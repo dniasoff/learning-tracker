@@ -126,6 +126,358 @@ const firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
 
 ---
 
+## Clean Code Principles (Robert Martin)
+
+### The Boy Scout Rule
+**Leave code cleaner than you found it.**
+
+When touching a file for any reason:
+- Fix one small thing (rename unclear variable, extract method, add type)
+- Don't mix cleanup with feature work in same commit
+- Small improvements compound over time
+
+### Meaningful Names
+
+**Intention-Revealing Names:**
+```dart
+// BAD - What does d mean?
+int d; // elapsed time in days
+
+// GOOD - Name reveals intent
+int elapsedDays;
+int daysSinceCreation;
+int fileAgeInDays;
+```
+
+**Avoid Disinformation:**
+```dart
+// BAD - It's not actually a List
+Map<String, Mishna> mishnaList;
+
+// GOOD - Accurate name
+Map<String, Mishna> mishnasByRef;
+Set<int> completedMishnaIds;
+```
+
+**Pronounceable & Searchable Names:**
+```dart
+// BAD - Unpronounceable, unsearchable
+int mshCnt;
+DateTime genymdhms;
+
+// GOOD - Clear and searchable
+int mishnaCount;
+DateTime generatedTimestamp;
+```
+
+**Class Names:** Nouns or noun phrases (`Mishna`, `CompletionTracker`, `SyncManager`)
+**Method Names:** Verbs or verb phrases (`getMishna()`, `markComplete()`, `calculateProgress()`)
+
+### Functions - Small & Focused
+
+**Do One Thing:**
+```dart
+// BAD - Does multiple things
+Future<void> processCompletion(int mishnaId) async {
+  final mishna = await getMishna(mishnaId);
+  await markComplete(mishna);
+  await updateProgress();
+  await syncToCloud();
+  await sendNotification();
+  await updateStreak();
+}
+
+// GOOD - Single responsibility, calls focused functions
+Future<void> processCompletion(int mishnaId) async {
+  await _recordCompletion(mishnaId);
+  await _updateDerivedState(mishnaId);
+  await _notifyUser();
+}
+```
+
+**Function Size Guidelines:**
+- Ideal: 5-10 lines
+- Maximum: 25 lines (extract if longer)
+- One level of abstraction per function
+
+**Single Level of Abstraction Principle (SLAP):**
+```dart
+// BAD - Mixed abstraction levels
+Future<void> syncProgress() async {
+  final completions = await db.select(mishnaCompletions).get();
+  final json = jsonEncode(completions.map((c) => c.toJson()).toList());
+  final response = await http.post(Uri.parse(url), body: json);
+  if (response.statusCode == 200) {
+    await prefs.setString('lastSync', DateTime.now().toIso8601String());
+  }
+}
+
+// GOOD - Consistent abstraction level
+Future<void> syncProgress() async {
+  final completions = await _getLocalCompletions();
+  await _uploadToCloud(completions);
+  await _recordSyncTimestamp();
+}
+```
+
+**Command-Query Separation:**
+```dart
+// BAD - Query with side effect
+bool markCompleteAndCheckStreak(int mishnaId) {
+  _completions.add(mishnaId);  // Command (modifies state)
+  return _streak > 7;          // Query (returns value)
+}
+
+// GOOD - Separated
+void markComplete(int mishnaId) => _completions.add(mishnaId);
+bool hasWeekStreak() => _streak > 7;
+```
+
+### Comments - Why, Not What
+
+**Good Comments:**
+```dart
+// Sefaria API returns perek as 1-indexed but we store 0-indexed
+final storedPerek = sefariaPerek - 1;
+
+// Hebrew calendar day starts at sunset, so we adjust by 6 hours
+// to align with civil midnight for display purposes
+final adjustedDate = hebrewDate.subtract(Duration(hours: 6));
+
+/// Calculates optimal daily Mishnayos count to reach bar mitzvah goal.
+/// Uses remaining days and accounts for Shabbos/Yom Tov rest days.
+int calculateDailyTarget(DateTime barMitzvahDate) { ... }
+```
+
+**Bad Comments (Delete These):**
+```dart
+// BAD - Restates the code
+i++; // increment i
+
+// BAD - Obvious from name
+/// Gets the mishna
+Mishna getMishna(int id) { ... }
+
+// BAD - Commented-out code (use git history)
+// final oldValue = calculateOldWay();
+
+// BAD - TODO without action
+// TODO: fix this later
+```
+
+### Error Handling
+
+**Don't Return Null - Use Optionals or Throw:**
+```dart
+// BAD - Caller must check null
+Mishna? getMishna(int id) {
+  return _mishnas[id];  // Returns null if not found
+}
+
+// GOOD - Explicit optional with freezed
+@freezed
+class MishnaResult with _$MishnaResult {
+  const factory MishnaResult.found(Mishna mishna) = _Found;
+  const factory MishnaResult.notFound() = _NotFound;
+}
+
+// GOOD - Throw for exceptional cases
+Mishna getMishnaOrThrow(int id) {
+  final mishna = _mishnas[id];
+  if (mishna == null) throw MishnaNotFoundException(id);
+  return mishna;
+}
+```
+
+**Don't Pass Null:**
+```dart
+// BAD - Null parameter
+void updateProgress(int? mishnaId) {
+  if (mishnaId == null) return;  // Defensive check everywhere
+  ...
+}
+
+// GOOD - Required parameter, validate at boundaries
+void updateProgress(int mishnaId) { ... }
+```
+
+**Fail Fast:**
+```dart
+// Validate at entry points, not deep in call stack
+Future<void> markComplete(int mishnaId, int stage) async {
+  // Validate immediately
+  if (mishnaId < 1 || mishnaId > 4192) {
+    throw ArgumentError('Invalid mishnaId: $mishnaId');
+  }
+  if (stage < 1 || stage > 3) {
+    throw ArgumentError('Invalid stage: $stage');
+  }
+
+  // Proceed with confidence
+  await _repository.recordCompletion(mishnaId, stage);
+}
+```
+
+### DRY - Don't Repeat Yourself
+
+**Extract Common Patterns:**
+```dart
+// BAD - Duplicated validation
+void createTrack(String name) {
+  if (name.isEmpty) throw ArgumentError('Name required');
+  if (name.length > 50) throw ArgumentError('Name too long');
+  ...
+}
+
+void renameTrack(String name) {
+  if (name.isEmpty) throw ArgumentError('Name required');
+  if (name.length > 50) throw ArgumentError('Name too long');
+  ...
+}
+
+// GOOD - Single source of truth
+String _validateTrackName(String name) {
+  if (name.isEmpty) throw ArgumentError('Name required');
+  if (name.length > 50) throw ArgumentError('Name too long');
+  return name.trim();
+}
+
+void createTrack(String name) {
+  final validName = _validateTrackName(name);
+  ...
+}
+```
+
+**But Avoid Premature Abstraction:**
+- Wait for 3 occurrences before extracting (Rule of Three)
+- Duplication is better than wrong abstraction
+
+---
+
+## Extreme Programming (XP) Practices
+
+### Test-Driven Development (TDD)
+
+**Red-Green-Refactor Cycle:**
+1. **Red:** Write a failing test first
+2. **Green:** Write minimal code to pass
+3. **Refactor:** Clean up while tests pass
+
+```dart
+// Step 1: RED - Write failing test
+test('calculates daily target for 100 remaining days', () {
+  final calculator = SchedulerCalculator();
+  final remaining = 1000; // Mishnayos remaining
+  final days = 100;
+
+  final target = calculator.dailyTarget(remaining, days);
+
+  expect(target, 10); // 1000 / 100 = 10
+});
+
+// Step 2: GREEN - Minimal implementation
+int dailyTarget(int remaining, int days) => remaining ~/ days;
+
+// Step 3: REFACTOR - Handle edge cases, improve naming
+int dailyTarget(int remainingMishnayos, int remainingDays) {
+  if (remainingDays <= 0) return remainingMishnayos;
+  return (remainingMishnayos / remainingDays).ceil();
+}
+```
+
+**FIRST Principles for Tests:**
+- **F**ast: Tests run in milliseconds
+- **I**ndependent: No test depends on another
+- **R**epeatable: Same result every time
+- **S**elf-validating: Pass or fail, no manual checking
+- **T**imely: Written before or with production code
+
+### Simple Design (Four Rules)
+
+Kent Beck's Four Rules of Simple Design (in priority order):
+
+1. **Passes all tests** - Code works correctly
+2. **Reveals intention** - Code is readable and clear
+3. **No duplication** - DRY principle applied
+4. **Fewest elements** - No unnecessary complexity
+
+```dart
+// Passes tests + Reveals intention + No duplication + Minimal
+class CompletionTracker {
+  final List<Completion> _completions;
+
+  bool isComplete(int mishnaId, int stage) =>
+    _completions.any((c) => c.mishnaId == mishnaId && c.stage == stage);
+
+  int completedCount(int stage) =>
+    _completions.where((c) => c.stage == stage).length;
+}
+```
+
+### Continuous Integration
+
+**Integrate frequently:**
+- Commit to main branch at least daily
+- All tests must pass before commit
+- Build and test automatically on every push
+
+**Keep the build green:**
+- Never commit on a broken build
+- Fix broken builds immediately (highest priority)
+- Run full test suite locally before pushing
+
+### Refactoring
+
+**Refactor continuously, not in big batches:**
+```dart
+// During feature work, improve as you go:
+// 1. Rename unclear variable
+// 2. Extract method
+// 3. Remove dead code
+// 4. Simplify conditional
+```
+
+**Safe refactoring rules:**
+- Only refactor when tests pass
+- Make one change at a time
+- Run tests after each change
+- Commit working refactors separately from features
+
+### Collective Code Ownership
+
+- Any developer can modify any code
+- No "owner" approval needed for changes
+- Consistent style enables shared ownership (hence these standards)
+
+### YAGNI - You Aren't Gonna Need It
+
+**Don't build for hypothetical futures:**
+```dart
+// BAD - Over-engineered for "future" needs
+abstract class BaseRepository<T, ID> {
+  Future<T?> findById(ID id);
+  Future<List<T>> findAll();
+  Future<void> save(T entity);
+  Future<void> delete(ID id);
+  Future<List<T>> findBySpec(Specification<T> spec);
+  Future<Page<T>> findPaged(Pageable pageable);
+  // ... 20 more methods "we might need"
+}
+
+// GOOD - Build what you need now
+class MishnaRepository {
+  Future<Mishna?> getMishna(int id) => ...;
+  Future<List<Mishna>> getMishnasByPerek(String masechta, int perek) => ...;
+}
+```
+
+**Add features when needed, not "just in case":**
+- Multi-language support? Add when there's a second language
+- Plugin system? Add when there's a second plugin
+- Configuration options? Add when someone asks
+
+---
+
 ## Architecture Standards
 
 ### Clean Architecture Layers
@@ -539,6 +891,23 @@ chore: update drift to 2.30.0
 - [ ] Tests passing (`flutter test`)
 - [ ] Coverage requirements met (80%+ domain, 70%+ data)
 
+### Clean Code (Robert Martin)
+- [ ] Names are intention-revealing (no `d`, `temp`, `data2`)
+- [ ] Functions do one thing and are small (< 25 lines)
+- [ ] Single level of abstraction per function
+- [ ] Comments explain "why", not "what"
+- [ ] No commented-out code (use git history)
+- [ ] No null parameters or return values where avoidable
+- [ ] DRY - no duplicate logic
+- [ ] Boy Scout Rule applied (left code cleaner)
+
+### XP Practices
+- [ ] Tests written first or alongside code (TDD)
+- [ ] FIRST principles: Fast, Independent, Repeatable, Self-validating, Timely
+- [ ] Simple design (passes tests, reveals intention, no duplication, minimal)
+- [ ] YAGNI - no speculative features
+- [ ] Refactoring done in small, tested steps
+
 ### Architecture
 - [ ] Clean architecture layers respected
 - [ ] Feature-first organization
@@ -578,6 +947,25 @@ chore: update drift to 2.30.0
 3. ProviderContainer for Riverpod tests
 4. In-memory database for drift tests
 5. Arrange-Act-Assert pattern
+
+### Clean Code (Robert Martin)
+1. Intention-revealing names
+2. Functions do ONE thing (< 25 lines)
+3. Single level of abstraction (SLAP)
+4. Command-Query Separation
+5. Comments explain WHY, not WHAT
+6. No null params/returns where avoidable
+7. Fail fast - validate at boundaries
+8. DRY - Rule of Three before extracting
+9. Boy Scout Rule - leave cleaner
+
+### XP Practices
+1. TDD: Red -> Green -> Refactor
+2. FIRST tests: Fast, Independent, Repeatable, Self-validating, Timely
+3. Simple Design: Tests pass, reveals intent, no duplication, minimal
+4. YAGNI: Build for now, not hypotheticals
+5. Continuous Integration: Commit daily, green builds
+6. Refactor continuously in small steps
 
 ---
 
