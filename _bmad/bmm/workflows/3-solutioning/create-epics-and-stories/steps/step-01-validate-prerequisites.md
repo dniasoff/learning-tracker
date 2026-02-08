@@ -6,18 +6,13 @@ description: 'Validate required documents exist and extract all requirements for
 workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories'
 
 # File References
-thisStepFile: '{workflow_path}/steps/step-01-validate-prerequisites.md'
-nextStepFile: '{workflow_path}/steps/step-02-design-epics.md'
+thisStepFile: './step-01-validate-prerequisites.md'
+nextStepFile: './step-02-design-epics.md'
 workflowFile: '{workflow_path}/workflow.md'
-outputFile: '{planning_artifacts}/epics.md'
-epicsTemplate: '{workflow_path}/templates/epics-template.md'
 
 # Task References
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
-
-# Template References
-epicsTemplate: '{workflow_path}/templates/epics-template.md'
 ---
 
 # Step 1: Validate Prerequisites and Extract Requirements
@@ -54,8 +49,8 @@ To validate that all required input documents exist and extract all requirements
 ## EXECUTION PROTOCOLS:
 
 - 🎯 Extract requirements systematically from all documents
-- 💾 Populate {outputFile} with extracted requirements
-- 📖 Update frontmatter with extraction progress
+- 💾 Store extracted requirements for Linear issue creation
+- 📖 Track extraction progress
 - 🚫 FORBIDDEN to load next step until user selects 'C' and requirements are extracted
 
 ## REQUIREMENTS EXTRACTION PROCESS:
@@ -91,7 +86,7 @@ Search for required documents using these patterns (sharded means a large docume
 1. `{planning_artifacts}/*ux*.md` (whole document)
 2. `{planning_artifacts}/*ux*/index.md` (sharded version)
 
-Before proceeding, Ask the user if there are any other documents to include for analysis, and if anything found should be excluded. Wait for user confirmation. Once confirmed, create the {outputFile} from the {epicsTemplate} and in the front matter list the files in the array of `inputDocuments: []`.
+Before proceeding, Ask the user if there are any other documents to include for analysis, and if anything found should be excluded. Wait for user confirmation. Once confirmed, store the list of input documents for reference during epic creation.
 
 ### 3. Extract Functional Requirements (FRs)
 
@@ -169,17 +164,16 @@ Review the UX document for requirements that affect epic and story creation:
 
 **Add these to Additional Requirements list.**
 
-### 7. Load and Initialize Template
+### 7. Organize Extracted Requirements
 
-Load {epicsTemplate} and initialize {outputFile}:
+Organize the extracted requirements for epic creation:
 
-1. Copy the entire template to {outputFile}
-2. Replace {{project_name}} with the actual project name
-3. Replace placeholder sections with extracted requirements:
-   - {{fr_list}} → extracted FRs
-   - {{nfr_list}} → extracted NFRs
-   - {{additional_requirements}} → extracted additional requirements
-4. Leave {{requirements_coverage_map}} and {{epics_list}} as placeholders for now
+1. Format FRs in a clear, numbered list
+2. Format NFRs in a clear, numbered list
+3. List additional requirements from Architecture/UX
+4. Note any starter template requirements from Architecture (for Epic 1 Story 1)
+
+These requirements will be used to create Linear issues in the next step.
 
 ### 8. Present Extracted Requirements
 
@@ -209,13 +203,15 @@ Ask: "Do these extracted requirements accurately represent what needs to be buil
 
 Update the requirements based on user feedback until confirmation is received.
 
-## CONTENT TO SAVE TO DOCUMENT:
+## REQUIREMENTS TO TRACK:
 
-After extraction and confirmation, update {outputFile} with:
+After extraction and confirmation, ensure you have:
 
-- Complete FR list in {{fr_list}} section
-- Complete NFR list in {{nfr_list}} section
-- All additional requirements in {{additional_requirements}} section
+- Complete FR list with numbering
+- Complete NFR list with numbering
+- All additional requirements from Architecture/UX
+
+These will be used to create epics and stories as Linear issues.
 
 ### 10. Present MENU OPTIONS
 
@@ -229,12 +225,12 @@ Display: `**Confirm the Requirements are complete and correct to [C] continue:**
 
 #### Menu Handling Logic:
 
-- IF C: Save all to {outputFile}, update frontmatter, only then load, read entire file, then execute {nextStepFile}
+- IF C: Confirm requirements are complete, then read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#10-present-menu-options)
 
 ## CRITICAL STEP COMPLETION NOTE
 
-ONLY WHEN C is selected and all requirements are saved to document and frontmatter is updated, will you then load, read entire file, then execute {nextStepFile} to execute and begin epic design step.
+ONLY WHEN C is selected and all requirements are confirmed complete, will you then read fully and follow: {nextStepFile} to begin epic design step.
 
 ---
 
@@ -246,14 +242,13 @@ ONLY WHEN C is selected and all requirements are saved to document and frontmatt
 - All FRs extracted and formatted correctly
 - All NFRs extracted and formatted correctly
 - Additional requirements from Architecture/UX identified
-- Template initialized with requirements
+- Requirements organized for Linear issue creation
 - User confirms requirements are complete and accurate
 
 ### ❌ SYSTEM FAILURE:
 
 - Missing required documents
 - Incomplete requirements extraction
-- Template not properly initialized
-- Not saving requirements to output file
+- Requirements not properly organized
 
 **Master Rule:** Skipping steps, optimizing sequences, or not following exact instructions is FORBIDDEN and constitutes SYSTEM FAILURE.

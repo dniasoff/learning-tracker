@@ -3,22 +3,64 @@
   <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
   <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
   <critical>Generate all documents in {document_output_language}</critical>
+  <critical>Linear is the single source of truth - read story context and post findings to Linear</critical>
 
   <critical>🔥 YOU ARE AN ADVERSARIAL CODE REVIEWER - Find what's wrong or missing! 🔥</critical>
-  <critical>Your purpose: Validate story file claims against actual implementation</critical>
-  <critical>Challenge everything: Are tasks marked [x] actually done? Are ACs really implemented?</critical>
-  <critical>Find 3-10 specific issues in every review minimum - no lazy "looks good" reviews - YOU are so much better than the dev agent
-    that wrote this slop</critical>
-  <critical>Read EVERY file in the File List - verify implementation against story requirements</critical>
+  <critical>Your purpose: Validate implementation against story requirements in Linear</critical>
+  <critical>Challenge everything: Are tasks actually done? Are ACs really implemented?</critical>
+  <critical>Find 3-10 specific issues in every review minimum - no lazy "looks good" reviews</critical>
+  <critical>Read EVERY file changed - verify implementation against story requirements</critical>
   <critical>Tasks marked complete but not done = CRITICAL finding</critical>
   <critical>Acceptance Criteria not implemented = HIGH severity finding</critical>
+  <critical>Do not review files that are not part of the application's source code. Always exclude _bmad/ and _bmad-output/ folders</critical>
 
-  <step n="1" goal="Load story and discover changes">
-    <action>Use provided {{story_path}} or ask user which story file to review</action>
-    <action>Read COMPLETE story file</action>
-    <action>Set {{story_key}} = extracted key from filename (e.g., "1-2-user-authentication.md" → "1-2-user-authentication") or story
-      metadata</action>
-    <action>Parse sections: Story, Acceptance Criteria, Tasks/Subtasks, Dev Agent Record → File List, Change Log</action>
+
+  <step n="1" goal="Load story context from Linear and discover changes">
+    <check if="{{story_key}} is provided">
+      <action>Use {{story_key}} to find Linear issue</action>
+    </check>
+
+    <check if="{{story_key}} is NOT provided">
+      <action>Load {{linear_mapping_file}} to get team_id and project_id</action>
+      <check if="linear_mapping_file does not exist OR team_id is empty">
+        <output>Linear mapping not initialized. Run sprint-planning first.</output>
+        <action>HALT</action>
+      </check>
+
+      <action>Query Linear for stories in review:
+        mcp__linear__list_issues with team={{team_id}}, project={{project_id}}, label="BMAD-Managed", state="In Review"
+      </action>
+      <action>Filter results to only include stories (exclude "[Epic-" prefix)</action>
+
+      <check if="no stories in review found">
+        <output>No stories in "In Review" status found in Linear.
+
+**Options:**
+1. Run `dev-story` first to complete implementation
+2. Provide a specific story_key to review
+3. Run `sprint-planning` to see current status
+        </output>
+        <action>HALT</action>
+      </check>
+
+      <action>Parse first result to extract story_key</action>
+    </check>
+
+    <action>Query Linear to find the story issue:
+      mcp__linear__list_issues with team={{team_id}}, project={{project_id}}, label="BMAD-Managed", query="[{{story_key}}]"
+    </action>
+    <action>Store {{linear_issue_id}} from query result</action>
+
+    <action>Get full issue details: mcp__linear__get_issue with id={{linear_issue_id}}</action>
+    <action>Extract from issue description:
+      - Story statement (As a/I want/So that)
+      - Acceptance Criteria
+      - Dev Notes (Architecture Guidance, Technical Requirements, etc.)
+      - Implementation Tasks
+    </action>
+
+    <action>Get comments on Linear issue: mcp__linear__list_comments with issueId={{linear_issue_id}}</action>
+    <action>Look for implementation completion comment with "Files Changed" section</action>
 
     <!-- Discover actual changes via git -->
     <action>Check if git repository detected in current directory</action>
@@ -29,46 +71,54 @@
       <action>Compile list of actually changed files from git output</action>
     </check>
 
-    <!-- Cross-reference story File List vs git reality -->
-    <action>Compare story's Dev Agent Record → File List with actual git changes</action>
+    <!-- Cross-reference Linear comments vs git reality -->
+    <action>Compare files listed in Linear comment with actual git changes</action>
     <action>Note discrepancies:
-      - Files in git but not in story File List
-      - Files in story File List but no git changes
-      - Missing documentation of what was actually changed
+      - Files in git but not mentioned in Linear comment
+      - Files in Linear comment but no git changes
     </action>
 
     <invoke-protocol name="discover_inputs" />
     <action>Load {project_context} for coding standards (if exists)</action>
+
+    <output>📋 **Loading Story for Review**
+
+**Story:** [{{story_key}}]
+**Linear Issue:** {{linear_issue_id}}
+**Status:** In Review
+
+Story context and acceptance criteria loaded from Linear.
+    </output>
   </step>
 
   <step n="2" goal="Build review attack plan">
-    <action>Extract ALL Acceptance Criteria from story</action>
-    <action>Extract ALL Tasks/Subtasks with completion status ([x] vs [ ])</action>
-    <action>From Dev Agent Record → File List, compile list of claimed changes</action>
+    <action>Extract ALL Acceptance Criteria from Linear issue description</action>
+    <action>Extract ALL Implementation Tasks with their descriptions</action>
+    <action>From Linear comment, compile list of claimed file changes</action>
 
     <action>Create review plan:
       1. **AC Validation**: Verify each AC is actually implemented
-      2. **Task Audit**: Verify each [x] task is really done
+      2. **Task Audit**: Verify each task is really done
       3. **Code Quality**: Security, performance, maintainability
       4. **Test Quality**: Real tests vs placeholder bullshit
     </action>
   </step>
 
   <step n="3" goal="Execute adversarial review">
-    <critical>VALIDATE EVERY CLAIM - Check git reality vs story claims</critical>
+    <critical>VALIDATE EVERY CLAIM - Check git reality vs Linear claims</critical>
 
-    <!-- Git vs Story Discrepancies -->
-    <action>Review git vs story File List discrepancies:
-      1. **Files changed but not in story File List** → MEDIUM finding (incomplete documentation)
-      2. **Story lists files but no git changes** → HIGH finding (false claims)
+    <!-- Git vs Linear Discrepancies -->
+    <action>Review git vs Linear file list discrepancies:
+      1. **Files changed but not in Linear** → MEDIUM finding (incomplete documentation)
+      2. **Linear lists files but no git changes** → HIGH finding (false claims)
       3. **Uncommitted changes not documented** → MEDIUM finding (transparency issue)
     </action>
 
-    <!-- Use combined file list: story File List + git discovered files -->
-    <action>Create comprehensive review file list from story File List and git changes</action>
+    <!-- Use combined file list -->
+    <action>Create comprehensive review file list from Linear comment and git changes</action>
 
     <!-- AC Validation -->
-    <action>For EACH Acceptance Criterion:
+    <action>For EACH Acceptance Criterion from Linear issue:
       1. Read the AC requirement
       2. Search implementation files for evidence
       3. Determine: IMPLEMENTED, PARTIAL, or MISSING
@@ -76,10 +126,10 @@
     </action>
 
     <!-- Task Completion Audit -->
-    <action>For EACH task marked [x]:
+    <action>For EACH task in Implementation Tasks:
       1. Read the task description
       2. Search files for evidence it was actually done
-      3. **CRITICAL**: If marked [x] but NOT DONE → CRITICAL finding
+      3. **CRITICAL**: If NOT DONE → CRITICAL finding
       4. Record specific proof (file:line)
     </action>
 
@@ -100,7 +150,6 @@
         - Documentation gaps
         - Integration issues
         - Dependency problems
-        - Git commit message quality (if applicable)
       </action>
       <action>Find at least 3 more specific, actionable issues</action>
     </check>
@@ -113,50 +162,44 @@
 
     <output>**🔥 CODE REVIEW FINDINGS, {user_name}!**
 
-      **Story:** {{story_file}}
-      **Git vs Story Discrepancies:** {{git_discrepancy_count}} found
-      **Issues Found:** {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
+**Story:** [{{story_key}}]
+**Linear Issue:** {{linear_issue_id}}
+**Issues Found:** {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
 
-      ## 🔴 CRITICAL ISSUES
-      - Tasks marked [x] but not actually implemented
-      - Acceptance Criteria not implemented
-      - Story claims files changed but no git evidence
-      - Security vulnerabilities
+## 🔴 CRITICAL ISSUES
+- Tasks not actually implemented
+- Acceptance Criteria not met
+- Security vulnerabilities
 
-      ## 🟡 MEDIUM ISSUES
-      - Files changed but not documented in story File List
-      - Uncommitted changes not tracked
-      - Performance problems
-      - Poor test coverage/quality
-      - Code maintainability issues
+## 🟡 MEDIUM ISSUES
+- Files changed but not documented
+- Performance problems
+- Poor test coverage/quality
+- Code maintainability issues
 
-      ## 🟢 LOW ISSUES
-      - Code style improvements
-      - Documentation gaps
-      - Git commit message quality
+## 🟢 LOW ISSUES
+- Code style improvements
+- Documentation gaps
     </output>
 
     <ask>What should I do with these issues?
 
-      1. **Fix them automatically** - I'll update the code and tests
-      2. **Create action items** - Add to story Tasks/Subtasks for later
-      3. **Show me details** - Deep dive into specific issues
+1. **Fix them automatically** - I'll update the code and tests
+2. **Create action items** - Post as Linear comment for later
+3. **Show me details** - Deep dive into specific issues
 
-      Choose [1], [2], or specify which issue to examine:</ask>
+Choose [1], [2], or specify which issue to examine:</ask>
 
     <check if="user chooses 1">
       <action>Fix all HIGH and MEDIUM issues in the code</action>
       <action>Add/update tests as needed</action>
-      <action>Update File List in story if files changed</action>
-      <action>Update story Dev Agent Record with fixes applied</action>
       <action>Set {{fixed_count}} = number of HIGH and MEDIUM issues fixed</action>
       <action>Set {{action_count}} = 0</action>
     </check>
 
     <check if="user chooses 2">
-      <action>Add "Review Follow-ups (AI)" subsection to Tasks/Subtasks</action>
-      <action>For each issue: `- [ ] [AI-Review][Severity] Description [file:line]`</action>
-      <action>Set {{action_count}} = number of action items created</action>
+      <action>Format action items for Linear comment</action>
+      <action>Set {{action_count}} = number of action items</action>
       <action>Set {{fixed_count}} = 0</action>
     </check>
 
@@ -166,59 +209,79 @@
     </check>
   </step>
 
-  <step n="5" goal="Update story status and sync sprint tracking">
+  <step n="5" goal="Post findings to Linear and update status">
     <!-- Determine new status based on review outcome -->
     <check if="all HIGH and MEDIUM issues fixed AND all ACs implemented">
-      <action>Set {{new_status}} = "done"</action>
-      <action>Update story Status field to "done"</action>
+      <action>Set {{new_status}} = "Done"</action>
+      <action>Set {{review_outcome}} = "Approved"</action>
     </check>
     <check if="HIGH or MEDIUM issues remain OR ACs not fully implemented">
-      <action>Set {{new_status}} = "in-progress"</action>
-      <action>Update story Status field to "in-progress"</action>
-    </check>
-    <action>Save story file</action>
-
-    <!-- Determine sprint tracking status -->
-    <check if="{sprint_status} file exists">
-      <action>Set {{current_sprint_status}} = "enabled"</action>
-    </check>
-    <check if="{sprint_status} file does NOT exist">
-      <action>Set {{current_sprint_status}} = "no-sprint-tracking"</action>
+      <action>Set {{new_status}} = "In Progress"</action>
+      <action>Set {{review_outcome}} = "Changes Requested"</action>
     </check>
 
-    <!-- Sync sprint-status.yaml when story status changes (only if sprint tracking enabled) -->
-    <check if="{{current_sprint_status}} != 'no-sprint-tracking'">
-      <action>Load the FULL file: {sprint_status}</action>
-      <action>Find development_status key matching {{story_key}}</action>
+    <!-- Post code review findings as Linear comment -->
+    <action>Build structured review comment:</action>
+    ```
+    ## Code Review ({{date}})
 
-      <check if="{{new_status}} == 'done'">
-        <action>Update development_status[{{story_key}}] = "done"</action>
-        <action>Save file, preserving ALL comments and structure</action>
-        <output>✅ Sprint status synced: {{story_key}} → done</output>
-      </check>
+    **Outcome:** {{review_outcome}}
 
-      <check if="{{new_status}} == 'in-progress'">
-        <action>Update development_status[{{story_key}}] = "in-progress"</action>
-        <action>Save file, preserving ALL comments and structure</action>
-        <output>🔄 Sprint status synced: {{story_key}} → in-progress</output>
-      </check>
+    ### Findings
+    {{#each finding}}
+    **[{{severity}}]** {{description}}
+    {{#if file}}File: {{file}}:{{line}}{{/if}}
+    {{/each}}
 
-      <check if="story key not found in sprint status">
-        <output>⚠️ Story file updated, but sprint-status sync failed: {{story_key}} not found in sprint-status.yaml</output>
-      </check>
+    ### Summary
+    - Issues Found: {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
+    - Issues Fixed: {{fixed_count}}
+    - Action Items: {{action_count}}
+
+    {{#if review_outcome == "Approved"}}
+    ✅ All acceptance criteria verified. Story complete.
+    {{else}}
+    ⚠️ Address findings before marking complete.
+    {{/if}}
+    ```
+
+    <action>Post review comment to Linear:
+      mcp__linear__create_comment with issueId={{linear_issue_id}}, body={{review_comment}}
+    </action>
+
+    <!-- Update Linear issue status -->
+    <action>Update Linear issue state:
+      mcp__linear__update_issue with id={{linear_issue_id}}, state={{new_status}}
+    </action>
+
+    <check if="{{new_status}} == 'Done'">
+      <output>✅ **Code Review Complete - Story Approved!**
+
+Linear issue {{linear_issue_id}} updated to Done.
+Review findings posted as comment.
+      </output>
     </check>
 
-    <check if="{{current_sprint_status}} == 'no-sprint-tracking'">
-      <output>ℹ️ Story status updated (no sprint tracking configured)</output>
+    <check if="{{new_status}} == 'In Progress'">
+      <output>🔄 **Code Review Complete - Changes Requested**
+
+Linear issue {{linear_issue_id}} updated to In Progress.
+Review findings posted as comment.
+
+**Next Steps:**
+1. Address the {{action_count}} action items
+2. Run `dev-story` to continue implementation
+3. Run `code-review` again when ready
+      </output>
     </check>
 
     <output>**✅ Review Complete!**
 
-      **Story Status:** {{new_status}}
-      **Issues Fixed:** {{fixed_count}}
-      **Action Items Created:** {{action_count}}
+**Story Status:** {{new_status}}
+**Issues Fixed:** {{fixed_count}}
+**Action Items Posted:** {{action_count}}
 
-      {{#if new_status == "done"}}Code review complete!{{else}}Address the action items and continue development.{{/if}}
+Review findings have been posted to the Linear issue as a comment.
     </output>
   </step>
 

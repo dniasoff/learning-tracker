@@ -2,941 +2,757 @@
 stepsCompleted: [1, 2, 3, 4, 7, 9, 10, 11]
 inputDocuments:
   - '_bmad-output/planning-artifacts/product-brief-mishnayos-tracker-2026-01-03.md'
-  - '_bmad-output/implementation-artifacts/tech-spec-mishnayos-tracker-v1-complete.md'
+  - '_bmad-output/planning-artifacts/architecture.md'
+  - '_bmad-output/planning-artifacts/epics.md'
 briefCount: 1
 researchCount: 0
 brainstormingCount: 0
 projectDocsCount: 0
-techSpecCount: 1
+techSpecCount: 0
 workflowType: 'prd'
 lastStep: 11
-completedAt: '2026-01-04'
+completedAt: '2026-02-08'
 status: 'complete'
-date: 2026-01-03
+date: 2026-02-08
 author: Daniel
+version: v2
+previousVersion: v1 (2026-01-04)
 ---
 
-# Product Requirements Document - mishnayos-tracker
+# Product Requirements Document - Learning Tracker
 
 **Author:** Daniel
-**Date:** 2026-01-03
+**Date:** 2026-02-08
+**Version:** v2
 
 ## Executive Summary
 
-**Mishnayos Tracker** is a personalized Android app designed to help Yisroel Meir Niasoff (10 years old) complete all 4,192 Mishnayos by his bar mitzvah on 19 Kislev, 5789 (December 7, 2028) through intelligent daily tracking, visual progress, and balanced motivation. The app transforms an overwhelming 3-year learning goal into an achievable daily habit by tracking the complete 3-stage learning cycle (learn + 2x chazara), providing adaptive scheduling, and rewarding consistency while respecting the seriousness of Torah learning.
+**Learning Tracker** (formerly Mishnayos Tracker) is a multi-curriculum Android app for tracking Torah learning with configurable review cycles, intelligent scheduling, and balanced motivation. The app supports both children and adults, serving any Torah learner who needs structured tracking across one or more curricula.
 
-Built as a deeply personal father-son project, the app creates emotional connection by being specifically designed for Yisroel Meir's unique journey. It addresses the core problem of inconsistent learning without a tracking system - where forgetting becomes habitual, proper review cycles get skipped, and the enormous total (4,192) remains abstract and intimidating rather than achievable.
+The app tracks a configurable N-stage learning cycle (learn + multiple chazara stages with user-defined timing) across five Sefaria-sourced curricula: Mishnayos, Gemara Bavli, Gemara Yerushalmi, Mishna Berurah, and Chumash. It provides adaptive scheduling per curriculum, drag-and-drop learning order customization, per-curriculum goals with Hebrew or Gregorian deadlines, and account-based multi-device sync.
 
 **Target Users:**
-- **Primary:** Yisroel Meir Niasoff (10-year-old, tech-savvy, preparing for bar mitzvah)
-- **Secondary:** Parents (shared login, hands-off monitoring, bulk management capabilities)
-- **Supporting:** Tutor (view-only progress access, aligns teaching sessions)
+
+- **Primary (Children):** Bar mitzvah-age learners (10-13) who need daily engagement and motivation to maintain consistent learning. Child mode provides full gamification with parent-managed mystery rewards.
+- **Primary (Adults):** Self-directed adult learners pursuing personal Torah learning goals across one or more curricula. Adult mode offers streamlined progress tracking with optional engagement features.
+- **Secondary (Parents):** Parents of child learners who manage rewards, monitor pace, and configure tracks with minimal daily oversight.
+- **Supporting (Tutors):** Tutors who need read-only visibility into learner progress to plan effective sessions. Available for both child and adult accounts.
+
+**Multi-Curriculum Support:**
+
+Five curricula with distinct hierarchies, all sourced from Sefaria API:
+
+- Mishnayos: seder > masechta > perek > mishna (4,192 items)
+- Gemara Bavli: masechta > daf > amud (~2,711 dapim)
+- Gemara Yerushalmi: masechta > daf > halacha
+- Mishna Berurah: siman > seif > seif katan (697 simanim)
+- Chumash: sefer > parsha > perek > pasuk (5,845 pesukim)
 
 **Multi-Context Learning:**
-The app supports three parallel learning contexts that all contribute to the same 4,192 completion goal:
+
+The app supports three parallel learning tracks per curriculum, all contributing to the same completion goal:
+
 - **Personal Track (Mandatory):** AI-driven with adaptive scheduler, daily recommendations, automatic chazara scheduling
 - **School Track (Optional):** Manual progress logging for formal school curriculum
 - **Tutor Track (Optional):** Manual progress logging for tutoring sessions
 
-Each track maintains its own bookmark ("where he's up to"), tracks can be added or removed as circumstances change, and no Mishna can appear in multiple tracks simultaneously. This flexible architecture accommodates the reality that a 10-year-old learns in multiple contexts while maintaining one unified goal.
+Each track maintains its own bookmark per curriculum. Tracks can be added or removed as circumstances change. No content item can appear in multiple tracks simultaneously within the same curriculum.
 
 ### What Makes This Special
 
-**Personal over generic:** Built as a father for his son's specific bar mitzvah journey, creating emotional connection and meaning beyond a corporate app. The personalization (his name, his date, his journey) makes Yisroel Meir feel this was created specifically for him.
+**Multi-curriculum flexibility:** A single app handles five distinct Torah curricula with independent hierarchies, scheduling, and tracking. The polymorphic content model supports new curricula without schema changes.
 
-**Proper Torah learning methodology:** Tracks the complete 3-stage learning cycle (learn + chazara next day + chazara 2 after 7 days) that reflects authentic Torah study practices, not just simplistic "done/not done" checkboxes found in generic habit trackers.
+**Configurable learning methodology:** N-stage learning cycles with user-defined timing replace hardcoded assumptions. Each curriculum can have its own stage count, names, and intervals.
 
-**Adaptive intelligence:** The smart scheduler calculates optimal daily recommendations based on the bar mitzvah deadline, automatically adjusts when he falls behind or accelerates ahead, and intelligently balances new learning with chazara pile-up to ensure on-time completion.
+**Child + adult modes:** A single platform serves children (with gamification and parent oversight) and adults (with streamlined, self-directed features) without separate codebases or apps.
 
-**Balanced gamification:** Respectfully engages a 10-year-old through progress visualization, points, and mystery rewards while maintaining the dignity and seriousness of Torah learning - neither frivolous nor boring.
+**Intelligent per-curriculum scheduling:** Independent parametric schedulers per curriculum calculate optimal daily loads based on goal deadlines, remaining items, and configurable stage timing. A cross-curriculum composer aggregates all schedules into a unified daily plan.
 
-**Multi-context reality:** Recognizes that learning happens in school, with tutors, and personally - providing flexible tracking across all contexts while maintaining one unified completion goal with intelligent recommendations only for personal study.
+**Offline-first with multi-device sync:** SQLite-first architecture ensures all core features work without network. Account-based auth (email/password + Google Sign-In) with Firestore provides seamless multi-device synchronization.
 
-**Complete Mishnayos structure:** Properly organized database of all 4,192 Mishnayos by seder/masechta/perek with immutable progress tracking (once complete, locked forever) and bulk management for initial onboarding.
-
-**Cloud-first with offline-first:** Firebase backend provides automatic backup, seamless device transfer, and parent account recovery, while SQLite local database ensures the app works smoothly offline with background sync when connected.
+**Content from Sefaria:** All curriculum content sourced from Sefaria's open API, properly attributed, with Hebrew and English text display. Content is immutable once imported; user customizations (learning order) are stored separately.
 
 ## Project Classification
 
 **Technical Type:** mobile_app
 **Domain:** edtech
-**Complexity:** medium
+**Complexity:** medium-high
 **Project Context:** Greenfield - new project
 
-This is an Android mobile application built with Flutter/Dart, leveraging device features including push notifications, offline-first operation with SQLite local storage, and cloud sync via Firebase. The offline capability is critical for daily usage reliability, while cloud backup provides safety and device portability.
+This is an Android mobile application built with Flutter/Dart, targeting mid-range devices (API 21+). The app leverages offline-first architecture with SQLite local storage, cloud sync via Firebase (Auth + Cloud Firestore), local notifications, and encrypted secure storage.
 
-The educational domain focuses on student learning progress tracking across multiple learning contexts (personal, school, tutor), implementing proper pedagogical methodology (spaced repetition via the 3-stage chazara cycle), and age-appropriate engagement for a 10-year-old user. The medium complexity reflects educational content management and learning methodology implementation, though regulatory requirements (COPPA/FERPA) don't apply since this is private personal use for one child, not a commercial educational platform.
+The medium-high complexity reflects:
 
-The multi-track architecture accommodates real-world learning scenarios where students engage with the same curriculum across different contexts, while the adaptive scheduler provides intelligent pacing unique to mobile learning applications.
+- Polymorphic content modeling across five curricula with distinct hierarchies
+- Configurable N-stage learning engine replacing hardcoded 3-stage logic
+- Per-curriculum parametric scheduling with cross-curriculum aggregation
+- Multi-device synchronization with conflict resolution
+- Dual user modes (child/adult) with conditional feature gating
+- 15 feature modules with clean architecture boundaries
 
 ## Success Criteria
 
 ### User Success
 
-**Primary Success Indicator: Personal Track Engagement**
-
-Success is measured primarily through Yisroel Meir's engagement with the **personal track** (the AI-driven smart track with adaptive scheduling). School and tutor tracks are passive logging that contribute to overall completion but don't drive the core engagement metrics.
-
-**The "Aha!" Moment:**
-
-The critical success indicator is when Yisroel Meir finds the app **addictive** and learns properly **because of it** - not just tracking what he's already doing, but fundamentally changing his learning behavior through the app's motivation and tracking systems. This typically manifests around days 5-7 when he realizes "I'm actually doing this every day! I can keep going!"
-
 **Engagement Metrics:**
-- **Daily app opens:** Yisroel Meir opens the app consistently without parental reminders
-- **Streak length:** Building consecutive days of usage (target: multi-week and multi-month streaks)
-- **Weekly active usage:** Using the app at least 5-6 days per week
-- **Streak protection:** The streak counter becomes something he actively protects and values
+
+- Daily app opens without external reminders
+- Streak length building to multi-week and multi-month streaks
+- Weekly active usage (5-6 days/week)
+- Streak counter becomes something learners actively protect
 
 **Learning Effectiveness:**
-- **Daily task completion rate:** Percentage of personal track recommended daily tasks actually completed
-- **3-stage completion consistency:** Following through on learning + both chazara cycles (not just learning new content)
-- **Chazara adherence:** Completing chazara on schedule (next day for chazara 1, 7 days later for chazara 2)
-- **Task abandonment rate:** Low rate of started-but-not-completed sessions
-- **Voluntary extra learning:** Completing beyond recommended daily tasks (indicates genuine engagement)
 
-**Multi-Context Integration:**
-- **All tracks contributing:** School track + tutor track + personal track all feeding the unified 4,192 completion goal
-- **Track flexibility working:** Ability to add/remove tracks as circumstances change (e.g., if tutor stops)
-- **No duplicate assignments:** System prevents same Mishna appearing in multiple tracks
-- **Bookmark effectiveness:** "Where he's up to" feature helps resume learning in each context
+- Daily task completion rate across all active curricula
+- Multi-stage completion consistency (learning + all chazara stages, not just new content)
+- Chazara adherence (completing reviews on schedule per stage timing)
+- Low task abandonment rate (started-but-not-completed sessions)
+- Voluntary extra learning beyond daily recommendations
 
-**On-Track Status:**
-- **Pace indicator:** Days ahead/on-pace/behind target completion rate
-- **Percentage complete vs time elapsed:** E.g., 33% complete by 1 year mark
-- **Projected completion date:** Based on current pace, will he finish before 19 Kislev, 5789?
-- **Buffer maintenance:** Staying ahead of minimum pace to allow for sick days, vacations, etc.
+**Multi-Curriculum Engagement:**
 
-**Parent Success:**
-- **Minimal intervention needed:** Yisroel Meir owns his journey without constant parental pushing or reminders
-- **Ease of reward management:** Parents can quickly add/edit mystery rewards as he progresses
-- **Quick monitoring:** Occasional dashboard glances show on-track status without daily oversight
-- **Bulk management efficiency:** Initial onboarding with bulk masechta marking works smoothly
+- Active use of multiple curricula simultaneously
+- Cross-curriculum daily plan utilization
+- Balanced progress across curricula (not neglecting any active curriculum)
+
+**Pace Achievement:**
+
+- On-track status for each curriculum with a deadline
+- Projected completion date within goal window
+- Sustained completion rate over time
+- Buffer maintenance (staying ahead of minimum pace)
+
+**Parent Success (Child Accounts):**
+
+- Child owns their journey without constant parental pushing
+- Reward management takes minimal time
+- Quick dashboard glances confirm on-track status
 
 **Tutor Success:**
-- **Teaching effectiveness:** Visibility into progress helps tutor align teaching sessions appropriately
-- **Progress awareness:** Tutor can see which Mishnayos completed and what's due for chazara
-- **Session planning:** Real-time data helps focus tutoring on gaps and review needs
 
-**Critical Success Milestones:**
+- Visibility into completion history helps plan effective sessions
+- Chazara queue shows what needs review focus
+- Real-time data keeps tutor aligned with learner progress
+
+### Critical Success Milestones
 
 **1 Week Mark:**
-- Still opening app daily? ✓
-- First streak established (7 days)? ✓
-- Completing recommended personal track tasks? ✓
-- *Success indicator:* Habit formation beginning
+
+- Opening app daily?
+- First streak established (7 days)?
+- Completing recommended daily tasks?
+- *Indicator:* Habit formation beginning
 
 **1 Month Mark:**
-- Consistent usage pattern (5-6 days/week)? ✓
-- Learning habit integrated into routine? ✓
-- Streak maintained or recovered after breaks? ✓
-- *Success indicator:* Daily habit solidified
+
+- Consistent usage pattern (5-6 days/week)?
+- Learning habit integrated into routine?
+- Streak maintained or recovered after breaks?
+- *Indicator:* Daily habit solidified
 
 **3 Month Mark:**
-- On pace for bar mitzvah deadline? ✓
-- Sustained engagement without motivation drop-off? ✓
-- First completed masechta(s)? ✓
-- *Success indicator:* Long-term viability proven
 
-**6 Month Mark:**
-- Multiple completed masechtos? ✓
-- Still ahead of or on minimum pace? ✓
-- Reward system maintaining motivation? ✓
-- *Success indicator:* Halfway confidence established
-
-**1 Year Mark:**
-- Approximately 33%+ of total Mishnayos completed? ✓
-- Significant progress visible (multiple sedarim substantially complete)? ✓
-- App remains part of daily routine? ✓
-- Confidence in bar mitzvah completion? ✓
-- *Success indicator:* Bar mitzvah goal achievable
-
-### Business Success
-
-**Singular Success Metric:**
-
-**By 19 Kislev, 5789 (December 7, 2028):**
-- ✓ All 4,192 Mishnayos of Shas completed (learning stage)
-- ✓ All 4,192 Mishnayos completed chazara 1
-- ✓ All 4,192 Mishnayos completed chazara 2
-- ✓ **Complete 3-stage learning cycle for entire Shas**
-- ✓ Yisroel Meir arrives at his bar mitzvah having mastered Shas Mishnayos
-
-**Secondary Success Indicators:**
-- Yisroel Meir feels proud of his achievement
-- Learning became a positive daily habit, not a burden
-- Parents didn't need to constantly push or remind
-- The journey built discipline and confidence for bar mitzvah and beyond
-- Daily Torah learning habit is established for life
-
-**What "Winning" Looks Like:**
-1. Yisroel Meir opens the app daily without being asked
-2. His streak counter becomes something he's proud of and protects
-3. He stays on pace (or ahead) for his bar mitzvah deadline
-4. The total number of Mishnayos feels achievable rather than overwhelming
-5. He completes his bar mitzvah goal on 19 Kislev, 5789
-6. The habit of daily Torah learning continues beyond bar mitzvah
-
-**What "Failing" Looks Like:**
-1. Yisroel Meir stops using it after initial excitement (week 2-4 drop-off)
-2. Usage requires constant parental reminders and pushing
-3. He falls significantly behind pace with no recovery
-4. Chazara cycles are skipped (learning without retention)
-5. Motivation wanes and the goal feels impossible again
-6. He doesn't complete Shas Mishnayos by his bar mitzvah
+- On pace for curriculum deadlines?
+- Sustained engagement without motivation drop-off?
+- First completed sections visible?
+- *Indicator:* Long-term viability proven
 
 ### Technical Success
 
 **Data Integrity (Non-Negotiable):**
-- **Zero data loss over 3 years:** Yisroel Meir's progress is irreplaceable and must never be lost
-- **Immutability enforcement:** Once a stage is marked complete, it's locked forever (prevents accidental unmarking)
-- **Firebase sync reliability:** Automatic backup prevents data loss if device breaks or is replaced
-- **Completion log integrity:** Append-only architecture ensures historical record is never corrupted
-- **Multi-track constraint enforcement:** System prevents duplicate Mishna assignments across tracks
+
+- Zero data loss over the app's lifetime
+- Immutability enforcement: once a stage is marked complete, it's locked (append-only log)
+- Multi-device sync consistency: additive merge for completions, last-write-wins for mutable data
+- Multi-track constraint enforcement: no duplicate completions within a curriculum
+- Transaction safety: all database writes use transactions with rollback on failure
 
 **Reliability (Critical Path):**
-- **Offline-first operation:** All core features work without network (mark complete, browse, view progress)
-- **First-launch sync success:** All 4,192 Mishnayos download successfully to SQLite within reasonable time
-- **Background sync recovery:** Network failures don't block progress; sync recovers with exponential backoff
-- **Resumable sync:** If interrupted during first-launch, can resume from checkpoint
-- **State persistence:** App state survives restarts, device reboots, low memory situations
+
+- Offline-first operation: all core features work without network
+- Content import success: curricula download and import from Sefaria reliably
+- Sync recovery: network failures don't block progress; sync recovers with retry
+- State persistence: app state survives restarts, device reboots, low memory
 
 **Performance (User Experience):**
-- **Smooth 60fps:** Scrolling, animations, transitions maintain 60fps on mid-range Android devices
-- **Smart scheduler speed:** Daily recommendation calculations complete in <500ms
-- **Database query performance:** Progress queries return in <100ms even with thousands of completions
-- **App startup time:** Opens to usable state in <2 seconds on typical device
-- **No crashes:** Crash-free rate >99.9% over the 3-year period
 
-**System Robustness:**
-- **Proper error handling:** Network errors, database errors, and edge cases handled gracefully
-- **Transaction safety:** Database writes use transactions with automatic rollback on failure
-- **Conflict resolution:** Last-write-wins with UTC timestamps handles multi-device edge cases
-- **Firebase quota management:** Stays within free tier limits, graceful degradation if quota exceeded
-- **Hebrew calendar accuracy:** Date calculations verified against authoritative sources (Hebcal.com)
+- Smooth 60fps rendering on mid-range Android devices
+- Smart scheduler calculations complete in <500ms across all active curricula
+- Database queries return in <100ms even with thousands of completions
+- App startup to usable state in <2 seconds
 
 ### Measurable Outcomes
 
 **Quantitative Metrics:**
-- **Total completions over 3 years:** 12,576 total stage completions (4,192 × 3 stages)
-- **Daily completion rate:** Average 12 completions/day during steady state (days 9-1,062)
-- **Streak metrics:** Maximum streak length, average streak length, streak recovery rate
-- **On-time completion:** Projected completion date ≤ 19 Kislev, 5789
-- **Pace buffer:** Days ahead of minimum required pace
-- **Points accumulation:** Total points earned over journey (max 83,840 if all defaults)
-- **Reward earning rate:** Mystery rewards earned at planned intervals
+
+- Daily completion rate across curricula
+- Streak metrics: maximum length, average length, recovery rate
+- On-time completion: projected dates within goal windows
+- Per-curriculum points accumulation
+- Mystery reward earning rate
 
 **Qualitative Outcomes:**
-- **Behavioral change:** Learning shifts from sporadic to consistent daily habit
-- **Emotional impact:** From "overwhelming and impossible" to "achievable and satisfying"
-- **Ownership:** Yisroel Meir feels ownership of his bar mitzvah journey
-- **Pride:** Visible progress creates sense of accomplishment and pride
-- **Confidence:** Belief that he will complete his goal by bar mitzvah
 
-**Decision Points:**
-- **Week 2-4:** Critical period - if usage drops off, intervention needed
-- **3 Month Mark:** Evaluate if trajectory supports 3-year completion
-- **1 Year Mark:** Assess if v2.0 public release is warranted based on proven success
-- **Bar Mitzvah Completion:** Ultimate validation of concept and methodology
+- Learning shifts from sporadic to consistent daily habit
+- Large goals feel achievable rather than overwhelming
+- Learner feels ownership of their progress
+- Multi-curriculum engagement sustained over time
 
 ## Product Scope
 
-### MVP - Minimum Viable Product
+### MVP - v1.0 Complete Feature Set
 
-**v1.0 Complete Feature Set (No Phasing)**
+All features are required for v1.0 release. This is not a phased rollout.
 
-Everything in the tech spec must be complete and functional on day 1. This is not a phased rollout - all features are required for the product to be useful for Yisroel Meir's 3-year journey.
+**Foundation & Infrastructure (Epic 1):**
 
-**Phase 1 - Foundation:**
-- Flutter project with proper architecture
-- Complete database schema (SQLite + Firestore)
-- All 4,192 Mishnayos pre-seeded from Sefaria API
-- Firebase project configured
-- Core domain models
-- Basic app shell and navigation
+- Flutter project with clean architecture (15 feature modules)
+- Complete database schema (SQLite via drift + Cloud Firestore)
+- Multi-curriculum content import from Sefaria API
+- Firebase Auth (email/password + Google Sign-In)
+- auto_route navigation with auth, parent PIN, and tutor PIN guards
+- Riverpod state management with family providers for curriculum scoping
+- Talker logging with dio/riverpod integrations
+- CI/CD pipeline (GitHub Actions)
+- Sync engine (push-on-write, pull-on-launch, foreground listeners)
+- Material Design 3 theme with RTL Hebrew support
+- Security infrastructure (bcrypt PIN hashing, flutter_secure_storage)
+- Hebrew calendar utilities (kosher_dart)
 
-**Phase 2 - Core Tracking:**
-- Complete 3-stage learning cycle (learning, chazara 1, chazara 2)
-- Multi-track system (personal/school/tutor tracks)
-- Track management (add/remove optional tracks)
-- Bookmark per track ("where he's up to")
-- Immutable progress enforcement via completion log
-- Bulk masechta management for parents (initial onboarding)
-- First-launch sync (Firebase → SQLite, all 4,192 Mishnayos)
-- Delta sync (SQLite ↔ Firebase with conflict resolution)
-- Mishna browsing by seder/masechta/perek
-- Text display (Hebrew + English from Sefaria)
-- Mark completion UI with stage-specific buttons
+**Content Import & Browsing (Epic 2):**
 
-**Phase 3 - Intelligence Layer:**
-- Smart adaptive scheduler (personal track only)
-- Daily recommendation engine
-- Automatic chazara scheduling (next day + 7 days)
-- Adaptive pacing algorithm (adjusts based on progress)
-- Chazara pile-up management
-- Progress dashboard (multiple views)
-- Hebrew calendar integration (kosher_dart)
-- On-track status calculations
-- Seder/masechta/overall progress visualization
-- Points over time charting
+- Sefaria content import pipeline for all five curricula
+- Generic hierarchy browsing (works for any curriculum depth 1-4 levels)
+- Content text display (Hebrew + English from Sefaria)
+- Curriculum activation/deactivation management
 
-**Phase 4 - Engagement & Access:**
-- Points system (learning=10, chazara1=5, chazara2=5)
-- Mystery rewards system (parent-configured, hidden from child)
-- Streak tracking (consecutive days)
-- Completion animations and feedback
-- Parent mode (PIN-protected)
-  - Reward catalog management
-  - Bulk masechta marking
-  - Analytics dashboard
-  - Point value configuration
-  - Track management (add/remove school/tutor tracks)
-- Tutor mode (separate PIN, view-only)
-- Local push notifications (daily reminders)
-- Data backup/restore (JSON export/import)
-- Sefaria attribution
-- Onboarding flow
-- Material Design 3 theme
+**Core Learning Cycle (Epic 3):**
 
-**Technical Requirements (All Required):**
-- Offline-first architecture
-- Firebase Anonymous Authentication
-- Cloud Firestore with security rules
-- Encrypted PIN storage (flutter_secure_storage + bcrypt)
-- Network retry with exponential backoff
-- Resumable first-launch sync with checkpoints
-- Transaction-based database writes
-- Error handling and crash prevention
-- 80%+ test coverage on business logic
-- Unit, widget, and integration tests
+- Mark completion per stage, per track, per curriculum
+- Append-only completion log with transaction safety
+- Completion history with filters
+- Bookmark management with automatic advancement
 
-**Acceptance Criteria:**
-All 76 acceptance criteria from tech spec must pass before release to Yisroel Meir.
+**Multi-Track Learning (Epic 4):**
+
+- Track management (add/remove school/tutor tracks per curriculum)
+- Track assignment with duplicate prevention
+- Track-specific progress views
+
+**Configurable Stages & Learning Order (Epic 5):**
+
+- Stage definition configuration (add/edit/delete/reorder stages per curriculum)
+- Drag-and-drop learning order customization per curriculum
+
+**Smart Scheduler (Epic 6):**
+
+- Parametric scheduler engine per curriculum
+- Daily task generation and display
+- Per-curriculum goal management with Gregorian/Hebrew deadlines
+- Pace tracking (ahead/on-pace/behind)
+- Cross-curriculum daily schedule composer
+
+**Dashboard & Progress (Epic 7):**
+
+- Cross-curriculum dashboard with summary cards, streak, daily tasks
+- Per-curriculum progress views with hierarchy breakdowns
+- Progress charts (completions over time, cumulative, pace trajectory)
+
+**Gamification & Engagement (Epic 8):**
+
+- Per-curriculum points system
+- Global streak tracking
+- Mystery rewards system
+
+**Onboarding Flow (Epic 9):**
+
+- Welcome and user mode selection (child/adult)
+- Curriculum selection with content import
+- Per-curriculum goal setup
+- Bulk mark prior completions
+- Initial rewards setup (child mode)
+
+**Parent Mode (Epic 10):**
+
+- PIN setup and authentication
+- Parent dashboard with analytics
+- Reward management (CRUD)
+- Point value configuration
+- Track management
+
+**Tutor Mode (Epic 11):**
+
+- PIN setup and authentication
+- Tutor dashboard (read-only)
+- Completion history and chazara views
+
+**Notifications (Epic 12):**
+
+- Daily learning reminders
+- Streak protection alerts
+- Reward milestone notifications
+
+**Cloud Sync (Epic 13):**
+
+- Push-on-write with offline queuing
+- Pull-on-launch merge
+- Foreground real-time listeners
+
+**Settings (Epic 14):**
+
+- General settings and user profile
+- Notification preferences
+- Data export/import (JSON)
+- Account management (sign out, delete, password change, provider linking)
 
 ### Growth Features (Post-MVP)
 
-**v2.0 - Public Release (Conditional on v1.0 Success)**
-
-Only pursued if Yisroel Meir successfully completes his bar mitzvah goal using the app.
-
-**Generalization Features:**
-- Multi-user support (remove hardcoding)
-- Setup wizard (child name, bar mitzvah date entry)
-- Firebase user isolation (each family gets private data)
-- Email/password authentication (replaces anonymous auth)
-- Privacy policy and terms of service
-- Beta testing group validation
-- Firebase Crashlytics for public monitoring
-- Play Store listing and compliance
-
-**User-Requested Enhancements:**
+- iOS version
+- Dark theme
+- Advanced analytics and learning insights engine
+- Curriculum marketplace / user-contributed curricula
+- Social features (shared progress, group learning)
+- Push notification optimization
 - Hebrew language UI option
-- Customizable learning goals (beyond bar mitzvah)
-- Parent-child progress sharing features
-- Community-contributed reward ideas
-- Multiple children per family account
-- Advanced analytics and data export
-
-### Vision (Future)
-
-**Long-Term Vision:**
-
-Make Mishnayos Tracker the go-to free app for Jewish families preparing their sons for bar mitzvah, helping thousands of children complete Shas Mishnayos through consistent daily learning habits supported by respectful gamification.
-
-**Potential Future Directions:**
-- iOS version (expand beyond Android)
-- Expanded curriculum support (Gemara, Tanach, etc.)
-- Advanced predictive analytics (completion forecasting)
-- AI-powered learning insights
-- Community features (anonymous leaderboards, family challenges)
-
-**Success Metrics for Public Release:**
-- 1,000+ active families using the app
-- 90%+ bar mitzvah completion rate
-- 4.5+ star rating on Play Store
-- Active community of contributing families
-- Sustainability model (donations, sponsorships)
 
 ## User Journeys
 
-### Journey 1: Yisroel Meir Niasoff - From Overwhelming to "I'm Actually Doing This!"
+### Journey 1: Child Learner - From Overwhelming to "I'm Actually Doing This!"
 
 **The Introduction**
 
-Yisroel Meir is 10 years old and has just learned he needs to complete all 4,192 Mishnayos of Shas before his bar mitzvah on 19 Kislev, 5789 (December 7, 2028). That's about 3 years away, and the number feels impossibly large and abstract. His learning has been sporadic - sometimes he forgets, sometimes he needs pushing, and without visible progress, it's hard to stay motivated. His father sits down with him one evening and says, "We built something special for your bar mitzvah."
+A bar mitzvah-age child has set a goal to complete a significant Torah learning milestone. The total items feel impossibly large and abstract. Learning has been sporadic without visible progress or structured tracking. A parent introduces the app as a tool built to help them achieve their goal.
 
-**First Open - It's Personal**
+**First Open - Setting Up**
 
-Yisroel Meir opens the app and immediately sees his name - "Yisroel Meir Niasoff" - and his Hebrew bar mitzvah date: 19 Kislev, 5789. This wasn't downloaded from the Play Store. This was made FOR HIM. His parents help him through the setup: configuring the bar mitzvah date, setting the learning order for masechtos, and adding the first few mystery rewards to the catalog. Then comes his first completion.
+The child creates an account (with parent help) and selects child mode. Together they activate the curricula they want to track (e.g., Mishnayos). Content imports from Sefaria while they set a completion goal with a Hebrew date deadline. The parent configures the first mystery rewards. Then comes the first completion.
 
-He marks his very first Mishna as learned. A satisfying checkmark animation plays, points pop up on screen (+10!), and he watches a tiny sliver of the progress bar fill. It's small, but it's *his*. Immediate satisfaction.
+The child marks their first item as learned. A satisfying animation plays, points pop up on screen, and a tiny sliver of the progress bar fills. It's small, but it's *theirs*. Immediate satisfaction.
 
 **Daily Routine Emerges**
 
-Over the next few days, Yisroel Meir develops a routine. He opens the app at a flexible time during his day - sometimes morning, sometimes evening, depending on his schedule. The dashboard greets him: "Today's Tasks: 4 new learning, 3 chazara 1, 2 chazara 2." After learning each Mishna with his sefer, he taps to mark it complete. Each time: satisfying tick animation, points popup, progress bars filling incrementally, streak counter incrementing. He checks the progress bar for his next mystery reward, building anticipation.
+Over the next few days, a routine develops. The dashboard greets them: "Today's Tasks: 4 new learning, 3 chazara 1, 2 chazara 2." After learning each item, they mark it complete. Each time: animation, points popup, progress bars filling, streak counter incrementing. The progress bar for the next mystery reward builds anticipation.
 
 **The "Aha!" Moment - Days 5-7**
 
-It's the sixth day in a row that Yisroel Meir opens the app. He sees "Current Streak: 6 days 🔥" displayed prominently. Something clicks. "I'm actually doing this every day! I can keep going!" He looks at the overall progress - a few masechtos are starting to show real completion. The 4,192 that felt overwhelming last week? It doesn't feel impossible anymore. He can *see* it happening. He feels ownership and pride in his visible progress. The app isn't just tracking - it's making him *want* to learn.
+It's the sixth day in a row. "Current Streak: 6 days." Something clicks. "I'm actually doing this every day! I can keep going!" The overall progress shows real completion building. The thousands of items don't feel impossible anymore. The child feels ownership and pride in visible progress. The app isn't just tracking -- it's making them *want* to learn.
 
 **The Journey Continues - Weeks and Months**
 
-The app becomes part of Yisroel Meir's daily routine, as automatic as brushing his teeth. His streak becomes something precious - he doesn't want to break it. After a few weeks, a notification pops up: "Mystery reward earned!" His parents reveal the surprise, and the excitement fuels his motivation for the next one. Months pass. He sees himself ahead of pace on the dashboard - a confidence boost. Multiple masechtos are complete now. Entire sedarim are filling up. As he approaches his bar mitzvah with over two years of consistent learning, completion is in sight. The 4,192 that once felt abstract is now a journey he owns completely.
+The app becomes part of daily routine. The streak becomes precious. Mystery rewards fuel continued motivation. Pace tracking shows they're ahead of schedule. Multiple sections are completing. Confidence builds toward the goal.
 
 **This journey reveals requirements for:**
-- Personalized onboarding with his name and bar mitzvah date
-- Multi-track system (personal/school/tutor) with bookmarks
-- 3-stage learning cycle tracking with immutable completion
-- Smart daily recommendations (personal track only)
-- Satisfying completion animations and instant feedback
+
+- Account-based onboarding with mode selection
+- Multi-curriculum content import from Sefaria
+- Configurable N-stage learning cycle with immutable completion
+- Smart daily recommendations per curriculum
+- Completion animations and instant feedback
 - Streak tracking and visualization
-- Progress dashboards (overall, by seder, by masechta)
-- Mystery rewards system with progress bars
-- Bulk masechta marking for initial setup
+- Cross-curriculum dashboard
+- Mystery rewards with progress bars
+- Bulk marking for prior completions
 
-### Journey 2: Parents (Mother & Father) - Hands-Off Observers
+### Journey 2: Adult Learner - Structured Progress Across Curricula
 
-**Setup Night**
+**Getting Started**
 
-It's the evening before Yisroel Meir starts using the app. Both parents sit together with the app open in parent mode (they share one login). They enter their 4-digit PIN for the first time - this section is theirs alone. They configure the initial rewards catalog: a small prize at 10,000 points, something bigger at 25,000, and so on. They think about what will keep him motivated over 3 years without making it feel like bribery. They review the learning order of masechtos and confirm the defaults look good. They set the bar mitzvah date one more time to double-check: 19 Kislev, 5789. Everything is ready.
+An adult Torah learner wants to work through Mishnayos and Gemara Bavli simultaneously. They create an account, select adult mode, and activate both curricula. Content imports from Sefaria. They set a completion goal for Mishnayos (by next Rosh Hashana) and leave Bavli as self-paced with no deadline.
 
-**Ongoing - Weekly Reward Updates**
+**Daily Usage**
 
-Every few weeks, one parent logs into parent mode to add another reward to the catalog. It takes less than 2 minutes. They set the point threshold, write a title (keeping it mysterious for Yisroel Meir), add a description they'll reveal when he earns it, and save. The app handles the rest. They don't micromanage his daily learning - that's his journey.
+The dashboard shows a unified daily plan: "5 tasks across 2 curricula today." Three Mishnayos items (1 new, 2 chazara) and two Bavli items (both new). The interface is clean and focused -- no mystery rewards or celebrations, just clear progress tracking. They mark items as completed throughout the day, sometimes from their phone, sometimes from their tablet (multi-device sync).
+
+**Customization**
+
+After a few weeks, they adjust the chazara timing for Bavli (adding a third chazara stage at +30 days for deeper retention) and reorganize the masechta learning order via drag-and-drop. The scheduler adapts automatically.
+
+**Long-Term Value**
+
+Months later, the per-curriculum progress views show substantial completion. The Mishnayos pace indicator shows they're 5 days ahead of the Rosh Hashana deadline. Bavli is progressing steadily without deadline pressure. The app has transformed their learning from sporadic to systematic.
+
+**This journey reveals requirements for:**
+
+- Adult mode with streamlined UI (minimal gamification)
+- Multiple curricula activated simultaneously
+- Per-curriculum goal management (with and without deadlines)
+- Cross-curriculum daily schedule composer
+- Configurable stage definitions per curriculum
+- Drag-and-drop learning order
+- Multi-device sync
+- Per-curriculum progress views with pace tracking
+
+### Journey 3: Parents - Hands-Off Oversight
+
+**Setup**
+
+The parent helps their child create an account in child mode. They set a 4-digit parent PIN, configure the initial mystery rewards catalog, review the learning order defaults, and set the bar mitzvah date as the goal deadline. Everything is ready.
+
+**Ongoing**
+
+Every few weeks, the parent logs into parent mode to add another reward. It takes less than 2 minutes. They set the point threshold, write a title, and save. They don't micromanage daily learning.
 
 **Occasional Check-Ins**
 
-About once a week (sometimes less), a parent opens the dashboard and glances at the key metrics:
-- Is he keeping up with the target pace? ✓ (He's 3 days ahead)
-- Overall completion percentage? ✓ (15% after 4 months - right on track)
-- Current streak? ✓ (23 days - impressive!)
+About once a week, the parent glances at the parent dashboard: on-track status, overall completion percentage, current streak. The check takes 30 seconds. No intervention needed.
 
-The check takes 30 seconds. They close the app satisfied. No intervention needed.
+**Reward Moments**
 
-**The Reward Moment**
-
-A notification appears on their phone: "Mystery reward earned!" They check which reward it is from the catalog, then call Yisroel Meir over. "You earned something!" They reveal what the mystery reward was, and his face lights up. This is why they built this. A few minutes later, they're back to their day. Minimal effort, maximum impact.
-
-**Three Years Later**
-
-It's a few weeks before the bar mitzvah. The parents open the app and see: 100% complete. All 4,192 Mishnayos. All three stages (learning, chazara 1, chazara 2). Yisroel Meir did it. They never had to push, never had to remind constantly. The app became his companion for the journey. They feel proud - not because they managed it, but because *he* owned it.
+A notification appears: "Mystery reward earned!" The parent reveals the surprise to the child. Minimal effort, maximum impact.
 
 **This journey reveals requirements for:**
-- PIN-protected parent mode (separate from child access)
-- Reward catalog management (add/edit/delete rewards)
-- Simple analytics dashboard (on-track status, completion %, streak)
-- Bulk masechta marking (initial onboarding)
-- Track management (add/remove school/tutor tracks)
-- Point value configuration
-- Notification system for reward milestones
-- Minimal time investment design (quick glances, not daily oversight)
 
-### Journey 3: Tutor - Teaching with Visibility
+- PIN-protected parent mode (child accounts only)
+- Reward catalog management (CRUD)
+- Parent analytics dashboard (pace, completion %, streak)
+- Track management (add/remove school/tutor tracks)
+- Point value configuration per stage per curriculum
+- Notification for reward milestones
+- Minimal-time-investment UX design
+
+### Journey 4: Tutor - Teaching with Visibility
 
 **Getting Access**
 
-The tutor receives login credentials from Yisroel Meir's parents - a separate PIN for tutor mode. It's view-only access, which is perfect. The tutor doesn't need to change anything, just see progress to align teaching sessions effectively.
+The tutor receives a separate 4-digit PIN from the student (or parent). Tutor mode provides read-only access to all progress data. Available for both child and adult accounts.
 
-**Weekly Pre-Session Check**
+**Pre-Session Check**
 
-Every Monday morning before the weekly tutoring session, the tutor logs into tutor mode and reviews:
-- Which Mishnayos has Yisroel Meir completed since last week? (Sees the completion log with dates)
-- What's due for chazara today or this week? (Sees the chazara queue)
-- Overall pace - is he on track? Falling behind? Ahead? (Sees on-track status)
+Before each session, the tutor logs into tutor mode and reviews: which items have been completed since last session, what's due for chazara, and overall pace status. This takes 3-4 minutes and transforms how sessions are planned.
 
-This takes 3-4 minutes and completely transforms how the tutor plans the session.
+**Session Focus**
 
-**Teaching Focus Adjustment**
-
-During the Tuesday tutoring session, the tutor notices Yisroel Meir completed Masechta Berachos learning stage but has several Mishnayos due for chazara 1. Instead of pushing forward with new masechtos, the tutor focuses the session on reviewing those specific Mishnayos, reinforcing retention. The app's data shows exactly where to focus.
-
-**Progress Monitoring Over Time**
-
-Every few months, the tutor reviews overall progress trends:
-- Are there patterns in which masechtos he completes faster?
-- Is the chazara piling up, or is he keeping pace?
-- Does the pace suggest he'll finish on time for his bar mitzvah?
-
-The tutor uses these insights to adjust teaching approach and provide encouragement or additional support where needed.
-
-**Celebration Moments**
-
-When Yisroel Meir completes an entire seder, the tutor sees it in the dashboard and acknowledges the milestone during their next session. "I saw you finished Seder Zeraim - that's incredible!" The real-time visibility lets the tutor celebrate achievements that might otherwise go unnoticed.
+During the session, the tutor uses progress data to focus on items due for review rather than just pushing forward. The app's data shows exactly where to focus.
 
 **This journey reveals requirements for:**
-- Separate PIN-protected tutor mode (different from parent PIN)
-- View-only access (no edit capabilities)
-- Completion log visibility (what's been completed, when, which stage)
-- Chazara queue visibility (what's due for review)
+
+- Separate PIN-protected tutor mode (any account type)
+- Read-only access enforcement
+- Completion history with timestamps
+- Chazara queue visibility
 - On-track status and overall progress metrics
-- Real-time sync (tutor sees latest data)
-- Progress breakdown by seder/masechta
-- Historical completion data (trends over time)
-
-### Journey Requirements Summary
-
-**From Yisroel Meir's Journey:**
-- Personalized onboarding and setup
-- Multi-track system with bookmarks (personal/school/tutor)
-- 3-stage learning cycle with immutable progress
-- Smart adaptive scheduler (personal track only)
-- Daily recommendations
-- Completion UI with animations and feedback
-- Streak tracking and protection
-- Multi-view progress dashboards
-- Mystery rewards with progress visualization
-- Bulk masechta management
-
-**From Parent Journey:**
-- PIN-protected parent mode
-- Reward catalog management (CRUD operations)
-- Simple analytics dashboard
-- Bulk masechta marking
-- Track management (add/remove optional tracks)
-- Point value configuration
-- Notification system for milestones
-- Minimal-time-investment UX design
-
-**From Tutor Journey:**
-- Separate PIN-protected tutor mode
-- View-only access enforcement
-- Completion log visibility with timestamps
-- Chazara queue display
-- On-track status calculations
-- Real-time Firebase sync
-- Progress breakdowns (seder/masechta/overall)
-- Historical trend data
+- Progress breakdowns by curriculum hierarchy
 
 ## Mobile App Specific Requirements
 
-### Project-Type Overview
-
-Mishnayos Tracker is an **Android mobile application** built using **Flutter/Dart** (cross-platform framework), though v1.0 deployment targets Android exclusively. The app leverages mobile-specific capabilities including offline-first architecture, local notifications, encrypted secure storage, and background synchronization. The mobile platform choice reflects the target user's daily usage pattern - a 10-year-old who needs quick, flexible access throughout the day on his personal Android device.
-
-### Technical Architecture Considerations
+### Technical Architecture
 
 **Cross-Platform Framework with Single-Platform Deployment:**
-- **Framework:** Flutter/Dart provides cross-platform codebase
+
+- **Framework:** Flutter/Dart (cross-platform codebase)
 - **v1.0 Target:** Android only (API level 21+ / Android 5.0 Lollipop+)
-- **Future Expansion:** iOS support deferred to v2.0+ (framework supports it, but separate development effort)
-- **Rationale:** Flutter chosen for rapid development, native performance, rich UI capabilities, and future iOS portability
+- **Future Expansion:** iOS deferred to post-v1.0
 
 **Performance Targets:**
-- **60fps rendering** for smooth scrolling, animations, and transitions on mid-range Android devices
-- **Sub-2-second startup time** to usable state
-- **Sub-500ms scheduler calculations** for daily recommendations
-- **Sub-100ms database queries** even with thousands of completion records
-- **Minimal battery drain** from background sync operations
+
+- 60fps rendering on mid-range Android devices
+- Sub-2-second startup to usable state
+- Sub-500ms scheduler calculations across all active curricula
+- Sub-100ms database queries with thousands of completion records
+- Minimal battery drain from sync operations
 
 ### Platform Requirements
 
-**Android Platform:**
-- **Minimum SDK:** API 21 (Android 5.0 Lollipop)
-- **Target SDK:** Latest stable Android version at release
-- **Device Classes:** Mid-range Android phones and tablets (no flagship-only features)
-- **Screen Support:** Responsive layouts for 5" phones to 10" tablets
-- **Orientation:** Portrait primary, landscape supported for viewing progress dashboards
+**Android:**
 
-**Distribution Method:**
-- **v1.0:** Direct APK installation (sideloading for personal use)
-- **v2.0+:** Google Play Store distribution (requires compliance process)
+- Minimum SDK: API 21 (Android 5.0 Lollipop)
+- Target SDK: Latest stable Android version
+- Device classes: Mid-range phones and tablets
+- Screen support: 5" phones to 10" tablets
+- Orientation: Portrait primary, landscape supported for progress views
 
-**Development Environment:**
-- Flutter SDK (stable channel)
-- Android Studio / VS Code with Flutter extensions
-- Android device or emulator for testing
+**Distribution:**
+
+- v1.0: Direct APK installation (sideloading)
+- Future: Google Play Store distribution
 
 ### Device Permissions
 
-**Required Permissions:**
+**Required:**
 
-**Storage:**
-- **Local database storage:** SQLite database for 4,192 Mishnayos and completion log
-- **Secure storage:** Encrypted PIN storage using `flutter_secure_storage`
-- **App data directory:** Configuration, cache, temporary files
+- **Storage:** SQLite database, secure PIN storage, app data
+- **Notifications:** Local scheduled notifications (Android 13+ runtime permission)
+- **Network (Optional):** Firebase sync, Sefaria API content fetching
 
-**Notifications:**
-- **Local scheduled notifications:** Daily learning reminders via `flutter_local_notifications`
-- **Notification permission:** Required on Android 13+ (runtime permission)
+**Not Required:**
 
-**Network (Optional):**
-- **Internet access:** Background Firebase sync when online
-- **Network state detection:** `connectivity_plus` to detect online/offline state
-- **Graceful degradation:** All core features work without network permission
-
-**NO permissions required for:**
-- Camera
-- Location
-- Contacts
-- Microphone
-- Biometrics
-- Phone state
-- SMS
-- Calendar access (uses kosher_dart library for calculations, no device calendar integration)
+- Camera, Location, Contacts, Microphone, Biometrics, Phone state, SMS, Calendar access
 
 ### Offline Mode
 
-**Offline-First Architecture (Critical Requirement):**
+**Offline-First Architecture:**
 
-**Design Philosophy:**
-- **SQLite is source of truth:** Local database is canonical, not Firebase
-- **Offline by default:** App fully functional without network connectivity
-- **Background sync:** Firebase sync is enhancement, not requirement
-- **User experience:** Zero difference between online/offline for core operations
-
-**Offline Capabilities:**
-- **Browse Mishnayos:** Navigate seder/masechta/perek structure offline
-- **Mark completions:** All 3 stages (learning, chazara 1, chazara 2) work offline
-- **View progress:** Dashboards, charts, statistics calculate from local data
-- **Smart scheduler:** Daily recommendations compute locally
-- **Streak tracking:** Maintains streak counter offline
-- **Points system:** Accumulates points locally
-- **Parent/Tutor modes:** PIN authentication and mode access work offline
-
-**Requires Network:**
-- **First-launch sync:** Initial download of 4,192 Mishnayos from Firebase to SQLite (resumable with checkpoints)
-- **Background sync:** Delta sync of local completions to Firebase (exponential backoff retry)
-- **Device transfer:** Restoring data on new device requires one-time sync
+- SQLite is source of truth (local database is canonical, not Firebase)
+- All core features work without network: browse content, mark completions, view progress, smart scheduler, streak tracking, parent/tutor modes
+- Network required for: first-time content import from Sefaria, multi-device sync, new-device data restore
 
 **Sync Strategy:**
-- **Conflict resolution:** Last-write-wins with UTC timestamps
-- **Delta sync only:** Only changed records sync (not full database)
-- **Automatic retry:** Exponential backoff for failed syncs
-- **Battery-aware:** Respects battery saver mode, defers non-critical sync
+
+- Push-on-write: local writes trigger async Firestore push (queued if offline)
+- Pull-on-launch: app startup pulls latest from Firestore and merges with local
+- Foreground listeners: real-time Firestore listeners while app is active
+- Conflict resolution: additive merge for completions (append-only), last-write-wins with UTC timestamps for mutable data
 
 ### Push Strategy
 
 **Local Notifications Only (No Cloud Messaging):**
 
-**Technology:**
-- **Library:** `flutter_local_notifications` package
-- **Type:** Local scheduled notifications (NOT Firebase Cloud Messaging)
-- **Scope:** All notifications generated and scheduled locally on device
+- Library: `flutter_local_notifications`
+- All notifications generated and scheduled locally on device
 
 **Notification Types:**
 
-**Daily Learning Reminder:**
-- **Trigger:** Daily at configurable time (default 7:00 PM)
-- **Content:** "Time to learn! You have [N] tasks today"
-- **Purpose:** Gentle daily reminder to maintain learning habit
-- **User control:** Can enable/disable, change time, or disable entirely in settings
-
-**Streak Protection Alert:**
-- **Trigger:** If user hasn't opened app by 9:00 PM and has active streak
-- **Content:** "Don't break your [N]-day streak!"
-- **Purpose:** Protect valuable multi-week/month streaks from accidental breaks
-- **User control:** Can disable streak alerts separately from daily reminders
-
-**Reward Earned Notification:**
-- **Trigger:** When point threshold crossed for mystery reward
-- **Content:** "Mystery reward unlocked! Ask your parents to reveal it."
-- **Purpose:** Immediate excitement and parent notification
-- **Delivery:** Instant notification when reward threshold reached
-
-**Permission Handling:**
-- **Android 12 and below:** Notifications work by default
-- **Android 13+:** Runtime permission request on first launch
-- **Graceful degradation:** App works fully without notification permission (just no reminders)
-
-**NO Cloud Messaging Requirements:**
-- No Firebase Cloud Messaging (FCM) integration
-- No server-triggered push notifications
-- No remote notification payloads
-- Simplified privacy and battery profile
+- **Daily Learning Reminder:** Configurable time (default 7:00 PM), "You have X tasks across Y curricula today"
+- **Streak Protection Alert:** If no learning by 9:00 PM and active streak exists, "Your X-day streak is at risk!"
+- **Reward Earned:** Instant when point threshold crossed, "Mystery reward earned!"
+- **Shabbos/Yom Tov quiet mode:** Suppress notifications during Shabbos (configurable)
 
 ### Store Compliance
 
 **v1.0 - Direct APK Distribution:**
 
-**No Play Store Compliance Required:**
-- Distributed as APK file via direct install (sideloading)
-- Private personal use for one family
-- No public distribution or monetization
-- No Play Store policies apply
+- No Play Store compliance required
+- Valid signing certificate, app icon, standard Android manifest
 
-**Basic Android APK Requirements:**
-- Valid signing certificate (debug or release)
-- Proper app icon and launcher configuration
-- Standard Android manifest permissions
-- Installation instructions for parents
+**Future - Google Play Store:**
 
-**v2.0+ - Google Play Store Preparation:**
-
-When pursuing public release, will require:
-
-**Legal/Compliance:**
-- Privacy policy (hosted URL)
-- Terms of service
-- Age rating declaration (PEGI, ESRB)
-- Data handling transparency
-- COPPA compliance (if targeting children under 13 in US)
-
-**Technical Requirements:**
-- Release signing certificate (production)
-- App signing by Google Play
-- Target latest Android API level (Google requirement)
-- 64-bit architecture support
-- Smaller APK size optimization
-
-**Store Listing:**
-- App description, screenshots, feature graphic
-- Localization (English + Hebrew if desired)
-- Content rating questionnaire
-- Developer account ($25 one-time fee)
-
-**Privacy & Security:**
-- Firebase security rules hardened for multi-user
-- User data isolation per family account
-- Email/password authentication (replaces anonymous auth)
-- Data deletion capability (GDPR compliance)
-- Crashlytics for production monitoring
-
-**Testing:**
-- Internal testing track
-- Closed beta testing with volunteer families
-- Production rollout phased by percentage
-
-### Implementation Considerations
-
-**Flutter-Specific Best Practices:**
-- **State management:** Provider or Riverpod for app-wide state
-- **Dependency injection:** get_it for service locator pattern
-- **Code architecture:** Clean architecture with presentation/domain/data layers
-- **Testing:** Unit tests (80%+ business logic), widget tests, integration tests
-
-**Android-Specific Optimizations:**
-- **ProGuard/R8:** Code shrinking and obfuscation for release builds
-- **App bundles:** Use AAB format for smaller download size (v2.0+)
-- **Background work:** WorkManager for reliable background sync
-- **Battery optimization:** Respect Doze mode, use efficient wake locks
-
-**Hebrew Language Support:**
-- **RTL layout:** Proper right-to-left layout for Hebrew text
-- **Text rendering:** Flutter handles bidirectional text (Hebrew + English)
-- **Fonts:** Include Hebrew-compatible fonts (possibly Noto Sans Hebrew)
-- **Character encoding:** UTF-8 throughout for proper Hebrew display
-- **Sefaria API:** Returns Hebrew text correctly formatted
-
-**Accessibility:**
-- Material Design 3 provides baseline accessibility
-- Semantic labels for screen readers (future enhancement)
-- Sufficient touch target sizes (48dp minimum)
-- Color contrast ratios meeting WCAG AA standards
+- Privacy policy, terms of service, age rating
+- COPPA compliance if targeting children
+- Data deletion capability (GDPR)
+- Firebase Crashlytics for production monitoring
 
 ## Functional Requirements
 
-### Learning Content & Structure
+### Content & Curriculum Management
 
-- FR1: System can provide complete database of 4,192 Mishnayos organized by seder/masechta/perek structure
-- FR2: Users can browse Mishnayos content hierarchically (seder → masechta → perek → individual Mishna)
-- FR3: Users can view Mishna text in both Hebrew and English
-- FR4: System can attribute content to Sefaria API source
+- FR1: System provides five curricula (Mishnayos, Bavli, Yerushalmi, Mishna Berurah, Chumash) sourced from Sefaria API
+- FR2: Users browse curriculum content hierarchically through up to 4 levels of generic hierarchy
+- FR3: Users view content text in Hebrew and English from Sefaria
+- FR4: System attributes content to Sefaria API source
+- FR5: Users activate and deactivate curricula at any time without losing progress data
+- FR6: System imports curriculum content from Sefaria with progress indicators and error recovery
+- FR7: System populates curriculum hierarchy configuration (level labels and depth) per curriculum
 
 ### Multi-Track Learning Management
 
-- FR5: Users can manage up to 3 learning tracks (personal, school, tutor) with personal track mandatory
-- FR6: Users can add or remove optional tracks (school/tutor) as circumstances change
-- FR7: System can maintain separate "where he's up to" bookmark for each active track
-- FR8: System can prevent a single Mishna from being assigned to multiple tracks simultaneously
-- FR9: Users can designate which track a Mishna belongs to when marking progress
+- FR8: Users manage up to 3 learning tracks per curriculum (personal mandatory, school/tutor optional)
+- FR9: Users add or remove optional tracks per curriculum as circumstances change
+- FR10: System maintains separate bookmarks per track per curriculum
+- FR11: System prevents the same content item's stage from being completed under multiple tracks within a curriculum
+- FR12: Users designate which track a completion belongs to (auto-assigned if only personal active)
 
-### 3-Stage Learning Cycle
+### Configurable N-Stage Learning Cycle
 
-- FR10: Users can mark a Mishna as completed for learning stage (stage 1)
-- FR11: Users can mark a Mishna as completed for chazara 1 (review stage 2)
-- FR12: Users can mark a Mishna as completed for chazara 2 (review stage 3)
-- FR13: System can enforce immutability - once a stage is marked complete, it cannot be unmarked
-- FR14: System can maintain append-only completion log with timestamps for all stage completions
-- FR15: System can track which Mishnayos are due for chazara 1 (next day after learning)
-- FR16: System can track which Mishnayos are due for chazara 2 (7 days after chazara 1)
+- FR13: Users mark a content item as completed for a specific stage within a specific track
+- FR14: System enforces stage progression (must complete stage N before stage N+1 for same item)
+- FR15: System enforces immutability (completed stages cannot be unmarked, append-only log)
+- FR16: System awards configurable points per stage per curriculum on completion
+- FR17: System advances bookmark to next item in learning order on first-stage completion
+- FR18: System syncs completions to Firestore via push-on-write
+- FR19: Users bulk-mark multiple items as completed for a stage in one action
+- FR20: System maintains transaction safety (completion + bookmark update + points in single transaction)
 
-### Smart Scheduling & Recommendations (Personal Track Only)
+### Stage Configuration
 
-- FR17: System can generate daily recommendations for personal track showing new learning and chazara tasks
-- FR18: System can calculate optimal daily task count based on bar mitzvah deadline and current progress
-- FR19: System can adapt recommendations when user falls behind or accelerates ahead of pace
-- FR20: System can balance new learning with chazara pile-up to prevent overload
-- FR21: System can automatically schedule chazara tasks based on completion timestamps
+- FR21: Users customize learning stages per curriculum (add, edit, delete, reorder stages)
+- FR22: System provides default stages for all curricula (learn/0 days, chazara 1/+1 day, chazara 2/+7 days)
+- FR23: "Learn" stage (stage_order=1, delay_days=0) cannot be deleted
+- FR24: Stage changes apply to future scheduling only (existing completions unaffected)
+- FR25: Users reset stages to defaults per curriculum
+- FR26: System syncs stage definitions to Firestore per curriculum
+
+### Learning Order
+
+- FR27: Users customize content item learning order per curriculum via drag-and-drop
+- FR28: Default order uses natural Sefaria order (content_items.sort_order)
+- FR29: Users reset learning order to default (deletes custom ordering)
+- FR30: Scheduler and bookmark advancement respect custom learning order
+
+### Smart Scheduling & Recommendations
+
+- FR31: System generates daily task recommendations per curriculum based on stage definitions, learning order, goal deadline, and current progress
+- FR32: System adapts daily load when learner falls behind or accelerates ahead
+- FR33: System balances new learning with chazara load to prevent pile-up
+- FR34: System schedules chazara tasks based on configurable delay_days per stage
+- FR35: System composes cross-curriculum daily plan from all active curriculum schedules
+- FR36: System enforces total daily load cap (configurable max tasks per day)
+- FR37: Scheduler runs for personal track only (school/tutor tracks are externally paced)
+
+### Goal Management
+
+- FR38: Users set per-curriculum completion goals with target dates
+- FR39: Users set target dates using Gregorian or Hebrew calendar
+- FR40: Users set multiple goals per curriculum (e.g., section-level deadlines)
+- FR41: Users modify or remove goals at any time
+- FR42: System tracks pace per goal (ahead/on-pace/behind with projected completion date)
+- FR43: Users learn without deadlines (no-deadline mode with chazara-only recommendations)
 
 ### Progress Tracking & Visualization
 
-- FR22: Users can view overall progress as percentage of 4,192 Mishnayos completed
-- FR23: Users can view progress broken down by seder
-- FR24: Users can view progress broken down by masechta
-- FR25: Users can view progress broken down by perek
-- FR26: Users can view which track contributed each completion
-- FR27: Users can see current pace status (days ahead/on-pace/behind target)
-- FR28: Users can see projected completion date based on current pace
-- FR29: Users can view completion history over time
+- FR44: Users view cross-curriculum dashboard with summary cards for all active curricula
+- FR45: Users view per-curriculum progress with hierarchy-level breakdowns
+- FR46: Users view which track contributed each completion
+- FR47: Users view pace status per curriculum (days ahead/on-pace/behind)
+- FR48: Users view projected completion date based on current pace
+- FR49: Users view completion history over time with filters (curriculum, track, stage, date range)
+- FR50: Users view completions-over-time charts and cumulative progress
+- FR51: Users view streak calendar highlighting days with learning activity
 
-### Gamification & Motivation System
+### Gamification & Motivation
 
-- FR30: System can award points for completing learning stages (configurable, default 10 points)
-- FR31: System can award points for completing chazara 1 (configurable, default 5 points)
-- FR32: System can award points for completing chazara 2 (configurable, default 5 points)
-- FR33: Users can track total points accumulated over time
-- FR34: Users can view points earned over time via charting
-- FR35: System can track consecutive days of app usage (streak counter)
-- FR36: Users can view current streak length and maximum streak achieved
-- FR37: System can display mystery rewards with progress bars showing points needed
-- FR38: System can notify when mystery reward point threshold is reached
-- FR39: Parents can reveal mystery reward details when earned
+- FR52: System accumulates points per curriculum from stage completions (configurable values)
+- FR53: System tracks global streak (consecutive days with any curriculum completion)
+- FR54: Users view current streak and max streak
+- FR55: System displays mystery rewards with progress bars showing points needed
+- FR56: System notifies when mystery reward point threshold reached
+- FR57: Parents reveal mystery reward details when earned (child mode)
+- FR58: Adults manage their own rewards (adult mode)
+- FR59: Child mode displays full gamification (animations, celebrations); adult mode displays minimal or optional
 
-### Parent Mode Capabilities
+### Parent Mode (Child Accounts Only)
 
-- FR40: Parents can access PIN-protected parent mode (4-digit PIN)
-- FR41: Parents can manage mystery reward catalog (add/edit/delete rewards with point thresholds)
-- FR42: Parents can bulk mark entire masechtas as already completed during initial onboarding
-- FR43: Parents can configure point values for each learning stage
-- FR44: Parents can add or remove optional tracks (school/tutor)
-- FR45: Parents can view analytics dashboard showing on-track status, completion percentage, and streak
-- FR46: Parents can view all completion history and progress data
+- FR60: Parents access PIN-protected parent mode (4-digit PIN, bcrypt-hashed, device-local)
+- FR61: Parents manage mystery reward catalog (add/edit/delete rewards with point thresholds)
+- FR62: Parents configure point values per stage per curriculum
+- FR63: Parents add or remove school/tutor tracks per curriculum
+- FR64: Parents view analytics dashboard (on-track status, completion %, streak, recent completions)
+- FR65: Parents view detailed progress and engagement metrics
+- FR66: Parent mode locks out after 5 failed PIN attempts with cooldown
+- FR67: Parent mode not available for adult accounts
 
-### Tutor Mode Capabilities
+### Tutor Mode (Any Account)
 
-- FR47: Tutor can access PIN-protected tutor mode with separate PIN from parent mode
-- FR48: Tutor can view (but not modify) all completion data and progress
-- FR49: Tutor can see completion log with timestamps showing what was completed and when
-- FR50: Tutor can see which Mishnayos are due for chazara
-- FR51: Tutor can view on-track status and overall progress metrics
-- FR52: Tutor can view progress breakdowns by seder/masechta
+- FR68: Tutors access PIN-protected tutor mode (separate 4-digit PIN, device-local)
+- FR69: Tutor mode is read-only (no data modification)
+- FR70: Tutors view completion history with timestamps
+- FR71: Tutors view items due for chazara review, grouped by urgency
+- FR72: Tutors view on-track status and progress metrics per curriculum
+- FR73: Tutors view schedule recommendations (read-only daily task view)
+- FR74: Tutor mode available for both child and adult accounts
 
 ### Onboarding & Setup
 
-- FR53: Users can complete initial app setup including bar mitzvah date configuration
-- FR54: Users can set personalized user information (name, bar mitzvah date in Hebrew calendar)
-- FR55: Parents can configure initial mystery rewards during setup
-- FR56: Parents can bulk mark prior completed masechtas during onboarding
-- FR57: Users can configure learning order preferences for masechtos
+- FR75: Users create accounts with email/password or Google Sign-In
+- FR76: Users select child mode or adult mode during onboarding
+- FR77: Users select which curricula to activate (minimum one required)
+- FR78: Users set per-curriculum goals with deadlines during onboarding (skippable)
+- FR79: Users bulk-mark previously completed content during onboarding
+- FR80: Parents configure initial mystery rewards during child account onboarding
+- FR81: User mode changeable later from settings
 
-### Notification & Reminders
+### Notifications & Reminders
 
-- FR58: Users can receive daily learning reminder notifications at configurable time (default 7:00 PM)
-- FR59: Users can receive streak protection alert if no app usage by 9:00 PM
-- FR60: Users can receive instant notification when mystery reward is earned
-- FR61: Users can enable/disable notification types independently
-- FR62: Users can configure notification times
-- FR63: Parents can receive reward milestone notifications
+- FR82: Users receive daily learning reminders at configurable time (default 7:00 PM)
+- FR83: Users receive streak protection alert if no learning by configurable time (default 9:00 PM)
+- FR84: Users receive instant notification when mystery reward earned
+- FR85: Users enable/disable each notification type independently
+- FR86: Users configure notification times
+- FR87: System suppresses notifications during Shabbos/Yom Tov (configurable)
 
 ### Offline & Data Management
 
-- FR64: Users can access all core features without network connectivity (offline-first)
-- FR65: System can perform first-launch sync to download all 4,192 Mishnayos from Firebase to local database
-- FR66: System can perform background delta sync of local completions to Firebase when online
-- FR67: System can resume interrupted first-launch sync from checkpoint
-- FR68: System can resolve sync conflicts using last-write-wins with UTC timestamps
-- FR69: System can retry failed syncs with exponential backoff
-- FR70: Users can export progress data to JSON for backup
-- FR71: Users can import progress data from JSON backup file
+- FR88: Users access all core features without network connectivity (offline-first)
+- FR89: System pushes local writes to Firestore asynchronously (queued if offline)
+- FR90: System pulls latest data from Firestore on app launch and merges with local
+- FR91: System maintains real-time Firestore listeners while app is in foreground
+- FR92: System resolves conflicts: additive merge for completions, last-write-wins for mutable data
+- FR93: System retries failed syncs with exponential backoff
+- FR94: System restores full state from Firestore on new device sign-in
+- FR95: Users export progress data to JSON for backup
+- FR96: Users import progress data from JSON backup file
 
 ### Security & Access Control
 
-- FR72: System can encrypt and securely store parent PIN using secure storage
-- FR73: System can encrypt and securely store tutor PIN using secure storage
-- FR74: System can authenticate parent mode access via 4-digit PIN
-- FR75: System can authenticate tutor mode access via separate 4-digit PIN
-- FR76: System can enforce view-only permissions for tutor mode (no edit capabilities)
+- FR97: System encrypts and stores parent PIN using flutter_secure_storage with bcrypt hashing
+- FR98: System encrypts and stores tutor PIN separately from parent PIN
+- FR99: PINs are device-local only (never synced to Firestore)
+- FR100: System enforces view-only permissions for tutor mode
+- FR101: System locks out after 5 failed PIN attempts with configurable cooldown
+
+### Account Management
+
+- FR102: Users sign out (local session cleared, data preserved for re-sign-in)
+- FR103: Users delete account (Firestore data deleted, Firebase Auth account deleted, local data cleared)
+- FR104: Users change password (email/password accounts)
+- FR105: Users link additional auth providers (e.g., add Google Sign-In to email account)
 
 ### Calendar & Date Management
 
-- FR77: System can calculate Hebrew calendar dates using kosher_dart library
-- FR78: System can track bar mitzvah deadline (19 Kislev, 5789 / December 7, 2028)
-- FR79: System can calculate days remaining until bar mitzvah
-- FR80: System can use Hebrew calendar for scheduling and display purposes
+- FR106: System calculates Hebrew calendar dates using kosher_dart
+- FR107: System supports Gregorian and Hebrew date pickers for goal deadlines
+- FR108: System stores all dates/times as UTC, converts in presentation layer only
+- FR109: System uses local timezone for streak day boundary
 
-### Completion Animations & Feedback
+### Completion Feedback
 
-- FR81: Users can see satisfying completion animations when marking stages complete
-- FR82: Users can see points popup immediately when earning points
-- FR83: Users can see progress bars fill incrementally with each completion
-- FR84: Users can see streak counter increment with daily usage
+- FR110: Users see completion animations when marking stages complete (scaled by user mode)
+- FR111: Users see points popup when earning points (child mode: celebratory, adult mode: subtle/none)
+- FR112: Users see progress bars fill incrementally with each completion
+- FR113: Users see streak counter increment with daily activity
 
 ## Non-Functional Requirements
 
 ### Performance
 
-**Response Time:**
-- NFR1: App startup must complete to usable state within 2 seconds on mid-range Android devices
-- NFR2: Smart scheduler calculations must complete within 500ms for daily recommendations
-- NFR3: Database queries must return results within 100ms even with thousands of completion records
-- NFR4: User actions (mark complete, navigate, view progress) must respond within 200ms
-
-**Rendering Performance:**
-- NFR5: UI must maintain 60fps during scrolling, animations, and transitions on mid-range Android devices
-- NFR6: Progress bar animations must render smoothly without frame drops
-- NFR7: List scrolling (Mishna browsing) must maintain consistent 60fps performance
-
-**Resource Efficiency:**
-- NFR8: Background sync operations must minimize battery drain (< 2% daily battery impact)
-- NFR9: App memory footprint must not exceed 150MB during normal operation
-- NFR10: First-launch sync must complete within 5 minutes on typical mobile network connection
+- NFR1: App startup to usable state within 2 seconds on mid-range Android devices
+- NFR2: Smart scheduler calculations complete within 500ms across all active curricula
+- NFR3: Database queries return within 100ms even with thousands of completion records
+- NFR4: User actions (mark complete, navigate, view progress) respond within 200ms
+- NFR5: UI maintains 60fps during scrolling, animations, and transitions on mid-range devices
+- NFR6: Progress bar animations render smoothly without frame drops
+- NFR7: List scrolling (content browsing) maintains consistent 60fps
+- NFR8: Background sync operations minimize battery drain (<2% daily battery impact)
+- NFR9: App memory footprint does not exceed 150MB during normal operation
+- NFR10: Content import completes within reasonable time on typical mobile network
 
 ### Reliability & Data Integrity
 
-**Data Persistence:**
-- NFR11: Zero data loss over 3-year usage period - all completion data must be preserved
-- NFR12: Completion log must maintain integrity through device reboots, crashes, and low-memory situations
-- NFR13: SQLite transactions must use automatic rollback on failure to prevent partial writes
-- NFR14: App state must survive device restarts without loss of unsynchronized data
-
-**Crash Resilience:**
-- NFR15: Crash-free rate must exceed 99.9% over the 3-year period
-- NFR16: All errors must be handled gracefully with user-friendly error messages
-- NFR17: Network errors must not cause app crashes or data corruption
-
-**Sync Reliability:**
-- NFR18: First-launch sync must be resumable from checkpoint if interrupted
-- NFR19: Background sync must retry failed operations with exponential backoff (max 5 retries)
-- NFR20: Sync conflicts must resolve using last-write-wins with UTC timestamps
-- NFR21: Firebase quota limits must be monitored with graceful degradation if exceeded
+- NFR11: Zero data loss over the app's lifetime
+- NFR12: Completion log maintains integrity through device reboots, crashes, and low-memory situations
+- NFR13: SQLite transactions use automatic rollback on failure
+- NFR14: App state survives device restarts without loss of unsynchronized data
+- NFR15: Crash-free rate exceeds 99.9%
+- NFR16: All errors handled gracefully with user-friendly messages
+- NFR17: Network errors do not cause crashes or data corruption
+- NFR18: Content import is idempotent and can recover from interruption
+- NFR19: Sync retries failed operations with exponential backoff (max 5 retries)
+- NFR20: Sync conflicts resolve consistently (additive for completions, last-write-wins for mutable)
+- NFR21: Firebase quota limits monitored with graceful degradation
 
 ### Offline Capability
 
-**Core Functionality:**
-- NFR22: All essential features (browse, mark complete, view progress, smart scheduler) must work without network connectivity
-- NFR23: Offline operation must provide identical user experience to online operation for core features
-- NFR24: Local database must serve as source of truth, not Firebase
-
-**Sync Behavior:**
-- NFR25: Background sync must operate battery-efficiently without blocking user actions
-- NFR26: Network state changes must trigger sync automatically when connectivity restored
-- NFR27: Sync must respect Android battery saver mode and defer non-critical operations
+- NFR22: All core features (browse, mark complete, view progress, scheduler) work without network
+- NFR23: Offline operation provides identical user experience to online for core features
+- NFR24: Local SQLite database serves as source of truth
+- NFR25: Background sync operates battery-efficiently without blocking user actions
+- NFR26: Network connectivity restoration triggers sync automatically
+- NFR27: Sync respects Android battery saver mode
 
 ### Security & Privacy
 
-**Authentication:**
-- NFR28: Parent PIN must be encrypted using flutter_secure_storage with bcrypt hashing
-- NFR29: Tutor PIN must be encrypted separately from parent PIN using secure storage
-- NFR30: PIN authentication must lockout after 5 failed attempts with 30-second timeout
-
-**Data Protection:**
-- NFR31: All Firebase communication must use HTTPS/TLS encryption
-- NFR32: Firestore security rules must prevent unauthorized access to user data
-- NFR33: Local data must be stored in app-private directory inaccessible to other apps
-
-**Access Control:**
-- NFR34: Tutor mode must enforce view-only access preventing data modification
-- NFR35: Parent mode must be the only mode with data modification capabilities (beyond child marking completions)
+- NFR28: Parent and tutor PINs encrypted with bcrypt and stored via flutter_secure_storage
+- NFR29: PINs are device-local only (never transmitted or synced)
+- NFR30: PIN authentication locks out after 5 failed attempts with cooldown
+- NFR31: All Firebase communication uses HTTPS/TLS
+- NFR32: Firestore security rules prevent unauthorized access, scoped by user UID
+- NFR33: Local data stored in app-private directory
+- NFR34: Tutor mode enforces view-only access (no data modification)
+- NFR35: Account deletion removes all Firestore user data
 
 ### Integration & Compatibility
 
-**External APIs:**
-- NFR36: Sefaria API integration must handle API failures gracefully with cached fallback
-- NFR37: Hebrew calendar calculations (kosher_dart) must be verified against authoritative sources (Hebcal.com)
-- NFR38: Firebase operations must handle network timeouts gracefully (15-second timeout with retry)
-
-**Platform Compatibility:**
-- NFR39: App must support Android API 21+ (Android 5.0 Lollipop and above)
-- NFR40: App must function correctly on screen sizes from 5" phones to 10" tablets
-- NFR41: App must support both portrait and landscape orientations
-
-**Hebrew Language Support:**
-- NFR42: Hebrew text must render correctly with RTL (right-to-left) layout
-- NFR43: Bidirectional text (Hebrew + English) must display properly
-- NFR44: Hebrew fonts must be included and render clearly on all supported devices
+- NFR36: Sefaria API integration handles failures gracefully with retry
+- NFR37: Hebrew calendar calculations verified against authoritative sources
+- NFR38: Firebase operations handle network timeouts gracefully
+- NFR39: App supports Android API 21+ (Lollipop and above)
+- NFR40: App functions correctly on screen sizes from 5" phones to 10" tablets
+- NFR41: App supports portrait and landscape orientations
+- NFR42: Hebrew text renders correctly with RTL layout
+- NFR43: Bidirectional text (Hebrew + English) displays properly
+- NFR44: Hebrew fonts render clearly on all supported devices
 
 ### Accessibility (Baseline)
 
-**Material Design 3 Compliance:**
-- NFR45: Touch targets must meet minimum 48dp size requirement
-- NFR46: Color contrast ratios must meet WCAG AA standards (4.5:1 for normal text, 3:1 for large text)
-- NFR47: UI must provide semantic structure for future screen reader support
+- NFR45: Touch targets meet minimum 48dp size
+- NFR46: Color contrast ratios meet WCAG AA standards
+- NFR47: UI provides semantic structure for future screen reader support

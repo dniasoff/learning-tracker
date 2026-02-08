@@ -6,10 +6,10 @@ description: 'Design and approve the epics_list that will organize all requireme
 workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories'
 
 # File References
-thisStepFile: '{workflow_path}/steps/step-02-design-epics.md'
-nextStepFile: '{workflow_path}/steps/step-03-create-stories.md'
+thisStepFile: './step-02-design-epics.md'
+nextStepFile: './step-03-create-stories.md'
 workflowFile: '{workflow_path}/workflow.md'
-outputFile: '{planning_artifacts}/epics.md'
+linearMappingFile: '{implementation_artifacts}/linear-mapping.yaml'
 
 # Task References
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
@@ -180,13 +180,69 @@ If user wants changes:
 - Re-present for approval
 - Repeat until approval is received
 
-## CONTENT TO UPDATE IN DOCUMENT:
+## CREATE EPICS IN LINEAR:
 
-After approval, update {outputFile}:
+After approval, create epics in Linear as the single source of truth:
 
-1. Replace {{epics_list}} placeholder with the approved epic list
-2. Replace {{requirements_coverage_map}} with the coverage map
-3. Ensure all FRs are mapped to epics
+**First-time setup: Discover team and project from Linear**
+<check if="linear_mapping_file does not exist OR team_id is empty in mapping file">
+  <critical>MUST query Linear and let user choose - do not assume or skip</critical>
+
+  <action>Query available teams: mcp__linear__list_teams</action>
+  <action>Display numbered list of teams to user:
+    "Available Linear teams:
+     1. Team Name A
+     2. Team Name B
+     ..."
+  </action>
+  <ask>Which team should BMAD use for sprint tracking? (enter number or name)</ask>
+  <action>WAIT for user response before proceeding</action>
+  <action>Store selected team_id and team_name in {linearMappingFile}</action>
+
+  <action>Query projects in selected team: mcp__linear__list_projects with team={selected_team_id}</action>
+  <action>Display numbered list of projects to user:
+    "Available projects in {team_name}:
+     1. Project Name A
+     2. Project Name B
+     ..."
+  </action>
+  <ask>Which project should BMAD use for epics and stories? (enter number or name)</ask>
+  <action>WAIT for user response before proceeding</action>
+  <action>Store selected project_id and project_name in {linearMappingFile}</action>
+
+  <output>Linear configuration saved:
+    Team: {team_name}
+    Project: {project_name}
+  </output>
+</check>
+
+**Ensure labels exist:**
+- Query Linear for existing labels using mcp__linear__list_issue_labels with team={team_id}
+- Create "BMAD-Managed" label if not exists using mcp__linear__create_issue_label
+- Create "Epic-N" labels for each epic (e.g., "Epic-1", "Epic-2") if not exists
+
+**For each approved epic:**
+1. Create parent issue in Linear with mcp__linear__create_issue:
+   - title: "[Epic-{N}] {Epic Title}"
+   - team: {team_id}
+   - project: {project_id}
+   - labels: ["BMAD-Managed", "Epic-{N}"]
+   - description: "{Epic goal statement}\n\n**FRs covered:** {FR list}\n\n**User Outcome:** {What users can accomplish}"
+   - state: "Backlog"
+2. Store issue_id in {linearMappingFile} under epics section
+
+**Update linear-mapping.yaml structure:**
+```yaml
+team_id: {team_id}
+team_name: {team_name}
+project_id: {project_id}
+project_name: {project_name}
+epics:
+  epic-1:
+    linear_issue_id: {issue_id}
+    title: "{Epic Title}"
+stories: {} # Will be populated in step-03
+```
 
 ### 8. Present MENU OPTIONS
 
@@ -194,9 +250,9 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 #### Menu Handling Logic:
 
-- IF A: Execute {advancedElicitationTask}
-- IF P: Execute {partyModeWorkflow}
-- IF C: Save approved epics_list to {outputFile}, update frontmatter, then only then load, read entire file, then execute {nextStepFile}
+- IF A: Read fully and follow: {advancedElicitationTask}
+- IF P: Read fully and follow: {partyModeWorkflow}
+- IF C: Save approved epics_list to {outputFile}, update frontmatter, then read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#8-present-menu-options)
 
 #### EXECUTION RULES:
@@ -208,7 +264,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 ## CRITICAL STEP COMPLETION NOTE
 
-ONLY WHEN C is selected and the approved epics_list is saved to document, will you then load, read entire file, then execute {nextStepFile} to execute and begin story creation step.
+ONLY WHEN C is selected and the approved epics_list is saved to document, will you then read fully and follow: {nextStepFile} to begin story creation step.
 
 ---
 

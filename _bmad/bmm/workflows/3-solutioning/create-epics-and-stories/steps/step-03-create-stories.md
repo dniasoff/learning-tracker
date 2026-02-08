@@ -1,15 +1,15 @@
 ---
 name: 'step-03-create-stories'
-description: 'Generate all epics with their stories following the template structure'
+description: 'Generate all epics with their stories as Linear sub-issues'
 
 # Path Definitions
 workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories'
 
 # File References
-thisStepFile: '{workflow_path}/steps/step-03-create-stories.md'
-nextStepFile: '{workflow_path}/steps/step-04-final-validation.md'
+thisStepFile: './step-03-create-stories.md'
+nextStepFile: './step-04-final-validation.md'
 workflowFile: '{workflow_path}/workflow.md'
-outputFile: '{planning_artifacts}/epics.md'
+linearMappingFile: '{implementation_artifacts}/linear-mapping.yaml'
 
 # Task References
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
@@ -179,13 +179,44 @@ After writing each story:
 - "Is the scope appropriate for a single dev session?"
 - "Are the acceptance criteria complete and testable?"
 
-#### E. Append to Document
+#### E. Create Story in Linear
 
 When story is approved:
 
-- Append it to {outputFile} following template structure
-- Use correct numbering (Epic N, Story M)
-- Maintain proper markdown formatting
+**Create story as Linear sub-issue:**
+1. Load {linearMappingFile} to get epic's Linear issue ID
+2. Generate story key: `{epic_num}-{story_num}-{kebab-case-title}` (e.g., "1-2-user-authentication")
+3. Create sub-issue in Linear with mcp__linear__create_issue:
+   - title: "[{story_key}] {Story Title}"
+   - team: {team_id}
+   - project: {project_id}
+   - parentId: epic's linear_issue_id from {linearMappingFile}
+   - labels: ["BMAD-Managed", "Epic-{N}"]
+   - description: |
+       ## Story
+       As a {user_type},
+       I want {capability},
+       So that {value_benefit}.
+
+       ## Acceptance Criteria
+       **Given** {precondition}
+       **When** {action}
+       **Then** {expected_outcome}
+       **And** {additional_criteria}
+
+       ## FRs Covered
+       {list of FR numbers this story addresses}
+   - state: "Backlog"
+
+4. Store in {linearMappingFile} under stories section:
+   ```yaml
+   stories:
+     {story_key}:
+       linear_issue_id: {issue_id}
+       epic_num: {N}
+       story_num: {M}
+       title: "{Story Title}"
+   ```
 
 ### 4. Epic Completion
 
@@ -209,19 +240,32 @@ After all epics and stories are generated:
 - Confirm all FRs are covered
 - Check formatting consistency
 
-## TEMPLATE STRUCTURE COMPLIANCE:
+## LINEAR ISSUE STRUCTURE:
 
-The final {outputFile} must follow this structure exactly:
+All epics and stories are stored in Linear as the single source of truth:
 
-1. **Overview** section with project name
-2. **Requirements Inventory** with all three subsections populated
-3. **FR Coverage Map** showing requirement to epic mapping
-4. **Epic List** with approved epic structure
-5. **Epic sections** for each epic (N = 1, 2, 3...)
-   - Epic title and goal
-   - All stories for that epic (M = 1, 2, 3...)
-     - Story title and user story
-     - Acceptance Criteria using Given/When/Then format
+**Epic (Parent Issue):**
+- Title: "[Epic-{N}] {Epic Title}"
+- Labels: ["BMAD-Managed", "Epic-{N}"]
+- Description: Epic goal, business value, FRs covered
+
+**Story (Sub-Issue):**
+- Title: "[{story-key}] {Story Title}"
+- Labels: ["BMAD-Managed", "Epic-{N}"]
+- Parent: Epic's issue ID
+- Description:
+  - Story statement (As a/I want/So that)
+  - Acceptance Criteria (Given/When/Then)
+  - FRs covered
+
+**Status Mapping:**
+| Workflow State | Linear Status |
+|----------------|---------------|
+| backlog | Backlog |
+| ready-for-dev (context added) | Todo |
+| in-progress | In Progress |
+| review | In Review |
+| done | Done |
 
 ### 7. Present FINAL MENU OPTIONS
 
@@ -231,9 +275,9 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 #### Menu Handling Logic:
 
-- IF A: Execute {advancedElicitationTask}
-- IF P: Execute {partyModeWorkflow}
-- IF C: Save content to {outputFile}, update frontmatter, then only then load, read entire file, then execute {nextStepFile}
+- IF A: Read fully and follow: {advancedElicitationTask}
+- IF P: Read fully and follow: {partyModeWorkflow}
+- IF C: Save content to {outputFile}, update frontmatter, then read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#7-present-final-menu-options)
 
 #### EXECUTION RULES:
@@ -245,7 +289,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 ## CRITICAL STEP COMPLETION NOTE
 
-ONLY WHEN [C continue option] is selected and [all epics and stories saved to document following the template structure exactly], will you then load and read fully `{nextStepFile}` to execute and begin final validation phase.
+ONLY WHEN [C continue option] is selected and [all epics and stories saved to document following the template structure exactly], will you then read fully and follow: `{nextStepFile}` to begin final validation phase.
 
 ---
 

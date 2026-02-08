@@ -6,8 +6,8 @@ description: 'Discover and inventory all project documents, handling duplicates 
 workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/implementation-readiness'
 
 # File References
-thisStepFile: '{workflow_path}/steps/step-01-document-discovery.md'
-nextStepFile: '{workflow_path}/steps/step-02-prd-analysis.md'
+thisStepFile: './step-01-document-discovery.md'
+nextStepFile: './step-02-prd-analysis.md'
 workflowFile: '{workflow_path}/workflow.md'
 outputFile: '{planning_artifacts}/implementation-readiness-report-{{date}}.md'
 templateFile: '{workflow_path}/templates/readiness-report-template.md'
@@ -77,10 +77,11 @@ Search for each document type using these patterns:
 - Whole: `{planning_artifacts}/*architecture*.md`
 - Sharded: `{planning_artifacts}/*architecture*/index.md` and related files
 
-#### C. Epics & Stories Documents
+#### C. Epics & Stories (Linear)
 
-- Whole: `{planning_artifacts}/*epic*.md`
-- Sharded: `{planning_artifacts}/*epic*/index.md` and related files
+- Query Linear for BMAD-Managed issues to get epics and stories
+- Epics: Issues with titles starting with "[Epic-"
+- Stories: Sub-issues under each epic
 
 #### D. UX Design Documents
 
@@ -162,7 +163,7 @@ Display: **Select an Option:** [C] Continue to File Validation
 
 #### Menu Handling Logic:
 
-- IF C: Save document inventory to {outputFile}, update frontmatter with completed step and files being included, and only then load read fully and execute {nextStepFile}
+- IF C: Save document inventory to {outputFile}, update frontmatter with completed step and files being included, and then read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then redisplay menu
 
 ## CRITICAL STEP COMPLETION NOTE

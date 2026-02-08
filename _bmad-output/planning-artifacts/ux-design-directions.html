@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning Tracker — Design Directions</title>
+<style>
+  :root {
+    --mishnayos: #FF8F00;
+    --bavli: #1565C0;
+    --yerushalmi: #0097A7;
+    --mb: #AD1457;
+    --chumash: #2E7D32;
+    --surface-light: #FFFBFE;
+    --surface-dark: #1C1B1F;
+    --on-surface: #1C1B1F;
+    --on-surface-variant: #49454F;
+    --outline: #79747E;
+    --outline-variant: #CAC4D0;
+    --success: #2E7D32;
+    --warning: #F57F17;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #F5F0EB;
+    color: var(--on-surface);
+    line-height: 1.5;
+  }
+
+  .page-header {
+    background: white;
+    padding: 32px 24px 24px;
+    border-bottom: 1px solid var(--outline-variant);
+    text-align: center;
+  }
+  .page-header h1 { font-size: 28px; font-weight: 400; margin-bottom: 8px; }
+  .page-header p { color: var(--on-surface-variant); font-size: 14px; max-width: 700px; margin: 0 auto; }
+
+  .nav-bar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 24px;
+    background: white;
+    border-bottom: 1px solid var(--outline-variant);
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--outline-variant);
+    border-radius: 20px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { background: #F5F0EB; }
+  .nav-btn.active { background: var(--bavli); color: white; border-color: var(--bavli); }
+
+  .directions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(375px, 1fr));
+    gap: 32px;
+    padding: 32px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .direction {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    display: none;
+  }
+  .direction.visible { display: block; }
+
+  .direction-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--outline-variant);
+  }
+  .direction-header h2 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .direction-header .subtitle { font-size: 13px; color: var(--on-surface-variant); }
+  .direction-header .tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .direction-header .tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #F5F0EB;
+    color: var(--on-surface-variant);
+  }
+
+  /* Phone Frame */
+  .phone-frame {
+    width: 375px;
+    margin: 24px auto;
+    border: 2px solid #E0E0E0;
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--surface-light);
+  }
+
+  .phone-status-bar {
+    height: 24px;
+    background: #F5F5F5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    font-size: 11px;
+    color: var(--on-surface);
+  }
+
+  /* Direction-specific styles */
+
+  /* ===== DIRECTION 1: Clean List ===== */
+  .d1-appbar {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--surface-light);
+  }
+  .d1-appbar .title { font-size: 22px; font-weight: 400; }
+  .d1-appbar .icons { display: flex; gap: 16px; color: var(--on-surface-variant); }
+  .d1-date-row {
+    padding: 4px 16px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+  }
+  .d1-streak { font-weight: 500; color: var(--mishnayos); }
+  .d1-task {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    border-bottom: 1px solid #F0EDE8;
+    min-height: 56px;
+  }
+  .d1-border { width: 3px; flex-shrink: 0; }
+  .d1-content { padding: 10px 16px; flex: 1; }
+  .d1-content .primary { font-size: 15px; direction: rtl; text-align: right; }
+  .d1-content .secondary { font-size: 12px; color: var(--on-surface-variant); margin-top: 2px; }
+  .d1-progress { height: 2px; background: #E8E4DF; margin-top: 4px; border-radius: 1px; }
+  .d1-progress-fill { height: 100%; border-radius: 1px; }
+  .d1-bottom-nav {
+    height: 80px;
+    display: flex;
+    border-top: 1px solid var(--outline-variant);
+    background: var(--surface-light);
+  }
+  .d1-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--on-surface-variant);
+  }
+  .d1-nav-item.active { color: var(--bavli); }
+  .d1-nav-icon { width: 24px; height: 24px; border-radius: 12px; background: currentColor; opacity: 0.3; }
+  .d1-nav-item.active .d1-nav-icon { opacity: 0.15; background: var(--bavli); }
+
+  /* ===== DIRECTION 2: Card Stack ===== */
+  .d2-appbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--surface-light);
+  }
+  .d2-greeting { font-size: 18px; font-weight: 400; }
+  .d2-greeting strong { font-weight: 500; }
+  .d2-header-stats {
+    display: flex;
+    gap: 16px;
+    padding: 0 16px 16px;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+  }
+  .d2-stat { display: flex; align-items: center; gap: 4px; }
+  .d2-stat-value { font-weight: 600; color: var(--on-surface); }
+  .d2-card {
+    margin: 0 16px 12px;
+    border-radius: 16px;
+    border: 1px solid #E8E4DF;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .d2-card-inner { display: flex; }
+  .d2-card-border { width: 4px; flex-shrink: 0; }
+  .d2-card-content { padding: 16px; flex: 1; }
+  .d2-card-primary { font-size: 16px; direction: rtl; text-align: right; font-weight: 400; }
+  .d2-card-secondary { font-size: 13px; color: var(--on-surface-variant); margin-top: 4px; }
+  .d2-card-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--on-surface-variant);
+  }
+  .d2-card-bar { flex: 1; height: 4px; background: #E8E4DF; border-radius: 2px; }
+  .d2-card-bar-fill { height: 100%; border-radius: 2px; }
+
+  /* ===== DIRECTION 3: Grouped Sections ===== */
+  .d3-appbar {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+  .d3-appbar .title { font-size: 20px; font-weight: 500; }
+  .d3-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .d3-section-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .d3-task-row {
+    padding: 10px 16px 10px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #F5F0EB;
+  }
+  .d3-task-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--outline-variant);
+    flex-shrink: 0;
+  }
+  .d3-task-text { flex: 1; }
+  .d3-task-text .primary { font-size: 14px; direction: rtl; text-align: right; }
+  .d3-task-text .secondary { font-size: 11px; color: var(--on-surface-variant); }
+
+  /* ===== DIRECTION 4: Progress Hero ===== */
+  .d4-hero {
+    padding: 24px 16px 20px;
+    text-align: center;
+    background: linear-gradient(180deg, #F0EDFF 0%, var(--surface-light) 100%);
+  }
+  .d4-ring-container { position: relative; width: 120px; height: 120px; margin: 0 auto 12px; }
+  .d4-ring {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 6px solid #E8E4DF;
+    position: relative;
+  }
+  .d4-ring-progress {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    width: 120px;
+    height: 120px;
+  }
+  .d4-ring-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 28px;
+    font-weight: 300;
+  }
+  .d4-ring-sub { font-size: 12px; color: var(--on-surface-variant); }
+  .d4-hero-label { font-size: 14px; color: var(--on-surface-variant); }
+  .d4-hero-streak { font-size: 13px; color: var(--mishnayos); font-weight: 500; margin-top: 4px; }
+  .d4-section-label {
+    padding: 12px 16px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .d4-task {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 12px;
+    border-bottom: 1px solid #F5F0EB;
+  }
+  .d4-task-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .d4-task-info { flex: 1; }
+  .d4-task-info .primary { font-size: 14px; direction: rtl; text-align: right; }
+  .d4-task-info .secondary { font-size: 11px; color: var(--on-surface-variant); }
+
+  /* ===== DIRECTION 5: Calm Focus ===== */
+  .d5-appbar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+  }
+  .d5-focus-card {
+    margin: 8px 16px 16px;
+    padding: 24px 20px;
+    border-radius: 16px;
+    border-left: 4px solid;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .d5-focus-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--on-surface-variant); margin-bottom: 8px; }
+  .d5-focus-primary { font-size: 20px; direction: rtl; text-align: right; margin-bottom: 6px; }
+  .d5-focus-secondary { font-size: 13px; color: var(--on-surface-variant); }
+  .d5-focus-progress { margin-top: 16px; }
+  .d5-focus-bar { height: 6px; background: #E8E4DF; border-radius: 3px; }
+  .d5-focus-bar-fill { height: 100%; border-radius: 3px; }
+  .d5-focus-bar-label { font-size: 11px; color: var(--on-surface-variant); margin-top: 4px; text-align: right; }
+  .d5-up-next-label {
+    padding: 8px 16px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--on-surface-variant);
+  }
+  .d5-queue-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 12px;
+    opacity: 0.5;
+    border-bottom: 1px solid #F5F0EB;
+  }
+  .d5-queue-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .d5-queue-text { font-size: 13px; direction: rtl; text-align: right; flex: 1; }
+  .d5-queue-sub { font-size: 11px; color: var(--on-surface-variant); }
+
+  /* ===== DIRECTION 6: Data Dashboard ===== */
+  .d6-appbar {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+  .d6-appbar .title { font-size: 18px; font-weight: 500; }
+  .d6-stats-row {
+    display: flex;
+    gap: 8px;
+    padding: 0 12px 12px;
+  }
+  .d6-stat-card {
+    flex: 1;
+    padding: 10px 12px;
+    background: #F5F0EB;
+    border-radius: 12px;
+    text-align: center;
+  }
+  .d6-stat-value { font-size: 20px; font-weight: 600; }
+  .d6-stat-label { font-size: 10px; color: var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
+  .d6-curriculum-row {
+    display: flex;
+    gap: 4px;
+    padding: 0 12px 8px;
+  }
+  .d6-curriculum-chip {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 500;
+    color: white;
+  }
+  .d6-task-compact {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 8px;
+    border-bottom: 1px solid #F0EDE8;
+    font-size: 13px;
+  }
+  .d6-task-border { width: 3px; height: 32px; border-radius: 2px; flex-shrink: 0; }
+  .d6-task-info { flex: 1; }
+  .d6-task-info .primary { direction: rtl; text-align: right; font-size: 13px; }
+  .d6-task-info .secondary { font-size: 10px; color: var(--on-surface-variant); }
+  .d6-task-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: #F5F0EB;
+    color: var(--on-surface-variant);
+    white-space: nowrap;
+  }
+
+  /* Description Panel */
+  .direction-description {
+    padding: 20px 24px;
+    border-top: 1px solid var(--outline-variant);
+    background: #FAFAF8;
+  }
+  .direction-description h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .direction-description ul { padding-left: 20px; font-size: 13px; color: var(--on-surface-variant); }
+  .direction-description li { margin-bottom: 4px; }
+  .direction-description .best-for {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #EDE9E3;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .direction-description .best-for strong { font-weight: 600; }
+
+  /* Dark mode variants */
+  .dark-toggle {
+    padding: 12px 24px;
+    text-align: center;
+  }
+  .dark-toggle button {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid var(--outline-variant);
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .phone-frame.dark {
+    background: var(--surface-dark);
+    color: #E6E1E5;
+    border-color: #444;
+  }
+  .phone-frame.dark .phone-status-bar { background: #2B2930; color: #E6E1E5; }
+  .phone-frame.dark .d1-task { border-color: #2B2930; }
+  .phone-frame.dark .d1-content .secondary,
+  .phone-frame.dark .d2-card-secondary,
+  .phone-frame.dark .d3-task-text .secondary { color: #CAC4D0; }
+
+  /* Comparison mode */
+  .compare-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+  .compare-section h2 {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 24px;
+  }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .compare-table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: #F5F0EB;
+    font-weight: 600;
+    border-bottom: 2px solid var(--outline-variant);
+  }
+  .compare-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #E8E4DF;
+    vertical-align: top;
+  }
+  .compare-table tr:hover { background: #FAFAF8; }
+
+  @media (max-width: 800px) {
+    .directions-grid { grid-template-columns: 1fr; }
+    .phone-frame { width: 100%; max-width: 375px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Learning Tracker — Design Directions</h1>
+  <p>Six visual approaches for the Today screen. All directions use the same design foundation (MD3, curriculum colors, RTL content, child/adult modes). They differ in layout philosophy, information density, and visual weight.</p>
+</div>
+
+<div class="nav-bar">
+  <button class="nav-btn active" onclick="showAll()">All Directions</button>
+  <button class="nav-btn" onclick="showOne(1)">1. Clean List</button>
+  <button class="nav-btn" onclick="showOne(2)">2. Card Stack</button>
+  <button class="nav-btn" onclick="showOne(3)">3. Grouped</button>
+  <button class="nav-btn" onclick="showOne(4)">4. Progress Hero</button>
+  <button class="nav-btn" onclick="showOne(5)">5. Calm Focus</button>
+  <button class="nav-btn" onclick="showOne(6)">6. Dashboard</button>
+  <button class="nav-btn" onclick="showCompare()">Compare</button>
+</div>
+
+<div class="directions-grid" id="directionsGrid">
+
+  <!-- ===== DIRECTION 1: Clean List ===== -->
+  <div class="direction visible" data-dir="1">
+    <div class="direction-header">
+      <h2>1. Clean List</h2>
+      <div class="subtitle">Minimal, efficient, Todoist-inspired</div>
+      <div class="tags">
+        <span class="tag">Adult-forward</span>
+        <span class="tag">High density</span>
+        <span class="tag">Thin accents</span>
+      </div>
+    </div>
+    <div class="phone-frame">
+      <div class="phone-status-bar">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="d1-appbar">
+        <span class="title">Today</span>
+        <div class="icons">
+          <span>&#9881;</span>
+        </div>
+      </div>
+      <div class="d1-date-row">
+        <span>&#1499;&#1524;&#1489; &#1496;&#1489;&#1514; &#1514;&#1513;&#1508;&#1524;&#1493; &middot; 6 items</span>
+        <span class="d1-streak">23 days</span>
+      </div>
+
+      <div class="d1-task">
+        <div class="d1-border" style="background: var(--mishnayos)"></div>
+        <div class="d1-content">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1490;&#1523; &#1502;&#1513;&#1504;&#1492; &#1494;&#1523;</div>
+          <div class="secondary">Learn &middot; Personal</div>
+          <div class="d1-progress"><div class="d1-progress-fill" style="width: 58%; background: var(--mishnayos)"></div></div>
+        </div>
+      </div>
+      <div class="d1-task">
+        <div class="d1-border" style="background: var(--bavli)"></div>
+        <div class="d1-content">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1491;&#1507; &#1502;&#1494;</div>
+          <div class="secondary">Learn &middot; Personal</div>
+          <div class="d1-progress"><div class="d1-progress-fill" style="width: 73%; background: var(--bavli)"></div></div>
+        </div>
+      </div>
+      <div class="d1-task">
+        <div class="d1-border" style="background: var(--mishnayos)"></div>
+        <div class="d1-content">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1489;&#1523; &#1502;&#1513;&#1504;&#1492; &#1488;&#1523;</div>
+          <div class="secondary">Chazara 1 &middot; Personal</div>
+          <div class="d1-progress"><div class="d1-progress-fill" style="width: 42%; background: var(--mishnayos)"></div></div>
+        </div>
+      </div>
+      <div class="d1-task">
+        <div class="d1-border" style="background: var(--mb)"></div>
+        <div class="d1-content">
+          <div class="primary">&#1505;&#1497;&#1502;&#1503; &#1497;&#1489; &#1505;&#1506;&#1497;&#1507; &#1490;&#1523;</div>
+          <div class="secondary">Learn &middot; Personal</div>
+          <div class="d1-progress"><div class="d1-progress-fill" style="width: 35%; background: var(--mb)"></div></div>
+        </div>
+      </div>
+      <div class="d1-task">
+        <div class="d1-border" style="background: var(--chumash)"></div>
+        <div class="d1-content">
+          <div class="primary">&#1489;&#1512;&#1488;&#1513;&#1497;&#1514; &#1508;&#1512;&#1511; &#1497;&#1489;</div>
+          <div class="secondary">Learn &middot; Personal</div>
+          <div class="d1-progress"><div class="d1-progress-fill" style="width: 88%; background: var(--chumash)"></div></div>
+        </div>
+      </div>
+      <div class="d1-task">
+        <div class="d1-border" style="background: var(--yerushalmi)"></div>
+        <div class="d1-content">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1488;&#1523; &#1492;&#1500;&#1499;&#1492; &#1491;&#1523;</div>
+          <div class="secondary">Chazara 2 &middot; Personal</div>
+          <div class="d1-progress"><div class="d1-progress-fill" style="width: 25%; background: var(--yerushalmi)"></div></div>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-height: 40px;"></div>
+      <div class="d1-bottom-nav">
+        <div class="d1-nav-item active">
+          <div class="d1-nav-icon"></div>
+          <span>Today</span>
+        </div>
+        <div class="d1-nav-item">
+          <div class="d1-nav-icon"></div>
+          <span>Browse</span>
+        </div>
+        <div class="d1-nav-item">
+          <div class="d1-nav-icon"></div>
+          <span>Progress</span>
+        </div>
+      </div>
+    </div>
+    <div class="direction-description">
+      <h3>Design Philosophy</h3>
+      <ul>
+        <li>Maximum items visible without scrolling (6+ on screen)</li>
+        <li>Thin 3dp border accents — curriculum color is present but understated</li>
+        <li>No card elevation — borderless list rows for minimal visual noise</li>
+        <li>Inline progress bars — micro-sized, non-competing</li>
+        <li>Header: date + count + streak in one compact row</li>
+      </ul>
+      <div class="best-for"><strong>Best for:</strong> Adult mode default. Users who want to scan and tap through quickly. Scales well to 10+ daily items.</div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTION 2: Card Stack ===== -->
+  <div class="direction visible" data-dir="2">
+    <div class="direction-header">
+      <h2>2. Card Stack</h2>
+      <div class="subtitle">Elevated cards, generous spacing</div>
+      <div class="tags">
+        <span class="tag">Child-forward</span>
+        <span class="tag">Spacious</span>
+        <span class="tag">Tactile</span>
+      </div>
+    </div>
+    <div class="phone-frame">
+      <div class="phone-status-bar">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="d2-appbar">
+        <div class="d2-greeting">Ready to learn, <strong>Moshe</strong>?</div>
+        <span>&#9881;</span>
+      </div>
+      <div class="d2-header-stats">
+        <div class="d2-stat">
+          <span class="d2-stat-value">6</span> items today
+        </div>
+        <div class="d2-stat">
+          <span class="d2-stat-value" style="color: var(--mishnayos)">23</span> day streak
+        </div>
+      </div>
+
+      <div class="d2-card">
+        <div class="d2-card-inner">
+          <div class="d2-card-border" style="background: var(--mishnayos)"></div>
+          <div class="d2-card-content">
+            <div class="d2-card-primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1490;&#1523; &#1502;&#1513;&#1504;&#1492; &#1494;&#1523;</div>
+            <div class="d2-card-secondary">Learn &middot; Personal</div>
+            <div class="d2-card-progress">
+              <div class="d2-card-bar"><div class="d2-card-bar-fill" style="width: 58%; background: var(--mishnayos)"></div></div>
+              <span>7 done! 5 to go!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d2-card">
+        <div class="d2-card-inner">
+          <div class="d2-card-border" style="background: var(--bavli)"></div>
+          <div class="d2-card-content">
+            <div class="d2-card-primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1491;&#1507; &#1502;&#1494;</div>
+            <div class="d2-card-secondary">Learn &middot; Personal</div>
+            <div class="d2-card-progress">
+              <div class="d2-card-bar"><div class="d2-card-bar-fill" style="width: 73%; background: var(--bavli)"></div></div>
+              <span>47 done! 17 to go!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d2-card">
+        <div class="d2-card-inner">
+          <div class="d2-card-border" style="background: var(--mishnayos)"></div>
+          <div class="d2-card-content">
+            <div class="d2-card-primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1489;&#1523; &#1502;&#1513;&#1504;&#1492; &#1488;&#1523;</div>
+            <div class="d2-card-secondary">Chazara 1 &middot; Personal</div>
+            <div class="d2-card-progress">
+              <div class="d2-card-bar"><div class="d2-card-bar-fill" style="width: 42%; background: var(--mishnayos)"></div></div>
+              <span>5 done! 7 to go!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d2-card">
+        <div class="d2-card-inner">
+          <div class="d2-card-border" style="background: var(--mb)"></div>
+          <div class="d2-card-content">
+            <div class="d2-card-primary">&#1505;&#1497;&#1502;&#1503; &#1497;&#1489; &#1505;&#1506;&#1497;&#1507; &#1490;&#1523;</div>
+            <div class="d2-card-secondary">Learn &middot; Personal</div>
+            <div class="d2-card-progress">
+              <div class="d2-card-bar"><div class="d2-card-bar-fill" style="width: 35%; background: var(--mb)"></div></div>
+              <span>3 done! 8 to go!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 12px;"></div>
+      <div class="d1-bottom-nav">
+        <div class="d1-nav-item active">
+          <div class="d1-nav-icon"></div>
+          <span>Today</span>
+        </div>
+        <div class="d1-nav-item">
+          <div class="d1-nav-icon"></div>
+          <span>Browse</span>
+        </div>
+        <div class="d1-nav-item">
+          <div class="d1-nav-icon"></div>
+          <span>Progress</span>
+        </div>
+      </div>
+    </div>
+    <div class="direction-description">
+      <h3>Design Philosophy</h3>
+      <ul>
+        <li>Each task is a distinct, elevated card — clear tap targets with 16dp corners</li>
+        <li>4dp curriculum color border on each card</li>
+        <li>Personalized greeting header (child mode)</li>
+        <li>Achievement framing on progress ("7 done! 5 to go!")</li>
+        <li>~4 items visible before scroll — prioritizes clarity over density</li>
+      </ul>
+      <div class="best-for"><strong>Best for:</strong> Child mode default. Users with fewer daily items (3-5). Makes each completion feel like an event.</div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTION 3: Grouped Sections ===== -->
+  <div class="direction visible" data-dir="3">
+    <div class="direction-header">
+      <h2>3. Grouped Sections</h2>
+      <div class="subtitle">Tasks organized by curriculum</div>
+      <div class="tags">
+        <span class="tag">Multi-curriculum</span>
+        <span class="tag">Organized</span>
+        <span class="tag">Scannable</span>
+      </div>
+    </div>
+    <div class="phone-frame">
+      <div class="phone-status-bar">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="d3-appbar">
+        <span class="title">Today &middot; 6 items</span>
+        <span>&#9881;</span>
+      </div>
+
+      <div class="d3-section-header" style="color: var(--mishnayos)">
+        <div class="d3-section-dot" style="background: var(--mishnayos)"></div>
+        Mishnayos
+      </div>
+      <div class="d3-task-row">
+        <div class="d3-task-check" style="border-color: var(--mishnayos)"></div>
+        <div class="d3-task-text">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1490;&#1523; &#1502;&#1513;&#1504;&#1492; &#1494;&#1523;</div>
+          <div class="secondary">Learn &middot; Perek 3: 7/12</div>
+        </div>
+      </div>
+      <div class="d3-task-row">
+        <div class="d3-task-check" style="border-color: var(--mishnayos)"></div>
+        <div class="d3-task-text">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1489;&#1523; &#1502;&#1513;&#1504;&#1492; &#1488;&#1523;</div>
+          <div class="secondary">Chazara 1 &middot; Perek 2: 1/8</div>
+        </div>
+      </div>
+
+      <div class="d3-section-header" style="color: var(--bavli)">
+        <div class="d3-section-dot" style="background: var(--bavli)"></div>
+        Bavli
+      </div>
+      <div class="d3-task-row">
+        <div class="d3-task-check" style="border-color: var(--bavli)"></div>
+        <div class="d3-task-text">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1491;&#1507; &#1502;&#1494;</div>
+          <div class="secondary">Learn &middot; Daf 47/64</div>
+        </div>
+      </div>
+
+      <div class="d3-section-header" style="color: var(--mb)">
+        <div class="d3-section-dot" style="background: var(--mb)"></div>
+        Mishna Berurah
+      </div>
+      <div class="d3-task-row">
+        <div class="d3-task-check" style="border-color: var(--mb)"></div>
+        <div class="d3-task-text">
+          <div class="primary">&#1505;&#1497;&#1502;&#1503; &#1497;&#1489; &#1505;&#1506;&#1497;&#1507; &#1490;&#1523;</div>
+          <div class="secondary">Learn &middot; Siman 12: 3/11</div>
+        </div>
+      </div>
+
+      <div class="d3-section-header" style="color: var(--chumash)">
+        <div class="d3-section-dot" style="background: var(--chumash)"></div>
+        Chumash
+      </div>
+      <div class="d3-task-row">
+        <div class="d3-task-check" style="border-color: var(--chumash)"></div>
+        <div class="d3-task-text">
+          <div class="primary">&#1489;&#1512;&#1488;&#1513;&#1497;&#1514; &#1508;&#1512;&#1511; &#1497;&#1489;</div>
+          <div class="secondary">Learn &middot; Perek 12/50</div>
+        </div>
+      </div>
+
+      <div class="d3-section-header" style="color: var(--yerushalmi)">
+        <div class="d3-section-dot" style="background: var(--yerushalmi)"></div>
+        Yerushalmi
+      </div>
+      <div class="d3-task-row">
+        <div class="d3-task-check" style="border-color: var(--yerushalmi)"></div>
+        <div class="d3-task-text">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1488;&#1523; &#1492;&#1500;&#1499;&#1492; &#1491;&#1523;</div>
+          <div class="secondary">Chazara 2 &middot; Perek 1: 4/7</div>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-height: 20px;"></div>
+      <div class="d1-bottom-nav">
+        <div class="d1-nav-item active"><div class="d1-nav-icon"></div><span>Today</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Browse</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Progress</span></div>
+      </div>
+    </div>
+    <div class="direction-description">
+      <h3>Design Philosophy</h3>
+      <ul>
+        <li>Tasks grouped by curriculum with colored section headers</li>
+        <li>Circle checkbox (curriculum-colored border) instead of card border</li>
+        <li>Clear visual hierarchy: curriculum > task > stage</li>
+        <li>Great for users with 3+ curricula — each section is visually distinct</li>
+        <li>Downside: breaks scheduler priority ordering in favor of curriculum grouping</li>
+      </ul>
+      <div class="best-for"><strong>Best for:</strong> Heavy multi-curriculum users (4-5 curricula). Clear mental model of "what do I have for each seder." Trades scheduler ordering for organizational clarity.</div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTION 4: Progress Hero ===== -->
+  <div class="direction visible" data-dir="4">
+    <div class="direction-header">
+      <h2>4. Progress Hero</h2>
+      <div class="subtitle">Large progress visualization, compact list</div>
+      <div class="tags">
+        <span class="tag">Achievement-driven</span>
+        <span class="tag">Visual progress</span>
+        <span class="tag">Motivating</span>
+      </div>
+    </div>
+    <div class="phone-frame">
+      <div class="phone-status-bar">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="d4-hero">
+        <div class="d4-ring-container">
+          <div class="d4-ring">
+            <svg class="d4-ring-progress" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="54" fill="none" stroke="#E8E4DF" stroke-width="6"/>
+              <circle cx="60" cy="60" r="54" fill="none" stroke="var(--bavli)" stroke-width="6"
+                stroke-dasharray="339.3" stroke-dashoffset="226.2"
+                stroke-linecap="round" transform="rotate(-90 60 60)"/>
+            </svg>
+            <div class="d4-ring-text">2<span class="d4-ring-sub">/6</span></div>
+          </div>
+        </div>
+        <div class="d4-hero-label">items remaining today</div>
+        <div class="d4-hero-streak">23 day streak</div>
+      </div>
+
+      <div class="d4-section-label">Remaining</div>
+      <div class="d4-task">
+        <div class="d4-task-dot" style="background: var(--mb)"></div>
+        <div class="d4-task-info">
+          <div class="primary">&#1505;&#1497;&#1502;&#1503; &#1497;&#1489; &#1505;&#1506;&#1497;&#1507; &#1490;&#1523;</div>
+          <div class="secondary">Mishna Berurah &middot; Learn</div>
+        </div>
+      </div>
+      <div class="d4-task">
+        <div class="d4-task-dot" style="background: var(--yerushalmi)"></div>
+        <div class="d4-task-info">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1488;&#1523; &#1492;&#1500;&#1499;&#1492; &#1491;&#1523;</div>
+          <div class="secondary">Yerushalmi &middot; Chazara 2</div>
+        </div>
+      </div>
+
+      <div class="d4-section-label" style="color: var(--success)">Completed</div>
+      <div class="d4-task" style="opacity: 0.5; text-decoration: line-through;">
+        <div class="d4-task-dot" style="background: var(--mishnayos)"></div>
+        <div class="d4-task-info">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1490;&#1523; &#1502;&#1513;&#1504;&#1492; &#1494;&#1523;</div>
+          <div class="secondary">Mishnayos &middot; Learn</div>
+        </div>
+      </div>
+      <div class="d4-task" style="opacity: 0.5; text-decoration: line-through;">
+        <div class="d4-task-dot" style="background: var(--bavli)"></div>
+        <div class="d4-task-info">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1491;&#1507; &#1502;&#1494;</div>
+          <div class="secondary">Bavli &middot; Learn</div>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-height: 20px;"></div>
+      <div class="d1-bottom-nav">
+        <div class="d1-nav-item active"><div class="d1-nav-icon"></div><span>Today</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Browse</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Progress</span></div>
+      </div>
+    </div>
+    <div class="direction-description">
+      <h3>Design Philosophy</h3>
+      <ul>
+        <li>Large progress ring dominates — every completion visibly fills the ring</li>
+        <li>Remaining/Completed split — completed items stay visible (greyed out)</li>
+        <li>Compact task rows below the hero — information dense once past the ring</li>
+        <li>Streak prominently placed inside the hero area</li>
+        <li>Downside: hero ring consumes ~40% of viewport — less room for tasks</li>
+      </ul>
+      <div class="best-for"><strong>Best for:</strong> Users motivated by visible progress. Child mode with fewer items. Creates strong "filling up" satisfaction as the ring completes.</div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTION 5: Calm Focus ===== -->
+  <div class="direction visible" data-dir="5">
+    <div class="direction-header">
+      <h2>5. Calm Focus</h2>
+      <div class="subtitle">One task prominent, queue dimmed</div>
+      <div class="tags">
+        <span class="tag">Mindful</span>
+        <span class="tag">Low anxiety</span>
+        <span class="tag">Single-task</span>
+      </div>
+    </div>
+    <div class="phone-frame">
+      <div class="phone-status-bar">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="d5-appbar">
+        <span>&#1499;&#1524;&#1489; &#1496;&#1489;&#1514; &#1514;&#1513;&#1508;&#1524;&#1493;</span>
+        <span>1 of 6 &middot; 23 days</span>
+      </div>
+
+      <div class="d5-focus-card" style="border-color: var(--mishnayos);">
+        <div class="d5-focus-label">Next up</div>
+        <div class="d5-focus-primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1490;&#1523; &#1502;&#1513;&#1504;&#1492; &#1494;&#1523;</div>
+        <div class="d5-focus-secondary">Mishnayos &middot; Learn &middot; Personal</div>
+        <div class="d5-focus-progress">
+          <div class="d5-focus-bar"><div class="d5-focus-bar-fill" style="width: 58%; background: var(--mishnayos)"></div></div>
+          <div class="d5-focus-bar-label">Perek 3: 7 of 12</div>
+        </div>
+      </div>
+
+      <div class="d5-up-next-label">Coming up</div>
+      <div class="d5-queue-item">
+        <div class="d5-queue-dot" style="background: var(--bavli)"></div>
+        <div>
+          <div class="d5-queue-text">&#1489;&#1512;&#1499;&#1493;&#1514; &#1491;&#1507; &#1502;&#1494;</div>
+          <div class="d5-queue-sub">Bavli &middot; Learn</div>
+        </div>
+      </div>
+      <div class="d5-queue-item">
+        <div class="d5-queue-dot" style="background: var(--mishnayos)"></div>
+        <div>
+          <div class="d5-queue-text">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1489;&#1523; &#1502;&#1513;&#1504;&#1492; &#1488;&#1523;</div>
+          <div class="d5-queue-sub">Mishnayos &middot; Chazara 1</div>
+        </div>
+      </div>
+      <div class="d5-queue-item">
+        <div class="d5-queue-dot" style="background: var(--mb)"></div>
+        <div>
+          <div class="d5-queue-text">&#1505;&#1497;&#1502;&#1503; &#1497;&#1489; &#1505;&#1506;&#1497;&#1507; &#1490;&#1523;</div>
+          <div class="d5-queue-sub">Mishna Berurah &middot; Learn</div>
+        </div>
+      </div>
+      <div class="d5-queue-item">
+        <div class="d5-queue-dot" style="background: var(--chumash)"></div>
+        <div>
+          <div class="d5-queue-text">&#1489;&#1512;&#1488;&#1513;&#1497;&#1514; &#1508;&#1512;&#1511; &#1497;&#1489;</div>
+          <div class="d5-queue-sub">Chumash &middot; Learn</div>
+        </div>
+      </div>
+      <div class="d5-queue-item">
+        <div class="d5-queue-dot" style="background: var(--yerushalmi)"></div>
+        <div>
+          <div class="d5-queue-text">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1488;&#1523; &#1492;&#1500;&#1499;&#1492; &#1491;&#1523;</div>
+          <div class="d5-queue-sub">Yerushalmi &middot; Chazara 2</div>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-height: 20px;"></div>
+      <div class="d1-bottom-nav">
+        <div class="d1-nav-item active"><div class="d1-nav-icon"></div><span>Today</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Browse</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Progress</span></div>
+      </div>
+    </div>
+    <div class="direction-description">
+      <h3>Design Philosophy</h3>
+      <ul>
+        <li>One prominent task card — full detail, large text, generous padding</li>
+        <li>Queue below at 50% opacity — visible but not competing for attention</li>
+        <li>After completing the focus task, next queue item promotes to focus card</li>
+        <li>Minimal header — date and counter only, no stats or greeting</li>
+        <li>Downside: hides the full picture — user can't easily scan all 6 items</li>
+      </ul>
+      <div class="best-for"><strong>Best for:</strong> Users who feel overwhelmed by a full task list. Creates a "just do the next thing" mindset. Reduces decision fatigue.</div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTION 6: Data Dashboard ===== -->
+  <div class="direction visible" data-dir="6">
+    <div class="direction-header">
+      <h2>6. Data Dashboard</h2>
+      <div class="subtitle">Stats-heavy header, compact list</div>
+      <div class="tags">
+        <span class="tag">Power user</span>
+        <span class="tag">Data-rich</span>
+        <span class="tag">Compact</span>
+      </div>
+    </div>
+    <div class="phone-frame">
+      <div class="phone-status-bar">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="d6-appbar">
+        <span class="title">Today</span>
+        <span>&#9881;</span>
+      </div>
+      <div class="d6-stats-row">
+        <div class="d6-stat-card">
+          <div class="d6-stat-value">6</div>
+          <div class="d6-stat-label">Items</div>
+        </div>
+        <div class="d6-stat-card">
+          <div class="d6-stat-value" style="color: var(--mishnayos)">23</div>
+          <div class="d6-stat-label">Streak</div>
+        </div>
+        <div class="d6-stat-card">
+          <div class="d6-stat-value" style="color: var(--success)">+3d</div>
+          <div class="d6-stat-label">Pace</div>
+        </div>
+      </div>
+      <div class="d6-curriculum-row">
+        <span class="d6-curriculum-chip" style="background: var(--mishnayos)">Mishnayos (2)</span>
+        <span class="d6-curriculum-chip" style="background: var(--bavli)">Bavli (1)</span>
+        <span class="d6-curriculum-chip" style="background: var(--mb)">MB (1)</span>
+        <span class="d6-curriculum-chip" style="background: var(--chumash)">Chumash (1)</span>
+        <span class="d6-curriculum-chip" style="background: var(--yerushalmi)">Yer. (1)</span>
+      </div>
+
+      <div class="d6-task-compact">
+        <div class="d6-task-border" style="background: var(--mishnayos)"></div>
+        <div class="d6-task-info">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1490;&#1523; &#1502;&#1513;&#1504;&#1492; &#1494;&#1523;</div>
+          <div class="secondary">Perek 3: 7/12</div>
+        </div>
+        <span class="d6-task-badge">Learn</span>
+      </div>
+      <div class="d6-task-compact">
+        <div class="d6-task-border" style="background: var(--bavli)"></div>
+        <div class="d6-task-info">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1491;&#1507; &#1502;&#1494;</div>
+          <div class="secondary">Daf 47/64</div>
+        </div>
+        <span class="d6-task-badge">Learn</span>
+      </div>
+      <div class="d6-task-compact">
+        <div class="d6-task-border" style="background: var(--mishnayos)"></div>
+        <div class="d6-task-info">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1489;&#1523; &#1502;&#1513;&#1504;&#1492; &#1488;&#1523;</div>
+          <div class="secondary">Perek 2: 1/8</div>
+        </div>
+        <span class="d6-task-badge">Chazara 1</span>
+      </div>
+      <div class="d6-task-compact">
+        <div class="d6-task-border" style="background: var(--mb)"></div>
+        <div class="d6-task-info">
+          <div class="primary">&#1505;&#1497;&#1502;&#1503; &#1497;&#1489; &#1505;&#1506;&#1497;&#1507; &#1490;&#1523;</div>
+          <div class="secondary">Siman 12: 3/11</div>
+        </div>
+        <span class="d6-task-badge">Learn</span>
+      </div>
+      <div class="d6-task-compact">
+        <div class="d6-task-border" style="background: var(--chumash)"></div>
+        <div class="d6-task-info">
+          <div class="primary">&#1489;&#1512;&#1488;&#1513;&#1497;&#1514; &#1508;&#1512;&#1511; &#1497;&#1489;</div>
+          <div class="secondary">Perek 12/50</div>
+        </div>
+        <span class="d6-task-badge">Learn</span>
+      </div>
+      <div class="d6-task-compact">
+        <div class="d6-task-border" style="background: var(--yerushalmi)"></div>
+        <div class="d6-task-info">
+          <div class="primary">&#1489;&#1512;&#1499;&#1493;&#1514; &#1508;&#1512;&#1511; &#1488;&#1523; &#1492;&#1500;&#1499;&#1492; &#1491;&#1523;</div>
+          <div class="secondary">Perek 1: 4/7</div>
+        </div>
+        <span class="d6-task-badge">Chazara 2</span>
+      </div>
+
+      <div style="flex: 1; min-height: 20px;"></div>
+      <div class="d1-bottom-nav">
+        <div class="d1-nav-item active"><div class="d1-nav-icon"></div><span>Today</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Browse</span></div>
+        <div class="d1-nav-item"><div class="d1-nav-icon"></div><span>Progress</span></div>
+      </div>
+    </div>
+    <div class="direction-description">
+      <h3>Design Philosophy</h3>
+      <ul>
+        <li>Stats header: item count, streak, pace — at a glance</li>
+        <li>Curriculum chips show distribution before scrolling</li>
+        <li>Ultra-compact task rows — all 6 visible without scrolling</li>
+        <li>Stage badge on right side for quick scanning</li>
+        <li>Downside: information-dense header may overwhelm new or child users</li>
+      </ul>
+      <div class="best-for"><strong>Best for:</strong> Adult power users with 5+ curricula. Users who want the full picture at a glance. Data-forward, not emotion-forward.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Comparison Table -->
+<div class="compare-section" id="compareSection" style="display: none;">
+  <h2>Direction Comparison</h2>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>1. Clean List</th>
+        <th>2. Card Stack</th>
+        <th>3. Grouped</th>
+        <th>4. Progress Hero</th>
+        <th>5. Calm Focus</th>
+        <th>6. Dashboard</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Items visible</strong></td>
+        <td>6+</td>
+        <td>3-4</td>
+        <td>5-6</td>
+        <td>4-5</td>
+        <td>1 + queue</td>
+        <td>6+</td>
+      </tr>
+      <tr>
+        <td><strong>Color prominence</strong></td>
+        <td>Minimal (3dp border)</td>
+        <td>Moderate (4dp border)</td>
+        <td>High (section headers)</td>
+        <td>Low (dots only)</td>
+        <td>Moderate (focus card border)</td>
+        <td>High (chips + borders)</td>
+      </tr>
+      <tr>
+        <td><strong>Progress visibility</strong></td>
+        <td>Inline micro-bars</td>
+        <td>Per-card bars + text</td>
+        <td>Per-task text</td>
+        <td>Hero ring + section split</td>
+        <td>Focus card bar</td>
+        <td>Stats header + per-task</td>
+      </tr>
+      <tr>
+        <td><strong>Best mode</strong></td>
+        <td>Adult</td>
+        <td>Child</td>
+        <td>Either</td>
+        <td>Child</td>
+        <td>Either</td>
+        <td>Adult</td>
+      </tr>
+      <tr>
+        <td><strong>Task ordering</strong></td>
+        <td>Scheduler priority</td>
+        <td>Scheduler priority</td>
+        <td>By curriculum</td>
+        <td>Scheduler priority</td>
+        <td>Scheduler priority</td>
+        <td>Scheduler priority</td>
+      </tr>
+      <tr>
+        <td><strong>Scroll needed?</strong></td>
+        <td>No (6 items)</td>
+        <td>Yes (5+ items)</td>
+        <td>Maybe</td>
+        <td>No (with hero)</td>
+        <td>No</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><strong>Scalability</strong></td>
+        <td>Excellent (10+)</td>
+        <td>Limited (5-6)</td>
+        <td>Good (8+)</td>
+        <td>Moderate (6-7)</td>
+        <td>Excellent (any)</td>
+        <td>Excellent (10+)</td>
+      </tr>
+      <tr>
+        <td><strong>Emotional register</strong></td>
+        <td>Neutral/efficient</td>
+        <td>Warm/celebratory</td>
+        <td>Organized/clear</td>
+        <td>Achievement/motivating</td>
+        <td>Calm/mindful</td>
+        <td>Analytical/informed</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  function showAll() {
+    document.querySelectorAll('.direction').forEach(d => d.classList.add('visible'));
+    document.getElementById('compareSection').style.display = 'none';
+    document.getElementById('directionsGrid').style.display = 'grid';
+    updateNav(null);
+  }
+  function showOne(n) {
+    document.querySelectorAll('.direction').forEach(d => {
+      d.classList.toggle('visible', d.dataset.dir == n);
+    });
+    document.getElementById('compareSection').style.display = 'none';
+    document.getElementById('directionsGrid').style.display = 'grid';
+    updateNav(n);
+  }
+  function showCompare() {
+    document.getElementById('directionsGrid').style.display = 'none';
+    document.getElementById('compareSection').style.display = 'block';
+    updateNav('compare');
+  }
+  function updateNav(active) {
+    document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+      btn.classList.remove('active');
+      if (active === null && i === 0) btn.classList.add('active');
+      else if (active === 'compare' && i === 7) btn.classList.add('active');
+      else if (active === i) btn.classList.add('active');
+    });
+  }
+</script>
+
+</body>
+</html>

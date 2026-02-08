@@ -1,9 +1,28 @@
 installation:
-  version: 6.0.0-alpha.22
-  installDate: 2026-01-03T19:32:32.668Z
-  lastUpdated: 2026-01-03T19:32:32.668Z
+  version: 6.0.0-Beta.6
+  installDate: 2026-02-08T11:29:18.311Z
+  lastUpdated: 2026-02-08T18:36:24.948Z
 modules:
-  - core
-  - bmm
+  - name: core
+    version: 6.0.0-Beta.6
+    installDate: 2026-02-08T11:29:18.311Z
+    lastUpdated: 2026-02-08T18:36:24.612Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmm
+    version: 6.0.0-Beta.6
+    installDate: 2026-02-08T11:29:18.286Z
+    lastUpdated: 2026-02-08T18:36:24.613Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: wds
+    version: 0.1.1
+    installDate: 2026-02-08T17:11:33.759Z
+    lastUpdated: 2026-02-08T18:36:24.948Z
+    source: external
+    npmPackage: whiteport-design-studio
+    repoUrl: https://github.com/orvexai/bmad-method-wds-expansion
 ides:
   - claude-code

@@ -1,217 +1,260 @@
-# Mishnayos Tracker
+# Learning Tracker
 
-A personalized Android learning application designed to help track progress through completing all 4,192 Mishnayos of Shas by bar mitzvah.
+A multi-curriculum Torah learning tracker for Android. Track progress across Mishnayos, Gemara Bavli, Yerushalmi, Mishna Berurah, and Chumash with configurable review cycles, intelligent scheduling, and multi-device sync.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Curricula](#curricula)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Planning Artifacts](#planning-artifacts)
 
 ## Overview
 
-Mishnayos Tracker is a mobile application that transforms the ambitious goal of learning the entire Shas Mishnayos into an achievable, gamified journey. Built specifically for a 3-year learning timeline leading up to a bar mitzvah, the app provides intelligent daily recommendations, multi-context learning organization, and motivational features to keep young learners engaged and on track.
+Learning Tracker helps Torah learners (children and adults) maintain consistent daily learning across one or more curricula. The app transforms large-scale learning goals into achievable daily habits through:
 
-## Purpose
+- **Configurable N-stage learning cycles** (learn + chazara stages with user-defined timing)
+- **Per-curriculum adaptive scheduling** that adjusts to individual pace and deadlines
+- **Multi-track support** (personal, school, tutor) per curriculum
+- **Cross-curriculum dashboard** with unified daily task planning
+- **Account-based multi-device sync** with offline-first operation
+- **Child and adult modes** with appropriate engagement levels
 
-Help Yisroel Meir complete all 4,192 Mishnayos by his bar mitzvah on December 7, 2028 (19 Kislev 5789), with:
-- **Smart scheduling** that adapts to his pace
-- **Multi-track learning** for personal, school, and tutor contexts
-- **Gamification** with points, streaks, and mystery rewards
-- **3-stage learning cycle** (learning → chazara 1 → chazara 2)
-- **Offline-first** design for uninterrupted learning
-- **Parent and tutor modes** for monitoring and support
+## Features
 
-## Key Features
+### Multi-Curriculum Content
 
-### Core Learning
-- **Complete Mishna database**: All 4,192 Mishnayos organized by seder/masechta/perek
-- **Bilingual text**: Hebrew (RTL) and English translation from Sefaria API
-- **Hierarchical browsing**: Navigate by seder → masechta → perek → individual Mishna
-- **3-stage completion tracking**: Learning, Chazara 1 (next day), Chazara 2 (7 days later)
-- **Immutable progress log**: Append-only completion records with timestamps
+All content sourced from [Sefaria](https://www.sefaria.org/) API with Hebrew and English text display. Activate and deactivate curricula at any time without losing progress.
 
-### Smart Scheduling
-- **Adaptive daily recommendations**: Calculates optimal task count based on bar mitzvah deadline
-- **Automatic chazara scheduling**: Tracks when reviews are due
-- **Pace monitoring**: Shows days ahead/behind schedule with projected completion date
-- **Overload prevention**: Balances new learning with review pile-up
+### Configurable Learning Stages
+
+Default: learn > chazara 1 (+1 day) > chazara 2 (+7 days). Customize stage count, names, and timing intervals independently per curriculum.
+
+### Smart Scheduler
+
+Per-curriculum parametric scheduling engine. Calculates optimal daily load based on goal deadlines and remaining items. Cross-curriculum composer aggregates all schedules into a unified daily plan.
 
 ### Multi-Track Learning
-- **Personal track** (mandatory): Self-paced learning with smart recommendations
-- **School track** (optional): Separate context for school-based learning
-- **Tutor track** (optional): Independent context for tutoring sessions
-- **Independent bookmarks**: Each track maintains its own "where I'm up to" position
-- **Duplicate prevention**: Each Mishna can only be assigned to one track
 
-### Gamification & Engagement
-- **Points system**: Configurable points for each completion stage (default: 10/5/5)
-- **Streak tracking**: Consecutive days of app usage with longest streak achievement
-- **Mystery rewards**: Parent-configured surprises unlocked at point thresholds
-- **Progress visualization**: Charts and breakdowns by seder, masechta, perek
-- **Completion animations**: Satisfying feedback for each accomplishment
+Personal track (mandatory, AI-driven) plus optional school and tutor tracks per curriculum. Each track maintains its own bookmark. Duplicate prevention within each curriculum.
 
-### Parent Mode (PIN-protected)
-- **Reward management**: Create, edit, reveal mystery rewards
-- **Bulk operations**: Mark entire masechtos as complete during onboarding
-- **Analytics dashboard**: Quick overview of progress, pace, and streaks
-- **Settings control**: Configure point values, manage tracks
-- **Progress monitoring**: View complete completion history
+### Per-Curriculum Goals
 
-### Tutor Mode (PIN-protected, view-only)
-- **Progress visibility**: View all completion data and statistics
-- **Chazara queue**: See which Mishnayos are due for review
-- **Completion log**: Timestamped history of all learning activity
-- **No editing capability**: Read-only access for accountability
+Set completion deadlines using Gregorian or Hebrew calendar. Multiple goals per curriculum. Pace tracking with projected completion dates. No-deadline mode for self-paced learners.
 
-### Offline-First Architecture
-- **Full offline operation**: All core features work without network
-- **SQLite local database**: Source of truth, not cloud
-- **Background sync**: Delta sync to Firebase when online
-- **Resumable first-launch**: Downloads all 4,192 Mishnayos with checkpoint recovery
-- **Conflict resolution**: Last-write-wins using UTC timestamps
+### Drag-and-Drop Learning Order
 
-### Notifications
-- **Daily learning reminders**: Configurable time (default 7:00 PM)
-- **Streak protection**: Alert at 9:00 PM if no app usage for streaks 5+ days
-- **Reward milestones**: Instant notification when mystery reward unlocked
-- **Parent notifications**: Alert parents when rewards are earned
+Customize the sequence of learning units within each curriculum. Default follows natural Sefaria order.
+
+### Child + Adult Modes
+
+- **Child mode:** Full gamification (points, streak celebrations, mystery rewards), parent mode available
+- **Adult mode:** Streamlined progress tracking, optional engagement features, self-managed
+
+### Parent Mode (Child Accounts)
+
+PIN-protected. Reward catalog management, analytics dashboard, point value configuration, track management.
+
+### Tutor Mode (Any Account)
+
+PIN-protected, read-only. Completion history, chazara queue, progress breakdowns.
+
+### Multi-Device Sync
+
+Email/password + Google Sign-In. Push-on-write, pull-on-launch, foreground real-time listeners. Offline queue with persistent retry.
+
+### Gamification
+
+Per-curriculum points, global streak tracking, mystery rewards system. Scaled appropriately by user mode.
+
+## Curricula
+
+| Curriculum | Hierarchy | Items |
+|---|---|---|
+| Mishnayos | seder > masechta > perek > mishna | 4,192 |
+| Gemara Bavli | masechta > daf > amud | ~2,711 |
+| Gemara Yerushalmi | masechta > daf > halacha | varies |
+| Mishna Berurah | siman > seif > seif katan | 697 simanim |
+| Chumash | sefer > parsha > perek > pasuk | 5,845 |
+
+All content is stored in a generic `content_items` table with `level_1` through `level_4` columns. A `curriculum_hierarchy_config` table maps level labels per curriculum.
+
+## Architecture
+
+**Platform:** Flutter/Dart, Android only (API 21+)
+
+**Architecture pattern:** Clean architecture with feature-first organization (15 feature modules).
+
+**Key architectural decisions:**
+
+| ID | Decision | Summary |
+|---|---|---|
+| D1 | Content Modeling | Shared table with generic hierarchy levels |
+| D2 | Authentication | Email/password + Google Sign-In via Firebase Auth |
+| D3 | Stage Storage | Separate `stage_definitions` table per curriculum |
+| D4 | Sync Architecture | Hybrid push/pull with foreground Firestore listeners |
+| D5 | User Mode | Profile field enum (child/adult) with feature flags |
+| D6 | Sefaria Integration | Per-curriculum adapter pattern with common interface |
+| D7 | Learning Order | Separate table (content immutable, order customizable) |
+| D8 | Gamification Scope | Per-curriculum points + global streak |
+
+**Key patterns:**
+
+| ID | Pattern | Rule |
+|---|---|---|
+| P1 | Curriculum ID | `CurriculumId.storageKey` (snake_case) for all persistence |
+| P2 | Not Found | `T?` for single items, `List<T>` (empty) for lists |
+| P3 | Provider Granularity | Family providers with `curriculumId` for scoped data |
+| P4 | Firestore Structure | Flat collections, deterministic IDs for mutable data |
+| P5 | Date/Time | All UTC storage, local timezone for streak day boundary |
+| P6 | Cross-Curriculum | Core layer services for aggregation (never cross-feature imports) |
 
 ## Tech Stack
 
-### Framework & Platform
-- **Flutter** (Android-only for v1.0)
-- **Minimum Android API 21** (Lollipop)
-- **Kotlin** for native code
-- **Material Design 3** with RTL support
+| Category | Technology |
+|---|---|
+| Framework | Flutter 3.38.6 / Dart 3.9.0 |
+| Database | drift ^2.31.0 (SQLite ORM) + drift_flutter |
+| State Management | flutter_riverpod ^3.2.1 + riverpod_generator ^4.0.3 |
+| Navigation | auto_route ^11.1.0 |
+| Data Classes | freezed ^3.2.5 |
+| HTTP | dio ^5.9.1 |
+| Auth | firebase_auth + google_sign_in |
+| Cloud DB | cloud_firestore |
+| Logging | talker ^5.1.13 suite |
+| Testing | mocktail ^1.0.4 |
+| Calendar | kosher_dart |
+| Security | flutter_secure_storage + bcrypt |
+| Code Generation | build_runner (drift, auto_route, freezed, riverpod) |
 
-### State Management & Architecture
-- **Riverpod** with code generation for state management and dependency injection
-- **Clean Architecture** (presentation/domain/data layers)
-- **Feature-first** folder structure
+## Project Structure
 
-### Database & Persistence
-- **SQLite** with drift ORM for local storage
-- **Firebase Cloud Firestore** for cloud backup
-- **flutter_secure_storage** for encrypted PIN storage
-
-### External Integrations
-- **Sefaria API**: Mishna text (Hebrew + English)
-- **kosher_dart**: Hebrew calendar calculations
-- **Firebase Anonymous Auth**: User identification for cloud sync
-
-### Code Generation & Type Safety
-- **build_runner**: Code generation orchestration
-- **freezed**: Immutable data models
-- **json_serializable**: JSON serialization
-- **auto_route**: Type-safe navigation
-- **riverpod_generator**: Provider code generation
-
-### Networking & Logging
-- **dio**: HTTP client with retry logic
-- **talker**: Comprehensive logging framework with in-app viewer
-- **connectivity_plus**: Network state monitoring
-
-### Testing
-- **mocktail**: Unit testing framework
-- **80%+ test coverage** requirement on business logic
-
-## Project Status
-
-**Phase 3: Solutioning - Complete ✅**
-
-The project has completed comprehensive planning with:
-- ✅ Product Requirements Document (PRD)
-- ✅ Technical Architecture Document
-- ✅ Epic and Story Breakdown (11 epics, 63 stories)
-- ✅ All 84 functional requirements mapped to implementation stories
-
-**Next Phase: Implementation (Phase 4)**
-
-Ready to begin development with implementation-ready stories.
-
-## Documentation
-
-### Planning Artifacts
-Located in `_bmad-output/planning-artifacts/`:
-
-- **`prd.md`**: Complete Product Requirements Document
-- **`architecture.md`**: Technical architecture and design decisions
-- **`epics.md`**: Full epic and story breakdown with acceptance criteria
-
-### Requirements Coverage
-- **84 Functional Requirements** covering all user-facing features
-- **47 Non-Functional Requirements** for performance, reliability, security
-- **Complete FR-to-Story mapping** for traceability
-
-## Development Approach
-
-### Epic Delivery Sequence
-1. **Project Foundation & Data Infrastructure** (6 stories)
-2. **Core Learning Cycle & Progress Tracking** (6 stories)
-3. **Multi-Track Learning Management** (5 stories)
-4. **Smart Scheduler & Daily Recommendations** (5 stories)
-5. **Gamification & Engagement System** (5 stories)
-6. **Parent Mode & Reward Management** (8 stories)
-7. **Tutor Mode & Progress Visibility** (5 stories)
-8. **Onboarding & Initial Setup** (5 stories)
-9. **Progress Visualization & Analytics** (5 stories)
-10. **Notification & Reminder System** (6 stories)
-11. **Cloud Sync & Data Management** (7 stories)
-
-Each epic delivers standalone user value and enables subsequent epics without requiring future work.
-
-### Story Structure
-Every story includes:
-- User value statement (As a/I want/So that)
-- Detailed acceptance criteria (Given/When/Then format)
-- Technical implementation details
-- Non-functional requirement references
-- No forward dependencies
-
-## Key Design Principles
-
-### Offline-First
-- Local SQLite database is the source of truth
-- All core features work without connectivity
-- Background sync to Firebase when online
-- No blocking on network operations
-
-### Immutable Progress
-- Completion log is append-only
-- Once marked complete, stages cannot be unmarked
-- Complete audit trail with UTC timestamps
-- Zero data loss guarantee over 3-year usage period
-
-### 3-Year Reliability
-- 99.9%+ crash-free rate requirement
-- Data integrity through device reboots and crashes
-- Graceful error handling throughout
-- Comprehensive logging for debugging
-
-### Performance Targets
-- App startup: < 2 seconds
-- Database queries: < 100ms
-- User actions: < 200ms response time
-- 60fps UI rendering
-- < 2% daily battery impact from background sync
-
-### Security & Privacy
-- Encrypted PIN storage using platform keystore
-- Role-based access control (parent full access, tutor view-only)
-- Firestore security rules preventing unauthorized access
-- HTTPS/TLS for all cloud communication
+```
+learning_tracker/
+├── lib/
+│   ├── main.dart
+│   ├── app.dart
+│   ├── core/
+│   │   ├── constants/        # App constants, curriculum defaults
+│   │   ├── database/         # Drift schema, tables, DAOs
+│   │   ├── enums/            # CurriculumId, UserMode, TrackType
+│   │   ├── logging/          # Talker singleton + observers
+│   │   ├── navigation/       # auto_route config + guards
+│   │   ├── network/          # Dio client, Sefaria fetchers
+│   │   ├── providers/        # Database, dio, Firebase, connectivity
+│   │   ├── services/         # Cross-curriculum aggregator, schedule composer
+│   │   ├── theme/            # Material 3 theme, RTL text styles
+│   │   └── utils/            # Date utils, Hebrew calendar utils
+│   └── features/
+│       ├── auth/             # Email/password + Google Sign-In
+│       ├── onboarding/       # Mode selection, curriculum, goals, bulk mark
+│       ├── content_browsing/ # Hierarchy browsing, text display
+│       ├── learning/         # Mark completion, bookmarks, tracks
+│       ├── scheduler/        # Per-curriculum scheduling engine
+│       ├── dashboard/        # Cross-curriculum home screen
+│       ├── progress/         # Per-curriculum progress views, charts
+│       ├── gamification/     # Points, streaks, rewards
+│       ├── parent_mode/      # Parent dashboard, reward management
+│       ├── tutor_mode/       # Read-only tutor dashboard
+│       ├── notifications/    # Local notification scheduling
+│       ├── settings/         # Stage config, learning order, preferences
+│       └── sync/             # Sync engine, Firestore data source, offline queue
+├── test/
+│   ├── mocks/                # Shared mocktail mocks
+│   ├── fixtures/             # Reusable test data factories
+│   ├── core/                 # Core infrastructure tests
+│   └── features/             # Feature module tests
+├── integration_test/         # End-to-end tests
+└── assets/
+    └── fonts/                # Hebrew fonts
+```
 
 ## Getting Started
 
-*Implementation has not yet begun. This section will be updated once the project structure is initialized.*
+### Prerequisites
 
-## License
+- Flutter SDK 3.38.6+ (stable channel)
+- Android SDK (API 21+)
+- Android device or emulator
 
-Private project for personal use.
+### Setup
 
-## Acknowledgments
+```bash
+# Clone the repository
+git clone <repo-url>
+cd learning_tracker
 
-- **Mishna text** provided by [Sefaria](https://www.sefaria.org)
-- **Hebrew calendar** calculations using kosher_dart library
-- **Planning and architecture** developed with Claude Code
+# Install dependencies
+flutter pub get
 
----
+# Run code generation
+dart run build_runner build --delete-conflicting-outputs
 
-**Project Timeline**: January 2026 - December 2028 (Bar Mitzvah: 19 Kislev 5789 / December 7, 2028)
+# Run the app
+flutter run
+```
 
-**Current Phase**: Ready for Implementation 🚀
+### Testing
+
+```bash
+# Run unit tests
+flutter test
+
+# Run static analysis
+dart analyze
+
+# Check formatting
+dart format --set-exit-if-changed .
+```
+
+## Developer Quick References
+
+**Start here for implementation guidance:**
+
+📚 **[Architecture Quick Reference](_bmad-output/planning-artifacts/architecture-quick-reference.md)** — Explains all D1-D8 decisions, P1-P6 patterns, project structure, key data models, and common queries. AI-friendly and concise.
+
+🎨 **[UX Patterns Quick Reference](_bmad-output/planning-artifacts/ux-patterns-quick-reference.md)** — User modes, navigation patterns, components, design system, color scheme, typography, animations, and accessibility guidelines.
+
+🧪 **[Testing Quick Reference](_bmad-output/planning-artifacts/testing-quick-reference.md)** — Unit/widget/integration test patterns, TDD workflow, mock utilities, and testing checklist.
+
+## Planning Artifacts
+
+Detailed planning documents are in `_bmad-output/planning-artifacts/`:
+
+| Document | Description |
+|---|---|
+| `product-brief-*.md` | Product vision, target users, success metrics, MVP scope |
+| `prd.md` | Full product requirements (113 FRs, 47 NFRs) |
+| `architecture.md` | Full architectural decisions (D1-D8), patterns (P1-P6), complete project structure (1,261 lines) |
+| `architecture-quick-reference.md` | ⭐ Condensed architecture guide for developers (AI-friendly) |
+| `ux-patterns-quick-reference.md` | ⭐ UX patterns and design system reference |
+| `testing-quick-reference.md` | ⭐ Testing patterns and TDD workflow |
+| `ux-design-specification.md` | Complete UX design specification |
+
+### Epic Summary
+
+| Epic | Stories | Scope |
+|---|---|---|
+| 1. Foundation & Infrastructure | 12 | All plumbing (CI/CD, auth, DB, sync, nav, theme) |
+| 2. Content Import & Browsing | 4 | Sefaria import, hierarchy browsing, text display |
+| 3. Core Learning Cycle | 3 | Mark completion, history, bookmarks |
+| 4. Multi-Track Learning | 3 | Track management, assignment, progress |
+| 5. Configurable Stages & Order | 2 | Stage editor, drag-and-drop learning order |
+| 6. Smart Scheduler | 5 | Per-curriculum scheduling, goals, pace tracking |
+| 7. Dashboard & Progress | 3 | Cross-curriculum dashboard, charts |
+| 8. Gamification | 3 | Points, streaks, mystery rewards |
+| 9. Onboarding | 5 | Mode selection, curriculum setup, bulk mark |
+| 10. Parent Mode | 6 | Parent dashboard, rewards, analytics |
+| 11. Tutor Mode | 4 | Read-only tutor dashboard |
+| 12. Notifications | 3 | Reminders, streak alerts, reward notifications |
+| 13. Cloud Sync | 3 | Push/pull sync, real-time listeners |
+| 14. Settings | 4 | Preferences, data export, account management |
+| **Total** | **60** | |
+
+## Attribution
+
+Torah text content provided by [Sefaria](https://www.sefaria.org/).

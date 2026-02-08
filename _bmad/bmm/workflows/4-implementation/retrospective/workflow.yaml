@@ -20,20 +20,14 @@ instructions: "{installed_path}/instructions.md"
 required_inputs:
   - agent_manifest: "{project-root}/_bmad/_config/agent-manifest.csv"
 
-# Smart input file references - handles both whole docs and sharded docs
-# Priority: Whole document first, then sharded version
-# Strategy: SELECTIVE LOAD - only load the completed epic and relevant retrospectives
+# Linear is the single source of truth
+linear_mapping_file: "{implementation_artifacts}/linear-mapping.yaml" # Maps BMAD items to Linear issue IDs
+
+# Retrospectives are saved locally as useful artifacts
+retrospectives_folder: "{implementation_artifacts}"
+
+# Smart input file references - for architecture/PRD context during retrospective
 input_file_patterns:
-  epics:
-    description: "The completed epic for retrospective"
-    whole: "{planning_artifacts}/*epic*.md"
-    sharded_index: "{planning_artifacts}/*epic*/index.md"
-    sharded_single: "{planning_artifacts}/*epic*/epic-{{epic_num}}.md"
-    load_strategy: "SELECTIVE_LOAD"
-  previous_retrospective:
-    description: "Previous epic's retrospective (optional)"
-    pattern: "{implementation_artifacts}/**/epic-{{prev_epic_num}}-retro-*.md"
-    load_strategy: "SELECTIVE_LOAD"
   architecture:
     description: "System architecture for context"
     whole: "{planning_artifacts}/*architecture*.md"
@@ -44,14 +38,3 @@ input_file_patterns:
     whole: "{planning_artifacts}/*prd*.md"
     sharded: "{planning_artifacts}/*prd*/*.md"
     load_strategy: "FULL_LOAD"
-  document_project:
-    description: "Brownfield project documentation (optional)"
-    sharded: "{planning_artifacts}/*.md"
-    load_strategy: "INDEX_GUIDED"
-
-# Required files
-sprint_status_file: "{implementation_artifacts}/sprint-status.yaml"
-story_directory: "{implementation_artifacts}"
-retrospectives_folder: "{implementation_artifacts}"
-
-standalone: true

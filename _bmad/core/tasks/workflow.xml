@@ -1,4 +1,4 @@
-<task id="_bmad/core/tasks/workflow.xml" name="Execute Workflow">
+<task id="_bmad/core/tasks/workflow.xml" name="Execute Workflow" internal="true">
   <objective>Execute given workflow by loading its configuration, following instructions, and producing output</objective>
 
   <llm critical="true">
@@ -81,7 +81,7 @@
               <action>Continue to next step</action>
             </if>
             <if response="p">
-              <action>Start the party-mode workflow {project-root}/_bmad/core/workflows/party-mode/workflow.yaml</action>
+              <action>Start the party-mode workflow {project-root}/_bmad/core/workflows/party-mode/workflow.md</action>
             </if>
             <if
               response="y">
@@ -211,10 +211,11 @@
           <example>
             ✓ Loaded {prd_content} from 5 sharded files: prd/index.md, prd/requirements.md, ...
             ✓ Loaded {architecture_content} from 1 file: Architecture.md
-            ✓ Loaded {epics_content} from selective load: epics/epic-3.md
-            ○ No ux_design files found
+            ✓ Loaded {ux_content} from 3 files: ux/index.md, ux/wireframes.md, ux/flows.md
+            ○ No brownfield files found
           </example>
           <note>This gives workflow transparency into what context is available</note>
+          <note>Epics and stories are managed in Linear - query via MCP tools, not discover_inputs</note>
         </step>
       </flow>
 

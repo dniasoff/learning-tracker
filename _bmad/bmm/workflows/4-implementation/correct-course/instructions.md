@@ -4,6 +4,7 @@
 <critical>You MUST have already loaded and processed: {project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.yaml</critical>
 <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
 <critical>Generate all documents in {document_output_language}</critical>
+<critical>Linear is the single source of truth - query Linear for epics/stories and post changes to Linear</critical>
 
 <critical>DOCUMENT OUTPUT: Updated epics, stories, or PRD sections. Clear, actionable changes. User skill level ({user_skill_level}) affects conversation style ONLY, not document updates.</critical>
 
@@ -12,11 +13,23 @@
 <step n="1" goal="Initialize Change Navigation">
   <action>Confirm change trigger and gather user description of the issue</action>
   <action>Ask: "What specific issue or change has been identified that requires navigation?"</action>
+
+  <action>Load {linear_mapping_file} to get team_id and project_id</action>
+  <check if="linear_mapping_file does not exist OR team_id is empty">
+    <output>Linear mapping not initialized. Run sprint-planning first to configure Linear integration.</output>
+    <action>HALT</action>
+  </check>
+
   <action>Verify access to required project documents:</action>
     - PRD (Product Requirements Document)
-    - Current Epics and Stories
     - Architecture documentation
     - UI/UX specifications
+
+  <action>Query Linear for current epics and stories:
+    mcp__linear__list_issues with team={{team_id}}, project={{project_id}}, label="BMAD-Managed"
+  </action>
+  <action>Store epics (titles starting with "[Epic-") and stories for impact analysis</action>
+
   <action>Ask user for mode preference:</action>
     - **Incremental** (recommended): Refine each edit collaboratively
     - **Batch**: Present all changes at once for review
@@ -24,16 +37,16 @@
 
 <action if="change trigger is unclear">HALT: "Cannot navigate change without clear understanding of the triggering issue. Please provide specific details about what needs to change and why."</action>
 
-<action if="core documents are unavailable">HALT: "Need access to project documents (PRD, Epics, Architecture, UI/UX) to assess change impact. Please ensure these documents are accessible."</action>
+<action if="core documents are unavailable">HALT: "Need access to project documents (PRD, Architecture, UI/UX) to assess change impact. Please ensure these documents are accessible."</action>
 </step>
 
 <step n="0.5" goal="Discover and load project documents">
   <invoke-protocol name="discover_inputs" />
-  <note>After discovery, these content variables are available: {prd_content}, {epics_content}, {architecture_content}, {ux_design_content}, {tech_spec_content}, {document_project_content}</note>
+  <note>After discovery, these content variables are available: {prd_content}, {architecture_content}, {ux_design_content}, {tech_spec_content}, {document_project_content}</note>
 </step>
 
 <step n="2" goal="Execute Change Analysis Checklist">
-  <action>Load and execute the systematic analysis from: {checklist}</action>
+  <action>Read fully and follow the systematic analysis from: {checklist}</action>
   <action>Work through each checklist section interactively with the user</action>
   <action>Record status for each checklist item:</action>
     - [x] Done - Item completed successfully
@@ -48,15 +61,16 @@
 <step n="3" goal="Draft Specific Change Proposals">
 <action>Based on checklist findings, create explicit edit proposals for each identified artifact</action>
 
-<action>For Story changes:</action>
+<action>For Story changes (Linear issues):</action>
 
 - Show old → new text format
-- Include story ID and section being modified
+- Include story key and Linear issue ID
 - Provide rationale for each change
 - Example format:
 
   ```
-  Story: [STORY-123] User Authentication
+  Story: [1-2-user-auth] User Authentication
+  Linear Issue: {{linear_issue_id}}
   Section: Acceptance Criteria
 
   OLD:
@@ -68,6 +82,12 @@
 
   Rationale: Security requirement identified during implementation
   ```
+
+<action>For Epic changes (Linear parent issues):</action>
+
+- Identify affected epics by querying Linear
+- Show current description and proposed changes
+- Note impact on child stories
 
 <action>For PRD modifications:</action>
 
@@ -108,8 +128,8 @@
 
 <action>Section 2: Impact Analysis</action>
 
-- Epic Impact: Which epics are affected and how
-- Story Impact: Current and future stories requiring changes
+- Epic Impact: Which Linear epic issues are affected and how
+- Story Impact: Current and future Linear story issues requiring changes
 - Artifact Conflicts: PRD, Architecture, UI/UX documents needing updates
 - Technical Impact: Code, infrastructure, or deployment implications
 
@@ -120,12 +140,12 @@
   - Potential Rollback: Revert completed work to simplify resolution
   - MVP Review: Reduce scope or modify goals
 - Provide clear rationale for recommendation
-- Include effort estimate, risk assessment, and timeline impact
+- Include risk assessment and scope impact
 
 <action>Section 4: Detailed Change Proposals</action>
 
 - Include all refined edit proposals from Step 3
-- Group by artifact type (Stories, PRD, Architecture, UI/UX)
+- Group by artifact type (Linear Stories, Linear Epics, PRD, Architecture, UI/UX)
 - Ensure each change includes before/after and justification
 
 <action>Section 5: Implementation Handoff</action>
@@ -142,7 +162,7 @@
 <ask>Review complete proposal. Continue [c] or Edit [e]?</ask>
 </step>
 
-<step n="5" goal="Finalize and Route for Implementation">
+<step n="5" goal="Finalize and Apply Changes to Linear">
 <action>Get explicit user approval for complete proposal</action>
 <ask>Do you approve this Sprint Change Proposal for implementation? (yes/no/revise)</ask>
 
@@ -162,9 +182,35 @@
 - **Moderate**: Requires backlog reorganization and PO/SM coordination
 - **Major**: Needs fundamental replan with PM/Architect involvement
 
-<action>Provide appropriate handoff based on scope:</action>
+<action>Apply approved changes to Linear:</action>
 
 </check>
+
+<check if="story changes approved">
+  <action>For each story change:
+    mcp__linear__update_issue with id={{story_issue_id}}, description={{updated_description}}
+  </action>
+  <action>Add comment documenting change:
+    mcp__linear__create_comment with issueId={{story_issue_id}}, body="Story updated via correct-course workflow.\n\nChange: {{change_summary}}\nRationale: {{rationale}}"
+  </action>
+</check>
+
+<check if="epic changes approved">
+  <action>For each epic change:
+    mcp__linear__update_issue with id={{epic_issue_id}}, description={{updated_description}}
+  </action>
+  <action>Add comment documenting change:
+    mcp__linear__create_comment with issueId={{epic_issue_id}}, body="Epic updated via correct-course workflow.\n\nChange: {{change_summary}}\nRationale: {{rationale}}"
+  </action>
+</check>
+
+<check if="new stories need to be created">
+  <action>For each new story:
+    mcp__linear__create_issue with teamId={{team_id}}, projectId={{project_id}}, title="[{{story_key}}] {{story_title}}", description={{story_description}}, labels=["BMAD-Managed"]
+  </action>
+</check>
+
+<action>Provide appropriate handoff based on scope:</action>
 
 <check if="Minor scope">
   <action>Route to: Development team for direct implementation</action>
@@ -190,6 +236,7 @@
 <action>Summarize workflow execution:</action>
   - Issue addressed: {{change_trigger}}
   - Change scope: {{scope_classification}}
+  - Linear issues modified: {{list_of_linear_updates}}
   - Artifacts modified: {{list_of_artifacts}}
   - Routed to: {{handoff_recipients}}
 
@@ -197,9 +244,10 @@
 
 - Sprint Change Proposal document
 - Specific edit proposals with before/after
+- Linear issues updated with changes and comments
 - Implementation handoff plan
 
-<action>Report workflow completion to user with personalized message: "✅ Correct Course workflow complete, {user_name}!"</action>
+<action>Report workflow completion to user with personalized message: "Correct Course workflow complete, {user_name}!"</action>
 <action>Remind user of success criteria and next steps for implementation team</action>
 </step>
 

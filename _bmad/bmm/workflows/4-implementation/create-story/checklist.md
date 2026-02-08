@@ -33,7 +33,7 @@ This is a COMPETITION to create the **ULTIMATE story context** that makes LLM de
 
 ### **When Running from Create-Story Workflow:**
 
-- The `{project_root}/_bmad/core/tasks/validate-workflow.xml` framework will automatically:
+- The `{project-root}/_bmad/core/tasks/validate-workflow.xml` framework will automatically:
   - Load this checklist file
   - Load the newly created story file (`{story_file_path}`)
   - Load workflow variables from `{installed_path}/workflow.yaml`
@@ -49,8 +49,8 @@ This is a COMPETITION to create the **ULTIMATE story context** that makes LLM de
 ### **Required Inputs:**
 
 - **Story file**: The story file to review and improve
-- **Workflow variables**: From workflow.yaml (story_dir, output_folder, epics_file, etc.)
-- **Source documents**: Epics, architecture, etc. (discovered or provided)
+- **Workflow variables**: From workflow.yaml (story_dir, output_folder, linear_mapping_file, etc.)
+- **Source documents**: Architecture, Linear issues, etc. (discovered or queried)
 - **Validation framework**: `validate-workflow.xml` (handles checklist execution)
 
 ---
@@ -63,9 +63,9 @@ You will systematically re-do the entire story creation process, but with a crit
 
 1. **Load the workflow configuration**: `{installed_path}/workflow.yaml` for variable inclusion
 2. **Load the story file**: `{story_file_path}` (provided by user or discovered)
-3. **Load validation framework**: `{project_root}/_bmad/core/tasks/validate-workflow.xml`
+3. **Load validation framework**: `{project-root}/_bmad/core/tasks/validate-workflow.xml`
 4. **Extract metadata**: epic_num, story_num, story_key, story_title from story file
-5. **Resolve all workflow variables**: story_dir, output_folder, epics_file, architecture_file, etc.
+5. **Resolve all workflow variables**: story_dir, output_folder, linear_mapping_file, architecture_file, etc.
 6. **Understand current status**: What story implementation guidance is currently provided?
 
 **Note:** If running in fresh context, user should provide the story file path being reviewed. If running from create-story workflow, the validation framework will automatically discover the checklist and story file.
@@ -75,10 +75,12 @@ You will systematically re-do the entire story creation process, but with a crit
 **🔥 CRITICAL: Treat this like YOU are creating the story from scratch to PREVENT DISASTERS!**
 **Discover everything the original LLM missed that could cause developer mistakes, omissions, or disasters!**
 
-#### **2.1 Epics and Stories Analysis**
+#### **2.1 Epics and Stories Analysis (from Linear)**
 
-- Load `{epics_file}` (or sharded equivalents)
-- Extract **COMPLETE Epic {{epic_num}} context**:
+- Load `{linear_mapping_file}` to get team_id and project_id
+- Query Linear for epic and stories: `mcp__linear__list_issues` with team={team_id}, project={project_id}, label="BMAD-Managed"
+- Find epic issue with title matching `[Epic-{{epic_num}}]`
+- Extract **COMPLETE Epic {{epic_num}} context** from Linear issue description:
   - Epic objectives and business value
   - ALL stories in this epic (for cross-story context)
   - Our specific story's requirements, acceptance criteria

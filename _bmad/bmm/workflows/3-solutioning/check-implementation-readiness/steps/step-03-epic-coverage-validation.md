@@ -6,8 +6,8 @@ description: 'Validate that all PRD FRs are covered in epics and stories'
 workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/implementation-readiness'
 
 # File References
-thisStepFile: '{workflow_path}/steps/step-03-epic-coverage-validation.md'
-nextStepFile: '{workflow_path}/steps/step-04-ux-alignment.md'
+thisStepFile: './step-03-epic-coverage-validation.md'
+nextStepFile: './step-04-ux-alignment.md'
 workflowFile: '{workflow_path}/workflow.md'
 outputFile: '{planning_artifacts}/implementation-readiness-report-{{date}}.md'
 ---
@@ -62,13 +62,14 @@ I will:
 3. Compare against PRD FRs from previous step
 4. Identify any FRs not covered in epics"
 
-### 2. Load Epics Document
+### 2. Query Linear for Epics and Stories
 
-From the document inventory in step 1:
+Query Linear for epic and story information:
 
-- Load the epics and stories document (whole or sharded)
-- Read it completely to find FR coverage information
-- Look for sections like "FR Coverage Map" or similar
+- Load {linear_mapping_file} to get team_id and project_id
+- Query Linear: mcp__linear__list_issues with team={team_id}, project={project_id}, label="BMAD-Managed"
+- Extract epics (titles starting with "[Epic-") and their stories
+- For each issue, get full details to find FR coverage information in descriptions
 
 ### 3. Extract Epic FR Coverage
 

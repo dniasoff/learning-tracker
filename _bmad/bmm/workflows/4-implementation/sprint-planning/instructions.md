@@ -1,225 +1,206 @@
-# Sprint Planning - Sprint Status Generator
+# Sprint Planning - Linear Status Viewer
 
 <critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
 <critical>You MUST have already loaded and processed: {project-root}/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml</critical>
+<critical>Linear is the single source of truth for all epics, stories, and sprint status.</critical>
 
-## 📚 Document Discovery - Full Epic Loading
+## Overview
 
-**Strategy**: Sprint planning needs ALL epics and stories to build complete status tracking.
-
-**Epic Discovery Process:**
-
-1. **Search for whole document first** - Look for `epics.md`, `bmm-epics.md`, or any `*epic*.md` file
-2. **Check for sharded version** - If whole document not found, look for `epics/index.md`
-3. **If sharded version found**:
-   - Read `index.md` to understand the document structure
-   - Read ALL epic section files listed in the index (e.g., `epic-1.md`, `epic-2.md`, etc.)
-   - Process all epics and their stories from the combined content
-   - This ensures complete sprint status coverage
-4. **Priority**: If both whole and sharded versions exist, use the whole document
-
-**Fuzzy matching**: Be flexible with document names - users may use variations like `epics.md`, `bmm-epics.md`, `user-stories.md`, etc.
+Sprint planning now queries Linear directly for all epic and story information. There is no local `sprint-status.yaml` or `epics.md` file to parse - Linear is the single source of truth.
 
 <workflow>
 
-<step n="1" goal="Parse epic files and extract all work items">
+<step n="1" goal="Initialize Linear connection and verify configuration">
 <action>Communicate in {communication_language} with {user_name}</action>
-<action>Look for all files matching `{epics_pattern}` in {epics_location}</action>
-<action>Could be a single `epics.md` file or multiple `epic-1.md`, `epic-2.md` files</action>
+<action>Verify Linear MCP is available by checking for mcp__linear__ tools</action>
 
-<action>For each epic file found, extract:</action>
+<check if="Linear MCP not available">
+  <output>❌ Linear MCP not available.
 
-- Epic numbers from headers like `## Epic 1:` or `## Epic 2:`
-- Story IDs and titles from patterns like `### Story 1.1: User Authentication`
-- Convert story format from `Epic.Story: Title` to kebab-case key: `epic-story-title`
+**Required Setup:**
+1. Install Linear MCP server
+2. Configure Linear API token
+3. Restart your IDE
 
-**Story ID Conversion Rules:**
+Linear is the single source of truth for BMAD sprint tracking.
+  </output>
+  <action>HALT</action>
+</check>
 
-- Original: `### Story 1.1: User Authentication`
-- Replace period with dash: `1-1`
-- Convert title to kebab-case: `user-authentication`
-- Final key: `1-1-user-authentication`
+<action>Load {linear_mapping_file} to get team_id and project_id</action>
 
-<action>Build complete inventory of all epics and stories from all epic files</action>
+<check if="linear_mapping_file does not exist OR team_id is empty">
+  <output>Linear mapping not initialized.</output>
+
+  <action>Query available teams: mcp__linear__list_teams</action>
+  <action>Display numbered list of teams to user:
+    "Available Linear teams:
+     1. Team Name A
+     2. Team Name B
+     ..."
+  </action>
+  <ask>Which team should BMAD use for sprint tracking? (enter number or name)</ask>
+  <action>WAIT for user response before proceeding</action>
+  <action>Store selected team_id and team_name</action>
+
+  <action>Query projects in selected team: mcp__linear__list_projects with team={selected_team_id}</action>
+  <action>Display numbered list of projects to user:
+    "Available projects in {team_name}:
+     1. Project Name A
+     2. Project Name B
+     ..."
+  </action>
+  <ask>Which project should BMAD use for epics and stories? (enter number or name)</ask>
+  <action>WAIT for user response before proceeding</action>
+  <action>Store selected project_id and project_name</action>
+
+  <action>Save initial {linear_mapping_file}:
+    ```yaml
+    team_id: {team_id}
+    team_name: {team_name}
+    project_id: {project_id}
+    project_name: {project_name}
+    epics: {}
+    stories: {}
+    ```
+  </action>
+
+  <output>Linear configuration saved:
+    Team: {team_name}
+    Project: {project_name}
+  </output>
+</check>
+
+<action>Load team_id and project_id from {linear_mapping_file}</action>
 </step>
 
-  <step n="0.5" goal="Discover and load project documents">
-    <invoke-protocol name="discover_inputs" />
-    <note>After discovery, these content variables are available: {epics_content} (all epics loaded - uses FULL_LOAD strategy)</note>
-  </step>
+<step n="2" goal="Query Linear for all BMAD-managed issues">
+<action>Query all BMAD-Managed issues from Linear:
+  mcp__linear__list_issues with team={team_id}, project={project_id}, label="BMAD-Managed"
+</action>
 
-<step n="2" goal="Build sprint status structure">
-<action>For each epic found, create entries in this order:</action>
+<check if="no issues found">
+  <output>No BMAD-managed issues found in Linear.
 
-1. **Epic entry** - Key: `epic-{num}`, Default status: `backlog`
-2. **Story entries** - Key: `{epic}-{story}-{title}`, Default status: `backlog`
-3. **Retrospective entry** - Key: `epic-{num}-retrospective`, Default status: `optional`
+**To create epics and stories:**
+Run the `create-epics-and-stories` workflow to define your product backlog.
 
-**Example structure:**
+The workflow will create:
+- Epic parent issues with [Epic-N] titles
+- Story sub-issues with [{story-key}] titles
+- All issues labeled with "BMAD-Managed"
+  </output>
+  <action>HALT</action>
+</check>
 
-```yaml
-development_status:
-  epic-1: backlog
-  1-1-user-authentication: backlog
-  1-2-account-management: backlog
-  epic-1-retrospective: optional
-```
+<action>Categorize issues:
+  - Epics: Issues with titles starting with "[Epic-" (parent issues)
+  - Stories: Issues with titles starting with "[" but not "[Epic-" (sub-issues)
+</action>
 
+<action>For each issue, map Linear state to BMAD status:
+  - Backlog → backlog
+  - Todo → ready-for-dev
+  - In Progress → in-progress
+  - In Review → review
+  - Done → done
+</action>
+
+<action>Group stories by their parent epic</action>
 </step>
 
-<step n="3" goal="Apply intelligent status detection">
-<action>For each story, detect current status by checking files:</action>
+<step n="3" goal="Build sprint status from Linear data">
+<action>Count story statuses:
+  - backlog: stories in Backlog state
+  - ready-for-dev: stories in Todo state
+  - in-progress: stories in "In Progress" state
+  - review: stories in "In Review" state
+  - done: stories in Done state
+</action>
 
-**Story file detection:**
+<action>Count epic statuses:
+  - backlog: epics with all stories in Backlog
+  - in-progress: epics with any story not in Backlog and not all Done
+  - done: epics with all stories in Done
+</action>
 
-- Check: `{story_location_absolute}/{story-key}.md` (e.g., `stories/1-1-user-authentication.md`)
-- If exists → upgrade status to at least `ready-for-dev`
+<action>Check for Retrospective-Complete label on epic issues:
+  - If label present → retrospective done
+  - If label absent → retrospective optional
+</action>
 
-**Preservation rule:**
-
-- If existing `{status_file}` exists and has more advanced status, preserve it
-- Never downgrade status (e.g., don't change `done` to `ready-for-dev`)
-
-**Status Flow Reference:**
-
-- Epic: `backlog` → `in-progress` → `done`
-- Story: `backlog` → `ready-for-dev` → `in-progress` → `review` → `done`
-- Retrospective: `optional` ↔ `done`
-  </step>
-
-<step n="4" goal="Generate sprint status file">
-<action>Create or update {status_file} with:</action>
-
-**File Structure:**
-
-```yaml
-# generated: {date}
-# project: {project_name}
-# project_key: {project_key}
-# tracking_system: {tracking_system}
-# story_location: {story_location}
-
-# STATUS DEFINITIONS:
-# ==================
-# Epic Status:
-#   - backlog: Epic not yet started
-#   - in-progress: Epic actively being worked on
-#   - done: All stories in epic completed
-#
-# Epic Status Transitions:
-#   - backlog → in-progress: Automatically when first story is created (via create-story)
-#   - in-progress → done: Manually when all stories reach 'done' status
-#
-# Story Status:
-#   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created in stories folder
-#   - in-progress: Developer actively working on implementation
-#   - review: Ready for code review (via Dev's code-review workflow)
-#   - done: Story completed
-#
-# Retrospective Status:
-#   - optional: Can be completed but not required
-#   - done: Retrospective has been completed
-#
-# WORKFLOW NOTES:
-# ===============
-# - Epic transitions to 'in-progress' automatically when first story is created
-# - Stories can be worked in parallel if team capacity allows
-# - SM typically creates next story after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
-
-generated: { date }
-project: { project_name }
-project_key: { project_key }
-tracking_system: { tracking_system }
-story_location: { story_location }
-
-development_status:
-  # All epics, stories, and retrospectives in order
-```
-
-<action>Write the complete sprint status YAML to {status_file}</action>
-<action>CRITICAL: Metadata appears TWICE - once as comments (#) for documentation, once as YAML key:value fields for parsing</action>
-<action>Ensure all items are ordered: epic, its stories, its retrospective, next epic...</action>
+<action>Update {linear_mapping_file} with current issue IDs and statuses</action>
 </step>
 
-<step n="5" goal="Validate and report">
+<step n="4" goal="Validate and report sprint status">
 <action>Perform validation checks:</action>
 
-- [ ] Every epic in epic files appears in {status_file}
-- [ ] Every story in epic files appears in {status_file}
-- [ ] Every epic has a corresponding retrospective entry
-- [ ] No items in {status_file} that don't exist in epic files
-- [ ] All status values are legal (match state machine definitions)
-- [ ] File is valid YAML syntax
+- [ ] All epics have BMAD-Managed label
+- [ ] All stories are sub-issues of their parent epic
+- [ ] All story titles follow [{story-key}] format
+- [ ] Linear connection is healthy
 
 <action>Count totals:</action>
 
 - Total epics: {{epic_count}}
 - Total stories: {{story_count}}
-- Epics in-progress: {{in_progress_count}}
-- Stories done: {{done_count}}
+- Stories by status: backlog={{backlog}}, ready-for-dev={{ready}}, in-progress={{in_progress}}, review={{review}}, done={{done}}
 
 <action>Display completion summary to {user_name} in {communication_language}:</action>
 
-**Sprint Status Generated Successfully**
+**Sprint Status from Linear**
 
-- **File Location:** {status_file}
+- **Team:** {team_name}
+- **Project:** {project_name}
 - **Total Epics:** {{epic_count}}
 - **Total Stories:** {{story_count}}
-- **Epics In Progress:** {{epics_in_progress_count}}
-- **Stories Completed:** {{done_count}}
+
+**Story Status Breakdown:**
+| Status | Count |
+|--------|-------|
+| Backlog | {{backlog}} |
+| Ready for Dev (Todo) | {{ready}} |
+| In Progress | {{in_progress}} |
+| In Review | {{review}} |
+| Done | {{done}} |
+
+**Epic Progress:**
+{{#each epic}}
+- [Epic-{{num}}] {{title}}: {{stories_done}}/{{stories_total}} stories done
+{{/each}}
 
 **Next Steps:**
-
-1. Review the generated {status_file}
-2. Use this file to track development progress
-3. Agents will update statuses as they work
-4. Re-run this workflow to refresh auto-detected statuses
+1. Use `create-story` to add Dev Notes to the next backlog story
+2. Use `dev-story` to implement stories marked Todo (ready-for-dev)
+3. Use `code-review` to review stories In Review
+4. Use `retrospective` after completing all stories in an epic
 
 </step>
 
 </workflow>
 
-## Additional Documentation
+## Status Mapping Reference
 
-### Status State Machine
+| Workflow State | Linear Status | Description |
+|----------------|---------------|-------------|
+| backlog | Backlog | Story exists but no context added |
+| ready-for-dev | Todo | Story has Dev Notes, ready for development |
+| in-progress | In Progress | Developer actively working |
+| review | In Review | Ready for code review |
+| done | Done | Story completed |
 
-**Epic Status Flow:**
+## Linear Issue Structure
 
-```
-backlog → in-progress → done
-```
+**Epic (Parent Issue):**
+- Title: `[Epic-N] Epic Title`
+- Labels: `BMAD-Managed`, `Epic-N`
+- Description: Epic goal and business value
 
-- **backlog**: Epic not yet started
-- **in-progress**: Epic actively being worked on (stories being created/implemented)
-- **done**: All stories in epic completed
-
-**Story Status Flow:**
-
-```
-backlog → ready-for-dev → in-progress → review → done
-```
-
-- **backlog**: Story only exists in epic file
-- **ready-for-dev**: Story file created (e.g., `stories/1-3-plant-naming.md`)
-- **in-progress**: Developer actively working
-- **review**: Ready for code review (via Dev's code-review workflow)
-- **done**: Completed
-
-**Retrospective Status:**
-
-```
-optional ↔ done
-```
-
-- **optional**: Ready to be conducted but not required
-- **done**: Finished
-
-### Guidelines
-
-1. **Epic Activation**: Mark epic as `in-progress` when starting work on its first story
-2. **Sequential Default**: Stories are typically worked in order, but parallel work is supported
-3. **Parallel Work Supported**: Multiple stories can be `in-progress` if team capacity allows
-4. **Review Before Done**: Stories should pass through `review` before `done`
-5. **Learning Transfer**: SM typically creates next story after previous one is `done` to incorporate learnings
+**Story (Sub-Issue):**
+- Title: `[story-key] Story Title`
+- Labels: `BMAD-Managed`, `Epic-N`
+- Parent: Epic issue ID
+- Description:
+  - Story statement (As a/I want/So that)
+  - Acceptance Criteria
+  - Dev Notes (added by create-story workflow)

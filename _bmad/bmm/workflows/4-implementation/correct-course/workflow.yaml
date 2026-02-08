@@ -13,7 +13,9 @@ implementation_artifacts: "{config_source}:implementation_artifacts"
 planning_artifacts: "{config_source}:planning_artifacts"
 project_knowledge: "{config_source}:project_knowledge"
 output_folder: "{implementation_artifacts}"
-sprint_status: "{implementation_artifacts}/sprint-status.yaml || {output_folder}/sprint-status.yaml"
+
+# Linear is the single source of truth
+linear_mapping_file: "{implementation_artifacts}/linear-mapping.yaml" # Maps BMAD items to Linear issue IDs
 
 # Smart input file references - handles both whole docs and sharded docs
 # Priority: Whole document first, then sharded version
@@ -23,11 +25,6 @@ input_file_patterns:
     description: "Product requirements for impact analysis"
     whole: "{planning_artifacts}/*prd*.md"
     sharded: "{planning_artifacts}/*prd*/*.md"
-    load_strategy: "FULL_LOAD"
-  epics:
-    description: "All epics to analyze change impact"
-    whole: "{planning_artifacts}/*epic*.md"
-    sharded: "{planning_artifacts}/*epic*/*.md"
     load_strategy: "FULL_LOAD"
   architecture:
     description: "System architecture and decisions"
@@ -54,5 +51,3 @@ instructions: "{installed_path}/instructions.md"
 validation: "{installed_path}/checklist.md"
 checklist: "{installed_path}/checklist.md"
 default_output_file: "{planning_artifacts}/sprint-change-proposal-{date}.md"
-
-standalone: true
