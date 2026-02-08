@@ -1,0 +1,28 @@
+targets:
+  $default:
+    builders:
+      # Drift - Database code generation
+      drift_dev:
+        enabled: true
+        options:
+          generate_connect_constructor: true
+          scoped_dart_components: true
+
+      # Auto Route - Navigation code generation
+      auto_route_generator:auto_route_generator:
+        enabled: true
+
+      # Freezed - Immutable class code generation
+      freezed:
+        enabled: true
+
+      # Riverpod - State management code generation
+      riverpod_generator:
+        enabled: true
+
+      # JSON Serializable - JSON serialization code generation
+      json_serializable:
+        enabled: true
+        options:
+          explicit_to_json: true
+          field_rename: snake
