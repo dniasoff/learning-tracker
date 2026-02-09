@@ -71,3 +71,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Assets
+  assets:
+    - assets/images/
+    - assets/fonts/
+
+  # Fonts
+  # Custom Hebrew fonts can be added here when needed
+  # fonts:
+  #   - family: CustomHebrew
+  #     fonts:
+  #       - asset: assets/fonts/CustomHebrew-Regular.ttf
