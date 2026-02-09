@@ -393,6 +393,45 @@ class SyncEngine {
     await detachListeners();
   }
 
+  /// Push curriculum import metadata to Firestore.
+  ///
+  /// This allows other devices to detect that a curriculum has already been
+  /// imported and skip re-import from Sefaria.
+  Future<void> pushCurriculumImportMetadata({
+    required String curriculumId,
+    required int itemCount,
+    required DateTime importedAt,
+  }) async {
+    final metadata = {
+      'curriculum_id': curriculumId,
+      'item_count': itemCount,
+      'imported_at': importedAt.toIso8601String(),
+    };
+
+    if (!_isOnline) {
+      await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.pushCurriculumImportMetadata(metadata);
+      _logger.debug(
+        'Pushed curriculum import metadata to Firestore: $curriculumId',
+      );
+    } catch (e, stackTrace) {
+      _logger.warning(
+        'Failed to push curriculum import metadata, queuing for later',
+        e,
+      );
+      await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
+    }
+  }
+
   // ========== Status Management ==========
 
   void _updateStatus(SyncStatus status) {

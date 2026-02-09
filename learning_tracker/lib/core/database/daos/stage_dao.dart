@@ -31,4 +31,8 @@ class StageDao extends DatabaseAccessor<AppDatabase> with _$StageDaoMixin {
 
   Future<int> deleteStageDefinition(int id) =>
       (delete(stageDefinitions)..where((t) => t.id.equals(id))).go();
+
+  Future<int> deleteAllForCurriculum(String curriculumId) => (delete(
+    stageDefinitions,
+  )..where((t) => t.curriculumId.equals(curriculumId))).go();
 }

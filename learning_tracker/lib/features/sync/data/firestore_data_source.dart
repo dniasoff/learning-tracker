@@ -231,4 +231,36 @@ class FirestoreDataSource {
 
     return doc.snapshots().map((snapshot) => snapshot.data());
   }
+
+  // ========== Curriculum Import Metadata Operations ==========
+
+  /// Push curriculum import metadata to Firestore.
+  ///
+  /// This allows other devices to detect that a curriculum has already been
+  /// imported and skip re-import from Sefaria.
+  Future<void> pushCurriculumImportMetadata(
+    Map<String, dynamic> metadata,
+  ) async {
+    final collection = _userDoc?.collection('curriculum_imports');
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final curriculumId = metadata['curriculum_id'] as String;
+    await collection.doc(curriculumId).set({
+      ...metadata,
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch curriculum import metadata from Firestore.
+  Future<Map<String, dynamic>?> fetchCurriculumImportMetadata(
+    String curriculumId,
+  ) async {
+    final collection = _userDoc?.collection('curriculum_imports');
+    if (collection == null) return null;
+
+    final snapshot = await collection.doc(curriculumId).get();
+    return snapshot.data();
+  }
 }

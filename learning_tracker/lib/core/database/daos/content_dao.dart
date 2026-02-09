@@ -32,4 +32,17 @@ class ContentDao extends DatabaseAccessor<AppDatabase> with _$ContentDaoMixin {
 
   Future<int> deleteContentItem(int id) =>
       (delete(contentItems)..where((t) => t.id.equals(id))).go();
+
+  Future<int> deleteAllForCurriculum(String curriculumId) => (delete(
+    contentItems,
+  )..where((t) => t.curriculumId.equals(curriculumId))).go();
+
+  Future<int> getContentItemCountByCurriculum(String curriculumId) async {
+    final query = selectOnly(contentItems)
+      ..addColumns([contentItems.id.count()])
+      ..where(contentItems.curriculumId.equals(curriculumId));
+
+    final result = await query.getSingleOrNull();
+    return result?.read(contentItems.id.count()) ?? 0;
+  }
 }

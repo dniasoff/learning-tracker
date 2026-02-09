@@ -65,6 +65,17 @@ class OfflineQueue {
     _logger.info('Queued profile for offline sync');
   }
 
+  /// Enqueue curriculum import metadata operation.
+  Future<void> enqueueCurriculumImportMetadata(
+    Map<String, dynamic> metadata,
+  ) async {
+    final payload = jsonEncode(metadata);
+    await _queue.enqueue('curriculum_import_metadata', payload);
+    _logger.info(
+      'Queued curriculum import metadata for offline sync: ${metadata['curriculum_id']}',
+    );
+  }
+
   /// Flush all queued operations to Firestore.
   ///
   /// Returns the number of successfully synced operations.
@@ -97,6 +108,9 @@ class OfflineQueue {
             break;
           case 'profile':
             await _firestoreDataSource.pushProfile(payload);
+            break;
+          case 'curriculum_import_metadata':
+            await _firestoreDataSource.pushCurriculumImportMetadata(payload);
             break;
           default:
             _logger.warning(
