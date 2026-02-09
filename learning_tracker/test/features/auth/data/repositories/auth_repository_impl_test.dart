@@ -1,0 +1,178 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:learning_tracker/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:mocktail/mocktail.dart';
+
+// Mocks
+class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class MockGoogleSignIn extends Mock implements GoogleSignIn {}
+
+class MockUserCredential extends Mock implements UserCredential {}
+
+class MockUser extends Mock implements User {}
+
+class MockGoogleSignInAccount extends Mock implements GoogleSignInAccount {}
+
+class MockGoogleSignInAuthentication extends Mock
+    implements GoogleSignInAuthentication {}
+
+class FakeAuthCredential extends Fake implements AuthCredential {}
+
+void main() {
+  late MockFirebaseAuth mockFirebaseAuth;
+  late MockGoogleSignIn mockGoogleSignIn;
+  late AuthRepositoryImpl repository;
+
+  setUpAll(() {
+    registerFallbackValue(FakeAuthCredential());
+  });
+
+  setUp(() {
+    mockFirebaseAuth = MockFirebaseAuth();
+    mockGoogleSignIn = MockGoogleSignIn();
+    repository = AuthRepositoryImpl(
+      firebaseAuth: mockFirebaseAuth,
+      googleSignIn: mockGoogleSignIn,
+    );
+  });
+
+  group('signInWithEmail', () {
+    test(
+      'calls FirebaseAuth.signInWithEmailAndPassword with correct email and password',
+      () async {
+        final mockCredential = MockUserCredential();
+        when(
+          () => mockFirebaseAuth.signInWithEmailAndPassword(
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+        ).thenAnswer((_) async => mockCredential);
+
+        final result = await repository.signInWithEmail(
+          'test@example.com',
+          'password123',
+        );
+
+        expect(result, equals(mockCredential));
+        verify(
+          () => mockFirebaseAuth.signInWithEmailAndPassword(
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+        ).called(1);
+      },
+    );
+  });
+
+  group('signUp', () {
+    test(
+      'calls FirebaseAuth.createUserWithEmailAndPassword and sets display name',
+      () async {
+        final mockCredential = MockUserCredential();
+        final mockUser = MockUser();
+        when(() => mockCredential.user).thenReturn(mockUser);
+        when(
+          () => mockFirebaseAuth.createUserWithEmailAndPassword(
+            email: 'new@example.com',
+            password: 'newpass123',
+          ),
+        ).thenAnswer((_) async => mockCredential);
+        when(
+          () => mockUser.updateDisplayName('Test User'),
+        ).thenAnswer((_) async {});
+
+        final result = await repository.signUp(
+          'new@example.com',
+          'newpass123',
+          'Test User',
+        );
+
+        expect(result, equals(mockCredential));
+        verify(
+          () => mockFirebaseAuth.createUserWithEmailAndPassword(
+            email: 'new@example.com',
+            password: 'newpass123',
+          ),
+        ).called(1);
+        verify(() => mockUser.updateDisplayName('Test User')).called(1);
+      },
+    );
+  });
+
+  group('signInWithGoogle', () {
+    test(
+      'triggers Google Sign-In flow and exchanges credential with Firebase',
+      () async {
+        final mockAccount = MockGoogleSignInAccount();
+        final mockAuth = MockGoogleSignInAuthentication();
+        final mockCredential = MockUserCredential();
+
+        when(
+          () => mockGoogleSignIn.authenticate(),
+        ).thenAnswer((_) async => mockAccount);
+        when(() => mockAccount.authentication).thenReturn(mockAuth);
+        when(() => mockAuth.idToken).thenReturn('test-id-token');
+        when(
+          () => mockFirebaseAuth.signInWithCredential(any()),
+        ).thenAnswer((_) async => mockCredential);
+
+        final result = await repository.signInWithGoogle();
+
+        expect(result, equals(mockCredential));
+        verify(() => mockGoogleSignIn.authenticate()).called(1);
+        verify(() => mockFirebaseAuth.signInWithCredential(any())).called(1);
+      },
+    );
+  });
+
+  group('signOut', () {
+    test('calls FirebaseAuth.signOut and GoogleSignIn.signOut', () async {
+      when(() => mockGoogleSignIn.signOut()).thenAnswer((_) async {});
+      when(() => mockFirebaseAuth.signOut()).thenAnswer((_) async {});
+
+      await repository.signOut();
+
+      verify(() => mockGoogleSignIn.signOut()).called(1);
+      verify(() => mockFirebaseAuth.signOut()).called(1);
+    });
+  });
+
+  group('deleteAccount', () {
+    test('calls FirebaseAuth.currentUser.delete()', () async {
+      final mockUser = MockUser();
+      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.delete()).thenAnswer((_) async {});
+
+      await repository.deleteAccount();
+
+      verify(() => mockUser.delete()).called(1);
+    });
+  });
+
+  group('authStateChanges', () {
+    test('emits null when user is signed out', () async {
+      when(
+        () => mockFirebaseAuth.authStateChanges(),
+      ).thenAnswer((_) => Stream.value(null));
+
+      final stream = repository.authStateChanges();
+
+      await expectLater(stream, emits(isNull));
+    });
+
+    test('emits User object when user is signed in', () async {
+      final mockUser = MockUser();
+      when(
+        () => mockFirebaseAuth.authStateChanges(),
+      ).thenAnswer((_) => Stream.value(mockUser));
+
+      final stream = repository.authStateChanges();
+
+      await expectLater(stream, emits(isA<User>()));
+    });
+  });
+}
