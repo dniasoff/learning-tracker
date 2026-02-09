@@ -4422,6 +4422,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RewardsTable rewards = $RewardsTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final ContentDao contentDao = ContentDao(this as AppDatabase);
+  late final CurriculumHierarchyConfigDao curriculumHierarchyConfigDao =
+      CurriculumHierarchyConfigDao(this as AppDatabase);
   late final CompletionDao completionDao = CompletionDao(this as AppDatabase);
   late final StageDao stageDao = StageDao(this as AppDatabase);
   late final BookmarkDao bookmarkDao = BookmarkDao(this as AppDatabase);

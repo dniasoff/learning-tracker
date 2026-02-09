@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/content_dao.dart';
+import 'package:learning_tracker/core/database/daos/curriculum_hierarchy_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
@@ -35,6 +36,7 @@ part 'app_database.g.dart';
   ],
   daos: [
     ContentDao,
+    CurriculumHierarchyConfigDao,
     CompletionDao,
     StageDao,
     BookmarkDao,
