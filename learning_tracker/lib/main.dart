@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
+import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
 
 void main() {
@@ -57,13 +58,15 @@ class LearningTrackerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Mishnayos Tracker',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    return SyncLifecycleObserver(
+      child: MaterialApp.router(
+        title: 'Mishnayos Tracker',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        ),
+        routerConfig: _appRouter.config(),
       ),
-      routerConfig: _appRouter.config(),
     );
   }
 }
