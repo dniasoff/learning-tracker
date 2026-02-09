@@ -103,6 +103,36 @@ void main() {
     );
   });
 
+  group('signUp error handling', () {
+    test(
+      'sign-up with invalid email format returns appropriate error',
+      () async {
+        when(
+          () => mockFirebaseAuth.createUserWithEmailAndPassword(
+            email: 'not-an-email',
+            password: 'password123',
+          ),
+        ).thenThrow(
+          FirebaseAuthException(
+            code: 'invalid-email',
+            message: 'The email address is badly formatted.',
+          ),
+        );
+
+        expect(
+          () => repository.signUp('not-an-email', 'password123', 'Test'),
+          throwsA(
+            isA<FirebaseAuthException>().having(
+              (e) => e.code,
+              'code',
+              'invalid-email',
+            ),
+          ),
+        );
+      },
+    );
+  });
+
   group('signInWithGoogle', () {
     test(
       'triggers Google Sign-In flow and exchanges credential with Firebase',
