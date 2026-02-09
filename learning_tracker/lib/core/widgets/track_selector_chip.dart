@@ -61,10 +61,15 @@ class TrackSelectorChip extends ConsumerWidget {
   }
 }
 
-/// Provider for managing the currently selected track.
+/// Parent component should manage selected track state and pass it down.
+/// Example usage in parent:
 ///
-/// This is a simple state provider that can be used to track which track
-/// is currently selected in the completion flow.
-final selectedTrackProvider = StateProvider.family<TrackType?, CurriculumId>(
-  (ref, curriculumId) => null,
-);
+/// ```dart
+/// TrackType? _selectedTrack;
+///
+/// TrackSelectorChip(
+///   curriculumId: curriculumId,
+///   selectedTrack: _selectedTrack,
+///   onTrackSelected: (track) => setState(() => _selectedTrack = track),
+/// )
+/// ```

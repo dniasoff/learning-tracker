@@ -3,18 +3,14 @@ import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
-/// Implementation of [TrackRepository] using Drift database and sync engine.
+/// Implementation of [TrackRepository] using Drift database.
 class TrackRepositoryImpl implements TrackRepository {
   final AppDatabase _database;
-  final SyncEngine _syncEngine;
 
   TrackRepositoryImpl({
     required AppDatabase database,
-    required SyncEngine syncEngine,
-  })  : _database = database,
-        _syncEngine = syncEngine;
+  }) : _database = database;
 
   @override
   Future<List<TrackType>> getActiveTracks(CurriculumId curriculumId) async {
@@ -31,12 +27,8 @@ class TrackRepositoryImpl implements TrackRepository {
   ) async {
     await _database.trackDao.activateTrack(curriculumId, trackType);
 
-    // Trigger Firestore sync for track activation
-    await _syncEngine.queueSync(
-      collection: 'curriculum_tracks',
-      documentId: '${curriculumId.storageKey}_${trackType.storageKey}',
-      operation: SyncOperation.upsert,
-    );
+    // TODO(DNI-38): Add Firestore sync for track activation
+    // See CompletionRepositoryImpl._syncCompletion for pattern
   }
 
   @override
@@ -47,12 +39,7 @@ class TrackRepositoryImpl implements TrackRepository {
     try {
       await _database.trackDao.deactivateTrack(curriculumId, trackType);
 
-      // Trigger Firestore sync for track deactivation
-      await _syncEngine.queueSync(
-        collection: 'curriculum_tracks',
-        documentId: '${curriculumId.storageKey}_${trackType.storageKey}',
-        operation: SyncOperation.upsert,
-      );
+      // TODO(DNI-38): Add Firestore sync for track deactivation
     } on InvalidOperationException catch (e) {
       throw InvalidTrackOperationException(e.message);
     }
@@ -70,11 +57,6 @@ class TrackRepositoryImpl implements TrackRepository {
   Future<void> initializeDefaultTracks(CurriculumId curriculumId) async {
     await _database.trackDao.initializeDefaultTracks(curriculumId);
 
-    // Trigger Firestore sync for initial personal track
-    await _syncEngine.queueSync(
-      collection: 'curriculum_tracks',
-      documentId: '${curriculumId.storageKey}_${TrackType.personal.storageKey}',
-      operation: SyncOperation.upsert,
-    );
+    // TODO(DNI-38): Add Firestore sync for initial personal track
   }
 }

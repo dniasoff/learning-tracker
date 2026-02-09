@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 part 'track_providers.g.dart';
 
@@ -12,11 +11,9 @@ part 'track_providers.g.dart';
 @riverpod
 TrackRepository trackRepository(Ref ref) {
   final database = ref.watch(appDatabaseProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
 
   return TrackRepositoryImpl(
     database: database,
-    syncEngine: syncEngine,
   );
 }
 
