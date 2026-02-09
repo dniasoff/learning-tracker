@@ -1,27 +1,31 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'completion_request.freezed.dart';
-
 /// Request to mark a content item as completed.
 ///
 /// Immutable value object containing all data needed to create a completion record.
-@freezed
-class CompletionRequest with _$CompletionRequest {
-  const factory CompletionRequest({
-    required String curriculumId,
-    required int contentItemId,
-    required int stageId,
-    required String trackType,
-  }) = _CompletionRequest;
+class CompletionRequest {
+  final String curriculumId;
+  final int contentItemId;
+  final int stageId;
+  final String trackType;
+
+  const CompletionRequest({
+    required this.curriculumId,
+    required this.contentItemId,
+    required this.stageId,
+    required this.trackType,
+  });
 }
 
 /// Request to mark multiple content items as completed (bulk operation).
-@freezed
-class BulkCompletionRequest with _$BulkCompletionRequest {
-  const factory BulkCompletionRequest({
-    required String curriculumId,
-    required List<int> contentItemIds,
-    required int stageId,
-    required String trackType,
-  }) = _BulkCompletionRequest;
+class BulkCompletionRequest {
+  final String curriculumId;
+  final List<int> contentItemIds;
+  final int stageId;
+  final String trackType;
+
+  const BulkCompletionRequest({
+    required this.curriculumId,
+    required this.contentItemIds,
+    required this.stageId,
+    required this.trackType,
+  });
 }
