@@ -40,10 +40,7 @@ class CurriculumIndicator extends StatelessWidget {
         indicator = Container(
           width: size,
           height: size,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         );
         break;
       case CurriculumIndicatorShape.square:
@@ -77,10 +74,7 @@ class CurriculumIndicator extends StatelessWidget {
       children: [
         indicator,
         const SizedBox(width: 8),
-        Text(
-          label!,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+        Text(label!, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }

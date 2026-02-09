@@ -10,11 +10,7 @@ class LoadingIndicator extends StatelessWidget {
   /// Size of the circular progress indicator
   final double size;
 
-  const LoadingIndicator({
-    super.key,
-    this.message,
-    this.size = 40.0,
-  });
+  const LoadingIndicator({super.key, this.message, this.size = 40.0});
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +34,8 @@ class LoadingIndicator extends StatelessWidget {
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
