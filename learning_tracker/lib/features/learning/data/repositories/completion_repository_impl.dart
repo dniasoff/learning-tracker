@@ -264,7 +264,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
             curriculumId: curriculumId,
             contentItemId: nextItemId,
             trackType: trackType,
-            lastUpdated: drift.Value(DateTime.now().toUtc()),
+            updatedAt: DateTime.now().toUtc(),
           ),
         );
       }
@@ -277,9 +277,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
       if (nextItemId != null) {
         await _database.bookmarkDao.updateBookmark(
-          bookmark.copyWith(
-            contentItemId: nextItemId,
-            lastUpdated: drift.Value(DateTime.now().toUtc()),
+          BookmarksCompanion(
+            id: drift.Value(bookmark.id),
+            curriculumId: drift.Value(bookmark.curriculumId),
+            trackType: drift.Value(bookmark.trackType),
+            contentItemId: drift.Value(nextItemId),
+            updatedAt: drift.Value(DateTime.now().toUtc()),
           ),
         );
       }
@@ -292,11 +295,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required String curriculumId,
     required int currentItemId,
   }) async {
-    // Get all leaf items for this curriculum, ordered by learning_order
+    // Get all leaf items for this curriculum, ordered by sort_order
     final allItems = await (_database.select(_database.contentItems)
           ..where((t) =>
               t.curriculumId.equals(curriculumId) & t.isLeaf.equals(true))
-          ..orderBy([(t) => drift.OrderingTerm.asc(t.learningOrder)]))
+          ..orderBy([(t) => drift.OrderingTerm.asc(t.sortOrder)]))
         .get();
 
     // Find current item's position
