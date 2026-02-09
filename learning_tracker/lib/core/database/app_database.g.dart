@@ -1127,6 +1127,408 @@ class CurriculumHierarchyConfigCompanion
   }
 }
 
+class $CurriculumTracksTable extends CurriculumTracks
+    with TableInfo<$CurriculumTracksTable, CurriculumTrack> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CurriculumTracksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
+    'curriculumId',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _trackTypeMeta = const VerificationMeta(
+    'trackType',
+  );
+  @override
+  late final GeneratedColumn<String> trackType = GeneratedColumn<String>(
+    'track_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _activatedAtMeta = const VerificationMeta(
+    'activatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> activatedAt = GeneratedColumn<DateTime>(
+    'activated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deactivatedAtMeta = const VerificationMeta(
+    'deactivatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deactivatedAt =
+      GeneratedColumn<DateTime>(
+        'deactivated_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    curriculumId,
+    trackType,
+    isActive,
+    activatedAt,
+    deactivatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'curriculum_tracks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CurriculumTrack> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('curriculum_id')) {
+      context.handle(
+        _curriculumIdMeta,
+        curriculumId.isAcceptableOrUnknown(
+          data['curriculum_id']!,
+          _curriculumIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumIdMeta);
+    }
+    if (data.containsKey('track_type')) {
+      context.handle(
+        _trackTypeMeta,
+        trackType.isAcceptableOrUnknown(data['track_type']!, _trackTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trackTypeMeta);
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('activated_at')) {
+      context.handle(
+        _activatedAtMeta,
+        activatedAt.isAcceptableOrUnknown(
+          data['activated_at']!,
+          _activatedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_activatedAtMeta);
+    }
+    if (data.containsKey('deactivated_at')) {
+      context.handle(
+        _deactivatedAtMeta,
+        deactivatedAt.isAcceptableOrUnknown(
+          data['deactivated_at']!,
+          _deactivatedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {curriculumId, trackType};
+  @override
+  CurriculumTrack map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CurriculumTrack(
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      trackType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}track_type'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      activatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}activated_at'],
+      )!,
+      deactivatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deactivated_at'],
+      ),
+    );
+  }
+
+  @override
+  $CurriculumTracksTable createAlias(String alias) {
+    return $CurriculumTracksTable(attachedDatabase, alias);
+  }
+}
+
+class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
+  /// curriculum_id from CurriculumId enum storageKey
+  final String curriculumId;
+
+  /// track_type from TrackType enum storageKey
+  final String trackType;
+
+  /// Whether this track is currently active for this curriculum
+  final bool isActive;
+
+  /// When this track was activated (or reactivated) for this curriculum
+  final DateTime activatedAt;
+
+  /// When this track was last deactivated (null if currently active)
+  final DateTime? deactivatedAt;
+  const CurriculumTrack({
+    required this.curriculumId,
+    required this.trackType,
+    required this.isActive,
+    required this.activatedAt,
+    this.deactivatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['curriculum_id'] = Variable<String>(curriculumId);
+    map['track_type'] = Variable<String>(trackType);
+    map['is_active'] = Variable<bool>(isActive);
+    map['activated_at'] = Variable<DateTime>(activatedAt);
+    if (!nullToAbsent || deactivatedAt != null) {
+      map['deactivated_at'] = Variable<DateTime>(deactivatedAt);
+    }
+    return map;
+  }
+
+  CurriculumTracksCompanion toCompanion(bool nullToAbsent) {
+    return CurriculumTracksCompanion(
+      curriculumId: Value(curriculumId),
+      trackType: Value(trackType),
+      isActive: Value(isActive),
+      activatedAt: Value(activatedAt),
+      deactivatedAt: deactivatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deactivatedAt),
+    );
+  }
+
+  factory CurriculumTrack.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CurriculumTrack(
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      trackType: serializer.fromJson<String>(json['trackType']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      activatedAt: serializer.fromJson<DateTime>(json['activatedAt']),
+      deactivatedAt: serializer.fromJson<DateTime?>(json['deactivatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'trackType': serializer.toJson<String>(trackType),
+      'isActive': serializer.toJson<bool>(isActive),
+      'activatedAt': serializer.toJson<DateTime>(activatedAt),
+      'deactivatedAt': serializer.toJson<DateTime?>(deactivatedAt),
+    };
+  }
+
+  CurriculumTrack copyWith({
+    String? curriculumId,
+    String? trackType,
+    bool? isActive,
+    DateTime? activatedAt,
+    Value<DateTime?> deactivatedAt = const Value.absent(),
+  }) => CurriculumTrack(
+    curriculumId: curriculumId ?? this.curriculumId,
+    trackType: trackType ?? this.trackType,
+    isActive: isActive ?? this.isActive,
+    activatedAt: activatedAt ?? this.activatedAt,
+    deactivatedAt: deactivatedAt.present
+        ? deactivatedAt.value
+        : this.deactivatedAt,
+  );
+  CurriculumTrack copyWithCompanion(CurriculumTracksCompanion data) {
+    return CurriculumTrack(
+      curriculumId: data.curriculumId.present
+          ? data.curriculumId.value
+          : this.curriculumId,
+      trackType: data.trackType.present ? data.trackType.value : this.trackType,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      activatedAt: data.activatedAt.present
+          ? data.activatedAt.value
+          : this.activatedAt,
+      deactivatedAt: data.deactivatedAt.present
+          ? data.deactivatedAt.value
+          : this.deactivatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurriculumTrack(')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('trackType: $trackType, ')
+          ..write('isActive: $isActive, ')
+          ..write('activatedAt: $activatedAt, ')
+          ..write('deactivatedAt: $deactivatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    curriculumId,
+    trackType,
+    isActive,
+    activatedAt,
+    deactivatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CurriculumTrack &&
+          other.curriculumId == this.curriculumId &&
+          other.trackType == this.trackType &&
+          other.isActive == this.isActive &&
+          other.activatedAt == this.activatedAt &&
+          other.deactivatedAt == this.deactivatedAt);
+}
+
+class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
+  final Value<String> curriculumId;
+  final Value<String> trackType;
+  final Value<bool> isActive;
+  final Value<DateTime> activatedAt;
+  final Value<DateTime?> deactivatedAt;
+  final Value<int> rowid;
+  const CurriculumTracksCompanion({
+    this.curriculumId = const Value.absent(),
+    this.trackType = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.activatedAt = const Value.absent(),
+    this.deactivatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CurriculumTracksCompanion.insert({
+    required String curriculumId,
+    required String trackType,
+    this.isActive = const Value.absent(),
+    required DateTime activatedAt,
+    this.deactivatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : curriculumId = Value(curriculumId),
+       trackType = Value(trackType),
+       activatedAt = Value(activatedAt);
+  static Insertable<CurriculumTrack> custom({
+    Expression<String>? curriculumId,
+    Expression<String>? trackType,
+    Expression<bool>? isActive,
+    Expression<DateTime>? activatedAt,
+    Expression<DateTime>? deactivatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (trackType != null) 'track_type': trackType,
+      if (isActive != null) 'is_active': isActive,
+      if (activatedAt != null) 'activated_at': activatedAt,
+      if (deactivatedAt != null) 'deactivated_at': deactivatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CurriculumTracksCompanion copyWith({
+    Value<String>? curriculumId,
+    Value<String>? trackType,
+    Value<bool>? isActive,
+    Value<DateTime>? activatedAt,
+    Value<DateTime?>? deactivatedAt,
+    Value<int>? rowid,
+  }) {
+    return CurriculumTracksCompanion(
+      curriculumId: curriculumId ?? this.curriculumId,
+      trackType: trackType ?? this.trackType,
+      isActive: isActive ?? this.isActive,
+      activatedAt: activatedAt ?? this.activatedAt,
+      deactivatedAt: deactivatedAt ?? this.deactivatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (curriculumId.present) {
+      map['curriculum_id'] = Variable<String>(curriculumId.value);
+    }
+    if (trackType.present) {
+      map['track_type'] = Variable<String>(trackType.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (activatedAt.present) {
+      map['activated_at'] = Variable<DateTime>(activatedAt.value);
+    }
+    if (deactivatedAt.present) {
+      map['deactivated_at'] = Variable<DateTime>(deactivatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurriculumTracksCompanion(')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('trackType: $trackType, ')
+          ..write('isActive: $isActive, ')
+          ..write('activatedAt: $activatedAt, ')
+          ..write('deactivatedAt: $deactivatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $StageDefinitionsTable extends StageDefinitions
     with TableInfo<$StageDefinitionsTable, StageDefinition> {
   @override
@@ -4007,6 +4409,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ContentItemsTable contentItems = $ContentItemsTable(this);
   late final $CurriculumHierarchyConfigTable curriculumHierarchyConfig =
       $CurriculumHierarchyConfigTable(this);
+  late final $CurriculumTracksTable curriculumTracks = $CurriculumTracksTable(
+    this,
+  );
   late final $StageDefinitionsTable stageDefinitions = $StageDefinitionsTable(
     this,
   );
@@ -4023,6 +4428,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final LearningOrderDao learningOrderDao = LearningOrderDao(
     this as AppDatabase,
   );
+  late final TrackDao trackDao = TrackDao(this as AppDatabase);
   late final UserProfileDao userProfileDao = UserProfileDao(
     this as AppDatabase,
   );
@@ -4034,6 +4440,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     contentItems,
     curriculumHierarchyConfig,
+    curriculumTracks,
     stageDefinitions,
     completions,
     bookmarks,
@@ -4606,6 +5013,218 @@ typedef $$CurriculumHierarchyConfigTableProcessedTableManager =
         >,
       ),
       CurriculumHierarchyConfigData,
+      PrefetchHooks Function()
+    >;
+typedef $$CurriculumTracksTableCreateCompanionBuilder =
+    CurriculumTracksCompanion Function({
+      required String curriculumId,
+      required String trackType,
+      Value<bool> isActive,
+      required DateTime activatedAt,
+      Value<DateTime?> deactivatedAt,
+      Value<int> rowid,
+    });
+typedef $$CurriculumTracksTableUpdateCompanionBuilder =
+    CurriculumTracksCompanion Function({
+      Value<String> curriculumId,
+      Value<String> trackType,
+      Value<bool> isActive,
+      Value<DateTime> activatedAt,
+      Value<DateTime?> deactivatedAt,
+      Value<int> rowid,
+    });
+
+class $$CurriculumTracksTableFilterComposer
+    extends Composer<_$AppDatabase, $CurriculumTracksTable> {
+  $$CurriculumTracksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackType => $composableBuilder(
+    column: $table.trackType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get activatedAt => $composableBuilder(
+    column: $table.activatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deactivatedAt => $composableBuilder(
+    column: $table.deactivatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CurriculumTracksTableOrderingComposer
+    extends Composer<_$AppDatabase, $CurriculumTracksTable> {
+  $$CurriculumTracksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trackType => $composableBuilder(
+    column: $table.trackType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get activatedAt => $composableBuilder(
+    column: $table.activatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deactivatedAt => $composableBuilder(
+    column: $table.deactivatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CurriculumTracksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CurriculumTracksTable> {
+  $$CurriculumTracksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get trackType =>
+      $composableBuilder(column: $table.trackType, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get activatedAt => $composableBuilder(
+    column: $table.activatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get deactivatedAt => $composableBuilder(
+    column: $table.deactivatedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$CurriculumTracksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CurriculumTracksTable,
+          CurriculumTrack,
+          $$CurriculumTracksTableFilterComposer,
+          $$CurriculumTracksTableOrderingComposer,
+          $$CurriculumTracksTableAnnotationComposer,
+          $$CurriculumTracksTableCreateCompanionBuilder,
+          $$CurriculumTracksTableUpdateCompanionBuilder,
+          (
+            CurriculumTrack,
+            BaseReferences<
+              _$AppDatabase,
+              $CurriculumTracksTable,
+              CurriculumTrack
+            >,
+          ),
+          CurriculumTrack,
+          PrefetchHooks Function()
+        > {
+  $$CurriculumTracksTableTableManager(
+    _$AppDatabase db,
+    $CurriculumTracksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CurriculumTracksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CurriculumTracksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CurriculumTracksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> curriculumId = const Value.absent(),
+                Value<String> trackType = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime> activatedAt = const Value.absent(),
+                Value<DateTime?> deactivatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CurriculumTracksCompanion(
+                curriculumId: curriculumId,
+                trackType: trackType,
+                isActive: isActive,
+                activatedAt: activatedAt,
+                deactivatedAt: deactivatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String curriculumId,
+                required String trackType,
+                Value<bool> isActive = const Value.absent(),
+                required DateTime activatedAt,
+                Value<DateTime?> deactivatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CurriculumTracksCompanion.insert(
+                curriculumId: curriculumId,
+                trackType: trackType,
+                isActive: isActive,
+                activatedAt: activatedAt,
+                deactivatedAt: deactivatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CurriculumTracksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CurriculumTracksTable,
+      CurriculumTrack,
+      $$CurriculumTracksTableFilterComposer,
+      $$CurriculumTracksTableOrderingComposer,
+      $$CurriculumTracksTableAnnotationComposer,
+      $$CurriculumTracksTableCreateCompanionBuilder,
+      $$CurriculumTracksTableUpdateCompanionBuilder,
+      (
+        CurriculumTrack,
+        BaseReferences<_$AppDatabase, $CurriculumTracksTable, CurriculumTrack>,
+      ),
+      CurriculumTrack,
       PrefetchHooks Function()
     >;
 typedef $$StageDefinitionsTableCreateCompanionBuilder =
@@ -6125,6 +6744,8 @@ class $AppDatabaseManager {
         _db,
         _db.curriculumHierarchyConfig,
       );
+  $$CurriculumTracksTableTableManager get curriculumTracks =>
+      $$CurriculumTracksTableTableManager(_db, _db.curriculumTracks);
   $$StageDefinitionsTableTableManager get stageDefinitions =>
       $$StageDefinitionsTableTableManager(_db, _db.stageDefinitions);
   $$CompletionsTableTableManager get completions =>

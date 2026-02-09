@@ -233,7 +233,7 @@ void main() {
         await database.bookmarkDao.insertBookmark(
           BookmarksCompanion.insert(
             curriculumId: CurriculumId.mishnayos.storageKey,
-            trackType: TrackType.personal.value,
+            trackType: TrackType.personal.storageKey,
             contentItemId: 1,
             updatedAt: localTime,
           ),
@@ -243,7 +243,7 @@ void main() {
         final remoteTime = DateTime.now().toUtc();
         await repository.mergeRemoteBookmark({
           'curriculumId': CurriculumId.mishnayos.storageKey,
-          'trackType': TrackType.personal.value,
+          'trackType': TrackType.personal.storageKey,
           'contentItemId': 2,
           'updatedAt': remoteTime.toIso8601String(),
         });
@@ -273,7 +273,7 @@ void main() {
         final olderRemoteTime = DateTime.now().toUtc();
         await repository.mergeRemoteBookmark({
           'curriculumId': CurriculumId.mishnayos.storageKey,
-          'trackType': TrackType.personal.value,
+          'trackType': TrackType.personal.storageKey,
           'contentItemId': 4,
           'updatedAt': olderRemoteTime.toIso8601String(),
         });

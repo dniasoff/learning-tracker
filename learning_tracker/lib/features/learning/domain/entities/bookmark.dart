@@ -47,7 +47,7 @@ class BookmarkEntity {
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == data['curriculumId'] as String,
       ),
-      trackType: TrackType.fromValue(data['trackType'] as String),
+      trackType: TrackType.fromStorageKey(data['trackType'] as String),
       contentItemId: data['contentItemId'] as int,
       updatedAt: DateTime.parse(data['updatedAt'] as String),
     );

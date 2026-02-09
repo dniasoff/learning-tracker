@@ -1,22 +1,34 @@
-/// Identifies the learning track type for completions and bookmarks.
+/// Identifies the type of learning track.
 ///
-/// Each user can maintain separate progress for different track types
-/// within the same curriculum (e.g., personal study vs. school program).
+/// Each curriculum can have multiple active tracks. Personal track is
+/// always present and cannot be removed. School and tutor tracks are optional.
 enum TrackType {
+  /// Personal learning track (always active, cannot be removed)
   personal('personal'),
+
+  /// School-based learning track (optional)
   school('school'),
+
+  /// Tutor-supervised learning track (optional)
   tutor('tutor');
 
-  const TrackType(this.value);
+  const TrackType(this.storageKey);
 
-  /// String value used in database and Firestore.
-  final String value;
+  /// Canonical string key used in database and Firestore.
+  final String storageKey;
 
-  /// Parse from string value.
-  static TrackType fromValue(String value) {
+  /// Parse from storage key string.
+  static TrackType fromStorageKey(String key) {
     return TrackType.values.firstWhere(
-      (type) => type.value == value,
-      orElse: () => throw ArgumentError('Invalid TrackType: $value'),
+      (type) => type.storageKey == key,
+      orElse: () => throw ArgumentError('Invalid TrackType key: $key'),
     );
   }
+
+  /// Display name in English.
+  String get displayNameEn => switch (this) {
+        TrackType.personal => 'Personal',
+        TrackType.school => 'School',
+        TrackType.tutor => 'Tutor',
+      };
 }

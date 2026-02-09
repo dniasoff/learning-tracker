@@ -249,7 +249,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == bookmark.curriculumId,
       ),
-      trackType: TrackType.fromValue(bookmark.trackType),
+      trackType: TrackType.fromStorageKey(bookmark.trackType),
       contentItemId: bookmark.contentItemId,
       updatedAt: bookmark.updatedAt,
     );
