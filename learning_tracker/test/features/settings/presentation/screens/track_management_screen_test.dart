@@ -17,15 +17,13 @@ void main() {
     mockRepository = MockTrackRepository();
   });
 
-  Widget createTestWidget({
-    required List<TrackType> initialActiveTracks,
-  }) {
+  Widget createTestWidget({required List<TrackType> initialActiveTracks}) {
     return ProviderScope(
       overrides: [
         trackRepositoryProvider.overrideWithValue(mockRepository),
-        activeTracksProvider(CurriculumId.mishnayos).overrideWith(
-          (ref) => Future.value(initialActiveTracks),
-        ),
+        activeTracksProvider(
+          CurriculumId.mishnayos,
+        ).overrideWith((ref) => Future.value(initialActiveTracks)),
       ],
       child: const MaterialApp(
         home: TrackManagementScreen(curriculumId: 'mishnayos'),
@@ -35,45 +33,43 @@ void main() {
 
   group('TrackManagementScreen Widget Tests', () {
     testWidgets(
-        'renders toggle switches for school and tutor tracks, personal track shown as always-on',
-        (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(
-          initialActiveTracks: [TrackType.personal],
-        ),
-      );
-      await tester.pumpAndSettle();
+      'renders toggle switches for school and tutor tracks, personal track shown as always-on',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(initialActiveTracks: [TrackType.personal]),
+        );
+        await tester.pumpAndSettle();
 
-      // Find all switches
-      final switches = find.byType(SwitchListTile);
-      expect(switches, findsNWidgets(3)); // personal, school, tutor
+        // Find all switches
+        final switches = find.byType(SwitchListTile);
+        expect(switches, findsNWidgets(3)); // personal, school, tutor
 
-      // Find personal track
-      final personalSwitch = find.ancestor(
-        of: find.text('Personal'),
-        matching: find.byType(SwitchListTile),
-      );
-      expect(personalSwitch, findsOneWidget);
+        // Find personal track
+        final personalSwitch = find.ancestor(
+          of: find.text('Personal'),
+          matching: find.byType(SwitchListTile),
+        );
+        expect(personalSwitch, findsOneWidget);
 
-      // Verify personal track is on and disabled
-      final personalSwitchWidget =
-          tester.widget<SwitchListTile>(personalSwitch);
-      expect(personalSwitchWidget.value, isTrue);
-      expect(personalSwitchWidget.onChanged, isNull); // Disabled
+        // Verify personal track is on and disabled
+        final personalSwitchWidget = tester.widget<SwitchListTile>(
+          personalSwitch,
+        );
+        expect(personalSwitchWidget.value, isTrue);
+        expect(personalSwitchWidget.onChanged, isNull); // Disabled
 
-      // Find subtitle showing "Always active"
-      expect(find.text('Always active'), findsOneWidget);
+        // Find subtitle showing "Always active"
+        expect(find.text('Always active'), findsOneWidget);
 
-      // Find school and tutor tracks
-      expect(find.text('School'), findsOneWidget);
-      expect(find.text('Tutor'), findsOneWidget);
-    });
+        // Find school and tutor tracks
+        expect(find.text('School'), findsOneWidget);
+        expect(find.text('Tutor'), findsOneWidget);
+      },
+    );
 
     testWidgets('school track toggle is enabled when inactive', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          initialActiveTracks: [TrackType.personal],
-        ),
+        createTestWidget(initialActiveTracks: [TrackType.personal]),
       );
       await tester.pumpAndSettle();
 
@@ -89,9 +85,7 @@ void main() {
 
     testWidgets('tutor track toggle is enabled when inactive', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          initialActiveTracks: [TrackType.personal],
-        ),
+        createTestWidget(initialActiveTracks: [TrackType.personal]),
       );
       await tester.pumpAndSettle();
 
@@ -106,15 +100,15 @@ void main() {
     });
 
     testWidgets('activating school track calls repository', (tester) async {
-      when(() => mockRepository.activateTrack(
-            CurriculumId.mishnayos,
-            TrackType.school,
-          )).thenAnswer((_) async => {});
+      when(
+        () => mockRepository.activateTrack(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        ),
+      ).thenAnswer((_) async => {});
 
       await tester.pumpWidget(
-        createTestWidget(
-          initialActiveTracks: [TrackType.personal],
-        ),
+        createTestWidget(initialActiveTracks: [TrackType.personal]),
       );
       await tester.pumpAndSettle();
 
@@ -126,50 +120,56 @@ void main() {
       await tester.tap(schoolSwitch);
       await tester.pumpAndSettle();
 
-      verify(() => mockRepository.activateTrack(
-            CurriculumId.mishnayos,
-            TrackType.school,
-          )).called(1);
+      verify(
+        () => mockRepository.activateTrack(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        ),
+      ).called(1);
     });
 
     testWidgets(
-        'deactivating track shows confirmation dialog warning that data is preserved',
-        (tester) async {
-      when(() => mockRepository.deactivateTrack(
+      'deactivating track shows confirmation dialog warning that data is preserved',
+      (tester) async {
+        when(
+          () => mockRepository.deactivateTrack(
             CurriculumId.mishnayos,
             TrackType.school,
-          )).thenAnswer((_) async => {});
+          ),
+        ).thenAnswer((_) async => {});
 
-      await tester.pumpWidget(
-        createTestWidget(
-          initialActiveTracks: [TrackType.personal, TrackType.school],
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createTestWidget(
+            initialActiveTracks: [TrackType.personal, TrackType.school],
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Tap school track switch (to deactivate)
-      final schoolSwitch = find.ancestor(
-        of: find.text('School'),
-        matching: find.byType(SwitchListTile),
-      );
-      await tester.tap(schoolSwitch);
-      await tester.pumpAndSettle();
+        // Tap school track switch (to deactivate)
+        final schoolSwitch = find.ancestor(
+          of: find.text('School'),
+          matching: find.byType(SwitchListTile),
+        );
+        await tester.tap(schoolSwitch);
+        await tester.pumpAndSettle();
 
-      // Verify confirmation dialog appears
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('Deactivate Track?'), findsOneWidget);
-      expect(
-        find.textContaining('completion history will be preserved'),
-        findsOneWidget,
-      );
+        // Verify confirmation dialog appears
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('Deactivate Track?'), findsOneWidget);
+        expect(
+          find.textContaining('completion history will be preserved'),
+          findsOneWidget,
+        );
 
-      // Verify dialog has Cancel and Deactivate buttons
-      expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Deactivate'), findsOneWidget);
-    });
+        // Verify dialog has Cancel and Deactivate buttons
+        expect(find.text('Cancel'), findsOneWidget);
+        expect(find.text('Deactivate'), findsOneWidget);
+      },
+    );
 
-    testWidgets('canceling deactivation does not call repository',
-        (tester) async {
+    testWidgets('canceling deactivation does not call repository', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           initialActiveTracks: [TrackType.personal, TrackType.school],
@@ -190,17 +190,21 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify repository was NOT called
-      verifyNever(() => mockRepository.deactivateTrack(
-            CurriculumId.mishnayos,
-            TrackType.school,
-          ));
+      verifyNever(
+        () => mockRepository.deactivateTrack(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        ),
+      );
     });
 
     testWidgets('confirming deactivation calls repository', (tester) async {
-      when(() => mockRepository.deactivateTrack(
-            CurriculumId.mishnayos,
-            TrackType.school,
-          )).thenAnswer((_) async => {});
+      when(
+        () => mockRepository.deactivateTrack(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        ),
+      ).thenAnswer((_) async => {});
 
       await tester.pumpWidget(
         createTestWidget(
@@ -222,10 +226,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify repository was called
-      verify(() => mockRepository.deactivateTrack(
-            CurriculumId.mishnayos,
-            TrackType.school,
-          )).called(1);
+      verify(
+        () => mockRepository.deactivateTrack(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        ),
+      ).called(1);
     });
 
     testWidgets('shows all three tracks when multiple active', (tester) async {

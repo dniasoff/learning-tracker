@@ -439,6 +439,62 @@ class SyncRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [TrackManagementScreen]
+class TrackManagementRoute extends PageRouteInfo<TrackManagementRouteArgs> {
+  TrackManagementRoute({
+    Key? key,
+    required String curriculumId,
+    List<PageRouteInfo>? children,
+  }) : super(
+         TrackManagementRoute.name,
+         args: TrackManagementRouteArgs(key: key, curriculumId: curriculumId),
+         rawPathParams: {'curriculumId': curriculumId},
+         initialChildren: children,
+       );
+
+  static const String name = 'TrackManagementRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final pathParams = data.inheritedPathParams;
+      final args = data.argsAs<TrackManagementRouteArgs>(
+        orElse: () => TrackManagementRouteArgs(
+          curriculumId: pathParams.getString('curriculumId'),
+        ),
+      );
+      return TrackManagementScreen(
+        key: args.key,
+        curriculumId: args.curriculumId,
+      );
+    },
+  );
+}
+
+class TrackManagementRouteArgs {
+  const TrackManagementRouteArgs({this.key, required this.curriculumId});
+
+  final Key? key;
+
+  final String curriculumId;
+
+  @override
+  String toString() {
+    return 'TrackManagementRouteArgs{key: $key, curriculumId: $curriculumId}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! TrackManagementRouteArgs) return false;
+    return key == other.key && curriculumId == other.curriculumId;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ curriculumId.hashCode;
+}
+
+/// generated route for
 /// [TutorModeScreen]
 class TutorModeRoute extends PageRouteInfo<void> {
   const TutorModeRoute({List<PageRouteInfo>? children})

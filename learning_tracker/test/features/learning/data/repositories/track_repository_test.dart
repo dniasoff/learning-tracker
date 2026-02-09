@@ -12,9 +12,7 @@ void main() {
 
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
-    repository = TrackRepositoryImpl(
-      database: database,
-    );
+    repository = TrackRepositoryImpl(database: database);
   });
 
   tearDown(() async {
@@ -23,38 +21,44 @@ void main() {
 
   group('TrackRepository', () {
     group('getActiveTracks', () {
-      test('returns only personal track for freshly activated curriculum',
-          () async {
-        // Initialize default tracks (only personal)
-        await repository.initializeDefaultTracks(CurriculumId.mishnayos);
+      test(
+        'returns only personal track for freshly activated curriculum',
+        () async {
+          // Initialize default tracks (only personal)
+          await repository.initializeDefaultTracks(CurriculumId.mishnayos);
 
-        // Get active tracks
-        final activeTracks =
-            await repository.getActiveTracks(CurriculumId.mishnayos);
+          // Get active tracks
+          final activeTracks = await repository.getActiveTracks(
+            CurriculumId.mishnayos,
+          );
 
-        expect(activeTracks, hasLength(1));
-        expect(activeTracks.first, TrackType.personal);
-      });
+          expect(activeTracks, hasLength(1));
+          expect(activeTracks.first, TrackType.personal);
+        },
+      );
 
-      test('returns [personal, school] after activating school track',
-          () async {
-        // Initialize default tracks
-        await repository.initializeDefaultTracks(CurriculumId.mishnayos);
+      test(
+        'returns [personal, school] after activating school track',
+        () async {
+          // Initialize default tracks
+          await repository.initializeDefaultTracks(CurriculumId.mishnayos);
 
-        // Activate school track
-        await repository.activateTrack(
-          CurriculumId.mishnayos,
-          TrackType.school,
-        );
+          // Activate school track
+          await repository.activateTrack(
+            CurriculumId.mishnayos,
+            TrackType.school,
+          );
 
-        // Get active tracks
-        final activeTracks =
-            await repository.getActiveTracks(CurriculumId.mishnayos);
+          // Get active tracks
+          final activeTracks = await repository.getActiveTracks(
+            CurriculumId.mishnayos,
+          );
 
-        expect(activeTracks, hasLength(2));
-        expect(activeTracks, contains(TrackType.personal));
-        expect(activeTracks, contains(TrackType.school));
-      });
+          expect(activeTracks, hasLength(2));
+          expect(activeTracks, contains(TrackType.personal));
+          expect(activeTracks, contains(TrackType.school));
+        },
+      );
 
       test('excludes deactivated tracks from results', () async {
         // Initialize and activate all tracks
@@ -63,10 +67,7 @@ void main() {
           CurriculumId.mishnayos,
           TrackType.school,
         );
-        await repository.activateTrack(
-          CurriculumId.mishnayos,
-          TrackType.tutor,
-        );
+        await repository.activateTrack(CurriculumId.mishnayos, TrackType.tutor);
 
         // Deactivate school track
         await repository.deactivateTrack(
@@ -75,8 +76,9 @@ void main() {
         );
 
         // Get active tracks
-        final activeTracks =
-            await repository.getActiveTracks(CurriculumId.mishnayos);
+        final activeTracks = await repository.getActiveTracks(
+          CurriculumId.mishnayos,
+        );
 
         expect(activeTracks, hasLength(2));
         expect(activeTracks, contains(TrackType.personal));
@@ -138,8 +140,9 @@ void main() {
         );
 
         // Verify school track exists and is active
-        final tracksBefore = await database.trackDao
-            .getAllTracks(CurriculumId.mishnayos);
+        final tracksBefore = await database.trackDao.getAllTracks(
+          CurriculumId.mishnayos,
+        );
         final schoolTrackBefore = tracksBefore.firstWhere(
           (t) => t.trackType == TrackType.school.storageKey,
         );
@@ -152,8 +155,9 @@ void main() {
         );
 
         // Verify record still exists but is inactive
-        final tracksAfter = await database.trackDao
-            .getAllTracks(CurriculumId.mishnayos);
+        final tracksAfter = await database.trackDao.getAllTracks(
+          CurriculumId.mishnayos,
+        );
         final schoolTrackAfter = tracksAfter.firstWhere(
           (t) => t.trackType == TrackType.school.storageKey,
         );
@@ -161,18 +165,20 @@ void main() {
         expect(schoolTrackAfter.deactivatedAt, isNotNull);
       });
 
-      test('throws InvalidTrackOperationException when deactivating personal',
-          () async {
-        await repository.initializeDefaultTracks(CurriculumId.mishnayos);
+      test(
+        'throws InvalidTrackOperationException when deactivating personal',
+        () async {
+          await repository.initializeDefaultTracks(CurriculumId.mishnayos);
 
-        expect(
-          () => repository.deactivateTrack(
-            CurriculumId.mishnayos,
-            TrackType.personal,
-          ),
-          throwsA(isA<InvalidTrackOperationException>()),
-        );
-      });
+          expect(
+            () => repository.deactivateTrack(
+              CurriculumId.mishnayos,
+              TrackType.personal,
+            ),
+            throwsA(isA<InvalidTrackOperationException>()),
+          );
+        },
+      );
 
       test('does not delete completion data when deactivating track', () async {
         // Initialize tracks
@@ -209,10 +215,7 @@ void main() {
         final completionsAfter = await database.completionDao
             .getCompletionsByCurriculum(CurriculumId.mishnayos.storageKey);
         expect(completionsAfter, hasLength(1));
-        expect(
-          completionsAfter.first.trackType,
-          TrackType.school.storageKey,
-        );
+        expect(completionsAfter.first.trackType, TrackType.school.storageKey);
       });
 
       // TODO(DNI-38): Add test for Firestore sync once implemented
@@ -266,8 +269,9 @@ void main() {
       test('creates only personal track for new curriculum', () async {
         await repository.initializeDefaultTracks(CurriculumId.mishnayos);
 
-        final activeTracks =
-            await repository.getActiveTracks(CurriculumId.mishnayos);
+        final activeTracks = await repository.getActiveTracks(
+          CurriculumId.mishnayos,
+        );
         expect(activeTracks, hasLength(1));
         expect(activeTracks.first, TrackType.personal);
       });
@@ -278,8 +282,9 @@ void main() {
         await repository.initializeDefaultTracks(CurriculumId.mishnayos);
 
         // Should still only have one personal track
-        final activeTracks =
-            await repository.getActiveTracks(CurriculumId.mishnayos);
+        final activeTracks = await repository.getActiveTracks(
+          CurriculumId.mishnayos,
+        );
         expect(activeTracks, hasLength(1));
       });
 
@@ -287,65 +292,68 @@ void main() {
     });
 
     group('independent curriculum states', () {
-      test('track activation is per-curriculum (two curricula independent)',
-          () async {
-        // Initialize both curricula
-        await repository.initializeDefaultTracks(CurriculumId.mishnayos);
-        await repository.initializeDefaultTracks(CurriculumId.bavli);
+      test(
+        'track activation is per-curriculum (two curricula independent)',
+        () async {
+          // Initialize both curricula
+          await repository.initializeDefaultTracks(CurriculumId.mishnayos);
+          await repository.initializeDefaultTracks(CurriculumId.bavli);
 
-        // Activate school for Mishnayos only
-        await repository.activateTrack(
-          CurriculumId.mishnayos,
-          TrackType.school,
-        );
+          // Activate school for Mishnayos only
+          await repository.activateTrack(
+            CurriculumId.mishnayos,
+            TrackType.school,
+          );
 
-        // Verify Mishnayos has school track
-        final mishnayosTracks =
-            await repository.getActiveTracks(CurriculumId.mishnayos);
-        expect(mishnayosTracks, contains(TrackType.school));
+          // Verify Mishnayos has school track
+          final mishnayosTracks = await repository.getActiveTracks(
+            CurriculumId.mishnayos,
+          );
+          expect(mishnayosTracks, contains(TrackType.school));
 
-        // Verify Bavli does NOT have school track
-        final bavliTracks =
-            await repository.getActiveTracks(CurriculumId.bavli);
-        expect(bavliTracks, isNot(contains(TrackType.school)));
-        expect(bavliTracks, hasLength(1));
-        expect(bavliTracks.first, TrackType.personal);
-      });
+          // Verify Bavli does NOT have school track
+          final bavliTracks = await repository.getActiveTracks(
+            CurriculumId.bavli,
+          );
+          expect(bavliTracks, isNot(contains(TrackType.school)));
+          expect(bavliTracks, hasLength(1));
+          expect(bavliTracks.first, TrackType.personal);
+        },
+      );
 
-      test('deactivating track in one curriculum does not affect another',
-          () async {
-        // Initialize and activate school for both
-        await repository.initializeDefaultTracks(CurriculumId.mishnayos);
-        await repository.initializeDefaultTracks(CurriculumId.bavli);
-        await repository.activateTrack(
-          CurriculumId.mishnayos,
-          TrackType.school,
-        );
-        await repository.activateTrack(
-          CurriculumId.bavli,
-          TrackType.school,
-        );
+      test(
+        'deactivating track in one curriculum does not affect another',
+        () async {
+          // Initialize and activate school for both
+          await repository.initializeDefaultTracks(CurriculumId.mishnayos);
+          await repository.initializeDefaultTracks(CurriculumId.bavli);
+          await repository.activateTrack(
+            CurriculumId.mishnayos,
+            TrackType.school,
+          );
+          await repository.activateTrack(CurriculumId.bavli, TrackType.school);
 
-        // Deactivate school for Mishnayos
-        await repository.deactivateTrack(
-          CurriculumId.mishnayos,
-          TrackType.school,
-        );
+          // Deactivate school for Mishnayos
+          await repository.deactivateTrack(
+            CurriculumId.mishnayos,
+            TrackType.school,
+          );
 
-        // Verify Mishnayos school is inactive
-        final mishnayosSchoolActive = await repository.isTrackActive(
-          CurriculumId.mishnayos,
-          TrackType.school,
-        );
-        expect(mishnayosSchoolActive, isFalse);
+          // Verify Mishnayos school is inactive
+          final mishnayosSchoolActive = await repository.isTrackActive(
+            CurriculumId.mishnayos,
+            TrackType.school,
+          );
+          expect(mishnayosSchoolActive, isFalse);
 
-        // Verify Bavli school is still active
-        final bavliSchoolActive = await repository.isTrackActive(
-          CurriculumId.bavli,
-          TrackType.school,
-        );
-        expect(bavliSchoolActive, isTrue);
-      });
+          // Verify Bavli school is still active
+          final bavliSchoolActive = await repository.isTrackActive(
+            CurriculumId.bavli,
+            TrackType.school,
+          );
+          expect(bavliSchoolActive, isTrue);
+        },
+      );
     });
   });
 }

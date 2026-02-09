@@ -12,17 +12,12 @@ part 'track_providers.g.dart';
 TrackRepository trackRepository(Ref ref) {
   final database = ref.watch(appDatabaseProvider);
 
-  return TrackRepositoryImpl(
-    database: database,
-  );
+  return TrackRepositoryImpl(database: database);
 }
 
 /// Provides the list of active tracks for a specific curriculum.
 @riverpod
-Future<List<TrackType>> activeTracks(
-  Ref ref,
-  CurriculumId curriculumId,
-) async {
+Future<List<TrackType>> activeTracks(Ref ref, CurriculumId curriculumId) async {
   final repository = ref.watch(trackRepositoryProvider);
   return repository.getActiveTracks(curriculumId);
 }

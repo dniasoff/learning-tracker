@@ -14,9 +14,9 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
-        activeTracksProvider(CurriculumId.mishnayos).overrideWith(
-          (ref) => Future.value(activeTracks),
-        ),
+        activeTracksProvider(
+          CurriculumId.mishnayos,
+        ).overrideWith((ref) => Future.value(activeTracks)),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -101,8 +101,9 @@ void main() {
       expect(find.byIcon(Icons.check), findsOneWidget);
     });
 
-    testWidgets('shows ChoiceChips when multiple tracks active',
-        (tester) async {
+    testWidgets('shows ChoiceChips when multiple tracks active', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           activeTracks: [TrackType.personal, TrackType.school, TrackType.tutor],
@@ -138,8 +139,9 @@ void main() {
       expect(selectedType, TrackType.school);
     });
 
-    testWidgets('updates selection when tapping different chip',
-        (tester) async {
+    testWidgets('updates selection when tapping different chip', (
+      tester,
+    ) async {
       TrackType? currentSelection = TrackType.personal;
 
       await tester.pumpWidget(
@@ -156,10 +158,7 @@ void main() {
         of: find.text('Personal'),
         matching: find.byType(ChoiceChip),
       );
-      expect(
-        tester.widget<ChoiceChip>(personalChip).selected,
-        isTrue,
-      );
+      expect(tester.widget<ChoiceChip>(personalChip).selected, isTrue);
 
       // Tap Tutor chip
       await tester.tap(find.text('Tutor'));
@@ -221,9 +220,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            activeTracksProvider(CurriculumId.mishnayos).overrideWith(
-              (ref) => Future.error('Failed to load tracks'),
-            ),
+            activeTracksProvider(
+              CurriculumId.mishnayos,
+            ).overrideWith((ref) => Future.error('Failed to load tracks')),
           ],
           child: MaterialApp(
             home: Scaffold(

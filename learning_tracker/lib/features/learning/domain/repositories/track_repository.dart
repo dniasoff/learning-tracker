@@ -18,10 +18,7 @@ abstract class TrackRepository {
   /// previously deactivated, reactivates it with a new activation timestamp.
   ///
   /// Does nothing if the track is already active.
-  Future<void> activateTrack(
-    CurriculumId curriculumId,
-    TrackType trackType,
-  );
+  Future<void> activateTrack(CurriculumId curriculumId, TrackType trackType);
 
   /// Deactivate a track for a curriculum.
   ///
@@ -30,16 +27,10 @@ abstract class TrackRepository {
   ///
   /// Throws [InvalidTrackOperationException] if attempting to deactivate
   /// [TrackType.personal] as it cannot be removed.
-  Future<void> deactivateTrack(
-    CurriculumId curriculumId,
-    TrackType trackType,
-  );
+  Future<void> deactivateTrack(CurriculumId curriculumId, TrackType trackType);
 
   /// Check if a specific track is active for a curriculum.
-  Future<bool> isTrackActive(
-    CurriculumId curriculumId,
-    TrackType trackType,
-  );
+  Future<bool> isTrackActive(CurriculumId curriculumId, TrackType trackType);
 
   /// Initialize default tracks for a newly activated curriculum.
   ///

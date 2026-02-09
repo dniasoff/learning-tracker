@@ -8,9 +8,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 class TrackRepositoryImpl implements TrackRepository {
   final AppDatabase _database;
 
-  TrackRepositoryImpl({
-    required AppDatabase database,
-  }) : _database = database;
+  TrackRepositoryImpl({required AppDatabase database}) : _database = database;
 
   @override
   Future<List<TrackType>> getActiveTracks(CurriculumId curriculumId) async {

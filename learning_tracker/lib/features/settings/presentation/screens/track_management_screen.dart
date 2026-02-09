@@ -37,16 +37,11 @@ class TrackManagementScreen extends ConsumerWidget {
         title: Text('Manage Tracks - ${curriculum.displayNameEn}'),
       ),
       body: activeTracksAsync.when(
-        data: (activeTracks) => _buildTrackList(
-          context,
-          ref,
-          curriculum,
-          activeTracks,
-        ),
+        data: (activeTracks) =>
+            _buildTrackList(context, ref, curriculum, activeTracks),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text('Error loading tracks: $error'),
-        ),
+        error: (error, stack) =>
+            Center(child: Text('Error loading tracks: $error')),
       ),
     );
   }
@@ -107,12 +102,7 @@ class TrackManagementScreen extends ConsumerWidget {
                 if (value) {
                   await _activateTrack(ref, curriculum, trackType);
                 } else {
-                  await _deactivateTrack(
-                    context,
-                    ref,
-                    curriculum,
-                    trackType,
-                  );
+                  await _deactivateTrack(context, ref, curriculum, trackType);
                 }
               },
       ),

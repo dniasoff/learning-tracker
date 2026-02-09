@@ -14,28 +14,31 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
   ///
   /// Returns only tracks where isActive = true.
   Future<List<CurriculumTrack>> getActiveTracks(CurriculumId curriculumId) =>
-      (select(curriculumTracks)
-            ..where((t) =>
+      (select(curriculumTracks)..where(
+            (t) =>
                 t.curriculumId.equals(curriculumId.storageKey) &
-                t.isActive.equals(true)))
+                t.isActive.equals(true),
+          ))
           .get();
 
   /// Get all tracks (active and inactive) for a curriculum.
   Future<List<CurriculumTrack>> getAllTracks(CurriculumId curriculumId) =>
-      (select(curriculumTracks)
-            ..where((t) => t.curriculumId.equals(curriculumId.storageKey)))
-          .get();
+      (select(
+        curriculumTracks,
+      )..where((t) => t.curriculumId.equals(curriculumId.storageKey))).get();
 
   /// Check if a specific track is active for a curriculum.
   Future<bool> isTrackActive(
     CurriculumId curriculumId,
     TrackType trackType,
   ) async {
-    final track = await (select(curriculumTracks)
-          ..where((t) =>
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.trackType.equals(trackType.storageKey)))
-        .getSingleOrNull();
+    final track =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId.storageKey) &
+                  t.trackType.equals(trackType.storageKey),
+            ))
+            .getSingleOrNull();
 
     return track?.isActive ?? false;
   }
@@ -48,11 +51,13 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
     CurriculumId curriculumId,
     TrackType trackType,
   ) async {
-    final existing = await (select(curriculumTracks)
-          ..where((t) =>
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.trackType.equals(trackType.storageKey)))
-        .getSingleOrNull();
+    final existing =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId.storageKey) &
+                  t.trackType.equals(trackType.storageKey),
+            ))
+            .getSingleOrNull();
 
     if (existing == null) {
       // Create new active track
@@ -66,17 +71,18 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
       );
     } else if (!existing.isActive) {
       // Reactivate existing track
-      await (update(curriculumTracks)
-            ..where((t) =>
+      await (update(curriculumTracks)..where(
+            (t) =>
                 t.curriculumId.equals(curriculumId.storageKey) &
-                t.trackType.equals(trackType.storageKey)))
+                t.trackType.equals(trackType.storageKey),
+          ))
           .write(
-        CurriculumTracksCompanion(
-          isActive: const Value(true),
-          activatedAt: Value(DateTime.now()),
-          deactivatedAt: const Value(null),
-        ),
-      );
+            CurriculumTracksCompanion(
+              isActive: const Value(true),
+              activatedAt: Value(DateTime.now()),
+              deactivatedAt: const Value(null),
+            ),
+          );
     }
     // If already active, do nothing
   }
@@ -95,23 +101,26 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
       );
     }
 
-    final existing = await (select(curriculumTracks)
-          ..where((t) =>
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.trackType.equals(trackType.storageKey)))
-        .getSingleOrNull();
+    final existing =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId.storageKey) &
+                  t.trackType.equals(trackType.storageKey),
+            ))
+            .getSingleOrNull();
 
     if (existing != null && existing.isActive) {
-      await (update(curriculumTracks)
-            ..where((t) =>
+      await (update(curriculumTracks)..where(
+            (t) =>
                 t.curriculumId.equals(curriculumId.storageKey) &
-                t.trackType.equals(trackType.storageKey)))
+                t.trackType.equals(trackType.storageKey),
+          ))
           .write(
-        CurriculumTracksCompanion(
-          isActive: const Value(false),
-          deactivatedAt: Value(DateTime.now()),
-        ),
-      );
+            CurriculumTracksCompanion(
+              isActive: const Value(false),
+              deactivatedAt: Value(DateTime.now()),
+            ),
+          );
     }
   }
 
@@ -120,9 +129,9 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
   /// Creates only the personal track (active by default).
   /// Should be called when a curriculum is first activated.
   Future<void> initializeDefaultTracks(CurriculumId curriculumId) async {
-    final existing = await (select(curriculumTracks)
-          ..where((t) => t.curriculumId.equals(curriculumId.storageKey)))
-        .get();
+    final existing = await (select(
+      curriculumTracks,
+    )..where((t) => t.curriculumId.equals(curriculumId.storageKey))).get();
 
     if (existing.isEmpty) {
       await into(curriculumTracks).insert(
