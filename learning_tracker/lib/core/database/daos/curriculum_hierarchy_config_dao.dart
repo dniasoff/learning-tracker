@@ -12,10 +12,9 @@ class CurriculumHierarchyConfigDao extends DatabaseAccessor<AppDatabase>
   /// Get hierarchy configuration for a specific curriculum.
   Future<CurriculumHierarchyConfigData?> getConfigForCurriculum(
     String curriculumId,
-  ) =>
-      (select(curriculumHierarchyConfig)
-            ..where((t) => t.curriculumId.equals(curriculumId)))
-          .getSingleOrNull();
+  ) => (select(
+    curriculumHierarchyConfig,
+  )..where((t) => t.curriculumId.equals(curriculumId))).getSingleOrNull();
 
   /// Get all curriculum hierarchy configurations.
   Future<List<CurriculumHierarchyConfigData>> getAllConfigs() =>

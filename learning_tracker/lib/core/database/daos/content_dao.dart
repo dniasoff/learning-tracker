@@ -37,11 +37,13 @@ class ContentDao extends DatabaseAccessor<AppDatabase> with _$ContentDaoMixin {
   /// Returns the first level of the hierarchy (e.g., Sedarim for Mishnayos).
   Future<List<ContentItem>> getTopLevelItems(String curriculumId) =>
       (select(contentItems)
-            ..where((t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.level2.isNull() &
-                t.level3.isNull() &
-                t.level4.isNull())
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.level2.isNull() &
+                  t.level3.isNull() &
+                  t.level4.isNull(),
+            )
             ..orderBy([(t) => OrderingTerm(expression: t.sortOrder)]))
           .get();
 
@@ -51,12 +53,14 @@ class ContentDao extends DatabaseAccessor<AppDatabase> with _$ContentDaoMixin {
     String level1Value,
   ) =>
       (select(contentItems)
-            ..where((t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.level1.equals(level1Value) &
-                t.level2.isNotNull() &
-                t.level3.isNull() &
-                t.level4.isNull())
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.level1.equals(level1Value) &
+                  t.level2.isNotNull() &
+                  t.level3.isNull() &
+                  t.level4.isNull(),
+            )
             ..orderBy([(t) => OrderingTerm(expression: t.sortOrder)]))
           .get();
 
@@ -67,12 +71,14 @@ class ContentDao extends DatabaseAccessor<AppDatabase> with _$ContentDaoMixin {
     String level2Value,
   ) =>
       (select(contentItems)
-            ..where((t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.level1.equals(level1Value) &
-                t.level2.equals(level2Value) &
-                t.level3.isNotNull() &
-                t.level4.isNull())
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.level1.equals(level1Value) &
+                  t.level2.equals(level2Value) &
+                  t.level3.isNotNull() &
+                  t.level4.isNull(),
+            )
             ..orderBy([(t) => OrderingTerm(expression: t.sortOrder)]))
           .get();
 
@@ -84,12 +90,14 @@ class ContentDao extends DatabaseAccessor<AppDatabase> with _$ContentDaoMixin {
     String level3Value,
   ) =>
       (select(contentItems)
-            ..where((t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.level1.equals(level1Value) &
-                t.level2.equals(level2Value) &
-                t.level3.equals(level3Value) &
-                t.level4.isNotNull())
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.level1.equals(level1Value) &
+                  t.level2.equals(level2Value) &
+                  t.level3.equals(level3Value) &
+                  t.level4.isNotNull(),
+            )
             ..orderBy([(t) => OrderingTerm(expression: t.sortOrder)]))
           .get();
 
@@ -111,7 +119,10 @@ class ContentDao extends DatabaseAccessor<AppDatabase> with _$ContentDaoMixin {
     String? level4Value,
   ) {
     final query = select(contentItems)
-      ..where((t) => t.curriculumId.equals(curriculumId) & t.level1.equals(level1Value));
+      ..where(
+        (t) =>
+            t.curriculumId.equals(curriculumId) & t.level1.equals(level1Value),
+      );
 
     if (level2Value != null) {
       query.where((t) => t.level2.equals(level2Value));
