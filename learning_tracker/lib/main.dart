@@ -1,10 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:talker_flutter/talker_flutter.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
 
 void main() {
@@ -27,7 +30,7 @@ void main() {
               ),
             ),
           ],
-          child: const LearningTrackerApp(),
+          child: LearningTrackerApp(),
         ),
       );
     },
@@ -38,46 +41,29 @@ void main() {
 }
 
 class LearningTrackerApp extends StatelessWidget {
-  const LearningTrackerApp({super.key});
+  LearningTrackerApp({super.key});
+
+  late final _appRouter = AppRouter(
+    authGuard: AuthGuard(firebaseAuth: FirebaseAuth.instance),
+    parentPinGuard: ParentPinGuard(
+      isPinVerified: () => false,
+      promptForPin: () async => false,
+    ),
+    tutorPinGuard: TutorPinGuard(
+      isPinVerified: () => false,
+      promptForPin: () async => false,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Mishnayos Tracker',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const _HomeScreen(),
-    );
-  }
-}
-
-class _HomeScreen extends StatelessWidget {
-  const _HomeScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mishnayos Tracker'),
-        actions: [
-          if (!kReleaseMode)
-            IconButton(
-              icon: const Icon(Icons.bug_report),
-              tooltip: 'Debug Logs',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (context) =>
-                        TalkerScreen(talker: AppLogger.instance),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-      body: const Center(child: Text('Mishnayos Tracker')),
+      routerConfig: _appRouter.config(),
     );
   }
 }

@@ -40,9 +40,7 @@ void main() {
 
     test('redirects to sign-in route when auth state is null', () {
       when(() => mockFirebaseAuth.currentUser).thenReturn(null);
-      when(
-        () => mockRouter.pushPath('/sign-in'),
-      ).thenAnswer((_) async => null);
+      when(() => mockRouter.pushPath('/sign-in')).thenAnswer((_) async => null);
 
       authGuard.onNavigation(mockResolver, mockRouter);
 

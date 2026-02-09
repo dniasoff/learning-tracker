@@ -61,9 +61,7 @@ void main() {
 
       // Start listening to auth state
       final authStates = <User?>[];
-      final subscription = repository.authStateChanges().listen(
-        authStates.add,
-      );
+      final subscription = repository.authStateChanges().listen(authStates.add);
 
       // Step 1: Sign in with email/password
       final credential = await repository.signInWithEmail(
