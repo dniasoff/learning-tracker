@@ -8,10 +8,7 @@ part 'content_hierarchy_providers.g.dart';
 
 /// Data class representing a curriculum with metadata for the list screen.
 class CurriculumInfo {
-  const CurriculumInfo({
-    required this.curriculum,
-    required this.itemCount,
-  });
+  const CurriculumInfo({required this.curriculum, required this.itemCount});
 
   final CurriculumId curriculum;
   final int itemCount;
@@ -131,7 +128,9 @@ Future<List<CurriculumInfo>> curriculumList(CurriculumListRef ref) async {
   final results = <CurriculumInfo>[];
 
   for (final curriculum in curricula) {
-    final count = await contentDao.getCurriculumItemCount(curriculum.storageKey);
+    final count = await contentDao.getCurriculumItemCount(
+      curriculum.storageKey,
+    );
     if (count > 0) {
       results.add(CurriculumInfo(curriculum: curriculum, itemCount: count));
     }
@@ -168,16 +167,16 @@ Future<List<HierarchyItemDTO>> hierarchyItems(
     0 => contentDao.getTopLevelItems(params.curriculumId),
     1 => contentDao.getLevel2Items(params.curriculumId, params.level1!),
     2 => contentDao.getLevel3Items(
-        params.curriculumId,
-        params.level1!,
-        params.level2!,
-      ),
+      params.curriculumId,
+      params.level1!,
+      params.level2!,
+    ),
     3 => contentDao.getLevel4Items(
-        params.curriculumId,
-        params.level1!,
-        params.level2!,
-        params.level3!,
-      ),
+      params.curriculumId,
+      params.level1!,
+      params.level2!,
+      params.level3!,
+    ),
     _ => <ContentItem>[],
   };
 

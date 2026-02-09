@@ -143,6 +143,22 @@ class CurriculumLearningRouteArgs {
 }
 
 /// generated route for
+/// [CurriculumListScreen]
+class CurriculumListRoute extends PageRouteInfo<void> {
+  const CurriculumListRoute({List<PageRouteInfo>? children})
+    : super(CurriculumListRoute.name, initialChildren: children);
+
+  static const String name = 'CurriculumListRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const CurriculumListScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [CurriculumProgressScreen]
 class CurriculumProgressRoute
     extends PageRouteInfo<CurriculumProgressRouteArgs> {
