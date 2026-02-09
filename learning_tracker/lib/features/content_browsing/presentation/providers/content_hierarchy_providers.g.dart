@@ -55,7 +55,7 @@ final class CurriculumListProvider
   }
 }
 
-String _$curriculumListHash() => r'aec373d2ca6362b08ee03e2fbbe2892fb2efa1c3';
+String _$curriculumListHash() => r'282ba34663ab39bbb794463242f105933dedf396';
 
 /// Provider for hierarchy configuration labels for a curriculum.
 /// Uses family pattern per P3 requirements.
@@ -120,7 +120,7 @@ final class HierarchyLabelsProvider
   }
 }
 
-String _$hierarchyLabelsHash() => r'8872122c0358bd0acd59af0cf47a5a9e1bd880b3';
+String _$hierarchyLabelsHash() => r'7f91d84c3dc9fb0699f5de858f2dff18c44b5f41';
 
 /// Provider for hierarchy configuration labels for a curriculum.
 /// Uses family pattern per P3 requirements.
@@ -214,7 +214,7 @@ final class HierarchyItemsProvider
   }
 }
 
-String _$hierarchyItemsHash() => r'347a8356f6e7804255fc6c1d1e396042df541aa9';
+String _$hierarchyItemsHash() => r'37de243ee774eb2d26a057885d405300be29a946';
 
 /// Provider for content items at a specific hierarchy path.
 /// Uses family pattern per P3 requirements.
@@ -307,7 +307,7 @@ final class ContentItemByPathProvider
   }
 }
 
-String _$contentItemByPathHash() => r'ec2bfa5196807dbc4851128f010bd045fcc9503c';
+String _$contentItemByPathHash() => r'73eccf90e337ce5bf75a35adf8d2c094b615376c';
 
 /// Provider for getting a specific content item's details by path.
 /// Used for breadcrumb display names.

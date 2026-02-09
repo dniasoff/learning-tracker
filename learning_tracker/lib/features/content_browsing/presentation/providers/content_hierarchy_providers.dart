@@ -120,7 +120,7 @@ class HierarchyQueryParams {
 /// Provider for all active curricula with item counts.
 /// Used by the curriculum list screen.
 @riverpod
-Future<List<CurriculumInfo>> curriculumList(CurriculumListRef ref) async {
+Future<List<CurriculumInfo>> curriculumList(Ref ref) async {
   final db = ref.watch(appDatabaseProvider);
   final contentDao = db.contentDao;
 
@@ -143,7 +143,7 @@ Future<List<CurriculumInfo>> curriculumList(CurriculumListRef ref) async {
 /// Uses family pattern per P3 requirements.
 @riverpod
 Future<List<String>> hierarchyLabels(
-  HierarchyLabelsRef ref,
+  Ref ref,
   String curriculumId,
 ) async {
   final db = ref.watch(appDatabaseProvider);
@@ -156,14 +156,14 @@ Future<List<String>> hierarchyLabels(
 /// Pass a hierarchy key in format "curriculumId/level1/level2/..." or just "curriculumId" for top level.
 @riverpod
 Future<List<HierarchyItemDTO>> hierarchyItems(
-  HierarchyItemsRef ref,
+  Ref ref,
   String hierarchyKey,
 ) async {
   final params = HierarchyQueryParams.fromKey(hierarchyKey);
   final db = ref.watch(appDatabaseProvider);
   final contentDao = db.contentDao;
 
-  final items = await switch (params.depth) {
+  final List<ContentItem> items = await switch (params.depth) {
     0 => contentDao.getTopLevelItems(params.curriculumId),
     1 => contentDao.getLevel2Items(params.curriculumId, params.level1!),
     2 => contentDao.getLevel3Items(
@@ -187,7 +187,7 @@ Future<List<HierarchyItemDTO>> hierarchyItems(
 /// Used for breadcrumb display names.
 @riverpod
 Future<HierarchyItemDTO?> contentItemByPath(
-  ContentItemByPathRef ref,
+  Ref ref,
   String hierarchyKey,
 ) async {
   final params = HierarchyQueryParams.fromKey(hierarchyKey);
