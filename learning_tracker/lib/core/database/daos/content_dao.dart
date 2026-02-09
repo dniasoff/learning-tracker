@@ -8,25 +8,20 @@ part 'content_dao.g.dart';
 class ContentDao extends DatabaseAccessor<AppDatabase> with _$ContentDaoMixin {
   ContentDao(super.db);
 
-  Future<List<ContentItem>> getAllContentItems() =>
-      select(contentItems).get();
+  Future<List<ContentItem>> getAllContentItems() => select(contentItems).get();
 
   Future<ContentItem?> getContentItemById(int id) =>
       (select(contentItems)..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  Future<List<ContentItem>> getContentItemsByCurriculum(
-    String curriculumId,
-  ) =>
-      (select(contentItems)..where((t) => t.curriculumId.equals(curriculumId)))
-          .get();
+  Future<List<ContentItem>> getContentItemsByCurriculum(String curriculumId) =>
+      (select(
+        contentItems,
+      )..where((t) => t.curriculumId.equals(curriculumId))).get();
 
   Future<List<ContentItem>> getLeafItems(String curriculumId) =>
-      (select(contentItems)
-            ..where(
-              (t) =>
-                  t.curriculumId.equals(curriculumId) &
-                  t.isLeaf.equals(true),
-            ))
+      (select(contentItems)..where(
+            (t) => t.curriculumId.equals(curriculumId) & t.isLeaf.equals(true),
+          ))
           .get();
 
   Future<int> insertContentItem(ContentItemsCompanion entry) =>

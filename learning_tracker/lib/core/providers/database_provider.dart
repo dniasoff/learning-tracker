@@ -6,9 +6,7 @@ part 'database_provider.g.dart';
 
 @Riverpod(keepAlive: true)
 AppDatabase appDatabase(Ref ref) {
-  final database = AppDatabase(
-    driftDatabase(name: 'learning_tracker'),
-  );
+  final database = AppDatabase(driftDatabase(name: 'learning_tracker'));
   ref.onDispose(database.close);
   return database;
 }

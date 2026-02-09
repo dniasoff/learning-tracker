@@ -11,9 +11,9 @@ class StageDao extends DatabaseAccessor<AppDatabase> with _$StageDaoMixin {
   Future<List<StageDefinition>> getAllStageDefinitions() =>
       select(stageDefinitions).get();
 
-  Future<StageDefinition?> getStageDefinitionById(int id) =>
-      (select(stageDefinitions)..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+  Future<StageDefinition?> getStageDefinitionById(int id) => (select(
+    stageDefinitions,
+  )..where((t) => t.id.equals(id))).getSingleOrNull();
 
   Future<List<StageDefinition>> getStageDefinitionsByCurriculum(
     String curriculumId,

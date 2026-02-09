@@ -1,0 +1,33 @@
+#!/bin/bash
+# Pre-commit hook: Run dart format and dart analyze
+# Install: cp hooks/pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+cd learning_tracker
+
+# Check if dart is available
+if ! command -v dart &> /dev/null; then
+    echo "❌ dart could not be found. Please install Flutter/Dart."
+    exit 1
+fi
+
+# Run dart format check
+echo "📝 Checking formatting..."
+if ! dart format --set-exit-if-changed .; then
+    echo "❌ Code is not formatted. Run: dart format ."
+    echo "   Or run: cd learning_tracker && dart format ."
+    exit 1
+fi
+
+# Run dart analyze
+echo "🔬 Running static analysis..."
+if ! dart analyze --fatal-infos; then
+    echo "❌ Analysis found issues. Fix them before committing."
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"
+exit 0

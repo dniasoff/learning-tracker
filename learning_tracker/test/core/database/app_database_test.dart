@@ -82,8 +82,9 @@ void main() {
         ),
       );
 
-      final items =
-          await db.contentDao.getContentItemsByCurriculum('mishnayos');
+      final items = await db.contentDao.getContentItemsByCurriculum(
+        'mishnayos',
+      );
       expect(items.length, 1);
       expect(items.first.curriculumId, 'mishnayos');
     });
@@ -171,16 +172,18 @@ void main() {
 
   group('CurriculumHierarchyConfig CRUD', () {
     test('inserts and retrieves config', () async {
-      await db.into(db.curriculumHierarchyConfig).insert(
-        CurriculumHierarchyConfigCompanion.insert(
-          curriculumId: 'mishnayos',
-          level1Label: 'Seder',
-          level2Label: const Value('Masechta'),
-          level3Label: const Value('Perek'),
-          level4Label: const Value('Mishna'),
-          maxLevels: 4,
-        ),
-      );
+      await db
+          .into(db.curriculumHierarchyConfig)
+          .insert(
+            CurriculumHierarchyConfigCompanion.insert(
+              curriculumId: 'mishnayos',
+              level1Label: 'Seder',
+              level2Label: const Value('Masechta'),
+              level3Label: const Value('Perek'),
+              level4Label: const Value('Mishna'),
+              maxLevels: 4,
+            ),
+          );
 
       final configs = await db.select(db.curriculumHierarchyConfig).get();
       expect(configs.length, 1);
@@ -190,22 +193,26 @@ void main() {
     });
 
     test('enforces primary key uniqueness', () async {
-      await db.into(db.curriculumHierarchyConfig).insert(
-        CurriculumHierarchyConfigCompanion.insert(
-          curriculumId: 'mishnayos',
-          level1Label: 'Seder',
-          maxLevels: 4,
-        ),
-      );
+      await db
+          .into(db.curriculumHierarchyConfig)
+          .insert(
+            CurriculumHierarchyConfigCompanion.insert(
+              curriculumId: 'mishnayos',
+              level1Label: 'Seder',
+              maxLevels: 4,
+            ),
+          );
 
       expect(
-        () => db.into(db.curriculumHierarchyConfig).insert(
-          CurriculumHierarchyConfigCompanion.insert(
-            curriculumId: 'mishnayos',
-            level1Label: 'Different',
-            maxLevels: 2,
-          ),
-        ),
+        () => db
+            .into(db.curriculumHierarchyConfig)
+            .insert(
+              CurriculumHierarchyConfigCompanion.insert(
+                curriculumId: 'mishnayos',
+                level1Label: 'Different',
+                maxLevels: 2,
+              ),
+            ),
         throwsA(isA<SqliteException>()),
       );
     });
@@ -222,8 +229,9 @@ void main() {
         ),
       );
 
-      final stages =
-          await db.stageDao.getStageDefinitionsByCurriculum('mishnayos');
+      final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+        'mishnayos',
+      );
       expect(stages.length, 1);
       expect(stages.first.stageName, 'learning');
       expect(stages.first.delayDays, 0);
@@ -255,8 +263,9 @@ void main() {
         ),
       );
 
-      final stages =
-          await db.stageDao.getStageDefinitionsByCurriculum('mishnayos');
+      final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+        'mishnayos',
+      );
       expect(stages.length, 3);
       expect(stages[0].stageName, 'learning');
       expect(stages[1].stageName, 'chazara1');
@@ -349,8 +358,9 @@ void main() {
         ),
       );
 
-      final completions =
-          await db.completionDao.getCompletionsByCurriculum('mishnayos');
+      final completions = await db.completionDao.getCompletionsByCurriculum(
+        'mishnayos',
+      );
       expect(completions.length, 1);
     });
 
@@ -375,8 +385,9 @@ void main() {
         ),
       );
 
-      final completions =
-          await db.completionDao.getCompletionsForContentItem(42);
+      final completions = await db.completionDao.getCompletionsForContentItem(
+        42,
+      );
       expect(completions.length, 2);
     });
   });
@@ -410,15 +421,19 @@ void main() {
         ),
       );
 
-      final bookmark = await db.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
+      final bookmark = await db.bookmarkDao.getBookmarkByCurriculumAndTrack(
+        'mishnayos',
+        'personal',
+      );
       expect(bookmark, isNotNull);
       expect(bookmark!.contentItemId, 1);
     });
 
     test('returns null for non-existent bookmark', () async {
-      final bookmark = await db.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('nonexistent', 'personal');
+      final bookmark = await db.bookmarkDao.getBookmarkByCurriculumAndTrack(
+        'nonexistent',
+        'personal',
+      );
       expect(bookmark, isNull);
     });
 
@@ -454,37 +469,40 @@ void main() {
       expect(order!.userSortOrder, 10);
     });
 
-    test('retrieves learning order by curriculum sorted by userSortOrder',
-        () async {
-      await db.learningOrderDao.insertLearningOrder(
-        LearningOrderCompanion.insert(
-          curriculumId: 'mishnayos',
-          contentItemId: 3,
-          userSortOrder: 30,
-        ),
-      );
-      await db.learningOrderDao.insertLearningOrder(
-        LearningOrderCompanion.insert(
-          curriculumId: 'mishnayos',
-          contentItemId: 1,
-          userSortOrder: 10,
-        ),
-      );
-      await db.learningOrderDao.insertLearningOrder(
-        LearningOrderCompanion.insert(
-          curriculumId: 'mishnayos',
-          contentItemId: 2,
-          userSortOrder: 20,
-        ),
-      );
+    test(
+      'retrieves learning order by curriculum sorted by userSortOrder',
+      () async {
+        await db.learningOrderDao.insertLearningOrder(
+          LearningOrderCompanion.insert(
+            curriculumId: 'mishnayos',
+            contentItemId: 3,
+            userSortOrder: 30,
+          ),
+        );
+        await db.learningOrderDao.insertLearningOrder(
+          LearningOrderCompanion.insert(
+            curriculumId: 'mishnayos',
+            contentItemId: 1,
+            userSortOrder: 10,
+          ),
+        );
+        await db.learningOrderDao.insertLearningOrder(
+          LearningOrderCompanion.insert(
+            curriculumId: 'mishnayos',
+            contentItemId: 2,
+            userSortOrder: 20,
+          ),
+        );
 
-      final orders = await db.learningOrderDao
-          .getLearningOrderByCurriculum('mishnayos');
-      expect(orders.length, 3);
-      expect(orders[0].userSortOrder, 10);
-      expect(orders[1].userSortOrder, 20);
-      expect(orders[2].userSortOrder, 30);
-    });
+        final orders = await db.learningOrderDao.getLearningOrderByCurriculum(
+          'mishnayos',
+        );
+        expect(orders.length, 3);
+        expect(orders[0].userSortOrder, 10);
+        expect(orders[1].userSortOrder, 20);
+        expect(orders[2].userSortOrder, 30);
+      },
+    );
 
     test('enforces unique constraint on curriculum + contentItemId', () async {
       await db.learningOrderDao.insertLearningOrder(
@@ -540,15 +558,17 @@ void main() {
         ),
       );
 
-      final profile =
-          await db.userProfileDao.getUserProfileByFirebaseUid('uid-456');
+      final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
+        'uid-456',
+      );
       expect(profile, isNotNull);
       expect(profile!.displayName, 'Test User');
     });
 
     test('returns null for non-existent user profile', () async {
-      final profile =
-          await db.userProfileDao.getUserProfileByFirebaseUid('nonexistent');
+      final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
+        'nonexistent',
+      );
       expect(profile, isNull);
     });
 
@@ -572,13 +592,15 @@ void main() {
 
   group('Rewards CRUD', () {
     test('inserts and retrieves a reward', () async {
-      await db.into(db.rewards).insert(
-        RewardsCompanion.insert(
-          title: 'Mystery Prize',
-          description: 'Complete 100 Mishnayos',
-          pointsThreshold: 100,
-        ),
-      );
+      await db
+          .into(db.rewards)
+          .insert(
+            RewardsCompanion.insert(
+              title: 'Mystery Prize',
+              description: 'Complete 100 Mishnayos',
+              pointsThreshold: 100,
+            ),
+          );
 
       final allRewards = await db.select(db.rewards).get();
       expect(allRewards.length, 1);
@@ -589,33 +611,37 @@ void main() {
     });
 
     test('supports nullable curriculumId for global rewards', () async {
-      await db.into(db.rewards).insert(
-        RewardsCompanion.insert(
-          title: 'Global Reward',
-          description: 'For everyone',
-          pointsThreshold: 50,
-        ),
-      );
+      await db
+          .into(db.rewards)
+          .insert(
+            RewardsCompanion.insert(
+              title: 'Global Reward',
+              description: 'For everyone',
+              pointsThreshold: 50,
+            ),
+          );
 
-      await db.into(db.rewards).insert(
-        RewardsCompanion.insert(
-          title: 'Curriculum Reward',
-          description: 'For mishnayos',
-          pointsThreshold: 200,
-          curriculumId: const Value('mishnayos'),
-        ),
-      );
+      await db
+          .into(db.rewards)
+          .insert(
+            RewardsCompanion.insert(
+              title: 'Curriculum Reward',
+              description: 'For mishnayos',
+              pointsThreshold: 200,
+              curriculumId: const Value('mishnayos'),
+            ),
+          );
 
       final allRewards = await db.select(db.rewards).get();
       expect(allRewards.length, 2);
 
-      final global =
-          allRewards.where((r) => r.curriculumId == null).toList();
+      final global = allRewards.where((r) => r.curriculumId == null).toList();
       expect(global.length, 1);
       expect(global.first.title, 'Global Reward');
 
-      final curriculum =
-          allRewards.where((r) => r.curriculumId != null).toList();
+      final curriculum = allRewards
+          .where((r) => r.curriculumId != null)
+          .toList();
       expect(curriculum.length, 1);
       expect(curriculum.first.curriculumId, 'mishnayos');
     });

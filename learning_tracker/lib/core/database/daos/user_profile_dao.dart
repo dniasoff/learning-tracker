@@ -9,15 +9,15 @@ class UserProfileDao extends DatabaseAccessor<AppDatabase>
     with _$UserProfileDaoMixin {
   UserProfileDao(super.db);
 
-  Future<List<UserProfile>> getAllUserProfiles() =>
-      select(userProfiles).get();
+  Future<List<UserProfile>> getAllUserProfiles() => select(userProfiles).get();
 
   Future<UserProfile?> getUserProfileById(int id) =>
       (select(userProfiles)..where((t) => t.id.equals(id))).getSingleOrNull();
 
   Future<UserProfile?> getUserProfileByFirebaseUid(String firebaseUid) =>
-      (select(userProfiles)..where((t) => t.firebaseUid.equals(firebaseUid)))
-          .getSingleOrNull();
+      (select(
+        userProfiles,
+      )..where((t) => t.firebaseUid.equals(firebaseUid))).getSingleOrNull();
 
   Future<int> insertUserProfile(UserProfilesCompanion entry) =>
       into(userProfiles).insert(entry);

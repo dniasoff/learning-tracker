@@ -13,24 +13,20 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
     with _$CompletionDaoMixin {
   CompletionDao(super.db);
 
-  Future<List<Completion>> getAllCompletions() =>
-      select(completions).get();
+  Future<List<Completion>> getAllCompletions() => select(completions).get();
 
   Future<Completion?> getCompletionById(int id) =>
       (select(completions)..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  Future<List<Completion>> getCompletionsByCurriculum(
-    String curriculumId,
-  ) =>
-      (select(completions)..where((t) => t.curriculumId.equals(curriculumId)))
-          .get();
+  Future<List<Completion>> getCompletionsByCurriculum(String curriculumId) =>
+      (select(
+        completions,
+      )..where((t) => t.curriculumId.equals(curriculumId))).get();
 
-  Future<List<Completion>> getCompletionsForContentItem(
-    int contentItemId,
-  ) =>
-      (select(completions)
-            ..where((t) => t.contentItemId.equals(contentItemId)))
-          .get();
+  Future<List<Completion>> getCompletionsForContentItem(int contentItemId) =>
+      (select(
+        completions,
+      )..where((t) => t.contentItemId.equals(contentItemId))).get();
 
   /// Insert a completion record. This is the only write operation allowed.
   Future<int> insertCompletion(CompletionsCompanion entry) =>

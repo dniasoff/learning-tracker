@@ -9,8 +9,7 @@ class BookmarkDao extends DatabaseAccessor<AppDatabase>
     with _$BookmarkDaoMixin {
   BookmarkDao(super.db);
 
-  Future<List<Bookmark>> getAllBookmarks() =>
-      select(bookmarks).get();
+  Future<List<Bookmark>> getAllBookmarks() => select(bookmarks).get();
 
   Future<Bookmark?> getBookmarkById(int id) =>
       (select(bookmarks)..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -19,12 +18,11 @@ class BookmarkDao extends DatabaseAccessor<AppDatabase>
     String curriculumId,
     String trackType,
   ) =>
-      (select(bookmarks)
-            ..where(
-              (t) =>
-                  t.curriculumId.equals(curriculumId) &
-                  t.trackType.equals(trackType),
-            ))
+      (select(bookmarks)..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.trackType.equals(trackType),
+          ))
           .getSingleOrNull();
 
   Future<int> insertBookmark(BookmarksCompanion entry) =>
