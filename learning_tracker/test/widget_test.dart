@@ -1,30 +1,57 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/main.dart';
+import 'package:talker_flutter/talker_flutter.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  setUp(() {
+    AppLogger.init();
   });
+
+  testWidgets('app renders correctly', (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: LearningTrackerApp()));
+    expect(find.text('Mishnayos Tracker'), findsWidgets);
+  });
+
+  testWidgets('Talker Flutter UI is accessible in debug mode via debug menu', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: LearningTrackerApp()));
+
+    // In debug mode, the bug_report icon button should be visible.
+    final debugButton = find.byIcon(Icons.bug_report);
+    expect(debugButton, findsOneWidget);
+
+    // Tap the debug button to open TalkerScreen.
+    await tester.tap(debugButton);
+    await tester.pumpAndSettle();
+
+    // TalkerScreen should now be displayed.
+    expect(find.byType(TalkerScreen), findsOneWidget);
+  });
+
+  testWidgets(
+    'Talker Flutter UI displays recent log entries with correct log levels',
+    (WidgetTester tester) async {
+      final talker = AppLogger.instance;
+
+      // Log entries at different levels before opening the UI.
+      talker.info('Test info message');
+      talker.warning('Test warning message');
+      talker.error('Test error message');
+
+      await tester.pumpWidget(const ProviderScope(child: LearningTrackerApp()));
+
+      // Open the Talker debug screen.
+      await tester.tap(find.byIcon(Icons.bug_report));
+      await tester.pumpAndSettle();
+
+      // The TalkerScreen should show recent log entries.
+      expect(find.textContaining('Test info message'), findsOneWidget);
+      expect(find.textContaining('Test warning message'), findsOneWidget);
+      expect(find.textContaining('Test error message'), findsOneWidget);
+    },
+  );
 }
