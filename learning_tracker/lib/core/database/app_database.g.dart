@@ -3,6 +3,241 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
+class $ActiveCurriculaTable extends ActiveCurricula
+    with TableInfo<$ActiveCurriculaTable, ActiveCurriculaData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ActiveCurriculaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
+    'curriculumId',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activatedAtMeta = const VerificationMeta(
+    'activatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> activatedAt = GeneratedColumn<DateTime>(
+    'activated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [curriculumId, activatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'active_curricula';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ActiveCurriculaData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('curriculum_id')) {
+      context.handle(
+        _curriculumIdMeta,
+        curriculumId.isAcceptableOrUnknown(
+          data['curriculum_id']!,
+          _curriculumIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumIdMeta);
+    }
+    if (data.containsKey('activated_at')) {
+      context.handle(
+        _activatedAtMeta,
+        activatedAt.isAcceptableOrUnknown(
+          data['activated_at']!,
+          _activatedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_activatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {curriculumId};
+  @override
+  ActiveCurriculaData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ActiveCurriculaData(
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      activatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}activated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ActiveCurriculaTable createAlias(String alias) {
+    return $ActiveCurriculaTable(attachedDatabase, alias);
+  }
+}
+
+class ActiveCurriculaData extends DataClass
+    implements Insertable<ActiveCurriculaData> {
+  /// curriculum_id from CurriculumId enum storageKey
+  final String curriculumId;
+
+  /// When this curriculum was activated
+  final DateTime activatedAt;
+  const ActiveCurriculaData({
+    required this.curriculumId,
+    required this.activatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['curriculum_id'] = Variable<String>(curriculumId);
+    map['activated_at'] = Variable<DateTime>(activatedAt);
+    return map;
+  }
+
+  ActiveCurriculaCompanion toCompanion(bool nullToAbsent) {
+    return ActiveCurriculaCompanion(
+      curriculumId: Value(curriculumId),
+      activatedAt: Value(activatedAt),
+    );
+  }
+
+  factory ActiveCurriculaData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ActiveCurriculaData(
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      activatedAt: serializer.fromJson<DateTime>(json['activatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'activatedAt': serializer.toJson<DateTime>(activatedAt),
+    };
+  }
+
+  ActiveCurriculaData copyWith({String? curriculumId, DateTime? activatedAt}) =>
+      ActiveCurriculaData(
+        curriculumId: curriculumId ?? this.curriculumId,
+        activatedAt: activatedAt ?? this.activatedAt,
+      );
+  ActiveCurriculaData copyWithCompanion(ActiveCurriculaCompanion data) {
+    return ActiveCurriculaData(
+      curriculumId: data.curriculumId.present
+          ? data.curriculumId.value
+          : this.curriculumId,
+      activatedAt: data.activatedAt.present
+          ? data.activatedAt.value
+          : this.activatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActiveCurriculaData(')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('activatedAt: $activatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(curriculumId, activatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ActiveCurriculaData &&
+          other.curriculumId == this.curriculumId &&
+          other.activatedAt == this.activatedAt);
+}
+
+class ActiveCurriculaCompanion extends UpdateCompanion<ActiveCurriculaData> {
+  final Value<String> curriculumId;
+  final Value<DateTime> activatedAt;
+  final Value<int> rowid;
+  const ActiveCurriculaCompanion({
+    this.curriculumId = const Value.absent(),
+    this.activatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ActiveCurriculaCompanion.insert({
+    required String curriculumId,
+    required DateTime activatedAt,
+    this.rowid = const Value.absent(),
+  }) : curriculumId = Value(curriculumId),
+       activatedAt = Value(activatedAt);
+  static Insertable<ActiveCurriculaData> custom({
+    Expression<String>? curriculumId,
+    Expression<DateTime>? activatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (activatedAt != null) 'activated_at': activatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ActiveCurriculaCompanion copyWith({
+    Value<String>? curriculumId,
+    Value<DateTime>? activatedAt,
+    Value<int>? rowid,
+  }) {
+    return ActiveCurriculaCompanion(
+      curriculumId: curriculumId ?? this.curriculumId,
+      activatedAt: activatedAt ?? this.activatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (curriculumId.present) {
+      map['curriculum_id'] = Variable<String>(curriculumId.value);
+    }
+    if (activatedAt.present) {
+      map['activated_at'] = Variable<DateTime>(activatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActiveCurriculaCompanion(')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('activatedAt: $activatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ContentItemsTable extends ContentItems
     with TableInfo<$ContentItemsTable, ContentItem> {
   @override
@@ -4406,6 +4641,9 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
+  late final $ActiveCurriculaTable activeCurricula = $ActiveCurriculaTable(
+    this,
+  );
   late final $ContentItemsTable contentItems = $ContentItemsTable(this);
   late final $CurriculumHierarchyConfigTable curriculumHierarchyConfig =
       $CurriculumHierarchyConfigTable(this);
@@ -4421,6 +4659,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $UserProfilesTable userProfiles = $UserProfilesTable(this);
   late final $RewardsTable rewards = $RewardsTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
+  late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
+    this as AppDatabase,
+  );
   late final ContentDao contentDao = ContentDao(this as AppDatabase);
   late final CompletionDao completionDao = CompletionDao(this as AppDatabase);
   late final StageDao stageDao = StageDao(this as AppDatabase);
@@ -4438,6 +4679,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
+    activeCurricula,
     contentItems,
     curriculumHierarchyConfig,
     curriculumTracks,
@@ -4451,6 +4693,163 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ];
 }
 
+typedef $$ActiveCurriculaTableCreateCompanionBuilder =
+    ActiveCurriculaCompanion Function({
+      required String curriculumId,
+      required DateTime activatedAt,
+      Value<int> rowid,
+    });
+typedef $$ActiveCurriculaTableUpdateCompanionBuilder =
+    ActiveCurriculaCompanion Function({
+      Value<String> curriculumId,
+      Value<DateTime> activatedAt,
+      Value<int> rowid,
+    });
+
+class $$ActiveCurriculaTableFilterComposer
+    extends Composer<_$AppDatabase, $ActiveCurriculaTable> {
+  $$ActiveCurriculaTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get activatedAt => $composableBuilder(
+    column: $table.activatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ActiveCurriculaTableOrderingComposer
+    extends Composer<_$AppDatabase, $ActiveCurriculaTable> {
+  $$ActiveCurriculaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get activatedAt => $composableBuilder(
+    column: $table.activatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ActiveCurriculaTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ActiveCurriculaTable> {
+  $$ActiveCurriculaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get activatedAt => $composableBuilder(
+    column: $table.activatedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$ActiveCurriculaTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ActiveCurriculaTable,
+          ActiveCurriculaData,
+          $$ActiveCurriculaTableFilterComposer,
+          $$ActiveCurriculaTableOrderingComposer,
+          $$ActiveCurriculaTableAnnotationComposer,
+          $$ActiveCurriculaTableCreateCompanionBuilder,
+          $$ActiveCurriculaTableUpdateCompanionBuilder,
+          (
+            ActiveCurriculaData,
+            BaseReferences<
+              _$AppDatabase,
+              $ActiveCurriculaTable,
+              ActiveCurriculaData
+            >,
+          ),
+          ActiveCurriculaData,
+          PrefetchHooks Function()
+        > {
+  $$ActiveCurriculaTableTableManager(
+    _$AppDatabase db,
+    $ActiveCurriculaTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ActiveCurriculaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ActiveCurriculaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ActiveCurriculaTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> curriculumId = const Value.absent(),
+                Value<DateTime> activatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ActiveCurriculaCompanion(
+                curriculumId: curriculumId,
+                activatedAt: activatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String curriculumId,
+                required DateTime activatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ActiveCurriculaCompanion.insert(
+                curriculumId: curriculumId,
+                activatedAt: activatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ActiveCurriculaTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ActiveCurriculaTable,
+      ActiveCurriculaData,
+      $$ActiveCurriculaTableFilterComposer,
+      $$ActiveCurriculaTableOrderingComposer,
+      $$ActiveCurriculaTableAnnotationComposer,
+      $$ActiveCurriculaTableCreateCompanionBuilder,
+      $$ActiveCurriculaTableUpdateCompanionBuilder,
+      (
+        ActiveCurriculaData,
+        BaseReferences<
+          _$AppDatabase,
+          $ActiveCurriculaTable,
+          ActiveCurriculaData
+        >,
+      ),
+      ActiveCurriculaData,
+      PrefetchHooks Function()
+    >;
 typedef $$ContentItemsTableCreateCompanionBuilder =
     ContentItemsCompanion Function({
       Value<int> id,
@@ -6737,6 +7136,8 @@ typedef $$SyncQueueTableProcessedTableManager =
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
+  $$ActiveCurriculaTableTableManager get activeCurricula =>
+      $$ActiveCurriculaTableTableManager(_db, _db.activeCurricula);
   $$ContentItemsTableTableManager get contentItems =>
       $$ContentItemsTableTableManager(_db, _db.contentItems);
   $$CurriculumHierarchyConfigTableTableManager get curriculumHierarchyConfig =>

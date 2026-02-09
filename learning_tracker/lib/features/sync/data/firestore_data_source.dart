@@ -51,6 +51,11 @@ class FirestoreDataSource {
     return _userDoc?.collection('streak').doc('data');
   }
 
+  /// Get active curricula document reference.
+  DocumentReference<Map<String, dynamic>>? get _activeCurriculaDoc {
+    return _userDoc?.collection('active_curricula').doc('data');
+  }
+
   // ========== Profile Operations ==========
 
   /// Fetch user profile from Firestore.
@@ -230,5 +235,48 @@ class FirestoreDataSource {
     }
 
     return doc.snapshots().map((snapshot) => snapshot.data());
+  }
+
+  // ========== Active Curricula Operations ==========
+
+  /// Fetch active curricula list from Firestore.
+  Future<List<String>?> fetchActiveCurricula() async {
+    final doc = _activeCurriculaDoc;
+    if (doc == null) return null;
+
+    final snapshot = await doc.get();
+    final data = snapshot.data();
+    if (data == null) return null;
+
+    final curriculaIds = (data['curricula_ids'] as List<dynamic>?) ?? [];
+    return curriculaIds.cast<String>();
+  }
+
+  /// Push active curricula list to Firestore.
+  Future<void> pushActiveCurricula(List<String> curriculaIds) async {
+    final doc = _activeCurriculaDoc;
+    if (doc == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await doc.set({
+      'curricula_ids': curriculaIds,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Listen to real-time active curricula updates.
+  Stream<List<String>> listenToActiveCurricula() {
+    final doc = _activeCurriculaDoc;
+    if (doc == null) {
+      return Stream.value([]);
+    }
+
+    return doc.snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return [];
+      final curriculaIds = (data['curricula_ids'] as List<dynamic>?) ?? [];
+      return curriculaIds.cast<String>();
+    });
   }
 }
