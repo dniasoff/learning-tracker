@@ -27,8 +27,8 @@ enum TrackType {
 
   /// Display name in English.
   String get displayNameEn => switch (this) {
-    TrackType.personal => 'Personal',
-    TrackType.school => 'School',
-    TrackType.tutor => 'Tutor',
-  };
+        TrackType.personal => 'Personal',
+        TrackType.school => 'School',
+        TrackType.tutor => 'Tutor',
+      };
 }
