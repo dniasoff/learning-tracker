@@ -7,11 +7,7 @@ class PointsPopup extends StatefulWidget {
   final int points;
   final VoidCallback onDismiss;
 
-  const PointsPopup({
-    required this.points,
-    required this.onDismiss,
-    super.key,
-  });
+  const PointsPopup({required this.points, required this.onDismiss, super.key});
 
   @override
   State<PointsPopup> createState() => _PointsPopupState();
@@ -35,22 +31,12 @@ class _PointsPopupState extends State<PointsPopup>
     _scaleAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.elasticOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _bounceAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.bounceOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.bounceOut));
 
     _controller.forward();
 
@@ -86,11 +72,7 @@ class _PointsPopupState extends State<PointsPopup>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.star,
-                    size: 80,
-                    color: Colors.amber,
-                  ),
+                  const Icon(Icons.star, size: 80, color: Colors.amber),
                   const SizedBox(height: 16),
                   Text(
                     '+${widget.points} Points!',
@@ -103,10 +85,7 @@ class _PointsPopupState extends State<PointsPopup>
                   const SizedBox(height: 8),
                   const Text(
                     'Great job!',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                 ],
               ),

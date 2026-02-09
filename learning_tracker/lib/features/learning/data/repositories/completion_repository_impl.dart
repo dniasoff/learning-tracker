@@ -12,8 +12,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
   CompletionRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
-  })  : _database = database,
-        _syncEngine = syncEngine;
+  }) : _database = database,
+       _syncEngine = syncEngine;
 
   @override
   Future<Completion> markComplete(CompletionRequest request) async {
@@ -296,14 +296,19 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required int currentItemId,
   }) async {
     // Get all leaf items for this curriculum, ordered by sort_order
-    final allItems = await (_database.select(_database.contentItems)
-          ..where((t) =>
-              t.curriculumId.equals(curriculumId) & t.isLeaf.equals(true))
-          ..orderBy([(t) => drift.OrderingTerm.asc(t.sortOrder)]))
-        .get();
+    final allItems =
+        await (_database.select(_database.contentItems)
+              ..where(
+                (t) =>
+                    t.curriculumId.equals(curriculumId) & t.isLeaf.equals(true),
+              )
+              ..orderBy([(t) => drift.OrderingTerm.asc(t.sortOrder)]))
+            .get();
 
     // Find current item's position
-    final currentIndex = allItems.indexWhere((item) => item.id == currentItemId);
+    final currentIndex = allItems.indexWhere(
+      (item) => item.id == currentItemId,
+    );
     if (currentIndex == -1 || currentIndex == allItems.length - 1) {
       return null; // Current item not found or is the last item
     }
@@ -330,15 +335,18 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<List<Completion>> getCompletionsByCurriculum(
     String curriculumId,
   ) async {
-    return await _database.completionDao.getCompletionsByCurriculum(curriculumId);
+    return await _database.completionDao.getCompletionsByCurriculum(
+      curriculumId,
+    );
   }
 
   @override
   Future<List<Completion>> getCompletionsForContentItem(
     int contentItemId,
   ) async {
-    return await _database.completionDao
-        .getCompletionsForContentItem(contentItemId);
+    return await _database.completionDao.getCompletionsForContentItem(
+      contentItemId,
+    );
   }
 
   @override

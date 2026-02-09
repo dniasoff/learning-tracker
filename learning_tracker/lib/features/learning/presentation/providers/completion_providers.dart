@@ -16,10 +16,7 @@ CompletionRepository completionRepository(Ref ref) {
   final database = ref.watch(appDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
 
-  return CompletionRepositoryImpl(
-    database: database,
-    syncEngine: syncEngine,
-  );
+  return CompletionRepositoryImpl(database: database, syncEngine: syncEngine);
 }
 
 /// Provides the mark completion use case.

@@ -136,10 +136,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
                 )
               : const Text('Mark Complete'),
         ),
-        if (_showAnimation)
-          const Positioned.fill(
-            child: CompletionAnimation(),
-          ),
+        if (_showAnimation) const Positioned.fill(child: CompletionAnimation()),
       ],
     );
   }

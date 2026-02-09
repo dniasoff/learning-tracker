@@ -57,9 +57,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Marked ${completions.length} items as complete',
-            ),
+            content: Text('Marked ${completions.length} items as complete'),
             backgroundColor: Colors.green,
           ),
         );
@@ -95,10 +93,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
           const SizedBox(height: 12),
           Text(
             '${widget.contentItemIds.length} items will be marked',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ],
       ),

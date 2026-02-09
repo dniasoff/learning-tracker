@@ -25,8 +25,9 @@ void main() {
     );
 
     // Set up mock for sync engine
-    when(() => mockSyncEngine.pushCompletion(any()))
-        .thenAnswer((_) async => Future.value());
+    when(
+      () => mockSyncEngine.pushCompletion(any()),
+    ).thenAnswer((_) async => Future.value());
   });
 
   tearDown(() async {
@@ -118,8 +119,16 @@ void main() {
     test('advances bookmark to next item', () async {
       // Arrange: Create two content items
       final curriculumId = 'mishna';
-      final item1 = await _createContentItem(database, curriculumId, sortOrder: 1);
-      final item2 = await _createContentItem(database, curriculumId, sortOrder: 2);
+      final item1 = await _createContentItem(
+        database,
+        curriculumId,
+        sortOrder: 1,
+      );
+      final item2 = await _createContentItem(
+        database,
+        curriculumId,
+        sortOrder: 2,
+      );
 
       // Create bookmark on item1
       await database.bookmarkDao.insertBookmark(
@@ -233,8 +242,9 @@ void main() {
       );
 
       // Verify item2 was not completed (transaction rolled back)
-      final item2Completions = await repository
-          .getCompletionsForContentItem(item2);
+      final item2Completions = await repository.getCompletionsForContentItem(
+        item2,
+      );
       expect(item2Completions, isEmpty);
     });
   });
@@ -288,7 +298,9 @@ Future<int> _createContentItem(
   String curriculumId, {
   int sortOrder = 1,
 }) async {
-  return await database.into(database.contentItems).insert(
+  return await database
+      .into(database.contentItems)
+      .insert(
         ContentItemsCompanion.insert(
           curriculumId: curriculumId,
           level1: 'Berachos',
