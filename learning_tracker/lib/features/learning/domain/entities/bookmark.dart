@@ -29,13 +29,13 @@ class BookmarkEntity {
   }
 
   /// Firestore document ID (deterministic per P4).
-  String get firestoreId => '${curriculumId.storageKey}_${trackType.value}';
+  String get firestoreId => '${curriculumId.storageKey}_${trackType.storageKey}';
 
   /// Convert to Firestore document map.
   Map<String, dynamic> toFirestore() {
     return {
       'curriculumId': curriculumId.storageKey,
-      'trackType': trackType.value,
+      'trackType': trackType.storageKey,
       'contentItemId': contentItemId,
       'updatedAt': updatedAt.toIso8601String(),
     };

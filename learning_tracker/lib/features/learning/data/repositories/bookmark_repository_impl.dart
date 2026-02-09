@@ -25,7 +25,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     final bookmark = await _database.bookmarkDao
         .getBookmarkByCurriculumAndTrack(
           curriculumId.storageKey,
-          trackType.value,
+          trackType.storageKey,
         );
 
     if (bookmark == null) return null;
@@ -45,7 +45,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     final existing = await _database.bookmarkDao
         .getBookmarkByCurriculumAndTrack(
           curriculumId.storageKey,
-          trackType.value,
+          trackType.storageKey,
         );
 
     final BookmarkEntity bookmark;
@@ -56,7 +56,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         BookmarksCompanion(
           id: drift.Value(existing.id),
           curriculumId: drift.Value(curriculumId.storageKey),
-          trackType: drift.Value(trackType.value),
+          trackType: drift.Value(trackType.storageKey),
           contentItemId: drift.Value(contentItemId),
           updatedAt: drift.Value(now),
         ),
@@ -73,7 +73,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       await _database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           curriculumId: curriculumId.storageKey,
-          trackType: trackType.value,
+          trackType: trackType.storageKey,
           contentItemId: contentItemId,
           updatedAt: now,
         ),
@@ -103,7 +103,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     final bookmark = await _database.bookmarkDao
         .getBookmarkByCurriculumAndTrack(
           curriculumId.storageKey,
-          trackType.value,
+          trackType.storageKey,
         );
 
     if (bookmark == null) {
@@ -273,7 +273,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       await _database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           curriculumId: remote.curriculumId.storageKey,
-          trackType: remote.trackType.value,
+          trackType: remote.trackType.storageKey,
           contentItemId: remote.contentItemId,
           updatedAt: remote.updatedAt,
         ),
@@ -286,11 +286,11 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
             id: drift.Value(
               (await _database.bookmarkDao.getBookmarkByCurriculumAndTrack(
                 local.curriculumId.storageKey,
-                local.trackType.value,
+                local.trackType.storageKey,
               ))!.id,
             ),
             curriculumId: drift.Value(remote.curriculumId.storageKey),
-            trackType: drift.Value(remote.trackType.value),
+            trackType: drift.Value(remote.trackType.storageKey),
             contentItemId: drift.Value(remote.contentItemId),
             updatedAt: drift.Value(remote.updatedAt),
           ),
