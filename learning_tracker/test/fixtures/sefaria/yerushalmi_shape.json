@@ -1,0 +1,20 @@
+[
+  {
+    "section": "Seder Zeraim",
+    "title": "Jerusalem Talmud Berakhot",
+    "heTitle": "תלמוד ירושלמי ברכות",
+    "length": 9,
+    "chapters": [8, 9, 6, 4, 5, 6, 5, 8, 5],
+    "book": "Jerusalem Talmud Berakhot",
+    "heBook": "תלמוד ירושלמי ברכות"
+  },
+  {
+    "section": "Seder Zeraim",
+    "title": "Jerusalem Talmud Peah",
+    "heTitle": "תלמוד ירושלמי פאה",
+    "length": 8,
+    "chapters": [5, 7, 4, 6, 5, 4, 5, 7],
+    "book": "Jerusalem Talmud Peah",
+    "heBook": "תלמוד ירושלמי פאה"
+  }
+]

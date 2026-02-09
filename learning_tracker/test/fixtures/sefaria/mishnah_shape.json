@@ -1,0 +1,29 @@
+[
+  {
+    "section": "Seder Zeraim",
+    "title": "Berakhot",
+    "heTitle": "ברכות",
+    "length": 9,
+    "chapters": [5, 8, 6, 7, 5, 8, 5, 8, 5],
+    "book": "Mishnah Berakhot",
+    "heBook": "משנה ברכות"
+  },
+  {
+    "section": "Seder Zeraim",
+    "title": "Peah",
+    "heTitle": "פאה",
+    "length": 8,
+    "chapters": [6, 8, 8, 11, 8, 11, 8, 9],
+    "book": "Mishnah Peah",
+    "heBook": "משנה פאה"
+  },
+  {
+    "section": "Seder Moed",
+    "title": "Shabbat",
+    "heTitle": "שבת",
+    "length": 24,
+    "chapters": [11, 7, 6, 2, 4, 10, 4, 7, 7, 6, 6, 6, 7, 4, 3, 8, 8, 3, 6, 5, 3, 6, 5, 5],
+    "book": "Mishnah Shabbat",
+    "heBook": "משנה שבת"
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "section": "Seder Zeraim",
+    "title": "Berakhot",
+    "heTitle": "ברכות",
+    "length": 64,
+    "chapters": [30, 28, 25, 22, 30, 28, 25, 22, 30, 28],
+  "book": "Berakhot",
+    "heBook": "ברכות"
+  },
+  {
+    "section": "Seder Moed",
+    "title": "Shabbat",
+    "heTitle": "שבת",
+    "length": 157,
+    "chapters": [20, 18, 22, 20, 18, 22],
+    "book": "Shabbat",
+    "heBook": "שבת"
+  }
+]

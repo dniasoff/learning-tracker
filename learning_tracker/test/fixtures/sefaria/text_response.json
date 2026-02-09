@@ -1,0 +1,26 @@
+{
+  "ref": "Mishnah Berakhot 1:1",
+  "heRef": "משנה ברכות א׳:א׳",
+  "versions": [
+    {
+      "text": "From when may one recite the Shema in the evening?",
+      "language": "en",
+      "actualLanguage": "en",
+      "versionTitle": "William Davidson Edition",
+      "license": "CC-BY-NC",
+      "isPrimary": true,
+      "isSource": false,
+      "direction": "ltr"
+    },
+    {
+      "text": "מֵאֵימָתַי קוֹרִין אֶת שְׁמַע בְּעַרְבִית",
+      "language": "he",
+      "actualLanguage": "he",
+      "versionTitle": "Torat Emet 357",
+      "license": "Public Domain",
+      "isPrimary": true,
+      "isSource": true,
+      "direction": "rtl"
+    }
+  ]
+}

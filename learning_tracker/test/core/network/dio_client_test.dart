@@ -125,4 +125,32 @@ void main() {
       expect(logMessages, isNot(contains('"1234"')));
     });
   });
+
+  group('createSefariaClient', () {
+    test('configures correct Sefaria base URL', () {
+      final dio = createSefariaClient();
+
+      expect(dio.options.baseUrl, 'https://www.sefaria.org');
+    });
+
+    test('configures timeout settings', () {
+      final dio = createSefariaClient();
+
+      expect(dio.options.connectTimeout, const Duration(seconds: 15));
+      expect(dio.options.receiveTimeout, const Duration(seconds: 30));
+    });
+
+    test('includes retry interceptor', () {
+      final dio = createSefariaClient();
+
+      final hasRetry = dio.interceptors.any((i) => i is RetryInterceptor);
+      expect(hasRetry, true);
+    });
+
+    test('includes Accept: application/json header', () {
+      final dio = createSefariaClient();
+
+      expect(dio.options.headers['Accept'], 'application/json');
+    });
+  });
 }

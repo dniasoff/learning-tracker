@@ -1,0 +1,20 @@
+[
+  {
+    "section": "Torah",
+    "title": "Genesis",
+    "heTitle": "בראשית",
+    "length": 50,
+    "chapters": [31, 25, 24],
+    "book": "Genesis",
+    "heBook": "בראשית"
+  },
+  {
+    "section": "Torah",
+    "title": "Exodus",
+    "heTitle": "שמות",
+    "length": 40,
+    "chapters": [22, 25],
+    "book": "Exodus",
+    "heBook": "שמות"
+  }
+]
