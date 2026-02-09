@@ -5,13 +5,12 @@ import 'package:learning_tracker/core/widgets/curriculum_indicator.dart';
 
 void main() {
   group('CurriculumIndicator', () {
-    testWidgets('displays indicator for mishna curriculum',
-        (WidgetTester tester) async {
+    testWidgets('displays indicator for mishna curriculum', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'mishna'),
-          ),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
         ),
       );
 
@@ -21,13 +20,12 @@ void main() {
       expect(decoration.color, equals(AppTheme.curriculumMishna));
     });
 
-    testWidgets('displays indicator for bavli curriculum',
-        (WidgetTester tester) async {
+    testWidgets('displays indicator for bavli curriculum', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'bavli'),
-          ),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'bavli')),
         ),
       );
 
@@ -37,13 +35,12 @@ void main() {
       expect(decoration.color, equals(AppTheme.curriculumBavli));
     });
 
-    testWidgets('displays indicator for yerushalmi curriculum',
-        (WidgetTester tester) async {
+    testWidgets('displays indicator for yerushalmi curriculum', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'yerushalmi'),
-          ),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'yerushalmi')),
         ),
       );
 
@@ -53,8 +50,9 @@ void main() {
       expect(decoration.color, equals(AppTheme.curriculumYerushalmi));
     });
 
-    testWidgets('displays indicator for mishna_berurah curriculum',
-        (WidgetTester tester) async {
+    testWidgets('displays indicator for mishna_berurah curriculum', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -69,13 +67,12 @@ void main() {
       expect(decoration.color, equals(AppTheme.curriculumMishnaBerurah));
     });
 
-    testWidgets('displays indicator for chumash curriculum',
-        (WidgetTester tester) async {
+    testWidgets('displays indicator for chumash curriculum', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'chumash'),
-          ),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'chumash')),
         ),
       );
 
@@ -91,10 +88,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: CurriculumIndicator(
-              curriculumId: 'mishna',
-              label: label,
-            ),
+            body: CurriculumIndicator(curriculumId: 'mishna', label: label),
           ),
         ),
       );
@@ -103,13 +97,12 @@ void main() {
       expect(find.byType(Row), findsOneWidget);
     });
 
-    testWidgets('does not display label when not provided',
-        (WidgetTester tester) async {
+    testWidgets('does not display label when not provided', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'mishna'),
-          ),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
         ),
       );
 
@@ -117,13 +110,12 @@ void main() {
       expect(find.byType(Row), findsNothing);
     });
 
-    testWidgets('displays circle shape by default',
-        (WidgetTester tester) async {
+    testWidgets('displays circle shape by default', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'mishna'),
-          ),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
         ),
       );
 
@@ -133,8 +125,9 @@ void main() {
       expect(decoration.shape, equals(BoxShape.circle));
     });
 
-    testWidgets('displays square shape when specified',
-        (WidgetTester tester) async {
+    testWidgets('displays square shape when specified', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -153,8 +146,9 @@ void main() {
       expect(decoration.borderRadius, isNotNull);
     });
 
-    testWidgets('displays bar shape when specified',
-        (WidgetTester tester) async {
+    testWidgets('displays bar shape when specified', (
+      WidgetTester tester,
+    ) async {
       const customSize = 24.0;
 
       await tester.pumpWidget(
@@ -181,10 +175,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: CurriculumIndicator(
-              curriculumId: 'mishna',
-              size: customSize,
-            ),
+            body: CurriculumIndicator(curriculumId: 'mishna', size: customSize),
           ),
         ),
       );
@@ -195,13 +186,12 @@ void main() {
       expect(container.constraints!.maxHeight, equals(customSize));
     });
 
-    testWidgets('uses default size when not specified',
-        (WidgetTester tester) async {
+    testWidgets('uses default size when not specified', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'mishna'),
-          ),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
         ),
       );
 

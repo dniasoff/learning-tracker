@@ -9,9 +9,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: EmptyState(message: message),
-          ),
+          home: Scaffold(body: EmptyState(message: message)),
         ),
       );
 
@@ -21,26 +19,22 @@ void main() {
     testWidgets('displays default icon', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: EmptyState(message: 'Empty'),
-          ),
+          home: Scaffold(body: EmptyState(message: 'Empty')),
         ),
       );
 
       expect(find.byIcon(Icons.inbox_outlined), findsOneWidget);
     });
 
-    testWidgets('displays custom icon when provided',
-        (WidgetTester tester) async {
+    testWidgets('displays custom icon when provided', (
+      WidgetTester tester,
+    ) async {
       const customIcon = Icons.search;
 
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: EmptyState(
-              message: 'No results',
-              icon: customIcon,
-            ),
+            body: EmptyState(message: 'No results', icon: customIcon),
           ),
         ),
       );
@@ -49,18 +43,14 @@ void main() {
       expect(find.byIcon(Icons.inbox_outlined), findsNothing);
     });
 
-    testWidgets('displays subtitle when provided',
-        (WidgetTester tester) async {
+    testWidgets('displays subtitle when provided', (WidgetTester tester) async {
       const message = 'No items';
       const subtitle = 'Try adding some items';
 
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: EmptyState(
-              message: message,
-              subtitle: subtitle,
-            ),
+            body: EmptyState(message: message, subtitle: subtitle),
           ),
         ),
       );
@@ -69,13 +59,12 @@ void main() {
       expect(find.text(subtitle), findsOneWidget);
     });
 
-    testWidgets('does not display subtitle when not provided',
-        (WidgetTester tester) async {
+    testWidgets('does not display subtitle when not provided', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: EmptyState(message: 'Empty'),
-          ),
+          home: Scaffold(body: EmptyState(message: 'Empty')),
         ),
       );
 
@@ -83,8 +72,9 @@ void main() {
       expect(find.byType(Text), findsOneWidget);
     });
 
-    testWidgets('displays action widget when provided',
-        (WidgetTester tester) async {
+    testWidgets('displays action widget when provided', (
+      WidgetTester tester,
+    ) async {
       var actionPressed = false;
 
       await tester.pumpWidget(
@@ -110,13 +100,12 @@ void main() {
       expect(actionPressed, isTrue);
     });
 
-    testWidgets('does not display action when not provided',
-        (WidgetTester tester) async {
+    testWidgets('does not display action when not provided', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: EmptyState(message: 'Empty'),
-          ),
+          home: Scaffold(body: EmptyState(message: 'Empty')),
         ),
       );
 
@@ -126,9 +115,7 @@ void main() {
     testWidgets('centers content', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: EmptyState(message: 'Empty'),
-          ),
+          home: Scaffold(body: EmptyState(message: 'Empty')),
         ),
       );
 

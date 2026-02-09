@@ -7,10 +7,7 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 /// Attaches Firestore listeners when app is in foreground (resumed).
 /// Detaches listeners when app goes to background (paused) to save battery.
 class SyncLifecycleObserver extends ConsumerStatefulWidget {
-  const SyncLifecycleObserver({
-    required this.child,
-    super.key,
-  });
+  const SyncLifecycleObserver({required this.child, super.key});
 
   final Widget child;
 

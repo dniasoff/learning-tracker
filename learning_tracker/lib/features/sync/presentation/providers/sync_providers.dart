@@ -12,10 +12,7 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
 
-  return FirestoreDataSource(
-    firestore: firestore,
-    auth: auth,
-  );
+  return FirestoreDataSource(firestore: firestore, auth: auth);
 });
 
 /// Provider for OfflineQueue.
@@ -68,9 +65,7 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
   return asyncStatus.when(
     data: (status) => status,
     loading: () => SyncStatus.syncing(startedAt: DateTime.now()),
-    error: (error, _) => SyncStatus.error(
-      message: error.toString(),
-      failedAt: DateTime.now(),
-    ),
+    error: (error, _) =>
+        SyncStatus.error(message: error.toString(), failedAt: DateTime.now()),
   );
 });

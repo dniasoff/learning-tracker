@@ -33,7 +33,9 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase>
 
   /// Mark an operation as failed with error message.
   Future<void> markFailed(int id, String error) async {
-    final current = await (select(syncQueue)..where((t) => t.id.equals(id))).getSingleOrNull();
+    final current = await (select(
+      syncQueue,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (current == null) return;
 
     await (update(syncQueue)..where((t) => t.id.equals(id))).write(

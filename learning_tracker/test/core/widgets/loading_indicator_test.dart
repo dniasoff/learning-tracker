@@ -4,14 +4,11 @@ import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 
 void main() {
   group('LoadingIndicator', () {
-    testWidgets('displays centered CircularProgressIndicator',
-        (WidgetTester tester) async {
+    testWidgets('displays centered CircularProgressIndicator', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingIndicator(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingIndicator())),
       );
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -23,9 +20,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: LoadingIndicator(message: testMessage),
-          ),
+          home: Scaffold(body: LoadingIndicator(message: testMessage)),
         ),
       );
 
@@ -33,14 +28,11 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('does not display message when not provided',
-        (WidgetTester tester) async {
+    testWidgets('does not display message when not provided', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingIndicator(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingIndicator())),
       );
 
       expect(find.byType(Text), findsNothing);
@@ -51,9 +43,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: LoadingIndicator(size: customSize),
-          ),
+          home: Scaffold(body: LoadingIndicator(size: customSize)),
         ),
       );
 
@@ -68,14 +58,11 @@ void main() {
       expect(sizedBox.height, equals(customSize));
     });
 
-    testWidgets('uses default size when not specified',
-        (WidgetTester tester) async {
+    testWidgets('uses default size when not specified', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LoadingIndicator(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LoadingIndicator())),
       );
 
       final sizedBox = tester.widget<SizedBox>(

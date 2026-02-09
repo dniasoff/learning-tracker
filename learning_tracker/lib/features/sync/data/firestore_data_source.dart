@@ -13,8 +13,8 @@ class FirestoreDataSource {
   FirestoreDataSource({
     required FirebaseFirestore firestore,
     required FirebaseAuth auth,
-  })  : _firestore = firestore,
-        _auth = auth;
+  }) : _firestore = firestore,
+       _auth = auth;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -98,10 +98,7 @@ class FirestoreDataSource {
     final snapshot = await collection.get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
-      return {
-        ...data,
-        'firestore_id': doc.id,
-      };
+      return {...data, 'firestore_id': doc.id};
     }).toList();
   }
 
@@ -115,10 +112,7 @@ class FirestoreDataSource {
     return collection.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          ...data,
-          'firestore_id': doc.id,
-        };
+        return {...data, 'firestore_id': doc.id};
       }).toList();
     });
   }

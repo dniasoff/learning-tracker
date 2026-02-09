@@ -18,10 +18,10 @@ class SyncEngine {
     required FirestoreDataSource firestoreDataSource,
     required OfflineQueue offlineQueue,
     required Talker logger,
-  })  : _database = database,
-        _firestoreDataSource = firestoreDataSource,
-        _offlineQueue = offlineQueue,
-        _logger = logger;
+  }) : _database = database,
+       _firestoreDataSource = firestoreDataSource,
+       _offlineQueue = offlineQueue,
+       _logger = logger;
 
   final AppDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
@@ -90,17 +90,20 @@ class SyncEngine {
         .listenToCompletions()
         .listen(_onCompletionsUpdate, onError: _handleListenerError);
 
-    _bookmarksSubscription = _firestoreDataSource
-        .listenToBookmarks()
-        .listen(_onBookmarksUpdate, onError: _handleListenerError);
+    _bookmarksSubscription = _firestoreDataSource.listenToBookmarks().listen(
+      _onBookmarksUpdate,
+      onError: _handleListenerError,
+    );
 
-    _settingsSubscription = _firestoreDataSource
-        .listenToSettings()
-        .listen(_onSettingsUpdate, onError: _handleListenerError);
+    _settingsSubscription = _firestoreDataSource.listenToSettings().listen(
+      _onSettingsUpdate,
+      onError: _handleListenerError,
+    );
 
-    _streakSubscription = _firestoreDataSource
-        .listenToStreak()
-        .listen(_onStreakUpdate, onError: _handleListenerError);
+    _streakSubscription = _firestoreDataSource.listenToStreak().listen(
+      _onStreakUpdate,
+      onError: _handleListenerError,
+    );
   }
 
   /// Detach foreground listeners (on app background).
@@ -129,9 +132,11 @@ class SyncEngine {
   /// Pull latest data from Firestore on app launch.
   Future<void> pullOnLaunch() async {
     if (!_isOnline) {
-      _updateStatus(SyncStatus.offline(
-        pendingChanges: await _offlineQueue.getPendingCount(),
-      ));
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
       return;
     }
 
@@ -158,10 +163,9 @@ class SyncEngine {
       _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now()));
     } catch (e, stackTrace) {
       _logger.error('Pull-on-launch failed', e, stackTrace);
-      _updateStatus(SyncStatus.error(
-        message: e.toString(),
-        failedAt: DateTime.now(),
-      ));
+      _updateStatus(
+        SyncStatus.error(message: e.toString(), failedAt: DateTime.now()),
+      );
     }
   }
 
@@ -171,9 +175,11 @@ class SyncEngine {
   Future<void> pushCompletion(Map<String, dynamic> completion) async {
     if (!_isOnline) {
       await _offlineQueue.enqueueCompletion(completion);
-      _updateStatus(SyncStatus.offline(
-        pendingChanges: await _offlineQueue.getPendingCount(),
-      ));
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
       return;
     }
 
@@ -190,9 +196,11 @@ class SyncEngine {
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
     if (!_isOnline) {
       await _offlineQueue.enqueueBookmark(bookmark);
-      _updateStatus(SyncStatus.offline(
-        pendingChanges: await _offlineQueue.getPendingCount(),
-      ));
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
       return;
     }
 
@@ -209,9 +217,11 @@ class SyncEngine {
   Future<void> pushSettings(Map<String, dynamic> settings) async {
     if (!_isOnline) {
       await _offlineQueue.enqueueSettings(settings);
-      _updateStatus(SyncStatus.offline(
-        pendingChanges: await _offlineQueue.getPendingCount(),
-      ));
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
       return;
     }
 
@@ -228,9 +238,11 @@ class SyncEngine {
   Future<void> pushStreak(Map<String, dynamic> streak) async {
     if (!_isOnline) {
       await _offlineQueue.enqueueStreak(streak);
-      _updateStatus(SyncStatus.offline(
-        pendingChanges: await _offlineQueue.getPendingCount(),
-      ));
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
       return;
     }
 
@@ -247,9 +259,11 @@ class SyncEngine {
   Future<void> pushProfile(Map<String, dynamic> profile) async {
     if (!_isOnline) {
       await _offlineQueue.enqueueProfile(profile);
-      _updateStatus(SyncStatus.offline(
-        pendingChanges: await _offlineQueue.getPendingCount(),
-      ));
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
       return;
     }
 
@@ -265,10 +279,14 @@ class SyncEngine {
   // ========== Conflict Resolution & Merge ==========
 
   /// Merge completions from Firestore (additive merge).
-  Future<void> _mergeCompletions(List<Map<String, dynamic>> remoteCompletions) async {
+  Future<void> _mergeCompletions(
+    List<Map<String, dynamic>> remoteCompletions,
+  ) async {
     // Completions are append-only, so we just insert new ones
     // that don't exist locally (based on Firestore ID or composite key)
-    _logger.debug('Merging ${remoteCompletions.length} completions from Firestore');
+    _logger.debug(
+      'Merging ${remoteCompletions.length} completions from Firestore',
+    );
 
     for (final remote in remoteCompletions) {
       // TODO: Check if completion already exists locally
@@ -278,7 +296,9 @@ class SyncEngine {
   }
 
   /// Merge bookmarks from Firestore (last-write-wins).
-  Future<void> _mergeBookmarks(List<Map<String, dynamic>> remoteBookmarks) async {
+  Future<void> _mergeBookmarks(
+    List<Map<String, dynamic>> remoteBookmarks,
+  ) async {
     _logger.debug('Merging ${remoteBookmarks.length} bookmarks from Firestore');
 
     for (final remote in remoteBookmarks) {
@@ -335,10 +355,9 @@ class SyncEngine {
 
   void _handleListenerError(Object error, StackTrace stackTrace) {
     _logger.error('Listener error', error, stackTrace);
-    _updateStatus(SyncStatus.error(
-      message: error.toString(),
-      failedAt: DateTime.now(),
-    ));
+    _updateStatus(
+      SyncStatus.error(message: error.toString(), failedAt: DateTime.now()),
+    );
   }
 
   // ========== Network Events ==========
@@ -360,10 +379,9 @@ class SyncEngine {
       }
     } catch (e, stackTrace) {
       _logger.error('Failed to flush offline queue', e, stackTrace);
-      _updateStatus(SyncStatus.error(
-        message: e.toString(),
-        failedAt: DateTime.now(),
-      ));
+      _updateStatus(
+        SyncStatus.error(message: e.toString(), failedAt: DateTime.now()),
+      );
     }
   }
 

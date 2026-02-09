@@ -12,19 +12,13 @@ part 'sync_status.freezed.dart';
 @freezed
 class SyncStatus with _$SyncStatus {
   /// Sync operation is currently in progress.
-  const factory SyncStatus.syncing({
-    required DateTime startedAt,
-  }) = _Syncing;
+  const factory SyncStatus.syncing({required DateTime startedAt}) = _Syncing;
 
   /// All data is successfully synchronized with Firestore.
-  const factory SyncStatus.synced({
-    required DateTime lastSyncedAt,
-  }) = _Synced;
+  const factory SyncStatus.synced({required DateTime lastSyncedAt}) = _Synced;
 
   /// Device is offline. Local changes are queued for sync when online.
-  const factory SyncStatus.offline({
-    required int pendingChanges,
-  }) = _Offline;
+  const factory SyncStatus.offline({required int pendingChanges}) = _Offline;
 
   /// Sync operation failed with an error.
   const factory SyncStatus.error({

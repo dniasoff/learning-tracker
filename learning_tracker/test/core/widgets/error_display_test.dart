@@ -9,9 +9,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ErrorDisplay(message: errorMessage),
-          ),
+          home: Scaffold(body: ErrorDisplay(message: errorMessage)),
         ),
       );
 
@@ -21,26 +19,22 @@ void main() {
     testWidgets('displays error icon', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ErrorDisplay(message: 'Error'),
-          ),
+          home: Scaffold(body: ErrorDisplay(message: 'Error')),
         ),
       );
 
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
-    testWidgets('displays custom icon when provided',
-        (WidgetTester tester) async {
+    testWidgets('displays custom icon when provided', (
+      WidgetTester tester,
+    ) async {
       const customIcon = Icons.warning;
 
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: ErrorDisplay(
-              message: 'Warning',
-              icon: customIcon,
-            ),
+            body: ErrorDisplay(message: 'Warning', icon: customIcon),
           ),
         ),
       );
@@ -49,8 +43,9 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsNothing);
     });
 
-    testWidgets('displays retry button when onRetry provided',
-        (WidgetTester tester) async {
+    testWidgets('displays retry button when onRetry provided', (
+      WidgetTester tester,
+    ) async {
       var retryPressed = false;
 
       await tester.pumpWidget(
@@ -75,13 +70,12 @@ void main() {
       expect(retryPressed, isTrue);
     });
 
-    testWidgets('does not display retry button when onRetry not provided',
-        (WidgetTester tester) async {
+    testWidgets('does not display retry button when onRetry not provided', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ErrorDisplay(message: 'Error'),
-          ),
+          home: Scaffold(body: ErrorDisplay(message: 'Error')),
         ),
       );
 
@@ -92,9 +86,7 @@ void main() {
     testWidgets('centers content', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ErrorDisplay(message: 'Error'),
-          ),
+          home: Scaffold(body: ErrorDisplay(message: 'Error')),
         ),
       );
 

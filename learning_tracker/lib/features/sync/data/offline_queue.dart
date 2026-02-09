@@ -14,9 +14,9 @@ class OfflineQueue {
     required AppDatabase database,
     required FirestoreDataSource firestoreDataSource,
     required Talker logger,
-  })  : _database = database,
-        _firestoreDataSource = firestoreDataSource,
-        _logger = logger;
+  }) : _database = database,
+       _firestoreDataSource = firestoreDataSource,
+       _logger = logger;
 
   final AppDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
@@ -99,14 +99,18 @@ class OfflineQueue {
             await _firestoreDataSource.pushProfile(payload);
             break;
           default:
-            _logger.warning('Unknown operation type: ${operation.operationType}');
+            _logger.warning(
+              'Unknown operation type: ${operation.operationType}',
+            );
             continue;
         }
 
         // Successfully synced, remove from queue
         await _queue.remove(operation.id);
         successCount++;
-        _logger.debug('Synced ${operation.operationType} operation #${operation.id}');
+        _logger.debug(
+          'Synced ${operation.operationType} operation #${operation.id}',
+        );
       } catch (e, stackTrace) {
         _logger.error(
           'Failed to sync ${operation.operationType} operation #${operation.id}',
@@ -117,7 +121,9 @@ class OfflineQueue {
       }
     }
 
-    _logger.info('Flushed $successCount/${pending.length} operations successfully');
+    _logger.info(
+      'Flushed $successCount/${pending.length} operations successfully',
+    );
     return successCount;
   }
 
