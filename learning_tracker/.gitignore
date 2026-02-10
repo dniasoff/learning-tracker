@@ -44,7 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Generated files (build_runner) - tracked for drift database support
-# *.g.dart
-# *.freezed.dart
-# *.gr.dart
+# Generated files (build_runner)
+*.g.dart
+*.freezed.dart
+*.gr.dart

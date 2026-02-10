@@ -27,4 +27,38 @@ class UserProfileDao extends DatabaseAccessor<AppDatabase>
 
   Future<int> deleteUserProfile(int id) =>
       (delete(userProfiles)..where((t) => t.id.equals(id))).go();
+
+  /// Upsert profile by Firebase UID (last-write-wins per D4).
+  ///
+  /// Inserts if no profile exists for the UID, or updates if remote is newer.
+  Future<void> upsertProfile({
+    required String firebaseUid,
+    required String displayName,
+    required String userMode,
+    required DateTime updatedAt,
+  }) async {
+    final existing = await getUserProfileByFirebaseUid(firebaseUid);
+
+    if (existing == null) {
+      await insertUserProfile(
+        UserProfilesCompanion.insert(
+          firebaseUid: firebaseUid,
+          displayName: displayName,
+          userMode: userMode,
+          createdAt: updatedAt,
+          updatedAt: updatedAt,
+        ),
+      );
+    } else if (updatedAt.isAfter(existing.updatedAt)) {
+      await (update(
+        userProfiles,
+      )..where((t) => t.id.equals(existing.id))).write(
+        UserProfilesCompanion(
+          displayName: Value(displayName),
+          userMode: Value(userMode),
+          updatedAt: Value(updatedAt),
+        ),
+      );
+    }
+  }
 }

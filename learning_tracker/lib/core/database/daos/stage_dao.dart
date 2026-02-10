@@ -35,4 +35,20 @@ class StageDao extends DatabaseAccessor<AppDatabase> with _$StageDaoMixin {
   Future<int> deleteAllForCurriculum(String curriculumId) => (delete(
     stageDefinitions,
   )..where((t) => t.curriculumId.equals(curriculumId))).go();
+
+  /// Replace all stage definitions for a curriculum with remote data.
+  ///
+  /// Used during sync merge (last-write-wins per D4).
+  /// Deletes existing stages for the curriculum and inserts the new ones.
+  Future<void> replaceStagesForCurriculum(
+    String curriculumId,
+    List<StageDefinitionsCompanion> stages,
+  ) async {
+    await db.transaction(() async {
+      await deleteAllForCurriculum(curriculumId);
+      for (final stage in stages) {
+        await insertStageDefinition(stage);
+      }
+    });
+  }
 }

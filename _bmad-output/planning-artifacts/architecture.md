@@ -24,11 +24,11 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 ## Project Context Analysis
 
-### Revised Scope: "Learning Tracker" (formerly "Mishnayos Tracker")
+### Revised Scope: "Learning Tracker" (formerly "Learning Tracker")
 
 The user's Revised Requirements Framework fundamentally transforms this project from a single-curriculum bar mitzvah tracker into a configurable multi-curriculum Torah learning platform for children AND adults. Key scope changes:
 
-- **Name:** Mishnayos Tracker → Learning Tracker
+- **Name:** Learning Tracker → Learning Tracker
 - **Curricula:** Single (Mishnayos) → Multi (Mishnayos, Gemara Bavli, Yerushalmi, Mishna Berurah, Chumash via Sefaria)
 - **Users:** Child-only → Child mode + Adult mode
 - **Learning stages:** Hardcoded 3-stage → Configurable N-stage with user-defined timing

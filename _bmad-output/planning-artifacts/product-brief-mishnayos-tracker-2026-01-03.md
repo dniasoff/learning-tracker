@@ -13,7 +13,7 @@ previousVersion: v1 (2026-01-03)
 
 ## Executive Summary
 
-**Learning Tracker** (formerly Mishnayos Tracker) is an Android app for tracking Torah learning across multiple curricula with configurable review cycles, intelligent scheduling, and balanced motivation. The app supports both children and adults, transforming large-scale learning goals into achievable daily habits through structured stage-based tracking, cross-curriculum progress dashboards, and account-based multi-device sync.
+**Learning Tracker** (formerly Learning Tracker) is an Android app for tracking Torah learning across multiple curricula with configurable review cycles, intelligent scheduling, and balanced motivation. The app supports both children and adults, transforming large-scale learning goals into achievable daily habits through structured stage-based tracking, cross-curriculum progress dashboards, and account-based multi-device sync.
 
 The app tracks a configurable N-stage learning cycle (learn + multiple chazara stages with user-defined timing) across five Sefaria-sourced curricula: Mishnayos, Gemara Bavli, Gemara Yerushalmi, Mishna Berurah, and Chumash. It provides adaptive scheduling per curriculum, drag-and-drop learning order customization, and per-curriculum goals with Hebrew or Gregorian deadlines.
 

@@ -25,8 +25,9 @@ void main() {
     );
 
     // Stub sync engine to prevent errors
-    when(() => mockSyncEngine.pushBookmark(any()))
-        .thenAnswer((_) async => Future.value());
+    when(
+      () => mockSyncEngine.pushBookmark(any()),
+    ).thenAnswer((_) async => Future.value());
 
     // Create test content items
     await _setupTestData(database);
@@ -57,109 +58,100 @@ void main() {
   });
 
   group('Bookmark advancement', () {
-    test(
-      'After completing the first stage of item N, advanceBookmark updates '
-      'the bookmark to point to item N+1 per sort_order',
-      () async {
-        // Arrange - Create bookmark at item 1
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
+    test('After completing the first stage of item N, advanceBookmark updates '
+        'the bookmark to point to item N+1 per sort_order', () async {
+      // Arrange - Create bookmark at item 1
+      await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        contentItemId: 1,
+      );
+
+      // Act - Advance from item 1
+      await repository.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        completedItemId: 1,
+      );
+
+      // Assert - Should be at item 2
+      final updated = await repository.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+      );
+      expect(updated?.contentItemId, equals(2));
+    });
+
+    test('When a custom learning_order exists, advanceBookmark follows '
+        'the custom order instead of sort_order', () async {
+      // Arrange - Create custom learning order (3, 1, 2)
+      await database.learningOrderDao.insertLearningOrder(
+        LearningOrderCompanion.insert(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          contentItemId: 3,
+          userSortOrder: 0,
+        ),
+      );
+      await database.learningOrderDao.insertLearningOrder(
+        LearningOrderCompanion.insert(
+          curriculumId: CurriculumId.mishnayos.storageKey,
           contentItemId: 1,
-        );
+          userSortOrder: 1,
+        ),
+      );
+      await database.learningOrderDao.insertLearningOrder(
+        LearningOrderCompanion.insert(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          contentItemId: 2,
+          userSortOrder: 2,
+        ),
+      );
 
-        // Act - Advance from item 1
-        await repository.advanceBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          completedItemId: 1,
-        );
+      // Set bookmark to item 3 (first in custom order)
+      await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        contentItemId: 3,
+      );
 
-        // Assert - Should be at item 2
-        final updated = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-        );
-        expect(updated?.contentItemId, equals(2));
-      },
-    );
+      // Act - Advance from item 3
+      await repository.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        completedItemId: 3,
+      );
 
-    test(
-      'When a custom learning_order exists, advanceBookmark follows '
-      'the custom order instead of sort_order',
-      () async {
-        // Arrange - Create custom learning order (3, 1, 2)
-        await database.learningOrderDao.insertLearningOrder(
-          LearningOrderCompanion.insert(
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            contentItemId: 3,
-            userSortOrder: 0,
-          ),
-        );
-        await database.learningOrderDao.insertLearningOrder(
-          LearningOrderCompanion.insert(
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            contentItemId: 1,
-            userSortOrder: 1,
-          ),
-        );
-        await database.learningOrderDao.insertLearningOrder(
-          LearningOrderCompanion.insert(
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            contentItemId: 2,
-            userSortOrder: 2,
-          ),
-        );
+      // Assert - Should be at item 1 (next in custom order, not item 4)
+      final updated = await repository.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+      );
+      expect(updated?.contentItemId, equals(1));
+    });
 
-        // Set bookmark to item 3 (first in custom order)
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          contentItemId: 3,
-        );
+    test('Bookmark at the last item in the curriculum: advanceBookmark '
+        'keeps the bookmark at the last item (does not overflow)', () async {
+      // Arrange - Set bookmark to last item (item 3)
+      await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        contentItemId: 3,
+      );
 
-        // Act - Advance from item 3
-        await repository.advanceBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          completedItemId: 3,
-        );
+      // Act - Try to advance from last item
+      await repository.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        completedItemId: 3,
+      );
 
-        // Assert - Should be at item 1 (next in custom order, not item 4)
-        final updated = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-        );
-        expect(updated?.contentItemId, equals(1));
-      },
-    );
-
-    test(
-      'Bookmark at the last item in the curriculum: advanceBookmark '
-      'keeps the bookmark at the last item (does not overflow)',
-      () async {
-        // Arrange - Set bookmark to last item (item 3)
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          contentItemId: 3,
-        );
-
-        // Act - Try to advance from last item
-        await repository.advanceBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          completedItemId: 3,
-        );
-
-        // Assert - Should still be at item 3
-        final updated = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-        );
-        expect(updated?.contentItemId, equals(3));
-      },
-    );
+      // Assert - Should still be at item 3
+      final updated = await repository.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+      );
+      expect(updated?.contentItemId, equals(3));
+    });
   });
 
   group('Manual bookmark operations', () {
@@ -203,10 +195,7 @@ void main() {
         );
 
         // Assert
-        expect(
-          bookmark.firestoreId,
-          equals('mishnayos_personal'),
-        );
+        expect(bookmark.firestoreId, equals('mishnayos_personal'));
 
         // Test with different curriculum and track
         final bookmark2 = await repository.setBookmark(
@@ -215,73 +204,71 @@ void main() {
           contentItemId: 1,
         );
 
-        expect(
-          bookmark2.firestoreId,
-          equals('bavli_school'),
-        );
+        expect(bookmark2.firestoreId, equals('bavli_school'));
       },
     );
   });
 
   group('Conflict resolution', () {
-    test(
-      'Conflict resolution: when remote bookmark has a newer UTC timestamp, '
-      'it wins over local; when local is newer, local wins',
-      () async {
-        // Arrange - Create local bookmark at item 1
-        final localTime = DateTime.now().toUtc().subtract(const Duration(hours: 1));
-        await database.bookmarkDao.insertBookmark(
-          BookmarksCompanion.insert(
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackType: TrackType.personal.storageKey,
-            contentItemId: 1,
-            updatedAt: localTime,
-          ),
-        );
+    test('Conflict resolution: when remote bookmark has a newer UTC timestamp, '
+        'it wins over local; when local is newer, local wins', () async {
+      // Arrange - Create local bookmark at item 1
+      final localTime = DateTime.now().toUtc().subtract(
+        const Duration(hours: 1),
+      );
+      await database.bookmarkDao.insertBookmark(
+        BookmarksCompanion.insert(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          trackType: TrackType.personal.storageKey,
+          contentItemId: 1,
+          updatedAt: localTime,
+        ),
+      );
 
-        // Act - Merge remote bookmark with newer timestamp at item 2
-        final remoteTime = DateTime.now().toUtc();
-        await repository.mergeRemoteBookmark({
-          'curriculumId': CurriculumId.mishnayos.storageKey,
-          'trackType': TrackType.personal.storageKey,
-          'contentItemId': 2,
-          'updatedAt': remoteTime.toIso8601String(),
-        });
+      // Act - Merge remote bookmark with newer timestamp at item 2
+      final remoteTime = DateTime.now().toUtc();
+      await repository.mergeRemoteBookmark({
+        'curriculumId': CurriculumId.mishnayos.storageKey,
+        'trackType': TrackType.personal.storageKey,
+        'contentItemId': 2,
+        'updatedAt': remoteTime.toIso8601String(),
+      });
 
-        // Assert - Remote should win (newer timestamp)
-        final result = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-        );
-        expect(result?.contentItemId, equals(2));
-        // Check timestamp is close (within 1 second due to storage precision)
-        expect(
-          result?.updatedAt.difference(remoteTime).inSeconds.abs(),
-          lessThan(2),
-        );
+      // Assert - Remote should win (newer timestamp)
+      final result = await repository.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+      );
+      expect(result?.contentItemId, equals(2));
+      // Check timestamp is close (within 1 second due to storage precision)
+      expect(
+        result?.updatedAt.difference(remoteTime).inSeconds.abs(),
+        lessThan(2),
+      );
 
-        // Now test local winning
-        // Update local to newer time at item 3
-        final newerLocalTime = DateTime.now().toUtc().add(const Duration(hours: 1));
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          contentItemId: 3,
-        );
+      // Now test local winning
+      // Update local to newer time at item 3
+      final newerLocalTime = DateTime.now().toUtc().add(
+        const Duration(hours: 1),
+      );
+      await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        contentItemId: 3,
+      );
 
-        // Try to merge older remote at item 4
-        final olderRemoteTime = DateTime.now().toUtc();
-        await repository.mergeRemoteBookmark({
-          'curriculumId': CurriculumId.mishnayos.storageKey,
-          'trackType': TrackType.personal.storageKey,
-          'contentItemId': 4,
-          'updatedAt': olderRemoteTime.toIso8601String(),
-        });
+      // Try to merge older remote at item 4
+      final olderRemoteTime = DateTime.now().toUtc();
+      await repository.mergeRemoteBookmark({
+        'curriculumId': CurriculumId.mishnayos.storageKey,
+        'trackType': TrackType.personal.storageKey,
+        'contentItemId': 4,
+        'updatedAt': olderRemoteTime.toIso8601String(),
+      });
 
-        // Local should win (we can't easily verify this without checking timestamps)
-        // The test ensures the method doesn't throw
-      },
-    );
+      // Local should win (we can't easily verify this without checking timestamps)
+      // The test ensures the method doesn't throw
+    });
   });
 }
 
@@ -289,7 +276,9 @@ void main() {
 Future<void> _setupTestData(AppDatabase db) async {
   // Insert 3 content items for mishnayos
   for (int i = 1; i <= 3; i++) {
-    await db.into(db.contentItems).insert(
+    await db
+        .into(db.contentItems)
+        .insert(
           ContentItemsCompanion.insert(
             curriculumId: CurriculumId.mishnayos.storageKey,
             level1: 'Seder $i',
@@ -302,7 +291,9 @@ Future<void> _setupTestData(AppDatabase db) async {
   }
 
   // Insert a bavli content item for Firestore ID test
-  await db.into(db.contentItems).insert(
+  await db
+      .into(db.contentItems)
+      .insert(
         ContentItemsCompanion.insert(
           curriculumId: CurriculumId.bavli.storageKey,
           level1: 'Berachos',

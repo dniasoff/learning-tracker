@@ -1,5 +1,5 @@
 ---
-title: 'Mishnayos Tracker - Complete v1.0 Implementation'
+title: 'Learning Tracker - Complete v1.0 Implementation'
 slug: 'mishnayos-tracker-v1-complete'
 created: '2026-01-03'
 updated: '2026-01-03 (3 BLOCKING issues resolved: N1-Mishna count, N2-Immutability, N3-Scheduler math)'
@@ -32,7 +32,7 @@ test_patterns:
   - Mock repositories with mockito
 ---
 
-# Tech-Spec: Mishnayos Tracker - Complete v1.0 Implementation
+# Tech-Spec: Learning Tracker - Complete v1.0 Implementation
 
 **Created:** 2026-01-03
 
@@ -871,7 +871,7 @@ This comprehensive implementation is organized into 4 sequential phases. Each ph
   - Action: Set up MaterialApp with Material Design 3
   - Action: Define initial route to splash/loading screen
   - File: `lib/features/splash/presentation/screens/splash_screen.dart`
-  - Action: Create splash screen showing "Mishnayos Tracker for Yisroel Meir"
+  - Action: Create splash screen showing "Learning Tracker for Yisroel Meir"
   - Notes: Basic navigation setup, will expand in later phases
 
 ---

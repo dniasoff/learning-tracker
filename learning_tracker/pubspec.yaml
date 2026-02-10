@@ -1,5 +1,5 @@
 name: learning_tracker
-description: "Mishnayos learning tracker for daily study management."
+description: "Learning tracker for daily study management."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -12,8 +12,8 @@ dependencies:
     sdk: flutter
 
   # State Management
-  flutter_riverpod: 3.0.3
-  riverpod_annotation: 3.0.3
+  flutter_riverpod: 3.1.0
+  riverpod_annotation: 4.0.0
 
   # Navigation
   auto_route: ^11.1.0
@@ -60,9 +60,9 @@ dev_dependencies:
 
   # Code Generation
   build_runner: ^2.11.0
-  riverpod_generator: ^3.0.3
-  freezed: 3.2.3
-  json_serializable: 6.11.2
+  riverpod_generator: 4.0.0+1
+  freezed: ^3.2.3
+  json_serializable: ">=6.9.0 <6.11.4"
   auto_route_generator: ^10.4.0
   drift_dev: ^2.31.0
 

@@ -33,4 +33,38 @@ class BookmarkDao extends DatabaseAccessor<AppDatabase>
 
   Future<int> deleteBookmark(int id) =>
       (delete(bookmarks)..where((t) => t.id.equals(id))).go();
+
+  /// Upsert a bookmark by curriculum and track (last-write-wins per D4).
+  ///
+  /// Inserts if no bookmark exists for the curriculum+track pair,
+  /// or updates if the existing bookmark is older than [updatedAt].
+  Future<void> upsertBookmark({
+    required String curriculumId,
+    required String trackType,
+    required int contentItemId,
+    required DateTime updatedAt,
+  }) async {
+    final existing = await getBookmarkByCurriculumAndTrack(
+      curriculumId,
+      trackType,
+    );
+
+    if (existing == null) {
+      await insertBookmark(
+        BookmarksCompanion.insert(
+          curriculumId: curriculumId,
+          trackType: trackType,
+          contentItemId: contentItemId,
+          updatedAt: updatedAt,
+        ),
+      );
+    } else if (updatedAt.isAfter(existing.updatedAt)) {
+      await (update(bookmarks)..where((t) => t.id.equals(existing.id))).write(
+        BookmarksCompanion(
+          contentItemId: Value(contentItemId),
+          updatedAt: Value(updatedAt),
+        ),
+      );
+    }
+  }
 }

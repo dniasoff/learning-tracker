@@ -61,7 +61,7 @@ class LearningTrackerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return SyncLifecycleObserver(
       child: MaterialApp.router(
-        title: 'Mishnayos Tracker',
+        title: 'Learning Tracker',
         theme: AppTheme.lightTheme,
         routerConfig: _appRouter.config(),
       ),

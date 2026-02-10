@@ -44,135 +44,149 @@ void main() {
   });
 
   group('CurriculumImportService', () {
-    test('imports curriculum with correct item count (AC: Unit test)', () async {
-      final database = await createTestDatabase();
-      addTearDown(database.close);
+    test(
+      'imports curriculum with correct item count (AC: Unit test)',
+      () async {
+        final database = await createTestDatabase();
+        addTearDown(database.close);
 
-      // Create mock fetcher that returns Mishnayos data
-      final mockItems = List.generate(
-        4192,
-        (i) => ContentItem(
+        // Create mock fetcher that returns Mishnayos data
+        final mockItems = List.generate(
+          4192,
+          (i) => ContentItem(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            level1: 'Seder ${i ~/ 1000}',
+            level2: 'Masechta ${i ~/ 100}',
+            level3: 'Perek ${i ~/ 10}',
+            level4: 'Mishna ${i % 10}',
+            displayNameHe: 'משנה $i',
+            displayNameEn: 'Mishna $i',
+            sefariaRef: 'Mishnah.Test.$i',
+            sortOrder: i,
+            isLeaf: true,
+          ),
+        );
+
+        final mockHierarchyConfig = CurriculumHierarchyConfig(
           curriculumId: CurriculumId.mishnayos.storageKey,
-          level1: 'Seder ${i ~/ 1000}',
-          level2: 'Masechta ${i ~/ 100}',
-          level3: 'Perek ${i ~/ 10}',
-          level4: 'Mishna ${i % 10}',
-          displayNameHe: 'משנה $i',
-          displayNameEn: 'Mishna $i',
-          sefariaRef: 'Mishnah.Test.$i',
-          sortOrder: i,
-          isLeaf: true,
-        ),
-      );
+          levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
+          totalItems: 4192,
+        );
 
-      final mockHierarchyConfig = CurriculumHierarchyConfig(
-        curriculumId: CurriculumId.mishnayos.storageKey,
-        levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
-        totalItems: 4192,
-      );
+        when(
+          () => mockFetcher.curriculumId,
+        ).thenReturn(CurriculumId.mishnayos.storageKey);
+        when(() => mockFetcher.fetchAllContent()).thenAnswer(
+          (_) async => FetchResult(
+            items: mockItems,
+            hierarchyConfig: mockHierarchyConfig,
+          ),
+        );
 
-      when(() => mockFetcher.curriculumId)
-          .thenReturn(CurriculumId.mishnayos.storageKey);
-      when(() => mockFetcher.fetchAllContent()).thenAnswer(
-        (_) async => FetchResult(
-          items: mockItems,
-          hierarchyConfig: mockHierarchyConfig,
-        ),
-      );
-
-      when(() => mockSyncEngine.pushCurriculumImportMetadata(
+        when(
+          () => mockSyncEngine.pushCurriculumImportMetadata(
             curriculumId: any(named: 'curriculumId'),
             itemCount: any(named: 'itemCount'),
             importedAt: any(named: 'importedAt'),
-          )).thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async {});
 
-      importService = CurriculumImportService(
-        database: database,
-        fetchers: {CurriculumId.mishnayos.storageKey: mockFetcher},
-        syncEngine: mockSyncEngine,
-        logger: mockLogger,
-      );
+        importService = CurriculumImportService(
+          database: database,
+          fetchers: {CurriculumId.mishnayos.storageKey: mockFetcher},
+          syncEngine: mockSyncEngine,
+          logger: mockLogger,
+        );
 
-      // Import the curriculum
-      final success = await importService.importCurriculum(CurriculumId.mishnayos);
+        // Import the curriculum
+        final success = await importService.importCurriculum(
+          CurriculumId.mishnayos,
+        );
 
-      expect(success, isTrue);
+        expect(success, isTrue);
 
-      // Verify correct number of items were inserted
-      final count = await database.contentDao
-          .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
-      expect(count, equals(4192));
+        // Verify correct number of items were inserted
+        final count = await database.contentDao.getContentItemCountByCurriculum(
+          CurriculumId.mishnayos.storageKey,
+        );
+        expect(count, equals(4192));
 
-      // Verify hierarchy config was stored
-      final hierarchyConfigData = await database
-          .select(database.curriculumHierarchyConfig)
-          .get();
-      expect(hierarchyConfigData.length, equals(1));
-      expect(hierarchyConfigData.first.maxLevels, equals(4));
-    });
+        // Verify hierarchy config was stored
+        final hierarchyConfigData = await database
+            .select(database.curriculumHierarchyConfig)
+            .get();
+        expect(hierarchyConfigData.length, equals(1));
+        expect(hierarchyConfigData.first.maxLevels, equals(4));
+      },
+    );
 
-    test('import is idempotent - no duplicates on second run (AC: Unit test)',
-        () async {
-      final database = await createTestDatabase();
-      addTearDown(database.close);
+    test(
+      'import is idempotent - no duplicates on second run (AC: Unit test)',
+      () async {
+        final database = await createTestDatabase();
+        addTearDown(database.close);
 
-      final mockItems = List.generate(
-        100,
-        (i) => ContentItem(
+        final mockItems = List.generate(
+          100,
+          (i) => ContentItem(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            level1: 'Seder1',
+            level2: 'Masechta1',
+            level3: 'Perek${i ~/ 10}',
+            level4: 'Mishna${i % 10}',
+            displayNameHe: 'משנה $i',
+            displayNameEn: 'Mishna $i',
+            sefariaRef: 'Mishnah.Test.$i',
+            sortOrder: i,
+            isLeaf: true,
+          ),
+        );
+
+        final mockHierarchyConfig = CurriculumHierarchyConfig(
           curriculumId: CurriculumId.mishnayos.storageKey,
-          level1: 'Seder1',
-          level2: 'Masechta1',
-          level3: 'Perek${i ~/ 10}',
-          level4: 'Mishna${i % 10}',
-          displayNameHe: 'משנה $i',
-          displayNameEn: 'Mishna $i',
-          sefariaRef: 'Mishnah.Test.$i',
-          sortOrder: i,
-          isLeaf: true,
-        ),
-      );
+          levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
+          totalItems: 100,
+        );
 
-      final mockHierarchyConfig = CurriculumHierarchyConfig(
-        curriculumId: CurriculumId.mishnayos.storageKey,
-        levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
-        totalItems: 100,
-      );
+        when(
+          () => mockFetcher.curriculumId,
+        ).thenReturn(CurriculumId.mishnayos.storageKey);
+        when(() => mockFetcher.fetchAllContent()).thenAnswer(
+          (_) async => FetchResult(
+            items: mockItems,
+            hierarchyConfig: mockHierarchyConfig,
+          ),
+        );
 
-      when(() => mockFetcher.curriculumId)
-          .thenReturn(CurriculumId.mishnayos.storageKey);
-      when(() => mockFetcher.fetchAllContent()).thenAnswer(
-        (_) async => FetchResult(
-          items: mockItems,
-          hierarchyConfig: mockHierarchyConfig,
-        ),
-      );
-
-      when(() => mockSyncEngine.pushCurriculumImportMetadata(
+        when(
+          () => mockSyncEngine.pushCurriculumImportMetadata(
             curriculumId: any(named: 'curriculumId'),
             itemCount: any(named: 'itemCount'),
             importedAt: any(named: 'importedAt'),
-          )).thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async {});
 
-      importService = CurriculumImportService(
-        database: database,
-        fetchers: {CurriculumId.mishnayos.storageKey: mockFetcher},
-        syncEngine: mockSyncEngine,
-        logger: mockLogger,
-      );
+        importService = CurriculumImportService(
+          database: database,
+          fetchers: {CurriculumId.mishnayos.storageKey: mockFetcher},
+          syncEngine: mockSyncEngine,
+          logger: mockLogger,
+        );
 
-      // First import
-      await importService.importCurriculum(CurriculumId.mishnayos);
-      final firstCount = await database.contentDao
-          .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
+        // First import
+        await importService.importCurriculum(CurriculumId.mishnayos);
+        final firstCount = await database.contentDao
+            .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
 
-      // Second import (idempotent)
-      await importService.importCurriculum(CurriculumId.mishnayos);
-      final secondCount = await database.contentDao
-          .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
+        // Second import (idempotent)
+        await importService.importCurriculum(CurriculumId.mishnayos);
+        final secondCount = await database.contentDao
+            .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
 
-      expect(firstCount, equals(secondCount));
-      expect(secondCount, equals(100));
-    });
+        expect(firstCount, equals(secondCount));
+        expect(secondCount, equals(100));
+      },
+    );
 
     test('seeds default stage definitions on import (AC: Unit test)', () async {
       final database = await createTestDatabase();
@@ -196,20 +210,21 @@ void main() {
         totalItems: 1,
       );
 
-      when(() => mockFetcher.curriculumId)
-          .thenReturn(CurriculumId.mishnayos.storageKey);
+      when(
+        () => mockFetcher.curriculumId,
+      ).thenReturn(CurriculumId.mishnayos.storageKey);
       when(() => mockFetcher.fetchAllContent()).thenAnswer(
-        (_) async => FetchResult(
-          items: mockItems,
-          hierarchyConfig: mockHierarchyConfig,
-        ),
+        (_) async =>
+            FetchResult(items: mockItems, hierarchyConfig: mockHierarchyConfig),
       );
 
-      when(() => mockSyncEngine.pushCurriculumImportMetadata(
-            curriculumId: any(named: 'curriculumId'),
-            itemCount: any(named: 'itemCount'),
-            importedAt: any(named: 'importedAt'),
-          )).thenAnswer((_) async {});
+      when(
+        () => mockSyncEngine.pushCurriculumImportMetadata(
+          curriculumId: any(named: 'curriculumId'),
+          itemCount: any(named: 'itemCount'),
+          importedAt: any(named: 'importedAt'),
+        ),
+      ).thenAnswer((_) async {});
 
       importService = CurriculumImportService(
         database: database,
@@ -221,8 +236,9 @@ void main() {
       await importService.importCurriculum(CurriculumId.mishnayos);
 
       // Verify stage definitions were seeded
-      final stages = await database.stageDao
-          .getStageDefinitionsByCurriculum(CurriculumId.mishnayos.storageKey);
+      final stages = await database.stageDao.getStageDefinitionsByCurriculum(
+        CurriculumId.mishnayos.storageKey,
+      );
 
       expect(stages.length, equals(3));
       expect(stages[0].stageName, equals('learn'));
@@ -237,11 +253,12 @@ void main() {
       final database = await createTestDatabase();
       addTearDown(database.close);
 
-      when(() => mockFetcher.curriculumId)
-          .thenReturn(CurriculumId.mishnayos.storageKey);
-      when(() => mockFetcher.fetchAllContent()).thenThrow(
-        const SefariaApiException('Network error', statusCode: 500),
-      );
+      when(
+        () => mockFetcher.curriculumId,
+      ).thenReturn(CurriculumId.mishnayos.storageKey);
+      when(
+        () => mockFetcher.fetchAllContent(),
+      ).thenThrow(const SefariaApiException('Network error', statusCode: 500));
 
       importService = CurriculumImportService(
         database: database,
@@ -257,8 +274,9 @@ void main() {
       );
 
       // Verify no items were inserted (transaction rolled back)
-      final count = await database.contentDao
-          .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
+      final count = await database.contentDao.getContentItemCountByCurriculum(
+        CurriculumId.mishnayos.storageKey,
+      );
       expect(count, equals(0));
     });
 
@@ -285,18 +303,17 @@ void main() {
         totalItems: 1000,
       );
 
-      when(() => mockFetcher.curriculumId)
-          .thenReturn(CurriculumId.mishnayos.storageKey);
-      when(() => mockFetcher.fetchAllContent()).thenAnswer(
-        (_) async {
-          // Simulate delay to allow cancellation
-          await Future.delayed(const Duration(milliseconds: 100));
-          return FetchResult(
-            items: mockItems,
-            hierarchyConfig: mockHierarchyConfig,
-          );
-        },
-      );
+      when(
+        () => mockFetcher.curriculumId,
+      ).thenReturn(CurriculumId.mishnayos.storageKey);
+      when(() => mockFetcher.fetchAllContent()).thenAnswer((_) async {
+        // Simulate delay to allow cancellation
+        await Future.delayed(const Duration(milliseconds: 100));
+        return FetchResult(
+          items: mockItems,
+          hierarchyConfig: mockHierarchyConfig,
+        );
+      });
 
       importService = CurriculumImportService(
         database: database,
@@ -306,8 +323,9 @@ void main() {
       );
 
       // Start import and cancel immediately
-      final importFuture =
-          importService.importCurriculum(CurriculumId.mishnayos);
+      final importFuture = importService.importCurriculum(
+        CurriculumId.mishnayos,
+      );
       importService.cancelImport();
 
       final result = await importFuture;
@@ -316,8 +334,9 @@ void main() {
       expect(result, isFalse);
 
       // Database should be clean (no partial items)
-      final count = await database.contentDao
-          .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
+      final count = await database.contentDao.getContentItemCountByCurriculum(
+        CurriculumId.mishnayos.storageKey,
+      );
       expect(count, equals(0));
     });
 
@@ -348,20 +367,21 @@ void main() {
         totalItems: 5845,
       );
 
-      when(() => mockFetcher.curriculumId)
-          .thenReturn(CurriculumId.chumash.storageKey);
+      when(
+        () => mockFetcher.curriculumId,
+      ).thenReturn(CurriculumId.chumash.storageKey);
       when(() => mockFetcher.fetchAllContent()).thenAnswer(
-        (_) async => FetchResult(
-          items: mockItems,
-          hierarchyConfig: mockHierarchyConfig,
-        ),
+        (_) async =>
+            FetchResult(items: mockItems, hierarchyConfig: mockHierarchyConfig),
       );
 
-      when(() => mockSyncEngine.pushCurriculumImportMetadata(
-            curriculumId: any(named: 'curriculumId'),
-            itemCount: any(named: 'itemCount'),
-            importedAt: any(named: 'importedAt'),
-          )).thenAnswer((_) async {});
+      when(
+        () => mockSyncEngine.pushCurriculumImportMetadata(
+          curriculumId: any(named: 'curriculumId'),
+          itemCount: any(named: 'itemCount'),
+          importedAt: any(named: 'importedAt'),
+        ),
+      ).thenAnswer((_) async {});
 
       importService = CurriculumImportService(
         database: database,
@@ -377,76 +397,90 @@ void main() {
       await importService.importCurriculum(CurriculumId.chumash);
 
       // Verify all items were inserted
-      final count = await database.contentDao
-          .getContentItemCountByCurriculum(CurriculumId.chumash.storageKey);
+      final count = await database.contentDao.getContentItemCountByCurriculum(
+        CurriculumId.chumash.storageKey,
+      );
       expect(count, equals(5845));
 
       // Verify we saw storing progress events (indicating batching)
-      final storingEvents = progressEvents.where((e) => e is ImportProgress && e.maybeWhen(storing: (_, __, ___) => true, orElse: () => false));
+      final storingEvents = progressEvents.where(
+        (e) =>
+            e is ImportProgress &&
+            e.maybeWhen(storing: (_, __, ___) => true, orElse: () => false),
+      );
       expect(storingEvents.isNotEmpty, isTrue);
     });
 
-    test('emits correct progress states during import (AC: Widget test prep)',
-        () async {
-      final database = await createTestDatabase();
-      addTearDown(database.close);
+    test(
+      'emits correct progress states during import (AC: Widget test prep)',
+      () async {
+        final database = await createTestDatabase();
+        addTearDown(database.close);
 
-      final mockItems = List.generate(
-        10,
-        (i) => ContentItem(
+        final mockItems = List.generate(
+          10,
+          (i) => ContentItem(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            level1: 'Test',
+            displayNameHe: 'Test $i',
+            displayNameEn: 'Test $i',
+            sefariaRef: 'Test.$i',
+            sortOrder: i,
+            isLeaf: true,
+          ),
+        );
+
+        final mockHierarchyConfig = CurriculumHierarchyConfig(
           curriculumId: CurriculumId.mishnayos.storageKey,
-          level1: 'Test',
-          displayNameHe: 'Test $i',
-          displayNameEn: 'Test $i',
-          sefariaRef: 'Test.$i',
-          sortOrder: i,
-          isLeaf: true,
-        ),
-      );
+          levelLabels: const ['Test'],
+          totalItems: 10,
+        );
 
-      final mockHierarchyConfig = CurriculumHierarchyConfig(
-        curriculumId: CurriculumId.mishnayos.storageKey,
-        levelLabels: const ['Test'],
-        totalItems: 10,
-      );
+        when(
+          () => mockFetcher.curriculumId,
+        ).thenReturn(CurriculumId.mishnayos.storageKey);
+        when(() => mockFetcher.fetchAllContent()).thenAnswer(
+          (_) async => FetchResult(
+            items: mockItems,
+            hierarchyConfig: mockHierarchyConfig,
+          ),
+        );
 
-      when(() => mockFetcher.curriculumId)
-          .thenReturn(CurriculumId.mishnayos.storageKey);
-      when(() => mockFetcher.fetchAllContent()).thenAnswer(
-        (_) async => FetchResult(
-          items: mockItems,
-          hierarchyConfig: mockHierarchyConfig,
-        ),
-      );
-
-      when(() => mockSyncEngine.pushCurriculumImportMetadata(
+        when(
+          () => mockSyncEngine.pushCurriculumImportMetadata(
             curriculumId: any(named: 'curriculumId'),
             itemCount: any(named: 'itemCount'),
             importedAt: any(named: 'importedAt'),
-          )).thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async {});
 
-      importService = CurriculumImportService(
-        database: database,
-        fetchers: {CurriculumId.mishnayos.storageKey: mockFetcher},
-        syncEngine: mockSyncEngine,
-        logger: mockLogger,
-      );
+        importService = CurriculumImportService(
+          database: database,
+          fetchers: {CurriculumId.mishnayos.storageKey: mockFetcher},
+          syncEngine: mockSyncEngine,
+          logger: mockLogger,
+        );
 
-      final progressEvents = <ImportProgress>[];
-      final subscription = importService.progressStream.listen(progressEvents.add);
-      addTearDown(subscription.cancel);
+        final progressEvents = <ImportProgress>[];
+        final subscription = importService.progressStream.listen(
+          progressEvents.add,
+        );
+        addTearDown(subscription.cancel);
 
-      await importService.importCurriculum(CurriculumId.mishnayos);
+        await importService.importCurriculum(CurriculumId.mishnayos);
 
-      // Give stream events time to propagate
-      await Future.delayed(const Duration(milliseconds: 100));
+        // Give stream events time to propagate
+        await Future.delayed(const Duration(milliseconds: 100));
 
-      // Verify we have progress events
-      expect(progressEvents.isNotEmpty, isTrue);
+        // Verify we have progress events
+        expect(progressEvents.isNotEmpty, isTrue);
 
-      // Verify we saw completed state at minimum
-      final hasCompleted = progressEvents.any((e) => e.maybeWhen(completed: (_, __) => true, orElse: () => false));
-      expect(hasCompleted, isTrue);
-    });
+        // Verify we saw completed state at minimum
+        final hasCompleted = progressEvents.any(
+          (e) => e.maybeWhen(completed: (_, __) => true, orElse: () => false),
+        );
+        expect(hasCompleted, isTrue);
+      },
+    );
   });
 }

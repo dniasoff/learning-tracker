@@ -1,4 +1,4 @@
-# Coding Standards - Mishnayos Tracker
+# Coding Standards - Learning Tracker
 
 **Status:** CAST-IRON RULES - Violations block PRs
 **Audience:** AI agents and developers
@@ -54,10 +54,10 @@ await db.transaction(() async {
 ### 5. Feature Isolation - NEVER Import Between Features
 ```dart
 // FORBIDDEN - Direct feature imports
-import '../../mishna_browsing/data/repositories/mishna_repository.dart';
+import '../../content_browsing/data/repositories/item_repository.dart';
 
 // REQUIRED - Use core providers
-final repo = ref.watch(mishnaRepositoryProvider); // from core/providers
+final repo = ref.watch(itemRepositoryProvider); // from core/providers
 ```
 
 ### 6. Generated Files - NEVER Commit
@@ -78,7 +78,7 @@ final apiKey = const String.fromEnvironment('API_KEY');
 ```
 
 ### 8. Completion Immutability - APPEND-ONLY
-Once a Mishna stage is marked complete, it is **locked forever**. No deletions, no unmarking.
+Once a content item is marked complete, it is **locked forever**. No deletions, no unmarking.
 
 ---
 
@@ -110,7 +110,7 @@ const firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
 **PIN Security:**
 - NEVER store PINs in plain text
 - ALWAYS use bcrypt hashing via flutter_secure_storage
-- Parent PIN !== Tutor PIN (separate storage keys)
+- Admin PIN !== User PIN (separate storage keys)
 
 ---
 
@@ -152,35 +152,35 @@ int fileAgeInDays;
 **Avoid Disinformation:**
 ```dart
 // BAD - It's not actually a List
-Map<String, Mishna> mishnaList;
+Map<String, Item> itemList;
 
 // GOOD - Accurate name
-Map<String, Mishna> mishnasByRef;
-Set<int> completedMishnaIds;
+Map<String, Item> itemsByRef;
+Set<int> completedItemIds;
 ```
 
 **Pronounceable & Searchable Names:**
 ```dart
 // BAD - Unpronounceable, unsearchable
-int mshCnt;
+int itmCnt;
 DateTime genymdhms;
 
 // GOOD - Clear and searchable
-int mishnaCount;
+int itemCount;
 DateTime generatedTimestamp;
 ```
 
-**Class Names:** Nouns or noun phrases (`Mishna`, `CompletionTracker`, `SyncManager`)
-**Method Names:** Verbs or verb phrases (`getMishna()`, `markComplete()`, `calculateProgress()`)
+**Class Names:** Nouns or noun phrases (`ContentItem`, `CompletionTracker`, `SyncManager`)
+**Method Names:** Verbs or verb phrases (`getItem()`, `markComplete()`, `calculateProgress()`)
 
 ### Functions - Small & Focused
 
 **Do One Thing:**
 ```dart
 // BAD - Does multiple things
-Future<void> processCompletion(int mishnaId) async {
-  final mishna = await getMishna(mishnaId);
-  await markComplete(mishna);
+Future<void> processCompletion(int itemId) async {
+  final item = await getItem(itemId);
+  await markComplete(item);
   await updateProgress();
   await syncToCloud();
   await sendNotification();
@@ -188,9 +188,9 @@ Future<void> processCompletion(int mishnaId) async {
 }
 
 // GOOD - Single responsibility, calls focused functions
-Future<void> processCompletion(int mishnaId) async {
-  await _recordCompletion(mishnaId);
-  await _updateDerivedState(mishnaId);
+Future<void> processCompletion(int itemId) async {
+  await _recordCompletion(itemId);
+  await _updateDerivedState(itemId);
   await _notifyUser();
 }
 ```
@@ -204,7 +204,7 @@ Future<void> processCompletion(int mishnaId) async {
 ```dart
 // BAD - Mixed abstraction levels
 Future<void> syncProgress() async {
-  final completions = await db.select(mishnaCompletions).get();
+  final completions = await db.select(itemCompletions).get();
   final json = jsonEncode(completions.map((c) => c.toJson()).toList());
   final response = await http.post(Uri.parse(url), body: json);
   if (response.statusCode == 200) {
@@ -223,13 +223,13 @@ Future<void> syncProgress() async {
 **Command-Query Separation:**
 ```dart
 // BAD - Query with side effect
-bool markCompleteAndCheckStreak(int mishnaId) {
-  _completions.add(mishnaId);  // Command (modifies state)
+bool markCompleteAndCheckStreak(int itemId) {
+  _completions.add(itemId);  // Command (modifies state)
   return _streak > 7;          // Query (returns value)
 }
 
 // GOOD - Separated
-void markComplete(int mishnaId) => _completions.add(mishnaId);
+void markComplete(int itemId) => _completions.add(itemId);
 bool hasWeekStreak() => _streak > 7;
 ```
 
@@ -237,16 +237,16 @@ bool hasWeekStreak() => _streak > 7;
 
 **Good Comments:**
 ```dart
-// Sefaria API returns perek as 1-indexed but we store 0-indexed
-final storedPerek = sefariaPerek - 1;
+// External API returns section as 1-indexed but we store 0-indexed
+final storedSection = apiSection - 1;
 
-// Hebrew calendar day starts at sunset, so we adjust by 6 hours
-// to align with civil midnight for display purposes
-final adjustedDate = hebrewDate.subtract(Duration(hours: 6));
+// Calendar day boundary may differ from civil midnight depending
+// on locale settings, so we adjust accordingly for display purposes
+final adjustedDate = calendarDate.subtract(Duration(hours: 6));
 
-/// Calculates optimal daily Mishnayos count to reach bar mitzvah goal.
-/// Uses remaining days and accounts for Shabbos/Yom Tov rest days.
-int calculateDailyTarget(DateTime barMitzvahDate) { ... }
+/// Calculates optimal daily item count to reach the target goal date.
+/// Uses remaining days and accounts for configured rest days.
+int calculateDailyTarget(DateTime goalDate) { ... }
 ```
 
 **Bad Comments (Delete These):**
@@ -255,8 +255,8 @@ int calculateDailyTarget(DateTime barMitzvahDate) { ... }
 i++; // increment i
 
 // BAD - Obvious from name
-/// Gets the mishna
-Mishna getMishna(int id) { ... }
+/// Gets the item
+Item getItem(int id) { ... }
 
 // BAD - Commented-out code (use git history)
 // final oldValue = calculateOldWay();
@@ -270,51 +270,51 @@ Mishna getMishna(int id) { ... }
 **Don't Return Null - Use Optionals or Throw:**
 ```dart
 // BAD - Caller must check null
-Mishna? getMishna(int id) {
-  return _mishnas[id];  // Returns null if not found
+Item? getItem(int id) {
+  return _items[id];  // Returns null if not found
 }
 
 // GOOD - Explicit optional with freezed
 @freezed
-class MishnaResult with _$MishnaResult {
-  const factory MishnaResult.found(Mishna mishna) = _Found;
-  const factory MishnaResult.notFound() = _NotFound;
+class ItemResult with _$ItemResult {
+  const factory ItemResult.found(Item item) = _Found;
+  const factory ItemResult.notFound() = _NotFound;
 }
 
 // GOOD - Throw for exceptional cases
-Mishna getMishnaOrThrow(int id) {
-  final mishna = _mishnas[id];
-  if (mishna == null) throw MishnaNotFoundException(id);
-  return mishna;
+Item getItemOrThrow(int id) {
+  final item = _items[id];
+  if (item == null) throw ItemNotFoundException(id);
+  return item;
 }
 ```
 
 **Don't Pass Null:**
 ```dart
 // BAD - Null parameter
-void updateProgress(int? mishnaId) {
-  if (mishnaId == null) return;  // Defensive check everywhere
+void updateProgress(int? itemId) {
+  if (itemId == null) return;  // Defensive check everywhere
   ...
 }
 
 // GOOD - Required parameter, validate at boundaries
-void updateProgress(int mishnaId) { ... }
+void updateProgress(int itemId) { ... }
 ```
 
 **Fail Fast:**
 ```dart
 // Validate at entry points, not deep in call stack
-Future<void> markComplete(int mishnaId, int stage) async {
+Future<void> markComplete(int itemId, int stage) async {
   // Validate immediately
-  if (mishnaId < 1 || mishnaId > 4192) {
-    throw ArgumentError('Invalid mishnaId: $mishnaId');
+  if (itemId < 1 || itemId > totalItemCount) {
+    throw ArgumentError('Invalid itemId: $itemId');
   }
   if (stage < 1 || stage > 3) {
     throw ArgumentError('Invalid stage: $stage');
   }
 
   // Proceed with confidence
-  await _repository.recordCompletion(mishnaId, stage);
+  await _repository.recordCompletion(itemId, stage);
 }
 ```
 
@@ -367,7 +367,7 @@ void createTrack(String name) {
 // Step 1: RED - Write failing test
 test('calculates daily target for 100 remaining days', () {
   final calculator = SchedulerCalculator();
-  final remaining = 1000; // Mishnayos remaining
+  final remaining = 1000; // items remaining
   final days = 100;
 
   final target = calculator.dailyTarget(remaining, days);
@@ -379,9 +379,9 @@ test('calculates daily target for 100 remaining days', () {
 int dailyTarget(int remaining, int days) => remaining ~/ days;
 
 // Step 3: REFACTOR - Handle edge cases, improve naming
-int dailyTarget(int remainingMishnayos, int remainingDays) {
-  if (remainingDays <= 0) return remainingMishnayos;
-  return (remainingMishnayos / remainingDays).ceil();
+int dailyTarget(int remainingItems, int remainingDays) {
+  if (remainingDays <= 0) return remainingItems;
+  return (remainingItems / remainingDays).ceil();
 }
 ```
 
@@ -406,8 +406,8 @@ Kent Beck's Four Rules of Simple Design (in priority order):
 class CompletionTracker {
   final List<Completion> _completions;
 
-  bool isComplete(int mishnaId, int stage) =>
-    _completions.any((c) => c.mishnaId == mishnaId && c.stage == stage);
+  bool isComplete(int itemId, int stage) =>
+    _completions.any((c) => c.itemId == itemId && c.stage == stage);
 
   int completedCount(int stage) =>
     _completions.where((c) => c.stage == stage).length;
@@ -465,9 +465,9 @@ abstract class BaseRepository<T, ID> {
 }
 
 // GOOD - Build what you need now
-class MishnaRepository {
-  Future<Mishna?> getMishna(int id) => ...;
-  Future<List<Mishna>> getMishnasByPerek(String masechta, int perek) => ...;
+class ItemRepository {
+  Future<Item?> getItem(int id) => ...;
+  Future<List<Item>> getItemsBySection(String subcategory, int section) => ...;
 }
 ```
 
@@ -484,7 +484,7 @@ class MishnaRepository {
 ```
 lib/
 ├── features/
-│   ├── mishna_browsing/
+│   ├── content_browsing/
 │   │   ├── data/
 │   │   │   ├── datasources/
 │   │   │   └── repositories/
@@ -502,7 +502,7 @@ lib/
     ├── logging/           # talker configuration
     ├── theme/             # Material Design 3 theme + RTL
     ├── auth/              # PIN authentication, Firebase
-    ├── network/           # dio HTTP client, Sefaria API
+    ├── network/           # dio HTTP client, content API
     ├── providers/         # Riverpod core providers
     ├── utils/             # Shared utilities
     └── constants/         # App-wide constants
@@ -519,18 +519,18 @@ lib/
 
 | Context | Convention | Example |
 |---------|-----------|---------|
-| SQL (drift tables) | snake_case | `mishna_completions`, `completed_at` |
-| Dart files | snake_case | `mishna_repository.dart` |
-| Dart classes | PascalCase | `MishnaRepository`, `CompletionTracker` |
-| Dart functions/methods | camelCase | `getMishna()`, `markComplete()` |
-| Dart variables | camelCase | `mishnaId`, `completedAt` |
+| SQL (drift tables) | snake_case | `item_completions`, `completed_at` |
+| Dart files | snake_case | `item_repository.dart` |
+| Dart classes | PascalCase | `ItemRepository`, `CompletionTracker` |
+| Dart functions/methods | camelCase | `getItem()`, `markComplete()` |
+| Dart variables | camelCase | `itemId`, `completedAt` |
 | Constants (compile-time) | SCREAMING_SNAKE_CASE | `MAX_DAILY_TASKS` |
 | Constants (runtime) | lowerCamelCase | `appVersion` |
 | Private members | Leading underscore | `_database`, `_syncManager` |
-| JSON/Firestore fields | camelCase | `mishnaId`, `completedAt` |
-| Route paths | kebab-case | `/mishna-browsing`, `/parent-mode` |
-| Route parameters | camelCase | `:mishnaId`, `:trackId` |
-| Riverpod providers | noun-based camelCase | `mishnaRepository` -> `mishnaRepositoryProvider` |
+| JSON/Firestore fields | camelCase | `itemId`, `completedAt` |
+| Route paths | kebab-case | `/content-browsing`, `/admin-mode` |
+| Route parameters | camelCase | `:itemId`, `:trackId` |
+| Riverpod providers | noun-based camelCase | `itemRepository` -> `itemRepositoryProvider` |
 
 ---
 
@@ -540,18 +540,18 @@ lib/
 ```dart
 // ALWAYS use riverpod_generator with @riverpod annotation
 @riverpod
-Future<List<Mishna>> mishnaList(Ref ref) async {
-  final repo = ref.watch(mishnaRepositoryProvider);
-  return repo.getAllMishnas();
+Future<List<Item>> itemList(Ref ref) async {
+  final repo = ref.watch(itemRepositoryProvider);
+  return repo.getAllItems();
 }
 
 // UI usage
-class MishnaListPage extends ConsumerWidget {
+class ItemListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mishnas = ref.watch(mishnaListProvider);
+    final items = ref.watch(itemListProvider);
 
-    return mishnas.when(
+    return items.when(
       loading: () => const CircularProgressIndicator(),
       error: (e, st) => Text('Error: $e'),
       data: (data) => ListView.builder(...),
@@ -573,9 +573,9 @@ class MishnaListPage extends ConsumerWidget {
 ### Table Definition Pattern
 ```dart
 // Table naming: snake_case plural (generates SQL table name)
-class MishnaCompletions extends Table {
+class ItemCompletions extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get mishnaId => integer()();  // Generates SQL: mishna_id
+  IntColumn get itemId => integer()();  // Generates SQL: item_id
   DateTimeColumn get completedAt => dateTime()();  // UTC ONLY
   IntColumn get stage => integer()();
   TextColumn get trackId => text()();
@@ -588,25 +588,25 @@ class MishnaCompletions extends Table {
 ### Query Patterns
 ```dart
 // Reactive stream for UI updates
-Stream<List<MishnaCompletion>> watchCompletions() {
-  return (select(mishnaCompletions)
+Stream<List<ItemCompletion>> watchCompletions() {
+  return (select(itemCompletions)
     ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
     .watch();
 }
 
 // Single query
-Future<MishnaCompletion?> getCompletion(int mishnaId) {
-  return (select(mishnaCompletions)
-    ..where((t) => t.mishnaId.equals(mishnaId)))
+Future<ItemCompletion?> getCompletion(int itemId) {
+  return (select(itemCompletions)
+    ..where((t) => t.itemId.equals(itemId)))
     .getSingleOrNull();
 }
 
 // ALWAYS use transactions for writes
-Future<void> markComplete(int mishnaId, int stage) {
+Future<void> markComplete(int itemId, int stage) {
   return transaction(() async {
-    await into(mishnaCompletions).insert(
-      MishnaCompletionsCompanion.insert(
-        mishnaId: mishnaId,
+    await into(itemCompletions).insert(
+      ItemCompletionsCompanion.insert(
+        itemId: itemId,
         stage: stage,
         completedAt: DateTime.now().toUtc(),  // UTC!
       ),
@@ -624,32 +624,32 @@ Future<void> markComplete(int mishnaId, int stage) {
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'mishna.freezed.dart';
-part 'mishna.g.dart';
+part 'item.freezed.dart';
+part 'item.g.dart';
 
 @freezed
-class Mishna with _$Mishna {
-  const factory Mishna({
+class Item with _$Item {
+  const factory Item({
     required int id,
-    required String seder,
-    required String masechta,
-    required int perek,
-    required int mishnaNumber,
-    required String hebrewText,
-    String? englishText,
-  }) = _Mishna;
+    required String category,
+    required String subcategory,
+    required int section,
+    required int itemNumber,
+    required String primaryText,
+    String? secondaryText,
+  }) = _Item;
 
-  factory Mishna.fromJson(Map<String, dynamic> json) => _$MishnaFromJson(json);
+  factory Item.fromJson(Map<String, dynamic> json) => _$ItemFromJson(json);
 }
 ```
 
 ### Update Pattern
 ```dart
 // ALWAYS use copyWith for updates
-final updated = mishna.copyWith(englishText: newTranslation);
+final updated = item.copyWith(secondaryText: newTranslation);
 
 // NEVER mutate
-mishna.englishText = newTranslation; // FORBIDDEN
+item.secondaryText = newTranslation; // FORBIDDEN
 ```
 
 ---
@@ -663,11 +663,11 @@ class AppRouter extends RootStackRouter {
   @override
   List<AutoRoute> get routes => [
     AutoRoute(page: HomeRoute.page, initial: true),
-    AutoRoute(page: MishnaBrowsingRoute.page, path: '/mishna-browsing'),
+    AutoRoute(page: ContentBrowsingRoute.page, path: '/content-browsing'),
     AutoRoute(
-      page: ParentModeRoute.page,
-      path: '/parent-mode',
-      guards: [ParentPinGuard()],  // PIN protection
+      page: AdminModeRoute.page,
+      path: '/admin-mode',
+      guards: [AdminPinGuard()],  // PIN protection
     ),
   ];
 }
@@ -676,8 +676,8 @@ class AppRouter extends RootStackRouter {
 ### Navigation Usage
 ```dart
 // Type-safe navigation - compile errors prevent runtime bugs
-context.router.push(const MishnaBrowsingRoute());
-context.router.push(MishnaDetailRoute(mishnaId: 42));
+context.router.push(const ContentBrowsingRoute());
+context.router.push(ItemDetailRoute(itemId: 42));
 ```
 
 ---
@@ -688,44 +688,44 @@ context.router.push(MishnaDetailRoute(mishnaId: 42));
 ```
 test/
 ├── features/
-│   ├── mishna_browsing/
+│   ├── content_browsing/
 │   │   ├── data/
 │   │   │   └── repositories/
-│   │   │       └── mishna_repository_test.dart
+│   │   │       └── item_repository_test.dart
 │   │   └── domain/
 │   │       └── entities/
-│   │           └── mishna_test.dart
+│   │           └── item_test.dart
 ├── mocks/
 │   └── mock_repositories.dart
 └── fixtures/
-    └── mishna_fixtures.dart
+    └── item_fixtures.dart
 ```
 
 ### Mocking with mocktail (REQUIRED)
 ```dart
 import 'package:mocktail/mocktail.dart';
 
-class MockMishnaRepository extends Mock implements MishnaRepository {}
+class MockItemRepository extends Mock implements ItemRepository {}
 
 void main() {
-  late MockMishnaRepository mockRepo;
+  late MockItemRepository mockRepo;
 
   setUp(() {
-    mockRepo = MockMishnaRepository();
+    mockRepo = MockItemRepository();
   });
 
-  test('should return mishna list', () async {
+  test('should return item list', () async {
     // Arrange
-    when(() => mockRepo.getAllMishnas()).thenAnswer(
-      (_) async => [testMishna],
+    when(() => mockRepo.getAllItems()).thenAnswer(
+      (_) async => [testItem],
     );
 
     // Act
-    final result = await mockRepo.getAllMishnas();
+    final result = await mockRepo.getAllItems();
 
     // Assert
-    expect(result, [testMishna]);
-    verify(() => mockRepo.getAllMishnas()).called(1);
+    expect(result, [testItem]);
+    verify(() => mockRepo.getAllItems()).called(1);
   });
 }
 ```
@@ -736,17 +736,17 @@ void main() {
   test('provider returns data', () async {
     final container = ProviderContainer(
       overrides: [
-        mishnaRepositoryProvider.overrideWithValue(mockRepo),
+        itemRepositoryProvider.overrideWithValue(mockRepo),
       ],
     );
     addTearDown(container.dispose);
 
-    when(() => mockRepo.getAllMishnas()).thenAnswer(
-      (_) async => [testMishna],
+    when(() => mockRepo.getAllItems()).thenAnswer(
+      (_) async => [testItem],
     );
 
-    final result = await container.read(mishnaListProvider.future);
-    expect(result, [testMishna]);
+    final result = await container.read(itemListProvider.future);
+    expect(result, [testItem]);
   });
 }
 ```
@@ -801,10 +801,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 // 4. Internal packages (absolute)
-import 'package:mishnayos_tracker/core/providers/providers.dart';
+import 'package:learning_tracker/core/providers/providers.dart';
 
 // 5. Relative imports (same feature)
-import '../domain/entities/mishna.dart';
+import '../domain/entities/item.dart';
 ```
 
 ### Complexity Management
@@ -861,7 +861,7 @@ dart run build_runner build --delete-conflicting-outputs
 ```
 <type>(<scope>): <description>
 
-feat: add mishna browsing screen
+feat: add content browsing screen
 fix: resolve sync conflict on completion
 test: add coverage for scheduler logic
 refactor: extract progress calculation to use case
@@ -972,22 +972,22 @@ chore: update drift to 2.30.0
 ## Edge Cases to Handle
 
 ### Empty States
-- Empty Mishna list (first launch before sync)
+- Empty item list (first launch before sync)
 - Zero completions (new user)
 - No tracks configured (onboarding incomplete)
 
-### Hebrew Text
+### Localized Text
 - RTL layout with Directionality widget
-- Mixed Hebrew/English BiDi handling
+- Mixed RTL/LTR BiDi handling
 - Nikud (vowel points) rendering
-- Hebrew dates via kosher_dart (not manual)
+- Locale-specific dates via appropriate localization library
 
 ### Offline-First
 - App starts offline (Firestore unavailable)
 - Sync interrupted (resumable checkpoints)
-- Sefaria API down (use cached text)
+- Content API down (use cached text)
 
 ### Multi-Track
-- Same Mishna cannot be in multiple tracks
+- Same item cannot be in multiple tracks
 - Personal track cannot be deleted
 - Track deletion handles orphaned bookmarks
