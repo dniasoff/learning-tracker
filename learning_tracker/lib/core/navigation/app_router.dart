@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_browsing_screen.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/curriculum_learning_screen.dart';
@@ -77,6 +78,13 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/curriculum/:curriculumId/settings',
       page: CurriculumSettingsRoute.page,
+      guards: [authGuard],
+    ),
+
+    // Text display route
+    AutoRoute(
+      path: '/text/:sefariaRef',
+      page: TextDisplayRoute.page,
       guards: [authGuard],
     ),
 
