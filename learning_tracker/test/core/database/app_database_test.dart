@@ -21,7 +21,7 @@ void main() {
   group('AppDatabase', () {
     test('creates database successfully', () {
       expect(db, isNotNull);
-      expect(db.schemaVersion, 2);
+      expect(db.schemaVersion, 3);
     });
 
     test('has all expected DAOs', () {
@@ -32,6 +32,7 @@ void main() {
       expect(db.learningOrderDao, isNotNull);
       expect(db.trackDao, isNotNull);
       expect(db.userProfileDao, isNotNull);
+      expect(db.textCacheDao, isNotNull);
     });
   });
 
