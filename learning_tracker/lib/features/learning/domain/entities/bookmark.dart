@@ -8,22 +8,22 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 class BookmarkEntity {
   final CurriculumId curriculumId;
   final TrackType trackType;
-  final int contentItemId;
+  final String sefariaRef;
   final DateTime updatedAt;
 
   const BookmarkEntity({
     required this.curriculumId,
     required this.trackType,
-    required this.contentItemId,
+    required this.sefariaRef,
     required this.updatedAt,
   });
 
   /// Create a bookmark with updated position.
-  BookmarkEntity copyWith({int? contentItemId, DateTime? updatedAt}) {
+  BookmarkEntity copyWith({String? sefariaRef, DateTime? updatedAt}) {
     return BookmarkEntity(
       curriculumId: curriculumId,
       trackType: trackType,
-      contentItemId: contentItemId ?? this.contentItemId,
+      sefariaRef: sefariaRef ?? this.sefariaRef,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -37,7 +37,7 @@ class BookmarkEntity {
     return {
       'curriculumId': curriculumId.storageKey,
       'trackType': trackType.storageKey,
-      'contentItemId': contentItemId,
+      'sefariaRef': sefariaRef,
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
@@ -49,7 +49,7 @@ class BookmarkEntity {
         (c) => c.storageKey == data['curriculumId'] as String,
       ),
       trackType: TrackType.fromStorageKey(data['trackType'] as String),
-      contentItemId: data['contentItemId'] as int,
+      sefariaRef: data['sefariaRef'] as String,
       updatedAt: DateTime.parse(data['updatedAt'] as String),
     );
   }
