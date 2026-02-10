@@ -62,10 +62,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<UserCredential> signInWithEmailLink(
-    String email,
-    String emailLink,
-  ) {
+  Future<UserCredential> signInWithEmailLink(String email, String emailLink) {
     return _firebaseAuth.signInWithEmailLink(
       email: email,
       emailLink: emailLink,

@@ -232,6 +232,61 @@ class FirestoreDataSource {
     return doc.snapshots().map((snapshot) => snapshot.data());
   }
 
+  // ========== Active Curricula Operations ==========
+
+  /// Get active curricula document reference.
+  DocumentReference<Map<String, dynamic>>? get _activeCurriculaDoc {
+    return _userDoc?.collection('active_curricula').doc('data');
+  }
+
+  /// Push active curricula list to Firestore.
+  Future<void> pushActiveCurricula(List<String> activeCurricula) async {
+    final doc = _activeCurriculaDoc;
+    if (doc == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await doc.set({
+      'curricula': activeCurricula,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch active curricula list from Firestore.
+  Future<List<String>> fetchActiveCurricula() async {
+    final doc = _activeCurriculaDoc;
+    if (doc == null) return [];
+
+    final snapshot = await doc.get();
+    final data = snapshot.data();
+    if (data == null) return [];
+
+    final curricula = data['curricula'];
+    if (curricula is List) {
+      return curricula.cast<String>();
+    }
+    return [];
+  }
+
+  /// Listen to real-time active curricula updates.
+  Stream<List<String>> listenToActiveCurricula() {
+    final doc = _activeCurriculaDoc;
+    if (doc == null) {
+      return Stream.value([]);
+    }
+
+    return doc.snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return [];
+
+      final curricula = data['curricula'];
+      if (curricula is List) {
+        return curricula.cast<String>();
+      }
+      return [];
+    });
+  }
+
   // ========== Curriculum Import Metadata Operations ==========
 
   /// Push curriculum import metadata to Firestore.

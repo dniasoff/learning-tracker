@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/content_dao.dart';
@@ -7,6 +8,7 @@ import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/tables/content_items.dart';
@@ -22,6 +24,7 @@ part 'app_database.g.dart';
 
 @DriftDatabase(
   tables: [
+    ActiveCurricula,
     ContentItems,
     CurriculumHierarchyConfig,
     CurriculumTracks,
@@ -34,6 +37,7 @@ part 'app_database.g.dart';
     SyncQueue,
   ],
   daos: [
+    ActiveCurriculumDao,
     ContentDao,
     CompletionDao,
     StageDao,
@@ -48,5 +52,5 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 }

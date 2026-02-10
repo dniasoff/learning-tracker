@@ -230,10 +230,7 @@ void main() {
         ),
         isTrue,
       );
-      expect(
-        repository.isSignInWithEmailLink('https://example.com'),
-        isFalse,
-      );
+      expect(repository.isSignInWithEmailLink('https://example.com'), isFalse);
     });
   });
 
