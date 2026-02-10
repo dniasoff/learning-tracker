@@ -21,7 +21,7 @@ void main() {
     test('returns false when no matching completion exists', () async {
       final exists = await db.completionDao.completionExists(
         curriculumId: 'mishnayos',
-        contentItemId: 1,
+        sefariaRef: 1,
         stageId: 1,
         trackType: 'personal',
         completedAt: DateTime.utc(2026, 2, 9, 12, 0, 0),
@@ -35,7 +35,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: completedAt,
@@ -44,7 +44,7 @@ void main() {
 
       final exists = await db.completionDao.completionExists(
         curriculumId: 'mishnayos',
-        contentItemId: 1,
+        sefariaRef: 1,
         stageId: 1,
         trackType: 'personal',
         completedAt: completedAt,
@@ -58,7 +58,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: completedAt,
@@ -67,7 +67,7 @@ void main() {
 
       final exists = await db.completionDao.completionExists(
         curriculumId: 'bavli', // different
-        contentItemId: 1,
+        sefariaRef: 1,
         stageId: 1,
         trackType: 'personal',
         completedAt: completedAt,
@@ -81,7 +81,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: completedAt,
@@ -90,7 +90,7 @@ void main() {
 
       final exists = await db.completionDao.completionExists(
         curriculumId: 'mishnayos',
-        contentItemId: 1,
+        sefariaRef: 1,
         stageId: 2, // different stage
         trackType: 'personal',
         completedAt: completedAt,
@@ -103,7 +103,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: DateTime.utc(2026, 2, 9, 12, 0, 0),
@@ -112,7 +112,7 @@ void main() {
 
       final exists = await db.completionDao.completionExists(
         curriculumId: 'mishnayos',
-        contentItemId: 1,
+        sefariaRef: 1,
         stageId: 1,
         trackType: 'personal',
         completedAt: DateTime.utc(2026, 2, 9, 13, 0, 0), // different time
@@ -127,7 +127,7 @@ void main() {
       await db.bookmarkDao.upsertBookmark(
         curriculumId: 'mishnayos',
         trackType: 'personal',
-        contentItemId: 42,
+        sefariaRef: 42,
         updatedAt: DateTime.utc(2026, 2, 9),
       );
 
@@ -136,7 +136,7 @@ void main() {
         'personal',
       );
       expect(bookmark, isNotNull);
-      expect(bookmark!.contentItemId, 42);
+      expect(bookmark!.sefariaRef, 42);
     });
 
     test('updates when remote is newer', () async {
@@ -144,7 +144,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 10,
+          sefariaRef: 10,
           updatedAt: DateTime.utc(2026, 2, 8),
         ),
       );
@@ -152,7 +152,7 @@ void main() {
       await db.bookmarkDao.upsertBookmark(
         curriculumId: 'mishnayos',
         trackType: 'personal',
-        contentItemId: 42,
+        sefariaRef: 42,
         updatedAt: DateTime.utc(2026, 2, 9), // newer
       );
 
@@ -160,7 +160,7 @@ void main() {
         'mishnayos',
         'personal',
       );
-      expect(bookmark!.contentItemId, 42);
+      expect(bookmark!.sefariaRef, 42);
     });
 
     test('does not update when remote is older', () async {
@@ -168,7 +168,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 99,
+          sefariaRef: 99,
           updatedAt: DateTime.utc(2026, 2, 10),
         ),
       );
@@ -176,7 +176,7 @@ void main() {
       await db.bookmarkDao.upsertBookmark(
         curriculumId: 'mishnayos',
         trackType: 'personal',
-        contentItemId: 42,
+        sefariaRef: 42,
         updatedAt: DateTime.utc(2026, 2, 8), // older
       );
 
@@ -184,7 +184,7 @@ void main() {
         'mishnayos',
         'personal',
       );
-      expect(bookmark!.contentItemId, 99); // unchanged
+      expect(bookmark!.sefariaRef, 99); // unchanged
     });
 
     test('does not update when timestamps are equal', () async {
@@ -193,7 +193,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 10,
+          sefariaRef: 10,
           updatedAt: timestamp,
         ),
       );
@@ -201,7 +201,7 @@ void main() {
       await db.bookmarkDao.upsertBookmark(
         curriculumId: 'mishnayos',
         trackType: 'personal',
-        contentItemId: 42,
+        sefariaRef: 42,
         updatedAt: timestamp, // equal
       );
 
@@ -209,7 +209,7 @@ void main() {
         'mishnayos',
         'personal',
       );
-      expect(bookmark!.contentItemId, 10); // unchanged
+      expect(bookmark!.sefariaRef, 10); // unchanged
     });
   });
 

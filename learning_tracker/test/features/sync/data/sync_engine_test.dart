@@ -152,7 +152,7 @@ void main() {
       final completions = await database.completionDao.getAllCompletions();
       expect(completions.length, 1);
       expect(completions.first.curriculumId, 'mishnayos');
-      expect(completions.first.contentItemId, 1);
+      expect(completions.first.sefariaRef, 1);
       expect(completions.first.points, 10);
     });
 
@@ -162,7 +162,7 @@ void main() {
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: completedAt,
@@ -268,7 +268,7 @@ void main() {
       final bookmark = await database.bookmarkDao
           .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
       expect(bookmark, isNotNull);
-      expect(bookmark!.contentItemId, 42);
+      expect(bookmark!.sefariaRef, 42);
     });
 
     test('updates bookmark when remote is newer', () async {
@@ -277,7 +277,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 10,
+          sefariaRef: 10,
           updatedAt: DateTime.utc(2026, 2, 8),
         ),
       );
@@ -301,7 +301,7 @@ void main() {
 
       final bookmark = await database.bookmarkDao
           .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
-      expect(bookmark!.contentItemId, 42); // Updated to remote
+      expect(bookmark!.sefariaRef, 42); // Updated to remote
     });
 
     test('keeps local bookmark when local is newer', () async {
@@ -310,7 +310,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 99,
+          sefariaRef: 99,
           updatedAt: DateTime.utc(2026, 2, 10),
         ),
       );
@@ -334,7 +334,7 @@ void main() {
 
       final bookmark = await database.bookmarkDao
           .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
-      expect(bookmark!.contentItemId, 99); // Kept local
+      expect(bookmark!.sefariaRef, 99); // Kept local
     });
   });
 

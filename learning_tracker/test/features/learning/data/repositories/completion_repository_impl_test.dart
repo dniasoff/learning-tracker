@@ -37,12 +37,12 @@ void main() {
     test('creates completion record with correct data', () async {
       // Arrange: Create prerequisite data
       const curriculumId = 'mishna';
-      final contentItemId = await _createContentItem(database, curriculumId);
+      final sefariaRef = await _createContentItem(database, curriculumId);
       const stageId = 1;
 
       final request = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: 'personal',
       );
@@ -52,7 +52,7 @@ void main() {
 
       // Assert
       expect(completion.curriculumId, curriculumId);
-      expect(completion.contentItemId, contentItemId);
+      expect(completion.sefariaRef, sefariaRef);
       expect(completion.stageId, stageId);
       expect(completion.trackType, 'personal');
       expect(completion.points, 10); // Default points
@@ -65,11 +65,11 @@ void main() {
     test('throws StageProgressionException when skipping stages', () async {
       // Arrange: Create item and complete stage 1
       const curriculumId = 'mishna';
-      final contentItemId = await _createContentItem(database, curriculumId);
+      final sefariaRef = await _createContentItem(database, curriculumId);
 
       final stage1Request = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'personal',
       );
@@ -78,7 +78,7 @@ void main() {
       // Try to complete stage 3 before stage 2
       final stage3Request = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 3,
         trackType: 'personal',
       );
@@ -93,11 +93,11 @@ void main() {
     test('is idempotent - returns existing completion', () async {
       // Arrange: Create and complete an item
       const curriculumId = 'mishna';
-      final contentItemId = await _createContentItem(database, curriculumId);
+      final sefariaRef = await _createContentItem(database, curriculumId);
 
       final request = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'personal',
       );
@@ -133,7 +133,7 @@ void main() {
       await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           curriculumId: curriculumId,
-          contentItemId: item1,
+          sefariaRef: item1,
           trackType: 'personal',
           updatedAt: DateTime.now().toUtc(),
         ),
@@ -141,7 +141,7 @@ void main() {
 
       final request = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: item1,
+        sefariaRef: item1,
         stageId: 1,
         trackType: 'personal',
       );
@@ -152,17 +152,17 @@ void main() {
       // Assert: Bookmark should now point to item2
       final bookmark = await database.bookmarkDao
           .getBookmarkByCurriculumAndTrack(curriculumId, 'personal');
-      expect(bookmark?.contentItemId, item2);
+      expect(bookmark?.sefariaRef, item2);
     });
 
     test('enforces stage progression per track', () async {
       // Arrange: Complete stage 1 on personal track
       const curriculumId = 'mishna';
-      final contentItemId = await _createContentItem(database, curriculumId);
+      final sefariaRef = await _createContentItem(database, curriculumId);
 
       final personalRequest = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'personal',
       );
@@ -171,7 +171,7 @@ void main() {
       // Act: Should be able to complete stage 1 on chavrusa track
       final chavrusaRequest = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'chavrusa',
       );
@@ -192,7 +192,7 @@ void main() {
 
       final request = BulkCompletionRequest(
         curriculumId: curriculumId,
-        contentItemIds: [item1, item2, item3],
+        sefariaRefs: [item1, item2, item3],
         stageId: 1,
         trackType: 'personal',
       );
@@ -202,9 +202,9 @@ void main() {
 
       // Assert
       expect(completions.length, 3);
-      expect(completions[0].contentItemId, item1);
-      expect(completions[1].contentItemId, item2);
-      expect(completions[2].contentItemId, item3);
+      expect(completions[0].sefariaRef, item1);
+      expect(completions[1].sefariaRef, item2);
+      expect(completions[2].sefariaRef, item3);
 
       // Verify all were synced
       verify(() => mockSyncEngine.pushCompletion(any())).called(3);
@@ -218,7 +218,7 @@ void main() {
       // Complete stage 1 for item1, then try bulk complete stage 3
       final stage1Request = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: item1,
+        sefariaRef: item1,
         stageId: 1,
         trackType: 'personal',
       );
@@ -229,7 +229,7 @@ void main() {
       // Bulk request with stage 3 (should fail for item1 due to progression)
       final bulkRequest = BulkCompletionRequest(
         curriculumId: curriculumId,
-        contentItemIds: [item1, item2],
+        sefariaRefs: [item1, item2],
         stageId: 3,
         trackType: 'personal',
       );
@@ -252,11 +252,11 @@ void main() {
     test('returns true for completed stage', () async {
       // Arrange
       const curriculumId = 'mishna';
-      final contentItemId = await _createContentItem(database, curriculumId);
+      final sefariaRef = await _createContentItem(database, curriculumId);
 
       final request = CompletionRequest(
         curriculumId: curriculumId,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'personal',
       );
@@ -264,7 +264,7 @@ void main() {
 
       // Act
       final isCompleted = await repository.isStageCompleted(
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'personal',
       );
@@ -276,11 +276,11 @@ void main() {
     test('returns false for non-completed stage', () async {
       // Arrange
       const curriculumId = 'mishna';
-      final contentItemId = await _createContentItem(database, curriculumId);
+      final sefariaRef = await _createContentItem(database, curriculumId);
 
       // Act
       final isCompleted = await repository.isStageCompleted(
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'personal',
       );

@@ -304,7 +304,7 @@ void main() {
       final id = await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: now,
@@ -314,7 +314,7 @@ void main() {
       final completion = await db.completionDao.getCompletionById(id);
       expect(completion, isNotNull);
       expect(completion!.curriculumId, 'mishnayos');
-      expect(completion.contentItemId, 1);
+      expect(completion.sefariaRef, 1);
       expect(completion.trackType, 'personal');
       expect(completion.points, 0);
     });
@@ -324,7 +324,7 @@ void main() {
       final id = await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: utcTime,
@@ -344,7 +344,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           stageId: 1,
           trackType: 'personal',
           completedAt: now,
@@ -353,7 +353,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'other',
-          contentItemId: 2,
+          sefariaRef: 2,
           stageId: 1,
           trackType: 'personal',
           completedAt: now,
@@ -371,7 +371,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 42,
+          sefariaRef: 42,
           stageId: 1,
           trackType: 'personal',
           completedAt: now,
@@ -380,7 +380,7 @@ void main() {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 42,
+          sefariaRef: 42,
           stageId: 2,
           trackType: 'personal',
           completedAt: now,
@@ -401,7 +401,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 1,
+          sefariaRef: 1,
           updatedAt: now,
         ),
       );
@@ -418,7 +418,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 1,
+          sefariaRef: 1,
           updatedAt: now,
         ),
       );
@@ -428,7 +428,7 @@ void main() {
         'personal',
       );
       expect(bookmark, isNotNull);
-      expect(bookmark!.contentItemId, 1);
+      expect(bookmark!.sefariaRef, 1);
     });
 
     test('returns null for non-existent bookmark', () async {
@@ -445,7 +445,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: 'mishnayos',
           trackType: 'personal',
-          contentItemId: 1,
+          sefariaRef: 1,
           updatedAt: now,
         ),
       );
@@ -461,7 +461,7 @@ void main() {
       final id = await db.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           userSortOrder: 10,
         ),
       );
@@ -477,21 +477,21 @@ void main() {
         await db.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
             curriculumId: 'mishnayos',
-            contentItemId: 3,
+            sefariaRef: 3,
             userSortOrder: 30,
           ),
         );
         await db.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
             curriculumId: 'mishnayos',
-            contentItemId: 1,
+            sefariaRef: 1,
             userSortOrder: 10,
           ),
         );
         await db.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
             curriculumId: 'mishnayos',
-            contentItemId: 2,
+            sefariaRef: 2,
             userSortOrder: 20,
           ),
         );
@@ -506,11 +506,11 @@ void main() {
       },
     );
 
-    test('enforces unique constraint on curriculum + contentItemId', () async {
+    test('enforces unique constraint on curriculum + sefariaRef', () async {
       await db.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(
           curriculumId: 'mishnayos',
-          contentItemId: 1,
+          sefariaRef: 1,
           userSortOrder: 10,
         ),
       );
@@ -519,7 +519,7 @@ void main() {
         () => db.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
             curriculumId: 'mishnayos',
-            contentItemId: 1,
+            sefariaRef: 1,
             userSortOrder: 20,
           ),
         ),

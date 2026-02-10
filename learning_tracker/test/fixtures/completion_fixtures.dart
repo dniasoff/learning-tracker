@@ -12,7 +12,7 @@ class CompletionFixtures {
   static CompletionsCompanion learnStage({
     Value<int> id = const Value.absent(),
     String? curriculumId,
-    int contentItemId = 1,
+    int sefariaRef = 1,
     int stageId = 1,
     String trackType = 'personal',
     DateTime? completedAt,
@@ -21,7 +21,7 @@ class CompletionFixtures {
     return CompletionsCompanion.insert(
       id: id,
       curriculumId: curriculumId ?? CurriculumId.mishnayos.storageKey,
-      contentItemId: contentItemId,
+      sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: trackType,
       completedAt: completedAt ?? DateTime.now().toUtc(),
@@ -33,7 +33,7 @@ class CompletionFixtures {
   static CompletionsCompanion chazara1({
     Value<int> id = const Value.absent(),
     String? curriculumId,
-    int contentItemId = 1,
+    int sefariaRef = 1,
     int stageId = 2,
     String trackType = 'personal',
     DateTime? completedAt,
@@ -42,7 +42,7 @@ class CompletionFixtures {
     return CompletionsCompanion.insert(
       id: id,
       curriculumId: curriculumId ?? CurriculumId.mishnayos.storageKey,
-      contentItemId: contentItemId,
+      sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: trackType,
       completedAt: completedAt ?? DateTime.now().toUtc(),
@@ -54,7 +54,7 @@ class CompletionFixtures {
   static CompletionsCompanion schoolTrack({
     Value<int> id = const Value.absent(),
     String? curriculumId,
-    int contentItemId = 1,
+    int sefariaRef = 1,
     int stageId = 1,
     DateTime? completedAt,
     Value<int> points = const Value(10),
@@ -62,7 +62,7 @@ class CompletionFixtures {
     return CompletionsCompanion.insert(
       id: id,
       curriculumId: curriculumId ?? CurriculumId.mishnayos.storageKey,
-      contentItemId: contentItemId,
+      sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: 'school',
       completedAt: completedAt ?? DateTime.now().toUtc(),
@@ -74,7 +74,7 @@ class CompletionFixtures {
   static CompletionsCompanion tutorTrack({
     Value<int> id = const Value.absent(),
     String? curriculumId,
-    int contentItemId = 1,
+    int sefariaRef = 1,
     int stageId = 1,
     DateTime? completedAt,
     Value<int> points = const Value(10),
@@ -82,7 +82,7 @@ class CompletionFixtures {
     return CompletionsCompanion.insert(
       id: id,
       curriculumId: curriculumId ?? CurriculumId.mishnayos.storageKey,
-      contentItemId: contentItemId,
+      sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: 'tutor',
       completedAt: completedAt ?? DateTime.now().toUtc(),
@@ -94,7 +94,7 @@ class CompletionFixtures {
   static CompletionsCompanion fromDate({
     Value<int> id = const Value.absent(),
     String? curriculumId,
-    int contentItemId = 1,
+    int sefariaRef = 1,
     int stageId = 1,
     String trackType = 'personal',
     required DateTime completedAt,
@@ -103,7 +103,7 @@ class CompletionFixtures {
     return CompletionsCompanion.insert(
       id: id,
       curriculumId: curriculumId ?? CurriculumId.mishnayos.storageKey,
-      contentItemId: contentItemId,
+      sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: trackType,
       completedAt: completedAt.toUtc(), // Ensure UTC per P5

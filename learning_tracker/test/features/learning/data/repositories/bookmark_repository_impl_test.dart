@@ -48,7 +48,7 @@ void main() {
         );
 
         // Assert
-        expect(bookmark.contentItemId, equals(1)); // First item ID
+        expect(bookmark.sefariaRef, equals(1)); // First item ID
         expect(bookmark.curriculumId, equals(CurriculumId.mishnayos));
         expect(bookmark.trackType, equals(TrackType.personal));
         expect(bookmark.updatedAt.isUtc, isTrue); // P5: UTC timestamps
@@ -63,7 +63,7 @@ void main() {
       await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
-        contentItemId: 1,
+        sefariaRef: 1,
       );
 
       // Act - Advance from item 1
@@ -78,7 +78,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
       );
-      expect(updated?.contentItemId, equals(2));
+      expect(updated?.sefariaRef, equals(2));
     });
 
     test('When a custom learning_order exists, advanceBookmark follows '
@@ -87,21 +87,21 @@ void main() {
       await database.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(
           curriculumId: CurriculumId.mishnayos.storageKey,
-          contentItemId: 3,
+          sefariaRef: 3,
           userSortOrder: 0,
         ),
       );
       await database.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(
           curriculumId: CurriculumId.mishnayos.storageKey,
-          contentItemId: 1,
+          sefariaRef: 1,
           userSortOrder: 1,
         ),
       );
       await database.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(
           curriculumId: CurriculumId.mishnayos.storageKey,
-          contentItemId: 2,
+          sefariaRef: 2,
           userSortOrder: 2,
         ),
       );
@@ -110,7 +110,7 @@ void main() {
       await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
-        contentItemId: 3,
+        sefariaRef: 3,
       );
 
       // Act - Advance from item 3
@@ -125,7 +125,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
       );
-      expect(updated?.contentItemId, equals(1));
+      expect(updated?.sefariaRef, equals(1));
     });
 
     test('Bookmark at the last item in the curriculum: advanceBookmark '
@@ -134,7 +134,7 @@ void main() {
       await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
-        contentItemId: 3,
+        sefariaRef: 3,
       );
 
       // Act - Try to advance from last item
@@ -149,7 +149,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
       );
-      expect(updated?.contentItemId, equals(3));
+      expect(updated?.sefariaRef, equals(3));
     });
   });
 
@@ -165,11 +165,11 @@ void main() {
         final bookmark = await repository.setBookmark(
           curriculumId: CurriculumId.mishnayos,
           trackType: TrackType.personal,
-          contentItemId: 2, // Jump to item 2
+          sefariaRef: 2, // Jump to item 2
         );
 
         // Assert
-        expect(bookmark.contentItemId, equals(2));
+        expect(bookmark.sefariaRef, equals(2));
         expect(bookmark.updatedAt.isUtc, isTrue);
         expect(bookmark.updatedAt.isAfter(before), isTrue);
 
@@ -190,7 +190,7 @@ void main() {
         final bookmark = await repository.setBookmark(
           curriculumId: CurriculumId.mishnayos,
           trackType: TrackType.personal,
-          contentItemId: 1,
+          sefariaRef: 1,
         );
 
         // Assert
@@ -200,7 +200,7 @@ void main() {
         final bookmark2 = await repository.setBookmark(
           curriculumId: CurriculumId.bavli,
           trackType: TrackType.school,
-          contentItemId: 1,
+          sefariaRef: 1,
         );
 
         expect(bookmark2.firestoreId, equals('bavli_school'));
@@ -219,7 +219,7 @@ void main() {
         BookmarksCompanion.insert(
           curriculumId: CurriculumId.mishnayos.storageKey,
           trackType: TrackType.personal.storageKey,
-          contentItemId: 1,
+          sefariaRef: 1,
           updatedAt: localTime,
         ),
       );
@@ -229,7 +229,7 @@ void main() {
       await repository.mergeRemoteBookmark({
         'curriculumId': CurriculumId.mishnayos.storageKey,
         'trackType': TrackType.personal.storageKey,
-        'contentItemId': 2,
+        'sefariaRef': 2,
         'updatedAt': remoteTime.toIso8601String(),
       });
 
@@ -238,7 +238,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
       );
-      expect(result?.contentItemId, equals(2));
+      expect(result?.sefariaRef, equals(2));
       // Check timestamp is close (within 1 second due to storage precision)
       expect(
         result?.updatedAt.difference(remoteTime).inSeconds.abs(),
@@ -250,7 +250,7 @@ void main() {
       await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
-        contentItemId: 3,
+        sefariaRef: 3,
       );
 
       // Try to merge older remote at item 4
@@ -258,7 +258,7 @@ void main() {
       await repository.mergeRemoteBookmark({
         'curriculumId': CurriculumId.mishnayos.storageKey,
         'trackType': TrackType.personal.storageKey,
-        'contentItemId': 4,
+        'sefariaRef': 4,
         'updatedAt': olderRemoteTime.toIso8601String(),
       });
 
