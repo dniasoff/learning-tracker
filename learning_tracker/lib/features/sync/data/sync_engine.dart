@@ -304,7 +304,7 @@ class SyncEngine {
     for (final remote in remoteCompletions) {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
-        final sefariaRef = remote['content_item_id'] as int?;
+        final sefariaRef = remote['content_item_id'] as String?;
         final stageId = remote['stage_id'] as int?;
         final trackType = remote['track_type'] as String?;
         final completedAt = _parseTimestamp(remote['completed_at']);
@@ -360,7 +360,7 @@ class SyncEngine {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
         final trackType = remote['track_type'] as String?;
-        final sefariaRef = remote['content_item_id'] as int?;
+        final sefariaRef = remote['content_item_id'] as String?;
         final updatedAt = _parseTimestamp(remote['updated_at']);
 
         if (curriculumId == null ||

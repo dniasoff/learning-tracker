@@ -9,7 +9,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 /// Example use case: "Mark this whole perek as learned"
 class BulkCompletionDialog extends ConsumerStatefulWidget {
   final String curriculumId;
-  final List<int> contentItemIds;
+  final List<String> sefariaRefs;
   final int stageId;
   final String trackType;
   final UserMode userMode;
@@ -17,7 +17,7 @@ class BulkCompletionDialog extends ConsumerStatefulWidget {
 
   const BulkCompletionDialog({
     required this.curriculumId,
-    required this.contentItemIds,
+    required this.sefariaRefs,
     required this.stageId,
     required this.trackType,
     required this.userMode,
@@ -44,7 +44,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
       final useCase = ref.read(bulkMarkCompletionUseCaseProvider);
       final request = BulkCompletionRequest(
         curriculumId: widget.curriculumId,
-        contentItemIds: widget.contentItemIds,
+        sefariaRefs: widget.sefariaRefs,
         stageId: widget.stageId,
         trackType: widget.trackType,
       );
@@ -92,7 +92,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
           ),
           const SizedBox(height: 12),
           Text(
-            '${widget.contentItemIds.length} items will be marked',
+            '${widget.sefariaRefs.length} items will be marked',
             style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ],

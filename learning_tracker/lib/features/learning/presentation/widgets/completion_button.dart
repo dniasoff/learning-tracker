@@ -12,7 +12,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/points_p
 /// subtle confirmation (adult mode) upon successful completion.
 class CompletionButton extends ConsumerStatefulWidget {
   final String curriculumId;
-  final int contentItemId;
+  final String sefariaRef;
   final int stageId;
   final String trackType;
   final UserMode userMode;
@@ -20,7 +20,7 @@ class CompletionButton extends ConsumerStatefulWidget {
 
   const CompletionButton({
     required this.curriculumId,
-    required this.contentItemId,
+    required this.sefariaRef,
     required this.stageId,
     required this.trackType,
     required this.userMode,
@@ -47,7 +47,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       final useCase = ref.read(markCompletionUseCaseProvider);
       final request = CompletionRequest(
         curriculumId: widget.curriculumId,
-        contentItemId: widget.contentItemId,
+        sefariaRef: widget.sefariaRef,
         stageId: widget.stageId,
         trackType: widget.trackType,
       );

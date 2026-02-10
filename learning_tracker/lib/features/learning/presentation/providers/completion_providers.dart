@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_completion_use_case.dart';
@@ -13,8 +14,13 @@ part 'completion_providers.g.dart';
 CompletionRepository completionRepository(Ref ref) {
   final database = ref.watch(appDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
+  final contentRepository = ref.watch(contentRepositoryProvider);
 
-  return CompletionRepositoryImpl(database: database, syncEngine: syncEngine);
+  return CompletionRepositoryImpl(
+    database: database,
+    syncEngine: syncEngine,
+    contentRepository: contentRepository,
+  );
 }
 
 /// Provides the mark completion use case.

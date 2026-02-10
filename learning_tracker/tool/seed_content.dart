@@ -56,18 +56,20 @@ Future<void> main() async {
           'totalItems': result.hierarchyConfig.totalItems,
         },
         'items': result.items
-            .map((item) => {
-                  'curriculumId': item.curriculumId,
-                  'level1': item.level1,
-                  if (item.level2 != null) 'level2': item.level2,
-                  if (item.level3 != null) 'level3': item.level3,
-                  if (item.level4 != null) 'level4': item.level4,
-                  'displayNameHe': item.displayNameHe,
-                  'displayNameEn': item.displayNameEn,
-                  'sefariaRef': item.sefariaRef,
-                  'sortOrder': item.sortOrder,
-                  'isLeaf': item.isLeaf,
-                })
+            .map(
+              (item) => {
+                'curriculumId': item.curriculumId,
+                'level1': item.level1,
+                if (item.level2 != null) 'level2': item.level2,
+                if (item.level3 != null) 'level3': item.level3,
+                if (item.level4 != null) 'level4': item.level4,
+                'displayNameHe': item.displayNameHe,
+                'displayNameEn': item.displayNameEn,
+                'sefariaRef': item.sefariaRef,
+                'sortOrder': item.sortOrder,
+                'isLeaf': item.isLeaf,
+              },
+            )
             .toList(),
       };
 
@@ -85,10 +87,12 @@ Future<void> main() async {
       final fileSizeMB = (fileSize / (1024 * 1024)).toStringAsFixed(2);
       totalSize += fileSize;
 
-      print('✓ ${fetcher.curriculumId}: '
-          '${result.items.length} items, '
-          '${result.hierarchyConfig.totalItems} leaves → '
-          '$fileSizeKB KB ($fileSizeMB MB)');
+      print(
+        '✓ ${fetcher.curriculumId}: '
+        '${result.items.length} items, '
+        '${result.hierarchyConfig.totalItems} leaves → '
+        '$fileSizeKB KB ($fileSizeMB MB)',
+      );
     } catch (e, stack) {
       print('✗ Error fetching ${fetcher.curriculumId}: $e');
       print(stack);

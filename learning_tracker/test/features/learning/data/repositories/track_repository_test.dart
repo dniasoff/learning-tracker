@@ -193,7 +193,7 @@ void main() {
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: 1,
+            sefariaRef: 'Mishnah Berakhot 1:1',
             stageId: 1,
             trackType: TrackType.school.storageKey,
             completedAt: DateTime.now(),

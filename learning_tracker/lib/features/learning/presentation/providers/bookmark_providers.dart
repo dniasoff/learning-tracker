@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
@@ -11,8 +12,13 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   final database = ref.watch(appDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
+  final contentRepository = ref.watch(contentRepositoryProvider);
 
-  return BookmarkRepositoryImpl(database: database, syncEngine: syncEngine);
+  return BookmarkRepositoryImpl(
+    database: database,
+    syncEngine: syncEngine,
+    contentRepository: contentRepository,
+  );
 });
 
 /// Provider family for a specific bookmark (curriculum + track).
@@ -38,13 +44,13 @@ class BookmarkActions {
   Future<void> setBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
-    required int contentItemId,
+    required String sefariaRef,
   }) async {
     final repository = ref.read(bookmarkRepositoryProvider);
     await repository.setBookmark(
       curriculumId: curriculumId,
       trackType: trackType,
-      contentItemId: contentItemId,
+      sefariaRef: sefariaRef,
     );
 
     // Invalidate the bookmark provider to refresh UI

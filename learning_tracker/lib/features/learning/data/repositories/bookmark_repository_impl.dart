@@ -41,7 +41,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   Future<BookmarkEntity> setBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
-    required int sefariaRef,
+    required String sefariaRef,
   }) async {
     final now = DateTime.now().toUtc(); // P5: UTC timestamps
 
@@ -101,7 +101,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   Future<void> advanceBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
-    required int completedItemId,
+    required String completedSefariaRef,
   }) async {
     // Get current bookmark
     final bookmark = await _database.bookmarkDao
@@ -112,30 +112,30 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
     if (bookmark == null) {
       // No bookmark exists yet, create one pointing to the next item
-      final nextItemId = await _getNextItemId(
+      final nextSefariaRef = await _getNextItemId(
         curriculumId: curriculumId,
-        currentItemId: completedItemId,
+        currentSefariaRef: completedSefariaRef,
       );
 
-      if (nextItemId != null) {
+      if (nextSefariaRef != null) {
         await setBookmark(
           curriculumId: curriculumId,
           trackType: trackType,
-          sefariaRef: nextItemId,
+          sefariaRef: nextSefariaRef,
         );
       }
-    } else if (bookmark.sefariaRef == completedItemId) {
+    } else if (bookmark.sefariaRef == completedSefariaRef) {
       // Bookmark is on this item, advance it
-      final nextItemId = await _getNextItemId(
+      final nextSefariaRef = await _getNextItemId(
         curriculumId: curriculumId,
-        currentItemId: completedItemId,
+        currentSefariaRef: completedSefariaRef,
       );
 
-      if (nextItemId != null) {
+      if (nextSefariaRef != null) {
         await setBookmark(
           curriculumId: curriculumId,
           trackType: trackType,
-          sefariaRef: nextItemId,
+          sefariaRef: nextSefariaRef,
         );
       }
     }
@@ -171,12 +171,12 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     return 0;
   }
 
-  /// Get the next content item ID in learning order.
+  /// Get the next content item sefariaRef in learning order.
   ///
   /// Respects custom learning order if it exists, otherwise uses sort_order.
-  Future<int?> _getNextItemId({
+  Future<String?> _getNextItemId({
     required CurriculumId curriculumId,
-    required int currentItemId,
+    required String currentSefariaRef,
   }) async {
     // Check if custom learning order exists for this curriculum
     final customOrder = await _database.learningOrderDao
@@ -185,7 +185,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     if (customOrder.isNotEmpty) {
       // Use custom learning order
       final currentIndex = customOrder.indexWhere(
-        (item) => item.sefariaRef == currentItemId,
+        (item) => item.sefariaRef == currentSefariaRef,
       );
 
       if (currentIndex == -1 || currentIndex == customOrder.length - 1) {
@@ -194,31 +194,29 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
       return customOrder[currentIndex + 1].sefariaRef;
     } else {
-      // Use default sort_order
-      final allItems =
-          await (_database.select(_database.contentItems)
-                ..where(
-                  (t) =>
-                      t.curriculumId.equals(curriculumId.storageKey) &
-                      t.isLeaf.equals(true),
-                )
-                ..orderBy([(t) => drift.OrderingTerm.asc(t.sortOrder)]))
-              .get();
-
-      final currentIndex = allItems.indexWhere(
-        (item) => item.id == currentItemId,
+      // Use default sort_order from ContentRepository
+      final allItems = await _contentRepository.getContentForCurriculum(
+        curriculumId,
       );
 
-      if (currentIndex == -1 || currentIndex == allItems.length - 1) {
+      // Filter to only leaf items and sort by sortOrder
+      final leafItems = allItems.where((item) => item.isLeaf).toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+      final currentIndex = leafItems.indexWhere(
+        (item) => item.sefariaRef == currentSefariaRef,
+      );
+
+      if (currentIndex == -1 || currentIndex == leafItems.length - 1) {
         return null; // Current item not found or is the last item
       }
 
-      return allItems[currentIndex + 1].id;
+      return leafItems[currentIndex + 1].sefariaRef;
     }
   }
 
-  /// Get the first content item ID in learning order.
-  Future<int?> _getFirstItemId({required CurriculumId curriculumId}) async {
+  /// Get the first content item sefariaRef in learning order.
+  Future<String?> _getFirstItemId({required CurriculumId curriculumId}) async {
     // Check if custom learning order exists for this curriculum
     final customOrder = await _database.learningOrderDao
         .getLearningOrderByCurriculum(curriculumId.storageKey);
@@ -226,19 +224,16 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     if (customOrder.isNotEmpty) {
       return customOrder.first.sefariaRef;
     } else {
-      // Use default sort_order
-      final firstItem =
-          await (_database.select(_database.contentItems)
-                ..where(
-                  (t) =>
-                      t.curriculumId.equals(curriculumId.storageKey) &
-                      t.isLeaf.equals(true),
-                )
-                ..orderBy([(t) => drift.OrderingTerm.asc(t.sortOrder)])
-                ..limit(1))
-              .getSingleOrNull();
+      // Use default sort_order from ContentRepository
+      final allItems = await _contentRepository.getContentForCurriculum(
+        curriculumId,
+      );
 
-      return firstItem?.id;
+      // Filter to only leaf items and sort by sortOrder
+      final leafItems = allItems.where((item) => item.isLeaf).toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+      return leafItems.isNotEmpty ? leafItems.first.sefariaRef : null;
     }
   }
 

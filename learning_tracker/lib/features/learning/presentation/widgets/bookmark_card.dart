@@ -70,7 +70,7 @@ class BookmarkCard extends ConsumerWidget {
           margin: const EdgeInsets.all(16),
           elevation: 2,
           child: InkWell(
-            onTap: () => _navigateToBookmark(context, bookmark.contentItemId),
+            onTap: () => _navigateToBookmark(context, bookmark.sefariaRef),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -93,7 +93,7 @@ class BookmarkCard extends ConsumerWidget {
                   const SizedBox(height: 12),
                   // TODO: Fetch and display content item name
                   Text(
-                    'Content Item #${bookmark.contentItemId}',
+                    'Content Item #${bookmark.sefariaRef}',
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 4),
@@ -161,11 +161,11 @@ class BookmarkCard extends ConsumerWidget {
     );
 
     if (bookmark != null && context.mounted) {
-      _navigateToBookmark(context, bookmark.contentItemId);
+      _navigateToBookmark(context, bookmark.sefariaRef);
     }
   }
 
-  void _navigateToBookmark(BuildContext context, int contentItemId) {
+  void _navigateToBookmark(BuildContext context, String sefariaRef) {
     // Navigate to curriculum learning screen
     // TODO: Update this to navigate to the specific content item
     context.router.push(

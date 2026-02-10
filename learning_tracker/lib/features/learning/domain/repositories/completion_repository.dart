@@ -34,12 +34,12 @@ abstract class CompletionRepository {
   /// Get all completions for a specific curriculum.
   Future<List<Completion>> getCompletionsByCurriculum(String curriculumId);
 
-  /// Get all completions for a specific content item.
-  Future<List<Completion>> getCompletionsForContentItem(int contentItemId);
+  /// Get all completions for a specific content item by sefariaRef.
+  Future<List<Completion>> getCompletionsForContentItem(String sefariaRef);
 
-  /// Check if a specific stage has been completed for a content item.
+  /// Check if a specific stage has been completed for a content item by sefariaRef.
   Future<bool> isStageCompleted({
-    required int contentItemId,
+    required String sefariaRef,
     required int stageId,
     required String trackType,
   });

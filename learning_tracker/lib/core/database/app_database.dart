@@ -79,7 +79,9 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('DROP TABLE IF EXISTS bookmarks');
           await customStatement('DROP TABLE IF EXISTS learning_order');
           await customStatement('DROP TABLE IF EXISTS content_items');
-          await customStatement('DROP TABLE IF EXISTS curriculum_hierarchy_config');
+          await customStatement(
+            'DROP TABLE IF EXISTS curriculum_hierarchy_config',
+          );
 
           // Recreate with new schema
           await m.createTable($CompletionsTable(attachedDatabase));

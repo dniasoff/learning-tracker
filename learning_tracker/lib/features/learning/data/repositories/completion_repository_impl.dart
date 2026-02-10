@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
@@ -8,12 +10,15 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 class CompletionRepositoryImpl implements CompletionRepository {
   final AppDatabase _database;
   final SyncEngine _syncEngine;
+  final ContentRepository _contentRepository;
 
   CompletionRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
+    required ContentRepository contentRepository,
   }) : _database = database,
-       _syncEngine = syncEngine;
+       _syncEngine = syncEngine,
+       _contentRepository = contentRepository;
 
   @override
   Future<Completion> markComplete(CompletionRequest request) async {
@@ -52,7 +57,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       await _advanceBookmark(
         curriculumId: request.curriculumId,
         trackType: request.trackType,
-        completedItemId: request.sefariaRef,
+        completedSefariaRef: request.sefariaRef,
       );
 
       // 6. Push to Firestore sync queue
@@ -129,7 +134,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     await _advanceBookmark(
       curriculumId: request.curriculumId,
       trackType: request.trackType,
-      completedItemId: request.sefariaRef,
+      completedSefariaRef: request.sefariaRef,
     );
 
     await _syncCompletion(completion);
@@ -142,13 +147,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// Throws [StageProgressionException] if attempting to complete stage N+1
   /// before stage N.
   Future<void> _validateStageProgression({
-    required int sefariaRef,
+    required String sefariaRef,
     required int stageId,
     required String trackType,
   }) async {
     // Get all stages for this curriculum (ordered by stageOrder)
-    final completions = await _database.completionDao
-        .getCompletionsForContentItem(sefariaRef);
+    final completions = await _database.completionDao.getCompletionsForContent(
+      sefariaRef,
+    );
 
     // Filter to this track type
     final trackCompletions = completions
@@ -185,12 +191,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Check if this exact completion already exists (for idempotency).
   Future<Completion?> _getExistingCompletion({
-    required int sefariaRef,
+    required String sefariaRef,
     required int stageId,
     required String trackType,
   }) async {
-    final completions = await _database.completionDao
-        .getCompletionsForContentItem(sefariaRef);
+    final completions = await _database.completionDao.getCompletionsForContent(
+      sefariaRef,
+    );
 
     try {
       return completions.firstWhere(
@@ -245,7 +252,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<void> _advanceBookmark({
     required String curriculumId,
     required String trackType,
-    required int completedItemId,
+    required String completedSefariaRef,
   }) async {
     // Get current bookmark
     final bookmark = await _database.bookmarkDao
@@ -253,35 +260,35 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
     if (bookmark == null) {
       // No bookmark exists yet, create one pointing to the next item
-      final nextItemId = await _getNextItemId(
+      final nextSefariaRef = await _getNextItemId(
         curriculumId: curriculumId,
-        currentItemId: completedItemId,
+        currentSefariaRef: completedSefariaRef,
       );
 
-      if (nextItemId != null) {
+      if (nextSefariaRef != null) {
         await _database.bookmarkDao.insertBookmark(
           BookmarksCompanion.insert(
             curriculumId: curriculumId,
-            sefariaRef: nextItemId,
+            sefariaRef: nextSefariaRef,
             trackType: trackType,
             updatedAt: DateTime.now().toUtc(),
           ),
         );
       }
-    } else if (bookmark.sefariaRef == completedItemId) {
+    } else if (bookmark.sefariaRef == completedSefariaRef) {
       // Bookmark is on this item, advance it
-      final nextItemId = await _getNextItemId(
+      final nextSefariaRef = await _getNextItemId(
         curriculumId: curriculumId,
-        currentItemId: completedItemId,
+        currentSefariaRef: completedSefariaRef,
       );
 
-      if (nextItemId != null) {
+      if (nextSefariaRef != null) {
         await _database.bookmarkDao.updateBookmark(
           BookmarksCompanion(
             id: drift.Value(bookmark.id),
             curriculumId: drift.Value(bookmark.curriculumId),
             trackType: drift.Value(bookmark.trackType),
-            sefariaRef: drift.Value(nextItemId),
+            sefariaRef: drift.Value(nextSefariaRef),
             updatedAt: drift.Value(DateTime.now().toUtc()),
           ),
         );
@@ -290,30 +297,34 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // else: bookmark is on a different item, don't change it
   }
 
-  /// Get the next content item ID in learning order.
-  Future<int?> _getNextItemId({
+  /// Get the next content item sefariaRef in learning order.
+  Future<String?> _getNextItemId({
     required String curriculumId,
-    required int currentItemId,
+    required String currentSefariaRef,
   }) async {
-    // Get all leaf items for this curriculum, ordered by sort_order
-    final allItems =
-        await (_database.select(_database.contentItems)
-              ..where(
-                (t) =>
-                    t.curriculumId.equals(curriculumId) & t.isLeaf.equals(true),
-              )
-              ..orderBy([(t) => drift.OrderingTerm.asc(t.sortOrder)]))
-            .get();
+    // Parse curriculumId string to CurriculumId enum
+    final curriculum = CurriculumId.values.firstWhere(
+      (c) => c.storageKey == curriculumId,
+    );
+
+    // Get all leaf items for this curriculum from ContentRepository
+    final allItems = await _contentRepository.getContentForCurriculum(
+      curriculum,
+    );
+
+    // Filter to only leaf items and sort by sortOrder
+    final leafItems = allItems.where((item) => item.isLeaf).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     // Find current item's position
-    final currentIndex = allItems.indexWhere(
-      (item) => item.id == currentItemId,
+    final currentIndex = leafItems.indexWhere(
+      (item) => item.sefariaRef == currentSefariaRef,
     );
-    if (currentIndex == -1 || currentIndex == allItems.length - 1) {
+    if (currentIndex == -1 || currentIndex == leafItems.length - 1) {
       return null; // Current item not found or is the last item
     }
 
-    return allItems[currentIndex + 1].id;
+    return leafItems[currentIndex + 1].sefariaRef;
   }
 
   /// Queue completion for Firestore sync.
@@ -342,21 +353,20 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   @override
   Future<List<Completion>> getCompletionsForContentItem(
-    int sefariaRef,
+    String sefariaRef,
   ) async {
-    return await _database.completionDao.getCompletionsForContentItem(
-      sefariaRef,
-    );
+    return await _database.completionDao.getCompletionsForContent(sefariaRef);
   }
 
   @override
   Future<bool> isStageCompleted({
-    required int sefariaRef,
+    required String sefariaRef,
     required int stageId,
     required String trackType,
   }) async {
-    final completions = await _database.completionDao
-        .getCompletionsForContentItem(sefariaRef);
+    final completions = await _database.completionDao.getCompletionsForContent(
+      sefariaRef,
+    );
 
     return completions.any(
       (c) => c.stageId == stageId && c.trackType == trackType,

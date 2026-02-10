@@ -18,7 +18,9 @@ abstract class ContentRepository {
   /// Get the hierarchy configuration for a curriculum.
   ///
   /// Returns metadata about the hierarchy structure (level labels, depth, etc.).
-  Future<CurriculumHierarchyConfig> getHierarchyConfig(CurriculumId curriculumId);
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(
+    CurriculumId curriculumId,
+  );
 
   /// Filter content items by hierarchy level.
   ///
