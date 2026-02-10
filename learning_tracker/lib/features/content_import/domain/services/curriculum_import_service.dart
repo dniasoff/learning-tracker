@@ -4,6 +4,10 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart'
+    as models;
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart'
+    as models;
 import 'package:learning_tracker/features/content_import/domain/models/import_progress.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:talker/talker.dart';
@@ -175,32 +179,34 @@ class CurriculumImportService {
     return count > 0;
   }
 
-  Future<void> _insertContentBatch(List<dynamic> items) async {
+  Future<void> _insertContentBatch(List<models.ContentItem> items) async {
     for (final item in items) {
       await _database.contentDao.insertContentItem(
         ContentItemsCompanion(
-          curriculumId: Value(item.curriculumId as String),
-          level1: Value(item.level1 as String),
-          level2: Value(item.level2 as String?),
-          level3: Value(item.level3 as String?),
-          level4: Value(item.level4 as String?),
-          displayNameHe: Value(item.displayNameHe as String),
-          displayNameEn: Value(item.displayNameEn as String),
-          sefariaRef: Value(item.sefariaRef as String),
-          sortOrder: Value(item.sortOrder as int),
-          isLeaf: Value(item.isLeaf as bool),
+          curriculumId: Value(item.curriculumId),
+          level1: Value(item.level1),
+          level2: Value(item.level2),
+          level3: Value(item.level3),
+          level4: Value(item.level4),
+          displayNameHe: Value(item.displayNameHe),
+          displayNameEn: Value(item.displayNameEn),
+          sefariaRef: Value(item.sefariaRef),
+          sortOrder: Value(item.sortOrder),
+          isLeaf: Value(item.isLeaf),
         ),
       );
     }
   }
 
-  Future<void> _insertHierarchyConfig(dynamic config) async {
-    final labels = config.levelLabels as List<String>;
+  Future<void> _insertHierarchyConfig(
+    models.CurriculumHierarchyConfig config,
+  ) async {
+    final labels = config.levelLabels;
     await _database
         .into(_database.curriculumHierarchyConfig)
         .insert(
           CurriculumHierarchyConfigCompanion(
-            curriculumId: Value(config.curriculumId as String),
+            curriculumId: Value(config.curriculumId),
             level1Label: Value(labels.isNotEmpty ? labels[0] : ''),
             level2Label: Value(labels.length > 1 ? labels[1] : null),
             level3Label: Value(labels.length > 2 ? labels[2] : null),

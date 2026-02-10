@@ -1,5 +1,5 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'pin_service.g.dart';
@@ -234,8 +234,6 @@ class PinLockoutException implements Exception {
 /// Provider for the PIN service.
 @riverpod
 PinService pinService(Ref ref) {
-  const storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  const storage = FlutterSecureStorage();
   return PinService(storage);
 }

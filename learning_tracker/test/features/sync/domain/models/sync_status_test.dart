@@ -39,7 +39,7 @@ void main() {
 
     group('offline', () {
       test('creates offline status with pendingChanges', () {
-        final status = SyncStatus.offline(pendingChanges: 5);
+        const status = SyncStatus.offline(pendingChanges: 5);
 
         final result = status.maybeWhen(
           offline: (pendingChanges) {
@@ -53,7 +53,7 @@ void main() {
       });
 
       test('allows zero pending changes', () {
-        final status = SyncStatus.offline(pendingChanges: 0);
+        const status = SyncStatus.offline(pendingChanges: 0);
 
         final result = status.maybeWhen(
           offline: (pendingChanges) {
@@ -99,7 +99,7 @@ void main() {
 
       test('different syncing statuses are not equal', () {
         final now = DateTime.now();
-        final later = now.add(Duration(seconds: 1));
+        final later = now.add(const Duration(seconds: 1));
         final status1 = SyncStatus.syncing(startedAt: now);
         final status2 = SyncStatus.syncing(startedAt: later);
 

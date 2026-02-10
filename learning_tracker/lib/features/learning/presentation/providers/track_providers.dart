@@ -1,9 +1,9 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'track_providers.g.dart';
 

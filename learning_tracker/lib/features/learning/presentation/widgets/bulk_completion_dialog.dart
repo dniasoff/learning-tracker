@@ -70,7 +70,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to mark complete: ${e.toString()}'),
+            content: Text('Failed to mark complete: $e'),
             backgroundColor: Colors.red,
           ),
         );

@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
@@ -41,9 +41,9 @@ void main() {
         ContentItemsCompanion.insert(
           curriculumId: 'mishnayos',
           level1: 'Zeraim',
-          level2: Value('Berachos'),
-          level3: Value('1'),
-          level4: Value('1'),
+          level2: const Value('Berachos'),
+          level3: const Value('1'),
+          level4: const Value('1'),
           displayNameHe: 'ברכות א:א',
           displayNameEn: 'Berachos 1:1',
           sefariaRef: const Value('Mishnah Berakhot 1.1'),
@@ -105,9 +105,9 @@ void main() {
         ContentItemsCompanion.insert(
           curriculumId: 'mishnayos',
           level1: 'Zeraim',
-          level2: Value('Berachos'),
-          level3: Value('1'),
-          level4: Value('1'),
+          level2: const Value('Berachos'),
+          level3: const Value('1'),
+          level4: const Value('1'),
           displayNameHe: 'ברכות א:א',
           displayNameEn: 'Berachos 1:1',
           sortOrder: 2,
@@ -142,9 +142,9 @@ void main() {
         ContentItemsCompanion.insert(
           curriculumId: 'mishnayos',
           level1: 'Zeraim',
-          level2: Value('Berachos'),
-          level3: Value('1'),
-          level4: Value('1'),
+          level2: const Value('Berachos'),
+          level3: const Value('1'),
+          level4: const Value('1'),
           displayNameHe: 'ברכות א:א',
           displayNameEn: 'Berachos 1:1',
           sortOrder: 1,
@@ -157,9 +157,9 @@ void main() {
           ContentItemsCompanion.insert(
             curriculumId: 'mishnayos',
             level1: 'Zeraim',
-            level2: Value('Berachos'),
-            level3: Value('1'),
-            level4: Value('1'),
+            level2: const Value('Berachos'),
+            level3: const Value('1'),
+            level4: const Value('1'),
             displayNameHe: 'duplicate',
             displayNameEn: 'duplicate',
             sortOrder: 2,

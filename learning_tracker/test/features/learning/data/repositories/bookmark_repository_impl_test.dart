@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -248,9 +247,6 @@ void main() {
 
       // Now test local winning
       // Update local to newer time at item 3
-      final newerLocalTime = DateTime.now().toUtc().add(
-        const Duration(hours: 1),
-      );
       await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
         trackType: TrackType.personal,
@@ -275,7 +271,7 @@ void main() {
 /// Set up test data for bookmark tests.
 Future<void> _setupTestData(AppDatabase db) async {
   // Insert 3 content items for mishnayos
-  for (int i = 1; i <= 3; i++) {
+  for (var i = 1; i <= 3; i++) {
     await db
         .into(db.contentItems)
         .insert(

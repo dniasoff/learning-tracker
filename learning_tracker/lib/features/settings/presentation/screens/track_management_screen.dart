@@ -148,7 +148,7 @@ class TrackManagementScreen extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       final repository = ref.read(trackRepositoryProvider);
       await repository.deactivateTrack(curriculum, trackType);
       // Invalidate provider to trigger refresh

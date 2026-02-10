@@ -17,7 +17,6 @@ class _PointsPopupState extends State<PointsPopup>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _bounceAnimation;
 
   @override
   void initState() {
@@ -32,11 +31,6 @@ class _PointsPopupState extends State<PointsPopup>
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
-
-    _bounceAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.bounceOut));
 
     _controller.forward();
 

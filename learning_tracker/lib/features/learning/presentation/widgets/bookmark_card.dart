@@ -102,7 +102,7 @@ class BookmarkCard extends ConsumerWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).textTheme.bodySmall?.color?.withOpacity(0.6),
+                      ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

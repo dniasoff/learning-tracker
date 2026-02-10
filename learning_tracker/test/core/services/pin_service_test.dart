@@ -1,7 +1,7 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
 
@@ -25,7 +25,8 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        storedValue = invocation.namedArguments[Symbol('value')] as String;
+        storedValue =
+            invocation.namedArguments[const Symbol('value')] as String;
       });
       when(
         () => mockStorage.delete(key: any(named: 'key')),
@@ -91,7 +92,8 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        storedValue = invocation.namedArguments[Symbol('value')] as String;
+        storedValue =
+            invocation.namedArguments[const Symbol('value')] as String;
       });
       when(
         () => mockStorage.delete(key: any(named: 'key')),
@@ -146,8 +148,10 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        if (invocation.namedArguments[Symbol('key')] == 'parent_pin_hash') {
-          storedHash = invocation.namedArguments[Symbol('value')] as String;
+        if (invocation.namedArguments[const Symbol('key')] ==
+            'parent_pin_hash') {
+          storedHash =
+              invocation.namedArguments[const Symbol('value')] as String;
         }
       });
       when(
@@ -180,8 +184,10 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        if (invocation.namedArguments[Symbol('key')] == 'parent_pin_hash') {
-          storedHash = invocation.namedArguments[Symbol('value')] as String;
+        if (invocation.namedArguments[const Symbol('key')] ==
+            'parent_pin_hash') {
+          storedHash =
+              invocation.namedArguments[const Symbol('value')] as String;
         }
       });
       when(
@@ -230,8 +236,10 @@ void main() {
             value: any(named: 'value'),
           ),
         ).thenAnswer((invocation) async {
-          if (invocation.namedArguments[Symbol('key')] == 'parent_pin_hash') {
-            storedHash = invocation.namedArguments[Symbol('value')] as String;
+          if (invocation.namedArguments[const Symbol('key')] ==
+              'parent_pin_hash') {
+            storedHash =
+                invocation.namedArguments[const Symbol('value')] as String;
           }
         });
         when(
@@ -270,8 +278,10 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        if (invocation.namedArguments[Symbol('key')] == 'parent_pin_hash') {
-          storedHash = invocation.namedArguments[Symbol('value')] as String;
+        if (invocation.namedArguments[const Symbol('key')] ==
+            'parent_pin_hash') {
+          storedHash =
+              invocation.namedArguments[const Symbol('value')] as String;
         }
       });
       when(
@@ -302,7 +312,7 @@ void main() {
       const incorrectPin = '9999';
 
       String? storedHash;
-      int attemptCount = 0;
+      var attemptCount = 0;
 
       when(
         () => mockStorage.write(
@@ -310,9 +320,10 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        final key = invocation.namedArguments[Symbol('key')] as String;
+        final key = invocation.namedArguments[const Symbol('key')] as String;
         if (key == 'parent_pin_hash') {
-          storedHash = invocation.namedArguments[Symbol('value')] as String;
+          storedHash =
+              invocation.namedArguments[const Symbol('value')] as String;
         } else if (key == 'parent_lockout_count') {
           attemptCount++;
         }
@@ -376,8 +387,10 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        if (invocation.namedArguments[Symbol('key')] == 'parent_pin_hash') {
-          storedHash = invocation.namedArguments[Symbol('value')] as String;
+        if (invocation.namedArguments[const Symbol('key')] ==
+            'parent_pin_hash') {
+          storedHash =
+              invocation.namedArguments[const Symbol('value')] as String;
         }
       });
       when(
@@ -410,8 +423,10 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        if (invocation.namedArguments[Symbol('key')] == 'tutor_pin_hash') {
-          storedHash = invocation.namedArguments[Symbol('value')] as String;
+        if (invocation.namedArguments[const Symbol('key')] ==
+            'tutor_pin_hash') {
+          storedHash =
+              invocation.namedArguments[const Symbol('value')] as String;
         }
       });
       when(
@@ -443,8 +458,10 @@ void main() {
           value: any(named: 'value'),
         ),
       ).thenAnswer((invocation) async {
-        if (invocation.namedArguments[Symbol('key')] == 'tutor_pin_hash') {
-          storedHash = invocation.namedArguments[Symbol('value')] as String;
+        if (invocation.namedArguments[const Symbol('key')] ==
+            'tutor_pin_hash') {
+          storedHash =
+              invocation.namedArguments[const Symbol('value')] as String;
         }
       });
       when(

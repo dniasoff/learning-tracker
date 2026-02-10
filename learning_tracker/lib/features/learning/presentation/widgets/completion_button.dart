@@ -84,7 +84,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to mark complete: ${e.toString()}'),
+            content: Text('Failed to mark complete: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -93,7 +93,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
   }
 
   Future<void> _showPointsPopup(int points) async {
-    await showDialog(
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => PointsPopup(

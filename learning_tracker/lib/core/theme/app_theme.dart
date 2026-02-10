@@ -114,21 +114,21 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: _primaryColor, width: 2),
+          borderSide: const BorderSide(color: _primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: _errorColor),
+          borderSide: const BorderSide(color: _errorColor),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 12,
         ),
       ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: _surfaceColor,
         selectedItemColor: _primaryColor,
-        unselectedItemColor: const Color(0xFF79747E),
+        unselectedItemColor: Color(0xFF79747E),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),

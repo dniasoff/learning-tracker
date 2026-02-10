@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
@@ -37,9 +36,9 @@ void main() {
   group('markComplete', () {
     test('creates completion record with correct data', () async {
       // Arrange: Create prerequisite data
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final contentItemId = await _createContentItem(database, curriculumId);
-      final stageId = 1;
+      const stageId = 1;
 
       final request = CompletionRequest(
         curriculumId: curriculumId,
@@ -65,7 +64,7 @@ void main() {
 
     test('throws StageProgressionException when skipping stages', () async {
       // Arrange: Create item and complete stage 1
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final contentItemId = await _createContentItem(database, curriculumId);
 
       final stage1Request = CompletionRequest(
@@ -93,7 +92,7 @@ void main() {
 
     test('is idempotent - returns existing completion', () async {
       // Arrange: Create and complete an item
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final contentItemId = await _createContentItem(database, curriculumId);
 
       final request = CompletionRequest(
@@ -118,7 +117,7 @@ void main() {
 
     test('advances bookmark to next item', () async {
       // Arrange: Create two content items
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final item1 = await _createContentItem(
         database,
         curriculumId,
@@ -158,7 +157,7 @@ void main() {
 
     test('enforces stage progression per track', () async {
       // Arrange: Complete stage 1 on personal track
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final contentItemId = await _createContentItem(database, curriculumId);
 
       final personalRequest = CompletionRequest(
@@ -186,7 +185,7 @@ void main() {
   group('bulkMarkComplete', () {
     test('marks multiple items in single transaction', () async {
       // Arrange: Create multiple items
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final item1 = await _createContentItem(database, curriculumId);
       final item2 = await _createContentItem(database, curriculumId);
       final item3 = await _createContentItem(database, curriculumId);
@@ -213,7 +212,7 @@ void main() {
 
     test('rolls back on error', () async {
       // Arrange: Create items, but set up one to fail
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final item1 = await _createContentItem(database, curriculumId);
 
       // Complete stage 1 for item1, then try bulk complete stage 3
@@ -252,7 +251,7 @@ void main() {
   group('isStageCompleted', () {
     test('returns true for completed stage', () async {
       // Arrange
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final contentItemId = await _createContentItem(database, curriculumId);
 
       final request = CompletionRequest(
@@ -276,7 +275,7 @@ void main() {
 
     test('returns false for non-completed stage', () async {
       // Arrange
-      final curriculumId = 'mishna';
+      const curriculumId = 'mishna';
       final contentItemId = await _createContentItem(database, curriculumId);
 
       // Act

@@ -56,7 +56,7 @@ class _CompletionAnimationState extends State<CompletionAnimation>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
+                color: Colors.green.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(

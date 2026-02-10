@@ -33,10 +33,12 @@ void main() {
     mockSyncEngine = MockSyncEngine();
     mockLogger = MockTalker();
 
-    when(() => mockLogger.info(any())).thenReturn(null);
-    when(() => mockLogger.debug(any())).thenReturn(null);
-    when(() => mockLogger.warning(any(), any())).thenReturn(null);
-    when(() => mockLogger.error(any())).thenReturn(null);
+    when(() => mockLogger.info(any<dynamic>())).thenReturn(null);
+    when(() => mockLogger.debug(any<dynamic>())).thenReturn(null);
+    when(
+      () => mockLogger.warning(any<dynamic>(), any<Object?>()),
+    ).thenReturn(null);
+    when(() => mockLogger.error(any<dynamic>())).thenReturn(null);
   });
 
   tearDown(() async {
@@ -308,7 +310,7 @@ void main() {
       ).thenReturn(CurriculumId.mishnayos.storageKey);
       when(() => mockFetcher.fetchAllContent()).thenAnswer((_) async {
         // Simulate delay to allow cancellation
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
         return FetchResult(
           items: mockItems,
           hierarchyConfig: mockHierarchyConfig,
@@ -404,9 +406,7 @@ void main() {
 
       // Verify we saw storing progress events (indicating batching)
       final storingEvents = progressEvents.where(
-        (e) =>
-            e is ImportProgress &&
-            e.maybeWhen(storing: (_, __, ___) => true, orElse: () => false),
+        (e) => e.maybeWhen(storing: (_, __, ___) => true, orElse: () => false),
       );
       expect(storingEvents.isNotEmpty, isTrue);
     });
@@ -470,7 +470,7 @@ void main() {
         await importService.importCurriculum(CurriculumId.mishnayos);
 
         // Give stream events time to propagate
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         // Verify we have progress events
         expect(progressEvents.isNotEmpty, isTrue);

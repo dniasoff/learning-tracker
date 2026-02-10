@@ -87,7 +87,7 @@ class OfflineQueue {
     }
 
     _logger.info('Flushing ${pending.length} pending operations');
-    int successCount = 0;
+    var successCount = 0;
 
     for (final operation in pending) {
       try {

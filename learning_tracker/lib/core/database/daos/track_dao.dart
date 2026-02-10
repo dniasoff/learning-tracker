@@ -96,7 +96,7 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
     TrackType trackType,
   ) async {
     if (trackType == TrackType.personal) {
-      throw InvalidOperationException(
+      throw const InvalidOperationException(
         'Cannot deactivate personal track - it is always active',
       );
     }

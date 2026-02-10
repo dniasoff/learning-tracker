@@ -248,7 +248,7 @@ class _PinDigitField extends StatelessWidget {
           ),
           filled: true,
           fillColor: hasError
-              ? theme.colorScheme.errorContainer.withOpacity(0.1)
+              ? theme.colorScheme.errorContainer.withValues(alpha: 0.1)
               : theme.colorScheme.surface,
         ),
         inputFormatters: [

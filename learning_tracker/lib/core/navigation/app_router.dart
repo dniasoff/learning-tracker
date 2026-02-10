@@ -18,8 +18,8 @@ import 'package:learning_tracker/features/progress/presentation/screens/progress
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/track_management_screen.dart';
+import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_mode_screen.dart';
 
 part 'app_router.gr.dart';
