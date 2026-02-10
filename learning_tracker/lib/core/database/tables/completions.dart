@@ -7,7 +7,7 @@ import 'package:drift/drift.dart';
 class Completions extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get curriculumId => text()();
-  IntColumn get contentItemId => integer()();
+  TextColumn get sefariaRef => text()();
   IntColumn get stageId => integer()();
   TextColumn get trackType => text()();
   DateTimeColumn get completedAt => dateTime()();

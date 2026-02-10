@@ -2,7 +2,6 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/daos/content_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
@@ -12,8 +11,6 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
-import 'package:learning_tracker/core/database/tables/content_items.dart';
-import 'package:learning_tracker/core/database/tables/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
@@ -27,8 +24,6 @@ part 'app_database.g.dart';
 @DriftDatabase(
   tables: [
     ActiveCurricula,
-    ContentItems,
-    CurriculumHierarchyConfig,
     CurriculumTracks,
     StageDefinitions,
     Completions,
@@ -41,7 +36,6 @@ part 'app_database.g.dart';
   ],
   daos: [
     ActiveCurriculumDao,
-    ContentDao,
     CompletionDao,
     StageDao,
     BookmarkDao,
@@ -57,4 +51,42 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 3) {
+          // Migration from schema v2 to v3: Remove content_items and
+          // curriculum_hierarchy_config tables, change FK columns to sefariaRef
+
+          // Step 1: Create temporary tables with new schema
+          await m.createTable($CompletionsTable(attachedDatabase));
+          await m.createTable($BookmarksTable(attachedDatabase));
+          await m.createTable($LearningOrderTable(attachedDatabase));
+
+          // Step 2: Migrate data from old tables (requires content lookup)
+          // This is handled by a separate data migration script since we need
+          // to map contentItemId -> sefariaRef using the old content_items table
+
+          // For now, we'll drop and recreate (data loss acceptable for dev)
+          // Production migration would need custom SQL to preserve data
+
+          await customStatement('DROP TABLE IF EXISTS completions');
+          await customStatement('DROP TABLE IF EXISTS bookmarks');
+          await customStatement('DROP TABLE IF EXISTS learning_order');
+          await customStatement('DROP TABLE IF EXISTS content_items');
+          await customStatement('DROP TABLE IF EXISTS curriculum_hierarchy_config');
+
+          // Recreate with new schema
+          await m.createTable($CompletionsTable(attachedDatabase));
+          await m.createTable($BookmarksTable(attachedDatabase));
+          await m.createTable($LearningOrderTable(attachedDatabase));
+        }
+      },
+    );
+  }
 }

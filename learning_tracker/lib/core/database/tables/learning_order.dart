@@ -4,14 +4,17 @@ import 'package:drift/drift.dart';
 ///
 /// Allows users to customize the order in which content items
 /// are presented within a curriculum.
+///
+/// sefariaRef references the content item in bundled JSON assets,
+/// replacing the old contentItemId FK to the content_items table.
 class LearningOrder extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get curriculumId => text()();
-  IntColumn get contentItemId => integer()();
+  TextColumn get sefariaRef => text()();
   IntColumn get userSortOrder => integer()();
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {curriculumId, contentItemId},
+    {curriculumId, sefariaRef},
   ];
 }
