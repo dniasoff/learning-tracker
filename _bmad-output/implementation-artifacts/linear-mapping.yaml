@@ -147,7 +147,7 @@ stories:
     parent_epic: "epic-1"
     title: "1.12: Hebrew Date Utilities (kosher_dart)"
 
-  # Epic 2: Content Import & Browsing (4 stories)
+  # Epic 2: Content Import & Browsing (5 stories)
   2.1:
     linear_issue_id: "b992801a-47e5-4ef6-be14-18b31263e603"
     linear_identifier: "DNI-31"
@@ -168,6 +168,11 @@ stories:
     linear_identifier: "DNI-34"
     parent_epic: "epic-2"
     title: "2.4: Curriculum Activation & Management"
+  2.5:
+    linear_issue_id: "f71d5a87-f56e-4f3e-ad80-3c2df6a22f3f"
+    linear_identifier: "DNI-79"
+    parent_epic: "epic-2"
+    title: "2.5: Bundled Content JSON & Dev Seed Script"
 
   # Epic 3: Core Learning Cycle (3 stories)
   3.1:

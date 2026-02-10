@@ -1,4 +1,5 @@
 # generated: 2026-01-05
+# updated: 2026-02-10 (Epic 2 QA review)
 # project: learning-tracker
 # project_key: learning-tracker
 # tracking_system: file-system
@@ -35,109 +36,144 @@ tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  # Epic 1: Project Foundation & Data Infrastructure
+  # Epic 1: Foundation & Infrastructure (12 stories)
   epic-1: in-progress
-  1-1-initialize-flutter-project-with-architecture-foundations: ready-for-dev
-  1-2-set-up-database-schema-for-mishnayos: backlog
-  1-3-integrate-sefaria-api-client: backlog
-  1-4-seed-database-with-4192-mishnayos: backlog
-  1-5-implement-hebrew-calendar-integration: backlog
-  1-6-configure-firebase-and-cloud-firestore: backlog
+  1-1-initialize-flutter-project-and-directory-structure: done
+  1-2-drift-database-schema-and-daos: done
+  1-3-firebase-integration-auth-and-firestore: done
+  1-4-sefaria-api-client-and-adapter-pattern: done
+  1-5-navigation-and-routing-auto-route-11x: done
+  1-6-theme-and-design-system: done
+  1-7-riverpod-provider-architecture: done
+  1-8-logging-and-error-handling-talker: done
+  1-9-sync-engine-foundation: done
+  1-10-cicd-pipeline: done
+  1-11-secure-storage-and-pin-infrastructure: done
+  1-12-hebrew-date-utilities-kosher-dart: done
   epic-1-retrospective: optional
 
-  # Epic 2: Core Learning Cycle & Progress Tracking
-  epic-2: backlog
-  2-1-create-completion-tracking-database-schema: backlog
-  2-2-implement-hierarchical-mishna-browsing: backlog
-  2-3-display-mishna-text-with-hebrew-and-english: backlog
-  2-4-mark-mishna-complete-for-learning-stage: backlog
-  2-5-mark-mishna-complete-for-chazara-1-and-chazara-2: backlog
-  2-6-display-overall-progress-percentage: backlog
+  # Epic 2: Content Import & Browsing (5 stories)
+  # QA Review: 2026-02-10 — ~35% complete overall
+  epic-2: in-progress
+  2-1-sefaria-content-import-pipeline: review
+  # ^ QA: Fetchers + import service complete and tested (22 tests).
+  #   Fixed: UTC dates, stage mismatch, typed cancellation, batch insert,
+  #   one-time seed guard.
+  #   ARCH ISSUE: Current design runs import at runtime in-app. Should be a
+  #   build-time dev script that produces a seed DB bundled in assets/.
+  #   See 2-5 for the fix.
+  2-2-hierarchical-content-browser: backlog
+  # ^ QA: STUB ONLY — placeholder screen with Center(child: Text(...)).
+  #   All feature dirs contain only .gitkeep. Data layer ready, feature not built.
+  2-3-content-text-display: backlog
+  # ^ QA: NOT STARTED on main. Linear ticket (DNI-33) was re-scoped from
+  #   "Content Search & Filtering" to "Content Text Display" (Hebrew/English
+  #   text rendering with caching). An agent branch exists with implementation
+  #   but it hasn't been merged or reviewed.
+  2-4-curriculum-activation-and-management: in-progress
+  # ^ QA: PARTIAL — Track-level activation (personal/school/tutor) is well-implemented
+  #   with 30 tests. Curriculum-level activation (toggle Mishnayos vs Bavli) missing.
+  #   Bugs fixed: TrackManagementRoute now registered in router,
+  #   getCurriculumColor key fixed ('mishnayos' not 'mishna').
+  2-5-bundled-content-json-and-dev-seed-script: backlog
+  # DNI-79: Replaces runtime import with bundled JSON content files.
+  #   - Dev script (tool/seed_content.dart) fetches from Sefaria → JSON per curriculum
+  #   - Bundle in assets/content/*.json, load in-memory via rootBundle
+  #   - Remove content_items + curriculum_hierarchy_config tables from DB
+  #   - Migrate completions/bookmarks/learning_order FK from autoincrement id → sefariaRef
+  #   - Remove runtime import UI + CurriculumImportService + dio dependency
+  #   - Impacts: DNI-31 (fetchers become dev-only), DNI-32 (in-memory browse),
+  #     DNI-33 (in-memory search), DNI-34 (activation simplified).
   epic-2-retrospective: optional
 
-  # Epic 3: Multi-Track Learning Management
+  # Epic 3: Core Learning Cycle (3 stories)
   epic-3: backlog
-  3-1-create-track-management-database-schema: backlog
-  3-2-add-and-remove-optional-tracks: backlog
-  3-3-maintain-independent-bookmarks-per-track: backlog
-  3-4-prevent-duplicate-mishna-assignments-across-tracks: backlog
-  3-5-designate-track-when-marking-progress: backlog
+  3-1-mark-completion-single-item: backlog
+  3-2-completion-history-and-stage-progression: backlog
+  3-3-bookmark-management: backlog
   epic-3-retrospective: optional
 
-  # Epic 4: Smart Scheduler & Daily Recommendations
+  # Epic 4: Multi-Track Learning (3 stories)
   epic-4: backlog
-  4-1-track-mishnayos-due-for-chazara: backlog
-  4-2-calculate-optimal-daily-task-count: backlog
-  4-3-generate-daily-recommendations-for-personal-track: backlog
-  4-4-adapt-recommendations-based-on-pace: backlog
-  4-5-display-current-pace-status-and-projected-completion: backlog
+  4-1-track-management: backlog
+  4-2-track-assignment-and-duplicate-prevention: backlog
+  4-3-track-specific-progress-views: backlog
   epic-4-retrospective: optional
 
-  # Epic 5: Gamification & Engagement System
+  # Epic 5: Configurable Stages & Learning Order (2 stories)
   epic-5: backlog
-  5-1-award-points-for-completion-stages: backlog
-  5-2-track-and-display-total-points: backlog
-  5-3-track-consecutive-days-streak: backlog
-  5-4-display-streak-protection-notifications: backlog
-  5-5-view-maximum-streak-achieved: backlog
+  5-1-stage-definition-configuration: backlog
+  5-2-drag-and-drop-learning-order: backlog
   epic-5-retrospective: optional
 
-  # Epic 6: Parent Mode & Reward Management
+  # Epic 6: Smart Scheduler (5 stories)
   epic-6: backlog
-  6-1-implement-pin-protected-parent-mode: backlog
-  6-2-create-mystery-rewards-catalog: backlog
-  6-3-display-mystery-rewards-to-child-with-progress: backlog
-  6-4-reveal-mystery-rewards-when-earned: backlog
-  6-5-bulk-mark-masechtas-as-complete: backlog
-  6-6-view-parent-analytics-dashboard: backlog
-  6-7-configure-point-values-for-each-stage: backlog
-  6-8-parent-mode-track-management: backlog
+  6-1-parametric-scheduler-engine: backlog
+  6-2-daily-task-generation-and-display: backlog
+  6-3-goal-management-per-curriculum-deadlines: backlog
+  6-4-pace-tracking: backlog
+  6-5-cross-curriculum-daily-schedule-composer: backlog
   epic-6-retrospective: optional
 
-  # Epic 7: Tutor Mode & Progress Visibility
+  # Epic 7: Dashboard & Progress (3 stories)
   epic-7: backlog
-  7-1-implement-pin-protected-tutor-mode: backlog
-  7-2-view-completion-log-with-timestamps: backlog
-  7-3-view-mishnayos-due-for-chazara: backlog
-  7-4-view-progress-breakdowns-by-seder-and-masechta: backlog
-  7-5-view-on-track-status-and-overall-metrics: backlog
+  7-1-cross-curriculum-dashboard: backlog
+  7-2-per-curriculum-progress-views: backlog
+  7-3-progress-charts-and-statistics: backlog
   epic-7-retrospective: optional
 
-  # Epic 8: Onboarding & Initial Setup
+  # Epic 8: Gamification & Engagement (3 stories)
   epic-8: backlog
-  8-1-create-onboarding-flow-with-welcome-screen: backlog
-  8-2-personalize-with-name-and-bar-mitzvah-date: backlog
-  8-3-configure-learning-order-preferences: backlog
-  8-4-set-up-parent-pin-during-onboarding: backlog
-  8-5-complete-onboarding-and-navigate-to-dashboard: backlog
+  8-1-points-system: backlog
+  8-2-streak-tracking: backlog
+  8-3-mystery-rewards-system: backlog
   epic-8-retrospective: optional
 
-  # Epic 9: Progress Visualization & Analytics
+  # Epic 9: Onboarding Flow (5 stories)
   epic-9: backlog
-  9-1-display-progress-breakdown-by-seder: backlog
-  9-2-display-progress-breakdown-by-masechta: backlog
-  9-3-display-progress-breakdown-by-perek: backlog
-  9-4-display-completion-history-over-time-with-charts: backlog
-  9-5-display-points-earned-over-time-chart: backlog
+  9-1-welcome-and-user-mode-selection: backlog
+  9-2-curriculum-selection: backlog
+  9-3-per-curriculum-goal-setup: backlog
+  9-4-bulk-mark-prior-completions: backlog
+  9-5-initial-rewards-setup-child-mode: backlog
   epic-9-retrospective: optional
 
-  # Epic 10: Notification & Reminder System
+  # Epic 10: Parent Mode (6 stories)
   epic-10: backlog
-  10-1-configure-daily-learning-reminder-notification: backlog
-  10-2-implement-streak-protection-alert: backlog
-  10-3-send-instant-reward-milestone-notification: backlog
-  10-4-send-parent-notification-for-reward-milestones: backlog
-  10-5-enable-disable-notification-types-independently: backlog
-  10-6-configure-notification-times: backlog
+  10-1-parent-pin-setup-and-authentication: backlog
+  10-2-parent-dashboard: backlog
+  10-3-reward-management-crud: backlog
+  10-4-point-value-configuration: backlog
+  10-5-track-management-parent: backlog
+  10-6-parent-analytics-and-progress-views: backlog
   epic-10-retrospective: optional
 
-  # Epic 11: Cloud Sync & Data Management
+  # Epic 11: Tutor Mode (4 stories)
   epic-11: backlog
-  11-1-implement-background-delta-sync-to-firebase: backlog
-  11-2-resume-interrupted-sync-from-checkpoint: backlog
-  11-3-resolve-sync-conflicts-with-last-write-wins: backlog
-  11-4-retry-failed-syncs-with-exponential-backoff: backlog
-  11-5-export-progress-data-to-json: backlog
-  11-6-import-progress-data-from-json: backlog
-  11-7-automatic-network-state-monitoring: backlog
+  11-1-tutor-pin-setup-and-authentication: backlog
+  11-2-tutor-dashboard: backlog
+  11-3-completion-history-views-tutor: backlog
+  11-4-chazara-due-and-progress-views-tutor: backlog
   epic-11-retrospective: optional
+
+  # Epic 12: Notifications (3 stories)
+  epic-12: backlog
+  12-1-daily-learning-reminders: backlog
+  12-2-streak-protection-alerts: backlog
+  12-3-reward-milestone-notifications: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Cloud Sync (3 stories)
+  epic-13: backlog
+  13-1-push-on-write-sync: backlog
+  13-2-pull-on-launch-sync: backlog
+  13-3-foreground-real-time-listeners: backlog
+  epic-13-retrospective: optional
+
+  # Epic 14: Settings (4 stories)
+  epic-14: backlog
+  14-1-general-settings: backlog
+  14-2-notification-preferences: backlog
+  14-3-data-export-and-import: backlog
+  14-4-account-management: backlog
+  epic-14-retrospective: optional

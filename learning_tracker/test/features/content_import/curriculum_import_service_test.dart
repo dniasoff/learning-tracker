@@ -38,7 +38,7 @@ void main() {
     when(
       () => mockLogger.warning(any<dynamic>(), any<Object?>()),
     ).thenReturn(null);
-    when(() => mockLogger.error(any<dynamic>())).thenReturn(null);
+    when(() => mockLogger.error(any<dynamic>(), any<Object?>())).thenReturn(null);
   });
 
   tearDown(() async {
@@ -180,13 +180,19 @@ void main() {
         final firstCount = await database.contentDao
             .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
 
-        // Second import (idempotent)
-        await importService.importCurriculum(CurriculumId.mishnayos);
+        // Second import (skipped - already imported)
+        final secondResult = await importService.importCurriculum(
+          CurriculumId.mishnayos,
+        );
         final secondCount = await database.contentDao
             .getContentItemCountByCurriculum(CurriculumId.mishnayos.storageKey);
 
+        expect(secondResult, isTrue);
         expect(firstCount, equals(secondCount));
         expect(secondCount, equals(100));
+
+        // Fetcher should only have been called once (second import skipped)
+        verify(() => mockFetcher.fetchAllContent()).called(1);
       },
     );
 

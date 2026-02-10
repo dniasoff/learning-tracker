@@ -8,17 +8,18 @@ class CurriculumDefaults {
   CurriculumDefaults._();
 
   /// Default stage definitions applied to all curricula.
+  /// Stage order is 0-indexed; stage names are lowercase identifiers.
   static const List<DefaultStageDefinition> defaultStages = [
-    DefaultStageDefinition(stageOrder: 1, stageName: 'Learn', delayDays: 0),
-    DefaultStageDefinition(stageOrder: 2, stageName: 'Chazara 1', delayDays: 1),
-    DefaultStageDefinition(stageOrder: 3, stageName: 'Chazara 2', delayDays: 7),
+    DefaultStageDefinition(stageOrder: 0, stageName: 'learn', delayDays: 0),
+    DefaultStageDefinition(stageOrder: 1, stageName: 'chazara1', delayDays: 1),
+    DefaultStageDefinition(stageOrder: 2, stageName: 'chazara2', delayDays: 7),
   ];
 
-  /// Points awarded per stage completion.
+  /// Points awarded per stage completion (keyed by stageOrder).
   static const Map<int, int> defaultPointsPerStage = {
-    1: 10, // Learn
-    2: 5, // Chazara 1
-    3: 3, // Chazara 2
+    0: 10, // learn
+    1: 5, // chazara1
+    2: 3, // chazara2
   };
 
   /// Hierarchy label configs per curriculum (maps to curriculum_hierarchy_config table).

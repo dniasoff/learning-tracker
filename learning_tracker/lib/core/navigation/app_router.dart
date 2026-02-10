@@ -107,5 +107,10 @@ class AppRouter extends RootStackRouter {
       guards: [authGuard, tutorPinGuard],
     ),
     AutoRoute(path: '/sync', page: SyncRoute.page, guards: [authGuard]),
+    AutoRoute(
+      path: '/curriculum/:curriculumId/tracks',
+      page: TrackManagementRoute.page,
+      guards: [authGuard],
+    ),
   ];
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
@@ -11,6 +12,14 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/features/content_import/domain/models/import_progress.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:talker/talker.dart';
+
+/// Thrown when an import operation is cancelled by the user.
+class ImportCancelledException implements Exception {
+  const ImportCancelledException([this.message = 'Import cancelled']);
+  final String message;
+  @override
+  String toString() => 'ImportCancelledException: $message';
+}
 
 /// Service for importing curriculum content from Sefaria API into local database.
 ///
@@ -53,6 +62,20 @@ class CurriculumImportService {
   Future<bool> importCurriculum(CurriculumId curriculum) async {
     final curriculumId = curriculum.storageKey;
     _isCancelled = false;
+
+    // One-time seed: skip if content already exists
+    if (await isCurriculumImported(curriculum)) {
+      _logger.info('Curriculum $curriculumId already imported, skipping');
+      final count = await _database.contentDao
+          .getContentItemCountByCurriculum(curriculumId);
+      _emitProgress(
+        ImportProgress.completed(
+          curriculumId: curriculumId,
+          totalItems: count,
+        ),
+      );
+      return true;
+    }
 
     _logger.info('Starting import for curriculum: $curriculumId');
     _emitProgress(ImportProgress.fetching(curriculumId: curriculumId));
@@ -98,13 +121,13 @@ class CurriculumImportService {
 
         // Check for cancellation before storing
         if (_isCancelled) {
-          throw Exception('Import cancelled during transaction');
+          throw const ImportCancelledException('during transaction');
         }
 
         // Store content items in batches
         for (var i = 0; i < items.length; i += _batchSize) {
           if (_isCancelled) {
-            throw Exception('Import cancelled during batch insert');
+            throw const ImportCancelledException('during batch insert');
           }
 
           final batch = items.skip(i).take(_batchSize).toList();
@@ -139,7 +162,7 @@ class CurriculumImportService {
       );
       return true;
     } on SefariaApiException catch (e) {
-      _logger.error('Sefaria API error during import: $e');
+      _logger.error('Sefaria API error during import', e);
       _emitProgress(
         ImportProgress.error(
           curriculumId: curriculumId,
@@ -148,13 +171,11 @@ class CurriculumImportService {
         ),
       );
       rethrow;
+    } on ImportCancelledException {
+      _emitProgress(ImportProgress.cancelled(curriculumId: curriculumId));
+      return false;
     } on Exception catch (e) {
-      if (e.toString().contains('cancelled')) {
-        _emitProgress(ImportProgress.cancelled(curriculumId: curriculumId));
-        return false;
-      }
-
-      _logger.error('Error during import: $e');
+      _logger.error('Error during import', e);
       _emitProgress(
         ImportProgress.error(
           curriculumId: curriculumId,
@@ -180,22 +201,27 @@ class CurriculumImportService {
   }
 
   Future<void> _insertContentBatch(List<models.ContentItem> items) async {
-    for (final item in items) {
-      await _database.contentDao.insertContentItem(
-        ContentItemsCompanion(
-          curriculumId: Value(item.curriculumId),
-          level1: Value(item.level1),
-          level2: Value(item.level2),
-          level3: Value(item.level3),
-          level4: Value(item.level4),
-          displayNameHe: Value(item.displayNameHe),
-          displayNameEn: Value(item.displayNameEn),
-          sefariaRef: Value(item.sefariaRef),
-          sortOrder: Value(item.sortOrder),
-          isLeaf: Value(item.isLeaf),
-        ),
+    await _database.batch((batch) {
+      batch.insertAll(
+        _database.contentItems,
+        items
+            .map(
+              (item) => ContentItemsCompanion(
+                curriculumId: Value(item.curriculumId),
+                level1: Value(item.level1),
+                level2: Value(item.level2),
+                level3: Value(item.level3),
+                level4: Value(item.level4),
+                displayNameHe: Value(item.displayNameHe),
+                displayNameEn: Value(item.displayNameEn),
+                sefariaRef: Value(item.sefariaRef),
+                sortOrder: Value(item.sortOrder),
+                isLeaf: Value(item.isLeaf),
+              ),
+            )
+            .toList(),
       );
-    }
+    });
   }
 
   Future<void> _insertHierarchyConfig(
@@ -222,34 +248,18 @@ class CurriculumImportService {
     )..where((t) => t.curriculumId.equals(curriculumId))).go();
   }
 
-  /// Seed default stage definitions: learn (0 days), chazara1 (1 day), chazara2 (7 days).
+  /// Seed default stage definitions from [CurriculumDefaults.defaultStages].
   Future<void> _seedDefaultStageDefinitions(String curriculumId) async {
-    final defaultStages = [
-      StageDefinitionsCompanion(
-        curriculumId: Value(curriculumId),
-        stageOrder: const Value(0),
-        stageName: const Value('learn'),
-        delayDays: const Value(0),
-        isDefault: const Value(true),
-      ),
-      StageDefinitionsCompanion(
-        curriculumId: Value(curriculumId),
-        stageOrder: const Value(1),
-        stageName: const Value('chazara1'),
-        delayDays: const Value(1),
-        isDefault: const Value(true),
-      ),
-      StageDefinitionsCompanion(
-        curriculumId: Value(curriculumId),
-        stageOrder: const Value(2),
-        stageName: const Value('chazara2'),
-        delayDays: const Value(7),
-        isDefault: const Value(true),
-      ),
-    ];
-
-    for (final stage in defaultStages) {
-      await _database.stageDao.insertStageDefinition(stage);
+    for (final stage in CurriculumDefaults.defaultStages) {
+      await _database.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion(
+          curriculumId: Value(curriculumId),
+          stageOrder: Value(stage.stageOrder),
+          stageName: Value(stage.stageName),
+          delayDays: Value(stage.delayDays),
+          isDefault: const Value(true),
+        ),
+      );
     }
   }
 
@@ -261,7 +271,7 @@ class CurriculumImportService {
       await _syncEngine.pushCurriculumImportMetadata(
         curriculumId: curriculumId,
         itemCount: itemCount,
-        importedAt: DateTime.now(),
+        importedAt: DateTime.now().toUtc(),
       );
       _logger.info('Synced import metadata for $curriculumId to Firestore');
     } catch (e) {

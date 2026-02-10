@@ -36,7 +36,7 @@ class AppTheme {
   /// Get curriculum color by curriculum ID
   static Color getCurriculumColor(String curriculumId) {
     switch (curriculumId) {
-      case 'mishna':
+      case 'mishnayos':
         return curriculumMishna;
       case 'bavli':
         return curriculumBavli;
