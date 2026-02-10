@@ -23,10 +23,10 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
         completions,
       )..where((t) => t.curriculumId.equals(curriculumId))).get();
 
-  Future<List<Completion>> getCompletionsForContentItem(int contentItemId) =>
+  Future<List<Completion>> getCompletionsForContent(String sefariaRef) =>
       (select(
         completions,
-      )..where((t) => t.contentItemId.equals(contentItemId))).get();
+      )..where((t) => t.sefariaRef.equals(sefariaRef))).get();
 
   /// Insert a completion record. This is the only write operation allowed.
   Future<int> insertCompletion(CompletionsCompanion entry) =>
@@ -37,7 +37,7 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
   /// Used during sync merge to avoid inserting duplicates (additive merge per D4).
   Future<bool> completionExists({
     required String curriculumId,
-    required int contentItemId,
+    required String sefariaRef,
     required int stageId,
     required String trackType,
     required DateTime completedAt,
@@ -47,7 +47,7 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
               ..where(
                 (t) =>
                     t.curriculumId.equals(curriculumId) &
-                    t.contentItemId.equals(contentItemId) &
+                    t.sefariaRef.equals(sefariaRef) &
                     t.stageId.equals(stageId) &
                     t.trackType.equals(trackType) &
                     t.completedAt.equals(completedAt),

@@ -69,7 +69,7 @@ class ContentRepositoryImpl implements ContentRepository {
       return items;
     } catch (e) {
       throw ContentLoadException(
-        'Failed to load content for ${curriculumId.displayName}',
+        'Failed to load content for ${curriculumId.displayNameEn}',
         cause: e,
       );
     }
