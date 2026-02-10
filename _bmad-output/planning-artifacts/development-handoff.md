@@ -73,7 +73,7 @@ status: "Ready for Implementation"
 All planning work is complete and available in [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/):
 
 ### 1. Product Brief
-**File:** [product-brief-mishnayos-tracker-2026-01-03.md](product-brief-mishnayos-tracker-2026-01-03.md)
+**File:** [product-brief-learning-tracker-2026-01-03.md](product-brief-learning-tracker-2026-01-03.md)
 
 **Contains:**
 - Product vision and target users
@@ -798,7 +798,7 @@ jobs:
 ## Document Index
 
 **Planning Artifacts:**
-1. [Product Brief](product-brief-mishnayos-tracker-2026-01-03.md) - Vision & users
+1. [Product Brief](product-brief-learning-tracker-2026-01-03.md) - Vision & users
 2. [PRD](prd.md) - All requirements (113 FRs, 47 NFRs)
 3. [Architecture](architecture.md) - Technical decisions & structure
 4. [Architecture Quick Reference](architecture-quick-reference.md) - Developer guide

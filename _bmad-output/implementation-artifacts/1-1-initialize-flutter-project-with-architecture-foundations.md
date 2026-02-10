@@ -11,7 +11,7 @@ so that the codebase follows the defined architecture patterns and is ready for 
 ## Acceptance Criteria
 
 **Given** the project initialization command from architecture document
-**When** I run `flutter create --org com.niasoff.mishnayos --platforms=android --android-language kotlin mishnayos_tracker`
+**When** I run `flutter create --org com.jcom.torah --platforms=android --android-language kotlin learning_tracker`
 **Then** the Flutter project is created with Android-only configuration and Kotlin native code
 
 **And** the feature-first folder structure is created with all core directories (database, navigation, logging, theme, auth, network, utils, constants, providers)
@@ -35,7 +35,7 @@ so that the codebase follows the defined architecture patterns and is ready for 
 ## Tasks / Subtasks
 
 - [ ] Initialize Flutter project with specified command (AC: 1)
-  - [ ] Run `flutter create --org com.niasoff.mishnayos --platforms=android --android-language kotlin mishnayos_tracker`
+  - [ ] Run `flutter create --org com.jcom.torah --platforms=android --android-language kotlin learning_tracker`
   - [ ] Verify Android-only platform, Kotlin native code
 
 - [ ] Create feature-first folder structure (AC: 2)
@@ -160,7 +160,7 @@ All use unified build_runner:
 
 **Complete Directory Structure:**
 ```
-mishnayos_tracker/
+learning_tracker/
 ├── lib/
 │   ├── main.dart (app entry point with Firebase init)
 │   ├── app.dart (root widget with ProviderScope)

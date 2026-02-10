@@ -13,6 +13,8 @@ class AuthRepositoryImpl implements AuthRepository {
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
 
+  static const _packageName = 'com.jcom.torah.learning_tracker';
+
   @override
   Future<UserCredential> signInWithEmail(String email, String password) {
     return _firebaseAuth.signInWithEmailAndPassword(
@@ -44,6 +46,35 @@ class AuthRepositoryImpl implements AuthRepository {
     );
     await credential.user?.updateDisplayName(displayName);
     return credential;
+  }
+
+  @override
+  Future<void> sendSignInLinkToEmail(String email) {
+    return _firebaseAuth.sendSignInLinkToEmail(
+      email: email,
+      actionCodeSettings: ActionCodeSettings(
+        url: 'https://torah-study-tracker.firebaseapp.com/sign-in',
+        handleCodeInApp: true,
+        androidPackageName: _packageName,
+        androidInstallApp: true,
+      ),
+    );
+  }
+
+  @override
+  Future<UserCredential> signInWithEmailLink(
+    String email,
+    String emailLink,
+  ) {
+    return _firebaseAuth.signInWithEmailLink(
+      email: email,
+      emailLink: emailLink,
+    );
+  }
+
+  @override
+  bool isSignInWithEmailLink(String link) {
+    return _firebaseAuth.isSignInWithEmailLink(link);
   }
 
   @override

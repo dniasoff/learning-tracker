@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2026-01-05"
-project: "mishnayos-tracker"
+project: "learning-tracker"
 project_type: "greenfield"
 selected_track: "bmad-method"
 field_type: "greenfield"
@@ -26,7 +26,7 @@ workflow_status:
   # Phase 1 - Analysis (Optional)
   brainstorm-project: optional
   research: optional
-  product-brief: "_bmad-output/planning-artifacts/product-brief-mishnayos-tracker-2026-01-03.md"
+  product-brief: "_bmad-output/planning-artifacts/product-brief-learning-tracker-2026-01-03.md"
 
   # Phase 2 - Planning
   prd: "_bmad-output/planning-artifacts/prd.md"

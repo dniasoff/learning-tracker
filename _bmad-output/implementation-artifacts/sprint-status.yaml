@@ -1,6 +1,6 @@
 # generated: 2026-01-05
-# project: mishnayos-tracker
-# project_key: mishnayos-tracker
+# project: learning-tracker
+# project_key: learning-tracker
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
 
@@ -29,8 +29,8 @@
 # - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
 
 generated: 2026-01-05
-project: mishnayos-tracker
-project_key: mishnayos-tracker
+project: learning-tracker
+project_key: learning-tracker
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 

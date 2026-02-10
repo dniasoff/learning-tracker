@@ -1,5 +1,5 @@
 ---
-project_name: 'mishnayos-tracker'
+project_name: 'learning-tracker'
 user_name: 'Daniel'
 date: '2026-01-04'
 sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'code_quality_rules', 'workflow_rules', 'critical_rules']
@@ -273,10 +273,10 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - ⚠️ CRITICAL: Use exact command from architecture:
   ```bash
   flutter create \
-    --org com.niasoff.mishnayos \
+    --org com.jcom.torah \
     --platforms=android \
     --android-language kotlin \
-    mishnayos_tracker
+    learning_tracker
   ```
 - ✅ Immediately set up `pubspec.yaml` with all dependencies
 - ✅ Configure `build.yaml` for build_runner

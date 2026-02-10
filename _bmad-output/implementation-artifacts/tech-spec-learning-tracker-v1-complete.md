@@ -1,6 +1,6 @@
 ---
 title: 'Learning Tracker - Complete v1.0 Implementation'
-slug: 'mishnayos-tracker-v1-complete'
+slug: 'learning-tracker-v1-complete'
 created: '2026-01-03'
 updated: '2026-01-03 (3 BLOCKING issues resolved: N1-Mishna count, N2-Immutability, N3-Scheduler math)'
 status: 'ready-for-dev'
@@ -181,7 +181,7 @@ lib/
 
 | File | Purpose |
 | ---- | ------- |
-| `_bmad-output/planning-artifacts/product-brief-mishnayos-tracker-2026-01-03.md` | Complete product vision and user requirements |
+| `_bmad-output/planning-artifacts/product-brief-learning-tracker-2026-01-03.md` | Complete product vision and user requirements |
 
 ### Technical Decisions
 
@@ -750,9 +750,9 @@ This comprehensive implementation is organized into 4 sequential phases. Each ph
 
 - [ ] **Task 1.1: Initialize Flutter Project**
   - File: Command line
-  - Action: Run `flutter create mishnayos_tracker --org com.niasoff --platforms android`
+  - Action: Run `flutter create learning_tracker --org com.jcom.torah --platforms android`
   - Action: Set up git repository and initial commit
-  - Notes: Use package name `com.niasoff.mishnayos_tracker`
+  - Notes: Originally created as `mishnayos_tracker`, renamed to `learning_tracker`
 
 - [ ] **Task 1.2: Configure pubspec.yaml**
   - File: `pubspec.yaml`
@@ -833,7 +833,7 @@ This comprehensive implementation is organized into 4 sequential phases. Each ph
 
 - [ ] **Task 1.11: Set Up Firebase Project**
   - Action: Create Firebase project in console (https://console.firebase.google.com)
-  - Action: Register Android app with package name `com.niasoff.mishnayos_tracker`
+  - Action: Register Android app with package name `com.niasoff.learning_tracker`
   - Action: Download `google-services.json` to `android/app/`
   - Action: Configure FlutterFire CLI: `flutterfire configure`
   - Notes: Enable Authentication, Firestore, and Cloud Messaging in Firebase console

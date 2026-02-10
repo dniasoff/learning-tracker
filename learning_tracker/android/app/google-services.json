@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "PLACEHOLDER",
-    "project_id": "learning-tracker-placeholder",
-    "storage_bucket": "learning-tracker-placeholder.firebasestorage.app"
+    "project_number": "346569574648",
+    "project_id": "torah-study-tracker",
+    "storage_bucket": "torah-study-tracker.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:346569574648:android:3519edaeb5ce5df9d6130d",
         "android_client_info": {
           "package_name": "com.jcom.torah.learning_tracker"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "346569574648-tots1edf04513on4oojgumfumdjasl68.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "PLACEHOLDER_API_KEY"
+          "current_key": "AIzaSyAhdnu2I8fJeUO3gZlsqwy8w-lcyU6hAeI"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "346569574648-tots1edf04513on4oojgumfumdjasl68.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

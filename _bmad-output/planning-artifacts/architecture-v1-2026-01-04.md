@@ -1,10 +1,10 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-mishnayos-tracker-2026-01-03.md'
+  - '_bmad-output/planning-artifacts/product-brief-learning-tracker-2026-01-03.md'
   - '_bmad-output/planning-artifacts/prd.md'
 workflowType: 'architecture'
-project_name: 'mishnayos-tracker'
+project_name: 'learning-tracker'
 user_name: 'Daniel'
 date: '2026-01-04'
 lastStep: 8
@@ -227,17 +227,17 @@ Given your project's specific requirements, the **official `flutter create` comm
 
 ```bash
 flutter create \
-  --org com.niasoff.mishnayos \
+  --org com.jcom.torah \
   --platforms=android \
   --android-language kotlin \
-  mishnayos_tracker
+  learning_tracker
 ```
 
 **Command Explanation:**
-- `--org com.niasoff.mishnayos`: Sets bundle ID (reverse domain notation) for Android package naming
+- `--org com.jcom.torah`: Sets bundle ID (reverse domain notation) for Android package naming
 - `--platforms=android`: Creates Android-only project (excludes iOS, web, desktop, Linux, macOS, Windows)
 - `--android-language kotlin`: Uses Kotlin for Android native code (modern standard, better null safety than Java)
-- `mishnayos_tracker`: Project name (snake_case convention)
+- `learning_tracker`: Project name (snake_case convention)
 
 ### Architectural Decisions Provided by Starter
 
@@ -249,7 +249,7 @@ flutter create \
 
 **Initial Project Structure:**
 ```
-mishnayos_tracker/
+learning_tracker/
 ├── android/              # Android-specific native code (Kotlin)
 ├── lib/
 │   ├── main.dart        # App entry point (minimal counter example)
@@ -1297,7 +1297,7 @@ final completedAt = DateTime.now().toUtc();
 ### Complete Project Directory Structure
 
 ```
-mishnayos_tracker/
+learning_tracker/
 ├── README.md
 ├── pubspec.yaml
 ├── pubspec.lock
@@ -1849,10 +1849,10 @@ All architectural decisions work together harmoniously. No conflicts, contradict
 ```bash
 # Initialize Flutter project
 flutter create \
-  --org com.niasoff.mishnayos \
+  --org com.jcom.torah \
   --platforms=android \
   --android-language kotlin \
-  mishnayos_tracker
+  learning_tracker
 
 # Set up pubspec.yaml with all dependencies
 # Configure build.yaml for build_runner
@@ -1906,15 +1906,15 @@ Followed immediately by architectural scaffolding:
 ### Implementation Handoff
 
 **For AI Agents:**
-This architecture document is your complete guide for implementing mishnayos-tracker. Follow all decisions, patterns, and structures exactly as documented.
+This architecture document is your complete guide for implementing learning-tracker. Follow all decisions, patterns, and structures exactly as documented.
 
 **First Implementation Priority:**
 ```bash
 flutter create \
-  --org com.niasoff.mishnayos \
+  --org com.jcom.torah \
   --platforms=android \
   --android-language kotlin \
-  mishnayos_tracker
+  learning_tracker
 ```
 
 **Development Sequence:**

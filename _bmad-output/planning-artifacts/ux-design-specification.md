@@ -1,7 +1,7 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-mishnayos-tracker-2026-01-03.md'
+  - '_bmad-output/planning-artifacts/product-brief-learning-tracker-2026-01-03.md'
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
   - '_bmad-output/planning-artifacts/architecture-v1-2026-01-04.md'

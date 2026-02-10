@@ -14,7 +14,7 @@ workflow_status:
     status: "complete"
     workflow_id: "project-brief"
     artifacts:
-      - "_bmad-output/planning-artifacts/product-brief-mishnayos-tracker-2026-01-03.md"
+      - "_bmad-output/planning-artifacts/product-brief-learning-tracker-2026-01-03.md"
     artifact_count: 1
     completed_at: "2026-01-03"
 

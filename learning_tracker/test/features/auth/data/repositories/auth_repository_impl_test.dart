@@ -22,6 +22,8 @@ class MockGoogleSignInAuthentication extends Mock
 
 class FakeAuthCredential extends Fake implements AuthCredential {}
 
+class FakeActionCodeSettings extends Fake implements ActionCodeSettings {}
+
 void main() {
   late MockFirebaseAuth mockFirebaseAuth;
   late MockGoogleSignIn mockGoogleSignIn;
@@ -29,6 +31,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(FakeAuthCredential());
+    registerFallbackValue(FakeActionCodeSettings());
   });
 
   setUp(() {
@@ -157,6 +160,81 @@ void main() {
         verify(() => mockFirebaseAuth.signInWithCredential(any())).called(1);
       },
     );
+  });
+
+  group('sendSignInLinkToEmail', () {
+    test(
+      'calls FirebaseAuth.sendSignInLinkToEmail with correct email and ActionCodeSettings',
+      () async {
+        when(
+          () => mockFirebaseAuth.sendSignInLinkToEmail(
+            email: any(named: 'email'),
+            actionCodeSettings: any(named: 'actionCodeSettings'),
+          ),
+        ).thenAnswer((_) async {});
+
+        await repository.sendSignInLinkToEmail('user@example.com');
+
+        verify(
+          () => mockFirebaseAuth.sendSignInLinkToEmail(
+            email: 'user@example.com',
+            actionCodeSettings: any(named: 'actionCodeSettings'),
+          ),
+        ).called(1);
+      },
+    );
+  });
+
+  group('signInWithEmailLink', () {
+    test(
+      'calls FirebaseAuth.signInWithEmailLink with stored email and incoming link',
+      () async {
+        final mockCredential = MockUserCredential();
+        when(
+          () => mockFirebaseAuth.signInWithEmailLink(
+            email: 'user@example.com',
+            emailLink: 'https://example.com/sign-in?oobCode=abc123',
+          ),
+        ).thenAnswer((_) async => mockCredential);
+
+        final result = await repository.signInWithEmailLink(
+          'user@example.com',
+          'https://example.com/sign-in?oobCode=abc123',
+        );
+
+        expect(result, equals(mockCredential));
+        verify(
+          () => mockFirebaseAuth.signInWithEmailLink(
+            email: 'user@example.com',
+            emailLink: 'https://example.com/sign-in?oobCode=abc123',
+          ),
+        ).called(1);
+      },
+    );
+  });
+
+  group('isSignInWithEmailLink', () {
+    test('correctly validates incoming deep links', () {
+      when(
+        () => mockFirebaseAuth.isSignInWithEmailLink(
+          'https://example.com/sign-in?oobCode=abc123',
+        ),
+      ).thenReturn(true);
+      when(
+        () => mockFirebaseAuth.isSignInWithEmailLink('https://example.com'),
+      ).thenReturn(false);
+
+      expect(
+        repository.isSignInWithEmailLink(
+          'https://example.com/sign-in?oobCode=abc123',
+        ),
+        isTrue,
+      );
+      expect(
+        repository.isSignInWithEmailLink('https://example.com'),
+        isFalse,
+      );
+    });
   });
 
   group('signOut', () {
