@@ -37,7 +37,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   Future<BookmarkEntity> setBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
-    required int contentItemId,
+    required int sefariaRef,
   }) async {
     final now = DateTime.now().toUtc(); // P5: UTC timestamps
 
@@ -57,7 +57,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
           id: drift.Value(existing.id),
           curriculumId: drift.Value(curriculumId.storageKey),
           trackType: drift.Value(trackType.storageKey),
-          contentItemId: drift.Value(contentItemId),
+          sefariaRef: drift.Value(sefariaRef),
           updatedAt: drift.Value(now),
         ),
       );
@@ -65,7 +65,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       bookmark = BookmarkEntity(
         curriculumId: curriculumId,
         trackType: trackType,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         updatedAt: now,
       );
     } else {
@@ -74,7 +74,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         BookmarksCompanion.insert(
           curriculumId: curriculumId.storageKey,
           trackType: trackType.storageKey,
-          contentItemId: contentItemId,
+          sefariaRef: sefariaRef,
           updatedAt: now,
         ),
       );
@@ -82,7 +82,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       bookmark = BookmarkEntity(
         curriculumId: curriculumId,
         trackType: trackType,
-        contentItemId: contentItemId,
+        sefariaRef: sefariaRef,
         updatedAt: now,
       );
     }
@@ -117,10 +117,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         await setBookmark(
           curriculumId: curriculumId,
           trackType: trackType,
-          contentItemId: nextItemId,
+          sefariaRef: nextItemId,
         );
       }
-    } else if (bookmark.contentItemId == completedItemId) {
+    } else if (bookmark.sefariaRef == completedItemId) {
       // Bookmark is on this item, advance it
       final nextItemId = await _getNextItemId(
         curriculumId: curriculumId,
@@ -131,7 +131,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         await setBookmark(
           curriculumId: curriculumId,
           trackType: trackType,
-          contentItemId: nextItemId,
+          sefariaRef: nextItemId,
         );
       }
     }
@@ -155,7 +155,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     return await setBookmark(
       curriculumId: curriculumId,
       trackType: trackType,
-      contentItemId: firstItemId,
+      sefariaRef: firstItemId,
     );
   }
 
@@ -181,14 +181,14 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     if (customOrder.isNotEmpty) {
       // Use custom learning order
       final currentIndex = customOrder.indexWhere(
-        (item) => item.contentItemId == currentItemId,
+        (item) => item.sefariaRef == currentItemId,
       );
 
       if (currentIndex == -1 || currentIndex == customOrder.length - 1) {
         return null; // Current item not found or is the last item
       }
 
-      return customOrder[currentIndex + 1].contentItemId;
+      return customOrder[currentIndex + 1].sefariaRef;
     } else {
       // Use default sort_order
       final allItems =
@@ -220,7 +220,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         .getLearningOrderByCurriculum(curriculumId.storageKey);
 
     if (customOrder.isNotEmpty) {
-      return customOrder.first.contentItemId;
+      return customOrder.first.sefariaRef;
     } else {
       // Use default sort_order
       final firstItem =
@@ -250,7 +250,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         (c) => c.storageKey == bookmark.curriculumId,
       ),
       trackType: TrackType.fromStorageKey(bookmark.trackType),
-      contentItemId: bookmark.contentItemId,
+      sefariaRef: bookmark.sefariaRef,
       updatedAt: bookmark.updatedAt,
     );
   }
@@ -274,7 +274,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         BookmarksCompanion.insert(
           curriculumId: remote.curriculumId.storageKey,
           trackType: remote.trackType.storageKey,
-          contentItemId: remote.contentItemId,
+          sefariaRef: remote.sefariaRef,
           updatedAt: remote.updatedAt,
         ),
       );
@@ -291,7 +291,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
             ),
             curriculumId: drift.Value(remote.curriculumId.storageKey),
             trackType: drift.Value(remote.trackType.storageKey),
-            contentItemId: drift.Value(remote.contentItemId),
+            sefariaRef: drift.Value(remote.sefariaRef),
             updatedAt: drift.Value(remote.updatedAt),
           ),
         );

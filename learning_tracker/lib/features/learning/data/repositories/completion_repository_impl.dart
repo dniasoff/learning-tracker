@@ -21,14 +21,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
     return await _database.transaction(() async {
       // 1. Validate stage progression
       await _validateStageProgression(
-        contentItemId: request.contentItemId,
+        sefariaRef: request.sefariaRef,
         stageId: request.stageId,
         trackType: request.trackType,
       );
 
       // 2. Check for duplicate (idempotent)
       final existing = await _getExistingCompletion(
-        contentItemId: request.contentItemId,
+        sefariaRef: request.sefariaRef,
         stageId: request.stageId,
         trackType: request.trackType,
       );
@@ -52,7 +52,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       await _advanceBookmark(
         curriculumId: request.curriculumId,
         trackType: request.trackType,
-        completedItemId: request.contentItemId,
+        completedItemId: request.sefariaRef,
       );
 
       // 6. Push to Firestore sync queue
@@ -70,10 +70,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
     return await _database.transaction(() async {
       final completions = <Completion>[];
 
-      for (final contentItemId in request.contentItemIds) {
+      for (final sefariaRef in request.sefariaRefs) {
         final singleRequest = CompletionRequest(
           curriculumId: request.curriculumId,
-          contentItemId: contentItemId,
+          sefariaRef: sefariaRef,
           stageId: request.stageId,
           trackType: request.trackType,
         );
@@ -102,13 +102,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
   ) async {
     // Same logic as markComplete but assumes we're already in a transaction
     await _validateStageProgression(
-      contentItemId: request.contentItemId,
+      sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
     );
 
     final existing = await _getExistingCompletion(
-      contentItemId: request.contentItemId,
+      sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
     );
@@ -129,7 +129,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     await _advanceBookmark(
       curriculumId: request.curriculumId,
       trackType: request.trackType,
-      completedItemId: request.contentItemId,
+      completedItemId: request.sefariaRef,
     );
 
     await _syncCompletion(completion);
@@ -142,13 +142,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// Throws [StageProgressionException] if attempting to complete stage N+1
   /// before stage N.
   Future<void> _validateStageProgression({
-    required int contentItemId,
+    required int sefariaRef,
     required int stageId,
     required String trackType,
   }) async {
     // Get all stages for this curriculum (ordered by stageOrder)
     final completions = await _database.completionDao
-        .getCompletionsForContentItem(contentItemId);
+        .getCompletionsForContentItem(sefariaRef);
 
     // Filter to this track type
     final trackCompletions = completions
@@ -185,12 +185,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Check if this exact completion already exists (for idempotency).
   Future<Completion?> _getExistingCompletion({
-    required int contentItemId,
+    required int sefariaRef,
     required int stageId,
     required String trackType,
   }) async {
     final completions = await _database.completionDao
-        .getCompletionsForContentItem(contentItemId);
+        .getCompletionsForContentItem(sefariaRef);
 
     try {
       return completions.firstWhere(
@@ -224,7 +224,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final id = await _database.completionDao.insertCompletion(
       CompletionsCompanion.insert(
         curriculumId: request.curriculumId,
-        contentItemId: request.contentItemId,
+        sefariaRef: request.sefariaRef,
         stageId: request.stageId,
         trackType: request.trackType,
         completedAt: now,
@@ -262,13 +262,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
         await _database.bookmarkDao.insertBookmark(
           BookmarksCompanion.insert(
             curriculumId: curriculumId,
-            contentItemId: nextItemId,
+            sefariaRef: nextItemId,
             trackType: trackType,
             updatedAt: DateTime.now().toUtc(),
           ),
         );
       }
-    } else if (bookmark.contentItemId == completedItemId) {
+    } else if (bookmark.sefariaRef == completedItemId) {
       // Bookmark is on this item, advance it
       final nextItemId = await _getNextItemId(
         curriculumId: curriculumId,
@@ -281,7 +281,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
             id: drift.Value(bookmark.id),
             curriculumId: drift.Value(bookmark.curriculumId),
             trackType: drift.Value(bookmark.trackType),
-            contentItemId: drift.Value(nextItemId),
+            sefariaRef: drift.Value(nextItemId),
             updatedAt: drift.Value(DateTime.now().toUtc()),
           ),
         );
@@ -321,7 +321,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // Convert to Firestore document format
     final completionData = {
       'curriculumId': completion.curriculumId,
-      'contentItemId': completion.contentItemId,
+      'sefariaRef': completion.sefariaRef,
       'stageId': completion.stageId,
       'trackType': completion.trackType,
       'completedAt': completion.completedAt.toIso8601String(),
@@ -342,21 +342,21 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   @override
   Future<List<Completion>> getCompletionsForContentItem(
-    int contentItemId,
+    int sefariaRef,
   ) async {
     return await _database.completionDao.getCompletionsForContentItem(
-      contentItemId,
+      sefariaRef,
     );
   }
 
   @override
   Future<bool> isStageCompleted({
-    required int contentItemId,
+    required int sefariaRef,
     required int stageId,
     required String trackType,
   }) async {
     final completions = await _database.completionDao
-        .getCompletionsForContentItem(contentItemId);
+        .getCompletionsForContentItem(sefariaRef);
 
     return completions.any(
       (c) => c.stageId == stageId && c.trackType == trackType,

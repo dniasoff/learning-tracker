@@ -304,13 +304,13 @@ class SyncEngine {
     for (final remote in remoteCompletions) {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
-        final contentItemId = remote['content_item_id'] as int?;
+        final sefariaRef = remote['content_item_id'] as int?;
         final stageId = remote['stage_id'] as int?;
         final trackType = remote['track_type'] as String?;
         final completedAt = _parseTimestamp(remote['completed_at']);
 
         if (curriculumId == null ||
-            contentItemId == null ||
+            sefariaRef == null ||
             stageId == null ||
             trackType == null ||
             completedAt == null) {
@@ -320,7 +320,7 @@ class SyncEngine {
 
         final exists = await _database.completionDao.completionExists(
           curriculumId: curriculumId,
-          contentItemId: contentItemId,
+          sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: trackType,
           completedAt: completedAt,
@@ -330,7 +330,7 @@ class SyncEngine {
           await _database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: curriculumId,
-              contentItemId: contentItemId,
+              sefariaRef: sefariaRef,
               stageId: stageId,
               trackType: trackType,
               completedAt: completedAt,
@@ -360,12 +360,12 @@ class SyncEngine {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
         final trackType = remote['track_type'] as String?;
-        final contentItemId = remote['content_item_id'] as int?;
+        final sefariaRef = remote['content_item_id'] as int?;
         final updatedAt = _parseTimestamp(remote['updated_at']);
 
         if (curriculumId == null ||
             trackType == null ||
-            contentItemId == null ||
+            sefariaRef == null ||
             updatedAt == null) {
           _logger.warning('Skipping invalid remote bookmark: $remote');
           continue;
@@ -374,7 +374,7 @@ class SyncEngine {
         await _database.bookmarkDao.upsertBookmark(
           curriculumId: curriculumId,
           trackType: trackType,
-          contentItemId: contentItemId,
+          sefariaRef: sefariaRef,
           updatedAt: updatedAt,
         );
       } catch (e) {
