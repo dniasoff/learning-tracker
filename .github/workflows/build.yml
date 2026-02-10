@@ -48,6 +48,10 @@ jobs:
         working-directory: learning_tracker
         run: flutter pub get
 
+      - name: Generate code
+        working-directory: learning_tracker
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Decode keystore (Release only)
         if: ${{ github.event.inputs.build_type == 'release' }}
         env:
