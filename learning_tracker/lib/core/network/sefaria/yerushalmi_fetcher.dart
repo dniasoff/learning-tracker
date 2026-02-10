@@ -52,7 +52,10 @@ class YerushalmiFetcher extends SefariaFetcherBase {
       // Add chapters (daf) and halachot.
       for (var chapterIdx = 0; chapterIdx < chapters.length; chapterIdx++) {
         final chapterNum = chapterIdx + 1;
-        final halachaCount = (chapters[chapterIdx] as num?)?.toInt() ?? 0;
+        final chapterData = chapters[chapterIdx];
+        final halachaCount = chapterData is num
+            ? chapterData.toInt()
+            : (chapterData is List ? chapterData.length : 0);
 
         // Add chapter/daf container.
         items.add(

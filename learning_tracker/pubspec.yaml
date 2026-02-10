@@ -76,6 +76,7 @@ flutter:
   assets:
     - assets/images/
     - assets/fonts/
+    - assets/content/
 
   # Fonts
   # Custom Hebrew fonts can be added here when needed
