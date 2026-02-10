@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
@@ -10,12 +11,15 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final AppDatabase _database;
   final SyncEngine _syncEngine;
+  final ContentRepository _contentRepository;
 
   BookmarkRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
+    required ContentRepository contentRepository,
   }) : _database = database,
-       _syncEngine = syncEngine;
+       _syncEngine = syncEngine,
+       _contentRepository = contentRepository;
 
   @override
   Future<BookmarkEntity?> getBookmark({
