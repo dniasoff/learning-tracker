@@ -41,7 +41,7 @@ class BookmarkDao extends DatabaseAccessor<AppDatabase>
   Future<void> upsertBookmark({
     required String curriculumId,
     required String trackType,
-    required int contentItemId,
+    required String sefariaRef,
     required DateTime updatedAt,
   }) async {
     final existing = await getBookmarkByCurriculumAndTrack(
@@ -54,14 +54,14 @@ class BookmarkDao extends DatabaseAccessor<AppDatabase>
         BookmarksCompanion.insert(
           curriculumId: curriculumId,
           trackType: trackType,
-          contentItemId: contentItemId,
+          sefariaRef: sefariaRef,
           updatedAt: updatedAt,
         ),
       );
     } else if (updatedAt.isAfter(existing.updatedAt)) {
       await (update(bookmarks)..where((t) => t.id.equals(existing.id))).write(
         BookmarksCompanion(
-          contentItemId: Value(contentItemId),
+          sefariaRef: Value(sefariaRef),
           updatedAt: Value(updatedAt),
         ),
       );
