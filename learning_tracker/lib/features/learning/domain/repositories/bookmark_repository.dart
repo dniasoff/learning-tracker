@@ -27,14 +27,14 @@ abstract class BookmarkRepository {
   Future<BookmarkEntity> setBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
-    required int contentItemId,
+    required String sefariaRef,
   });
 
   /// Advance the bookmark to the next item in learning order.
   ///
   /// This is called automatically after marking a completion. It:
   /// - Follows custom learning_order if it exists for this curriculum
-  /// - Otherwise follows natural sort_order from content_items table
+  /// - Otherwise follows natural sort_order from in-memory content
   /// - Does nothing if bookmark is already on a different item
   /// - Does nothing if the completed item is the last item
   ///
@@ -43,7 +43,7 @@ abstract class BookmarkRepository {
   Future<void> advanceBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
-    required int completedItemId,
+    required String completedSefariaRef,
   });
 
   /// Initialize bookmark for a new curriculum/track combination.
