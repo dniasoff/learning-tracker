@@ -20,24 +20,17 @@ enum TextDownloadState {
 class TextDownloadProgress {
   const TextDownloadProgress({
     required this.state,
-    this.bytesDownloaded = 0,
-    this.totalBytes = 0,
     this.itemsStored = 0,
     this.totalItems = 0,
     this.error,
   });
 
   final TextDownloadState state;
-  final int bytesDownloaded;
-  final int totalBytes;
   final int itemsStored;
   final int totalItems;
   final String? error;
 
   double get progress {
-    if (state == TextDownloadState.downloading && totalBytes > 0) {
-      return bytesDownloaded / totalBytes;
-    }
     if (state == TextDownloadState.storing && totalItems > 0) {
       return itemsStored / totalItems;
     }
@@ -92,11 +85,17 @@ class TextDownloadService {
       final items = json['items'] as List<dynamic>;
       final totalItems = items.length;
 
-      // 3. Batch insert
+      // 3. Check for partial progress (resume support)
       const batchSize = 500;
-      var stored = 0;
+      final previousCount =
+          await _textDownloadStatusDao.getPartialItemCount(
+            curriculum.storageKey,
+          ) ??
+          0;
+      var stored = previousCount;
 
-      for (var i = 0; i < items.length; i += batchSize) {
+      // 4. Batch insert, skipping already-stored items
+      for (var i = previousCount; i < items.length; i += batchSize) {
         final batchItems = items.skip(i).take(batchSize).toList();
 
         await _textCacheDao.storeBatch(
@@ -111,6 +110,13 @@ class TextDownloadService {
         );
 
         stored = (i + batchSize).clamp(0, totalItems);
+
+        // Checkpoint after each batch
+        await _textDownloadStatusDao.savePartialProgress(
+          curriculumId: curriculum.storageKey,
+          storedItemCount: stored,
+        );
+
         yield TextDownloadProgress(
           state: TextDownloadState.storing,
           itemsStored: stored,
@@ -118,7 +124,7 @@ class TextDownloadService {
         );
       }
 
-      // 4. Mark as downloaded
+      // 5. Mark as downloaded (clears partial progress)
       await _textDownloadStatusDao.markDownloaded(
         curriculumId: curriculum.storageKey,
         itemCount: totalItems,

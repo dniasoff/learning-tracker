@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
@@ -78,22 +79,32 @@ class _OfflineMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.download, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'Text content not yet downloaded',
-            style: AppTextStyles.titleMedium.copyWith(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Download this curriculum\'s text from the settings to read offline.',
-            style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.download, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'Text content not yet downloaded',
+              style:
+                  AppTextStyles.titleMedium.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Download this curriculum\'s text from the settings to read offline.',
+              style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => context.router.push(const SettingsRoute()),
+              icon: const Icon(Icons.download),
+              label: const Text('Go to Downloads'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -138,7 +149,7 @@ class _FontSizeSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<FontSize>(
-      icon: const Icon(Icons.text_fields),
+      icon: const Icon(Icons.format_size),
       tooltip: 'Font Size',
       onSelected: (size) {
         ref.read(fontSizeProvider.notifier).setFontSize(size);

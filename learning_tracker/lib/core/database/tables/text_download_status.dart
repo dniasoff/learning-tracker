@@ -18,6 +18,10 @@ class TextDownloadStatuses extends Table {
   /// When the download completed
   DateTimeColumn get downloadedAt => dateTime()();
 
+  /// Number of items stored so far during an in-progress download.
+  /// Null when no partial download is in progress.
+  IntColumn get storedItemCount => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {curriculumId};
 }

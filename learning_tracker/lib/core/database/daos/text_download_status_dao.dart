@@ -24,11 +24,12 @@ class TextDownloadStatusDao extends DatabaseAccessor<AppDatabase>
     required String textVersion,
   }) async {
     await into(textDownloadStatuses).insertOnConflictUpdate(
-      TextDownloadStatusesCompanion.insert(
-        curriculumId: curriculumId,
-        itemCount: itemCount,
-        textVersion: textVersion,
-        downloadedAt: DateTime.now(),
+      TextDownloadStatusesCompanion(
+        curriculumId: Value(curriculumId),
+        itemCount: Value(itemCount),
+        textVersion: Value(textVersion),
+        downloadedAt: Value(DateTime.now()),
+        storedItemCount: const Value(null),
       ),
     );
   }
@@ -45,5 +46,30 @@ class TextDownloadStatusDao extends DatabaseAccessor<AppDatabase>
     return (select(
       textDownloadStatuses,
     )..where((t) => t.curriculumId.equals(curriculumId))).getSingleOrNull();
+  }
+
+  /// Saves partial download progress (batch-level checkpoint).
+  Future<void> savePartialProgress({
+    required String curriculumId,
+    required int storedItemCount,
+  }) async {
+    await into(textDownloadStatuses).insertOnConflictUpdate(
+      TextDownloadStatusesCompanion(
+        curriculumId: Value(curriculumId),
+        itemCount: const Value(0),
+        textVersion: const Value(''),
+        downloadedAt: Value(DateTime.now()),
+        storedItemCount: Value(storedItemCount),
+      ),
+    );
+  }
+
+  /// Returns the number of items stored so far for a partial download,
+  /// or null if no partial progress exists.
+  Future<int?> getPartialItemCount(String curriculumId) async {
+    final row = await (select(
+      textDownloadStatuses,
+    )..where((t) => t.curriculumId.equals(curriculumId))).getSingleOrNull();
+    return row?.storedItemCount;
   }
 }
