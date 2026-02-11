@@ -32,10 +32,7 @@ void main() {
         isLeaf: false,
       );
 
-      await tester.pumpWidget(createTestWidget(
-        item: item,
-        onTap: () {},
-      ));
+      await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
 
       // Hebrew name should be the title
       expect(find.text('סדר זרעים'), findsOneWidget);
@@ -57,10 +54,7 @@ void main() {
         isLeaf: false,
       );
 
-      await tester.pumpWidget(createTestWidget(
-        item: item,
-        onTap: () {},
-      ));
+      await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
 
       // English name should be the subtitle
       expect(find.text('Seder Zeraim'), findsOneWidget);
@@ -77,10 +71,7 @@ void main() {
         isLeaf: false,
       );
 
-      await tester.pumpWidget(createTestWidget(
-        item: item,
-        onTap: () {},
-      ));
+      await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
 
       expect(find.byIcon(Icons.folder), findsOneWidget);
     });
@@ -99,10 +90,7 @@ void main() {
         isLeaf: true,
       );
 
-      await tester.pumpWidget(createTestWidget(
-        item: item,
-        onTap: () {},
-      ));
+      await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
 
       // Leaf items show completion status icon (unchecked by default)
       expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
@@ -119,10 +107,7 @@ void main() {
         isLeaf: false,
       );
 
-      await tester.pumpWidget(createTestWidget(
-        item: item,
-        onTap: () {},
-      ));
+      await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
 
       // Container items show chevron for drill-down
       expect(find.byIcon(Icons.chevron_right), findsOneWidget);
@@ -140,10 +125,9 @@ void main() {
         isLeaf: false,
       );
 
-      await tester.pumpWidget(createTestWidget(
-        item: item,
-        onTap: () => tapped = true,
-      ));
+      await tester.pumpWidget(
+        createTestWidget(item: item, onTap: () => tapped = true),
+      );
 
       await tester.tap(find.byType(ListTile));
       expect(tapped, isTrue);
@@ -181,9 +165,7 @@ void main() {
     testWidgets('displays percentage text', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AggregateCompletionIndicator(percentage: 75.5),
-          ),
+          home: Scaffold(body: AggregateCompletionIndicator(percentage: 75.5)),
         ),
       );
 
@@ -194,48 +176,45 @@ void main() {
     testWidgets('shows progress bar', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AggregateCompletionIndicator(percentage: 50),
-          ),
+          home: Scaffold(body: AggregateCompletionIndicator(percentage: 50)),
         ),
       );
 
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
-      final progressBar =
-          tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
+      final progressBar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
       expect(progressBar.value, 0.5); // 50% = 0.5
     });
 
     testWidgets('handles 0% completion', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AggregateCompletionIndicator(percentage: 0),
-          ),
+          home: Scaffold(body: AggregateCompletionIndicator(percentage: 0)),
         ),
       );
 
       expect(find.text('0%'), findsOneWidget);
 
-      final progressBar =
-          tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
+      final progressBar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
       expect(progressBar.value, 0.0);
     });
 
     testWidgets('handles 100% completion', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AggregateCompletionIndicator(percentage: 100),
-          ),
+          home: Scaffold(body: AggregateCompletionIndicator(percentage: 100)),
         ),
       );
 
       expect(find.text('100%'), findsOneWidget);
 
-      final progressBar =
-          tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
+      final progressBar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
       expect(progressBar.value, 1.0);
     });
   });

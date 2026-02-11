@@ -14,9 +14,7 @@ void main() {
   Widget createTestWidget({required ContentRepository repository}) {
     return ProviderScope(
       overrides: [contentRepositoryProvider.overrideWithValue(repository)],
-      child: const MaterialApp(
-        home: CurriculumListScreen(),
-      ),
+      child: const MaterialApp(home: CurriculumListScreen()),
     );
   }
 
@@ -26,8 +24,9 @@ void main() {
 
       // Mock all 5 curricula returning empty lists (just need the calls to succeed)
       for (final curriculum in CurriculumId.values) {
-        when(() => mockRepo.getContentForCurriculum(curriculum))
-            .thenAnswer((_) async => []);
+        when(
+          () => mockRepo.getContentForCurriculum(curriculum),
+        ).thenAnswer((_) async => []);
       }
 
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
@@ -45,25 +44,29 @@ void main() {
       final mockRepo = MockContentRepository();
 
       // Mock Mishnayos with 10 leaf items
-      when(() => mockRepo.getContentForCurriculum(CurriculumId.mishnayos))
-          .thenAnswer((_) async => List.generate(
-                10,
-                (i) => ContentItem(
-                  curriculumId: 'mishnayos',
-                  level1: 'Level $i',
-                  displayNameHe: 'Hebrew $i',
-                  displayNameEn: 'English $i',
-                  sefariaRef: 'Ref $i',
-                  sortOrder: i,
-                  isLeaf: true,
-                ),
-              ));
+      when(
+        () => mockRepo.getContentForCurriculum(CurriculumId.mishnayos),
+      ).thenAnswer(
+        (_) async => List.generate(
+          10,
+          (i) => ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Level $i',
+            displayNameHe: 'Hebrew $i',
+            displayNameEn: 'English $i',
+            sefariaRef: 'Ref $i',
+            sortOrder: i,
+            isLeaf: true,
+          ),
+        ),
+      );
 
       // Mock others with empty lists
       for (final curriculum in CurriculumId.values) {
         if (curriculum != CurriculumId.mishnayos) {
-          when(() => mockRepo.getContentForCurriculum(curriculum))
-              .thenAnswer((_) async => []);
+          when(
+            () => mockRepo.getContentForCurriculum(curriculum),
+          ).thenAnswer((_) async => []);
         }
       }
 
@@ -80,8 +83,9 @@ void main() {
       final mockRepo = MockContentRepository();
 
       for (final curriculum in CurriculumId.values) {
-        when(() => mockRepo.getContentForCurriculum(curriculum))
-            .thenAnswer((_) async => []);
+        when(
+          () => mockRepo.getContentForCurriculum(curriculum),
+        ).thenAnswer((_) async => []);
       }
 
       await tester.pumpWidget(createTestWidget(repository: mockRepo));

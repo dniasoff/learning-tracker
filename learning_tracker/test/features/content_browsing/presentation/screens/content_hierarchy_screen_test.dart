@@ -22,9 +22,7 @@ void main() {
     return ProviderScope(
       overrides: [contentRepositoryProvider.overrideWithValue(mockRepo)],
       child: MaterialApp(
-        home: ContentHierarchyScreen(
-          curriculumId: curriculumId ?? 'mishnayos',
-        ),
+        home: ContentHierarchyScreen(curriculumId: curriculumId ?? 'mishnayos'),
       ),
     );
   }
@@ -54,16 +52,19 @@ void main() {
         ),
       ];
 
-      when(() => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: null,
-            level2: null,
-            level3: null,
-            level4: null,
-          )).thenAnswer((_) async => testItems);
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: null,
+          level2: null,
+          level3: null,
+          level4: null,
+        ),
+      ).thenAnswer((_) async => testItems);
 
-      when(() => mockRepo.getHierarchyConfig(CurriculumId.mishnayos))
-          .thenAnswer(
+      when(
+        () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+      ).thenAnswer(
         (_) async => const CurriculumHierarchyConfig(
           curriculumId: 'mishnayos',
           levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
@@ -97,16 +98,19 @@ void main() {
         ),
       ];
 
-      when(() => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: 'Seder Zeraim',
-            level2: null,
-            level3: null,
-            level4: null,
-          )).thenAnswer((_) async => testItems);
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: 'Seder Zeraim',
+          level2: null,
+          level3: null,
+          level4: null,
+        ),
+      ).thenAnswer((_) async => testItems);
 
-      when(() => mockRepo.getHierarchyConfig(CurriculumId.mishnayos))
-          .thenAnswer(
+      when(
+        () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+      ).thenAnswer(
         (_) async => const CurriculumHierarchyConfig(
           curriculumId: 'mishnayos',
           levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
@@ -143,16 +147,19 @@ void main() {
         ),
       ];
 
-      when(() => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: 'Seder Zeraim',
-            level2: 'Berachos',
-            level3: 'Perek 1',
-            level4: null,
-          )).thenAnswer((_) async => testItems);
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: 'Seder Zeraim',
+          level2: 'Berachos',
+          level3: 'Perek 1',
+          level4: null,
+        ),
+      ).thenAnswer((_) async => testItems);
 
-      when(() => mockRepo.getHierarchyConfig(CurriculumId.mishnayos))
-          .thenAnswer(
+      when(
+        () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+      ).thenAnswer(
         (_) async => const CurriculumHierarchyConfig(
           curriculumId: 'mishnayos',
           levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],

@@ -22,19 +22,20 @@ void main() {
 
   group('BreadcrumbNavigation', () {
     testWidgets('shows curriculum name as root level', (tester) async {
-      await tester.pumpWidget(createTestWidget(
-        navigationStack: [],
-        onBreadcrumbTap: (_) {},
-      ));
+      await tester.pumpWidget(
+        createTestWidget(navigationStack: [], onBreadcrumbTap: (_) {}),
+      );
 
       expect(find.text('Mishnayos'), findsOneWidget);
     });
 
     testWidgets('displays navigation stack with separators', (tester) async {
-      await tester.pumpWidget(createTestWidget(
-        navigationStack: ['Seder Zeraim', 'Berachos'],
-        onBreadcrumbTap: (_) {},
-      ));
+      await tester.pumpWidget(
+        createTestWidget(
+          navigationStack: ['Seder Zeraim', 'Berachos'],
+          onBreadcrumbTap: (_) {},
+        ),
+      );
 
       expect(find.text('Mishnayos'), findsOneWidget);
       expect(find.text('Seder Zeraim'), findsOneWidget);
@@ -47,10 +48,12 @@ void main() {
     testWidgets('makes previous levels clickable', (tester) async {
       var tappedLevel = -1;
 
-      await tester.pumpWidget(createTestWidget(
-        navigationStack: ['Seder Zeraim', 'Berachos', 'Perek 1'],
-        onBreadcrumbTap: (level) => tappedLevel = level,
-      ));
+      await tester.pumpWidget(
+        createTestWidget(
+          navigationStack: ['Seder Zeraim', 'Berachos', 'Perek 1'],
+          onBreadcrumbTap: (level) => tappedLevel = level,
+        ),
+      );
 
       // Tap on first level (Seder Zeraim)
       await tester.tap(find.text('Seder Zeraim'));
@@ -64,10 +67,12 @@ void main() {
     testWidgets('makes current level non-clickable with different style', (
       tester,
     ) async {
-      await tester.pumpWidget(createTestWidget(
-        navigationStack: ['Seder Zeraim', 'Berachos'],
-        onBreadcrumbTap: (_) {},
-      ));
+      await tester.pumpWidget(
+        createTestWidget(
+          navigationStack: ['Seder Zeraim', 'Berachos'],
+          onBreadcrumbTap: (_) {},
+        ),
+      );
 
       // Find the current level text widget
       final currentLevelFinder = find.text('Berachos');
@@ -79,10 +84,9 @@ void main() {
     });
 
     testWidgets('handles empty navigation stack', (tester) async {
-      await tester.pumpWidget(createTestWidget(
-        navigationStack: [],
-        onBreadcrumbTap: (_) {},
-      ));
+      await tester.pumpWidget(
+        createTestWidget(navigationStack: [], onBreadcrumbTap: (_) {}),
+      );
 
       // Should only show curriculum name
       expect(find.text('Mishnayos'), findsOneWidget);
@@ -90,15 +94,12 @@ void main() {
     });
 
     testWidgets('handles maximum depth (4 levels)', (tester) async {
-      await tester.pumpWidget(createTestWidget(
-        navigationStack: [
-          'Seder Zeraim',
-          'Berachos',
-          'Perek 1',
-          'Mishna 1',
-        ],
-        onBreadcrumbTap: (_) {},
-      ));
+      await tester.pumpWidget(
+        createTestWidget(
+          navigationStack: ['Seder Zeraim', 'Berachos', 'Perek 1', 'Mishna 1'],
+          onBreadcrumbTap: (_) {},
+        ),
+      );
 
       // Should show all 4 levels plus curriculum
       expect(find.text('Mishnayos'), findsOneWidget);
@@ -112,14 +113,16 @@ void main() {
     });
 
     testWidgets('scrolls horizontally for long breadcrumbs', (tester) async {
-      await tester.pumpWidget(createTestWidget(
-        navigationStack: [
-          'Very Long Seder Name That Might Overflow',
-          'Very Long Masechta Name',
-          'Perek With Long Name',
-        ],
-        onBreadcrumbTap: (_) {},
-      ));
+      await tester.pumpWidget(
+        createTestWidget(
+          navigationStack: [
+            'Very Long Seder Name That Might Overflow',
+            'Very Long Masechta Name',
+            'Perek With Long Name',
+          ],
+          onBreadcrumbTap: (_) {},
+        ),
+      );
 
       // Should have a horizontal scroll view
       expect(find.byType(SingleChildScrollView), findsOneWidget);

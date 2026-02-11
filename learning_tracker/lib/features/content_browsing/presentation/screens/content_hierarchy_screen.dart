@@ -65,14 +65,18 @@ class _ContentHierarchyScreenState
 
   @override
   Widget build(BuildContext context) {
-    final configAsync = ref.watch(curriculumHierarchyConfigProvider(_curriculum));
-    final itemsAsync = ref.watch(filteredContentProvider(
-      curriculumId: _curriculum,
-      level1: _currentLevel1,
-      level2: _currentLevel2,
-      level3: _currentLevel3,
-      level4: _currentLevel4,
-    ));
+    final configAsync = ref.watch(
+      curriculumHierarchyConfigProvider(_curriculum),
+    );
+    final itemsAsync = ref.watch(
+      filteredContentProvider(
+        curriculumId: _curriculum,
+        level1: _currentLevel1,
+        level2: _currentLevel2,
+        level3: _currentLevel3,
+        level4: _currentLevel4,
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -104,9 +108,7 @@ class _ContentHierarchyScreenState
             child: itemsAsync.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return const Center(
-                    child: Text('No content available'),
-                  );
+                  return const Center(child: Text('No content available'));
                 }
 
                 // Group items by the next level in hierarchy
@@ -124,9 +126,7 @@ class _ContentHierarchyScreenState
                   },
                 );
               },
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -205,7 +205,10 @@ class _ContentHierarchyScreenState
   void _navigateUp() {
     if (_navigationStack.isNotEmpty) {
       setState(() {
-        _navigationStack = _navigationStack.sublist(0, _navigationStack.length - 1);
+        _navigationStack = _navigationStack.sublist(
+          0,
+          _navigationStack.length - 1,
+        );
       });
     }
   }
