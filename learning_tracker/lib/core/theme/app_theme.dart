@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 
 /// AppTheme provides Material Design 3 theme for the Torah learning app.
 ///
@@ -48,6 +49,23 @@ class AppTheme {
         return curriculumChumash;
       default:
         return _primaryColor;
+    }
+  }
+
+  /// Track colors - distinct colors for the 3 track types
+  static const Color trackPersonal = Color(0xFF4A90E2); // Blue
+  static const Color trackSchool = Color(0xFF2ECC71); // Green
+  static const Color trackTutor = Color(0xFFE67E22); // Orange
+
+  /// Get track color by TrackType
+  static Color getTrackColor(TrackType trackType) {
+    switch (trackType) {
+      case TrackType.personal:
+        return trackPersonal;
+      case TrackType.school:
+        return trackSchool;
+      case TrackType.tutor:
+        return trackTutor;
     }
   }
 
