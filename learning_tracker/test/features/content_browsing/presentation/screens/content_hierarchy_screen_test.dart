@@ -180,11 +180,13 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(createTestWidget(
-        level1: 'Seder Zeraim',
-        level2: 'Berachos',
-        level3: 'Perek 1',
-      ));
+      await tester.pumpWidget(
+        createTestWidget(
+          level1: 'Seder Zeraim',
+          level2: 'Berachos',
+          level3: 'Perek 1',
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Leaf items should be visible
