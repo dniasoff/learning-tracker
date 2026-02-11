@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
@@ -140,18 +141,22 @@ void main() {
       final router = _createAuthenticatedRouter();
 
       await tester.pumpWidget(
-        MaterialApp.router(
-          routerConfig: router.config(
-            deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+        ProviderScope(
+          child: MaterialApp.router(
+            routerConfig: router.config(
+              deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Settings'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Settings Screen'), findsOneWidget);
+      // SettingsScreen should be displayed with its distinctive content
+      expect(find.text('Active Curricula'), findsOneWidget);
     });
   });
 

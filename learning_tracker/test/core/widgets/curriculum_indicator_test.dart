@@ -5,12 +5,12 @@ import 'package:learning_tracker/core/widgets/curriculum_indicator.dart';
 
 void main() {
   group('CurriculumIndicator', () {
-    testWidgets('displays indicator for mishna curriculum', (
+    testWidgets('displays indicator for mishnayos curriculum', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishnayos')),
         ),
       );
 
@@ -88,7 +88,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'mishna', label: label),
+            body: CurriculumIndicator(curriculumId: 'mishnayos', label: label),
           ),
         ),
       );
@@ -102,7 +102,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishnayos')),
         ),
       );
 
@@ -115,7 +115,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishnayos')),
         ),
       );
 
@@ -132,7 +132,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: CurriculumIndicator(
-              curriculumId: 'mishna',
+              curriculumId: 'mishnayos',
               shape: CurriculumIndicatorShape.square,
             ),
           ),
@@ -155,7 +155,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: CurriculumIndicator(
-              curriculumId: 'mishna',
+              curriculumId: 'mishnayos',
               size: customSize,
               shape: CurriculumIndicatorShape.bar,
             ),
@@ -175,7 +175,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: CurriculumIndicator(curriculumId: 'mishna', size: customSize),
+            body: CurriculumIndicator(curriculumId: 'mishnayos', size: customSize),
           ),
         ),
       );
@@ -191,7 +191,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishna')),
+          home: Scaffold(body: CurriculumIndicator(curriculumId: 'mishnayos')),
         ),
       );
 
