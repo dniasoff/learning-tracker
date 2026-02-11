@@ -42,7 +42,10 @@ class TextCacheRepository {
     // Not cached - fetch from API
     try {
       final hebrewText = await contentFetcher.fetchText(sefariaRef, lang: 'he');
-      final englishText = await contentFetcher.fetchText(sefariaRef, lang: 'en');
+      final englishText = await contentFetcher.fetchText(
+        sefariaRef,
+        lang: 'en',
+      );
 
       // Store in cache
       await textCacheDao.storeText(

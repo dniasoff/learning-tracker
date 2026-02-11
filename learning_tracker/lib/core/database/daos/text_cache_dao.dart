@@ -11,9 +11,9 @@ class TextCacheDao extends DatabaseAccessor<AppDatabase>
 
   /// Retrieves cached text for a given Sefaria reference.
   /// Returns null if not cached.
-  Future<TextCacheData?> getText(String sefariaRef) =>
-      (select(textCache)..where((t) => t.sefariaRef.equals(sefariaRef)))
-          .getSingleOrNull();
+  Future<TextCacheData?> getText(String sefariaRef) => (select(
+    textCache,
+  )..where((t) => t.sefariaRef.equals(sefariaRef))).getSingleOrNull();
 
   /// Stores text in cache. Replaces existing entry if present.
   Future<void> storeText({

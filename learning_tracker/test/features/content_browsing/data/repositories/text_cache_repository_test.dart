@@ -34,8 +34,9 @@ void main() {
 
     test('returns null for uncached ref when offline', () async {
       // Arrange - Mock API failure
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'he'))
-          .thenThrow(const SefariaApiException('Network error'));
+      when(
+        () => mockFetcher.fetchText(sefariaRef, lang: 'he'),
+      ).thenThrow(const SefariaApiException('Network error'));
 
       // Act
       final result = await repository.getText(sefariaRef);
@@ -68,10 +69,12 @@ void main() {
 
     test('fetches from API and caches when not cached', () async {
       // Arrange - Mock successful API calls
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'he'))
-          .thenAnswer((_) async => hebrewText);
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'en'))
-          .thenAnswer((_) async => englishText);
+      when(
+        () => mockFetcher.fetchText(sefariaRef, lang: 'he'),
+      ).thenAnswer((_) async => hebrewText);
+      when(
+        () => mockFetcher.fetchText(sefariaRef, lang: 'en'),
+      ).thenAnswer((_) async => englishText);
 
       // Act
       final result = await repository.getText(sefariaRef);
@@ -95,10 +98,12 @@ void main() {
 
     test('subsequent calls use cache after first fetch', () async {
       // Arrange - Mock API for first call
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'he'))
-          .thenAnswer((_) async => hebrewText);
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'en'))
-          .thenAnswer((_) async => englishText);
+      when(
+        () => mockFetcher.fetchText(sefariaRef, lang: 'he'),
+      ).thenAnswer((_) async => hebrewText);
+      when(
+        () => mockFetcher.fetchText(sefariaRef, lang: 'en'),
+      ).thenAnswer((_) async => englishText);
 
       // Act - First call
       final result1 = await repository.getText(sefariaRef);
@@ -119,8 +124,9 @@ void main() {
 
     test('handles API exception gracefully', () async {
       // Arrange - Mock API failure
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'he'))
-          .thenThrow(const SefariaApiException('API error', statusCode: 404));
+      when(
+        () => mockFetcher.fetchText(sefariaRef, lang: 'he'),
+      ).thenThrow(const SefariaApiException('API error', statusCode: 404));
 
       // Act
       final result = await repository.getText(sefariaRef);
@@ -133,23 +139,28 @@ void main() {
       expect(cached, isNull);
     });
 
-    test('handles partial API failure (Hebrew succeeds, English fails)', () async {
-      // Arrange - Hebrew succeeds, English fails
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'he'))
-          .thenAnswer((_) async => hebrewText);
-      when(() => mockFetcher.fetchText(sefariaRef, lang: 'en'))
-          .thenThrow(const SefariaApiException('English text unavailable'));
+    test(
+      'handles partial API failure (Hebrew succeeds, English fails)',
+      () async {
+        // Arrange - Hebrew succeeds, English fails
+        when(
+          () => mockFetcher.fetchText(sefariaRef, lang: 'he'),
+        ).thenAnswer((_) async => hebrewText);
+        when(
+          () => mockFetcher.fetchText(sefariaRef, lang: 'en'),
+        ).thenThrow(const SefariaApiException('English text unavailable'));
 
-      // Act
-      final result = await repository.getText(sefariaRef);
+        // Act
+        final result = await repository.getText(sefariaRef);
 
-      // Assert - Returns null on any fetch failure
-      expect(result, isNull);
+        // Assert - Returns null on any fetch failure
+        expect(result, isNull);
 
-      // Verify nothing was cached
-      final cached = await database.textCacheDao.getText(sefariaRef);
-      expect(cached, isNull);
-    });
+        // Verify nothing was cached
+        final cached = await database.textCacheDao.getText(sefariaRef);
+        expect(cached, isNull);
+      },
+    );
   });
 
   group('TextCacheRepository.clearCache', () {

@@ -23,19 +23,14 @@ class TextDisplayScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(sefariaRef),
-        actions: [
-          _FontSizeSelector(currentSize: fontSize),
-        ],
+        actions: [_FontSizeSelector(currentSize: fontSize)],
       ),
       body: textAsync.when(
         data: (textContent) {
           if (textContent == null) {
             return const _OfflineMessage();
           }
-          return _TextContentView(
-            textContent: textContent,
-            fontSize: fontSize,
-          );
+          return _TextContentView(textContent: textContent, fontSize: fontSize);
         },
         loading: () => const _LoadingView(),
         error: (error, stack) => _ErrorView(error: error),
@@ -155,10 +150,7 @@ class _FontSizeSelector extends ConsumerWidget {
 
 /// Main text content view with Hebrew and English text.
 class _TextContentView extends StatelessWidget {
-  const _TextContentView({
-    required this.textContent,
-    required this.fontSize,
-  });
+  const _TextContentView({required this.textContent, required this.fontSize});
 
   final TextContent textContent;
   final FontSize fontSize;
@@ -273,9 +265,7 @@ class _SefariaAttribution extends StatelessWidget {
           Expanded(
             child: Text(
               'Content from Sefaria',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: Colors.grey[700],
-              ),
+              style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[700]),
             ),
           ),
         ],

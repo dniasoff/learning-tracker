@@ -20,10 +20,7 @@ TextCacheRepository textCacheRepository(Ref ref) {
 
 /// Provider for fetching text by Sefaria reference.
 @riverpod
-Future<TextContent?> textContent(
-  Ref ref,
-  String sefariaRef,
-) async {
+Future<TextContent?> textContent(Ref ref, String sefariaRef) async {
   final repository = ref.watch(textCacheRepositoryProvider);
   return repository.getText(sefariaRef);
 }

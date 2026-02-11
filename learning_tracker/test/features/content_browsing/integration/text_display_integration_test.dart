@@ -33,13 +33,16 @@ void main() {
       () async {
         const sefariaRef = 'Mishnah Berakhot 1.1';
         const hebrewText = 'מֵאֵימָתַי קוֹרִין אֶת שְׁמַע בָּעֲרָבִית';
-        const englishText = 'From when may one recite the Shema in the evening?';
+        const englishText =
+            'From when may one recite the Shema in the evening?';
 
         // Arrange - Mock API to return text on first call
-        when(() => mockFetcher.fetchText(sefariaRef, lang: 'he'))
-            .thenAnswer((_) async => hebrewText);
-        when(() => mockFetcher.fetchText(sefariaRef, lang: 'en'))
-            .thenAnswer((_) async => englishText);
+        when(
+          () => mockFetcher.fetchText(sefariaRef, lang: 'he'),
+        ).thenAnswer((_) async => hebrewText);
+        when(
+          () => mockFetcher.fetchText(sefariaRef, lang: 'en'),
+        ).thenAnswer((_) async => englishText);
 
         // Act - First call: fetch from API
         final firstResult = await repository.getText(sefariaRef);
@@ -83,8 +86,9 @@ void main() {
         );
 
         // Simulate offline: API throws exception
-        when(() => mockFetcher.fetchText(any(), lang: any(named: 'lang')))
-            .thenThrow(const SefariaApiException('Network error'));
+        when(
+          () => mockFetcher.fetchText(any(), lang: any(named: 'lang')),
+        ).thenThrow(const SefariaApiException('Network error'));
 
         // Act - Try to get cached text (should succeed)
         final cachedResult = await repository.getText(cachedRef);
@@ -118,10 +122,12 @@ void main() {
         const englishText = 'english text';
 
         // Arrange - Mock API for initial fetch
-        when(() => mockFetcher.fetchText(sefariaRef, lang: 'he'))
-            .thenAnswer((_) async => hebrewText);
-        when(() => mockFetcher.fetchText(sefariaRef, lang: 'en'))
-            .thenAnswer((_) async => englishText);
+        when(
+          () => mockFetcher.fetchText(sefariaRef, lang: 'he'),
+        ).thenAnswer((_) async => hebrewText);
+        when(
+          () => mockFetcher.fetchText(sefariaRef, lang: 'en'),
+        ).thenAnswer((_) async => englishText);
 
         // Act - Initial view: fetch and cache
         await repository.getText(sefariaRef);

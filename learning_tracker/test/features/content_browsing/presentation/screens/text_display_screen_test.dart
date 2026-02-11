@@ -17,9 +17,7 @@ void main() {
 
   Widget createTestWidget({required TextCacheRepository repository}) {
     return ProviderScope(
-      overrides: [
-        textCacheRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [textCacheRepositoryProvider.overrideWithValue(repository)],
       child: const MaterialApp(
         home: TextDisplayScreen(sefariaRef: 'Mishnah Berakhot 1.1'),
       ),
@@ -28,29 +26,25 @@ void main() {
 
   group('TextDisplayScreen', () {
     // Skip loading test - timing is difficult to test reliably with fake_async
-    testWidgets(
-      'shows loading state while fetching text',
-      (tester) async {
-        final mockRepo = MockTextCacheRepository();
-        when(() => mockRepo.getText(any())).thenAnswer(
-          (_) => Future<TextContent>.delayed(
-            const Duration(seconds: 10),
-            () => TextContent(
-              sefariaRef: 'Mishnah Berakhot 1.1',
-              hebrewText: 'hebrew',
-              englishText: 'english',
-            ),
+    testWidgets('shows loading state while fetching text', (tester) async {
+      final mockRepo = MockTextCacheRepository();
+      when(() => mockRepo.getText(any())).thenAnswer(
+        (_) => Future<TextContent>.delayed(
+          const Duration(seconds: 10),
+          () => TextContent(
+            sefariaRef: 'Mishnah Berakhot 1.1',
+            hebrewText: 'hebrew',
+            englishText: 'english',
           ),
-        );
+        ),
+      );
 
-        await tester.pumpWidget(createTestWidget(repository: mockRepo));
-        await tester.pump();
+      await tester.pumpWidget(createTestWidget(repository: mockRepo));
+      await tester.pump();
 
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
-        expect(find.text('Loading text...'), findsOneWidget);
-      },
-      skip: true,
-    );
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Loading text...'), findsOneWidget);
+    }, skip: true);
 
     testWidgets('displays Hebrew text with RTL directionality', (tester) async {
       const hebrewText = 'מֵאֵימָתַי קוֹרִין אֶת שְׁמַע';
@@ -99,7 +93,9 @@ void main() {
       expect(hebrewPos.dy, lessThan(englishPos.dy));
     });
 
-    testWidgets('shows offline message when text is not cached', (tester) async {
+    testWidgets('shows offline message when text is not cached', (
+      tester,
+    ) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async => null);
 
@@ -141,7 +137,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Scroll to bottom to ensure buttons are visible
-      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -500));
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -500),
+      );
       await tester.pumpAndSettle();
 
       // Verify button texts are present
