@@ -1,0 +1,47 @@
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-all ci analyze format
+
+help:
+	@echo "Learning Tracker - Make Commands"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test-unit          - Run unit tests"
+	@echo "  make test-widget        - Run widget tests"
+	@echo "  make test-integration   - Run integration tests"
+	@echo "  make test-story-4.3     - Run Story 4.3 acceptance tests"
+	@echo "  make test-all           - Run all tests"
+	@echo ""
+	@echo "Quality:"
+	@echo "  make analyze            - Run dart analyze"
+	@echo "  make format             - Run dart format"
+	@echo "  make ci                 - Run full CI check (analyze + format + all tests)"
+
+test-unit:
+	@echo "Running unit tests..."
+	@cd learning_tracker && flutter test test/features/*/data/repositories/*_test.dart test/core/database/*_test.dart
+
+test-widget:
+	@echo "Running widget tests..."
+	@cd learning_tracker && flutter test test/core/widgets/*_test.dart test/features/*/presentation/*_test.dart
+
+test-integration:
+	@echo "Running integration tests..."
+	@cd learning_tracker && flutter test integration_test/
+
+test-story-4.3:
+	@echo "Running Story 4.3 acceptance tests..."
+	@cd learning_tracker && flutter test test/story_acceptance/epic_04_multi_track_test.dart --reporter=expanded
+
+test-all:
+	@echo "Running all tests..."
+	@cd learning_tracker && flutter test
+
+analyze:
+	@echo "Running dart analyze..."
+	@cd learning_tracker && dart analyze
+
+format:
+	@echo "Checking dart format..."
+	@cd learning_tracker && dart format --set-exit-if-changed .
+
+ci: analyze format test-all
+	@echo "✓ CI checks passed"

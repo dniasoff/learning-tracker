@@ -56,4 +56,40 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
             .get();
     return result.isNotEmpty;
   }
+
+  /// Get completion count breakdown by track type for a curriculum.
+  ///
+  /// Returns a map of track type keys to completion counts.
+  /// Includes counts from deactivated tracks (historical data preserved).
+  Future<Map<String, int>> getTrackBreakdown(String curriculumId) async {
+    final query = selectOnly(completions)
+      ..addColumns([completions.trackType, completions.id.count()])
+      ..where(completions.curriculumId.equals(curriculumId))
+      ..groupBy([completions.trackType]);
+
+    final results = await query.get();
+
+    final breakdown = <String, int>{};
+    for (final row in results) {
+      final trackType = row.read(completions.trackType);
+      final count = row.read(completions.id.count());
+      if (trackType != null && count != null) {
+        breakdown[trackType] = count;
+      }
+    }
+
+    return breakdown;
+  }
+
+  /// Get total completion count for a curriculum across all tracks.
+  ///
+  /// Returns the sum of all completions regardless of track type.
+  Future<int> getAggregateCount(String curriculumId) async {
+    final query = selectOnly(completions)
+      ..addColumns([completions.id.count()])
+      ..where(completions.curriculumId.equals(curriculumId));
+
+    final result = await query.getSingle();
+    return result.read(completions.id.count()) ?? 0;
+  }
 }
