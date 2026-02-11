@@ -5,7 +5,8 @@ import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/screens/content_browsing_screen.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
@@ -59,10 +60,15 @@ class AppRouter extends RootStackRouter {
       ],
     ),
 
-    // Curriculum-scoped routes
+    // Content browsing routes
+    AutoRoute(
+      path: '/browse',
+      page: CurriculumListRoute.page,
+      guards: [authGuard],
+    ),
     AutoRoute(
       path: '/curriculum/:curriculumId/browse',
-      page: ContentBrowsingRoute.page,
+      page: ContentHierarchyRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(
