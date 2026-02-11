@@ -52,10 +52,7 @@ class ContentItemTile extends StatelessWidget {
       );
     } else {
       // Container items show folder icon
-      return Icon(
-        Icons.folder,
-        color: theme.colorScheme.primary,
-      );
+      return Icon(Icons.folder, color: theme.colorScheme.primary);
     }
   }
 
@@ -78,10 +75,7 @@ class ContentItemTile extends StatelessWidget {
 ///
 /// Example: [✓ Learn] [○ Review] [○ Chazara]
 class StageCompletionIndicators extends StatelessWidget {
-  const StageCompletionIndicators({
-    super.key,
-    required this.stages,
-  });
+  const StageCompletionIndicators({super.key, required this.stages});
 
   /// Map of stage ID to completion status.
   final Map<int, bool> stages;
@@ -113,10 +107,7 @@ class StageCompletionIndicators extends StatelessWidget {
 ///
 /// Example: "30%" with progress indicator
 class AggregateCompletionIndicator extends StatelessWidget {
-  const AggregateCompletionIndicator({
-    super.key,
-    required this.percentage,
-  });
+  const AggregateCompletionIndicator({super.key, required this.percentage});
 
   final double percentage;
 

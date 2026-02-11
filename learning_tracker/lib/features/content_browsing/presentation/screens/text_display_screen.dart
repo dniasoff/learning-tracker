@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
+import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 
@@ -19,18 +20,30 @@ class TextDisplayScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final textAsync = ref.watch(textContentProvider(sefariaRef));
     final fontSize = ref.watch(fontSizeProvider);
+    final showNikud = ref.watch(showNikudProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(sefariaRef),
-        actions: [_FontSizeSelector(currentSize: fontSize)],
+        actions: [
+          IconButton(
+            icon: Icon(showNikud ? Icons.format_clear : Icons.text_fields),
+            tooltip: showNikud ? 'Hide Nikud' : 'Show Nikud',
+            onPressed: () => ref.read(showNikudProvider.notifier).toggle(),
+          ),
+          _FontSizeSelector(currentSize: fontSize),
+        ],
       ),
       body: textAsync.when(
         data: (textContent) {
           if (textContent == null) {
             return const _OfflineMessage();
           }
-          return _TextContentView(textContent: textContent, fontSize: fontSize);
+          return _TextContentView(
+            textContent: textContent,
+            fontSize: fontSize,
+            showNikud: showNikud,
+          );
         },
         loading: () => const _LoadingView(),
         error: (error, stack) => _ErrorView(error: error),
@@ -58,7 +71,7 @@ class _LoadingView extends StatelessWidget {
   }
 }
 
-/// Offline message view.
+/// Download required message view.
 class _OfflineMessage extends StatelessWidget {
   const _OfflineMessage();
 
@@ -68,16 +81,17 @@ class _OfflineMessage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.wifi_off, size: 64, color: Colors.grey[400]),
+          Icon(Icons.download, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'Text not available offline',
+            'Text content not yet downloaded',
             style: AppTextStyles.titleMedium.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
           Text(
-            'Connect to the internet to fetch this text',
+            'Download this curriculum\'s text from the settings to read offline.',
             style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[500]),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -150,13 +164,22 @@ class _FontSizeSelector extends ConsumerWidget {
 
 /// Main text content view with Hebrew and English text.
 class _TextContentView extends StatelessWidget {
-  const _TextContentView({required this.textContent, required this.fontSize});
+  const _TextContentView({
+    required this.textContent,
+    required this.fontSize,
+    required this.showNikud,
+  });
 
   final TextContent textContent;
   final FontSize fontSize;
+  final bool showNikud;
 
   @override
   Widget build(BuildContext context) {
+    final displayHebrew = showNikud
+        ? textContent.hebrewText
+        : HebrewUtils.stripNikud(textContent.hebrewText);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -172,7 +195,7 @@ class _TextContentView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              textContent.hebrewText,
+              displayHebrew,
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
               style: AppTextStyles.hebrewBodyLarge.copyWith(

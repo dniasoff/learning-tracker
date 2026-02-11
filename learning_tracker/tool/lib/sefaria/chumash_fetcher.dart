@@ -2,12 +2,13 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/network/sefaria/sefaria_fetcher_base.dart';
+
+import 'sefaria_fetcher_base.dart';
 
 /// Fetches Chumash (Five Books of Moses) content from Sefaria.
 ///
 /// Parses the Sefaria Tanakh shape API into a 4-level hierarchy:
-/// sefer → parsha → perek → pasuk (5,845 verses).
+/// sefer -> parsha -> perek -> pasuk (5,845 verses).
 ///
 /// Parsha boundaries are well-known fixed data and are defined inline.
 class ChumashFetcher extends SefariaFetcherBase {

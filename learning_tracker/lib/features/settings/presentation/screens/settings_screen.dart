@@ -2,6 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 
 @RoutePage()
@@ -87,6 +89,10 @@ class _CurriculumToggleTile extends ConsumerWidget {
           : (newValue) async {
               try {
                 await service.toggle(curriculum);
+                // Invalidate family providers for the toggled curriculum (P3)
+                ref.invalidate(isCurriculumActiveProvider(curriculum));
+                ref.invalidate(activeTracksProvider(curriculum));
+                ref.invalidate(curriculumContentProvider(curriculum));
               } on StateError catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

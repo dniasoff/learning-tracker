@@ -1,0 +1,109 @@
+# Tag registration for story acceptance tests.
+# Prevents "unknown tag" warnings when running flutter test --tags.
+
+tags:
+  # Epic tags (14)
+  epic_1:
+  epic_2:
+  epic_3:
+  epic_4:
+  epic_5:
+  epic_6:
+  epic_7:
+  epic_8:
+  epic_9:
+  epic_10:
+  epic_11:
+  epic_12:
+  epic_13:
+  epic_14:
+
+  # Story tags -- Epic 1 Foundation (12)
+  story_1_1:
+  story_1_2:
+  story_1_3:
+  story_1_4:
+  story_1_5:
+  story_1_6:
+  story_1_7:
+  story_1_8:
+  story_1_9:
+  story_1_10:
+  story_1_11:
+  story_1_12:
+
+  # Story tags -- Epic 2 Content (6)
+  story_2_1:
+  story_2_2:
+  story_2_3:
+  story_2_4:
+  story_2_5:
+  story_2_6:
+
+  # Story tags -- Epic 3 Learning Cycle (3)
+  story_3_1:
+  story_3_2:
+  story_3_3:
+
+  # Story tags -- Epic 4 Multi-Track (3)
+  story_4_1:
+  story_4_2:
+  story_4_3:
+
+  # Story tags -- Epic 5 Stages & Order (2)
+  story_5_1:
+  story_5_2:
+
+  # Story tags -- Epic 6 Scheduler (5)
+  story_6_1:
+  story_6_2:
+  story_6_3:
+  story_6_4:
+  story_6_5:
+
+  # Story tags -- Epic 7 Dashboard (3)
+  story_7_1:
+  story_7_2:
+  story_7_3:
+
+  # Story tags -- Epic 8 Gamification (3)
+  story_8_1:
+  story_8_2:
+  story_8_3:
+
+  # Story tags -- Epic 9 Onboarding (5)
+  story_9_1:
+  story_9_2:
+  story_9_3:
+  story_9_4:
+  story_9_5:
+
+  # Story tags -- Epic 10 Parent Mode (6)
+  story_10_1:
+  story_10_2:
+  story_10_3:
+  story_10_4:
+  story_10_5:
+  story_10_6:
+
+  # Story tags -- Epic 11 Tutor Mode (4)
+  story_11_1:
+  story_11_2:
+  story_11_3:
+  story_11_4:
+
+  # Story tags -- Epic 12 Notifications (3)
+  story_12_1:
+  story_12_2:
+  story_12_3:
+
+  # Story tags -- Epic 13 Cloud Sync (3)
+  story_13_1:
+  story_13_2:
+  story_13_3:
+
+  # Story tags -- Epic 14 Settings (4)
+  story_14_1:
+  story_14_2:
+  story_14_3:
+  story_14_4:

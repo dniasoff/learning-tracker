@@ -2,12 +2,13 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/network/sefaria/sefaria_fetcher_base.dart';
+
+import 'sefaria_fetcher_base.dart';
 
 /// Fetches Talmud Yerushalmi content from Sefaria.
 ///
 /// Parses the Sefaria Yerushalmi shape API into a 3-level hierarchy:
-/// masechta → daf → halacha.
+/// masechta -> daf -> halacha.
 ///
 /// On Sefaria, Yerushalmi references use chapter:halacha format
 /// (e.g., "Jerusalem Talmud Berakhot 1:1"). The "daf" level in this

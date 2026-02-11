@@ -41,6 +41,26 @@ class TextCacheDao extends DatabaseAccessor<AppDatabase>
     return results.map((row) => row.sefariaRef).toList();
   }
 
+  /// Stores multiple texts in a single transaction (batch insert).
+  Future<void> storeBatch(
+    List<({String sefariaRef, String hebrewText, String englishText})> items,
+  ) async {
+    await batch((b) {
+      for (final item in items) {
+        b.insert(
+          textCache,
+          TextCacheCompanion.insert(
+            sefariaRef: item.sefariaRef,
+            hebrewText: item.hebrewText,
+            englishText: item.englishText,
+            fetchedAt: DateTime.now(),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
+  }
+
   /// Clears all cached text.
   Future<int> clearCache() => delete(textCache).go();
 }

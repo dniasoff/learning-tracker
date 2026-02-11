@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/network/dio_client.dart';
 import 'package:talker/talker.dart';
+
+// ignore: avoid_relative_lib_imports
+import '../../../tool/lib/dio_client.dart';
 
 /// A custom [HttpClientAdapter] that returns pre-configured responses
 /// without making actual HTTP requests.

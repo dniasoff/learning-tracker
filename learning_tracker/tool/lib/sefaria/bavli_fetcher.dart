@@ -2,12 +2,13 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/network/sefaria/sefaria_fetcher_base.dart';
+
+import 'sefaria_fetcher_base.dart';
 
 /// Fetches Talmud Bavli content from Sefaria.
 ///
 /// Parses the Sefaria Bavli shape API into a 3-level hierarchy:
-/// masechta → daf → amud (~2,711 dapim / ~5,422 amudim).
+/// masechta -> daf -> amud (~2,711 dapim / ~5,422 amudim).
 ///
 /// Bavli daf numbering starts at 2a (there is no daf 1 in printed editions).
 /// Each daf has two amudim: a (recto) and b (verso).

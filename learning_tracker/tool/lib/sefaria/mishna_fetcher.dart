@@ -2,12 +2,13 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/network/sefaria/sefaria_fetcher_base.dart';
+
+import 'sefaria_fetcher_base.dart';
 
 /// Fetches Mishnah content from Sefaria.
 ///
 /// Parses the Sefaria Mishnah shape API into a 4-level hierarchy:
-/// seder → masechta → perek → mishna (4,192 leaf items).
+/// seder -> masechta -> perek -> mishna (4,192 leaf items).
 class MishnaFetcher extends SefariaFetcherBase {
   MishnaFetcher({required super.dio});
 

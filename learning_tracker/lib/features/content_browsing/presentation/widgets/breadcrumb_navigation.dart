@@ -27,10 +27,7 @@ class BreadcrumbNavigation extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant,
-            width: 1,
-          ),
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
         ),
       ),
       child: SingleChildScrollView(

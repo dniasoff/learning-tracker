@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,11 +8,13 @@ import 'package:learning_tracker/features/content_browsing/data/repositories/tex
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockTextCacheRepository extends Mock implements TextCacheRepository {}
 
 void main() {
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     // Reset preferences before each test
     TextDisplayPreferences.instance.reset();
   });
@@ -25,26 +29,27 @@ void main() {
   }
 
   group('TextDisplayScreen', () {
-    // Skip loading test - timing is difficult to test reliably with fake_async
     testWidgets('shows loading state while fetching text', (tester) async {
+      final completer = Completer<TextContent?>();
       final mockRepo = MockTextCacheRepository();
-      when(() => mockRepo.getText(any())).thenAnswer(
-        (_) => Future<TextContent>.delayed(
-          const Duration(seconds: 10),
-          () => TextContent(
-            sefariaRef: 'Mishnah Berakhot 1.1',
-            hebrewText: 'hebrew',
-            englishText: 'english',
-          ),
-        ),
-      );
+      when(() => mockRepo.getText(any())).thenAnswer((_) => completer.future);
 
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.text('Loading text...'), findsOneWidget);
-    }, skip: true);
+
+      // Complete the future to avoid pending timers
+      completer.complete(
+        TextContent(
+          sefariaRef: 'Mishnah Berakhot 1.1',
+          hebrewText: 'hebrew',
+          englishText: 'english',
+        ),
+      );
+      await tester.pumpAndSettle();
+    });
 
     testWidgets('displays Hebrew text with RTL directionality', (tester) async {
       const hebrewText = 'מֵאֵימָתַי קוֹרִין אֶת שְׁמַע';
@@ -102,8 +107,21 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Text not available offline'), findsOneWidget);
-      expect(find.byIcon(Icons.wifi_off), findsOneWidget);
+      expect(find.text('Text content not yet downloaded'), findsOneWidget);
+      expect(find.byIcon(Icons.download), findsOneWidget);
+    });
+
+    testWidgets('shows error view when provider throws', (tester) async {
+      final mockRepo = MockTextCacheRepository();
+      when(
+        () => mockRepo.getText(any()),
+      ).thenThrow(Exception('Database corrupted'));
+
+      await tester.pumpWidget(createTestWidget(repository: mockRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Failed to load text'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
     testWidgets('displays Sefaria attribution', (tester) async {
@@ -214,6 +232,59 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
+    });
+
+    testWidgets('shows nikud toggle button in app bar', (tester) async {
+      final mockRepo = MockTextCacheRepository();
+      when(() => mockRepo.getText(any())).thenAnswer((_) async {
+        return TextContent(
+          sefariaRef: 'Mishnah Berakhot 1.1',
+          hebrewText: 'hebrew',
+          englishText: 'english',
+        );
+      });
+
+      await tester.pumpWidget(createTestWidget(repository: mockRepo));
+      await tester.pumpAndSettle();
+
+      // Default is nikud ON, so toggle shows format_clear icon
+      expect(find.byIcon(Icons.format_clear), findsOneWidget);
+
+      // When nikud is ON (default), the font size button uses text_fields
+      // and the nikud toggle uses format_clear, so there's exactly one
+      // text_fields widget (the font size selector)
+      expect(find.byIcon(Icons.text_fields), findsOneWidget);
+    });
+
+    testWidgets('nikud toggle strips vowel marks from Hebrew text', (
+      tester,
+    ) async {
+      const hebrewWithNikud =
+          '\u05DE\u05B5\u05D0\u05B5\u05D9\u05DE\u05B8\u05EA\u05B7\u05D9';
+      const hebrewWithoutNikud = '\u05DE\u05D0\u05D9\u05DE\u05EA\u05D9';
+
+      final mockRepo = MockTextCacheRepository();
+      when(() => mockRepo.getText(any())).thenAnswer((_) async {
+        return TextContent(
+          sefariaRef: 'Mishnah Berakhot 1.1',
+          hebrewText: hebrewWithNikud,
+          englishText: 'From when',
+        );
+      });
+
+      await tester.pumpWidget(createTestWidget(repository: mockRepo));
+      await tester.pumpAndSettle();
+
+      // Default: nikud is ON, text shown with vowel marks
+      expect(find.text(hebrewWithNikud), findsOneWidget);
+
+      // Tap the nikud toggle (format_clear when nikud is ON)
+      await tester.tap(find.byIcon(Icons.format_clear));
+      await tester.pumpAndSettle();
+
+      // After toggle: nikud stripped, showing text without vowel marks
+      expect(find.text(hebrewWithoutNikud), findsOneWidget);
+      expect(find.text(hebrewWithNikud), findsNothing);
     });
   });
 }

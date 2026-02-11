@@ -167,16 +167,21 @@ void main() {
       final router = _createAuthenticatedRouter();
 
       await tester.pumpWidget(
-        MaterialApp.router(
-          routerConfig: router.config(
-            deepLinkBuilder: (_) =>
-                const DeepLink.path('/curriculum/test-curriculum/browse'),
+        ProviderScope(
+          child: MaterialApp.router(
+            routerConfig: router.config(
+              deepLinkBuilder: (_) =>
+                  const DeepLink.path('/curriculum/mishnayos/browse'),
+            ),
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
 
-      expect(find.text('Content Browsing: test-curriculum'), findsOneWidget);
+      // ContentBrowsingScreen is now a ConsumerStatefulWidget that
+      // renders the curriculum display name and a loading indicator
+      // while content loads from the (bundled JSON) asset provider.
+      expect(find.text('Mishnayos'), findsOneWidget);
     });
   });
 

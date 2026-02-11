@@ -12,9 +12,7 @@ class CurriculumListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Browse Content'),
-      ),
+      appBar: AppBar(title: const Text('Browse Content')),
       body: ListView.builder(
         itemCount: CurriculumId.values.length,
         itemBuilder: (context, index) {
@@ -47,10 +45,9 @@ class _CurriculumListTile extends ConsumerWidget {
           ),
           subtitle: Text(
             curriculum.displayNameHe,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(fontFamily: 'Noto Sans Hebrew'),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontFamily: 'Noto Sans Hebrew'),
             textDirection: TextDirection.rtl,
             textAlign: TextAlign.left,
           ),
@@ -78,7 +75,7 @@ class _CurriculumListTile extends ConsumerWidget {
       error: (error, stack) => ListTile(
         leading: Icon(_getIcon(curriculum), size: 40, color: Colors.red),
         title: Text(curriculum.displayNameEn),
-        subtitle: Text('Error: ${error.toString()}'),
+        subtitle: Text('Error: $error'),
       ),
     );
   }

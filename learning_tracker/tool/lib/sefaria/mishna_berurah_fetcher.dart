@@ -2,12 +2,13 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/network/sefaria/sefaria_fetcher_base.dart';
+
+import 'sefaria_fetcher_base.dart';
 
 /// Fetches Mishna Berurah content from Sefaria.
 ///
 /// Parses the Sefaria Mishna Berurah shape API into a 3-level hierarchy:
-/// siman → seif → seif katan (697 simanim).
+/// siman -> seif -> seif katan (697 simanim).
 ///
 /// The Mishna Berurah is a commentary on Shulchan Aruch Orach Chaim.
 /// On Sefaria, references use siman:seif_katan format
@@ -22,10 +23,10 @@ class MishnaBerurahFetcher extends SefariaFetcherBase {
 
   @override
   Future<FetchResult> fetchAllContent() async {
-    // Fetch Mishna Berurah shape (siman → seif katan counts).
+    // Fetch Mishna Berurah shape (siman -> seif katan counts).
     final mbShape = await fetchBookShape('Mishnah Berurah');
 
-    // Fetch Shulchan Aruch OC shape (siman → seif counts) for the
+    // Fetch Shulchan Aruch OC shape (siman -> seif counts) for the
     // middle "seif" hierarchy level.
     final saShape = await fetchBookShape('Shulchan Arukh, Orach Chayyim');
 

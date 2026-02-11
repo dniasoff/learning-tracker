@@ -1,5 +1,4 @@
 import 'package:learning_tracker/core/database/daos/text_cache_dao.dart';
-import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 
 /// Model for fetched text content.
 class TextContent {
@@ -14,22 +13,16 @@ class TextContent {
   final String englishText;
 }
 
-/// Repository for fetching and caching Sefaria text content.
-/// Implements cache-first strategy: check cache, then fetch from API if needed.
+/// Repository for cached Sefaria text content.
+/// Cache-only: returns null if text is not cached.
 class TextCacheRepository {
-  TextCacheRepository({
-    required this.textCacheDao,
-    required this.contentFetcher,
-  });
+  TextCacheRepository({required this.textCacheDao});
 
   final TextCacheDao textCacheDao;
-  final CurriculumContentFetcher contentFetcher;
 
   /// Retrieves text for a given Sefaria reference.
-  /// Cache-first: returns cached text if available, otherwise fetches from API.
-  /// Returns null if offline and text is not cached.
+  /// Returns cached text if available, otherwise returns null.
   Future<TextContent?> getText(String sefariaRef) async {
-    // Check cache first
     final cached = await textCacheDao.getText(sefariaRef);
     if (cached != null) {
       return TextContent(
@@ -38,31 +31,7 @@ class TextCacheRepository {
         englishText: cached.englishText,
       );
     }
-
-    // Not cached - fetch from API
-    try {
-      final hebrewText = await contentFetcher.fetchText(sefariaRef, lang: 'he');
-      final englishText = await contentFetcher.fetchText(
-        sefariaRef,
-        lang: 'en',
-      );
-
-      // Store in cache
-      await textCacheDao.storeText(
-        sefariaRef: sefariaRef,
-        hebrewText: hebrewText,
-        englishText: englishText,
-      );
-
-      return TextContent(
-        sefariaRef: sefariaRef,
-        hebrewText: hebrewText,
-        englishText: englishText,
-      );
-    } on SefariaApiException {
-      // Network error or API failure - return null
-      return null;
-    }
+    return null;
   }
 
   /// Clears all cached text.

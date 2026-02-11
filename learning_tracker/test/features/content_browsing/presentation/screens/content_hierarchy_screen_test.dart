@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -18,12 +19,22 @@ void main() {
     mockRepo = MockContentRepository();
   });
 
-  Widget createTestWidget({String? curriculumId}) {
+  Widget createTestWidget({
+    String? curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) {
     return ProviderScope(
       overrides: [contentRepositoryProvider.overrideWithValue(mockRepo)],
       child: MaterialApp(
         home: ContentHierarchyScreen(
           curriculumId: curriculumId ?? 'mishnayos',
+          level1: level1,
+          level2: level2,
+          level3: level3,
+          level4: level4,
         ),
       ),
     );
@@ -54,16 +65,19 @@ void main() {
         ),
       ];
 
-      when(() => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: null,
-            level2: null,
-            level3: null,
-            level4: null,
-          )).thenAnswer((_) async => testItems);
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: null,
+          level2: null,
+          level3: null,
+          level4: null,
+        ),
+      ).thenAnswer((_) async => testItems);
 
-      when(() => mockRepo.getHierarchyConfig(CurriculumId.mishnayos))
-          .thenAnswer(
+      when(
+        () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+      ).thenAnswer(
         (_) async => const CurriculumHierarchyConfig(
           curriculumId: 'mishnayos',
           levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
@@ -97,16 +111,19 @@ void main() {
         ),
       ];
 
-      when(() => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: 'Seder Zeraim',
-            level2: null,
-            level3: null,
-            level4: null,
-          )).thenAnswer((_) async => testItems);
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: 'Seder Zeraim',
+          level2: null,
+          level3: null,
+          level4: null,
+        ),
+      ).thenAnswer((_) async => testItems);
 
-      when(() => mockRepo.getHierarchyConfig(CurriculumId.mishnayos))
-          .thenAnswer(
+      when(
+        () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+      ).thenAnswer(
         (_) async => const CurriculumHierarchyConfig(
           curriculumId: 'mishnayos',
           levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
@@ -114,11 +131,11 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(createTestWidget());
+      await tester.pumpWidget(createTestWidget(level1: 'Seder Zeraim'));
       await tester.pumpAndSettle();
 
       // Should show breadcrumb (the exact widget will be tested separately)
-      expect(find.byType(Row), findsWidgets);
+      expect(find.byType(BreadcrumbNavigation), findsOneWidget);
     });
 
     testWidgets('navigates back to previous level on back button', (
@@ -143,16 +160,19 @@ void main() {
         ),
       ];
 
-      when(() => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: 'Seder Zeraim',
-            level2: 'Berachos',
-            level3: 'Perek 1',
-            level4: null,
-          )).thenAnswer((_) async => testItems);
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: 'Seder Zeraim',
+          level2: 'Berachos',
+          level3: 'Perek 1',
+          level4: null,
+        ),
+      ).thenAnswer((_) async => testItems);
 
-      when(() => mockRepo.getHierarchyConfig(CurriculumId.mishnayos))
-          .thenAnswer(
+      when(
+        () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+      ).thenAnswer(
         (_) async => const CurriculumHierarchyConfig(
           curriculumId: 'mishnayos',
           levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
@@ -160,7 +180,11 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(createTestWidget());
+      await tester.pumpWidget(createTestWidget(
+        level1: 'Seder Zeraim',
+        level2: 'Berachos',
+        level3: 'Perek 1',
+      ));
       await tester.pumpAndSettle();
 
       // Leaf items should be visible

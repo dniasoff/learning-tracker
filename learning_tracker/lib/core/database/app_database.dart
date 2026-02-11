@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_cache_dao.dart';
+import 'package:learning_tracker/core/database/daos/text_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
@@ -17,6 +18,7 @@ import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
+import 'package:learning_tracker/core/database/tables/text_download_status.dart';
 import 'package:learning_tracker/core/database/tables/user_profiles.dart';
 
 part 'app_database.g.dart';
@@ -33,6 +35,7 @@ part 'app_database.g.dart';
     Rewards,
     SyncQueue,
     TextCache,
+    TextDownloadStatuses,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -44,13 +47,14 @@ part 'app_database.g.dart';
     UserProfileDao,
     SyncQueueDao,
     TextCacheDao,
+    TextDownloadStatusDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -87,6 +91,10 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable($CompletionsTable(attachedDatabase));
           await m.createTable($BookmarksTable(attachedDatabase));
           await m.createTable($LearningOrderTable(attachedDatabase));
+        }
+        if (from < 4) {
+          // Migration from schema v3 to v4: Add text_download_statuses table
+          await m.createTable($TextDownloadStatusesTable(attachedDatabase));
         }
       },
     );

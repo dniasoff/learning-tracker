@@ -4,11 +4,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:learning_tracker/core/network/sefaria/bavli_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/chumash_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/mishna_berurah_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/mishna_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/yerushalmi_fetcher.dart';
+
+import 'lib/sefaria/bavli_fetcher.dart';
+import 'lib/sefaria/chumash_fetcher.dart';
+import 'lib/sefaria/mishna_berurah_fetcher.dart';
+import 'lib/sefaria/mishna_fetcher.dart';
+import 'lib/sefaria/yerushalmi_fetcher.dart';
 
 /// CLI script to fetch content from Sefaria API and generate bundled JSON files.
 ///

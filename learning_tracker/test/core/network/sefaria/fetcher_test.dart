@@ -4,13 +4,20 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/bavli_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/chumash_fetcher.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/mishna_berurah_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/mishna_fetcher.dart';
-import 'package:learning_tracker/core/network/sefaria/yerushalmi_fetcher.dart';
+
 import 'package:mocktail/mocktail.dart';
+
+// ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/bavli_fetcher.dart';
+// ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/chumash_fetcher.dart';
+// ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/mishna_berurah_fetcher.dart';
+// ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/mishna_fetcher.dart';
+// ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/yerushalmi_fetcher.dart';
 
 class MockDio extends Mock implements Dio {}
 
@@ -453,5 +460,207 @@ void main() {
         throwsA(isA<SefariaApiException>()),
       );
     });
+  });
+
+  group('SefariaFetcherBase - fetchText edge cases', () {
+    late MishnaFetcher fetcher;
+
+    setUp(() {
+      fetcher = MishnaFetcher(dio: mockDio);
+    });
+
+    test('fetchText strips HTML tags from text', () async {
+      mockTextResponse(
+        '/api/v3/texts/${Uri.encodeComponent('Mishnah Berakhot 1.1')}',
+        {
+          'versions': [
+            {
+              'text': '<b>Bold</b> and <i>italic</i> text',
+              'language': 'en',
+              'actualLanguage': 'en',
+            },
+            {
+              'text': '<span class="segment">מֵאֵימָתַי</span>',
+              'language': 'he',
+              'actualLanguage': 'he',
+            },
+          ],
+        },
+      );
+
+      final text = await fetcher.fetchText('Mishnah Berakhot 1.1');
+
+      expect(text, contains('Bold and italic text'));
+      expect(text, isNot(contains('<b>')));
+      expect(text, isNot(contains('<span')));
+      expect(text, contains('מֵאֵימָתַי'));
+    });
+
+    test('fetchText handles nested list text fields', () async {
+      mockTextResponse(
+        '/api/v3/texts/${Uri.encodeComponent('Mishnah Berakhot 1.1')}',
+        {
+          'versions': [
+            {
+              'text': ['First sentence.', 'Second sentence.'],
+              'language': 'en',
+              'actualLanguage': 'en',
+            },
+          ],
+        },
+      );
+
+      final text = await fetcher.fetchText('Mishnah Berakhot 1.1', lang: 'en');
+
+      expect(text, contains('First sentence.'));
+      expect(text, contains('Second sentence.'));
+    });
+
+    test('fetchText returns empty string when no versions present', () async {
+      mockTextResponse(
+        '/api/v3/texts/${Uri.encodeComponent('Mishnah Berakhot 1.1')}',
+        {'versions': <dynamic>[]},
+      );
+
+      final text = await fetcher.fetchText('Mishnah Berakhot 1.1');
+
+      expect(text, isEmpty);
+    });
+
+    test('fetchText with lang=en returns only English', () async {
+      final textData =
+          loadFixture('text_response.json') as Map<String, dynamic>;
+      mockTextResponse(
+        '/api/v3/texts/${Uri.encodeComponent('Mishnah Berakhot 1.1')}',
+        textData,
+      );
+
+      final text = await fetcher.fetchText('Mishnah Berakhot 1.1', lang: 'en');
+
+      expect(text, contains('From when may one recite'));
+      expect(text, isNot(contains('מֵאֵימָתַי')));
+    });
+
+    test('fetchText throws on null response data', () async {
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
+        (_) async => Response<Map<String, dynamic>>(
+          data: null,
+          statusCode: 200,
+          requestOptions: RequestOptions(path: '/api/v3/texts/test'),
+        ),
+      );
+
+      expect(
+        () => fetcher.fetchText('test'),
+        throwsA(isA<SefariaApiException>()),
+      );
+    });
+  });
+
+  group('SefariaFetcherBase - fetchBookShape', () {
+    late MishnaBerurahFetcher fetcher;
+
+    setUp(() {
+      fetcher = MishnaBerurahFetcher(dio: mockDio);
+    });
+
+    test('fetchBookShape extracts map from list wrapper', () async {
+      // Sefaria returns book shape as a list containing one map.
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mishnah Berurah')}',
+        [
+          {
+            'title': 'Mishnah Berurah',
+            'chapters': [5, 10],
+          },
+        ],
+      );
+
+      final shape = await fetcher.fetchBookShape('Mishnah Berurah');
+
+      expect(shape['title'], 'Mishnah Berurah');
+      expect(shape['chapters'], [5, 10]);
+    });
+
+    test('fetchBookShape handles direct map response', () async {
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mishnah Berurah')}',
+        {
+          'title': 'Mishnah Berurah',
+          'chapters': [5, 10],
+        },
+      );
+
+      final shape = await fetcher.fetchBookShape('Mishnah Berurah');
+
+      expect(shape['title'], 'Mishnah Berurah');
+    });
+
+    test('fetchBookShape throws on unexpected format', () async {
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mishnah Berurah')}',
+        'unexpected string',
+      );
+
+      expect(
+        () => fetcher.fetchBookShape('Mishnah Berurah'),
+        throwsA(isA<SefariaApiException>()),
+      );
+    });
+  });
+
+  group('All fetchers cover all 5 curricula', () {
+    test('each CurriculumId has a corresponding fetcher', () {
+      final fetchers = {
+        CurriculumId.mishnayos: MishnaFetcher(dio: mockDio),
+        CurriculumId.bavli: BavliFetcher(dio: mockDio),
+        CurriculumId.yerushalmi: YerushalmiFetcher(dio: mockDio),
+        CurriculumId.mishnaBerurah: MishnaBerurahFetcher(dio: mockDio),
+        CurriculumId.chumash: ChumashFetcher(dio: mockDio),
+      };
+
+      // All 5 curricula have fetchers.
+      expect(fetchers.length, CurriculumId.values.length);
+
+      // Each fetcher's curriculumId matches its CurriculumId.storageKey.
+      for (final entry in fetchers.entries) {
+        expect(
+          entry.value.curriculumId,
+          entry.key.storageKey,
+          reason: '${entry.key} fetcher should use ${entry.key.storageKey}',
+        );
+      }
+    });
+  });
+
+  group('Seed script JSON schema compatibility', () {
+    test(
+      'fetcher output contains all fields required by seed script schema',
+      () async {
+        // Use MishnaFetcher as representative; all fetchers produce ContentItems.
+        mockShapeResponse(
+          '/api/shape/Mishnah',
+          loadFixture('mishnah_shape.json'),
+        );
+
+        final result = await MishnaFetcher(dio: mockDio).fetchAllContent();
+
+        // Verify hierarchyConfig has fields that _validateSchema checks.
+        expect(result.hierarchyConfig.curriculumId, isNotEmpty);
+        expect(result.hierarchyConfig.levelLabels, isNotEmpty);
+        expect(result.hierarchyConfig.depth, greaterThan(0));
+        expect(result.hierarchyConfig.totalItems, greaterThan(0));
+
+        // Verify items have all required fields that _validateSchema checks.
+        final firstLeaf = result.items.firstWhere((i) => i.isLeaf);
+        expect(firstLeaf.curriculumId, isNotEmpty);
+        expect(firstLeaf.level1, isNotEmpty);
+        expect(firstLeaf.displayNameHe, isNotEmpty);
+        expect(firstLeaf.displayNameEn, isNotEmpty);
+        expect(firstLeaf.sefariaRef, isNotEmpty);
+        expect(firstLeaf.sortOrder, greaterThanOrEqualTo(0));
+        expect(firstLeaf.isLeaf, isTrue);
+      },
+    );
   });
 }
