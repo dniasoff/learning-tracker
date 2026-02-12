@@ -8,10 +8,17 @@
   <critical>Absolutely DO NOT stop because of "milestones", "significant progress", or "session boundaries". Continue in a single execution
     until the story is COMPLETE (all ACs satisfied and all tasks checked) UNLESS a HALT condition is triggered or the USER gives
     other instruction.</critical>
-  <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 6 decides completion.</critical>
+  <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies.</critical>
   <critical>User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.</critical>
+  <critical>After completing each step, you MUST call `gt mol step done &lt;step-id&gt;` with a detailed --body.
+    This posts a progress comment to the Linear issue and tracks molecule completion.
+    Do NOT skip this — it is the primary mechanism for reporting progress.</critical>
 
-  <step n="1" goal="Find next ready story from Linear and load context" tag="linear-status">
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 1: LOAD CONTEXT AND VERIFY ASSIGNMENT
+       Formula step ID: load-context
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="1" goal="Load context and verify assignment" tag="linear-status">
     <check if="{{story_key}} is provided">
       <action>Use {{story_key}} to find Linear issue</action>
       <goto anchor="load_linear_issue" />
@@ -30,19 +37,17 @@
     <action>Sort results by title to get ordered story keys</action>
 
     <check if="no ready stories found in Linear">
-      <output>📋 No stories with "Todo" status found in Linear.
+      <output>No stories with "Todo" status found in Linear.
 
 **Options:**
 1. Run `create-story` to add Dev Notes to the next backlog story
 2. Check if stories are "In Progress" (may need to resume work)
 3. Run `sprint-planning` to see current status
-
-All stories may be completed or still in backlog without Dev Notes.
       </output>
       <action>HALT</action>
     </check>
 
-    <action>Parse first result title to extract story key: "[1-2-name] Title" → "1-2-name"</action>
+    <action>Parse first result title to extract story key: "[1-2-name] Title" -> "1-2-name"</action>
     <action>Store {{linear_issue_id}} from query result</action>
 
     <anchor id="load_linear_issue" />
@@ -61,108 +66,163 @@ All stories may be completed or still in backlog without Dev Notes.
     </action>
 
     <action if="no Dev Notes section found in description">
-      <output>⚠️ Story [{{story_key}}] does not have Dev Notes.
-
-Run `create-story` first to add comprehensive Dev Notes to this story.
-      </output>
+      <output>Story [{{story_key}}] does not have Dev Notes. Run `create-story` first.</output>
       <action>HALT</action>
     </check>
 
     <action>Load comprehensive context from Dev Notes section of Linear issue description</action>
     <action>Extract developer guidance: architecture requirements, previous learnings, technical specifications</action>
+    <action>Load {project_context} for coding standards and project-wide patterns (if exists)</action>
     <action>Parse Implementation Tasks to identify first incomplete task (unchecked [ ])</action>
 
     <action if="no incomplete tasks">
-      <goto step="9">Completion sequence</goto>
+      <goto step="9">Deployment verification</goto>
     </action>
 
-    <output>🚀 **Loading Story from Linear**
+    <!-- Check for code review continuation -->
+    <action>Get comments on Linear issue: mcp__linear__list_comments with issueId={{linear_issue_id}}</action>
+    <action>Check for code review comments (containing "Code Review" or "Review Findings")</action>
+    <check if="code review comment exists with unresolved items">
+      <action>Set review_continuation = true</action>
+      <action>Extract action items from review comment</action>
+    </check>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done load-context --body "## Context Loaded
 
 **Story:** [{{story_key}}]
 **Linear Issue:** {{linear_issue_id}}
-**First Task:** {{first_task_description}}
-
-Dev Notes loaded from Linear issue description.
-    </output>
+**Requirements:** [story statement and acceptance criteria]
+**Acceptance Criteria:** [list all AC from issue]
+**Key Files:** [relevant files identified from Dev Notes]
+**Review Continuation:** [yes/no, with details if yes]"
+    </action>
   </step>
 
-  <step n="2" goal="Load project context and extract implementation guidance">
-    <critical>Load all available context to inform implementation</critical>
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 2: SET UP WORKING BRANCH
+       Formula step ID: branch-setup
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="2" goal="Set up working branch and mark in-progress">
+    <action>Check current branch state: git status, git branch --show-current</action>
 
-    <action>Load {project_context} for coding standards and project-wide patterns (if exists)</action>
-
-    <action>From Linear issue description, extract and organize:
-      - Architecture Guidance section
-      - Technical Requirements section
-      - Testing Requirements section
-      - Previous Story Learnings section
-      - Implementation Tasks breakdown
+    <action>If not on a feature branch, create one:
+      git checkout -b polecat/{{agent_name}} or feature/{{story_key}}
     </action>
 
-    <output>✅ **Context Loaded from Linear**
+    <action>Ensure clean working state:
+      git status (should show "working tree clean")
+    </action>
 
-**Architecture Guidance:** [summary]
-**Technical Stack:** [from Dev Notes]
-**Testing Framework:** [from Dev Notes]
+    <action>Sync with target branch:
+      git fetch origin
+      git rebase origin/{{default_branch}}
+    </action>
 
-Ready to implement tasks.
-    </output>
-  </step>
-
-  <step n="3" goal="Detect review continuation and extract review context">
-    <critical>Determine if this is a fresh start or continuation after code review</critical>
-
-    <action>Get comments on Linear issue: mcp__linear__list_comments with issueId={{linear_issue_id}}</action>
-    <action>Check for code review comments (containing "Code Review" or "Review Findings")</action>
-
-    <check if="code review comment exists with unresolved items">
-      <action>Set review_continuation = true</action>
-      <action>Extract from code review comment:
-        - Review outcome
-        - Action items (look for unchecked [ ] items)
-        - Severity breakdown
-      </action>
-      <action>Count unchecked review items as {{pending_review_items}}</action>
-
-      <output>⏯️ **Resuming Story After Code Review**
-
-**Review Outcome:** {{review_outcome}}
-**Action Items:** {{unchecked_review_count}} remaining to address
-
-**Strategy:** Will prioritize review follow-up items before continuing with regular tasks.
-      </output>
+    <check if="rebase conflicts">
+      <action>Resolve them carefully</action>
+      <action>Test after resolution</action>
+      <action if="stuck on conflicts">HALT and request guidance</action>
     </check>
 
-    <check if="no code review comment exists">
-      <action>Set review_continuation = false</action>
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done branch-setup --body "## Branch Setup
 
-      <output>🚀 **Starting Fresh Implementation**
+**Branch:** [branch-name]
+**Base:** {{default_branch}} at [commit-sha]
+**Status:** Clean working tree, rebased on latest"
+    </action>
+  </step>
 
-Story: {{story_key}}
-First incomplete task: {{first_task_description}}
-      </output>
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 3: VERIFY TESTS PASS BEFORE STARTING
+       Formula step ID: preflight-tests
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="3" goal="Verify tests pass before starting work">
+    <critical>Check if the codebase is healthy BEFORE starting your work</critical>
+
+    <action>Determine how to run tests for this repo (infer test framework from project structure)</action>
+    <action>Run the full test suite to establish a baseline</action>
+
+    <check if="tests pass">
+      <action>Good - codebase is healthy, proceed to planning</action>
     </check>
+
+    <check if="tests fail">
+      <action>Determine if failures are pre-existing (not caused by your changes)</action>
+      <action>If pre-existing: note the failures and proceed with your work</action>
+      <action>Do NOT fix pre-existing failures - that is not your assignment</action>
+    </check>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done preflight-tests --body "## Preflight Tests
+
+**Result:** PASS/FAIL
+**Test command:** [command used]
+**Notes:** [any pre-existing issues found]"
+    </action>
   </step>
 
-  <step n="4" goal="Mark story in-progress in Linear" tag="linear-status">
-    <action>Update Linear issue to "In Progress" state:
-      mcp__linear__update_issue with id={{linear_issue_id}}, state="In Progress"
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 4: DESIGN IMPLEMENTATION APPROACH
+       Formula step ID: plan
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="4" goal="Design implementation approach before writing code">
+    <critical>Plan your approach BEFORE writing code. A good plan prevents wasted work.</critical>
+
+    <action>Re-read the issue carefully - review all Implementation Tasks from Dev Notes</action>
+    <action>Identify acceptance criteria and constraints</action>
+
+    <action>Explore the codebase:
+      - Find the relevant files and understand existing patterns
+      - Identify where changes need to go
+      - Look for similar features you can follow as examples
     </action>
 
-    <action>Add comment noting work started:
-      mcp__linear__create_comment with issueId={{linear_issue_id}}, body="Development started on story."
+    <action>Design your approach:
+      - List the files you'll modify/create
+      - Outline the key changes in each file
+      - Identify potential risks or unknowns
+      - Plan the red-green-refactor cycle for each task
+      - Decide on test strategy (what to test, how)
     </action>
 
-    <output>🚀 Starting work on story {{story_key}}
-Linear issue updated: Todo → In Progress
-    </output>
+    <action>Verify feasibility:
+      - Can you implement this within your assignment scope?
+      - Are there dependencies you're missing?
+      - Does your approach follow existing conventions from Dev Notes?
+    </action>
+
+    <action if="scope is larger than expected or blockers discovered">HALT and request guidance</action>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done plan --body "## Plan
+
+**Files to modify:**
+- path/to/file1 - description of changes
+- path/to/file2 - description of changes
+
+**Approach:**
+[detailed description of what you'll do and how, including task order]
+
+**Tests:**
+[what you'll test and how, red-green-refactor strategy]"
+    </action>
   </step>
 
-  <step n="5" goal="Implement task following red-green-refactor cycle">
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 5: IMPLEMENT THE SOLUTION
+       Formula step ID: implement
+       Includes BMAD's red-green-refactor cycle and task loop
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="5" goal="Implement all tasks following red-green-refactor cycle">
     <critical>FOLLOW THE IMPLEMENTATION TASKS FROM LINEAR ISSUE EXACTLY AS WRITTEN - NO DEVIATION</critical>
+    <critical>Execute continuously without pausing until all tasks complete or explicit HALT condition</critical>
+
+    <!-- TASK LOOP: For each incomplete Implementation Task from Linear issue -->
+    <anchor id="next_task" />
 
     <action>Review the current task from the Linear issue Dev Notes - this is your authoritative implementation guide</action>
-    <action>Plan implementation following red-green-refactor cycle</action>
 
     <!-- RED PHASE -->
     <action>Write FAILING tests first for the task functionality</action>
@@ -177,65 +237,236 @@ Linear issue updated: Todo → In Progress
     <action>Improve code structure while keeping tests green</action>
     <action>Ensure code follows architecture patterns from Dev Notes</action>
 
-    <action if="new dependencies required beyond story specifications">HALT: "Additional dependencies need user approval"</action>
-    <action if="3 consecutive implementation failures occur">HALT and request guidance</action>
-    <action if="required configuration is missing">HALT: "Cannot proceed without necessary configuration files"</action>
-
-    <critical>NEVER implement anything not in the Implementation Tasks from Linear issue</critical>
-    <critical>NEVER proceed to next task until current task is complete AND tests pass</critical>
-    <critical>Execute continuously without pausing until all tasks complete or explicit HALT condition</critical>
-  </step>
-
-  <step n="6" goal="Author comprehensive tests">
-    <action>Create unit tests for business logic and core functionality introduced/changed by the task</action>
-    <action>Add integration tests for component interactions specified in story requirements</action>
-    <action>Include end-to-end tests for critical user flows when story requirements demand them</action>
-    <action>Cover edge cases and error handling scenarios identified in Dev Notes</action>
-  </step>
-
-  <step n="7" goal="Run validations and tests">
-    <action>Determine how to run tests for this repo (infer test framework from project structure)</action>
-    <action>Run all existing tests to ensure no regressions</action>
-    <action>Run the new tests to verify implementation correctness</action>
-    <action>Run linting and code quality checks if configured in project</action>
-    <action>Validate implementation meets ALL story acceptance criteria</action>
-    <action if="regression tests fail">STOP and fix before continuing</action>
-    <action if="new tests fail">STOP and fix before continuing</action>
-  </step>
-
-  <step n="8" goal="Validate and track task completion">
-    <critical>NEVER mark a task complete unless ALL conditions are met</critical>
-
-    <!-- VALIDATION GATES -->
+    <!-- TASK VALIDATION -->
     <action>Verify ALL tests for this task ACTUALLY EXIST and PASS 100%</action>
     <action>Confirm implementation matches EXACTLY what the task specifies</action>
-    <action>Validate that ALL acceptance criteria related to this task are satisfied</action>
     <action>Run full test suite to ensure NO regressions introduced</action>
-
-    <!-- TRACK COMPLETION -->
-    <check if="ALL validation gates pass AND tests ACTUALLY exist and pass">
-      <action>Note task as completed in local tracking</action>
-      <action>Track files created/modified for this task</action>
-    </check>
 
     <check if="ANY validation fails">
       <action>DO NOT mark task complete - fix issues first</action>
       <action>HALT if unable to fix validation failures</action>
     </check>
 
+    <action>Note task as completed, track files created/modified</action>
+    <action>Commit the completed task:
+      git add [files]
+      git commit -m "[type]: [description] ([story_key])"
+    </action>
+
+    <action if="new dependencies required beyond story specifications">HALT: "Additional dependencies need user approval"</action>
+    <action if="3 consecutive implementation failures occur">HALT and request guidance</action>
+    <action if="required configuration is missing">HALT: "Cannot proceed without necessary configuration files"</action>
+
     <action>Determine if more incomplete tasks remain in Implementation Tasks list</action>
     <action if="more tasks remain">
-      <goto step="5">Next task</goto>
+      <goto anchor="next_task">Next task</goto>
     </action>
-    <action if="no tasks remain">
-      <goto step="9">Completion</goto>
+
+    <critical>NEVER implement anything not in the Implementation Tasks from Linear issue</critical>
+    <critical>NEVER proceed to next task until current task is complete AND tests pass</critical>
+
+    <!-- Report progress via molecule step (after ALL tasks complete) -->
+    <action>Run: gt mol step done implement --body "## Implementation Complete
+
+**Changes:**
+- path/to/file1 - what was changed
+- path/to/file2 - what was changed
+
+**Commits:**
+[list of commits made]
+
+**Tasks completed:** [count] of [total]
+**Notes:** [any decisions, trade-offs, or issues]"
     </action>
   </step>
 
-  <step n="9" goal="Story completion and mark for review in Linear" tag="linear-status">
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 6: SELF-REVIEW CHANGES
+       Formula step ID: self-review
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="6" goal="Self-review all changes before final testing">
+    <action>Review the full diff: git diff origin/{{default_branch}}...HEAD</action>
+    <action>Review all commits: git log --oneline origin/{{default_branch}}..HEAD</action>
+
+    <action>Check for common issues:
+      - Bugs: off-by-one, null handling, edge cases
+      - Security: injection, auth bypass, exposed secrets
+      - Style: naming, formatting, code organization
+      - Completeness: missing error handling, incomplete paths
+      - Cruft: debug prints, commented code, TODOs
+    </action>
+
+    <action>Fix any issues found - don't just note them, fix them now</action>
+
+    <action>Verify no unintended changes:
+      git diff --stat origin/{{default_branch}}...HEAD
+      Only files relevant to the story should appear
+    </action>
+
+    <action if="accidentally modified unrelated files">Remove those changes</action>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done self-review --body "## Self-Review
+
+**Files reviewed:** [count] files, [lines] lines changed
+**Issues found:** [list any issues found and fixed]
+**Security:** [any security concerns checked]
+**Status:** Ready for testing"
+    </action>
+  </step>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 7: RUN TESTS AND VERIFY COVERAGE
+       Formula step ID: run-tests
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="7" goal="Run full test suite and verify coverage">
+    <action>Run all existing tests to ensure no regressions</action>
+    <action>Run the new tests to verify implementation correctness</action>
+    <action>Run linting and code quality checks if configured in project</action>
+    <action>Validate implementation meets ALL story acceptance criteria</action>
+
+    <action if="regression tests fail">STOP and fix before continuing</action>
+    <action if="new tests fail">STOP and fix before continuing</action>
+
+    <action>Verify test coverage for new code:
+      - New features should have tests
+      - Bug fixes should have regression tests
+      - If significant code lacks tests, add them now
+    </action>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done run-tests --body "## Test Results
+
+**Test command:** [command used]
+**Result:** [pass count] passed, [fail count] failed
+**Coverage:** [new code coverage notes]
+**Lint/Build:** [lint and build results]"
+    </action>
+  </step>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 8: COMMIT ALL CHANGES
+       Formula step ID: commit-changes
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="8" goal="Ensure all implementation work is committed">
+    <critical>You MUST commit all changes from implementation. NEVER discard implementation work.</critical>
+
+    <action>Check for uncommitted changes: git status</action>
+
+    <check if="uncommitted changes exist">
+      <action>git add -A and git commit -m "[type]: [description] ([story_key])"</action>
+    </check>
+
+    <action>Verify clean state: git status must show "nothing to commit, working tree clean"</action>
+
+    <action>Verify you have commits:
+      git log origin/{{default_branch}}..HEAD --oneline
+      This MUST show at least 1 commit if you made changes.
+    </action>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done commit-changes --body "## Changes Committed
+
+**Commits:**
+$(git log --oneline origin/{{default_branch}}..HEAD)
+
+**Files changed:**
+$(git diff --stat origin/{{default_branch}}..HEAD)"
+    </action>
+  </step>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 9: DEPLOY AND VERIFY (BMAD-SPECIFIC)
+       No formula step ID - this is an extra BMAD step for ephemeral deployment
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="9" goal="Verify deployment and run acceptance tests in ephemeral environment">
+    <critical>Code is not complete until it works when deployed AND acceptance tests pass</critical>
+
+    <action>Ensure all changes are committed and pushed to the remote branch:
+      git push origin HEAD
+    </action>
+    <action>Get current branch name: git rev-parse --abbrev-ref HEAD</action>
+
+    <!-- Phase A: Infrastructure verification -->
+    <action>Run deployment verification:
+      scripts/verify-deployment.sh {{branch_name}} --timeout 600
+    </action>
+
+    <check if="verification fails due to code issue">
+      <action>Fix the issue in code</action>
+      <action>Push the fix</action>
+      <action>Re-run verification</action>
+    </check>
+
+    <check if="verification fails due to infrastructure issue OR 3 consecutive verification failures">
+      <output>Deployment verification failed after multiple attempts. Infrastructure issue suspected.</output>
+      <action>HALT</action>
+    </check>
+
+    <!-- Phase B: Acceptance smoke tests -->
+    <action>Run acceptance tests against the ephemeral environment:
+      make acceptance-test BRANCH={{branch_name}}
+    </action>
+    <action>Store acceptance test output in {{acceptance_test_results}}</action>
+
+    <check if="acceptance tests pass (exit code 0)">
+      <output>Deployment verification and acceptance tests passed for branch {{branch_name}}</output>
+    </check>
+
+    <check if="acceptance tests fail due to code issue">
+      <action>Fix the issue in code</action>
+      <action>Push the fix</action>
+      <action>Re-run acceptance tests</action>
+    </check>
+
+    <check if="acceptance tests fail due to infrastructure issue OR 3 consecutive failures">
+      <output>Acceptance tests failed after multiple attempts. Infrastructure issue suspected.</output>
+      <action>HALT</action>
+    </check>
+  </step>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 10: CLEAN UP WORKSPACE
+       Formula step ID: cleanup-workspace
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="10" goal="Ensure workspace is pristine before handoff">
+    <critical>Do NOT run `git push` here. That is `gt done`'s job.</critical>
+    <critical>Do NOT discard implementation changes. They must already be committed.</critical>
+
+    <action>Check for untracked files: git status --porcelain
+      - Add to .gitignore if appropriate
+      - Remove if temporary
+      - Commit if needed
+    </action>
+
+    <action>Check stash: git stash list (should be empty)</action>
+
+    <action>Verify clean state and commits:
+      git status (must show "working tree clean")
+      git stash list (must be empty)
+      git log origin/{{default_branch}}..HEAD (should show your work)
+    </action>
+
+    <check if="git log shows nothing but you DID make changes">
+      <action>Something went wrong. Do NOT proceed. HALT and request guidance.</action>
+    </check>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done cleanup-workspace --body "## Workspace Clean
+
+**Git status:** clean
+**Stash:** empty
+**Commits ahead:** $(git log --oneline origin/{{default_branch}}..HEAD | wc -l)"
+    </action>
+  </step>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 11: PREPARE WORK FOR REVIEW
+       Formula step ID: prepare-for-review
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="11" goal="Story completion and prepare for review">
     <action>Verify ALL tasks from Implementation Tasks are completed</action>
-    <action>Run the full regression suite (do not skip)</action>
-    <action>Execute enhanced definition-of-done validation</action>
+    <action>Run the full regression suite one final time (do not skip)</action>
 
     <!-- Enhanced Definition of Done Validation -->
     <action>Validate definition-of-done checklist:
@@ -246,50 +477,58 @@ Linear issue updated: Todo → In Progress
       - End-to-end tests for critical flows added when story demands them
       - All tests pass (no regressions, new tests successful)
       - Code quality checks pass (linting, static analysis if configured)
+      - Deployment verification passed (if applicable)
+      - Acceptance tests passed (if applicable)
     </action>
 
-    <!-- Update Linear issue to In Review -->
-    <action>Update Linear issue to "In Review" state:
-      mcp__linear__update_issue with id={{linear_issue_id}}, state="In Review"
-    </action>
-
-    <action>Add completion comment to Linear issue:
-      mcp__linear__create_comment with issueId={{linear_issue_id}}, body="Story implementation complete.\n\n**Files Changed:**\n{{file_list}}\n\n**Tests Added:**\n{{test_summary}}\n\nReady for code review."
-    </action>
-
-    <output>✅ Story status updated to "In Review" in Linear</output>
-
-    <!-- Final validation gates -->
     <action if="any task is incomplete">HALT - Complete remaining tasks before marking ready for review</action>
     <action if="regression failures exist">HALT - Fix regression issues before completing</action>
     <action if="definition-of-done validation fails">HALT - Address DoD failures before completing</action>
+
+    <action>Update issue notes: bd update {{issue}} --notes "Implemented: [brief summary]"</action>
+    <action>Sync beads: bd sync</action>
+
+    <!-- Report progress via molecule step -->
+    <action>Run: gt mol step done prepare-for-review --body "## Ready for Review
+
+**Issue:** {{story_key}}
+**Branch:** [branch-name]
+**Summary:** [what was implemented]
+**Commits:** [count] commits
+**Files changed:** [count] files
+**Tests added:** [test summary]
+**Deployment:** [passed/skipped]
+**Acceptance tests:** [passed/skipped]"
+    </action>
   </step>
 
-  <step n="10" goal="Completion communication and user support">
-    <action>Prepare a concise summary of implementation</action>
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STEP 12: SUBMIT WORK AND SELF-CLEAN
+       Formula step ID: submit-and-exit
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <step n="12" goal="Submit work and self-clean">
+    <critical>Once you run `gt done`, you're gone. The command pushes your branch,
+      creates an MR bead, sets Linear to Code Complete, nukes your sandbox, and exits.
+      Do NOT close the Linear issue - the Refinery does that after merge.</critical>
 
-    <action>Communicate to {user_name} that story implementation is complete and ready for review</action>
-    <action>Summarize key accomplishments: story key, key changes made, tests added, files modified</action>
-    <action>Provide the Linear issue link and current status (now "In Review")</action>
+    <action>Run: gt done</action>
 
-    <action>Based on {user_skill_level}, ask if user needs any explanations about:
-      - What was implemented and how it works
-      - Why certain technical decisions were made
-      - How to test or verify the changes
-      - Any patterns, libraries, or approaches used
-    </action>
+    <!-- gt done handles:
+      1. Pushes your branch to origin
+      2. Creates an MR bead in the merge queue
+      3. Calls SyncCodeComplete -> ticks non-human-gated checkboxes, sets "Code Complete"
+      4. Nukes your sandbox (worktree removal)
+      5. Exits your session immediately
 
-    <check if="user asks for explanations">
-      <action>Provide clear, contextual explanations tailored to {user_skill_level}</action>
-    </check>
+      What happens next (not your concern):
+      - Refinery processes your MR from the queue
+      - Refinery rebases and merges to target branch
+      - Refinery calls gt done --merged -> ticks merge checkboxes, sets "In Review"
+      - Refinery closes the issue
+      - If conflicts: Refinery spawns a FRESH polecat to re-implement
+    -->
 
-    <action>Recommended next steps:
-      - Review the implemented story in Linear
-      - Verify all acceptance criteria are met
-      - Run `code-review` workflow for peer review
-    </action>
-
-    <output>💡 **Tip:** For best results, run `code-review` using a **different** LLM than the one that implemented this story.</output>
+    <output>Work submitted. Session exiting.</output>
   </step>
 
 </workflow>
