@@ -141,7 +141,95 @@ void main() {
     testWidgets('navigates back to previous level on back button', (
       tester,
     ) async {
-      // This will be tested in integration tests with full navigation stack
+      // Items shown at level1 depth (Seder Zeraim selected)
+      final level1Items = [
+        const ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Zeraim',
+          level2: 'Berachos',
+          displayNameHe: 'ברכות',
+          displayNameEn: 'Berachos',
+          sefariaRef: 'Berachos',
+          sortOrder: 0,
+          isLeaf: false,
+        ),
+      ];
+
+      // Items shown at root level (no filters)
+      final rootItems = [
+        const ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Zeraim',
+          displayNameHe: 'סדר זרעים',
+          displayNameEn: 'Seder Zeraim',
+          sefariaRef: 'Seder Zeraim',
+          sortOrder: 0,
+          isLeaf: false,
+        ),
+        const ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Moed',
+          displayNameHe: 'סדר מועד',
+          displayNameEn: 'Seder Moed',
+          sefariaRef: 'Seder Moed',
+          sortOrder: 1,
+          isLeaf: false,
+        ),
+      ];
+
+      when(
+        () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+      ).thenAnswer(
+        (_) async => const CurriculumHierarchyConfig(
+          curriculumId: 'mishnayos',
+          levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
+          totalItems: 100,
+        ),
+      );
+
+      // Mock for level1='Seder Zeraim' (initial view)
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: 'Seder Zeraim',
+          level2: null,
+          level3: null,
+          level4: null,
+        ),
+      ).thenAnswer((_) async => level1Items);
+
+      // Mock for root level (after pressing back)
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnayos,
+          level1: null,
+          level2: null,
+          level3: null,
+          level4: null,
+        ),
+      ).thenAnswer((_) async => rootItems);
+
+      // Start at level1 depth
+      await tester.pumpWidget(createTestWidget(level1: 'Seder Zeraim'));
+      await tester.pumpAndSettle();
+
+      // Verify we see the level1-filtered content
+      expect(find.text('Berachos'), findsOneWidget);
+      expect(find.text('Seder Moed'), findsNothing);
+
+      // Back button should be visible when navigation stack is non-empty
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+
+      // Tap the back button to navigate up
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      // Now we should see root-level items
+      expect(find.text('Seder Zeraim'), findsOneWidget);
+      expect(find.text('Seder Moed'), findsOneWidget);
+
+      // Back button should no longer be visible at root level
+      expect(find.byIcon(Icons.arrow_back), findsNothing);
     });
 
     testWidgets('displays leaf items with different styling', (tester) async {

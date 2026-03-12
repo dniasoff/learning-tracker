@@ -98,18 +98,24 @@ void main() {
       expect(hebrewPos.dy, lessThan(englishPos.dy));
     });
 
-    testWidgets('shows offline message when text is not cached', (
-      tester,
-    ) async {
-      final mockRepo = MockTextCacheRepository();
-      when(() => mockRepo.getText(any())).thenAnswer((_) async => null);
+    testWidgets(
+      'shows offline message with download button when text is not cached',
+      (tester) async {
+        final mockRepo = MockTextCacheRepository();
+        when(() => mockRepo.getText(any())).thenAnswer((_) async => null);
 
-      await tester.pumpWidget(createTestWidget(repository: mockRepo));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createTestWidget(repository: mockRepo));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Text content not yet downloaded'), findsOneWidget);
-      expect(find.byIcon(Icons.download), findsOneWidget);
-    });
+        expect(find.text('Text content not yet downloaded'), findsOneWidget);
+        expect(find.byIcon(Icons.download), findsWidgets);
+        expect(find.text('Go to Downloads'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate((w) => w is ElevatedButton),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('shows error view when provider throws', (tester) async {
       final mockRepo = MockTextCacheRepository();
@@ -180,7 +186,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap font size icon
-      await tester.tap(find.byIcon(Icons.text_fields));
+      await tester.tap(find.byIcon(Icons.format_size));
       await tester.pumpAndSettle();
 
       // Should show all font size options
@@ -207,7 +213,7 @@ void main() {
       final initialSize = initialHebrew.style!.fontSize!;
 
       // Open menu and select Large
-      await tester.tap(find.byIcon(Icons.text_fields));
+      await tester.tap(find.byIcon(Icons.format_size));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Large'));
       await tester.pumpAndSettle();
@@ -250,10 +256,9 @@ void main() {
       // Default is nikud ON, so toggle shows format_clear icon
       expect(find.byIcon(Icons.format_clear), findsOneWidget);
 
-      // When nikud is ON (default), the font size button uses text_fields
-      // and the nikud toggle uses format_clear, so there's exactly one
-      // text_fields widget (the font size selector)
-      expect(find.byIcon(Icons.text_fields), findsOneWidget);
+      // When nikud is ON (default), the font size button uses format_size
+      // and the nikud toggle uses format_clear, so they are now distinct
+      expect(find.byIcon(Icons.format_size), findsOneWidget);
     });
 
     testWidgets('nikud toggle strips vowel marks from Hebrew text', (

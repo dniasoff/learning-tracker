@@ -27,7 +27,6 @@ void main() {
             .toSet()
             .toList();
 
-
         // Should have content items (exact count depends on actual data)
         expect(items, isNotEmpty);
 

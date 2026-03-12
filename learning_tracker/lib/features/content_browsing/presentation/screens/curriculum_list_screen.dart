@@ -49,7 +49,7 @@ class _CurriculumListTile extends ConsumerWidget {
               context,
             ).textTheme.bodyMedium?.copyWith(fontFamily: 'Noto Sans Hebrew'),
             textDirection: TextDirection.rtl,
-            textAlign: TextAlign.left,
+            textAlign: TextAlign.right,
           ),
           trailing: Text(
             '$leafCount items',
