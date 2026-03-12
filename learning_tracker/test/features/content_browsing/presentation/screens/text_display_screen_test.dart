@@ -98,23 +98,24 @@ void main() {
       expect(hebrewPos.dy, lessThan(englishPos.dy));
     });
 
-    testWidgets('shows offline message with download button when text is not cached', (
-      tester,
-    ) async {
-      final mockRepo = MockTextCacheRepository();
-      when(() => mockRepo.getText(any())).thenAnswer((_) async => null);
+    testWidgets(
+      'shows offline message with download button when text is not cached',
+      (tester) async {
+        final mockRepo = MockTextCacheRepository();
+        when(() => mockRepo.getText(any())).thenAnswer((_) async => null);
 
-      await tester.pumpWidget(createTestWidget(repository: mockRepo));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createTestWidget(repository: mockRepo));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Text content not yet downloaded'), findsOneWidget);
-      expect(find.byIcon(Icons.download), findsWidgets);
-      expect(find.text('Go to Downloads'), findsOneWidget);
-      expect(
-        find.byWidgetPredicate((w) => w is ElevatedButton),
-        findsOneWidget,
-      );
-    });
+        expect(find.text('Text content not yet downloaded'), findsOneWidget);
+        expect(find.byIcon(Icons.download), findsWidgets);
+        expect(find.text('Go to Downloads'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate((w) => w is ElevatedButton),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('shows error view when provider throws', (tester) async {
       final mockRepo = MockTextCacheRepository();

@@ -88,8 +88,9 @@ class _OfflineMessage extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Text content not yet downloaded',
-              style:
-                  AppTextStyles.titleMedium.copyWith(color: Colors.grey[600]),
+              style: AppTextStyles.titleMedium.copyWith(
+                color: Colors.grey[600],
+              ),
             ),
             const SizedBox(height: 8),
             Text(

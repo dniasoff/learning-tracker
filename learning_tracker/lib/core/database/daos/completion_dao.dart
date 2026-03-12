@@ -92,4 +92,14 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
     final result = await query.getSingle();
     return result.read(completions.id.count()) ?? 0;
   }
+
+  /// Returns true if any completions reference the given stage ID.
+  Future<bool> hasCompletionsForStage(int stageId) async {
+    final result =
+        await (select(completions)
+              ..where((t) => t.stageId.equals(stageId))
+              ..limit(1))
+            .get();
+    return result.isNotEmpty;
+  }
 }

@@ -120,27 +120,30 @@ void main() {
     });
 
     group('downloadCurriculum', () {
-      test('emits downloading, parsing, storing, completed on success',
-          () async {
-        final body = _buildGzipBody(3);
-        final url = TextContentConfig.downloadUrl(
-          CurriculumId.mishnayos.storageKey,
-        );
-        when(
-          () => mockHttpClient.get(Uri.parse(url)),
-        ).thenAnswer((_) async => http.Response.bytes(body, 200));
+      test(
+        'emits downloading, parsing, storing, completed on success',
+        () async {
+          final body = _buildGzipBody(3);
+          final url = TextContentConfig.downloadUrl(
+            CurriculumId.mishnayos.storageKey,
+          );
+          when(
+            () => mockHttpClient.get(Uri.parse(url)),
+          ).thenAnswer((_) async => http.Response.bytes(body, 200));
 
-        final events =
-            await service.downloadCurriculum(CurriculumId.mishnayos).toList();
+          final events = await service
+              .downloadCurriculum(CurriculumId.mishnayos)
+              .toList();
 
-        final states = events.map((e) => e.state).toList();
-        expect(states, [
-          TextDownloadState.downloading,
-          TextDownloadState.parsing,
-          TextDownloadState.storing,
-          TextDownloadState.completed,
-        ]);
-      });
+          final states = events.map((e) => e.state).toList();
+          expect(states, [
+            TextDownloadState.downloading,
+            TextDownloadState.parsing,
+            TextDownloadState.storing,
+            TextDownloadState.completed,
+          ]);
+        },
+      );
 
       test('completed event has correct itemsStored and totalItems', () async {
         final body = _buildGzipBody(10);
@@ -151,8 +154,9 @@ void main() {
           () => mockHttpClient.get(Uri.parse(url)),
         ).thenAnswer((_) async => http.Response.bytes(body, 200));
 
-        final events =
-            await service.downloadCurriculum(CurriculumId.mishnayos).toList();
+        final events = await service
+            .downloadCurriculum(CurriculumId.mishnayos)
+            .toList();
         final completed = events.last;
         expect(completed.state, TextDownloadState.completed);
         expect(completed.itemsStored, 10);
@@ -167,8 +171,9 @@ void main() {
           () => mockHttpClient.get(Uri.parse(url)),
         ).thenAnswer((_) async => http.Response('Not Found', 404));
 
-        final events =
-            await service.downloadCurriculum(CurriculumId.mishnayos).toList();
+        final events = await service
+            .downloadCurriculum(CurriculumId.mishnayos)
+            .toList();
 
         expect(events.last.state, TextDownloadState.failed);
         expect(events.last.error, contains('404'));
@@ -182,8 +187,9 @@ void main() {
           () => mockHttpClient.get(Uri.parse(url)),
         ).thenThrow(const SocketException('No internet'));
 
-        final events =
-            await service.downloadCurriculum(CurriculumId.mishnayos).toList();
+        final events = await service
+            .downloadCurriculum(CurriculumId.mishnayos)
+            .toList();
 
         expect(events.last.state, TextDownloadState.failed);
         expect(events.last.error, contains('SocketException'));
@@ -204,8 +210,11 @@ void main() {
           () => mockTextCacheDao.storeBatch(captureAny()),
         ).captured;
         expect(captured, hasLength(1));
-        final batch = captured.first
-            as List<({String sefariaRef, String hebrewText, String englishText})>;
+        final batch =
+            captured.first
+                as List<
+                  ({String sefariaRef, String hebrewText, String englishText})
+                >;
         expect(batch, hasLength(2));
         expect(batch[0].sefariaRef, 'Ref.0');
         expect(batch[0].hebrewText, 'Hebrew 0');
@@ -242,16 +251,18 @@ void main() {
           () => mockHttpClient.get(Uri.parse(url)),
         ).thenAnswer((_) async => http.Response.bytes(body, 200));
 
-        final events =
-            await service.downloadCurriculum(CurriculumId.mishnayos).toList();
+        final events = await service
+            .downloadCurriculum(CurriculumId.mishnayos)
+            .toList();
 
         // 1200 items / 500 batch = 3 batches
         verify(() => mockTextCacheDao.storeBatch(any())).called(3);
 
         // 3 storing events + downloading + parsing + completed = 6
         expect(events, hasLength(6));
-        final storingEvents =
-            events.where((e) => e.state == TextDownloadState.storing).toList();
+        final storingEvents = events
+            .where((e) => e.state == TextDownloadState.storing)
+            .toList();
         expect(storingEvents, hasLength(3));
         expect(storingEvents[0].itemsStored, 500);
         expect(storingEvents[1].itemsStored, 1000);
@@ -298,14 +309,16 @@ void main() {
           () => mockHttpClient.get(Uri.parse(url)),
         ).thenAnswer((_) async => http.Response.bytes(body, 200));
 
-        final events =
-            await service.downloadCurriculum(CurriculumId.mishnayos).toList();
+        final events = await service
+            .downloadCurriculum(CurriculumId.mishnayos)
+            .toList();
 
         // Should only process 1 batch (items 500-999) since first 500 already done
         verify(() => mockTextCacheDao.storeBatch(any())).called(1);
 
-        final storingEvents =
-            events.where((e) => e.state == TextDownloadState.storing).toList();
+        final storingEvents = events
+            .where((e) => e.state == TextDownloadState.storing)
+            .toList();
         expect(storingEvents, hasLength(1));
         expect(storingEvents.first.itemsStored, 1000);
       });
@@ -322,8 +335,9 @@ void main() {
           () => mockTextCacheDao.storeBatch(any()),
         ).thenThrow(Exception('DB write failed'));
 
-        final events =
-            await service.downloadCurriculum(CurriculumId.mishnayos).toList();
+        final events = await service
+            .downloadCurriculum(CurriculumId.mishnayos)
+            .toList();
 
         expect(events.last.state, TextDownloadState.failed);
         expect(events.last.error, contains('DB write failed'));
