@@ -23,6 +23,7 @@ import 'package:learning_tracker/features/scheduler/presentation/screens/schedul
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/track_management_screen.dart';
+import 'package:learning_tracker/features/stages/presentation/screens/stage_editor_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_mode_screen.dart';
 
@@ -131,6 +132,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/curriculum/:curriculumId/order',
       page: LearningOrderRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/curriculum/:curriculumId/stages',
+      page: StageEditorRoute.page,
       guards: [authGuard],
     ),
   ];

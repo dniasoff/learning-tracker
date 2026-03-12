@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Service for managing curriculum activation/deactivation.
 ///
@@ -12,11 +13,14 @@ class CurriculumActivationService {
   CurriculumActivationService({
     required AppDatabase database,
     required Future<void> Function(List<String>) pushActiveCurricula,
+    StageDefinitionRepository? stageDefinitionRepository,
   }) : _database = database,
-       _pushActiveCurricula = pushActiveCurricula;
+       _pushActiveCurricula = pushActiveCurricula,
+       _stageDefinitionRepository = stageDefinitionRepository;
 
   final AppDatabase _database;
   final Future<void> Function(List<String>) _pushActiveCurricula;
+  final StageDefinitionRepository? _stageDefinitionRepository;
 
   /// Initialize default active curricula if none exist.
   ///
@@ -33,6 +37,7 @@ class CurriculumActivationService {
   /// Activate a curriculum.
   Future<void> activate(CurriculumId curriculum) async {
     await _database.activeCurriculumDao.activate(curriculum);
+    await _stageDefinitionRepository?.initializeDefaults(curriculum);
     await _syncToFirestore();
   }
 

@@ -36,6 +36,26 @@ class StageDao extends DatabaseAccessor<AppDatabase> with _$StageDaoMixin {
     stageDefinitions,
   )..where((t) => t.curriculumId.equals(curriculumId))).go();
 
+  /// Returns the maximum stageOrder for a curriculum, or null if no stages exist.
+  Future<int?> getMaxStageOrder(String curriculumId) async {
+    final maxCol = stageDefinitions.stageOrder.max();
+    final query = selectOnly(stageDefinitions)
+      ..addColumns([maxCol])
+      ..where(stageDefinitions.curriculumId.equals(curriculumId));
+    final row = await query.getSingleOrNull();
+    return row?.read(maxCol);
+  }
+
+  /// Returns the count of stages for a curriculum.
+  Future<int> countStagesForCurriculum(String curriculumId) async {
+    final countCol = stageDefinitions.id.count();
+    final query = selectOnly(stageDefinitions)
+      ..addColumns([countCol])
+      ..where(stageDefinitions.curriculumId.equals(curriculumId));
+    final row = await query.getSingleOrNull();
+    return row?.read(countCol) ?? 0;
+  }
+
   /// Replace all stage definitions for a curriculum with remote data.
   ///
   /// Used during sync merge (last-write-wins per D4).
