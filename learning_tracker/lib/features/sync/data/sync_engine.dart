@@ -416,6 +416,15 @@ class SyncEngine {
           curriculumId,
           companions,
         );
+
+        // Merge learning order if present in this settings document
+        final learningOrder = remote['learning_order'] as List<dynamic>?;
+        if (learningOrder != null) {
+          await _mergeLearningOrder(
+            curriculumId,
+            learningOrder.cast<Map<String, dynamic>>(),
+          );
+        }
       } catch (e) {
         _logger.warning('Failed to merge settings: $e');
       }
@@ -566,6 +575,61 @@ class SyncEngine {
         e,
       );
       await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
+    }
+  }
+
+  // ========== Learning Order Sync ==========
+
+  /// Push learning order to Firestore after local write.
+  ///
+  /// Stores as `learning_order` field in `settings/{curriculumId}` document.
+  Future<void> pushLearningOrder(Map<String, dynamic> data) async {
+    if (!_isOnline) {
+      await _offlineQueue.enqueueSettings(data);
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.pushSettings(data);
+      _logger.debug('Pushed learning order to Firestore');
+    } catch (e) {
+      _logger.warning('Failed to push learning order, queuing for later', e);
+      await _offlineQueue.enqueueSettings(data);
+    }
+  }
+
+  /// Merge learning order from remote Firestore settings document.
+  Future<void> _mergeLearningOrder(
+    String curriculumId,
+    List<Map<String, dynamic>> orderRows,
+  ) async {
+    _logger.debug(
+      'Merging ${orderRows.length} learning order rows for $curriculumId',
+    );
+
+    try {
+      await _database.learningOrderDao.deleteAllForCurriculum(curriculumId);
+
+      for (final row in orderRows) {
+        final sefariaRef = row['sefaria_ref'] as String?;
+        final userSortOrder = row['user_sort_order'] as int?;
+        if (sefariaRef == null || userSortOrder == null) continue;
+
+        await _database.learningOrderDao.upsertLearningOrder(
+          LearningOrderCompanion.insert(
+            curriculumId: curriculumId,
+            sefariaRef: sefariaRef,
+            userSortOrder: userSortOrder,
+          ),
+        );
+      }
+    } catch (e) {
+      _logger.warning('Failed to merge learning order: $e');
     }
   }
 

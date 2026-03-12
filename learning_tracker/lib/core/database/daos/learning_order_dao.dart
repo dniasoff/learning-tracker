@@ -31,4 +31,19 @@ class LearningOrderDao extends DatabaseAccessor<AppDatabase>
 
   Future<int> deleteLearningOrder(int id) =>
       (delete(learningOrder)..where((t) => t.id.equals(id))).go();
+
+  /// Upsert a learning order row — insert or update on (curriculumId, sefariaRef) conflict.
+  Future<int> upsertLearningOrder(LearningOrderCompanion entry) =>
+      into(learningOrder).insert(
+        entry,
+        onConflict: DoUpdate(
+          (_) => entry,
+          target: [learningOrder.curriculumId, learningOrder.sefariaRef],
+        ),
+      );
+
+  /// Delete all learning order rows for a curriculum (reset to default).
+  Future<int> deleteAllForCurriculum(String curriculumId) => (delete(
+    learningOrder,
+  )..where((t) => t.curriculumId.equals(curriculumId))).go();
 }

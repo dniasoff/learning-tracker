@@ -22,10 +22,7 @@ void main() {
     });
 
     test('fromStorageKey throws on invalid key', () {
-      expect(
-        () => TrackType.fromStorageKey('invalid'),
-        throwsArgumentError,
-      );
+      expect(() => TrackType.fromStorageKey('invalid'), throwsArgumentError);
     });
   });
 }

@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_shell.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
@@ -12,6 +13,7 @@ import 'package:learning_tracker/features/dashboard/presentation/screens/dashboa
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/curriculum_learning_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
+import 'package:learning_tracker/features/learning_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
@@ -124,6 +126,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/curriculum/:curriculumId/tracks',
       page: TrackManagementRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/curriculum/:curriculumId/order',
+      page: LearningOrderRoute.page,
       guards: [authGuard],
     ),
   ];

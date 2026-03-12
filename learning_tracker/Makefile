@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -11,6 +11,9 @@ test: ## Run all tests
 
 test-story-4.1: ## Run Story 4.1 (Track Management) acceptance tests
 	flutter test test/story_acceptance/epic_04_multi_track_test.dart
+
+test-story-5.2: ## Run Story 5.2 (Custom Learning Order) acceptance tests
+	flutter test test/story_acceptance/epic_05_stages_order_test.dart --name "Story 5.2"
 
 ci: analyze test ## Run full CI pipeline (analyze + all tests)
 

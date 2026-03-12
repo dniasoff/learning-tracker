@@ -6,10 +6,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/track_se
 void main() {
   group('TrackSelectorBottomSheet', () {
     testWidgets('displays all active tracks', (tester) async {
-      final activeTracks = [
-        TrackType.personal,
-        TrackType.school,
-      ];
+      final activeTracks = [TrackType.personal, TrackType.school];
 
       await tester.pumpWidget(
         MaterialApp(

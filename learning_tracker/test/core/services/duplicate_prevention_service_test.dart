@@ -29,73 +29,82 @@ void main() {
       expect(result, isTrue);
     });
 
-    test('returns false when completion already exists for same item+stage', () async {
-      // Insert a completion
-      await database.completionDao.insertCompletion(
-        CompletionsCompanion.insert(
+    test(
+      'returns false when completion already exists for same item+stage',
+      () async {
+        // Insert a completion
+        await database.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            contentItemId: 1,
+            stageId: 1,
+            trackType: TrackType.personal.storageKey,
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        // Try to complete again
+        final result = await service.canComplete(
           curriculumId: 'mishnayos',
           contentItemId: 1,
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
-          completedAt: DateTime.now().toUtc(),
-        ),
-      );
+        );
 
-      // Try to complete again
-      final result = await service.canComplete(
-        curriculumId: 'mishnayos',
-        contentItemId: 1,
-        stageId: 1,
-      );
+        expect(result, isFalse);
+      },
+    );
 
-      expect(result, isFalse);
-    });
+    test(
+      'correctly scopes to curriculum - same content item in different curriculum allowed',
+      () async {
+        // Insert completion for mishnayos curriculum
+        await database.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            contentItemId: 1,
+            stageId: 1,
+            trackType: TrackType.personal.storageKey,
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
 
-    test('correctly scopes to curriculum - same content item in different curriculum allowed', () async {
-      // Insert completion for mishnayos curriculum
-      await database.completionDao.insertCompletion(
-        CompletionsCompanion.insert(
+        // Try to complete same content item ID but in different curriculum
+        final result = await service.canComplete(
+          curriculumId: 'bavli',
+          contentItemId: 1,
+          stageId: 1,
+        );
+
+        expect(result, isTrue);
+      },
+    );
+
+    test(
+      'allows same item+stage under different tracks (before duplicate prevention is enforced)',
+      () async {
+        // This test verifies the current behavior.
+        // When duplicate prevention is enforced, this should return false.
+        await database.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            contentItemId: 1,
+            stageId: 1,
+            trackType: TrackType.personal.storageKey,
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        // Currently, canComplete only checks if ANY completion exists for item+stage,
+        // regardless of track. So this should return false.
+        final result = await service.canComplete(
           curriculumId: 'mishnayos',
           contentItemId: 1,
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
-          completedAt: DateTime.now().toUtc(),
-        ),
-      );
+        );
 
-      // Try to complete same content item ID but in different curriculum
-      final result = await service.canComplete(
-        curriculumId: 'bavli',
-        contentItemId: 1,
-        stageId: 1,
-      );
-
-      expect(result, isTrue);
-    });
-
-    test('allows same item+stage under different tracks (before duplicate prevention is enforced)', () async {
-      // This test verifies the current behavior.
-      // When duplicate prevention is enforced, this should return false.
-      await database.completionDao.insertCompletion(
-        CompletionsCompanion.insert(
-          curriculumId: 'mishnayos',
-          contentItemId: 1,
-          stageId: 1,
-          trackType: TrackType.personal.storageKey,
-          completedAt: DateTime.now().toUtc(),
-        ),
-      );
-
-      // Currently, canComplete only checks if ANY completion exists for item+stage,
-      // regardless of track. So this should return false.
-      final result = await service.canComplete(
-        curriculumId: 'mishnayos',
-        contentItemId: 1,
-        stageId: 1,
-      );
-
-      expect(result, isFalse);
-    });
+        expect(result, isFalse);
+      },
+    );
 
     test('allows different stages of same item', () async {
       // Insert stage 1 completion

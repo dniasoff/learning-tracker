@@ -31,23 +31,32 @@ void main() {
       expect(tracks, isNot(contains(TrackType.school)));
     });
 
-    test('deactivateTrack throws when attempting to remove personal track', () async {
-      expect(
-        () => service.deactivateTrack('mishnayos', TrackType.personal),
-        throwsA(isA<InvalidOperationException>()),
-      );
-    });
+    test(
+      'deactivateTrack throws when attempting to remove personal track',
+      () async {
+        expect(
+          () => service.deactivateTrack('mishnayos', TrackType.personal),
+          throwsA(isA<InvalidOperationException>()),
+        );
+      },
+    );
 
-    test('getAutoAssignedTrack returns personal when only one track active', () async {
-      final track = await service.getAutoAssignedTrack('mishnayos');
-      expect(track, TrackType.personal);
-    });
+    test(
+      'getAutoAssignedTrack returns personal when only one track active',
+      () async {
+        final track = await service.getAutoAssignedTrack('mishnayos');
+        expect(track, TrackType.personal);
+      },
+    );
 
-    test('getAutoAssignedTrack returns null when multiple tracks active', () async {
-      await service.activateTrack('mishnayos', TrackType.school);
-      final track = await service.getAutoAssignedTrack('mishnayos');
-      expect(track, isNull);
-    });
+    test(
+      'getAutoAssignedTrack returns null when multiple tracks active',
+      () async {
+        await service.activateTrack('mishnayos', TrackType.school);
+        final track = await service.getAutoAssignedTrack('mishnayos');
+        expect(track, isNull);
+      },
+    );
 
     test('tracks are scoped per curriculum', () async {
       await service.activateTrack('mishnayos', TrackType.school);
@@ -56,7 +65,10 @@ void main() {
       final mishnayosTracks = await service.getActiveTracks('mishnayos');
       final bavliTracks = await service.getActiveTracks('bavli');
 
-      expect(mishnayosTracks, containsAll([TrackType.personal, TrackType.school]));
+      expect(
+        mishnayosTracks,
+        containsAll([TrackType.personal, TrackType.school]),
+      );
       expect(bavliTracks, containsAll([TrackType.personal, TrackType.tutor]));
       expect(mishnayosTracks, isNot(contains(TrackType.tutor)));
       expect(bavliTracks, isNot(contains(TrackType.school)));
