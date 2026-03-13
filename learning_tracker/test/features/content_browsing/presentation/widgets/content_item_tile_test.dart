@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 
 void main() {
   Widget createTestWidget({
     required ContentItem item,
     required VoidCallback onTap,
+    int completionCount = 0,
   }) {
-    return MaterialApp(
-      home: Scaffold(
-        body: ContentItemTile(
-          item: item,
-          curriculum: CurriculumId.mishnayos,
-          onTap: onTap,
+    return ProviderScope(
+      overrides: [
+        completionCountProvider(
+          curriculumId: item.curriculumId,
+          sefariaRef: item.sefariaRef,
+        ).overrideWith((ref) async => completionCount),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: ContentItemTile(
+            item: item,
+            curriculum: CurriculumId.mishnayos,
+            onTap: onTap,
+          ),
         ),
       ),
     );
@@ -33,6 +44,7 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
+      await tester.pump(); // resolve async completionCountProvider
 
       // Hebrew name should be the title
       expect(find.text('סדר זרעים'), findsOneWidget);
@@ -55,6 +67,7 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
+      await tester.pump();
 
       // English name should be the subtitle
       expect(find.text('Seder Zeraim'), findsOneWidget);
@@ -72,6 +85,7 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
+      await tester.pump();
 
       expect(find.byIcon(Icons.folder), findsOneWidget);
     });
@@ -91,6 +105,7 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
+      await tester.pump();
 
       // Leaf items show completion status icon (unchecked by default)
       expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
@@ -108,6 +123,7 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
+      await tester.pump();
 
       // Container items show chevron for drill-down
       expect(find.byIcon(Icons.chevron_right), findsOneWidget);
@@ -128,6 +144,7 @@ void main() {
       await tester.pumpWidget(
         createTestWidget(item: item, onTap: () => tapped = true),
       );
+      await tester.pump();
 
       await tester.tap(find.byType(ListTile));
       expect(tapped, isTrue);

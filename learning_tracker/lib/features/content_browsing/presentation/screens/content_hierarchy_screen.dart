@@ -47,11 +47,13 @@ class _ContentHierarchyScreenState
     ];
   }
 
-  CurriculumId get _curriculum {
-    return CurriculumId.values.firstWhere(
+  /// Returns the [CurriculumId] matching the route parameter, or null if
+  /// the parameter does not correspond to any known curriculum.
+  CurriculumId? get _curriculumOrNull {
+    final matches = CurriculumId.values.where(
       (c) => c.storageKey == widget.curriculumId,
-      orElse: () => CurriculumId.mishnayos,
     );
+    return matches.isNotEmpty ? matches.first : null;
   }
 
   String? get _currentLevel1 =>
@@ -65,12 +67,33 @@ class _ContentHierarchyScreenState
 
   @override
   Widget build(BuildContext context) {
+    final curriculum = _curriculumOrNull;
+
+    if (curriculum == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Unknown Curriculum')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Unknown curriculum: "${widget.curriculumId}"',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final configAsync = ref.watch(
-      curriculumHierarchyConfigProvider(_curriculum),
+      curriculumHierarchyConfigProvider(curriculum),
     );
     final itemsAsync = ref.watch(
       filteredContentProvider(
-        curriculumId: _curriculum,
+        curriculumId: curriculum,
         level1: _currentLevel1,
         level2: _currentLevel2,
         level3: _currentLevel3,
@@ -80,13 +103,22 @@ class _ContentHierarchyScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_curriculum.displayNameEn),
+        title: Text(curriculum.displayNameEn),
         leading: _navigationStack.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: _navigateUp,
               )
             : null,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: () => context.router.push(
+              ContentSearchRoute(curriculumId: curriculum.storageKey),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -94,7 +126,7 @@ class _ContentHierarchyScreenState
           if (_navigationStack.isNotEmpty)
             configAsync.when(
               data: (config) => BreadcrumbNavigation(
-                curriculum: _curriculum,
+                curriculum: curriculum,
                 levelLabels: config.levelLabels,
                 navigationStack: _navigationStack,
                 onBreadcrumbTap: _navigateToLevel,
@@ -120,7 +152,7 @@ class _ContentHierarchyScreenState
                     final item = groupedItems[index];
                     return ContentItemTile(
                       item: item,
-                      curriculum: _curriculum,
+                      curriculum: curriculum,
                       onTap: () => _handleItemTap(item),
                     );
                   },
@@ -154,17 +186,44 @@ class _ContentHierarchyScreenState
       return items;
     }
 
-    // Group by the next level value
+    // If all items at this depth are leaves, show them directly without grouping.
+    if (items.isNotEmpty && items.every((i) => i.isLeaf)) {
+      return items;
+    }
+
+    // Group by the next level value, creating a representative container item
+    // for each group whose display name is the group key (e.g. "Seder Zeraim"),
+    // not the name of an arbitrary leaf inside it.
     final uniqueItems = <String, ContentItem>{};
 
     for (final item in items) {
       final nextLevelValue = _getNextLevelValue(item, currentDepth);
       if (nextLevelValue != null && !uniqueItems.containsKey(nextLevelValue)) {
-        uniqueItems[nextLevelValue] = item;
+        // Prefer container items (non-leaf) as representatives because they
+        // already have the correct display names for the group (e.g., the
+        // seder name). Leaf items have their own sub-level names and must not
+        // be used directly — in that case we create a synthetic container item
+        // using the group key as the display name.
+        if (!item.isLeaf) {
+          uniqueItems[nextLevelValue] = item;
+        } else {
+          uniqueItems[nextLevelValue] = ContentItem(
+            curriculumId: item.curriculumId,
+            level1: item.level1,
+            level2: currentDepth >= 1 ? item.level2 : null,
+            level3: currentDepth >= 2 ? item.level3 : null,
+            level4: currentDepth >= 3 ? item.level4 : null,
+            displayNameHe: nextLevelValue,
+            displayNameEn: nextLevelValue,
+            sefariaRef: item.sefariaRef,
+            sortOrder: item.sortOrder,
+            isLeaf: false,
+          );
+        }
       }
     }
 
-    // Sort by sortOrder
+    // Sort by sortOrder of the first representative item encountered.
     final result = uniqueItems.values.toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 

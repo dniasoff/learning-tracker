@@ -2,37 +2,39 @@
 
 ## Core Validation
 
-### Linear Integration Check
-
-- [ ] Linear MCP is available and connected
-- [ ] Team and project are correctly identified
-- [ ] linear-mapping.yaml is created with team_id and project_id
-
 ### Complete Coverage Check
 
-- [ ] Every epic from PRD appears as a Linear parent issue with "[Epic-N]" title
-- [ ] Every story appears as a Linear sub-issue under its epic
-- [ ] All issues have "BMAD-Managed" label
-- [ ] Issue statuses are valid (Backlog, Todo, In Progress, In Review, Done)
+- [ ] Every epic found in epic\*.md files appears in sprint-status.yaml
+- [ ] Every story found in epic\*.md files appears in sprint-status.yaml
+- [ ] Every epic has a corresponding retrospective entry
+- [ ] No items in sprint-status.yaml that don't exist in epic files
 
 ### Parsing Verification
 
-Compare PRD requirements against Linear issues:
+Compare epic files against generated sprint-status.yaml:
 
 ```
-PRD Contains:                       Linear Contains:
-✓ Epic 1: User Authentication       ✓ [Epic-1] User Authentication
-  ✓ Story 1.1: User Login             ✓ [1-1-user-login] User Login
-  ✓ Story 1.2: Account Mgmt           ✓ [1-2-account-mgmt] Account Management
-  ✓ Story 1.3: Password Reset         ✓ [1-3-password-reset] Password Reset
-
-✓ Epic 2: Plant Personality         ✓ [Epic-2] Plant Personality
-  ✓ Story 2.1: Personality Model      ✓ [2-1-personality-model] Personality Model
-  ✓ Story 2.2: Chat Interface         ✓ [2-2-chat-interface] Chat Interface
+Epic Files Contains:                Sprint Status Contains:
+✓ Epic 1                            ✓ epic-1: [status]
+  ✓ Story 1.1: User Auth              ✓ 1-1-user-auth: [status]
+  ✓ Story 1.2: Account Mgmt           ✓ 1-2-account-mgmt: [status]
+  ✓ Story 1.3: Plant Naming           ✓ 1-3-plant-naming: [status]
+                                      ✓ epic-1-retrospective: [status]
+✓ Epic 2                            ✓ epic-2: [status]
+  ✓ Story 2.1: Personality Model      ✓ 2-1-personality-model: [status]
+  ✓ Story 2.2: Chat Interface         ✓ 2-2-chat-interface: [status]
+                                      ✓ epic-2-retrospective: [status]
 ```
 
 ### Final Check
 
-- [ ] Total count of epics matches PRD
-- [ ] Total count of stories matches PRD
-- [ ] All issues are in correct parent-child relationships
+- [ ] Total count of epics matches
+- [ ] Total count of stories matches
+- [ ] All items are in the expected order (epic, stories, retrospective)
+
+### Linear Validation (when tracking_system=linear)
+
+- [ ] All epics created as Linear parent issues with BMAD-Managed label
+- [ ] All stories created as Linear sub-issues under correct epic parent
+- [ ] linear-mapping.yaml created with team_key, project_name, and issue mappings
+- [ ] Linear issue statuses match local sprint-status.yaml statuses

@@ -10,7 +10,7 @@ After selection, run project analysis then start the chosen workflow.
 ### 1. UX Design
 **When to use:** You need scenarios, page specs, and prototypes.
 **What it does:** Creates complete user journey specifications with interactive prototypes.
-**Output:** `docs/C-Scenarios/` with specs, sketches, and HTML prototypes
+**Output:** `docs/C-UX-Scenarios/` with specs, sketches, and HTML prototypes
 **Best for:** The core design work — this is where most of my time goes.
 
 ### 2. Visual Design
@@ -28,7 +28,7 @@ Figma for refinement and component integration.
 
 ### 4. Agentic Development
 **When to use:** You want to build features iteratively with AI assistance.
-**What it does:** Guided implementation using agent dialogs — prototypes, code, bug fixes.
+**What it does:** Guided implementation using design log — prototypes, code, bug fixes.
 **Output:** Working implementations, prototype iterations
 **Best for:** When you're ready to go from spec to code with AI support.
 

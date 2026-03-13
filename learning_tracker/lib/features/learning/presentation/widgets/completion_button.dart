@@ -6,6 +6,20 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 
+/// Provider family to check whether a specific stage is already completed.
+final isStageCompletedProvider = FutureProvider.autoDispose
+    .family<
+      bool,
+      ({String sefariaRef, int stageId, String trackType})
+    >((ref, params) async {
+      final repository = ref.watch(completionRepositoryProvider);
+      return repository.isStageCompleted(
+        sefariaRef: params.sefariaRef,
+        stageId: params.stageId,
+        trackType: params.trackType,
+      );
+    });
+
 /// Button widget for marking a content item as completed.
 ///
 /// Shows completion animation and points popup (child mode) or
@@ -123,16 +137,43 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompletedAsync = ref.watch(
+      isStageCompletedProvider((
+        sefariaRef: widget.sefariaRef,
+        stageId: widget.stageId,
+        trackType: widget.trackType,
+      )),
+    );
+
+    final isAlreadyCompleted = isCompletedAsync.value ?? false;
+
     return Stack(
       alignment: Alignment.center,
       children: [
         ElevatedButton(
-          onPressed: _isLoading || _showAnimation ? null : _handleMarkComplete,
+          onPressed: _isLoading || _showAnimation || isAlreadyCompleted
+              ? null
+              : _handleMarkComplete,
+          style: isAlreadyCompleted
+              ? ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade100,
+                  foregroundColor: Colors.green.shade800,
+                )
+              : null,
           child: _isLoading
               ? const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : isAlreadyCompleted
+              ? const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle, size: 18),
+                    SizedBox(width: 4),
+                    Text('Completed'),
+                  ],
                 )
               : const Text('Mark Complete'),
         ),

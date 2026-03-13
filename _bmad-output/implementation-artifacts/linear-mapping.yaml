@@ -6,7 +6,7 @@ team_id: "9df0c216-327c-41fe-a16e-67dd15b83698"
 team_name: "Dniasoff"
 project_id: "cd5f6b60-f107-4fa8-bb59-951e05d1a9f1"
 project_name: "learning-tracker"
-sync_timestamp: "2026-02-08T14:43:27Z"
+sync_timestamp: "2026-03-12T20:23:00Z"
 
 labels:
   bmad_managed: ""
@@ -32,7 +32,8 @@ epics:
     linear_issue_id: "f581c216-3f14-4b4a-b3b8-88f794f22f4a"
     linear_identifier: "DNI-8"
     title: "[Epic-4] Multi-Track Learning"
-    retrospective_done: false
+    retrospective_done: true
+    retrospective_file: "epic-4-retro-2026-03-12.md"
   epic-5:
     linear_issue_id: "834e74c4-7c83-4bb0-a3a1-d05db1a6f650"
     linear_identifier: "DNI-9"

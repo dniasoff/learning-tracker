@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 
 /// AppTheme provides Material Design 3 theme for the Torah learning app.
@@ -34,22 +35,31 @@ class AppTheme {
   static const Color curriculumMishnaBerurah = Color(0xFFE67E22); // Orange
   static const Color curriculumChumash = Color(0xFFE74C3C); // Red
 
-  /// Get curriculum color by curriculum ID
-  static Color getCurriculumColor(String curriculumId) {
-    switch (curriculumId) {
-      case 'mishnayos':
+  /// Get curriculum color by [CurriculumId] enum value.
+  static Color getCurriculumColor(CurriculumId curriculum) {
+    switch (curriculum) {
+      case CurriculumId.mishnayos:
         return curriculumMishna;
-      case 'bavli':
+      case CurriculumId.bavli:
         return curriculumBavli;
-      case 'yerushalmi':
+      case CurriculumId.yerushalmi:
         return curriculumYerushalmi;
-      case 'mishna_berurah':
+      case CurriculumId.mishnaBerurah:
         return curriculumMishnaBerurah;
-      case 'chumash':
+      case CurriculumId.chumash:
         return curriculumChumash;
-      default:
-        return _primaryColor;
     }
+  }
+
+  /// Get curriculum color by storage-key string.
+  ///
+  /// Prefer [getCurriculumColor] with a [CurriculumId] value. This helper
+  /// exists for call sites that receive a raw string from routing params.
+  static Color getCurriculumColorByKey(String storageKey) {
+    final curriculum = CurriculumId.values.where(
+      (c) => c.storageKey == storageKey,
+    ).firstOrNull;
+    return curriculum != null ? getCurriculumColor(curriculum) : _primaryColor;
   }
 
   /// Track colors - distinct colors for the 3 track types
@@ -148,6 +158,31 @@ class AppTheme {
         selectedItemColor: _primaryColor,
         unselectedItemColor: Color(0xFF79747E),
         type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: _surfaceColor,
+        indicatorColor: _primaryColor.withValues(alpha: 0.15),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: _primaryColor);
+          }
+          return const IconThemeData(color: Color(0xFF79747E));
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              color: _primaryColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            );
+          }
+          return const TextStyle(
+            color: Color(0xFF79747E),
+            fontWeight: FontWeight.normal,
+            fontSize: 12,
+          );
+        }),
         elevation: 8,
       ),
     );

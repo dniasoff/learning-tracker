@@ -2,15 +2,9 @@
 name: 'step-01-document-discovery'
 description: 'Discover and inventory all project documents, handling duplicates and organizing file structure'
 
-# Path Definitions
-workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/implementation-readiness'
-
-# File References
-thisStepFile: './step-01-document-discovery.md'
 nextStepFile: './step-02-prd-analysis.md'
-workflowFile: '{workflow_path}/workflow.md'
 outputFile: '{planning_artifacts}/implementation-readiness-report-{{date}}.md'
-templateFile: '{workflow_path}/templates/readiness-report-template.md'
+templateFile: '../templates/readiness-report-template.md'
 ---
 
 # Step 1: Document Discovery
@@ -77,16 +71,22 @@ Search for each document type using these patterns:
 - Whole: `{planning_artifacts}/*architecture*.md`
 - Sharded: `{planning_artifacts}/*architecture*/index.md` and related files
 
-#### C. Epics & Stories (Linear)
+#### C. Epics & Stories Documents
 
-- Query Linear for BMAD-Managed issues to get epics and stories
-- Epics: Issues with titles starting with "[Epic-"
-- Stories: Sub-issues under each epic
+- Whole: `{planning_artifacts}/*epic*.md`
+- Sharded: `{planning_artifacts}/*epic*/index.md` and related files
 
 #### D. UX Design Documents
 
 - Whole: `{planning_artifacts}/*ux*.md`
 - Sharded: `{planning_artifacts}/*ux*/index.md` and related files
+
+<check if="{tracking_system} == linear">
+  <action>Also discover Linear project structure:
+    linearis issues search "" --team {team_key} --limit 50 \
+      | jq '[.[] | {id: .identifier, title: .title, status: .state.name, labels: [.labels[].name]}]'
+  </action>
+</check>
 
 ### 3. Organize Findings
 

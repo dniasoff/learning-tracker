@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
@@ -43,7 +44,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     required TrackType trackType,
     required String sefariaRef,
   }) async {
-    final now = DateTime.now().toUtc(); // P5: UTC timestamps
+    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
 
     // Check if bookmark exists
     final existing = await _database.bookmarkDao
@@ -165,10 +166,11 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
   @override
   Future<int> syncFromFirestore() async {
-    // This would be called by the sync engine
-    // For now, return 0 as a placeholder
-    // The actual implementation will be in sync engine's _mergeBookmarks
-    return 0;
+    final remoteBookmarks = await _syncEngine.fetchBookmarksFromFirestore();
+    for (final remote in remoteBookmarks) {
+      await mergeRemoteBookmark(remote);
+    }
+    return remoteBookmarks.length;
   }
 
   /// Get the next content item sefariaRef in learning order.
@@ -247,6 +249,9 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     return BookmarkEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == bookmark.curriculumId,
+        orElse: () => throw ArgumentError(
+          'Unknown curriculumId: ${bookmark.curriculumId}',
+        ),
       ),
       trackType: TrackType.fromStorageKey(bookmark.trackType),
       sefariaRef: bookmark.sefariaRef,
@@ -278,21 +283,15 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         ),
       );
     } else {
-      // Compare timestamps: remote wins if newer
+      // Compare timestamps: remote wins if newer.
+      // Use upsertBookmark which handles the id lookup internally,
+      // avoiding an extra round-trip to the database.
       if (remote.updatedAt.isAfter(local.updatedAt)) {
-        await _database.bookmarkDao.updateBookmark(
-          BookmarksCompanion(
-            id: drift.Value(
-              (await _database.bookmarkDao.getBookmarkByCurriculumAndTrack(
-                local.curriculumId.storageKey,
-                local.trackType.storageKey,
-              ))!.id,
-            ),
-            curriculumId: drift.Value(remote.curriculumId.storageKey),
-            trackType: drift.Value(remote.trackType.storageKey),
-            sefariaRef: drift.Value(remote.sefariaRef),
-            updatedAt: drift.Value(remote.updatedAt),
-          ),
+        await _database.bookmarkDao.upsertBookmark(
+          curriculumId: remote.curriculumId.storageKey,
+          trackType: remote.trackType.storageKey,
+          sefariaRef: remote.sefariaRef,
+          updatedAt: remote.updatedAt,
         );
       }
       // else: local is newer or same, keep local

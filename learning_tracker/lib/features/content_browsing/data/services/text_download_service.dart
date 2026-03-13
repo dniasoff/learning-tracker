@@ -137,6 +137,8 @@ class TextDownloadService {
         totalItems: totalItems,
       );
     } catch (e) {
+      // Intentional catch-all: converts any download failure (network, IO, parse)
+      // into a terminal failed state for the stream consumer to handle.
       yield TextDownloadProgress(
         state: TextDownloadState.failed,
         error: e.toString(),

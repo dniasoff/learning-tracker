@@ -105,17 +105,15 @@ design_system:
 
 ---
 
-### 3. Value Trigger Chain (VTC)
+### 3. Strategic Context (from Trigger Map)
 **Strategic benchmark for early decisions**
 
-Created in Step 4 (early in the brief) to provide strategic grounding:
+Extracted from the Trigger Map to provide strategic grounding:
 - Business goal
 - Solution context
-- User
+- Target group / persona
 - Driving forces (positive + negative)
 - Customer awareness progression
-
-**See:** VTC micro-guide for Freya (also relevant for Saga)
 
 ---
 
@@ -210,12 +208,12 @@ Created in Step 4 (early in the brief) to provide strategic grounding:
 
 ---
 
-### 12. Synthesize
+### 12. Create Product Brief
 **Bring it all together**
 
 Generate complete Product Brief document using template.
 
-**See:** `../../workflows/1-project-brief/project-brief/complete/project-brief.template.md`
+**See:** `{project-root}/_bmad/wds/templates/1-project-brief/project-brief.template.md`
 
 ---
 
@@ -345,7 +343,7 @@ Good structure:
 ```
 docs/A-Product-Brief/product-brief.md
 docs/B-Trigger-Map/trigger-map.md
-docs/C-Scenarios/landing-page/01-hero-section.md
+docs/C-UX-Scenarios/landing-page/01-hero-section.md
 ```
 
 **Why:** Clear, unambiguous, no confusion about location

@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 
@@ -128,8 +129,6 @@ void _validateSchema(Map<String, dynamic> json, String filename) {
     throw Exception('$filename: Missing or empty items array');
   }
 
-  // Validate first item structure
-  final firstItem = items.first as Map<String, dynamic>;
   final requiredFields = [
     'curriculumId',
     'level1',
@@ -140,9 +139,32 @@ void _validateSchema(Map<String, dynamic> json, String filename) {
     'isLeaf',
   ];
 
-  for (final field in requiredFields) {
-    if (!firstItem.containsKey(field)) {
-      throw Exception('$filename: Item missing required field: $field');
+  // Validate a sample: first item, last item, and a random middle item.
+  // For small lists, validate all items.
+  final indicesToCheck = items.length <= 10
+      ? List.generate(items.length, (i) => i)
+      : [
+          0,
+          items.length - 1,
+          Random().nextInt(items.length - 2) + 1,
+        ];
+
+  var invalidCount = 0;
+  for (final idx in indicesToCheck) {
+    final item = items[idx] as Map<String, dynamic>;
+    for (final field in requiredFields) {
+      if (!item.containsKey(field)) {
+        print(
+          'WARNING: $filename item[$idx] missing required field: $field',
+        );
+        invalidCount++;
+      }
     }
+  }
+
+  if (invalidCount > 0) {
+    throw Exception(
+      '$filename: $invalidCount schema violation(s) found in sampled items',
+    );
   }
 }

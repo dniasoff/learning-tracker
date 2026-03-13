@@ -1,6 +1,6 @@
 # Change Navigation Checklist
 
-<critical>This checklist is executed as part of: {project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.yaml</critical>
+<critical>This checklist is executed as part of: {project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.md</critical>
 <critical>Work through each section systematically with the user, recording findings and impacts</critical>
 
 <checklist>
@@ -258,6 +258,13 @@
 <action>If epics were removed: Remove corresponding entries</action>
 <action>If epics were renumbered: Update epic IDs and story references</action>
 <action>If stories were added/removed: Update story entries within affected epics</action>
+<status>[ ] Done / [ ] N/A / [ ] Action-needed</status>
+</check-item>
+
+<check-item id="6.6">
+<prompt>Update Linear issues to reflect approved changes (when tracking_system=linear)</prompt>
+<action>Update Linear issue descriptions and statuses for modified stories/epics</action>
+<action>Post change proposal summary as comment on affected Linear issues</action>
 <status>[ ] Done / [ ] N/A / [ ] Action-needed</status>
 </check-item>
 

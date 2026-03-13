@@ -55,6 +55,13 @@ validation-rules:
 - [ ] **Review Follow-ups:** All review follow-up tasks (marked [AI-Review]) completed and corresponding review items marked resolved (if applicable)
 - [ ] **Story Structure Compliance:** Only permitted sections of story file were modified
 
+## 🔗 Linear Tracking Validation (when tracking_system=linear)
+
+- [ ] **Linear Issue Updated:** All Implementation Task checkboxes ticked in Linear issue description
+- [ ] **Acceptance Criteria Ticked:** All AC checkboxes ticked in Linear issue description
+- [ ] **Progress Comments Posted:** Key progress comments posted to Linear issue
+- [ ] **Status Current:** Linear issue status reflects current story state
+
 ## 🔚 Final Status Verification
 
 - [ ] **Story Status Updated:** Story Status set to "review"

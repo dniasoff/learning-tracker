@@ -54,6 +54,10 @@ dependencies:
   # Crypto
   bcrypt: ^1.2.0
 
+  # HTTP client
+  dio: ^5.9.1
+  talker_dio_logger: ^5.1.13
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,10 +72,6 @@ dev_dependencies:
   auto_route_generator: ^10.4.0
   drift_dev: ^2.31.0
 
-  # Networking (used by tool/ seed scripts only)
-  dio: ^5.9.1
-  talker_dio_logger: ^5.1.13
-
   # Testing
   test: ^1.26.0
   mocktail: ^1.0.4
@@ -85,9 +85,16 @@ flutter:
     - assets/fonts/
     - assets/content/
 
-  # Fonts
-  # Custom Hebrew fonts can be added here when needed
-  # fonts:
-  #   - family: CustomHebrew
-  #     fonts:
-  #       - asset: assets/fonts/CustomHebrew-Regular.ttf
+  fonts:
+    - family: Noto Sans Hebrew
+      fonts:
+        - asset: assets/fonts/NotoSansHebrew-Light.ttf
+          weight: 300
+        - asset: assets/fonts/NotoSansHebrew-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansHebrew-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansHebrew-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/NotoSansHebrew-Bold.ttf
+          weight: 700

@@ -42,6 +42,17 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
 
   @override
+  void didUpdateWidget(PinEntryWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Auto-clear digits and return focus to field 1 when an error appears.
+    // This is standard security UX — don't leave failed digits visible.
+    if (widget.errorMessage != null &&
+        oldWidget.errorMessage != widget.errorMessage) {
+      _clearPin();
+    }
+  }
+
+  @override
   void dispose() {
     for (final controller in _controllers) {
       controller.dispose();

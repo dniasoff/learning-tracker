@@ -1,6 +1,7 @@
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 
 /// Service for managing curriculum activation/deactivation.
 ///
@@ -13,14 +14,14 @@ class CurriculumActivationService {
   CurriculumActivationService({
     required AppDatabase database,
     required Future<void> Function(List<String>) pushActiveCurricula,
-    StageDefinitionRepository? stageDefinitionRepository,
+    required TrackRepository trackRepository,
   }) : _database = database,
        _pushActiveCurricula = pushActiveCurricula,
-       _stageDefinitionRepository = stageDefinitionRepository;
+       _trackRepository = trackRepository;
 
   final AppDatabase _database;
   final Future<void> Function(List<String>) _pushActiveCurricula;
-  final StageDefinitionRepository? _stageDefinitionRepository;
+  final TrackRepository _trackRepository;
 
   /// Initialize default active curricula if none exist.
   ///
@@ -30,6 +31,7 @@ class CurriculumActivationService {
         .getActiveCurricula();
     if (activeCurricula.isEmpty) {
       await _database.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await _trackRepository.initializeDefaultTracks(CurriculumId.mishnayos);
       await _syncToFirestore();
     }
   }
@@ -37,7 +39,7 @@ class CurriculumActivationService {
   /// Activate a curriculum.
   Future<void> activate(CurriculumId curriculum) async {
     await _database.activeCurriculumDao.activate(curriculum);
-    await _stageDefinitionRepository?.initializeDefaults(curriculum);
+    await _trackRepository.initializeDefaultTracks(curriculum);
     await _syncToFirestore();
   }
 
@@ -50,23 +52,46 @@ class CurriculumActivationService {
   }
 
   /// Toggle a curriculum on or off.
+  ///
+  /// The [isActive] check and [activate]/[deactivate] call are wrapped in a
+  /// single database transaction to prevent a TOCTOU race where two concurrent
+  /// toggle calls could both read the same state and both activate or both
+  /// deactivate the curriculum.
   Future<void> toggle(CurriculumId curriculum) async {
-    final isActive = await _database.activeCurriculumDao.isActive(curriculum);
-    if (isActive) {
-      await deactivate(curriculum);
-    } else {
-      await activate(curriculum);
-    }
+    await _database.transaction(() async {
+      final isActive = await _database.activeCurriculumDao.isActive(
+        curriculum,
+      );
+      if (isActive) {
+        await deactivate(curriculum);
+      } else {
+        await activate(curriculum);
+      }
+    });
   }
 
   /// Get list of currently active curricula as enums.
+  ///
+  /// Unknown storage keys (e.g. from an old database) are skipped with a
+  /// warning rather than throwing, so a stale DB row cannot crash the app.
   Future<List<CurriculumId>> getActiveCurricula() async {
     final storageKeys = await _database.activeCurriculumDao
         .getActiveCurricula();
     return storageKeys
-        .map(
-          (key) => CurriculumId.values.firstWhere((c) => c.storageKey == key),
-        )
+        .map<CurriculumId?>((key) {
+          final matches = CurriculumId.values.where(
+            (c) => c.storageKey == key,
+          );
+          if (matches.isNotEmpty) {
+            return matches.first;
+          }
+          AppLogger.instance.warning(
+            'CurriculumActivationService.getActiveCurricula: '
+            'unknown curriculum key: $key',
+          );
+          return null;
+        })
+        .whereType<CurriculumId>()
         .toList();
   }
 
@@ -83,9 +108,8 @@ class CurriculumActivationService {
       final activeCurricula = await _database.activeCurriculumDao
           .getActiveCurricula();
       await _pushActiveCurricula(activeCurricula);
-    } catch (e) {
-      // Silent fail for offline/auth issues
-      // Local database is source of truth
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional: silent fail for offline/auth
+      // Silent fail for offline/auth issues — local database is source of truth
     }
   }
 }

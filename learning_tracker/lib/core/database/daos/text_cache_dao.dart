@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'text_cache_dao.g.dart';
 
@@ -26,7 +27,7 @@ class TextCacheDao extends DatabaseAccessor<AppDatabase>
         sefariaRef: sefariaRef,
         hebrewText: hebrewText,
         englishText: englishText,
-        fetchedAt: DateTime.now(),
+        fetchedAt: DateTimeFactory.nowUtc(),
       ),
     );
   }
@@ -53,7 +54,7 @@ class TextCacheDao extends DatabaseAccessor<AppDatabase>
             sefariaRef: item.sefariaRef,
             hebrewText: item.hebrewText,
             englishText: item.englishText,
-            fetchedAt: DateTime.now(),
+            fetchedAt: DateTimeFactory.nowUtc(),
           ),
           mode: InsertMode.insertOrReplace,
         );

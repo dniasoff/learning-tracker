@@ -183,7 +183,7 @@ void main() {
 
     test('curriculum colours are accessible', () {
       final color = AppTheme.getCurriculumColor(
-        CurriculumId.mishnayos.storageKey,
+        CurriculumId.mishnayos,
       );
       expect(color, isA<Color>());
     });

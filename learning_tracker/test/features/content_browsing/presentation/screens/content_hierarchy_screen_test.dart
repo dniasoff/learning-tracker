@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -27,7 +28,13 @@ void main() {
     String? level4,
   }) {
     return ProviderScope(
-      overrides: [contentRepositoryProvider.overrideWithValue(mockRepo)],
+      overrides: [
+        contentRepositoryProvider.overrideWithValue(mockRepo),
+        // Stub completionCountProvider to return 0 for all items
+        completionCountProvider.overrideWith(
+          (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
+        ),
+      ],
       child: MaterialApp(
         home: ContentHierarchyScreen(
           curriculumId: curriculumId ?? 'mishnayos',

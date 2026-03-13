@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -21,6 +22,9 @@ class OfflineQueue {
   final AppDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
   final Talker _logger;
+
+  /// Maximum number of retry attempts before an item is considered dead.
+  static const _maxRetries = 10;
 
   /// Get the sync queue DAO.
   SyncQueueDao get _queue => _database.syncQueueDao;
@@ -90,6 +94,25 @@ class OfflineQueue {
     var successCount = 0;
 
     for (final operation in pending) {
+      // Skip items that have exceeded the retry limit (dead-letter).
+      if (operation.retryCount >= _maxRetries) {
+        _logger.warning(
+          'Skipping dead-letter operation #${operation.id} '
+          '(${operation.operationType}) after $_maxRetries retries',
+        );
+        continue;
+      }
+
+      // Exponential backoff: wait 2^retryCount seconds before retrying.
+      if (operation.retryCount > 0) {
+        final backoffSeconds = pow(2, operation.retryCount).toInt();
+        _logger.debug(
+          'Backoff ${backoffSeconds}s for operation #${operation.id} '
+          '(retry ${operation.retryCount})',
+        );
+        await Future<void>.delayed(Duration(seconds: backoffSeconds));
+      }
+
       try {
         final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
 

@@ -47,6 +47,9 @@ class BookmarkEntity {
     return BookmarkEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == data['curriculumId'] as String,
+        orElse: () => throw ArgumentError(
+          'Unknown curriculumId: ${data['curriculumId']}',
+        ),
       ),
       trackType: TrackType.fromStorageKey(data['trackType'] as String),
       sefariaRef: data['sefariaRef'] as String,

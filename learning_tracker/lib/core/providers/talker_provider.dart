@@ -4,6 +4,14 @@ import 'package:talker/talker.dart';
 
 /// Provides the application-wide [Talker] singleton instance.
 ///
+/// This provider wraps the [AppLogger] singleton so that it can be overridden
+/// in tests:
+/// ```dart
+/// final container = ProviderContainer(overrides: [
+///   talkerProvider.overrideWithValue(MockTalker()),
+/// ]);
+/// ```
+///
 /// Use this provider to access the logger from any Riverpod-aware context:
 /// ```dart
 /// final talker = ref.read(talkerProvider);

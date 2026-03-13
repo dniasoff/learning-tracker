@@ -11,7 +11,10 @@ class AppTextStyles {
   AppTextStyles._();
 
   // Base font families
-  static const String _hebrewFontFamily = 'Roboto'; // System default for now
+  // NOTE: 'Noto Sans Hebrew' font files must be placed in assets/fonts/ and
+  // declared in pubspec.yaml before this family is available at runtime.
+  // Until then the system fallback font renders Hebrew characters.
+  static const String hebrewFontFamily = 'Noto Sans Hebrew';
   static const String _englishFontFamily = 'Roboto';
 
   /// Headline styles (for page titles, section headers)
@@ -104,37 +107,37 @@ class AppTextStyles {
 
   /// Hebrew text styles - same sizes but with Hebrew font and RTL direction
   static TextStyle get hebrewHeadlineLarge =>
-      headlineLarge.copyWith(fontFamily: _hebrewFontFamily);
+      headlineLarge.copyWith(fontFamily: hebrewFontFamily);
 
   static TextStyle get hebrewHeadlineMedium =>
-      headlineMedium.copyWith(fontFamily: _hebrewFontFamily);
+      headlineMedium.copyWith(fontFamily: hebrewFontFamily);
 
   static TextStyle get hebrewHeadlineSmall =>
-      headlineSmall.copyWith(fontFamily: _hebrewFontFamily);
+      headlineSmall.copyWith(fontFamily: hebrewFontFamily);
 
   static TextStyle get hebrewTitleLarge =>
-      titleLarge.copyWith(fontFamily: _hebrewFontFamily);
+      titleLarge.copyWith(fontFamily: hebrewFontFamily);
 
   static TextStyle get hebrewTitleMedium =>
-      titleMedium.copyWith(fontFamily: _hebrewFontFamily);
+      titleMedium.copyWith(fontFamily: hebrewFontFamily);
 
   static TextStyle get hebrewTitleSmall =>
-      titleSmall.copyWith(fontFamily: _hebrewFontFamily);
+      titleSmall.copyWith(fontFamily: hebrewFontFamily);
 
   static TextStyle get hebrewBodyLarge => bodyLarge.copyWith(
-    fontFamily: _hebrewFontFamily,
+    fontFamily: hebrewFontFamily,
     fontSize: 18, // Slightly larger for Hebrew readability
     height: 1.6,
   );
 
   static TextStyle get hebrewBodyMedium => bodyMedium.copyWith(
-    fontFamily: _hebrewFontFamily,
+    fontFamily: hebrewFontFamily,
     fontSize: 16, // Slightly larger for Hebrew readability
     height: 1.6,
   );
 
   static TextStyle get hebrewBodySmall => bodySmall.copyWith(
-    fontFamily: _hebrewFontFamily,
+    fontFamily: hebrewFontFamily,
     fontSize: 14, // Slightly larger for Hebrew readability
     height: 1.6,
   );
@@ -153,7 +156,7 @@ class AppTextStyles {
     final isHebrew = getTextDirection(text) == TextDirection.rtl;
     if (isHebrew) {
       return baseStyle.copyWith(
-        fontFamily: _hebrewFontFamily,
+        fontFamily: hebrewFontFamily,
         fontSize: (baseStyle.fontSize ?? 14) + 2, // Slightly larger
       );
     }

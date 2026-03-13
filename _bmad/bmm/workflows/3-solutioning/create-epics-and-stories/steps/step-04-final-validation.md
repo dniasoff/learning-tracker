@@ -1,6 +1,6 @@
 ---
 name: 'step-04-final-validation'
-description: 'Validate complete coverage of all requirements and ensure implementation readiness in Linear'
+description: 'Validate complete coverage of all requirements and ensure implementation readiness'
 
 # Path Definitions
 workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories'
@@ -8,11 +8,11 @@ workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-an
 # File References
 thisStepFile: './step-04-final-validation.md'
 workflowFile: '{workflow_path}/workflow.md'
-linearMappingFile: '{implementation_artifacts}/linear-mapping.yaml'
+outputFile: '{planning_artifacts}/epics.md'
 
 # Task References
-advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
-partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
+advancedElicitationTask: 'skill:bmad-advanced-elicitation'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/bmad-party-mode/workflow.md'
 
 # Template References
 epicsTemplate: '{workflow_path}/templates/epics-template.md'
@@ -131,40 +131,34 @@ For each epic, review stories in order:
 - ❌ WRONG: Story references features not yet implemented
 - ✅ RIGHT: Each story builds only on previous stories
 
-### 6. Validate Linear State and Complete
+<check if="{tracking_system} == linear">
+  <action>Additional Linear validation:
+    linearis issues search "" --team {team_key} --limit 50 \
+      | jq '[.[] | {id: .identifier, title: .title, parent: .parentIssue.identifier}]'
+    Verify all epics/stories have Linear issues with correct parent-child relationships and BMAD-Managed labels.
+  </action>
+</check>
+
+### 6. Complete and Save
 
 If all validations pass:
 
-**Verify Linear state:**
-1. Load {linearMappingFile} and get all epic and story IDs
-2. Query Linear for each epic: mcp__linear__get_issue with id={epic_issue_id}
-   - Verify issue exists and has correct labels
-   - Verify description contains epic goal
-3. Query Linear for each story: mcp__linear__get_issue with id={story_issue_id}
-   - Verify issue exists as sub-issue of correct epic
-   - Verify description contains user story and acceptance criteria
-   - Verify state is "Backlog"
+<check if="{tracking_system} != linear">
+- Update any remaining placeholders in the document
+- Ensure proper formatting
+- Save the final epics.md
+</check>
 
-**Report Linear summary:**
-- Total epics created: {epic_count}
-- Total stories created: {story_count}
-- All issues have "BMAD-Managed" label: ✓
-- All stories linked to parent epics: ✓
-
-**Save linear-mapping.yaml:**
-- Ensure {linearMappingFile} is saved with all issue IDs
-- This file is the local reference to Linear issue IDs
+<check if="{tracking_system} == linear">
+- Verify all epics and stories exist in Linear with correct descriptions and parent-child relationships
+- No local epics.md file is written — Linear issue descriptions are the sole record
+</check>
 
 **Present Final Menu:**
 **All validations complete!** [C] Complete Workflow
 
-When C is selected, the workflow is complete and epics/stories are ready in Linear.
+When C is selected, the workflow is complete and the epics.md is ready for development.
 
-Epics and Stories complete. Read fully and follow: `_bmad/core/tasks/bmad-help.md` with argument `Create Epics and Stories`.
+Epics and Stories complete. Invoke the `bmad-help` skill.
 
 Upon Completion of task output: offer to answer any questions about the Epics and Stories.
-
-**Note:** All epics and stories now live in Linear as the single source of truth.
-- View epics and stories in Linear at: {linear_project_url}
-- Use sprint-planning to see sprint status
-- Use create-story to add Dev Notes for the next story

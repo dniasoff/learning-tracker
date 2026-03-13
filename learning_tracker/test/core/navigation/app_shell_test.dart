@@ -7,40 +7,58 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
+import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 class MockUser extends Mock implements User {}
 
+class MockPinService extends Mock implements PinService {}
+
 AppRouter _createAuthenticatedRouter() {
   final mockAuth = MockFirebaseAuth();
-  when(() => mockAuth.currentUser).thenReturn(MockUser());
+  final mockUser = MockUser();
+  when(
+    () => mockAuth.authStateChanges(),
+  ).thenAnswer((_) => Stream.value(mockUser));
+
+  final mockPinService = MockPinService();
+  when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
+  when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
+
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
     parentPinGuard: ParentPinGuard(
-      isPinVerified: () => false,
-      promptForPin: () async => false,
+      pinService: mockPinService,
+      promptForPin: () async => null,
     ),
     tutorPinGuard: TutorPinGuard(
-      isPinVerified: () => false,
-      promptForPin: () async => false,
+      pinService: mockPinService,
+      promptForPin: () async => null,
     ),
   );
 }
 
 AppRouter _createUnauthenticatedRouter() {
   final mockAuth = MockFirebaseAuth();
-  when(() => mockAuth.currentUser).thenReturn(null);
+  when(
+    () => mockAuth.authStateChanges(),
+  ).thenAnswer((_) => Stream.value(null));
+
+  final mockPinService = MockPinService();
+  when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
+  when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
+
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
     parentPinGuard: ParentPinGuard(
-      isPinVerified: () => false,
-      promptForPin: () async => false,
+      pinService: mockPinService,
+      promptForPin: () async => null,
     ),
     tutorPinGuard: TutorPinGuard(
-      isPinVerified: () => false,
-      promptForPin: () async => false,
+      pinService: mockPinService,
+      promptForPin: () async => null,
     ),
   );
 }

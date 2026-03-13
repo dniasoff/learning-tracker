@@ -192,7 +192,7 @@ class _CurriculumProgressScreenState
             Text(
               total.toString(),
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                color: AppTheme.getCurriculumColor(widget.curriculumId),
+                color: AppTheme.getCurriculumColorByKey(widget.curriculumId),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -210,13 +210,9 @@ class _CurriculumProgressScreenState
   }
 
   String _getCurriculumName(String curriculumId) {
-    try {
-      final curriculum = CurriculumId.values.firstWhere(
-        (c) => c.storageKey == curriculumId,
-      );
-      return curriculum.displayNameEn;
-    } catch (e) {
-      return curriculumId;
-    }
+    final matches = CurriculumId.values.where(
+      (c) => c.storageKey == curriculumId,
+    );
+    return matches.isNotEmpty ? matches.first.displayNameEn : curriculumId;
   }
 }

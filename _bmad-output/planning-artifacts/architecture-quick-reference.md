@@ -1,6 +1,6 @@
 # Learning Tracker — Architecture Quick Reference
 
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-03-12
 **Full Details:** [architecture.md](architecture.md) | [PRD](prd.md) | [Project Context](../../_bmad/bmm/data/project-context-template.md)
 
 ---
@@ -219,10 +219,10 @@ class ContentItem {
 class Completion {
   String id;
   CurriculumId curriculumId;
-  String contentItemId;
-  String stageDefinitionId; // FK to stage_definitions
+  String sefariaRef;          // ⚠️ Changed from contentItemId in Epic 3 — use sefariaRef everywhere
+  String stageDefinitionId;   // FK to stage_definitions
   TrackType trackType;
-  DateTime completedAt; // UTC per P5
+  DateTime completedAt;       // UTC per P5
   int points;
 }
 ```
@@ -360,6 +360,48 @@ See [project-context.md](../../_bmad/bmm/data/project-context-template.md) for f
 
 ---
 
+## Known Toolchain Limitations
+
+### riverpod_generator + `Map<K,V>` Return Types
+**Problem:** `riverpod_generator` / `build_runner` cannot generate `.g.dart` files for providers that return `Map<K, V>` types (e.g., `Map<TrackType, int>`). The generated file is simply not created, causing cascade compile errors in every class that imports it.
+
+**Pattern:** When a provider must return a `Map`, manually author the `.g.dart` file using the Riverpod 3 class structure. Do **not** run `build_runner` targeting that file — it will not produce output and will not overwrite a manually created file.
+
+**Affected providers (as of Epic 4):**
+- `progress_providers.g.dart` — manually authored, contains `getTrackBreakdown` provider returning `Map<TrackType, int>`
+
+**Rule for future epics:** If a new provider returns `Map<K, V>`, create the `.g.dart` file manually from the start. Do not wait for build_runner to fail.
+
+---
+
+## Entering Each Epic — Codebase State Briefs
+
+### Entering Epic 5: Configurable Stages & Learning Order (2026-03-12)
+
+**Current schema version:** 2 (bumped in Epic 4 for `curriculum_tracks` table)
+
+**Critical field change from Epic 3:**
+> `completions` table uses `sefaria_ref` (String), NOT `content_item_id`. Any query, service, or exception that references completions must use `sefariaRef` in Dart and `sefaria_ref` in SQL/Drift.
+
+**Canonical track implementation:**
+> Use `TrackRepository` (DB-backed, in `features/tracks/data/`). Do NOT create a `TrackService` or any in-memory track abstraction. `TrackRepository` is injected via `trackRepositoryProvider`.
+
+**Track initialization:**
+> `CurriculumActivationService.activate()` calls `trackRepository.initializeDefaultTracks(curriculum)` — personal track is set up automatically on curriculum activation. No manual setup needed.
+
+**Track colors:**
+> Defined in `app_theme.dart` (personal=blue, school=green, tutor=orange). Never hardcode track colors in feature code — always read from theme.
+
+**Manual provider files:**
+> `features/progress/presentation/providers/progress_providers.g.dart` is manually authored (riverpod_generator limitation — see Toolchain section above). Do not run build_runner targeting this file.
+
+**Active Firestore sync TODO:**
+> Track activation state (curriculum_tracks table) is NOT yet synced to Firestore. Marked for Epic 13. Do not add Firestore sync for tracks in Epic 5 — it is intentionally deferred.
+
+**Test baseline entering Epic 5:** 671 passing tests.
+
+---
+
 ## Anti-Patterns to Avoid
 
 ❌ **Hardcoded 3-stage assumption** — stages are user-configurable per D3
@@ -374,8 +416,10 @@ See [project-context.md](../../_bmad/bmm/data/project-context-template.md) for f
 
 ## Quick Start: Implementing a New Story
 
-1. **Read architecture.md** section for relevant decisions (D1-D8) and patterns (P1-P6)
-2. **Write failing tests** for domain models, repository interface, service logic
+1. **Read the "Entering Epic N" section** above for the current epic's codebase state brief — schema changes, canonical implementations, known pitfalls.
+2. **Search before you build** — `grep -r "ClassName" lib/` for every new abstraction. If it exists, wire it. Don't create a parallel implementation.
+3. **Read architecture.md** section for relevant decisions (D1-D8) and patterns (P1-P6)
+4. **Write failing tests** for domain models, repository interface, service logic
 3. **Implement data layer** (DAO, repository impl) following P2
 4. **Implement domain layer** (models, services) with @freezed, immutability
 5. **Implement presentation layer** (providers, screens, widgets) using P3 family pattern

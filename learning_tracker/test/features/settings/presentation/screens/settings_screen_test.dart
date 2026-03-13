@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
@@ -40,6 +41,7 @@ void main() {
               return CurriculumActivationService(
                 database: database,
                 pushActiveCurricula: (_) async {}, // Mock Firestore sync
+                trackRepository: TrackRepositoryImpl(database: database),
               );
             }),
           ],

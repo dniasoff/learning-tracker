@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 
 /// Repository interface for progress data operations.
@@ -17,4 +18,14 @@ abstract class ProgressRepository {
   /// Returns the sum of all completions regardless of track type.
   /// Should match the sum of individual track counts from getTrackBreakdown.
   Future<int> getAggregateCount(String curriculumId);
+
+  /// Get all completion records for a specific curriculum.
+  ///
+  /// Returns completions in insertion order. Used by history screen.
+  Future<List<Completion>> getCompletionsByCurriculum(String curriculumId);
+
+  /// Get all completion records across all curricula.
+  ///
+  /// Used by history screen when no curriculum filter is applied.
+  Future<List<Completion>> getAllCompletions();
 }

@@ -48,8 +48,7 @@ docs/
 
 ## 🤝 Team Collaboration
 
-**With Freya WDS Designer Agent**: I provide strategic foundation and user personas for her scenarios  
-**With Idunn WDS PM Agent**: I hand off strategic foundation for her technical planning  
+**With Freya WDS Designer Agent**: I provide strategic foundation and user personas for her scenarios
 **With You**: I ask probing questions, research your market, and create clarity from complexity
 
 ---
@@ -72,4 +71,4 @@ Whether starting new products, clarifying direction, researching users, or defin
 
 **Analyzing your project now...**
 
-_(Continue to: `src/modules/wds/workflows/project-analysis/project-analysis-router.md`)_
+_(Continue to: Read `{output_folder}/_progress/00-design-log.md` and present the Adaptive Dashboard)_

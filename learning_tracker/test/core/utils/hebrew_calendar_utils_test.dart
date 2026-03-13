@@ -182,18 +182,35 @@ void main() {
       expect(HebrewCalendarUtils.isShabbos(saturday), isTrue);
     });
 
-    test('returns false for weekdays', () {
+    test('returns true for Friday evening (at or after 18:00)', () {
+      // Feb 6, 2026 is a Friday — Shabbat begins at sunset (~18:00)
+      final fridayEvening = DateTime(2026, 2, 6, 18, 0);
+      expect(fridayEvening.weekday, DateTime.friday);
+      expect(HebrewCalendarUtils.isShabbos(fridayEvening), isTrue);
+
+      final fridayNight = DateTime(2026, 2, 6, 21, 30);
+      expect(HebrewCalendarUtils.isShabbos(fridayNight), isTrue);
+    });
+
+    test('returns false for Friday before 18:00', () {
+      // Friday afternoon is not yet Shabbat
+      final fridayAfternoon = DateTime(2026, 2, 6, 17, 59);
+      expect(fridayAfternoon.weekday, DateTime.friday);
+      expect(HebrewCalendarUtils.isShabbos(fridayAfternoon), isFalse);
+    });
+
+    test('returns false for weekdays (not Friday evening)', () {
       final weekdays = [
         DateTime.utc(2026, 2, 8), // Sunday
         DateTime.utc(2026, 2, 9), // Monday
         DateTime.utc(2026, 2, 10), // Tuesday
         DateTime.utc(2026, 2, 11), // Wednesday
         DateTime.utc(2026, 2, 12), // Thursday
-        DateTime.utc(2026, 2, 13), // Friday
+        DateTime(2026, 2, 13, 12, 0), // Friday midday (not yet sunset)
       ];
 
       for (final date in weekdays) {
-        expect(HebrewCalendarUtils.isShabbos(date), isFalse);
+        expect(HebrewCalendarUtils.isShabbos(date), isFalse, reason: '$date');
       }
     });
 

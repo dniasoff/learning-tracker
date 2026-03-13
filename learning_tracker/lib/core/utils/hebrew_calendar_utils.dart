@@ -53,16 +53,23 @@ class HebrewCalendarUtils {
       jewishMonth: month,
       jewishDayOfMonth: day,
     );
-    return jewishDate.getGregorianCalendar();
+    return jewishDate.getGregorianCalendar().toUtc();
   }
 
   /// Checks if a given Gregorian date is Shabbos (Friday sunset to Saturday nightfall).
-  /// Returns true if the date falls on Saturday.
+  /// Returns true if the date falls on Saturday, or on Friday at or after 18:00
+  /// (approximate sunset).
   ///
-  /// Note: This is a simplified check. For precise sunset/nightfall times,
-  /// use ComplexZmanimCalendar with a GeoLocation.
+  /// Note: 18:00 local time is used as an approximate sunset time.
+  /// For precise zmanim (sunset/nightfall), use ComplexZmanimCalendar with a GeoLocation.
   static bool isShabbos(DateTime gregorianDate) {
-    return gregorianDate.weekday == DateTime.saturday;
+    if (gregorianDate.weekday == DateTime.saturday) return true;
+    // Friday evening approximation: 18:00 local time as sunset
+    if (gregorianDate.weekday == DateTime.friday &&
+        gregorianDate.hour >= 18) {
+      return true;
+    }
+    return false;
   }
 
   /// Checks if a given Gregorian date is a Yom Tov (Jewish holiday).

@@ -1,29 +1,15 @@
-import 'package:auto_route/auto_route.dart';
+import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 
-typedef PinVerificationChecker = bool Function();
-typedef PinPromptTrigger = Future<bool> Function();
-
-class ParentPinGuard extends AutoRouteGuard {
-  final PinVerificationChecker _isPinVerified;
-  final PinPromptTrigger _promptForPin;
-
+/// Route guard that protects parent-mode routes with a PIN.
+///
+/// Delegates all guard logic to [PinGuard].  If no parent PIN has been
+/// configured, access is allowed so the user can set one in settings.
+class ParentPinGuard extends PinGuard {
   ParentPinGuard({
-    required PinVerificationChecker isPinVerified,
-    required PinPromptTrigger promptForPin,
-  }) : _isPinVerified = isPinVerified,
-       _promptForPin = promptForPin;
+    required super.pinService,
+    required super.promptForPin,
+  });
 
   @override
-  Future<void> onNavigation(
-    NavigationResolver resolver,
-    StackRouter router,
-  ) async {
-    if (_isPinVerified()) {
-      resolver.next(true);
-      return;
-    }
-
-    final verified = await _promptForPin();
-    resolver.next(verified);
-  }
+  String get pinType => 'parent';
 }

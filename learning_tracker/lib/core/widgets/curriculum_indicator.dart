@@ -32,7 +32,7 @@ class CurriculumIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = AppTheme.getCurriculumColor(curriculumId);
+    final color = AppTheme.getCurriculumColorByKey(curriculumId);
 
     Widget indicator;
     switch (shape) {

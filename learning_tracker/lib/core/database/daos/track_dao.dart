@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'track_dao.g.dart';
 
@@ -66,7 +67,7 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
           curriculumId: curriculumId.storageKey,
           trackType: trackType.storageKey,
           isActive: const Value(true),
-          activatedAt: DateTime.now(),
+          activatedAt: DateTimeFactory.nowUtc(),
         ),
       );
     } else if (!existing.isActive) {
@@ -79,7 +80,7 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
           .write(
             CurriculumTracksCompanion(
               isActive: const Value(true),
-              activatedAt: Value(DateTime.now()),
+              activatedAt: Value(DateTimeFactory.nowUtc()),
               deactivatedAt: const Value(null),
             ),
           );
@@ -118,7 +119,7 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
           .write(
             CurriculumTracksCompanion(
               isActive: const Value(false),
-              deactivatedAt: Value(DateTime.now()),
+              deactivatedAt: Value(DateTimeFactory.nowUtc()),
             ),
           );
     }
@@ -139,7 +140,7 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
           curriculumId: curriculumId.storageKey,
           trackType: TrackType.personal.storageKey,
           isActive: const Value(true),
-          activatedAt: DateTime.now(),
+          activatedAt: DateTimeFactory.nowUtc(),
         ),
       );
     }

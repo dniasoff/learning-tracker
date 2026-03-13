@@ -1,4 +1,5 @@
 import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -184,7 +185,9 @@ class PinService {
     await _secureStorage.write(key: countKey, value: newCount.toString());
 
     if (newCount >= _maxFailedAttempts) {
-      // Trigger lockout
+      // Trigger lockout and reset count so successive lockout cycles don't
+      // grow unboundedly.
+      await _secureStorage.write(key: countKey, value: '0');
       final lockoutTimestamp = DateTime.now().millisecondsSinceEpoch.toString();
       await _secureStorage.write(key: timestampKey, value: lockoutTimestamp);
     }
@@ -216,7 +219,11 @@ class PinService {
     ).add(const Duration(minutes: _lockoutDurationMinutes));
 
     final remaining = lockoutEnd.difference(DateTime.now());
-    return remaining.inMinutes + 1; // Round up
+    if (remaining.inSeconds <= 0) {
+      return 0;
+    }
+    // Round up so users see at least 1 minute while time is still remaining.
+    return remaining.inMinutes + 1;
   }
 }
 
@@ -231,9 +238,16 @@ class PinLockoutException implements Exception {
       'PinLockoutException: Too many failed attempts. Try again in $remainingMinutes minute(s).';
 }
 
+/// Provider for FlutterSecureStorage instance.
+///
+/// Exposed as a separate provider so tests can override it with a mock.
+final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
+  (ref) => const FlutterSecureStorage(),
+);
+
 /// Provider for the PIN service.
 @riverpod
 PinService pinService(Ref ref) {
-  const storage = FlutterSecureStorage();
+  final storage = ref.read(flutterSecureStorageProvider);
   return PinService(storage);
 }

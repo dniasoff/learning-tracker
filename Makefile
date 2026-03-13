@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-all ci analyze format
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-all ci analyze format linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -14,6 +14,11 @@ help:
 	@echo "  make analyze            - Run dart analyze"
 	@echo "  make format             - Run dart format"
 	@echo "  make ci                 - Run full CI check (analyze + format + all tests)"
+	@echo ""
+	@echo "Linear Cache:"
+	@echo "  make linear-sync        - Full sync of Linear issues to .linear-cache/"
+	@echo "  make linear-story STORY=DNI-XX - Refresh a single story"
+	@echo "  make linear-check       - Check cache freshness"
 
 test-unit:
 	@echo "Running unit tests..."
@@ -45,3 +50,12 @@ format:
 
 ci: analyze format test-all
 	@echo "✓ CI checks passed"
+
+linear-sync:
+	@tool/linear-sync.sh sync
+
+linear-story:
+	@tool/linear-sync.sh story $(STORY)
+
+linear-check:
+	@tool/linear-sync.sh check

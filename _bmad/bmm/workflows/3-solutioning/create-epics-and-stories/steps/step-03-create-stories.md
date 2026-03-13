@@ -1,6 +1,6 @@
 ---
 name: 'step-03-create-stories'
-description: 'Generate all epics with their stories as Linear sub-issues'
+description: 'Generate all epics with their stories following the template structure'
 
 # Path Definitions
 workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories'
@@ -9,11 +9,11 @@ workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-an
 thisStepFile: './step-03-create-stories.md'
 nextStepFile: './step-04-final-validation.md'
 workflowFile: '{workflow_path}/workflow.md'
-linearMappingFile: '{implementation_artifacts}/linear-mapping.yaml'
+outputFile: '{planning_artifacts}/epics.md'
 
 # Task References
-advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
-partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
+advancedElicitationTask: 'skill:bmad-advanced-elicitation'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/bmad-party-mode/workflow.md'
 
 # Template References
 epicsTemplate: '{workflow_path}/templates/epics-template.md'
@@ -66,8 +66,10 @@ Load {outputFile} and review:
 
 - Approved epics_list from Step 2
 - FR coverage map
-- All requirements (FRs, NFRs, additional)
+- All requirements (FRs, NFRs, additional, **UX Design requirements if present**)
 - Template structure at the end of the document
+
+**UX Design Integration**: If UX Design Requirements (UX-DRs) were extracted in Step 1, ensure they are visible during story creation. UX-DRs must be covered by stories — either within existing epics (e.g., accessibility fixes for a feature epic) or in a dedicated "Design System / UX Polish" epic.
 
 ### 2. Explain Story Creation Approach
 
@@ -146,6 +148,7 @@ Display:
 - Epic goal statement
 - FRs covered by this epic
 - Any NFRs or additional requirements relevant
+- Any UX Design Requirements (UX-DRs) relevant to this epic
 
 #### B. Story Breakdown
 
@@ -179,44 +182,24 @@ After writing each story:
 - "Is the scope appropriate for a single dev session?"
 - "Are the acceptance criteria complete and testable?"
 
-#### E. Create Story in Linear
+#### E. Append to Document
 
 When story is approved:
 
-**Create story as Linear sub-issue:**
-1. Load {linearMappingFile} to get epic's Linear issue ID
-2. Generate story key: `{epic_num}-{story_num}-{kebab-case-title}` (e.g., "1-2-user-authentication")
-3. Create sub-issue in Linear with mcp__linear__create_issue:
-   - title: "[{story_key}] {Story Title}"
-   - team: {team_id}
-   - project: {project_id}
-   - parentId: epic's linear_issue_id from {linearMappingFile}
-   - labels: ["BMAD-Managed", "Epic-{N}"]
-   - description: |
-       ## Story
-       As a {user_type},
-       I want {capability},
-       So that {value_benefit}.
+<check if="{tracking_system} != linear">
+- Append it to {outputFile} following template structure
+- Use correct numbering (Epic N, Story M)
+- Maintain proper markdown formatting
+</check>
 
-       ## Acceptance Criteria
-       **Given** {precondition}
-       **When** {action}
-       **Then** {expected_outcome}
-       **And** {additional_criteria}
-
-       ## FRs Covered
-       {list of FR numbers this story addresses}
-   - state: "Backlog"
-
-4. Store in {linearMappingFile} under stories section:
-   ```yaml
-   stories:
-     {story_key}:
-       linear_issue_id: {issue_id}
-       epic_num: {N}
-       story_num: {M}
-       title: "{Story Title}"
-   ```
+<check if="{tracking_system} == linear">
+  <action>Create Linear issues for each story:
+    linearis issues create "[Epic-N] Epic Title" --team {team_key} --labels "BMAD-Managed,Epic" -d "Epic goal"
+    linearis issues create "[N-M-key] Story Title" --team {team_key} --labels "BMAD-Managed,Story" \
+      --parent-ticket [epic-id] -d "Placeholder — run create-story for Dev Notes" --status "Backlog"
+  </action>
+  <action>Record Linear issue identifiers in linear-mapping.yaml</action>
+</check>
 
 ### 4. Epic Completion
 
@@ -238,34 +221,22 @@ After all epics and stories are generated:
 - Verify the document follows template structure exactly
 - Ensure all placeholders are replaced
 - Confirm all FRs are covered
+- **Confirm all UX Design Requirements (UX-DRs) are covered by at least one story** (if UX document was an input)
 - Check formatting consistency
 
-## LINEAR ISSUE STRUCTURE:
+## TEMPLATE STRUCTURE COMPLIANCE:
 
-All epics and stories are stored in Linear as the single source of truth:
+The final {outputFile} must follow this structure exactly:
 
-**Epic (Parent Issue):**
-- Title: "[Epic-{N}] {Epic Title}"
-- Labels: ["BMAD-Managed", "Epic-{N}"]
-- Description: Epic goal, business value, FRs covered
-
-**Story (Sub-Issue):**
-- Title: "[{story-key}] {Story Title}"
-- Labels: ["BMAD-Managed", "Epic-{N}"]
-- Parent: Epic's issue ID
-- Description:
-  - Story statement (As a/I want/So that)
-  - Acceptance Criteria (Given/When/Then)
-  - FRs covered
-
-**Status Mapping:**
-| Workflow State | Linear Status |
-|----------------|---------------|
-| backlog | Backlog |
-| ready-for-dev (context added) | Todo |
-| in-progress | In Progress |
-| review | In Review |
-| done | Done |
+1. **Overview** section with project name
+2. **Requirements Inventory** with all three subsections populated
+3. **FR Coverage Map** showing requirement to epic mapping
+4. **Epic List** with approved epic structure
+5. **Epic sections** for each epic (N = 1, 2, 3...)
+   - Epic title and goal
+   - All stories for that epic (M = 1, 2, 3...)
+     - Story title and user story
+     - Acceptance Criteria using Given/When/Then format
 
 ### 7. Present FINAL MENU OPTIONS
 
@@ -277,7 +248,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 - IF A: Read fully and follow: {advancedElicitationTask}
 - IF P: Read fully and follow: {partyModeWorkflow}
-- IF C: Save content to {outputFile}, update frontmatter, then read fully and follow: {nextStepFile}
+- IF C: {{#if tracking_system != "linear"}}Save content to {outputFile}, update frontmatter, then{{/if}} read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#7-present-final-menu-options)
 
 #### EXECUTION RULES:
@@ -289,7 +260,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 ## CRITICAL STEP COMPLETION NOTE
 
-ONLY WHEN [C continue option] is selected and [all epics and stories saved to document following the template structure exactly], will you then read fully and follow: `{nextStepFile}` to begin final validation phase.
+ONLY WHEN [C continue option] is selected and [all epics and stories saved to document (when {tracking_system} != linear) or created in Linear (when {tracking_system} == linear) following the template structure exactly], will you then read fully and follow: `{nextStepFile}` to begin final validation phase.
 
 ---
 

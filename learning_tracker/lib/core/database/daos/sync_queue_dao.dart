@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'sync_queue_dao.g.dart';
 
@@ -16,8 +17,10 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase>
 
   /// Get count of pending operations.
   Future<int> getPendingCount() async {
-    final count = await (select(syncQueue)..limit(1000)).get();
-    return count.length;
+    final countExpr = syncQueue.id.count();
+    final query = selectOnly(syncQueue)..addColumns([countExpr]);
+    final row = await query.getSingle();
+    return row.read(countExpr) ?? 0;
   }
 
   /// Enqueue a new operation.
@@ -26,7 +29,7 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase>
       SyncQueueCompanion.insert(
         operationType: operationType,
         payload: payload,
-        queuedAt: DateTime.now().toUtc(),
+        queuedAt: DateTimeFactory.nowUtc(),
       ),
     );
   }

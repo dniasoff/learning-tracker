@@ -188,11 +188,17 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushCompletion(completion);
       _logger.debug('Pushed completion to Firestore');
-    } catch (e) {
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push completion, queuing for later', e);
       await _offlineQueue.enqueueCompletion(completion);
     }
   }
+
+  /// Fetch all bookmarks for the current user from Firestore.
+  ///
+  /// Used by [BookmarkRepositoryImpl.syncFromFirestore] for pull-on-demand sync.
+  Future<List<Map<String, dynamic>>> fetchBookmarksFromFirestore() =>
+      _firestoreDataSource.fetchBookmarks();
 
   /// Push a bookmark to Firestore after local write.
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
@@ -209,7 +215,7 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushBookmark(bookmark);
       _logger.debug('Pushed bookmark to Firestore');
-    } catch (e) {
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push bookmark, queuing for later', e);
       await _offlineQueue.enqueueBookmark(bookmark);
     }
@@ -230,7 +236,7 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushSettings(settings);
       _logger.debug('Pushed settings to Firestore');
-    } catch (e) {
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push settings, queuing for later', e);
       await _offlineQueue.enqueueSettings(settings);
     }
@@ -251,7 +257,7 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushStreak(streak);
       _logger.debug('Pushed streak to Firestore');
-    } catch (e) {
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push streak, queuing for later', e);
       await _offlineQueue.enqueueStreak(streak);
     }
@@ -272,7 +278,7 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushProfile(profile);
       _logger.debug('Pushed profile to Firestore');
-    } catch (e) {
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push profile, queuing for later', e);
       await _offlineQueue.enqueueProfile(profile);
     }
@@ -339,7 +345,7 @@ class SyncEngine {
           );
           insertedCount++;
         }
-      } catch (e) {
+      } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge completion: $e');
       }
     }
@@ -377,7 +383,7 @@ class SyncEngine {
           sefariaRef: sefariaRef,
           updatedAt: updatedAt,
         );
-      } catch (e) {
+      } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge bookmark: $e');
       }
     }
@@ -416,16 +422,7 @@ class SyncEngine {
           curriculumId,
           companions,
         );
-
-        // Merge learning order if present in this settings document
-        final learningOrder = remote['learning_order'] as List<dynamic>?;
-        if (learningOrder != null) {
-          await _mergeLearningOrder(
-            curriculumId,
-            learningOrder.cast<Map<String, dynamic>>(),
-          );
-        }
-      } catch (e) {
+      } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge settings: $e');
       }
     }
@@ -470,7 +467,7 @@ class SyncEngine {
         userMode: userMode,
         updatedAt: updatedAt,
       );
-    } catch (e) {
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to merge profile: $e');
     }
   }
@@ -519,10 +516,10 @@ class SyncEngine {
 
       _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now()));
 
-      // Reattach listeners if app is in foreground
-      if (_listenersAttached) {
-        await attachListeners();
-      }
+      // Reattach listeners — detachListeners() cleared the flag on disconnect,
+      // so always attempt to attach them now that we are back online.
+      _listenersAttached = false;
+      await attachListeners();
     } catch (e, stackTrace) {
       _logger.error('Failed to flush offline queue', e, stackTrace);
       _updateStatus(
@@ -569,67 +566,12 @@ class SyncEngine {
       _logger.debug(
         'Pushed curriculum import metadata to Firestore: $curriculumId',
       );
-    } catch (e) {
+    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning(
         'Failed to push curriculum import metadata, queuing for later',
         e,
       );
       await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
-    }
-  }
-
-  // ========== Learning Order Sync ==========
-
-  /// Push learning order to Firestore after local write.
-  ///
-  /// Stores as `learning_order` field in `settings/{curriculumId}` document.
-  Future<void> pushLearningOrder(Map<String, dynamic> data) async {
-    if (!_isOnline) {
-      await _offlineQueue.enqueueSettings(data);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushSettings(data);
-      _logger.debug('Pushed learning order to Firestore');
-    } catch (e) {
-      _logger.warning('Failed to push learning order, queuing for later', e);
-      await _offlineQueue.enqueueSettings(data);
-    }
-  }
-
-  /// Merge learning order from remote Firestore settings document.
-  Future<void> _mergeLearningOrder(
-    String curriculumId,
-    List<Map<String, dynamic>> orderRows,
-  ) async {
-    _logger.debug(
-      'Merging ${orderRows.length} learning order rows for $curriculumId',
-    );
-
-    try {
-      await _database.learningOrderDao.deleteAllForCurriculum(curriculumId);
-
-      for (final row in orderRows) {
-        final sefariaRef = row['sefaria_ref'] as String?;
-        final userSortOrder = row['user_sort_order'] as int?;
-        if (sefariaRef == null || userSortOrder == null) continue;
-
-        await _database.learningOrderDao.upsertLearningOrder(
-          LearningOrderCompanion.insert(
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            userSortOrder: userSortOrder,
-          ),
-        );
-      }
-    } catch (e) {
-      _logger.warning('Failed to merge learning order: $e');
     }
   }
 

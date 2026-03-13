@@ -42,8 +42,12 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     logger: logger,
   );
 
-  // Initialize on creation
-  engine.initialize();
+  // Initialize on creation; surface errors onto the status stream.
+  engine.initialize().catchError((Object error, StackTrace stackTrace) {
+    // initialize() updates the status stream with an error status on failure,
+    // but catchError is needed here so an unhandled async error doesn't crash
+    // the isolate when the Future is fire-and-forget.
+  });
 
   // Dispose when provider is disposed
   ref.onDispose(() {

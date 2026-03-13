@@ -29,7 +29,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
       try {
         final trackType = TrackType.fromStorageKey(entry.key);
         result[trackType] = entry.value;
-      } catch (e) {
+      } on ArgumentError {
         // Skip invalid track types (defensive - shouldn't happen)
         continue;
       }
@@ -41,5 +41,19 @@ class ProgressRepositoryImpl implements ProgressRepository {
   @override
   Future<int> getAggregateCount(String curriculumId) async {
     return await _database.completionDao.getAggregateCount(curriculumId);
+  }
+
+  @override
+  Future<List<Completion>> getCompletionsByCurriculum(
+    String curriculumId,
+  ) async {
+    return await _database.completionDao.getCompletionsByCurriculum(
+      curriculumId,
+    );
+  }
+
+  @override
+  Future<List<Completion>> getAllCompletions() async {
+    return await _database.completionDao.getAllCompletions();
   }
 }

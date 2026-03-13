@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'active_curriculum_dao.g.dart';
 
@@ -36,21 +37,26 @@ class ActiveCurriculumDao extends DatabaseAccessor<AppDatabase>
     await into(activeCurricula).insertOnConflictUpdate(
       ActiveCurriculaCompanion.insert(
         curriculumId: curriculum.storageKey,
-        activatedAt: DateTime.now().toUtc(),
+        activatedAt: DateTimeFactory.nowUtc(),
       ),
     );
   }
 
-  /// Deactivate a curriculum (throws StateError if last active)
+  /// Deactivate a curriculum (throws StateError if last active).
+  ///
+  /// The count check and delete are wrapped in a single [transaction] to
+  /// prevent a TOCTOU race where two concurrent calls could both pass the
+  /// "length > 1" guard and both delete, leaving zero active curricula.
   Future<void> deactivate(CurriculumId curriculum) async {
-    // Check if this is the last active curriculum
-    final activeCurriculaList = await getActiveCurricula();
-    if (activeCurriculaList.length <= 1) {
-      throw StateError('Cannot deactivate the last active curriculum');
-    }
+    await transaction(() async {
+      final activeCurriculaList = await getActiveCurricula();
+      if (activeCurriculaList.length <= 1) {
+        throw StateError('Cannot deactivate the last active curriculum');
+      }
 
-    await (delete(
-      activeCurricula,
-    )..where((t) => t.curriculumId.equals(curriculum.storageKey))).go();
+      await (delete(
+        activeCurricula,
+      )..where((t) => t.curriculumId.equals(curriculum.storageKey))).go();
+    });
   }
 }

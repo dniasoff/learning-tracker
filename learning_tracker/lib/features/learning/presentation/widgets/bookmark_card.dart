@@ -166,10 +166,14 @@ class BookmarkCard extends ConsumerWidget {
   }
 
   void _navigateToBookmark(BuildContext context, String sefariaRef) {
-    // Navigate to curriculum learning screen
-    // TODO: Update this to navigate to the specific content item
+    // Navigate to the content hierarchy screen for this specific item.
+    // We use the sefariaRef as the level1 path parameter so the hierarchy
+    // screen can deep-link directly to the bookmarked item.
     context.router.push(
-      CurriculumLearningRoute(curriculumId: curriculumId.storageKey),
+      ContentHierarchyRoute(
+        curriculumId: curriculumId.storageKey,
+        level1: sefariaRef,
+      ),
     );
   }
 

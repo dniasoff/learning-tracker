@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -18,6 +19,10 @@ void main() {
   late MockNavigationResolver mockResolver;
   late MockStackRouter mockRouter;
 
+  setUpAll(() {
+    registerFallbackValue(const SignInRoute());
+  });
+
   setUp(() {
     mockFirebaseAuth = MockFirebaseAuth();
     authGuard = AuthGuard(firebaseAuth: mockFirebaseAuth);
@@ -25,26 +30,33 @@ void main() {
     mockRouter = MockStackRouter();
 
     when(() => mockResolver.next(any())).thenReturn(null);
+    when(() => mockResolver.next()).thenReturn(null);
   });
 
   group('AuthGuard', () {
-    test('allows navigation when auth state has valid user', () {
+    test('allows navigation when auth state has valid user', () async {
       final mockUser = MockUser();
-      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+      when(
+        () => mockFirebaseAuth.authStateChanges(),
+      ).thenAnswer((_) => Stream.value(mockUser));
 
-      authGuard.onNavigation(mockResolver, mockRouter);
+      await authGuard.onNavigation(mockResolver, mockRouter);
 
       verify(() => mockResolver.next()).called(1);
-      verifyNever(() => mockRouter.pushPath(any()));
+      verifyNever(() => mockRouter.replace(any()));
     });
 
-    test('redirects to sign-in route when auth state is null', () {
-      when(() => mockFirebaseAuth.currentUser).thenReturn(null);
-      when(() => mockRouter.pushPath('/sign-in')).thenAnswer((_) async => null);
+    test('redirects to sign-in route when auth state is null', () async {
+      when(
+        () => mockFirebaseAuth.authStateChanges(),
+      ).thenAnswer((_) => Stream.value(null));
+      when(
+        () => mockRouter.replace(any()),
+      ).thenAnswer((_) async => null);
 
-      authGuard.onNavigation(mockResolver, mockRouter);
+      await authGuard.onNavigation(mockResolver, mockRouter);
 
-      verify(() => mockRouter.pushPath('/sign-in')).called(1);
+      verify(() => mockRouter.replace(any())).called(1);
       verify(() => mockResolver.next(false)).called(1);
     });
   });

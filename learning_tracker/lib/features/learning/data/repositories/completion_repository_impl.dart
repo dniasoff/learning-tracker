@@ -1,8 +1,11 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
@@ -11,14 +14,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final AppDatabase _database;
   final SyncEngine _syncEngine;
   final ContentRepository _contentRepository;
+  final BookmarkRepository? _bookmarkRepository;
 
   CompletionRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
     required ContentRepository contentRepository,
+    BookmarkRepository? bookmarkRepository,
   }) : _database = database,
        _syncEngine = syncEngine,
-       _contentRepository = contentRepository;
+       _contentRepository = contentRepository,
+       _bookmarkRepository = bookmarkRepository;
 
   @override
   Future<Completion> markComplete(CompletionRequest request) async {
@@ -86,15 +92,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
         // Use the same logic as single completion
         // Note: We're already in a transaction, so nested transactions
         // will be handled by Drift's transaction management
-        try {
-          final completion = await _markCompleteSingleInTransaction(
-            singleRequest,
-          );
-          completions.add(completion);
-        } catch (e) {
-          // If any item fails, the entire transaction will be rolled back
-          rethrow;
-        }
+        final completion = await _markCompleteSingleInTransaction(singleRequest);
+        completions.add(completion);
       }
 
       return completions;
@@ -199,26 +198,39 @@ class CompletionRepositoryImpl implements CompletionRepository {
       sefariaRef,
     );
 
-    try {
-      return completions.firstWhere(
-        (c) => c.stageId == stageId && c.trackType == trackType,
-      );
-    } catch (e) {
-      return null; // Not found
-    }
+    final matches = completions.where(
+      (c) => c.stageId == stageId && c.trackType == trackType,
+    );
+    return matches.isEmpty ? null : matches.first; // null if not found
   }
 
   /// Calculate points for completing this stage.
   ///
-  /// TODO: Get points from curriculum configuration or stage definitions.
-  /// For now, uses a default value of 10 points per stage.
+  /// Queries stage definitions for this curriculum and returns points based
+  /// on the stage order (higher stages are worth more). Falls back to a
+  /// default of 10 × stageOrder when no stage definitions are configured.
   Future<int> _calculatePoints({
     required String curriculumId,
     required int stageId,
   }) async {
-    // TODO: Implement proper points calculation from curriculum config
-    // For now, return a default value
-    return 10;
+    final stages = await _database.stageDao.getStageDefinitionsByCurriculum(
+      curriculumId,
+    );
+
+    if (stages.isEmpty) {
+      // No stage definitions configured — use stageId × 10 as a sensible default
+      return stageId * 10;
+    }
+
+    // Match by stageOrder (stageId corresponds to the 1-based stageOrder)
+    final matching = stages.where((s) => s.stageOrder == stageId);
+    if (matching.isNotEmpty) {
+      // Award stageOrder × 10 points (later stages worth more)
+      return matching.first.stageOrder * 10;
+    }
+
+    // Fallback: multiply by 10
+    return stageId * 10;
   }
 
   /// Create the completion record in the database.
@@ -226,7 +238,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required CompletionRequest request,
     required int points,
   }) async {
-    final now = DateTime.now().toUtc(); // P5: Store as UTC
+    final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
 
     final id = await _database.completionDao.insertCompletion(
       CompletionsCompanion.insert(
@@ -249,17 +261,35 @@ class CompletionRepositoryImpl implements CompletionRepository {
   }
 
   /// Advance the bookmark to the next item in learning order.
+  ///
+  /// Delegates to [BookmarkRepository] when available so that Firestore sync
+  /// is triggered. Falls back to direct DAO access when no repository is
+  /// injected (e.g. during tests that don't need sync).
   Future<void> _advanceBookmark({
     required String curriculumId,
     required String trackType,
     required String completedSefariaRef,
   }) async {
-    // Get current bookmark
+    if (_bookmarkRepository != null) {
+      // Use BookmarkRepository so Firestore sync is triggered
+      final curriculum = CurriculumId.values.firstWhere(
+        (c) => c.storageKey == curriculumId,
+        orElse: () => throw ArgumentError('Unknown curriculumId: $curriculumId'),
+      );
+      final track = TrackType.fromStorageKey(trackType);
+      await _bookmarkRepository.advanceBookmark(
+        curriculumId: curriculum,
+        trackType: track,
+        completedSefariaRef: completedSefariaRef,
+      );
+      return;
+    }
+
+    // Fallback: direct DAO access (no Firestore sync)
     final bookmark = await _database.bookmarkDao
         .getBookmarkByCurriculumAndTrack(curriculumId, trackType);
 
     if (bookmark == null) {
-      // No bookmark exists yet, create one pointing to the next item
       final nextSefariaRef = await _getNextItemId(
         curriculumId: curriculumId,
         currentSefariaRef: completedSefariaRef,
@@ -271,12 +301,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
             curriculumId: curriculumId,
             sefariaRef: nextSefariaRef,
             trackType: trackType,
-            updatedAt: DateTime.now().toUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
           ),
         );
       }
     } else if (bookmark.sefariaRef == completedSefariaRef) {
-      // Bookmark is on this item, advance it
       final nextSefariaRef = await _getNextItemId(
         curriculumId: curriculumId,
         currentSefariaRef: completedSefariaRef,
@@ -289,7 +318,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
             curriculumId: drift.Value(bookmark.curriculumId),
             trackType: drift.Value(bookmark.trackType),
             sefariaRef: drift.Value(nextSefariaRef),
-            updatedAt: drift.Value(DateTime.now().toUtc()),
+            updatedAt: drift.Value(DateTimeFactory.nowUtc()),
           ),
         );
       }

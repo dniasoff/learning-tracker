@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 
 /// In-memory implementation of [ContentRepository].
@@ -68,6 +69,8 @@ class ContentRepositoryImpl implements ContentRepository {
       _contentCache[key] = items;
       return items;
     } catch (e) {
+      // Intentional catch-all: wraps any load failure (network, parse, IO)
+      // into a typed ContentLoadException for callers to handle uniformly.
       throw ContentLoadException(
         'Failed to load content for ${curriculumId.displayNameEn}',
         cause: e,
@@ -120,11 +123,17 @@ class ContentRepositoryImpl implements ContentRepository {
     }
 
     final items = await getContentForCurriculum(curriculumId);
-    final lowerQuery = query.toLowerCase();
+
+    // Normalize the query: lowercase for Latin, strip nikud for Hebrew.
+    // Hebrew toLowerCase() is a no-op, so we strip diacritics (nikud) from
+    // both query and item names to enable nikud-insensitive Hebrew matching.
+    final normalizedQuery = HebrewUtils.stripNikud(query.toLowerCase().trim());
 
     return items.where((item) {
-      return item.displayNameHe.toLowerCase().contains(lowerQuery) ||
-          item.displayNameEn.toLowerCase().contains(lowerQuery);
+      final normalizedHe = HebrewUtils.stripNikud(item.displayNameHe);
+      final normalizedEn = item.displayNameEn.toLowerCase();
+      return normalizedHe.contains(normalizedQuery) ||
+          normalizedEn.contains(normalizedQuery);
     }).toList();
   }
 
@@ -135,11 +144,8 @@ class ContentRepositoryImpl implements ContentRepository {
   }) async {
     final items = await getContentForCurriculum(curriculumId);
 
-    try {
-      return items.firstWhere((item) => item.sefariaRef == sefariaRef);
-    } catch (_) {
-      return null;
-    }
+    final matches = items.where((item) => item.sefariaRef == sefariaRef);
+    return matches.isNotEmpty ? matches.first : null;
   }
 
   /// Maps curriculum ID to JSON filename.

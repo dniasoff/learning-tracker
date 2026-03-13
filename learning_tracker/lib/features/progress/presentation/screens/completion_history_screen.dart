@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 
 @RoutePage()
 class CompletionHistoryScreen extends ConsumerStatefulWidget {
@@ -25,65 +25,21 @@ class CompletionHistoryScreen extends ConsumerStatefulWidget {
 class _CompletionHistoryScreenState
     extends ConsumerState<CompletionHistoryScreen> {
   TrackType? _trackFilter;
-  List<Completion>? _completions;
-  bool _isLoading = true;
-  Object? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCompletions();
-  }
-
-  Future<void> _loadCompletions() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final database = ref.read(appDatabaseProvider);
-
-      List<Completion> completions;
-      if (widget.curriculumId != null) {
-        completions = await database.completionDao.getCompletionsByCurriculum(
-          widget.curriculumId!,
-        );
-      } else {
-        completions = await database.completionDao.getAllCompletions();
-      }
-
-      // Apply track filter if specified
-      if (_trackFilter != null) {
-        completions = completions
-            .where((c) => c.trackType == _trackFilter!.storageKey)
-            .toList();
-      }
-
-      // Sort by completion date descending (most recent first)
-      completions.sort((a, b) => b.completedAt.compareTo(a.completedAt));
-
-      setState(() {
-        _completions = completions;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e;
-        _isLoading = false;
-      });
-    }
-  }
 
   void _onTrackFilterChanged(TrackType? trackType) {
     setState(() {
       _trackFilter = trackType;
     });
-    _loadCompletions();
   }
 
   @override
   Widget build(BuildContext context) {
+    final completionsAsync = widget.curriculumId != null
+        ? ref.watch(
+            completionHistoryForCurriculumProvider(widget.curriculumId!),
+          )
+        : ref.watch(allCompletionHistoryProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Completion History'),
@@ -92,25 +48,41 @@ class _CompletionHistoryScreenState
       body: Column(
         children: [
           if (_trackFilter != null) _buildActiveFilterChip(),
-          Expanded(child: _buildBody()),
+          Expanded(child: _buildBody(completionsAsync)),
         ],
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const LoadingIndicator(message: 'Loading history...');
-    }
-
-    if (_error != null) {
-      return ErrorDisplay(
-        message: 'Failed to load completion history: $_error',
-        onRetry: _loadCompletions,
-      );
-    }
-
-    return _buildCompletionsList(_completions!);
+  Widget _buildBody(AsyncValue<List<Completion>> completionsAsync) {
+    return completionsAsync.when(
+      loading: () => const LoadingIndicator(message: 'Loading history...'),
+      error: (error, _) => ErrorDisplay(
+        message: 'Failed to load completion history: $error',
+        onRetry: () {
+          if (widget.curriculumId != null) {
+            ref.invalidate(
+              completionHistoryForCurriculumProvider(widget.curriculumId!),
+            );
+          } else {
+            ref.invalidate(allCompletionHistoryProvider);
+          }
+        },
+      ),
+      data: (allCompletions) {
+        // Apply track filter in-memory (SQL filter is a future optimisation)
+        var completions = allCompletions;
+        if (_trackFilter != null) {
+          completions = completions
+              .where((c) => c.trackType == _trackFilter!.storageKey)
+              .toList();
+        }
+        // Sort by completion date descending (most recent first)
+        completions = [...completions]
+          ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+        return _buildCompletionsList(completions);
+      },
+    );
   }
 
   Widget _buildTrackFilterMenu() {

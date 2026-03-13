@@ -14,17 +14,17 @@ class DuplicatePreventionService {
   /// Checks if a completion can be created for the given parameters.
   ///
   /// Returns true if no prior completion exists for the same
-  /// [curriculumId], [contentItemId], and [stageId].
+  /// [curriculumId], [sefariaRef], and [stageId].
   ///
   /// Returns false if a completion already exists, preventing duplicates.
   Future<bool> canComplete({
     required String curriculumId,
-    required int contentItemId,
+    required String sefariaRef,
     required int stageId,
   }) async {
     final existing = await getExistingCompletion(
       curriculumId: curriculumId,
-      contentItemId: contentItemId,
+      sefariaRef: sefariaRef,
       stageId: stageId,
     );
     return existing == null;
@@ -37,13 +37,13 @@ class DuplicatePreventionService {
   /// (e.g., which track it was completed under) for error messages.
   Future<Completion?> getExistingCompletion({
     required String curriculumId,
-    required int contentItemId,
+    required String sefariaRef,
     required int stageId,
   }) async {
     return (_database.select(_database.completions)..where(
           (t) =>
               t.curriculumId.equals(curriculumId) &
-              t.contentItemId.equals(contentItemId) &
+              t.sefariaRef.equals(sefariaRef) &
               t.stageId.equals(stageId),
         ))
         .getSingleOrNull();

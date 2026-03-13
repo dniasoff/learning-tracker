@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'text_download_status_dao.g.dart';
 
@@ -28,7 +29,7 @@ class TextDownloadStatusDao extends DatabaseAccessor<AppDatabase>
         curriculumId: Value(curriculumId),
         itemCount: Value(itemCount),
         textVersion: Value(textVersion),
-        downloadedAt: Value(DateTime.now()),
+        downloadedAt: Value(DateTimeFactory.nowUtc()),
         storedItemCount: const Value(null),
       ),
     );
@@ -58,7 +59,7 @@ class TextDownloadStatusDao extends DatabaseAccessor<AppDatabase>
         curriculumId: Value(curriculumId),
         itemCount: const Value(0),
         textVersion: const Value(''),
-        downloadedAt: Value(DateTime.now()),
+        downloadedAt: Value(DateTimeFactory.nowUtc()),
         storedItemCount: Value(storedItemCount),
       ),
     );

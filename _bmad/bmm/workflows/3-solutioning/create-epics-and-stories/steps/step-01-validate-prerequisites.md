@@ -9,10 +9,15 @@ workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-an
 thisStepFile: './step-01-validate-prerequisites.md'
 nextStepFile: './step-02-design-epics.md'
 workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/epics.md'
+epicsTemplate: '{workflow_path}/templates/epics-template.md'
 
 # Task References
-advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
-partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
+advancedElicitationTask: 'skill:bmad-advanced-elicitation'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/bmad-party-mode/workflow.md'
+
+# Template References
+epicsTemplate: '{workflow_path}/templates/epics-template.md'
 ---
 
 # Step 1: Validate Prerequisites and Extract Requirements
@@ -49,8 +54,8 @@ To validate that all required input documents exist and extract all requirements
 ## EXECUTION PROTOCOLS:
 
 - 🎯 Extract requirements systematically from all documents
-- 💾 Store extracted requirements for Linear issue creation
-- 📖 Track extraction progress
+- 💾 Populate {outputFile} with extracted requirements
+- 📖 Update frontmatter with extraction progress
 - 🚫 FORBIDDEN to load next step until user selects 'C' and requirements are extracted
 
 ## REQUIREMENTS EXTRACTION PROCESS:
@@ -86,7 +91,7 @@ Search for required documents using these patterns (sharded means a large docume
 1. `{planning_artifacts}/*ux*.md` (whole document)
 2. `{planning_artifacts}/*ux*/index.md` (sharded version)
 
-Before proceeding, Ask the user if there are any other documents to include for analysis, and if anything found should be excluded. Wait for user confirmation. Once confirmed, store the list of input documents for reference during epic creation.
+Before proceeding, Ask the user if there are any other documents to include for analysis, and if anything found should be excluded. Wait for user confirmation. Once confirmed, create the {outputFile} from the {epicsTemplate} and in the front matter list the files in the array of `inputDocuments: []`.
 
 ### 3. Extract Functional Requirements (FRs)
 
@@ -149,31 +154,44 @@ Review the Architecture document for technical requirements that impact epic and
 ...
 ```
 
-### 6. Extract Additional Requirements from UX (if exists)
+### 6. Extract UX Design Requirements (if UX document exists)
 
-Review the UX document for requirements that affect epic and story creation:
+**IMPORTANT**: The UX Design Specification is a first-class input document, not supplementary material. Requirements from the UX spec must be extracted with the same rigor as PRD functional requirements.
+
+Read the FULL UX Design document and extract ALL actionable work items:
 
 **Look for:**
 
-- Responsive design requirements
-- Accessibility requirements
-- Browser/device compatibility
-- User interaction patterns that need implementation
-- Animation or transition requirements
-- Error handling UX requirements
+- **Design token work**: Color systems, spacing scales, typography tokens that need implementation or consolidation
+- **Component proposals**: Reusable UI components identified in the UX spec (e.g., ConfirmActions, StatusMessage, EmptyState, FocusIndicator)
+- **Visual standardization**: Semantic CSS classes, consistent color palette usage, design pattern consolidation
+- **Accessibility requirements**: Contrast audit fixes, ARIA patterns, keyboard navigation, screen reader support
+- **Responsive design requirements**: Breakpoints, layout adaptations, mobile-specific interactions
+- **Interaction patterns**: Animations, transitions, loading states, error handling UX
+- **Browser/device compatibility**: Target platforms, progressive enhancement requirements
 
-**Add these to Additional Requirements list.**
+**Format UX Design Requirements as a SEPARATE section (not merged into Additional Requirements):**
 
-### 7. Organize Extracted Requirements
+```
+UX-DR1: [Actionable UX design requirement with clear implementation scope]
+UX-DR2: [Actionable UX design requirement with clear implementation scope]
+...
+```
 
-Organize the extracted requirements for epic creation:
+**🚨 CRITICAL**: Do NOT reduce UX requirements to vague summaries. Each UX-DR must be specific enough to generate a story with testable acceptance criteria. If the UX spec identifies 6 reusable components, list all 6 — not "create reusable components."
 
-1. Format FRs in a clear, numbered list
-2. Format NFRs in a clear, numbered list
-3. List additional requirements from Architecture/UX
-4. Note any starter template requirements from Architecture (for Epic 1 Story 1)
+### 7. Load and Initialize Template
 
-These requirements will be used to create Linear issues in the next step.
+Load {epicsTemplate} and initialize {outputFile}:
+
+1. Copy the entire template to {outputFile}
+2. Replace {{project_name}} with the actual project name
+3. Replace placeholder sections with extracted requirements:
+   - {{fr_list}} → extracted FRs
+   - {{nfr_list}} → extracted NFRs
+   - {{additional_requirements}} → extracted additional requirements (from Architecture)
+   - {{ux_design_requirements}} → extracted UX Design Requirements (if UX document exists)
+4. Leave {{requirements_coverage_map}} and {{epics_list}} as placeholders for now
 
 ### 8. Present Extracted Requirements
 
@@ -191,11 +209,16 @@ Display to user:
 - Display key NFRs
 - Ask if any constraints were missed
 
-**Additional Requirements:**
+**Additional Requirements (Architecture):**
 
 - Summarize technical requirements from Architecture
-- Summarize UX requirements (if applicable)
 - Verify completeness
+
+**UX Design Requirements (if applicable):**
+
+- Show count of UX-DRs found
+- Display key UX Design requirements (design tokens, components, accessibility)
+- Verify each UX-DR is specific enough for story creation
 
 ### 9. Get User Confirmation
 
@@ -203,15 +226,14 @@ Ask: "Do these extracted requirements accurately represent what needs to be buil
 
 Update the requirements based on user feedback until confirmation is received.
 
-## REQUIREMENTS TO TRACK:
+## CONTENT TO SAVE TO DOCUMENT:
 
-After extraction and confirmation, ensure you have:
+After extraction and confirmation, update {outputFile} with:
 
-- Complete FR list with numbering
-- Complete NFR list with numbering
-- All additional requirements from Architecture/UX
-
-These will be used to create epics and stories as Linear issues.
+- Complete FR list in {{fr_list}} section
+- Complete NFR list in {{nfr_list}} section
+- All additional requirements in {{additional_requirements}} section
+- UX Design requirements in {{ux_design_requirements}} section (if UX document exists)
 
 ### 10. Present MENU OPTIONS
 
@@ -225,12 +247,12 @@ Display: `**Confirm the Requirements are complete and correct to [C] continue:**
 
 #### Menu Handling Logic:
 
-- IF C: Confirm requirements are complete, then read fully and follow: {nextStepFile}
+- IF C: Save all to {outputFile}, update frontmatter, then read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#10-present-menu-options)
 
 ## CRITICAL STEP COMPLETION NOTE
 
-ONLY WHEN C is selected and all requirements are confirmed complete, will you then read fully and follow: {nextStepFile} to begin epic design step.
+ONLY WHEN C is selected and all requirements are saved to document and frontmatter is updated, will you then read fully and follow: {nextStepFile} to begin epic design step.
 
 ---
 
@@ -242,13 +264,14 @@ ONLY WHEN C is selected and all requirements are confirmed complete, will you th
 - All FRs extracted and formatted correctly
 - All NFRs extracted and formatted correctly
 - Additional requirements from Architecture/UX identified
-- Requirements organized for Linear issue creation
+- Template initialized with requirements
 - User confirms requirements are complete and accurate
 
 ### ❌ SYSTEM FAILURE:
 
 - Missing required documents
 - Incomplete requirements extraction
-- Requirements not properly organized
+- Template not properly initialized
+- Not saving requirements to output file
 
 **Master Rule:** Skipping steps, optimizing sequences, or not following exact instructions is FORBIDDEN and constitutes SYSTEM FAILURE.

@@ -8,7 +8,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'content_providers.g.dart';
 
 /// Provides the content repository (singleton).
-@riverpod
+///
+/// keepAlive: true ensures the in-memory content cache persists for the
+/// lifetime of the app — rebuilding this provider would discard cached data.
+@Riverpod(keepAlive: true)
 ContentRepository contentRepository(Ref ref) {
   return ContentRepositoryImpl();
 }

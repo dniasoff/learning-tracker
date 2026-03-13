@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   push:
-    branches: [main]
+    branches: [main, dev, dev/**]
 
 jobs:
   analyze-and-test:
@@ -18,7 +18,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.9'
           channel: 'stable'
           cache: true
 
@@ -61,81 +60,83 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  integration-tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.38.9'
-          channel: 'stable'
-          cache: true
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
-
-      - name: Generate code
-        working-directory: learning_tracker
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Enable KVM (for Android emulator)
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: AVD cache
-        uses: actions/cache@v4
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-34
-
-      - name: Create AVD and generate snapshot for caching
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: echo "Generated AVD snapshot for caching."
-
-      - name: Run integration tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: cd learning_tracker && flutter test integration_test
+  # TODO: Enable integration-tests job once integration_test/ directory
+  # contains real tests. Requires physical device or emulator.
+  # integration-tests:
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 30
+  #   needs: [analyze-and-test]
+  #
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: 'stable'
+  #         cache: true
+  #
+  #     - name: Setup Java
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         distribution: 'temurin'
+  #         java-version: '17'
+  #
+  #     - name: Cache pub dependencies
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           ~/.pub-cache
+  #           learning_tracker/.dart_tool
+  #         key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-pub-
+  #
+  #     - name: Install dependencies
+  #       working-directory: learning_tracker
+  #       run: flutter pub get
+  #
+  #     - name: Generate code
+  #       working-directory: learning_tracker
+  #       run: dart run build_runner build --delete-conflicting-outputs
+  #
+  #     - name: Enable KVM (for Android emulator)
+  #       run: |
+  #         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+  #         sudo udevadm control --reload-rules
+  #         sudo udevadm trigger --name-match=kvm
+  #
+  #     - name: AVD cache
+  #       uses: actions/cache@v4
+  #       id: avd-cache
+  #       with:
+  #         path: |
+  #           ~/.android/avd/*
+  #           ~/.android/adb*
+  #         key: avd-34
+  #
+  #     - name: Create AVD and generate snapshot for caching
+  #       if: steps.avd-cache.outputs.cache-hit != 'true'
+  #       uses: reactivecircus/android-emulator-runner@v2
+  #       with:
+  #         api-level: 34
+  #         target: google_apis
+  #         arch: x86_64
+  #         profile: pixel_6
+  #         force-avd-creation: false
+  #         emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+  #         disable-animations: true
+  #         script: echo "Generated AVD snapshot for caching."
+  #
+  #     - name: Run integration tests
+  #       uses: reactivecircus/android-emulator-runner@v2
+  #       with:
+  #         api-level: 34
+  #         target: google_apis
+  #         arch: x86_64
+  #         profile: pixel_6
+  #         force-avd-creation: false
+  #         emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+  #         disable-animations: true
+  #         script: cd learning_tracker && flutter test integration_test

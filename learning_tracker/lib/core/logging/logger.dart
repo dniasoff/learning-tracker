@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 
-/// Application-wide Talker logger singleton.
+/// Application-wide logger that wraps [Talker] with sensitive-data filtering.
 ///
-/// Provides a single shared [Talker] instance configured with appropriate
-/// log levels and settings for the application.
+/// All log calls go through [_safeMessage] which redacts any message that
+/// contains recognised sensitive-data patterns before forwarding to Talker.
 ///
 /// Log level conventions:
 /// - `verbose` / `debug`: state changes, development details
@@ -13,26 +13,29 @@ import 'package:talker_flutter/talker_flutter.dart';
 /// - `error`: failures requiring attention
 /// - `critical`: system failures (database error, auth failure)
 class AppLogger {
-  AppLogger._();
-
-  static Talker? _instance;
-
-  /// Returns the singleton [Talker] instance.
+  /// Creates an [AppLogger] that filters log messages through
+  /// [SensitiveDataPatterns] before forwarding them to [talker].
   ///
-  /// The instance is lazily created on first access with default settings.
-  /// Call [init] to configure before first use.
+  /// Prefer using the [instance] singleton in production and inject a
+  /// test-specific [Talker] via [talkerProvider] in unit tests.
+  AppLogger(this._talker);
+
+  final Talker _talker;
+
+  static Talker? _talkerInstance;
+
+  /// The singleton [Talker] instance used by the static helpers.
   static Talker get instance {
-    _instance ??= _createTalker();
-    return _instance!;
+    _talkerInstance ??= _createTalker();
+    return _talkerInstance!;
   }
 
-  /// Initializes the Talker singleton with application settings.
+  /// Initialises the singleton [Talker] instance with application settings.
   ///
-  /// Should be called once during app startup before any logging occurs.
-  /// Subsequent calls replace the existing instance.
+  /// Call once during app startup before any logging occurs.
   static Talker init() {
-    _instance = _createTalker();
-    return _instance!;
+    _talkerInstance = _createTalker();
+    return _talkerInstance!;
   }
 
   static Talker _createTalker() {
@@ -46,10 +49,6 @@ class AppLogger {
   }
 
   /// Configures Flutter framework error handlers to route errors to Talker.
-  ///
-  /// Sets up:
-  /// - [FlutterError.onError] for Flutter framework errors
-  /// - [PlatformDispatcher.instance.onError] for unhandled platform errors
   static void setupFlutterErrorHandlers() {
     FlutterError.onError = (FlutterErrorDetails details) {
       instance.handle(details.exception, details.stack);
@@ -59,6 +58,35 @@ class AppLogger {
       instance.handle(error, stack);
       return true;
     };
+  }
+
+  // ─── Instance logging methods with sensitive-data filtering ─────────────────
+
+  void info(String message) => _talker.info(_safeMessage(message));
+  void debug(String message) => _talker.debug(_safeMessage(message));
+  void warning(String message) => _talker.warning(_safeMessage(message));
+  void error(String message, [Object? error, StackTrace? stackTrace]) =>
+      _talker.error(_safeMessage(message), error, stackTrace);
+  void critical(String message, [Object? error, StackTrace? stackTrace]) =>
+      _talker.critical(_safeMessage(message), error, stackTrace);
+
+  void log(String message, {LogLevel level = LogLevel.info}) =>
+      _talker.log(_safeMessage(message), logLevel: level);
+
+  /// Forwards exception handling without message transformation.
+  void handle(Object error, [StackTrace? stackTrace, String? message]) =>
+      _talker.handle(error, stackTrace, message);
+
+  /// The underlying [Talker] instance (use for providers / observers).
+  Talker get talker => _talker;
+
+  // ─── Sensitive-data filtering ────────────────────────────────────────────────
+
+  static String _safeMessage(String message) {
+    if (SensitiveDataPatterns.containsSensitiveData(message)) {
+      return '[REDACTED — message contained sensitive data]';
+    }
+    return message;
   }
 }
 

@@ -9,11 +9,11 @@ workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-an
 thisStepFile: './step-02-design-epics.md'
 nextStepFile: './step-03-create-stories.md'
 workflowFile: '{workflow_path}/workflow.md'
-linearMappingFile: '{implementation_artifacts}/linear-mapping.yaml'
+outputFile: '{planning_artifacts}/epics.md'
 
 # Task References
-advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
-partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
+advancedElicitationTask: 'skill:bmad-advanced-elicitation'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/bmad-party-mode/workflow.md'
 
 # Template References
 epicsTemplate: '{workflow_path}/templates/epics-template.md'
@@ -180,69 +180,24 @@ If user wants changes:
 - Re-present for approval
 - Repeat until approval is received
 
-## CREATE EPICS IN LINEAR:
+## CONTENT TO UPDATE IN DOCUMENT:
 
-After approval, create epics in Linear as the single source of truth:
-
-**First-time setup: Discover team and project from Linear**
-<check if="linear_mapping_file does not exist OR team_id is empty in mapping file">
-  <critical>MUST query Linear and let user choose - do not assume or skip</critical>
-
-  <action>Query available teams: mcp__linear__list_teams</action>
-  <action>Display numbered list of teams to user:
-    "Available Linear teams:
-     1. Team Name A
-     2. Team Name B
-     ..."
-  </action>
-  <ask>Which team should BMAD use for sprint tracking? (enter number or name)</ask>
-  <action>WAIT for user response before proceeding</action>
-  <action>Store selected team_id and team_name in {linearMappingFile}</action>
-
-  <action>Query projects in selected team: mcp__linear__list_projects with team={selected_team_id}</action>
-  <action>Display numbered list of projects to user:
-    "Available projects in {team_name}:
-     1. Project Name A
-     2. Project Name B
-     ..."
-  </action>
-  <ask>Which project should BMAD use for epics and stories? (enter number or name)</ask>
-  <action>WAIT for user response before proceeding</action>
-  <action>Store selected project_id and project_name in {linearMappingFile}</action>
-
-  <output>Linear configuration saved:
-    Team: {team_name}
-    Project: {project_name}
-  </output>
+<check if="{tracking_system} == linear">
+  <action>Prepare Linear issue creation plan for approved epics. Each epic will be created as a Linear issue when stories are generated in Step 3.</action>
 </check>
 
-**Ensure labels exist:**
-- Query Linear for existing labels using mcp__linear__list_issue_labels with team={team_id}
-- Create "BMAD-Managed" label if not exists using mcp__linear__create_issue_label
-- Create "Epic-N" labels for each epic (e.g., "Epic-1", "Epic-2") if not exists
+<check if="{tracking_system} != linear">
+After approval, update {outputFile}:
 
-**For each approved epic:**
-1. Create parent issue in Linear with mcp__linear__create_issue:
-   - title: "[Epic-{N}] {Epic Title}"
-   - team: {team_id}
-   - project: {project_id}
-   - labels: ["BMAD-Managed", "Epic-{N}"]
-   - description: "{Epic goal statement}\n\n**FRs covered:** {FR list}\n\n**User Outcome:** {What users can accomplish}"
-   - state: "Backlog"
-2. Store issue_id in {linearMappingFile} under epics section
+1. Replace {{epics_list}} placeholder with the approved epic list
+2. Replace {{requirements_coverage_map}} with the coverage map
+3. Ensure all FRs are mapped to epics
+</check>
 
-**Update linear-mapping.yaml structure:**
-```yaml
-team_id: {team_id}
-team_name: {team_name}
-project_id: {project_id}
-project_name: {project_name}
-epics:
-  epic-1:
-    linear_issue_id: {issue_id}
-    title: "{Epic Title}"
-stories: {} # Will be populated in step-03
-```
+<check if="{tracking_system} == linear">
+After approval, all epic/story content goes directly to Linear issue descriptions (no local file writes).
+The approved epic list and coverage map are stored in Linear issue descriptions when stories are created in Step 3.
+</check>
 
 ### 8. Present MENU OPTIONS
 
@@ -252,7 +207,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 - IF A: Read fully and follow: {advancedElicitationTask}
 - IF P: Read fully and follow: {partyModeWorkflow}
-- IF C: Save approved epics_list to {outputFile}, update frontmatter, then read fully and follow: {nextStepFile}
+- IF C: {{#if tracking_system != "linear"}}Save approved epics_list to {outputFile}, update frontmatter, then{{/if}} read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#8-present-menu-options)
 
 #### EXECUTION RULES:

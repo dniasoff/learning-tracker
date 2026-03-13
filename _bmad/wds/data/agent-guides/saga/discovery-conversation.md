@@ -233,10 +233,30 @@ Not:
 
 ---
 
+## Cross-Step Context Awareness
+
+### Never Re-Ask What You Already Know
+
+When loading a new step, ALWAYS check what was captured in prior steps. The design log and previous step outputs contain previous answers.
+
+**Pattern:**
+1. Before asking your first question in a new step, review available context from prior steps
+2. Reference prior answers: "Earlier you mentioned [X]..."
+3. Ask only for NEW information: "Building on that, I'd like to explore [Y]..."
+4. If user says "I already told you" — immediately acknowledge and skip
+
+**Example:**
+- Step 3 captured positioning target: "busy professionals"
+- Step 7 asks about target users
+- WRONG: "Who are you building this for?"
+- RIGHT: "You positioned this for busy professionals. Let's build a behavioral profile — tell me about their daily experience with [problem]."
+
+---
+
 ## Related Resources
 
 - **Product Brief Workflow:** `../../workflows/1-project-brief/project-brief/`
-- **Alignment & Signoff:** `../../workflows/1-project-brief/alignment-signoff/`
+- **Alignment & Signoff:** `../../workflows/0-alignment-signoff/`
 - **Golden Circle Model:** `../../docs/models/golden-circle.md` (for discovery order: WHY → HOW → WHAT)
 
 ---

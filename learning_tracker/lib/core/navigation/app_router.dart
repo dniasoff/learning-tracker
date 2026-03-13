@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -17,6 +18,7 @@ import 'package:learning_tracker/features/learning_order/presentation/screens/le
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
@@ -87,6 +89,13 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/curriculum/:curriculumId/settings',
       page: CurriculumSettingsRoute.page,
+      guards: [authGuard],
+    ),
+
+    // Content search route
+    AutoRoute(
+      path: '/curriculum/:curriculumId/search',
+      page: ContentSearchRoute.page,
       guards: [authGuard],
     ),
 

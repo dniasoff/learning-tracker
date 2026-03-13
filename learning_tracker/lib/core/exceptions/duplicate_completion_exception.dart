@@ -8,8 +8,8 @@ class DuplicateCompletionException implements Exception {
   /// The curriculum ID where the duplicate was attempted
   final String curriculumId;
 
-  /// The content item ID that was already completed
-  final int contentItemId;
+  /// The Sefaria reference of the content item that was already completed
+  final String sefariaRef;
 
   /// The stage ID that was already completed
   final int stageId;
@@ -19,14 +19,14 @@ class DuplicateCompletionException implements Exception {
 
   DuplicateCompletionException({
     required this.curriculumId,
-    required this.contentItemId,
+    required this.sefariaRef,
     required this.stageId,
     required this.existingTrack,
   });
 
   @override
   String toString() {
-    return 'DuplicateCompletionException: Item $contentItemId stage $stageId '
+    return 'DuplicateCompletionException: Item $sefariaRef stage $stageId '
         'in curriculum $curriculumId is already completed under '
         '${existingTrack.displayNameEn} track';
   }
