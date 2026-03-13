@@ -3,3 +3,7 @@
 .logs/
 .beads/
 .linear-cache/
+
+# Gas Town (added by gt)
+__pycache__/
+state.json
