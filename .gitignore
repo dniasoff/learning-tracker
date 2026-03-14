@@ -1,5 +1,6 @@
 .runtime/
-.claude/
+.claude/*
+!.claude/skills/
 .logs/
 .beads/
 .linear-cache/
