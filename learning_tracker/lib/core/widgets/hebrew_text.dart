@@ -32,9 +32,10 @@ class HebrewText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveStyle =
-        style ?? DefaultTextStyle.of(context).style.copyWith(
-          fontFamily: AppTextStyles.hebrewFontFamily,
-        );
+        style ??
+        DefaultTextStyle.of(
+          context,
+        ).style.copyWith(fontFamily: AppTextStyles.hebrewFontFamily);
 
     return Directionality(
       textDirection: TextDirection.rtl,

@@ -405,7 +405,9 @@ void main() {
           ),
         );
 
-        when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
+        when(
+          () => mockFirestore.fetchCompletions(),
+        ).thenAnswer((_) async => []);
         when(() => mockFirestore.fetchBookmarks()).thenAnswer(
           (_) async => [
             {
@@ -495,8 +497,9 @@ void main() {
 
       await syncEngine.pullOnLaunch();
 
-      final profile = await database.userProfileDao
-          .getUserProfileByFirebaseUid('uid-123');
+      final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
+        'uid-123',
+      );
       expect(profile, isNotNull);
       expect(profile!.displayName, 'Yisroel');
       expect(profile.userMode, 'child');
@@ -529,8 +532,9 @@ void main() {
 
       await syncEngine.pullOnLaunch();
 
-      final profile = await database.userProfileDao
-          .getUserProfileByFirebaseUid('uid-123');
+      final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
+        'uid-123',
+      );
       expect(profile!.displayName, 'New Name');
       expect(profile.userMode, 'child');
     });

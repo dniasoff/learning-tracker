@@ -188,7 +188,8 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushCompletion(completion);
       _logger.debug('Pushed completion to Firestore');
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push completion, queuing for later', e);
       await _offlineQueue.enqueueCompletion(completion);
     }
@@ -215,7 +216,8 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushBookmark(bookmark);
       _logger.debug('Pushed bookmark to Firestore');
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push bookmark, queuing for later', e);
       await _offlineQueue.enqueueBookmark(bookmark);
     }
@@ -236,7 +238,8 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushSettings(settings);
       _logger.debug('Pushed settings to Firestore');
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push settings, queuing for later', e);
       await _offlineQueue.enqueueSettings(settings);
     }
@@ -257,7 +260,8 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushStreak(streak);
       _logger.debug('Pushed streak to Firestore');
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push streak, queuing for later', e);
       await _offlineQueue.enqueueStreak(streak);
     }
@@ -278,7 +282,8 @@ class SyncEngine {
     try {
       await _firestoreDataSource.pushProfile(profile);
       _logger.debug('Pushed profile to Firestore');
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push profile, queuing for later', e);
       await _offlineQueue.enqueueProfile(profile);
     }
@@ -345,7 +350,8 @@ class SyncEngine {
           );
           insertedCount++;
         }
-      } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge completion: $e');
       }
     }
@@ -383,7 +389,8 @@ class SyncEngine {
           sefariaRef: sefariaRef,
           updatedAt: updatedAt,
         );
-      } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge bookmark: $e');
       }
     }
@@ -422,7 +429,8 @@ class SyncEngine {
           curriculumId,
           companions,
         );
-      } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge settings: $e');
       }
     }
@@ -467,7 +475,8 @@ class SyncEngine {
         userMode: userMode,
         updatedAt: updatedAt,
       );
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to merge profile: $e');
     }
   }
@@ -566,7 +575,8 @@ class SyncEngine {
       _logger.debug(
         'Pushed curriculum import metadata to Firestore: $curriculumId',
       );
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning(
         'Failed to push curriculum import metadata, queuing for later',
         e,

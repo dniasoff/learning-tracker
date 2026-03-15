@@ -182,9 +182,7 @@ void main() {
     });
 
     test('curriculum colours are accessible', () {
-      final color = AppTheme.getCurriculumColor(
-        CurriculumId.mishnayos,
-      );
+      final color = AppTheme.getCurriculumColor(CurriculumId.mishnayos);
       expect(color, isA<Color>());
     });
   });

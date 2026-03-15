@@ -44,9 +44,7 @@ void main() {
     ).thenAnswer((_) async => Future.value());
 
     // Default content order: ref1, ref2, ref3
-    when(
-      () => mockContentRepository.getContentForCurriculum(any()),
-    ).thenAnswer(
+    when(() => mockContentRepository.getContentForCurriculum(any())).thenAnswer(
       (_) async => [
         ContentItem(
           curriculumId: 'mishnayos',
@@ -171,52 +169,46 @@ void main() {
       },
     );
 
-    test(
-      'advanceBookmark keeps bookmark at last item (no overflow)',
-      () async {
-        await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          sefariaRef: _ref3,
-        );
+    test('advanceBookmark keeps bookmark at last item (no overflow)', () async {
+      await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        sefariaRef: _ref3,
+      );
 
-        await repository.advanceBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          completedSefariaRef: _ref3,
-        );
+      await repository.advanceBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        completedSefariaRef: _ref3,
+      );
 
-        final updated = await repository.getBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-        );
-        expect(updated?.sefariaRef, _ref3); // Unchanged — already at last item
-      },
-    );
+      final updated = await repository.getBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+      );
+      expect(updated?.sefariaRef, _ref3); // Unchanged — already at last item
+    });
   });
 
   group('Manual bookmark operations', () {
-    test(
-      'setBookmark updates sefariaRef and stores a UTC timestamp',
-      () async {
-        final before = DateTime.now().toUtc();
+    test('setBookmark updates sefariaRef and stores a UTC timestamp', () async {
+      final before = DateTime.now().toUtc();
 
-        final bookmark = await repository.setBookmark(
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          sefariaRef: _ref2,
-        );
+      final bookmark = await repository.setBookmark(
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        sefariaRef: _ref2,
+      );
 
-        expect(bookmark.sefariaRef, _ref2);
-        expect(bookmark.updatedAt.isUtc, isTrue);
-        expect(bookmark.updatedAt.isAfter(before), isTrue);
+      expect(bookmark.sefariaRef, _ref2);
+      expect(bookmark.updatedAt.isUtc, isTrue);
+      expect(bookmark.updatedAt.isAfter(before), isTrue);
 
-        // No completions should be created
-        final completions = await database.completionDao
-            .getCompletionsByCurriculum(CurriculumId.mishnayos.storageKey);
-        expect(completions, isEmpty);
-      },
-    );
+      // No completions should be created
+      final completions = await database.completionDao
+          .getCompletionsByCurriculum(CurriculumId.mishnayos.storageKey);
+      expect(completions, isEmpty);
+    });
   });
 
   group('Firestore document ID', () {

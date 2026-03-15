@@ -50,9 +50,7 @@ void main() {
       when(
         () => mockFirebaseAuth.authStateChanges(),
       ).thenAnswer((_) => Stream.value(null));
-      when(
-        () => mockRouter.replace(any()),
-      ).thenAnswer((_) async => null);
+      when(() => mockRouter.replace(any())).thenAnswer((_) async => null);
 
       await authGuard.onNavigation(mockResolver, mockRouter);
 

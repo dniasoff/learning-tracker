@@ -19,10 +19,7 @@ ProgressRepository progressRepository(Ref ref) {
 ///
 /// Returns a map of TrackType to completion counts for the given curriculum.
 @riverpod
-Future<Map<TrackType, int>> trackBreakdown(
-  Ref ref,
-  String curriculumId,
-) async {
+Future<Map<TrackType, int>> trackBreakdown(Ref ref, String curriculumId) async {
   final repository = ref.watch(progressRepositoryProvider);
   return repository.getTrackBreakdown(curriculumId);
 }
@@ -44,11 +41,8 @@ Future<int> aggregateCount(Ref ref, String curriculumId) async {
 /// and makes widget testing simpler — only [appDatabaseProvider] needs to be
 /// overridden. Watching this provider keeps the screen reactive; invalidating
 /// it causes the UI to rebuild with fresh data.
-final completionHistoryForCurriculumProvider =
-    FutureProvider.autoDispose.family<List<Completion>, String>((
-      ref,
-      curriculumId,
-    ) async {
+final completionHistoryForCurriculumProvider = FutureProvider.autoDispose
+    .family<List<Completion>, String>((ref, curriculumId) async {
       final repository = ref.watch(progressRepositoryProvider);
       return repository.getCompletionsByCurriculum(curriculumId);
     });

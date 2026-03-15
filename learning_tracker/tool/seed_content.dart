@@ -143,20 +143,14 @@ void _validateSchema(Map<String, dynamic> json, String filename) {
   // For small lists, validate all items.
   final indicesToCheck = items.length <= 10
       ? List.generate(items.length, (i) => i)
-      : [
-          0,
-          items.length - 1,
-          Random().nextInt(items.length - 2) + 1,
-        ];
+      : [0, items.length - 1, Random().nextInt(items.length - 2) + 1];
 
   var invalidCount = 0;
   for (final idx in indicesToCheck) {
     final item = items[idx] as Map<String, dynamic>;
     for (final field in requiredFields) {
       if (!item.containsKey(field)) {
-        print(
-          'WARNING: $filename item[$idx] missing required field: $field',
-        );
+        print('WARNING: $filename item[$idx] missing required field: $field');
         invalidCount++;
       }
     }

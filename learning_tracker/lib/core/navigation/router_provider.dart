@@ -19,17 +19,13 @@ final routerProvider = Provider<AppRouter>((ref) {
     authGuard: AuthGuard(firebaseAuth: FirebaseAuth.instance),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
-      promptForPin: () => _showPinDialog(
-        navigatorKey.currentContext!,
-        'Enter Parent PIN',
-      ),
+      promptForPin: () =>
+          _showPinDialog(navigatorKey.currentContext!, 'Enter Parent PIN'),
     ),
     tutorPinGuard: TutorPinGuard(
       pinService: pinSvc,
-      promptForPin: () => _showPinDialog(
-        navigatorKey.currentContext!,
-        'Enter Tutor PIN',
-      ),
+      promptForPin: () =>
+          _showPinDialog(navigatorKey.currentContext!, 'Enter Tutor PIN'),
     ),
   );
 });

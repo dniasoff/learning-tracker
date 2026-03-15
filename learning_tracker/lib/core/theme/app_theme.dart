@@ -56,9 +56,9 @@ class AppTheme {
   /// Prefer [getCurriculumColor] with a [CurriculumId] value. This helper
   /// exists for call sites that receive a raw string from routing params.
   static Color getCurriculumColorByKey(String storageKey) {
-    final curriculum = CurriculumId.values.where(
-      (c) => c.storageKey == storageKey,
-    ).firstOrNull;
+    final curriculum = CurriculumId.values
+        .where((c) => c.storageKey == storageKey)
+        .firstOrNull;
     return curriculum != null ? getCurriculumColor(curriculum) : _primaryColor;
   }
 

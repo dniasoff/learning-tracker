@@ -42,9 +42,7 @@ AppRouter _createAuthenticatedRouter() {
 
 AppRouter _createUnauthenticatedRouter() {
   final mockAuth = MockFirebaseAuth();
-  when(
-    () => mockAuth.authStateChanges(),
-  ).thenAnswer((_) => Stream.value(null));
+  when(() => mockAuth.authStateChanges()).thenAnswer((_) => Stream.value(null));
 
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);

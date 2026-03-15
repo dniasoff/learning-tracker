@@ -23,49 +23,52 @@ void main() {
   });
 
   group('Duplicate Prevention Integration', () {
-    test('blocks duplicate completion for same item+stage under different track', () async {
-      const curriculumId = 'mishnayos';
-      const sefariaRef = 'Mishnah Berakhot 1:1';
-      const stageId = 1; // Learn stage
+    test(
+      'blocks duplicate completion for same item+stage under different track',
+      () async {
+        const curriculumId = 'mishnayos';
+        const sefariaRef = 'Mishnah Berakhot 1:1';
+        const stageId = 1; // Learn stage
 
-      // Mark item under personal track
-      await database.completionDao.insertCompletion(
-        CompletionsCompanion.insert(
+        // Mark item under personal track
+        await database.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: curriculumId,
+            sefariaRef: sefariaRef,
+            stageId: stageId,
+            trackType: TrackType.personal.storageKey,
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        // Attempt to mark same item+stage under school track should be blocked
+        final canComplete = await duplicateService.canComplete(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: stageId,
-          trackType: TrackType.personal.storageKey,
-          completedAt: DateTime.now().toUtc(),
-        ),
-      );
+        );
 
-      // Attempt to mark same item+stage under school track should be blocked
-      final canComplete = await duplicateService.canComplete(
-        curriculumId: curriculumId,
-        sefariaRef: sefariaRef,
-        stageId: stageId,
-      );
+        expect(canComplete, isFalse);
 
-      expect(canComplete, isFalse);
-
-      // Get existing completion for error message
-      final existing = await duplicateService.getExistingCompletion(
-        curriculumId: curriculumId,
-        sefariaRef: sefariaRef,
-        stageId: stageId,
-      );
-
-      expect(existing, isNotNull);
-      expect(
-        () => throw DuplicateCompletionException(
+        // Get existing completion for error message
+        final existing = await duplicateService.getExistingCompletion(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: stageId,
-          existingTrack: TrackType.fromStorageKey(existing!.trackType),
-        ),
-        throwsA(isA<DuplicateCompletionException>()),
-      );
-    });
+        );
+
+        expect(existing, isNotNull);
+        expect(
+          () => throw DuplicateCompletionException(
+            curriculumId: curriculumId,
+            sefariaRef: sefariaRef,
+            stageId: stageId,
+            existingTrack: TrackType.fromStorageKey(existing!.trackType),
+          ),
+          throwsA(isA<DuplicateCompletionException>()),
+        );
+      },
+    );
 
     test('allows same item under different stages on different tracks', () async {
       const curriculumId = 'mishnayos';
@@ -110,11 +113,19 @@ void main() {
       final allCompletions = await database.completionDao.getAllCompletions();
       expect(allCompletions.length, 2);
       expect(
-        allCompletions.any((c) => c.stageId == learnStageId && c.trackType == TrackType.personal.storageKey),
+        allCompletions.any(
+          (c) =>
+              c.stageId == learnStageId &&
+              c.trackType == TrackType.personal.storageKey,
+        ),
         isTrue,
       );
       expect(
-        allCompletions.any((c) => c.stageId == chazara1StageId && c.trackType == TrackType.school.storageKey),
+        allCompletions.any(
+          (c) =>
+              c.stageId == chazara1StageId &&
+              c.trackType == TrackType.school.storageKey,
+        ),
         isTrue,
       );
     });
@@ -122,7 +133,9 @@ void main() {
     test('auto-assigns to personal track when only one track active', () async {
       const curriculumId = 'mishnayos';
 
-      final assignedTrack = await trackService.getAutoAssignedTrack(curriculumId);
+      final assignedTrack = await trackService.getAutoAssignedTrack(
+        curriculumId,
+      );
       expect(assignedTrack, TrackType.personal);
     });
 
@@ -133,7 +146,9 @@ void main() {
       await trackService.activateTrack(curriculumId, TrackType.school);
 
       // Should return null to indicate user needs to select
-      final assignedTrack = await trackService.getAutoAssignedTrack(curriculumId);
+      final assignedTrack = await trackService.getAutoAssignedTrack(
+        curriculumId,
+      );
       expect(assignedTrack, isNull);
 
       // Verify both tracks are active

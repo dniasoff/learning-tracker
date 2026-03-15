@@ -39,9 +39,7 @@ final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((
     // was removed from the enum but still exists in an old database.
     final curricula = storageKeys
         .map<CurriculumId?>((key) {
-          final matches = CurriculumId.values.where(
-            (c) => c.storageKey == key,
-          );
+          final matches = CurriculumId.values.where((c) => c.storageKey == key);
           if (matches.isNotEmpty) {
             return matches.first;
           }

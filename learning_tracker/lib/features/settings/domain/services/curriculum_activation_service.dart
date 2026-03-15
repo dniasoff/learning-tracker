@@ -59,9 +59,7 @@ class CurriculumActivationService {
   /// deactivate the curriculum.
   Future<void> toggle(CurriculumId curriculum) async {
     await _database.transaction(() async {
-      final isActive = await _database.activeCurriculumDao.isActive(
-        curriculum,
-      );
+      final isActive = await _database.activeCurriculumDao.isActive(curriculum);
       if (isActive) {
         await deactivate(curriculum);
       } else {
@@ -79,9 +77,7 @@ class CurriculumActivationService {
         .getActiveCurricula();
     return storageKeys
         .map<CurriculumId?>((key) {
-          final matches = CurriculumId.values.where(
-            (c) => c.storageKey == key,
-          );
+          final matches = CurriculumId.values.where((c) => c.storageKey == key);
           if (matches.isNotEmpty) {
             return matches.first;
           }
@@ -108,7 +104,8 @@ class CurriculumActivationService {
       final activeCurricula = await _database.activeCurriculumDao
           .getActiveCurricula();
       await _pushActiveCurricula(activeCurricula);
-    } catch (e) { // ignore: avoid_catches_without_on_clauses — intentional: silent fail for offline/auth
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional: silent fail for offline/auth
       // Silent fail for offline/auth issues — local database is source of truth
     }
   }

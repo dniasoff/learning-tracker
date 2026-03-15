@@ -54,7 +54,5 @@ Future<int> completionCount(
   final completions = await database.completionDao.getCompletionsForContent(
     sefariaRef,
   );
-  return completions
-      .where((c) => c.curriculumId == curriculumId)
-      .length;
+  return completions.where((c) => c.curriculumId == curriculumId).length;
 }

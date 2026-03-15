@@ -8,10 +8,10 @@ import 'package:learning_tracker/features/learning/presentation/widgets/points_p
 
 /// Provider family to check whether a specific stage is already completed.
 final isStageCompletedProvider = FutureProvider.autoDispose
-    .family<
-      bool,
-      ({String sefariaRef, int stageId, String trackType})
-    >((ref, params) async {
+    .family<bool, ({String sefariaRef, int stageId, String trackType})>((
+      ref,
+      params,
+    ) async {
       final repository = ref.watch(completionRepositoryProvider);
       return repository.isStageCompleted(
         sefariaRef: params.sefariaRef,

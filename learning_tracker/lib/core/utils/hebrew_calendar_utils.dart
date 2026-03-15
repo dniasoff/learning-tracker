@@ -65,8 +65,7 @@ class HebrewCalendarUtils {
   static bool isShabbos(DateTime gregorianDate) {
     if (gregorianDate.weekday == DateTime.saturday) return true;
     // Friday evening approximation: 18:00 local time as sunset
-    if (gregorianDate.weekday == DateTime.friday &&
-        gregorianDate.hour >= 18) {
+    if (gregorianDate.weekday == DateTime.friday && gregorianDate.hour >= 18) {
       return true;
     }
     return false;

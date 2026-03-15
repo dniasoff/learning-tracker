@@ -92,7 +92,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
         // Use the same logic as single completion
         // Note: We're already in a transaction, so nested transactions
         // will be handled by Drift's transaction management
-        final completion = await _markCompleteSingleInTransaction(singleRequest);
+        final completion = await _markCompleteSingleInTransaction(
+          singleRequest,
+        );
         completions.add(completion);
       }
 
@@ -274,7 +276,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
       // Use BookmarkRepository so Firestore sync is triggered
       final curriculum = CurriculumId.values.firstWhere(
         (c) => c.storageKey == curriculumId,
-        orElse: () => throw ArgumentError('Unknown curriculumId: $curriculumId'),
+        orElse: () =>
+            throw ArgumentError('Unknown curriculumId: $curriculumId'),
       );
       final track = TrackType.fromStorageKey(trackType);
       await _bookmarkRepository.advanceBookmark(

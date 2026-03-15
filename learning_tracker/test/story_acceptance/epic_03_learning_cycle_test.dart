@@ -72,29 +72,31 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test('completing a content item records a DB row with correct fields',
-        () async {
-      const sefariaRef = 'Mishnah Berachot 1:1';
-      final completion = await repo.markComplete(
-        CompletionRequest(
-          curriculumId: 'mishnayos',
-          sefariaRef: sefariaRef,
-          stageId: 1,
-          trackType: 'personal',
-        ),
-      );
+    test(
+      'completing a content item records a DB row with correct fields',
+      () async {
+        const sefariaRef = 'Mishnah Berachot 1:1';
+        final completion = await repo.markComplete(
+          CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+          ),
+        );
 
-      expect(completion.id, greaterThan(0));
-      expect(completion.curriculumId, 'mishnayos');
-      expect(completion.sefariaRef, sefariaRef);
-      expect(completion.stageId, 1);
-      expect(completion.trackType, 'personal');
-      // completedAt should be close to now (within 5 seconds)
-      expect(
-        DateTime.now().difference(completion.completedAt).abs().inSeconds,
-        lessThan(5),
-      );
-    });
+        expect(completion.id, greaterThan(0));
+        expect(completion.curriculumId, 'mishnayos');
+        expect(completion.sefariaRef, sefariaRef);
+        expect(completion.stageId, 1);
+        expect(completion.trackType, 'personal');
+        // completedAt should be close to now (within 5 seconds)
+        expect(
+          DateTime.now().difference(completion.completedAt).abs().inSeconds,
+          lessThan(5),
+        );
+      },
+    );
 
     test('completion emits points based on stage', () async {
       await db.stageDao.insertStageDefinition(
@@ -199,29 +201,31 @@ void main() {
       expect(stages[1].delayDays, 7);
     });
 
-    test('completing stage N unlocks the ability to complete stage N+1',
-        () async {
-      const sefariaRef = 'Mishnah Berachot 1:1';
+    test(
+      'completing stage N unlocks the ability to complete stage N+1',
+      () async {
+        const sefariaRef = 'Mishnah Berachot 1:1';
 
-      await repo.markComplete(
-        CompletionRequest(
-          curriculumId: 'mishnayos',
-          sefariaRef: sefariaRef,
-          stageId: 1,
-          trackType: 'personal',
-        ),
-      );
+        await repo.markComplete(
+          CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+          ),
+        );
 
-      final c2 = await repo.markComplete(
-        CompletionRequest(
-          curriculumId: 'mishnayos',
-          sefariaRef: sefariaRef,
-          stageId: 2,
-          trackType: 'personal',
-        ),
-      );
-      expect(c2.stageId, 2);
-    });
+        final c2 = await repo.markComplete(
+          CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: sefariaRef,
+            stageId: 2,
+            trackType: 'personal',
+          ),
+        );
+        expect(c2.stageId, 2);
+      },
+    );
 
     test('replaceStagesForCurriculum replaces all stage definitions', () async {
       await db.stageDao.insertStageDefinition(
@@ -279,54 +283,60 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test('getCompletionsByCurriculum returns all recorded completions',
-        () async {
-      const curriculumId = 'mishnayos';
-      for (var i = 1; i <= 3; i++) {
-        await repo.markComplete(
-          CompletionRequest(
-            curriculumId: curriculumId,
-            sefariaRef: 'Ref $i',
-            stageId: 1,
-            trackType: 'personal',
-          ),
+    test(
+      'getCompletionsByCurriculum returns all recorded completions',
+      () async {
+        const curriculumId = 'mishnayos';
+        for (var i = 1; i <= 3; i++) {
+          await repo.markComplete(
+            CompletionRequest(
+              curriculumId: curriculumId,
+              sefariaRef: 'Ref $i',
+              stageId: 1,
+              trackType: 'personal',
+            ),
+          );
+        }
+
+        final completions = await repo.getCompletionsByCurriculum(curriculumId);
+        expect(completions.length, 3);
+      },
+    );
+
+    test(
+      'progress percentage can be derived from completions vs total items',
+      () async {
+        const curriculumId = 'mishnayos';
+        // Complete 2 of the 5 available items
+        for (var i = 1; i <= 2; i++) {
+          await repo.markComplete(
+            CompletionRequest(
+              curriculumId: curriculumId,
+              sefariaRef: 'Ref $i',
+              stageId: 1,
+              trackType: 'personal',
+            ),
+          );
+        }
+
+        final progressRepo = ProgressRepositoryImpl(database: db);
+        final totalCompleted = await progressRepo.getAggregateCount(
+          curriculumId,
         );
-      }
 
-      final completions = await repo.getCompletionsByCurriculum(curriculumId);
-      expect(completions.length, 3);
-    });
+        // AC: 2 completions recorded
+        expect(totalCompleted, 2);
 
-    test('progress percentage can be derived from completions vs total items',
-        () async {
-      const curriculumId = 'mishnayos';
-      // Complete 2 of the 5 available items
-      for (var i = 1; i <= 2; i++) {
-        await repo.markComplete(
-          CompletionRequest(
-            curriculumId: curriculumId,
-            sefariaRef: 'Ref $i',
-            stageId: 1,
-            trackType: 'personal',
-          ),
+        // AC: 5 items in the curriculum
+        final allItems = await contentRepo.getContentForCurriculum(
+          CurriculumId.mishnayos,
         );
-      }
+        expect(allItems.length, 5);
 
-      final progressRepo = ProgressRepositoryImpl(database: db);
-      final totalCompleted = await progressRepo.getAggregateCount(curriculumId);
-
-      // AC: 2 completions recorded
-      expect(totalCompleted, 2);
-
-      // AC: 5 items in the curriculum
-      final allItems = await contentRepo.getContentForCurriculum(
-        CurriculumId.mishnayos,
-      );
-      expect(allItems.length, 5);
-
-      // AC: progress = 40%
-      final pct = totalCompleted / allItems.length;
-      expect(pct, closeTo(0.4, 0.01));
-    });
+        // AC: progress = 40%
+        final pct = totalCompleted / allItems.length;
+        expect(pct, closeTo(0.4, 0.01));
+      },
+    );
   });
 }
