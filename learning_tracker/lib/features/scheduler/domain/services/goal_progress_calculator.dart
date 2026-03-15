@@ -1,31 +1,29 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'goal_progress_calculator.freezed.dart';
+
 /// Result of a goal progress calculation.
-class GoalProgress {
-  /// Percentage of target completed (0.0 to 100.0+).
-  final double percentComplete;
+@freezed
+abstract class GoalProgress with _$GoalProgress {
+  const factory GoalProgress({
+    /// Percentage of target completed (0.0 to 100.0+).
+    required double percentComplete,
 
-  /// Days remaining until deadline. Null if no deadline set.
-  final int? daysRemaining;
+    /// Days remaining until deadline. Null if no deadline set.
+    int? daysRemaining,
 
-  /// Items per day needed to meet the goal. Null if no deadline set.
-  final double? itemsPerDay;
+    /// Items per day needed to meet the goal. Null if no deadline set.
+    double? itemsPerDay,
 
-  /// Total items in the curriculum.
-  final int totalItems;
+    /// Total items in the curriculum.
+    required int totalItems,
 
-  /// Number of items completed.
-  final int completedItems;
+    /// Number of items completed.
+    required int completedItems,
 
-  /// Number of items still needed to reach the target.
-  final int remainingItems;
-
-  const GoalProgress({
-    required this.percentComplete,
-    this.daysRemaining,
-    this.itemsPerDay,
-    required this.totalItems,
-    required this.completedItems,
-    required this.remainingItems,
-  });
+    /// Number of items still needed to reach the target.
+    required int remainingItems,
+  }) = _GoalProgress;
 }
 
 /// Computes goal progress metrics.

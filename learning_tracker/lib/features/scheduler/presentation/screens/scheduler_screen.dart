@@ -1,19 +1,27 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/services/daily_schedule_composer.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_schedule_header.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
+import 'package:learning_tracker/features/scheduler/presentation/widgets/grouped_daily_view.dart';
 
 @RoutePage()
-class SchedulerScreen extends ConsumerWidget {
+class SchedulerScreen extends ConsumerStatefulWidget {
   const SchedulerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SchedulerScreen> createState() => _SchedulerScreenState();
+}
+
+class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
+  bool _isGroupedView = false;
+
+  @override
+  Widget build(BuildContext context) {
     final asyncTasks = ref.watch(allDailyTasksProvider);
 
     return Scaffold(
@@ -28,10 +36,35 @@ class SchedulerScreen extends ConsumerWidget {
             );
           }
 
+          final schedule = ComposedDailySchedule(
+            tasks: tasks,
+            summary:
+                '${tasks.length} task${tasks.length == 1 ? '' : 's'} today',
+          );
+
           return Column(
             children: [
-              _TaskSummary(tasks: tasks),
-              Expanded(child: _TaskList(tasks: tasks)),
+              DailyScheduleHeader(
+                summary: schedule.summary,
+                isGroupedView: _isGroupedView,
+                onToggleView: () =>
+                    setState(() => _isGroupedView = !_isGroupedView),
+              ),
+              Expanded(
+                child: _isGroupedView
+                    ? GroupedDailyView(
+                        schedule: schedule,
+                        onTaskDismissed: (curriculum, index) {
+                          final grouped = schedule.groupedByCurriculum;
+                          final task = grouped[curriculum]![index];
+                          _skipTask(task);
+                        },
+                        onTaskCompleted: (curriculum, index) {
+                          ref.invalidate(allDailyTasksProvider);
+                        },
+                      )
+                    : _TaskList(tasks: tasks),
+              ),
             ],
           );
         },
@@ -52,49 +85,20 @@ class SchedulerScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
-class _TaskSummary extends StatelessWidget {
-  const _TaskSummary({required this.tasks});
-  final List<DailyTask> tasks;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    // Group by curriculum
-    final grouped = <CurriculumId, int>{};
-    for (final task in tasks) {
-      grouped[task.curriculumId] = (grouped[task.curriculumId] ?? 0) + 1;
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      color: theme.colorScheme.primaryContainer,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${tasks.length} task${tasks.length == 1 ? '' : 's'} today',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            children: grouped.entries.map((entry) {
-              final color = AppTheme.getCurriculumColor(entry.key);
-              return Chip(
-                avatar: CircleAvatar(backgroundColor: color, radius: 6),
-                label: Text('${entry.key.displayNameEn}: ${entry.value}'),
-                visualDensity: VisualDensity.compact,
-              );
-            }).toList(),
-          ),
-        ],
+  void _skipTask(DailyTask task) {
+    ref.read(skippedTasksProvider.notifier).skip(task.contentItemSefariaRef);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Task skipped until tomorrow'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            ref
+                .read(skippedTasksProvider.notifier)
+                .undoSkip(task.contentItemSefariaRef);
+          },
+        ),
       ),
     );
   }

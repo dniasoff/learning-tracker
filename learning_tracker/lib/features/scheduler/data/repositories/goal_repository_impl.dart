@@ -102,7 +102,15 @@ class GoalRepositoryImpl implements GoalRepository {
 
   @override
   Future<void> deleteGoal(int goalId) async {
+    // Retrieve the entity before deleting so we can sync the deletion
+    final existing = await _database.goalDao.getGoalById(goalId);
     await _database.goalDao.deleteGoal(goalId);
+
+    // Sync deletion to Firestore
+    if (existing != null) {
+      final entity = _toEntity(existing);
+      await _syncDeleteGoal(entity);
+    }
   }
 
   GoalEntity _toEntity(Goal goal) {
@@ -126,6 +134,19 @@ class GoalRepositoryImpl implements GoalRepository {
     final data = entity.toFirestore();
     data['_type'] = 'goal';
     data['_id'] = entity.firestoreId;
+    await _syncEngine.pushSettings(data);
+  }
+
+  Future<void> _syncDeleteGoal(GoalEntity entity) async {
+    if (_syncEngine == null) return;
+
+    // Mark as deleted in Firestore via the settings collection
+    final data = <String, dynamic>{
+      '_type': 'goal',
+      '_id': entity.firestoreId,
+      '_deleted': true,
+      'curriculumId': entity.curriculumId.storageKey,
+    };
     await _syncEngine.pushSettings(data);
   }
 }

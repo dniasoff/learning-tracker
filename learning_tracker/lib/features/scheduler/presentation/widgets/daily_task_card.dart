@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -34,7 +35,7 @@ class _DailyTaskCardState extends ConsumerState<DailyTaskCard> {
         curriculumId: widget.task.curriculumId.storageKey,
         sefariaRef: widget.task.contentItemSefariaRef,
         stageId: widget.task.stageDefinitionId,
-        trackType: 'personal',
+        trackType: TrackType.personal.storageKey,
       );
       await useCase(request);
 
@@ -163,6 +164,19 @@ class _DailyTaskCardState extends ConsumerState<DailyTaskCard> {
                         const SizedBox(width: 8),
                         Text(
                           stageLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 14,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${task.estimatedEffortMinutes}m',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),

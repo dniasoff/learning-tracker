@@ -18,7 +18,7 @@ void main() {
         );
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: GoalProgressCard(
                 progress: progress,
@@ -78,7 +78,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(body: GoalProgressCard(progress: progress)),
         ),
       );

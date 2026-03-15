@@ -43,8 +43,13 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
   List<int> _getMonths() {
     final isLeap = HebrewCalendarUtils.isHebrewLeapYear(_hebrewYear);
     final months = <int>[];
-    for (var m = JewishDate.TISHREI; m <= JewishDate.ELUL; m++) {
+    // Hebrew months: Nissan(1) through Adar_II(13)
+    // Display in calendar order: Tishrei(7)..Adar/Adar_II, then Nissan(1)..Elul(6)
+    for (var m = JewishDate.TISHREI; m <= JewishDate.ADAR_II; m++) {
       if (m == JewishDate.ADAR_II && !isLeap) continue;
+      months.add(m);
+    }
+    for (var m = JewishDate.NISSAN; m <= JewishDate.ELUL; m++) {
       months.add(m);
     }
     return months;

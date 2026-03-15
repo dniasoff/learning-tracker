@@ -19,7 +19,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
         ),
       );
@@ -38,7 +38,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
         ),
       );
@@ -55,7 +55,7 @@ void main() {
 
     testWidgets('slider changes target percentage', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
         ),
       );

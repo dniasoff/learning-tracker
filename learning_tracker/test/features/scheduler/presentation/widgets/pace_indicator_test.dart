@@ -26,13 +26,15 @@ void main() {
     });
 
     testWidgets('renders yellow indicator for onPace', (tester) async {
-      final pace = PaceStatus(
+      const pace = PaceStatus(
         status: PaceStatusType.onPace,
         daysDelta: 0,
         rollingAverage: 1.0,
       );
 
-      await tester.pumpWidget(wrapWidget(PaceIndicator(paceStatus: pace)));
+      await tester.pumpWidget(
+        wrapWidget(const PaceIndicator(paceStatus: pace)),
+      );
 
       expect(find.text('On pace'), findsOneWidget);
       final icon = tester.widget<Icon>(find.byType(Icon));
@@ -40,15 +42,17 @@ void main() {
     });
 
     testWidgets('renders red indicator for behind', (tester) async {
-      final pace = PaceStatus(
+      const pace = PaceStatus(
         status: PaceStatusType.behind,
         daysDelta: -3,
         rollingAverage: 0.5,
       );
 
-      await tester.pumpWidget(wrapWidget(PaceIndicator(paceStatus: pace)));
+      await tester.pumpWidget(
+        wrapWidget(const PaceIndicator(paceStatus: pace)),
+      );
 
-      expect(find.text('-3 days behind'), findsOneWidget);
+      expect(find.text('3 days behind'), findsOneWidget);
       final icon = tester.widget<Icon>(find.byType(Icon));
       expect(icon.color, Colors.red);
     });
@@ -61,8 +65,13 @@ void main() {
         wrapWidget(ProjectedCompletionText(projectedDate: date)),
       );
 
+      // MaterialLocalizations.formatMediumDate uses locale-aware formatting
+      final localizations = MaterialLocalizations.of(
+        tester.element(find.byType(ProjectedCompletionText)),
+      );
+      final formatted = localizations.formatMediumDate(date);
       expect(
-        find.text("At current pace, you'll finish by 6/15/2026"),
+        find.text("At current pace, you'll finish by $formatted"),
         findsOneWidget,
       );
     });

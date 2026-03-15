@@ -19,6 +19,7 @@ DailyTask _task(
     isOverdue: isOverdue,
     reason: 'test',
     stageName: 'Stage $stageOrder',
+    estimatedEffortMinutes: 5,
   );
 }
 
@@ -172,6 +173,61 @@ void main() {
     expect(result.summary, contains('15 tasks'));
     expect(result.summary, contains('3 curricula'));
   });
+
+  test(
+    'overdue tasks exceeding cap still allow some new learning tasks (M2)',
+    () {
+      // 25 overdue tasks with a cap of 20 — should still include new learning
+      final overdue = List.generate(
+        25,
+        (i) => _task(
+          CurriculumId.mishnayos,
+          ref: 'overdue_$i',
+          priority: DailyTaskPriority.overdueChazara,
+          isOverdue: true,
+        ),
+      );
+      final newLearning = List.generate(
+        5,
+        (i) => _task(CurriculumId.bavli, ref: 'new_$i'),
+      );
+
+      final result = composer.compose({
+        CurriculumId.mishnayos: overdue,
+        CurriculumId.bavli: newLearning,
+      }, maxTasksPerDay: 20);
+
+      expect(result.tasks.length, 20);
+
+      final newTasks = result.tasks.where((t) => !t.isOverdue).toList();
+      expect(
+        newTasks.length,
+        greaterThanOrEqualTo(2),
+        reason: 'At least 2 new-learning slots should be reserved',
+      );
+    },
+  );
+
+  test(
+    'round-robin order is deterministic regardless of map insertion order',
+    () {
+      // Insert in two different orders, expect same result
+      final result1 = composer.compose({
+        CurriculumId.mishnayos: [_task(CurriculumId.mishnayos, ref: '1')],
+        CurriculumId.bavli: [_task(CurriculumId.bavli, ref: '1')],
+      });
+      final result2 = composer.compose({
+        CurriculumId.bavli: [_task(CurriculumId.bavli, ref: '1')],
+        CurriculumId.mishnayos: [_task(CurriculumId.mishnayos, ref: '1')],
+      });
+
+      expect(
+        result1.tasks.map((t) => t.curriculumId).toList(),
+        result2.tasks.map((t) => t.curriculumId).toList(),
+        reason: 'Round-robin order should be deterministic',
+      );
+    },
+  );
 
   test('groupedByCurriculum returns tasks organized by curriculum', () {
     final result = composer.compose({

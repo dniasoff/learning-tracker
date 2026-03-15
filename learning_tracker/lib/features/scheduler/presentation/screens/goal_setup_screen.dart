@@ -61,7 +61,7 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
       initialDate: _targetDate,
     );
     if (picked != null) {
-      setState(() => _targetDate = picked);
+      setState(() => _targetDate = picked.toUtc());
     }
   }
 

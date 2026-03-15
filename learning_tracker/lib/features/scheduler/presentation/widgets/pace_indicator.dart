@@ -50,7 +50,7 @@ class PaceIndicator extends StatelessWidget {
       case PaceStatusType.onPace:
         return 'On pace';
       case PaceStatusType.behind:
-        return '${pace.daysDelta} days behind';
+        return '${pace.daysDelta.abs()} days behind';
     }
   }
 }
@@ -67,8 +67,8 @@ class ProjectedCompletionText extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final formatted =
-        '${projectedDate!.month}/${projectedDate!.day}/${projectedDate!.year}';
+    final localizations = MaterialLocalizations.of(context);
+    final formatted = localizations.formatMediumDate(projectedDate!);
 
     return Text(
       "At current pace, you'll finish by $formatted",

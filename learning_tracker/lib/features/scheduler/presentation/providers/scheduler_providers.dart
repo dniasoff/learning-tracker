@@ -13,8 +13,13 @@ import 'package:learning_tracker/features/scheduler/domain/services/daily_task_g
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'scheduler_providers.g.dart';
+
+/// Provides the current UTC date/time. Override in tests to control time.
+@riverpod
+DateTime clock(Ref ref) => DateTime.now().toUtc();
 
 @riverpod
 SchedulerEngine schedulerEngine(Ref ref) {
@@ -52,24 +57,68 @@ Future<List<DailyTask>> dailyTasks(
   final config = ScheduleConfig(
     curriculumId: curriculumId,
     goalDeadline: goalDeadline,
-    currentDate: DateTime.now().toUtc(),
+    currentDate: ref.watch(clockProvider),
   );
   return engine.generateDailyTasks(config);
 }
 
+/// Storage key constants for skipped-task persistence.
+const _skippedDateKey = 'skipped_tasks_date';
+const _skippedRefsKey = 'skipped_tasks_refs';
+const _previouslySkippedRefsKey = 'skipped_tasks_previous_refs';
+
 /// Holds the set of sefaria refs skipped (dismissed) today.
+///
+/// Persisted via SharedPreferences. Resets automatically when the date
+/// changes. Previously-skipped refs are tracked so they can receive a
+/// priority boost (see [previouslySkippedRefsProvider]).
 @riverpod
 class SkippedTasks extends _$SkippedTasks {
   @override
-  Set<String> build() => {};
+  Set<String> build() {
+    _loadFromPrefs();
+    return {};
+  }
 
-  void skip(String sefariaRef) {
+  Future<void> _loadFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = ref.read(clockProvider);
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final storedDate = prefs.getString(_skippedDateKey);
+
+    if (storedDate == todayStr) {
+      final refs = prefs.getStringList(_skippedRefsKey) ?? [];
+      state = refs.toSet();
+    } else {
+      // Date changed — archive yesterday's skips, clear today's
+      final yesterdayRefs = prefs.getStringList(_skippedRefsKey) ?? [];
+      await prefs.setStringList(_previouslySkippedRefsKey, yesterdayRefs);
+      await prefs.setString(_skippedDateKey, todayStr);
+      await prefs.setStringList(_skippedRefsKey, []);
+      state = {};
+    }
+  }
+
+  Future<void> skip(String sefariaRef) async {
     state = {...state, sefariaRef};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_skippedRefsKey, state.toList());
   }
 
-  void undoSkip(String sefariaRef) {
+  Future<void> undoSkip(String sefariaRef) async {
     state = {...state}..remove(sefariaRef);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_skippedRefsKey, state.toList());
   }
+}
+
+/// Refs that were skipped yesterday. Used for priority boost logic.
+@riverpod
+Future<Set<String>> previouslySkippedRefs(Ref ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  final refs = prefs.getStringList(_previouslySkippedRefsKey) ?? [];
+  return refs.toSet();
 }
 
 /// Pace status for a curriculum goal.
@@ -85,7 +134,7 @@ Future<PaceStatus?> paceStatus(
   required int totalItems,
 }) async {
   final db = ref.watch(appDatabaseProvider);
-  final now = DateTime.now().toUtc();
+  final now = ref.watch(clockProvider);
 
   // Get personal-track completions only
   final allCompletions = await db.completionDao.getCompletionsByCurriculum(
@@ -117,20 +166,40 @@ Future<PaceStatus?> paceStatus(
 }
 
 /// All daily tasks across active curricula, filtered by skipped items.
+///
+/// Previously-skipped tasks receive an `overdueChazara`-level priority
+/// boost so they appear near the top of the list.
 @riverpod
 Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final db = ref.watch(appDatabaseProvider);
   final generator = ref.watch(dailyTaskGeneratorProvider);
   final skipped = ref.watch(skippedTasksProvider);
+  final previouslySkipped = await ref.watch(
+    previouslySkippedRefsProvider.future,
+  );
 
   final activeKeys = await db.activeCurriculumDao.getActiveCurricula();
   final activeCurricula = activeKeys
       .map((key) => CurriculumId.values.where((c) => c.storageKey == key).first)
       .toList();
 
-  return generator.generateAll(
+  final tasks = await generator.generateAll(
     activeCurricula,
-    DateTime.now().toUtc(),
+    ref.watch(clockProvider),
     skippedRefs: skipped,
   );
+
+  // Priority boost: previously-skipped tasks get overdueChazara priority
+  if (previouslySkipped.isEmpty) return tasks;
+
+  return tasks.map((task) {
+    if (previouslySkipped.contains(task.contentItemSefariaRef) &&
+        task.priority != DailyTaskPriority.overdueChazara) {
+      return task.copyWith(
+        priority: DailyTaskPriority.overdueChazara,
+        reason: '${task.reason} (previously skipped)',
+      );
+    }
+    return task;
+  }).toList()..sort((a, b) => a.priority.index.compareTo(b.priority.index));
 }

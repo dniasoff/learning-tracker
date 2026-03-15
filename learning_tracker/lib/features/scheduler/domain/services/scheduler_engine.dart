@@ -117,6 +117,7 @@ class SchedulerEngine {
                 isOverdue: true,
                 reason: '${stage.stageName} overdue by ${-daysUntilDue} day(s)',
                 stageName: stage.stageName,
+                estimatedEffortMinutes: 3,
               ),
             );
           } else if (daysUntilDue == 0) {
@@ -130,6 +131,7 @@ class SchedulerEngine {
                 isOverdue: false,
                 reason: '${stage.stageName} due today',
                 stageName: stage.stageName,
+                estimatedEffortMinutes: 3,
               ),
             );
           }
@@ -156,6 +158,7 @@ class SchedulerEngine {
         isOverdue: false,
         reason: 'New learning',
         stageName: firstStage.stageName,
+        estimatedEffortMinutes: 5,
       );
     }).toList();
 
@@ -197,6 +200,10 @@ class SchedulerEngine {
   }
 
   /// Calculate new items per day with adaptive pacing.
+  ///
+  /// When chazara load is heavy (exceeds half of daily capacity),
+  /// new items are reduced proportionally. Always returns at least 1
+  /// to ensure forward progress.
   int _calculateNewItemsPerDay(
     ScheduleConfig config,
     int remainingNewItems,
@@ -204,24 +211,33 @@ class SchedulerEngine {
   ) {
     if (remainingNewItems == 0) return 0;
 
+    int baseRate;
+
     if (config.goalDeadline == null) {
-      // No deadline: use default rate, ensure at least 1 if chazara is heavy
-      return max(1, config.defaultNewItemsPerDay);
+      baseRate = config.defaultNewItemsPerDay;
+    } else {
+      final daysRemaining = config.goalDeadline!
+          .difference(config.currentDate)
+          .inDays;
+
+      if (daysRemaining <= 0) {
+        // Past deadline — push harder
+        baseRate = (remainingNewItems * 0.1).ceil();
+      } else {
+        // Spread remaining items evenly across remaining days
+        baseRate = (remainingNewItems / daysRemaining).ceil();
+      }
     }
 
-    final daysRemaining = config.goalDeadline!
-        .difference(config.currentDate)
-        .inDays;
-
-    if (daysRemaining <= 0) {
-      // Past deadline — push harder
-      return max(1, (remainingNewItems * 0.1).ceil());
+    // Chazara load balancing: when chazara tasks exceed half of daily
+    // capacity (baseRate + chazaraCount), reduce new items proportionally.
+    final dailyCapacity = baseRate + chazaraCount;
+    if (dailyCapacity > 0 && chazaraCount > dailyCapacity ~/ 2) {
+      final chazaraRatio = chazaraCount / dailyCapacity;
+      baseRate = (baseRate * (1.0 - chazaraRatio)).ceil();
     }
 
-    // Base rate: spread remaining items evenly
-    final baseRate = (remainingNewItems / daysRemaining).ceil();
-
-    // Ensure at least 1 new item even with heavy chazara
+    // Always at least 1 new item for forward progress
     return max(1, baseRate);
   }
 }

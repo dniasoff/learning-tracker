@@ -1,55 +1,38 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+
+part 'goal_entity.freezed.dart';
 
 /// Domain entity representing a learning goal with an optional deadline.
 ///
 /// Goals are per-curriculum and drive the scheduler's pacing calculations.
 /// Multiple goals per curriculum are allowed (e.g., "finish Seder Zeraim by
 /// Pesach, all Mishnayos by bar mitzvah").
-class GoalEntity {
-  final int? id;
-  final CurriculumId curriculumId;
-  final double targetPercent;
-  final DateTime? targetDate;
-  final String description;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+@freezed
+abstract class GoalEntity with _$GoalEntity {
+  const GoalEntity._();
 
-  const GoalEntity({
-    this.id,
-    required this.curriculumId,
-    this.targetPercent = 100.0,
-    this.targetDate,
-    this.description = '',
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  GoalEntity copyWith({
+  const factory GoalEntity({
     int? id,
-    CurriculumId? curriculumId,
-    double? targetPercent,
+    required CurriculumId curriculumId,
+    @Default(100.0) double targetPercent,
     DateTime? targetDate,
-    bool clearTargetDate = false,
-    String? description,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return GoalEntity(
-      id: id ?? this.id,
-      curriculumId: curriculumId ?? this.curriculumId,
-      targetPercent: targetPercent ?? this.targetPercent,
-      targetDate: clearTargetDate ? null : (targetDate ?? this.targetDate),
-      description: description ?? this.description,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
+    @Default('') String description,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) = _GoalEntity;
 
   /// Firestore document ID (deterministic per P4).
-  /// Uses curriculum + createdAt for uniqueness since multiple goals per
-  /// curriculum are allowed.
-  String get firestoreId =>
-      '${curriculumId.storageKey}_${createdAt.millisecondsSinceEpoch}';
+  /// Uses curriculum + targetPercent + targetDate + createdAt for uniqueness
+  /// since multiple goals per curriculum are allowed.
+  String get firestoreId {
+    final parts = <String>[
+      curriculumId.storageKey,
+      targetPercent.toStringAsFixed(1),
+      createdAt.millisecondsSinceEpoch.toString(),
+    ];
+    return parts.join('_');
+  }
 
   /// Convert to Firestore document map.
   Map<String, dynamic> toFirestore() {
@@ -74,11 +57,11 @@ class GoalEntity {
       ),
       targetPercent: (data['targetPercent'] as num?)?.toDouble() ?? 100.0,
       targetDate: data['targetDate'] != null
-          ? DateTime.parse(data['targetDate'] as String)
+          ? DateTime.parse(data['targetDate'] as String).toUtc()
           : null,
       description: data['description'] as String? ?? '',
-      createdAt: DateTime.parse(data['createdAt'] as String),
-      updatedAt: DateTime.parse(data['updatedAt'] as String),
+      createdAt: DateTime.parse(data['createdAt'] as String).toUtc(),
+      updatedAt: DateTime.parse(data['updatedAt'] as String).toUtc(),
     );
   }
 }

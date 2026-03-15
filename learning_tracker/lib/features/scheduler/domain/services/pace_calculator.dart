@@ -1,5 +1,11 @@
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
+/// Callback invoked when pace drops to [PaceStatusType.behind].
+///
+/// [daysBehind] is the absolute number of days behind (always positive).
+// TODO(Epic-12): Wire this callback into the notification system (DNI notification story).
+typedef PaceBehindCallback = void Function(int daysBehind);
+
 /// Pure computation for pace tracking.
 ///
 /// Calculates whether the user is ahead, behind, or on-pace for a goal,
@@ -14,6 +20,9 @@ class PaceCalculator {
   /// [dailyCompletionCounts] — map of date → count for recent days
   ///   (at least 7 days of history for rolling average)
   /// [today] — current date (UTC)
+  /// [onPaceBehind] — optional callback fired when status is behind.
+  // TODO(Epic-12): Epic 12 notification system should pass an [onPaceBehind]
+  //  callback to trigger "falling behind" notifications.
   static PaceStatus calculate({
     required DateTime goalStartDate,
     required DateTime goalDeadline,
@@ -21,6 +30,7 @@ class PaceCalculator {
     required int completedItems,
     required Map<DateTime, int> dailyCompletionCounts,
     required DateTime today,
+    PaceBehindCallback? onPaceBehind,
   }) {
     // Calculate expected items by today using linear interpolation
     final totalDays = goalDeadline.difference(goalStartDate).inDays;
@@ -31,12 +41,16 @@ class PaceCalculator {
       final status = completedItems >= totalItems
           ? PaceStatusType.ahead
           : PaceStatusType.behind;
-      return PaceStatus(
+      final result = PaceStatus(
         status: status,
         daysDelta: 0,
         projectedCompletionDate: null,
         rollingAverage: _rolling7DayAverage(dailyCompletionCounts, today),
       );
+      if (result.status == PaceStatusType.behind) {
+        onPaceBehind?.call(result.daysDelta.abs());
+      }
+      return result;
     }
 
     final expectedItemsPerDay = totalItems / totalDays;
@@ -48,10 +62,21 @@ class PaceCalculator {
     // Days delta: how many days ahead or behind
     // If completed > expected, user is ahead; calculate how many days of work
     // the surplus represents
-    final itemsDelta = completedItems - expectedByToday;
-    final daysDelta = expectedItemsPerDay > 0
-        ? (itemsDelta / expectedItemsPerDay).round()
-        : 0;
+    final rawItemsDelta = completedItems - expectedByToday;
+    final rawDaysDelta = expectedItemsPerDay > 0
+        ? rawItemsDelta / expectedItemsPerDay
+        : 0.0;
+
+    // Use floor for ahead (don't over-report partial days ahead) and
+    // negative-ceil for behind (any fractional behind counts as behind).
+    int daysDelta;
+    if (rawDaysDelta > 0) {
+      daysDelta = rawDaysDelta.floor();
+    } else if (rawDaysDelta < 0) {
+      daysDelta = -(-rawDaysDelta).ceil();
+    } else {
+      daysDelta = 0;
+    }
 
     PaceStatusType status;
     if (daysDelta > 0) {
@@ -78,12 +103,18 @@ class PaceCalculator {
     }
     // If rollingAvg == 0, projectedDate stays null (cannot project)
 
-    return PaceStatus(
+    final result = PaceStatus(
       status: status,
       daysDelta: daysDelta,
       projectedCompletionDate: projectedDate,
       rollingAverage: rollingAvg,
     );
+
+    if (result.status == PaceStatusType.behind) {
+      onPaceBehind?.call(result.daysDelta.abs());
+    }
+
+    return result;
   }
 
   /// Compute the rolling 7-day average of daily completions.

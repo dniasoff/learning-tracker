@@ -29,5 +29,9 @@ abstract class DailyTask with _$DailyTask {
     required bool isOverdue,
     required String reason,
     required String stageName,
+
+    /// Estimated effort in minutes. Defaults based on priority:
+    /// newLearning = 5 min, chazara = 3 min.
+    @Default(3) int estimatedEffortMinutes,
   }) = _DailyTask;
 }
