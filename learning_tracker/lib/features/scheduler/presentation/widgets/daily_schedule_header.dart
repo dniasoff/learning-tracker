@@ -34,9 +34,7 @@ class DailyScheduleHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(
-              isGroupedView ? Icons.view_list : Icons.view_module,
-            ),
+            icon: Icon(isGroupedView ? Icons.view_list : Icons.view_module),
             tooltip: isGroupedView ? 'Unified view' : 'Grouped view',
             onPressed: onToggleView,
           ),

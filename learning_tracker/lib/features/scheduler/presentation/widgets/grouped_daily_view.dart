@@ -23,9 +23,7 @@ class GroupedDailyView extends StatelessWidget {
     final grouped = schedule.groupedByCurriculum;
 
     if (grouped.isEmpty) {
-      return const Center(
-        child: Text('No tasks for today'),
-      );
+      return const Center(child: Text('No tasks for today'));
     }
 
     final curricula = grouped.keys.toList()
@@ -40,13 +38,8 @@ class GroupedDailyView extends StatelessWidget {
         return ExpansionTile(
           key: ValueKey('group_${curriculum.storageKey}'),
           initiallyExpanded: true,
-          leading: CircleAvatar(
-            backgroundColor: color,
-            radius: 8,
-          ),
-          title: Text(
-            '${curriculum.displayNameEn} (${tasks.length})',
-          ),
+          leading: CircleAvatar(backgroundColor: color, radius: 8),
+          title: Text('${curriculum.displayNameEn} (${tasks.length})'),
           children: List.generate(tasks.length, (i) {
             final task = tasks[i];
             return DailyTaskCard(

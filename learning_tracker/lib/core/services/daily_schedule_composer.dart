@@ -3,10 +3,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 
 /// Result of composing a daily schedule across all active curricula.
 class ComposedDailySchedule {
-  const ComposedDailySchedule({
-    required this.tasks,
-    required this.summary,
-  });
+  const ComposedDailySchedule({required this.tasks, required this.summary});
 
   /// The prioritized, capped list of tasks for the day.
   final List<DailyTask> tasks;
@@ -72,14 +69,12 @@ class DailyScheduleComposer {
     final allTasks = [...overdueTasks, ...roundRobinTasks];
 
     // Apply load cap
-    final capped =
-        allTasks.length > maxTasksPerDay
-            ? allTasks.sublist(0, maxTasksPerDay)
-            : allTasks;
+    final capped = allTasks.length > maxTasksPerDay
+        ? allTasks.sublist(0, maxTasksPerDay)
+        : allTasks;
 
     // Build summary
-    final distinctCurricula =
-        capped.map((t) => t.curriculumId).toSet().length;
+    final distinctCurricula = capped.map((t) => t.curriculumId).toSet().length;
     final summary =
         'You have ${capped.length} task${capped.length == 1 ? '' : 's'} '
         'across $distinctCurricula curricul${distinctCurricula == 1 ? 'um' : 'a'} today';
@@ -94,8 +89,9 @@ class DailyScheduleComposer {
     if (tasksByCurriculum.isEmpty) return [];
 
     final result = <DailyTask>[];
-    final queues =
-        tasksByCurriculum.values.map((list) => List<DailyTask>.of(list)).toList();
+    final queues = tasksByCurriculum.values
+        .map((list) => List<DailyTask>.of(list))
+        .toList();
 
     // Sort each queue by priority
     for (final q in queues) {

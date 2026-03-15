@@ -43,23 +43,23 @@ Widget _wrap(Widget child) {
 
 void main() {
   group('UnifiedDailyView', () {
-    testWidgets('renders single prioritized list with curriculum badge',
-        (tester) async {
-      final schedule = _schedule(
-        [
-          _task(CurriculumId.mishnayos, ref: 'Mishnah_Berakhot_1.0'),
-          _task(CurriculumId.bavli, ref: 'Bavli_Berakhot_2a'),
-        ],
-        '2 tasks across 2 curricula today',
-      );
+    testWidgets('renders single prioritized list with curriculum badge', (
+      tester,
+    ) async {
+      final schedule = _schedule([
+        _task(CurriculumId.mishnayos, ref: 'Mishnah_Berakhot_1.0'),
+        _task(CurriculumId.bavli, ref: 'Bavli_Berakhot_2a'),
+      ], '2 tasks across 2 curricula today');
 
-      await tester.pumpWidget(_wrap(
-        UnifiedDailyView(
-          schedule: schedule,
-          onTaskDismissed: (_) {},
-          onTaskCompleted: (_) {},
+      await tester.pumpWidget(
+        _wrap(
+          UnifiedDailyView(
+            schedule: schedule,
+            onTaskDismissed: (_) {},
+            onTaskCompleted: (_) {},
+          ),
         ),
-      ));
+      );
 
       // Both tasks should be visible
       expect(find.text('Mishnah Berakhot 1.0'), findsOneWidget);
@@ -72,53 +72,58 @@ void main() {
     testWidgets('shows empty message for no tasks', (tester) async {
       final schedule = _schedule([], '0 tasks across 0 curricula today');
 
-      await tester.pumpWidget(_wrap(
-        UnifiedDailyView(
-          schedule: schedule,
-          onTaskDismissed: (_) {},
-          onTaskCompleted: (_) {},
+      await tester.pumpWidget(
+        _wrap(
+          UnifiedDailyView(
+            schedule: schedule,
+            onTaskDismissed: (_) {},
+            onTaskCompleted: (_) {},
+          ),
         ),
-      ));
+      );
 
       expect(find.text('No tasks for today'), findsOneWidget);
     });
   });
 
   group('GroupedDailyView', () {
-    testWidgets('renders tasks organized by curriculum with collapsible sections',
-        (tester) async {
-      final schedule = _schedule(
-        [
+    testWidgets(
+      'renders tasks organized by curriculum with collapsible sections',
+      (tester) async {
+        final schedule = _schedule([
           _task(CurriculumId.mishnayos, ref: 'Mishnah_1'),
           _task(CurriculumId.bavli, ref: 'Bavli_1'),
           _task(CurriculumId.bavli, ref: 'Bavli_2'),
-        ],
-        '3 tasks across 2 curricula today',
-      );
+        ], '3 tasks across 2 curricula today');
 
-      await tester.pumpWidget(_wrap(
-        GroupedDailyView(
-          schedule: schedule,
-          onTaskDismissed: (_, __) {},
-          onTaskCompleted: (_, __) {},
-        ),
-      ));
+        await tester.pumpWidget(
+          _wrap(
+            GroupedDailyView(
+              schedule: schedule,
+              onTaskDismissed: (_, __) {},
+              onTaskCompleted: (_, __) {},
+            ),
+          ),
+        );
 
-      // Curriculum group headers with counts
-      expect(find.text('Talmud Bavli (2)'), findsOneWidget);
-      expect(find.text('Mishnayos (1)'), findsOneWidget);
-    });
+        // Curriculum group headers with counts
+        expect(find.text('Talmud Bavli (2)'), findsOneWidget);
+        expect(find.text('Mishnayos (1)'), findsOneWidget);
+      },
+    );
   });
 
   group('DailyScheduleHeader', () {
     testWidgets('displays summary text', (tester) async {
-      await tester.pumpWidget(_wrap(
-        DailyScheduleHeader(
-          summary: '15 tasks across 3 curricula today',
-          isGroupedView: false,
-          onToggleView: () {},
+      await tester.pumpWidget(
+        _wrap(
+          DailyScheduleHeader(
+            summary: '15 tasks across 3 curricula today',
+            isGroupedView: false,
+            onToggleView: () {},
+          ),
         ),
-      ));
+      );
 
       expect(find.text('15 tasks across 3 curricula today'), findsOneWidget);
     });
@@ -126,13 +131,15 @@ void main() {
     testWidgets('toggle switches between views', (tester) async {
       var toggled = false;
 
-      await tester.pumpWidget(_wrap(
-        DailyScheduleHeader(
-          summary: 'test',
-          isGroupedView: false,
-          onToggleView: () => toggled = true,
+      await tester.pumpWidget(
+        _wrap(
+          DailyScheduleHeader(
+            summary: 'test',
+            isGroupedView: false,
+            onToggleView: () => toggled = true,
+          ),
         ),
-      ));
+      );
 
       // Find the toggle button and tap it
       await tester.tap(find.byType(IconButton));
@@ -140,30 +147,31 @@ void main() {
     });
 
     testWidgets('summary updates reactively', (tester) async {
-      await tester.pumpWidget(_wrap(
-        DailyScheduleHeader(
-          summary: '10 tasks across 2 curricula today',
-          isGroupedView: false,
-          onToggleView: () {},
+      await tester.pumpWidget(
+        _wrap(
+          DailyScheduleHeader(
+            summary: '10 tasks across 2 curricula today',
+            isGroupedView: false,
+            onToggleView: () {},
+          ),
         ),
-      ));
+      );
 
       expect(find.text('10 tasks across 2 curricula today'), findsOneWidget);
 
       // Rebuild with updated summary
-      await tester.pumpWidget(_wrap(
-        DailyScheduleHeader(
-          summary: '9 tasks across 2 curricula today',
-          isGroupedView: false,
-          onToggleView: () {},
+      await tester.pumpWidget(
+        _wrap(
+          DailyScheduleHeader(
+            summary: '9 tasks across 2 curricula today',
+            isGroupedView: false,
+            onToggleView: () {},
+          ),
         ),
-      ));
+      );
 
       expect(find.text('9 tasks across 2 curricula today'), findsOneWidget);
-      expect(
-        find.text('10 tasks across 2 curricula today'),
-        findsNothing,
-      );
+      expect(find.text('10 tasks across 2 curricula today'), findsNothing);
     });
   });
 }

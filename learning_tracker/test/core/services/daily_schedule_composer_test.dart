@@ -29,70 +29,71 @@ void main() {
     composer = DailyScheduleComposer();
   });
 
-  test('compose merges tasks from all active curricula into a single list',
-      () {
+  test('compose merges tasks from all active curricula into a single list', () {
     final result = composer.compose({
       CurriculumId.mishnayos: [
         _task(CurriculumId.mishnayos, ref: '1'),
         _task(CurriculumId.mishnayos, ref: '2'),
       ],
-      CurriculumId.bavli: [
-        _task(CurriculumId.bavli, ref: '1'),
-      ],
+      CurriculumId.bavli: [_task(CurriculumId.bavli, ref: '1')],
     });
 
     expect(result.tasks.length, 3);
-    expect(
-      result.tasks.map((t) => t.curriculumId).toSet(),
-      {CurriculumId.mishnayos, CurriculumId.bavli},
-    );
+    expect(result.tasks.map((t) => t.curriculumId).toSet(), {
+      CurriculumId.mishnayos,
+      CurriculumId.bavli,
+    });
   });
 
   test(
-      'cross-curriculum prioritization places overdue items before on-time items',
-      () {
-    final result = composer.compose({
-      CurriculumId.mishnayos: [
-        _task(CurriculumId.mishnayos, ref: 'ontime'),
-      ],
-      CurriculumId.bavli: [
-        _task(
-          CurriculumId.bavli,
-          ref: 'overdue',
-          priority: DailyTaskPriority.overdueChazara,
-          isOverdue: true,
-        ),
-      ],
-    });
+    'cross-curriculum prioritization places overdue items before on-time items',
+    () {
+      final result = composer.compose({
+        CurriculumId.mishnayos: [_task(CurriculumId.mishnayos, ref: 'ontime')],
+        CurriculumId.bavli: [
+          _task(
+            CurriculumId.bavli,
+            ref: 'overdue',
+            priority: DailyTaskPriority.overdueChazara,
+            isOverdue: true,
+          ),
+        ],
+      });
 
-    expect(result.tasks.first.curriculumId, CurriculumId.bavli);
-    expect(result.tasks.first.isOverdue, isTrue);
-    expect(result.tasks.last.isOverdue, isFalse);
-  });
+      expect(result.tasks.first.curriculumId, CurriculumId.bavli);
+      expect(result.tasks.first.isOverdue, isTrue);
+      expect(result.tasks.last.isOverdue, isFalse);
+    },
+  );
 
   test(
-      'round-robin balancing: tasks alternate between curricula when no overdue',
-      () {
-    final result = composer.compose({
-      CurriculumId.mishnayos: [
-        _task(CurriculumId.mishnayos, ref: '1'),
-        _task(CurriculumId.mishnayos, ref: '2'),
-        _task(CurriculumId.mishnayos, ref: '3'),
-      ],
-      CurriculumId.bavli: [
-        _task(CurriculumId.bavli, ref: '1'),
-        _task(CurriculumId.bavli, ref: '2'),
-        _task(CurriculumId.bavli, ref: '3'),
-      ],
-    });
+    'round-robin balancing: tasks alternate between curricula when no overdue',
+    () {
+      final result = composer.compose({
+        CurriculumId.mishnayos: [
+          _task(CurriculumId.mishnayos, ref: '1'),
+          _task(CurriculumId.mishnayos, ref: '2'),
+          _task(CurriculumId.mishnayos, ref: '3'),
+        ],
+        CurriculumId.bavli: [
+          _task(CurriculumId.bavli, ref: '1'),
+          _task(CurriculumId.bavli, ref: '2'),
+          _task(CurriculumId.bavli, ref: '3'),
+        ],
+      });
 
-    // Should alternate: mishnayos, bavli, mishnayos, bavli, ...
-    // (or bavli, mishnayos — order of map entries)
-    // Key assertion: should NOT exhaust one curriculum first
-    final firstThree = result.tasks.sublist(0, 3);
-    final curricula = firstThree.map((t) => t.curriculumId).toSet();
-    expect(curricula.length, 2, reason: 'First 3 tasks should come from both');
-  });
+      // Should alternate: mishnayos, bavli, mishnayos, bavli, ...
+      // (or bavli, mishnayos — order of map entries)
+      // Key assertion: should NOT exhaust one curriculum first
+      final firstThree = result.tasks.sublist(0, 3);
+      final curricula = firstThree.map((t) => t.curriculumId).toSet();
+      expect(
+        curricula.length,
+        2,
+        reason: 'First 3 tasks should come from both',
+      );
+    },
+  );
 
   test('daily load cap enforced — cap 20, 30 tasks → only 20 returned', () {
     final tasks = List.generate(
@@ -104,10 +105,10 @@ void main() {
       (i) => _task(CurriculumId.bavli, ref: 'b$i'),
     );
 
-    final result = composer.compose(
-      {CurriculumId.mishnayos: tasks, CurriculumId.bavli: tasks2},
-      maxTasksPerDay: 20,
-    );
+    final result = composer.compose({
+      CurriculumId.mishnayos: tasks,
+      CurriculumId.bavli: tasks2,
+    }, maxTasksPerDay: 20);
 
     expect(result.tasks.length, 20);
   });
@@ -118,16 +119,14 @@ void main() {
       (i) => _task(CurriculumId.mishnayos, ref: '$i'),
     );
 
-    final result10 = composer.compose(
-      {CurriculumId.mishnayos: tasks},
-      maxTasksPerDay: 10,
-    );
+    final result10 = composer.compose({
+      CurriculumId.mishnayos: tasks,
+    }, maxTasksPerDay: 10);
     expect(result10.tasks.length, 10);
 
-    final result5 = composer.compose(
-      {CurriculumId.mishnayos: tasks},
-      maxTasksPerDay: 5,
-    );
+    final result5 = composer.compose({
+      CurriculumId.mishnayos: tasks,
+    }, maxTasksPerDay: 5);
     expect(result5.tasks.length, 5);
   });
 
@@ -138,20 +137,21 @@ void main() {
   });
 
   test(
-      'compose with one active curriculum returns that curriculum\'s tasks unchanged',
-      () {
-    final tasks = [
-      _task(CurriculumId.mishnayos, ref: '1'),
-      _task(CurriculumId.mishnayos, ref: '2'),
-    ];
+    'compose with one active curriculum returns that curriculum\'s tasks unchanged',
+    () {
+      final tasks = [
+        _task(CurriculumId.mishnayos, ref: '1'),
+        _task(CurriculumId.mishnayos, ref: '2'),
+      ];
 
-    final result = composer.compose({CurriculumId.mishnayos: tasks});
+      final result = composer.compose({CurriculumId.mishnayos: tasks});
 
-    expect(result.tasks.length, 2);
-    for (final t in result.tasks) {
-      expect(t.curriculumId, CurriculumId.mishnayos);
-    }
-  });
+      expect(result.tasks.length, 2);
+      for (final t in result.tasks) {
+        expect(t.curriculumId, CurriculumId.mishnayos);
+      }
+    },
+  );
 
   test('summary correctly counts tasks and distinct curricula', () {
     final result = composer.compose({
