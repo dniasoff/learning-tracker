@@ -77,7 +77,7 @@ void main() {
       () async {
         const sefariaRef = 'Mishnah Berachot 1:1';
         final completion = await repo.markComplete(
-          CompletionRequest(
+          const CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: sefariaRef,
             stageId: 1,
@@ -117,7 +117,7 @@ void main() {
       );
 
       final c1 = await repo.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
           stageId: 1,
@@ -125,7 +125,7 @@ void main() {
         ),
       );
       final c2 = await repo.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
           stageId: 2,
@@ -137,7 +137,7 @@ void main() {
     });
 
     test('duplicate completion for same stage is idempotent', () async {
-      final request = CompletionRequest(
+      const request = CompletionRequest(
         curriculumId: 'mishnayos',
         sefariaRef: 'Mishnah Berachot 1:1',
         stageId: 1,
@@ -207,7 +207,7 @@ void main() {
         const sefariaRef = 'Mishnah Berachot 1:1';
 
         await repo.markComplete(
-          CompletionRequest(
+          const CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: sefariaRef,
             stageId: 1,
@@ -216,7 +216,7 @@ void main() {
         );
 
         final c2 = await repo.markComplete(
-          CompletionRequest(
+          const CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: sefariaRef,
             stageId: 2,

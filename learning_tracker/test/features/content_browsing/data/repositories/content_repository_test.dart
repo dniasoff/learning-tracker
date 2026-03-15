@@ -21,12 +21,6 @@ void main() {
           CurriculumId.mishnayos,
         );
 
-        // Mishnayos should have 6 Sedarim at top level
-        final sedarim = items
-            .where((item) => item.level2 == null && !item.isLeaf)
-            .toSet()
-            .toList();
-
         // Should have content items (exact count depends on actual data)
         expect(items, isNotEmpty);
 

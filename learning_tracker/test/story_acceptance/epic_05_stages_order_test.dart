@@ -3,7 +3,6 @@
 library;
 
 import 'package:drift/native.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -13,6 +12,7 @@ import 'package:learning_tracker/features/learning_order/data/repositories/learn
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:test/test.dart';
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 

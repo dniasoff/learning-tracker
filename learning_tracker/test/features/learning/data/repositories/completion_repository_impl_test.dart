@@ -56,7 +56,7 @@ void main() {
       const sefariaRef = 'Mishnah Berachot 1:1';
       const stageId = 1;
 
-      final request = CompletionRequest(
+      const request = CompletionRequest(
         curriculumId: curriculumId,
         sefariaRef: sefariaRef,
         stageId: stageId,
@@ -81,7 +81,7 @@ void main() {
 
       // Complete stage 1 first
       await repository.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: 1,
@@ -92,7 +92,7 @@ void main() {
       // Try stage 3, skipping stage 2
       expect(
         () => repository.markComplete(
-          CompletionRequest(
+          const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: sefariaRef,
             stageId: 3,
@@ -106,7 +106,7 @@ void main() {
     test('is idempotent — returns existing completion on duplicate', () async {
       const curriculumId = 'mishnayos';
       const sefariaRef = 'Mishnah Berachot 1:1';
-      final request = CompletionRequest(
+      const request = CompletionRequest(
         curriculumId: curriculumId,
         sefariaRef: sefariaRef,
         stageId: 1,
@@ -128,7 +128,7 @@ void main() {
       const sefariaRef = 'Mishnah Berachot 1:1';
 
       await repository.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: 1,
@@ -139,7 +139,7 @@ void main() {
       // Stage 1 on a different track should succeed without requiring
       // stage 1 to be completed on that track first.
       final chavrusaCompletion = await repository.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: 1,
@@ -174,7 +174,7 @@ void main() {
 
         // Stage 1 completion
         final c1 = await repository.markComplete(
-          CompletionRequest(
+          const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: 'Mishnah Berachot 1:1',
             stageId: 1,
@@ -184,7 +184,7 @@ void main() {
 
         // Stage 2 completion (same ref, different stage)
         final c2 = await repository.markComplete(
-          CompletionRequest(
+          const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: 'Mishnah Berachot 1:1',
             stageId: 2,
@@ -225,7 +225,7 @@ void main() {
     test('returns true for a completed stage', () async {
       const sefariaRef = 'Mishnah Berachot 1:1';
       await repository.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: sefariaRef,
           stageId: 1,
@@ -264,7 +264,7 @@ void main() {
         () => mockContentRepository.getContentForCurriculum(any()),
       ).thenAnswer(
         (_) async => [
-          ContentItem(
+          const ContentItem(
             curriculumId: 'mishnayos',
             sefariaRef: ref1,
             displayNameEn: 'Berachot 1:1',
@@ -273,7 +273,7 @@ void main() {
             sortOrder: 1,
             level1: 'Seder Zeraim',
           ),
-          ContentItem(
+          const ContentItem(
             curriculumId: 'mishnayos',
             sefariaRef: ref2,
             displayNameEn: 'Berachot 1:2',
@@ -296,7 +296,7 @@ void main() {
       );
 
       await repository.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: ref1,
           stageId: 1,

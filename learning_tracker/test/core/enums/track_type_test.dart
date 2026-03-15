@@ -1,5 +1,5 @@
-import 'package:test/test.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('TrackType', () {

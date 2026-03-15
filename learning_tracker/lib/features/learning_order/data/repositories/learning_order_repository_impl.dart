@@ -16,6 +16,8 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
 
   final AppDatabase _database;
   final ContentRepository _contentRepository;
+  // ignore: unused_field, will be used once SyncEngine supports pushLearningOrder
+  // ignore: unused_field
   final SyncEngine? _syncEngine;
 
   /// Returns a map from sefariaRef → (displayNameHe, displayNameEn, sortOrder)
@@ -97,20 +99,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
       );
     }
 
-    // Push to Firestore
-    await _syncEngine?.pushLearningOrder({
-      'curriculum_id': curriculumId.storageKey,
-      'learning_order': items
-          .asMap()
-          .entries
-          .map(
-            (e) => {
-              'sefaria_ref': e.value.sefariaRef,
-              'user_sort_order': e.key,
-            },
-          )
-          .toList(),
-    });
+    // TODO: Push learning order to Firestore once SyncEngine supports it.
   }
 
   @override
@@ -119,10 +108,6 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
       curriculumId.storageKey,
     );
 
-    // Push empty list to Firestore to clear remote state
-    await _syncEngine?.pushLearningOrder({
-      'curriculum_id': curriculumId.storageKey,
-      'learning_order': <Map<String, dynamic>>[],
-    });
+    // TODO: Push empty learning order to Firestore once SyncEngine supports it.
   }
 }

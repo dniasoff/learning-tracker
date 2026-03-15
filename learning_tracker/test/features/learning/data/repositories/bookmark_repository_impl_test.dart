@@ -46,7 +46,7 @@ void main() {
     // Default content order: ref1, ref2, ref3
     when(() => mockContentRepository.getContentForCurriculum(any())).thenAnswer(
       (_) async => [
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           sefariaRef: _ref1,
           displayNameEn: 'B 1:1',
@@ -55,7 +55,7 @@ void main() {
           sortOrder: 1,
           level1: 'Zeraim',
         ),
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           sefariaRef: _ref2,
           displayNameEn: 'B 1:2',
@@ -64,7 +64,7 @@ void main() {
           sortOrder: 2,
           level1: 'Zeraim',
         ),
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           sefariaRef: _ref3,
           displayNameEn: 'B 1:3',
