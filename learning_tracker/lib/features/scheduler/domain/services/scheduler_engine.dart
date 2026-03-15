@@ -109,19 +109,27 @@ class SchedulerEngine {
           if (daysUntilDue < 0) {
             overdueTasks.add(
               DailyTask(
+                curriculumId: config.curriculumId,
                 contentItemSefariaRef: ref,
                 stageOrder: stage.stageOrder,
+                stageDefinitionId: stage.id,
                 priority: DailyTaskPriority.overdueChazara,
+                isOverdue: true,
                 reason: '${stage.stageName} overdue by ${-daysUntilDue} day(s)',
+                stageName: stage.stageName,
               ),
             );
           } else if (daysUntilDue == 0) {
             scheduledTasks.add(
               DailyTask(
+                curriculumId: config.curriculumId,
                 contentItemSefariaRef: ref,
                 stageOrder: stage.stageOrder,
+                stageDefinitionId: stage.id,
                 priority: DailyTaskPriority.scheduledChazara,
+                isOverdue: false,
                 reason: '${stage.stageName} due today',
+                stageName: stage.stageName,
               ),
             );
           }
@@ -137,12 +145,17 @@ class SchedulerEngine {
       chazaraCount,
     );
 
+    final firstStage = sortedStages.first;
     final newTasks = newLearningRefs.take(newItemsPerDay).map((ref) {
       return DailyTask(
+        curriculumId: config.curriculumId,
         contentItemSefariaRef: ref,
         stageOrder: firstStageOrder,
+        stageDefinitionId: firstStage.id,
         priority: DailyTaskPriority.newLearning,
+        isOverdue: false,
         reason: 'New learning',
+        stageName: firstStage.stageName,
       );
     }).toList();
 
