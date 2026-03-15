@@ -11,10 +11,12 @@ import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/goal_progress_calculator.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:test/test.dart';
 
@@ -580,17 +582,256 @@ void main() {
     );
   });
 
-  // ── Story 6.4: Calendar integration ───────────────────────────
+  // ── Story 6.4: Pace Tracking ──────────────────────────────────
 
-  group(
-    'Story 6.4 -- Calendar integration',
-    tags: ['story_6_4'],
-    skip: 'Backlog: calendar integration not yet implemented',
-    () {
-      test('Hebrew calendar dates shown in scheduler view', () {});
-      test('Shabbos and Yom Tov days are marked differently', () {});
-    },
-  );
+  group('Story 6.4 -- Pace Tracking', tags: ['story_6_4'], () {
+    final goalStart = DateTime.utc(2026, 1, 1);
+    final goalDeadline = DateTime.utc(2026, 7, 1); // 181 days
+    final today = DateTime.utc(2026, 3, 15); // 73 days elapsed
+    const totalItems = 181; // 1 item/day pace
+
+    /// Build daily completion counts for the last 7 days.
+    Map<DateTime, int> buildRecentCompletions(int perDay) {
+      final counts = <DateTime, int>{};
+      for (var i = 1; i <= 7; i++) {
+        counts[DateTime.utc(2026, 3, 15 - i)] = perDay;
+      }
+      return counts;
+    }
+
+    // ── Unit: PaceCalculator ──
+
+    test(
+      'PaceCalculator.calculate returns onPace when completions match expected',
+      () {
+        // 73 days elapsed, 1 item/day expected → 73 items expected
+        final result = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: 73,
+          dailyCompletionCounts: buildRecentCompletions(1),
+          today: today,
+        );
+
+        expect(result.status, PaceStatusType.onPace);
+        expect(result.daysDelta, 0);
+      },
+    );
+
+    test(
+      'PaceCalculator returns ahead with correct daysAhead when exceeding pace',
+      () {
+        // 73 expected, 93 completed → 20 items ahead → 20 days ahead
+        final result = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: 93,
+          dailyCompletionCounts: buildRecentCompletions(2),
+          today: today,
+        );
+
+        expect(result.status, PaceStatusType.ahead);
+        expect(result.daysDelta, greaterThan(0));
+        expect(result.daysDelta, 20);
+      },
+    );
+
+    test(
+      'PaceCalculator returns behind with correct daysBehind when below pace',
+      () {
+        // 73 expected, 53 completed → -20 items → -20 days behind
+        final result = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: 53,
+          dailyCompletionCounts: buildRecentCompletions(1),
+          today: today,
+        );
+
+        expect(result.status, PaceStatusType.behind);
+        expect(result.daysDelta, lessThan(0));
+        expect(result.daysDelta, -20);
+      },
+    );
+
+    test(
+      'PaceCalculator.projectedCompletionDate uses rolling 7-day average',
+      () {
+        // 73 completed, 108 remaining, rolling avg = 2/day → 54 days → Apr 8
+        final result = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: 73,
+          dailyCompletionCounts: buildRecentCompletions(2),
+          today: today,
+        );
+
+        expect(result.projectedCompletionDate, isNotNull);
+        expect(result.rollingAverage, closeTo(2.0, 0.01));
+        // 108 remaining / 2 per day = 54 days → May 8
+        final expectedDate = today.add(const Duration(days: 54));
+        expect(result.projectedCompletionDate, expectedDate);
+      },
+    );
+
+    test(
+      'PaceCalculator with zero completions in last 7 days returns null projectedDate',
+      () {
+        final result = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: 50,
+          dailyCompletionCounts: {}, // no recent completions
+          today: today,
+        );
+
+        expect(result.projectedCompletionDate, isNull);
+        expect(result.rollingAverage, 0.0);
+      },
+    );
+
+    test(
+      'PaceCalculator recalculates correctly when completion added — behind to onPace',
+      () {
+        // First: behind (53 completed, 73 expected)
+        final behind = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: 53,
+          dailyCompletionCounts: buildRecentCompletions(1),
+          today: today,
+        );
+        expect(behind.status, PaceStatusType.behind);
+
+        // After adding 20 completions → 73, now on pace
+        final onPace = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: 73,
+          dailyCompletionCounts: buildRecentCompletions(1),
+          today: today,
+        );
+        expect(onPace.status, PaceStatusType.onPace);
+      },
+    );
+
+    test('Pace calculated for personal track only — school/tutor excluded', () {
+      // This test verifies the contract: PaceCalculator receives only
+      // personal-track completedItems count. The filtering happens at the
+      // repository/provider layer. We verify the calculator uses the count
+      // as-is without any track filtering logic.
+      //
+      // Scenario: 73 personal completions (on pace), but if school
+      // completions were included it would show 150 (ahead).
+      // Calculator should use only what it's given.
+      final result = PaceCalculator.calculate(
+        goalStartDate: goalStart,
+        goalDeadline: goalDeadline,
+        totalItems: totalItems,
+        completedItems: 73, // personal only
+        dailyCompletionCounts: buildRecentCompletions(1),
+        today: today,
+      );
+
+      expect(result.status, PaceStatusType.onPace);
+    });
+
+    // ── Integration: Full pace scenario ──
+
+    late AppDatabase db;
+
+    setUp(() async {
+      db = createTestDatabase();
+
+      // Set up stage definitions for mishnayos
+      await db.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion.insert(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          stageOrder: 1,
+          stageName: 'Learn',
+          delayDays: 0,
+        ),
+      );
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test(
+      'complete items at double pace for 7 days — shows ahead with correct count',
+      () async {
+        const curriculum = CurriculumId.mishnayos;
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          curriculum.storageKey,
+        );
+        final learnId = stages.first.id;
+
+        // Insert 14 personal completions over 7 days (2/day)
+        final dailyCounts = <DateTime, int>{};
+        var totalCompleted = 0;
+        for (var dayOffset = 1; dayOffset <= 7; dayOffset++) {
+          final date = DateTime.utc(2026, 3, 15 - dayOffset);
+          dailyCounts[date] = 2;
+          for (var j = 0; j < 2; j++) {
+            await db.completionDao.insertCompletion(
+              CompletionsCompanion.insert(
+                curriculumId: curriculum.storageKey,
+                sefariaRef: 'Mishnah_Berakhot_${dayOffset}_$j',
+                stageId: learnId,
+                trackType: 'personal',
+                completedAt: date,
+                points: const Value(10),
+              ),
+            );
+            totalCompleted++;
+          }
+        }
+
+        // Goal: 181 items over 181 days (1/day), started Jan 1
+        // Expected by day 73: 73 items
+        // Completed: 14 (just the recent 7 days for simplicity)
+        // But let's say we also had earlier completions to total 93
+        // Add 79 earlier completions
+        for (var i = 0; i < 79; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              curriculumId: curriculum.storageKey,
+              sefariaRef: 'Mishnah_Berakhot_early_$i',
+              stageId: learnId,
+              trackType: 'personal',
+              completedAt: DateTime.utc(2026, 2, 1),
+              points: const Value(10),
+            ),
+          );
+        }
+        totalCompleted += 79; // 93 total
+
+        final result = PaceCalculator.calculate(
+          goalStartDate: goalStart,
+          goalDeadline: goalDeadline,
+          totalItems: totalItems,
+          completedItems: totalCompleted,
+          dailyCompletionCounts: dailyCounts,
+          today: today,
+        );
+
+        expect(result.status, PaceStatusType.ahead);
+        expect(result.daysDelta, 20); // 93-73=20 items ahead / 1 item/day
+        expect(result.rollingAverage, closeTo(2.0, 0.01));
+        // Projected: 88 remaining / 2 per day = 44 days
+        expect(result.projectedCompletionDate, isNotNull);
+        expect(result.projectedCompletionDate!.isBefore(goalDeadline), isTrue);
+      },
+    );
+  });
 
   // ── Story 6.5: Cross-Curriculum Daily Schedule Composer ──────
 

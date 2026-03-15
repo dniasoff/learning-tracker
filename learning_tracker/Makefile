@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.5 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -20,6 +20,9 @@ test-story-6.1: ## Run Story 6.1 (Parametric Scheduler Engine) acceptance tests
 
 test-story-6.3: ## Run Story 6.3 (Goal Management) acceptance tests
 	flutter test test/story_acceptance/epic_06_scheduler_test.dart --name "Story 6.3"
+
+test-story-6.4: ## Run Story 6.4 (Pace Tracking) acceptance tests
+	flutter test test/story_acceptance/epic_06_scheduler_test.dart --name "Story 6.4"
 
 test-story-6.5: ## Run Story 6.5 (Cross-Curriculum Daily Schedule Composer) acceptance tests
 	flutter test test/story_acceptance/epic_06_scheduler_test.dart --name "Story 6.5"

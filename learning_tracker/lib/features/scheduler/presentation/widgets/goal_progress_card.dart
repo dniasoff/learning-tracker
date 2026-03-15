@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/goal_progress_calculator.dart';
+import 'package:learning_tracker/features/scheduler/presentation/widgets/pace_indicator.dart';
 
 /// Displays goal progress: "X% complete, Y days remaining, Z items/day needed".
 class GoalProgressCard extends StatelessWidget {
   final GoalProgress progress;
+  final PaceStatus? paceStatus;
   final String? description;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -11,6 +14,7 @@ class GoalProgressCard extends StatelessWidget {
   const GoalProgressCard({
     super.key,
     required this.progress,
+    this.paceStatus,
     this.description,
     this.onEdit,
     this.onDelete,
@@ -33,6 +37,14 @@ class GoalProgressCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(_buildProgressText(), style: theme.textTheme.bodyMedium),
+            if (paceStatus != null) ...[
+              const SizedBox(height: 8),
+              PaceIndicator(paceStatus: paceStatus!),
+              const SizedBox(height: 4),
+              ProjectedCompletionText(
+                projectedDate: paceStatus!.projectedCompletionDate,
+              ),
+            ],
             if (onEdit != null || onDelete != null) ...[
               const SizedBox(height: 8),
               Row(
