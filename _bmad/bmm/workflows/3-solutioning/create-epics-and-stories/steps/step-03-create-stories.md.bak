@@ -194,11 +194,11 @@ When story is approved:
 
 <check if="{tracking_system} == linear">
   <action>Create Linear issues for each story:
-    linearis issues create "[Epic-N] Epic Title" --team {team_key} --project "{linear_project}" --labels "BMAD-Managed,Epic" -d "Epic goal"
-    linearis issues create "[N-M-key] Story Title" --team {team_key} --project "{linear_project}" --labels "BMAD-Managed,Story" \
+    linearis issues create "[Epic-N] Epic Title" --team {team_key} --labels "BMAD-Managed,Epic" -d "Epic goal"
+    linearis issues create "[N-M-key] Story Title" --team {team_key} --labels "BMAD-Managed,Story" \
       --parent-ticket [epic-id] -d "Placeholder — run create-story for Dev Notes" --status "Backlog"
   </action>
-  <action>After all issues created, refresh cache: `tool/linear-sync.sh sync`</action>
+  <action>Record Linear issue identifiers in linear-mapping.yaml</action>
 </check>
 
 ### 4. Epic Completion

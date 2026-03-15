@@ -20,11 +20,10 @@ description: 'Perform adversarial code review finding specific issues. Use when 
 - Do not review files that are not part of the application's source code. Always exclude the `_bmad/` and `_bmad-output/` folders from the review. Always exclude IDE and CLI configuration folders like `.cursor/` and `.windsurf/` and `.claude/`
 
 > **Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-> **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
+> **READS:** Use `.linear-cache/sprint-status.yaml` for status data and `.linear-cache/stories/DNI-XX.yaml`
 > for story details. If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
 > **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-> `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-> Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
+> `tool/linear-sync.sh story <ID>` to refresh the cache entry.
 > Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.
 
 ---
@@ -68,7 +67,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 <step n="1" goal="Load story and discover changes">
   <action>Use provided {{story_path}} or ask user which story file to review</action>
   <check if="{tracking_system} == linear">
-    <action>Read story from cache: `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{story_key}}.yaml`</action>
+    <action>Read story from cache: `.linear-cache/stories/{{story_key}}.yaml`</action>
     <check if="cache file does not exist">
       <action>Run `tool/linear-sync.sh story {{story_key}}` to fetch it</action>
     </check>

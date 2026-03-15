@@ -132,10 +132,11 @@ For each epic, review stories in order:
 - ✅ RIGHT: Each story builds only on previous stories
 
 <check if="{tracking_system} == linear">
-  <action>Ensure Linear cache is fresh: run `tool/linear-sync.sh sync`</action>
-  <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` to get all epics and stories</action>
-  <action>Read story files from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/*.yaml` to verify parent-child relationships (check `epic:` field in each story)</action>
-  <action>Verify all epics/stories have correct parent-child relationships and expected coverage</action>
+  <action>Additional Linear validation:
+    linearis issues search "" --team {team_key} --limit 50 \
+      | jq '[.[] | {id: .identifier, title: .title, parent: .parentIssue.identifier}]'
+    Verify all epics/stories have Linear issues with correct parent-child relationships and BMAD-Managed labels.
+  </action>
 </check>
 
 ### 6. Complete and Save

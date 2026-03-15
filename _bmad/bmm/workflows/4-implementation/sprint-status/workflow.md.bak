@@ -24,11 +24,10 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - YOU MUST ALWAYS SPEAK OUTPUT in your Agent communication style with the config `{communication_language}`
 
 > **Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-> **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
+> **READS:** Use `.linear-cache/sprint-status.yaml` for status data and `.linear-cache/stories/DNI-XX.yaml`
 > for story details. If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
 > **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-> `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-> Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
+> `tool/linear-sync.sh story <ID>` to refresh the cache entry.
 > Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.
 
 ### Paths
@@ -90,17 +89,17 @@ Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-stat
 <step n="2" goal="Read and parse sprint data">
   <!-- LINEAR PATH: Read from local cache -->
   <check if="{tracking_system} == linear">
-    <critical>Linear is the SOLE source of truth. Read status from ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ (not sprint-status.yaml in implementation-artifacts).</critical>
-    <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
+    <critical>Linear is the SOLE source of truth. Read status from .linear-cache/ (not sprint-status.yaml in implementation-artifacts).</critical>
+    <check if=".linear-cache/sprint-status.yaml does not exist">
       <output>Linear cache not found. Building complete cache...</output>
       <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
       <check if="sync command failed">
-        <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
+        <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the team key is correct.</output>
         <action>Exit workflow</action>
       </check>
       <output>✅ Linear cache created successfully.</output>
     </check>
-    <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for all epics and stories with statuses</action>
+    <action>Read `.linear-cache/sprint-status.yaml` for all epics and stories with statuses</action>
     <action>Classify entries from the cached YAML:
       - Epics: entries under `epics:` section
       - Stories: entries under `stories:` section
@@ -112,7 +111,7 @@ Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-stat
       - "Code Complete" or "In Review" → review
       - Done → done
     </action>
-    <action>Parse project metadata from the cache file (linear_project, team_key)</action>
+    <action>Parse project metadata from the cache file (project, team_key)</action>
   </check>
 
   <!-- FILE-SYSTEM PATH: Read local sprint-status.yaml -->
@@ -198,7 +197,7 @@ Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue witho
 
 - Project: {{project}} ({{project_key}})
 - Tracking: {{tracking_system}}
-- Status file: {{#if tracking_system == "linear"}}~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml{{else}}{sprint_status_file}{{/if}}
+- Status file: {{#if tracking_system == "linear"}}.linear-cache/sprint-status.yaml{{else}}{sprint_status_file}{{/if}}
 
 **Stories:** backlog {{count_backlog}}, ready-for-dev {{count_ready}}, in-progress {{count_in_progress}}, review {{count_review}}, done {{count_done}}
 
@@ -277,22 +276,17 @@ If the command targets a story, set `story_key={{next_story_id}}` when prompted.
 
 <step n="30" goal="Validate sprint tracking">
   <check if="{tracking_system} == linear">
-    <action>Run `tool/linear-sync.sh sync` to refresh cache and verify Linear connectivity</action>
-    <check if="sync command fails">
+    <action>Query Linear to verify team issues are accessible:
+      linearis issues search "" --team {team_key} --limit 1 | jq 'length'
+    </action>
+    <check if="query fails or returns 0">
       <template-output>is_valid = false</template-output>
-      <template-output>error = "Linear sync failed for project {linear_project} (team {team_key})"</template-output>
-      <template-output>suggestion = "Check linearis auth and linear_project / team_key in config.yaml"</template-output>
-      <action>Return</action>
-    </check>
-    <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and verify it contains epics/stories</action>
-    <check if="cache file missing or empty">
-      <template-output>is_valid = false</template-output>
-      <template-output>error = "Linear cache empty after sync — no issues found for project {linear_project} (team {team_key})"</template-output>
-      <template-output>suggestion = "Check linear_project / team_key in config.yaml"</template-output>
+      <template-output>error = "Linear query failed or returned no issues for team {team_key}"</template-output>
+      <template-output>suggestion = "Check linearis auth and team_key in config.yaml"</template-output>
       <action>Return</action>
     </check>
     <template-output>is_valid = true</template-output>
-    <template-output>message = "Linear tracking valid: cache refreshed, project {linear_project} (team {team_key}) has issues"</template-output>
+    <template-output>message = "Linear tracking valid: team {team_key} accessible with issues"</template-output>
     <action>Return</action>
   </check>
 

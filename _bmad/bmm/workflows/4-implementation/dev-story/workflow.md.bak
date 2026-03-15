@@ -2,7 +2,7 @@
 name: dev-story
 description: 'Execute story implementation following a context filled story spec file. Use when the user says "dev this story [story file]" or "implement the next story in the sprint plan"'
 tracking_system: "{config_source}:tracking_system"
-linear_cache: "~/.local/share/linear-sync/{linear_tenant}/{linear_project}"
+linear_mapping: "{implementation_artifacts}/linear-mapping.yaml"
 ---
 
 # Dev Story Workflow
@@ -60,11 +60,10 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.</critical>
 
   <critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-  **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
+  **READS:** Use `.linear-cache/sprint-status.yaml` for status data and `.linear-cache/stories/DNI-XX.yaml`
   for story details. If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
   **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-  `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-  Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
+  `tool/linear-sync.sh story <ID>` to refresh the cache entry.
   Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
 
   <step n="1" goal="Find next ready story and load it" tag="sprint-status">
@@ -77,25 +76,25 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <!-- Linear-based story discovery — read from cache -->
     <check if="{tracking_system} == linear">
-      <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
+      <check if=".linear-cache/sprint-status.yaml does not exist">
         <output>Linear cache not found. Building complete cache...</output>
         <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
         <check if="sync command failed">
-          <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
+          <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the team key is correct.</output>
           <action>HALT</action>
         </check>
         <output>✅ Linear cache created successfully.</output>
       </check>
 
       <check if="{{story_key}} is provided">
-        <action>Read story details from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{story_key}}.yaml`</action>
+        <action>Read story details from `.linear-cache/stories/{{story_key}}.yaml`</action>
         <check if="cache file does not exist">
           <action>Run `tool/linear-sync.sh story {{story_key}}` to fetch it</action>
         </check>
         <goto anchor="linear_load_issue" />
       </check>
 
-      <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and find stories with status Todo</action>
+      <action>Read `.linear-cache/sprint-status.yaml` and find stories with status Todo</action>
       <action>Filter to stories only (exclude epics)</action>
       <action>Select first Todo story, store as {{linear_issue_id}}</action>
 
@@ -107,7 +106,7 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
 
       <anchor id="linear_load_issue" />
 
-      <action>Read full story details from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml`</action>
+      <action>Read full story details from `.linear-cache/stories/{{linear_issue_id}}.yaml`</action>
       <action>Parse description for: Story statement, Acceptance Criteria, Dev Notes, Implementation Tasks</action>
 
       <action if="no Dev Notes section found">
@@ -115,8 +114,9 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
         <action>HALT</action>
       </action>
 
-      <action>Refresh cache to get latest comments: `tool/linear-sync.sh story {{linear_issue_id}}`</action>
-      <action>Read comments from cache: `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml` — parse the `comments:` section for review continuation check</action>
+      <action>Get comments for review continuation check:
+        linearis issues read {{linear_issue_id}} | jq '[.comments[] | {author: .user.name, body: .body}]'
+      </action>
     </check>
 
     <!-- Sprint-based story discovery -->
@@ -453,15 +453,13 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
     </check>
 
     <check if="{tracking_system} == linear">
-      <action>Read description from cache: parse `description:` field from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml`</action>
-      <action>Tick checkbox in description (change `- [ ] TASK_TEXT` to `- [x] TASK_TEXT`)</action>
-      <action>Write updated description to Linear:
-        linearis issues update {{linear_issue_id}} -d "$UPDATED_DESC"
+      <action>Tick checkbox in Linear issue description:
+        DESC=$(linearis issues read {{linear_issue_id}} | jq -r '.description' | sed 's/- \[ \] TASK_TEXT/- [x] TASK_TEXT/')
+        linearis issues update {{linear_issue_id}} -d "$DESC"
       </action>
       <action>Post task progress comment:
         linearis comments create {{linear_issue_id}} --body "Task complete: [task]. Progress: [n]/[total]"
       </action>
-      <action>Refresh cache: `tool/linear-sync.sh story {{linear_issue_id}}`</action>
     </check>
 
     <check if="{tracking_system} != linear">
@@ -502,8 +500,9 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
 
     <!-- Linear completion -->
     <check if="{tracking_system} == linear">
-      <action>Refresh cache: `tool/linear-sync.sh story {{linear_issue_id}}`</action>
-      <action>Verify all checkboxes ticked by reading description from cache: `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml` — count `- [ ]` occurrences in `description:` field</action>
+      <action>Verify all Linear checkboxes ticked:
+        linearis issues read {{linear_issue_id}} | jq -r '.description' | grep -c '- \[ \]'
+      </action>
       <check if="any unchecked items remain">
         <action>HALT - tick remaining checkboxes or complete the work</action>
       </check>

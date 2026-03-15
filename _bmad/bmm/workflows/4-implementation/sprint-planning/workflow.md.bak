@@ -25,11 +25,10 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - YOU MUST ALWAYS SPEAK OUTPUT in your Agent communication style with the config `{communication_language}`
 
 > **Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-> **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
+> **READS:** Use `.linear-cache/sprint-status.yaml` for status data and `.linear-cache/stories/DNI-XX.yaml`
 > for story details. If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
 > **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-> `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-> Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
+> `tool/linear-sync.sh story <ID>` to refresh the cache entry.
 > Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.
 
 ### Paths
@@ -201,25 +200,26 @@ development_status:
 <check if="{tracking_system} == linear">
   <action>Create Linear issues for each epic and story:
     For each epic:
-      linearis issues create "[Epic-N] Epic Title" --team {team_key} --project "{linear_project}" \
+      linearis issues create "[Epic-N] Epic Title" --team {team_key} --project {project_name} \
         --labels "BMAD-Managed,Epic" -d "Epic goal statement"
     For each story:
-      linearis issues create "[N-M-key] Story Title" --team {team_key} --project "{linear_project}" \
+      linearis issues create "[N-M-key] Story Title" --team {team_key} --project {project_name} \
         --labels "BMAD-Managed,Story" --parent-ticket [epic-id] \
         -d "Story placeholder — run create-story to add Dev Notes" --status "Backlog"
   </action>
-  <action>Run `tool/linear-sync.sh sync` to populate ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ with all issue data</action>
+  <action>Create linear-mapping.yaml with team_key, project_name, and issue ID mappings</action>
+  <action>Run `tool/linear-sync.sh sync` to populate .linear-cache/ with all issue data</action>
 </check>
 </step>
 
 <step n="5" goal="Validate and report">
 
 <check if="{tracking_system} == linear">
-  <action>Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` as the validation source (NOT {status_file})</action>
-  <action>If `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` is missing, instruct user to run `make linear-sync`</action>
+  <action>Use `.linear-cache/sprint-status.yaml` as the validation source (NOT {status_file})</action>
+  <action>If `.linear-cache/sprint-status.yaml` is missing, instruct user to run `make linear-sync`</action>
 </check>
 
-<action>Perform validation checks (use {status_file} for file-system mode, `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for linear mode):</action>
+<action>Perform validation checks (use {status_file} for file-system mode, `.linear-cache/sprint-status.yaml` for linear mode):</action>
 
 - [ ] Every epic in epic files appears in the status source
 - [ ] Every story in epic files appears in the status source
@@ -260,7 +260,7 @@ development_status:
 **Sprint Status Generated Successfully (Linear Mode)**
 
 - **Tracking:** Linear issues (source of truth)
-- **Local Cache:** `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml`
+- **Local Cache:** `.linear-cache/sprint-status.yaml`
 - **Total Epics:** {{epic_count}}
 - **Total Stories:** {{story_count}}
 - **Epics In Progress:** {{in_progress_count}}

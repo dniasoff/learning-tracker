@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG="$PROJECT_ROOT/_bmad/bmm/config.yaml"
+CONFIG="$PROJECT_ROOT/{bmad_folder}/bmm/config.yaml"
 
 TEAM_KEY=$(grep '^team_key:' "$CONFIG" | awk '{print $2}')
 LINEAR_TENANT=$(grep '^linear_tenant:' "$CONFIG" | awk '{print $2}')

@@ -17,11 +17,10 @@ description: 'Creates a dedicated story file with all the context the agent will
 - ZERO USER INTERVENTION: Process should be fully automated except for initial epic/story selection or missing documents
 
 > **Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-> **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
+> **READS:** Use `.linear-cache/sprint-status.yaml` for status data and `.linear-cache/stories/DNI-XX.yaml`
 > for story details. If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
 > **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-> `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-> Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
+> `tool/linear-sync.sh story <ID>` to refresh the cache entry.
 > Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.
 
 ---
@@ -76,22 +75,22 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
   <!-- LINEAR PATH: Read from cache -->
   <check if="{tracking_system} == linear">
-    <critical>Linear is the SOLE source of truth. Read from ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ (not sprint-status.yaml in implementation-artifacts).</critical>
-    <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
+    <critical>Linear is the SOLE source of truth. Read from .linear-cache/ (not sprint-status.yaml in implementation-artifacts).</critical>
+    <check if=".linear-cache/sprint-status.yaml does not exist">
       <output>Linear cache not found. Building complete cache...</output>
       <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
       <check if="sync command failed">
-        <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
+        <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the team key is correct.</output>
         <action>HALT</action>
       </check>
       <output>✅ Linear cache created successfully.</output>
     </check>
-    <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and find stories with status Backlog</action>
+    <action>Read `.linear-cache/sprint-status.yaml` and find stories with status Backlog</action>
     <action>Filter to stories only (exclude epics)</action>
     <action>Select the first Backlog story, extract epic_num and story_num from title pattern [N.M] or [N-M]</action>
 
     <check if="no backlog stories found in Linear">
-      <output>📋 No backlog stories found in Linear project {linear_project}
+      <output>📋 No backlog stories found in Linear for team {team_key}
 
         All stories are either already created, in progress, or done.
 
@@ -109,10 +108,13 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Set {{story_id}} = "{{epic_num}}.{{story_num}}"</action>
     <action>Store story_key for later use</action>
 
-    <!-- Check epic status from cache if this is first story -->
+    <!-- Check epic status in Linear if this is first story -->
     <action>Check if this is the first story in epic {{epic_num}}</action>
     <check if="this is first story in epic {{epic_num}}">
-      <action>Read epic status from cache: find epic {{epic_num}} in `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` under `epics:` section</action>
+      <action>Query Linear for epic status:
+        linearis issues search "[Epic {{epic_num}}]" --team {team_key} --limit 1 \
+          | jq '.[0] | {id: .identifier, status: .state.name}'
+      </action>
       <check if="epic status is Done">
         <output>🚫 ERROR: Cannot create story in completed epic</output>
         <output>Epic {{epic_num}} is marked as 'Done' in Linear.</output>
@@ -122,7 +124,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
         <action>Update epic to In Progress in Linear:
           linearis issues update [epic_id] -s "In Progress"
         </action>
-        <action>Refresh cache: `tool/linear-sync.sh story [epic_id]`</action>
         <output>📊 Epic {{epic_num}} status updated to In Progress in Linear</output>
       </check>
     </check>

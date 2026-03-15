@@ -36,5 +36,5 @@ Epic Files Contains:                Sprint Status Contains:
 
 - [ ] All epics created as Linear parent issues with BMAD-Managed label
 - [ ] All stories created as Linear sub-issues under correct epic parent
-- [ ] linear-mapping.yaml created with team_key, project_name, and issue mappings
-- [ ] Linear issue statuses match local sprint-status.yaml statuses
+- [ ] `tool/linear-sync.sh sync` run successfully after issue creation
+- [ ] Linear cache at `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/` contains all epics and stories

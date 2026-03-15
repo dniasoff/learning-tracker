@@ -20,11 +20,10 @@ description: 'Post-epic review to extract lessons and assess success. Use when t
   - Two-part format: (1) Epic Review + (2) Next Epic Preparation
 
 > **Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-> **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
+> **READS:** Use `.linear-cache/sprint-status.yaml` for status data and `.linear-cache/stories/DNI-XX.yaml`
 > for story details. If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
 > **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-> `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-> Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
+> `tool/linear-sync.sh story <ID>` to refresh the cache entry.
 > Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.
 
 - Party mode protocol:
@@ -89,19 +88,19 @@ Bob (Scrum Master): "Welcome to the retrospective, {user_name}. Let me help you 
 
 <!-- LINEAR PATH: Read from cache -->
 <check if="{tracking_system} == linear">
-  <critical>Linear is the SOLE source of truth. Read from ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ (not sprint-status.yaml in implementation-artifacts).</critical>
-  <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
+  <critical>Linear is the SOLE source of truth. Read from .linear-cache/ (not sprint-status.yaml in implementation-artifacts).</critical>
+  <check if=".linear-cache/sprint-status.yaml does not exist">
     <output>Linear cache not found. Building complete cache...</output>
     <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
     <check if="sync command failed">
-      <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
+      <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the team key is correct.</output>
       <action>HALT</action>
     </check>
     <output>✅ Linear cache created successfully.</output>
   </check>
-  <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and filter for stories with status Done</action>
+  <action>Read `.linear-cache/sprint-status.yaml` and filter for stories with status Done</action>
   <action>Find the highest epic number with completed stories from cached data</action>
-  <action>For detailed story comments/learnings, read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml` for each completed story</action>
+  <action>For detailed story comments/learnings, read `.linear-cache/stories/DNI-XX.yaml` for each completed story</action>
 </check>
 
 <!-- FILE-SYSTEM PATH: Use local sprint-status.yaml -->
