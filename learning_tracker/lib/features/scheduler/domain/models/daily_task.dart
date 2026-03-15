@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 part 'daily_task.freezed.dart';
 
@@ -20,9 +21,13 @@ enum DailyTaskPriority {
 @freezed
 abstract class DailyTask with _$DailyTask {
   const factory DailyTask({
+    required CurriculumId curriculumId,
     required String contentItemSefariaRef,
     required int stageOrder,
+    required int stageDefinitionId,
     required DailyTaskPriority priority,
+    required bool isOverdue,
     required String reason,
+    required String stageName,
   }) = _DailyTask;
 }
