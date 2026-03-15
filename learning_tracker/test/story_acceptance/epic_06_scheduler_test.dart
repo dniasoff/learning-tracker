@@ -2,15 +2,17 @@
 @Tags(['epic_6'])
 library;
 
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/goal_progress_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:test/test.dart';
 
@@ -154,17 +156,206 @@ void main() {
     },
   );
 
-  // ── Story 6.3: Session management ─────────────────────────────
+  // ── Story 6.3: Goal Management (Per-Curriculum Deadlines) ────
 
-  group(
-    'Story 6.3 -- Session management',
-    tags: ['story_6_3'],
-    skip: 'Backlog: session management not yet implemented',
-    () {
-      test('session tracks items reviewed and time spent', () {});
-      test('session can be paused and resumed', () {});
-    },
-  );
+  group('Story 6.3 -- Goal Management', tags: ['story_6_3'], () {
+    late AppDatabase db;
+    late GoalRepositoryImpl goalRepo;
+    const curriculum = CurriculumId.mishnayos;
+    const chumash = CurriculumId.chumash;
+
+    setUp(() async {
+      db = createTestDatabase();
+      goalRepo = GoalRepositoryImpl(database: db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    // ── Unit: GoalRepository CRUD ──
+
+    test(
+      'GoalRepository.createGoal persists goal with UTC date per P5',
+      () async {
+        final targetDate = DateTime(2027, 1, 1, 12, 0); // local time
+        final goal = await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 100.0,
+          targetDate: targetDate,
+        );
+
+        expect(goal.id, isNotNull);
+        expect(goal.curriculumId, curriculum);
+        expect(goal.targetPercent, 100.0);
+        // Date must be stored as UTC per P5
+        expect(goal.targetDate!.isUtc, isTrue);
+        expect(goal.createdAt.isUtc, isTrue);
+      },
+    );
+
+    test(
+      'GoalRepository.createGoal with Hebrew date converts to Gregorian UTC',
+      () async {
+        // Simulate a Hebrew date already converted to Gregorian UTC
+        // (Hebrew date conversion is done by kosher_dart before calling repo)
+        final hebrewConverted = DateTime.utc(2027, 9, 16); // 13 Tishrei 5788
+        final goal = await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 100.0,
+          targetDate: hebrewConverted,
+        );
+
+        expect(goal.targetDate, equals(hebrewConverted));
+        expect(goal.targetDate!.isUtc, isTrue);
+      },
+    );
+
+    test(
+      'GoalRepository.getGoals returns List<Goal> sorted by target date',
+      () async {
+        final date1 = DateTime.utc(2027, 6, 1);
+        final date2 = DateTime.utc(2027, 1, 1);
+        final date3 = DateTime.utc(2027, 12, 1);
+
+        await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 100.0,
+          targetDate: date1,
+        );
+        await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 50.0,
+          targetDate: date2,
+        );
+        await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 75.0,
+          targetDate: date3,
+        );
+
+        final goals = await goalRepo.getGoals(curriculum);
+        expect(goals.length, 3);
+        // Sorted by target date ascending
+        expect(goals[0].targetPercent, 50.0); // Jan
+        expect(goals[1].targetPercent, 100.0); // Jun
+        expect(goals[2].targetPercent, 75.0); // Dec
+      },
+    );
+
+    test(
+      'GoalRepository.updateGoal updates deadline and target percentage',
+      () async {
+        final goal = await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 100.0,
+          targetDate: DateTime.utc(2027, 1, 1),
+        );
+
+        final updated = await goalRepo.updateGoal(
+          goalId: goal.id!,
+          targetPercent: 80.0,
+          targetDate: DateTime.utc(2027, 6, 1),
+        );
+
+        expect(updated.targetPercent, 80.0);
+        expect(updated.targetDate, DateTime.utc(2027, 6, 1));
+        // CreatedAt unchanged
+        expect(updated.createdAt, goal.createdAt);
+      },
+    );
+
+    // ── Unit: GoalProgressCalculator ──
+
+    test(
+      'GoalProgressCalculator computes percentage, days remaining, items/day',
+      () {
+        final progress = GoalProgressCalculator.calculate(
+          targetPercent: 100.0,
+          targetDate: DateTime.utc(2027, 1, 1),
+          currentDate: DateTime.utc(2026, 3, 15),
+          totalItems: 4192,
+          completedItems: 10,
+        );
+
+        expect(progress.percentComplete, closeTo(0.238, 0.01));
+        expect(progress.daysRemaining, greaterThan(0));
+        expect(progress.itemsPerDay, isNotNull);
+        expect(progress.itemsPerDay, greaterThan(0));
+        expect(progress.remainingItems, 4182);
+      },
+    );
+
+    test(
+      'GoalProgressCalculator with no deadline returns null for days/items',
+      () {
+        final progress = GoalProgressCalculator.calculate(
+          targetPercent: 100.0,
+          targetDate: null,
+          currentDate: DateTime.utc(2026, 3, 15),
+          totalItems: 100,
+          completedItems: 50,
+        );
+
+        expect(progress.percentComplete, 50.0);
+        expect(progress.daysRemaining, isNull);
+        expect(progress.itemsPerDay, isNull);
+      },
+    );
+
+    test(
+      'Goal data keyed by CurriculumId.storageKey — goals independent',
+      () async {
+        await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 100.0,
+          targetDate: DateTime.utc(2027, 1, 1),
+        );
+        await goalRepo.createGoal(
+          curriculumId: chumash,
+          targetPercent: 50.0,
+          targetDate: DateTime.utc(2027, 6, 1),
+        );
+
+        final mishnayosGoals = await goalRepo.getGoals(curriculum);
+        final chumashGoals = await goalRepo.getGoals(chumash);
+
+        expect(mishnayosGoals.length, 1);
+        expect(chumashGoals.length, 1);
+        expect(mishnayosGoals[0].targetPercent, 100.0);
+        expect(chumashGoals[0].targetPercent, 50.0);
+      },
+    );
+
+    // ── Integration: Full scenario ──
+
+    test(
+      'Create Mishnayos goal 100% by 2027-01-01, complete 10 of 4192 items',
+      () async {
+        final goal = await goalRepo.createGoal(
+          curriculumId: curriculum,
+          targetPercent: 100.0,
+          targetDate: DateTime.utc(2027, 1, 1),
+          description: 'Complete all Mishnayos by 2027',
+        );
+
+        final progress = GoalProgressCalculator.calculate(
+          targetPercent: goal.targetPercent,
+          targetDate: goal.targetDate,
+          currentDate: DateTime.utc(2026, 3, 15),
+          totalItems: 4192,
+          completedItems: 10,
+        );
+
+        // 10/4192 ≈ 0.239%
+        expect(progress.percentComplete, closeTo(0.239, 0.01));
+        // ~292 days remaining (Mar 15 2026 → Jan 1 2027)
+        expect(progress.daysRemaining, 292);
+        // 4182 remaining / 292 days ≈ 14.32 items/day
+        expect(progress.itemsPerDay, closeTo(14.32, 0.1));
+      },
+    );
+  });
 
   // ── Story 6.4: Calendar integration ───────────────────────────
 
