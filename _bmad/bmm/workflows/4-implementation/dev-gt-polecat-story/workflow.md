@@ -30,12 +30,49 @@ echo "POLECAT=$GT_POLECAT BRANCH=$GT_BRANCH ROLE=$GT_ROLE AGENT=$BEADS_AGENT_NAM
   HALT: GT_BRANCH is not set. Polecat sandbox was not properly initialized.
 </check>
 
-### Step 1: Context (APPEND — add gt mol + polecat identity)
+### Step 1: Load context from Linear (REPLACES base — polecat-specific)
 
-Include in Linear comment: **Polecat:** $GT_POLECAT, **Branch:** $GT_BRANCH
+> **MANDATORY:** You MUST fetch the full story from Linear. Do NOT use `bd show` or any other tool as a substitute.
+
+Set `{{linear_issue_id}}` = `$GT_LINEAR_ISSUE`
+
+**1a. Fetch full story content:**
+
+If `$GT_LINEAR_CONTEXT` is set and file exists → read it. Otherwise fetch directly:
 
 ```bash
-gt mol step done load-context --body "Context Loaded. Story: {{issue_identifier}}, Polecat: $GT_POLECAT, Branch: $GT_BRANCH"
+linearis issues read $GT_LINEAR_ISSUE | jq '.'
+```
+
+Parse from the response: title, status, description (Story statement, ACs, Dev Notes, Implementation Tasks).
+
+**1b. Fetch comments** (for review continuation detection):
+
+```bash
+linearis issues read $GT_LINEAR_ISSUE | jq '[.comments[] | {author: .user.name, body: .body}]'
+```
+
+**1c. Ensure Linear cache is populated:**
+
+```bash
+tool/linear-sync.sh story $GT_LINEAR_ISSUE
+```
+
+Read `.linear-cache/stories/$GT_LINEAR_ISSUE.yaml` to confirm cache is valid.
+
+**1d. Post context-loaded comment to Linear:**
+
+```bash
+linearis comments create $GT_LINEAR_ISSUE --body "## Context Loaded
+Polecat: $GT_POLECAT, Branch: $GT_BRANCH
+Story: $GT_LINEAR_ISSUE
+ACs: [count], Tasks: [total] total, [incomplete] remaining"
+```
+
+**1e. Track in molecule:**
+
+```bash
+gt mol step done load-context --body "Context Loaded. Story: $GT_LINEAR_ISSUE, Polecat: $GT_POLECAT, Branch: $GT_BRANCH"
 ```
 
 ### Step 2: Verify polecat branch (REPLACES base Step 2)
@@ -50,7 +87,26 @@ git rebase origin/{default_branch}
 
 If rebase conflicts → resolve carefully. If stuck → HALT.
 
-Update Linear status and post branch comment via linearis.
+**MANDATORY — Update Linear status:**
+
+```bash
+linearis issues update $GT_LINEAR_ISSUE -s "In Progress"
+```
+
+**MANDATORY — Post branch comment:**
+
+```bash
+linearis comments create $GT_LINEAR_ISSUE --body "## Branch Ready
+Polecat: $GT_POLECAT, Branch: $GT_BRANCH, Base: {default_branch} at $(git rev-parse --short origin/{default_branch})"
+```
+
+**Refresh cache:**
+
+```bash
+tool/linear-sync.sh story $GT_LINEAR_ISSUE
+```
+
+**Track in molecule:**
 
 ```bash
 gt mol step done branch-setup --body "Branch: $GT_BRANCH, rebased on {default_branch}"
