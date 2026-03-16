@@ -23,8 +23,8 @@ class OfflineQueue {
   final FirestoreDataSource _firestoreDataSource;
   final Talker _logger;
 
-  /// Maximum number of retry attempts before an item is considered dead.
-  static const _maxRetries = 10;
+  /// Maximum number of retry attempts before an item is considered dead (FR93).
+  static const maxRetries = 5;
 
   /// Get the sync queue DAO.
   SyncQueueDao get _queue => _database.syncQueueDao;
@@ -80,11 +80,16 @@ class OfflineQueue {
     );
   }
 
-  /// Flush all queued operations to Firestore.
+  /// Flush queued operations to Firestore.
   ///
+  /// If [batchSize] is provided, only processes that many items per flush
+  /// (battery-efficient mode per NFR27).
   /// Returns the number of successfully synced operations.
-  Future<int> flush() async {
-    final pending = await _queue.getAllPending();
+  Future<int> flush({int? batchSize}) async {
+    var pending = await _queue.getAllPending();
+    if (batchSize != null && pending.length > batchSize) {
+      pending = pending.sublist(0, batchSize);
+    }
     if (pending.isEmpty) {
       _logger.debug('No pending operations to flush');
       return 0;
@@ -95,10 +100,10 @@ class OfflineQueue {
 
     for (final operation in pending) {
       // Skip items that have exceeded the retry limit (dead-letter).
-      if (operation.retryCount >= _maxRetries) {
+      if (operation.retryCount >= maxRetries) {
         _logger.warning(
           'Skipping dead-letter operation #${operation.id} '
-          '(${operation.operationType}) after $_maxRetries retries',
+          '(${operation.operationType}) after $maxRetries retries',
         );
         continue;
       }

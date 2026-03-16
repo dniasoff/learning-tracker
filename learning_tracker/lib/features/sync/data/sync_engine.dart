@@ -192,6 +192,7 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push completion, queuing for later', e);
       await _offlineQueue.enqueueCompletion(completion);
+      await _emitPendingStatus();
     }
   }
 
@@ -220,6 +221,7 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push bookmark, queuing for later', e);
       await _offlineQueue.enqueueBookmark(bookmark);
+      await _emitPendingStatus();
     }
   }
 
@@ -242,6 +244,7 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push settings, queuing for later', e);
       await _offlineQueue.enqueueSettings(settings);
+      await _emitPendingStatus();
     }
   }
 
@@ -264,6 +267,7 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push streak, queuing for later', e);
       await _offlineQueue.enqueueStreak(streak);
+      await _emitPendingStatus();
     }
   }
 
@@ -286,6 +290,7 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push profile, queuing for later', e);
       await _offlineQueue.enqueueProfile(profile);
+      await _emitPendingStatus();
     }
   }
 
@@ -520,7 +525,9 @@ class SyncEngine {
     _updateStatus(SyncStatus.syncing(startedAt: DateTime.now()));
 
     try {
-      final syncedCount = await _offlineQueue.flush();
+      // In battery saver mode, process in smaller batches with delays
+      final batchSize = _isBatterySaverMode ? 5 : null;
+      final syncedCount = await _offlineQueue.flush(batchSize: batchSize);
       _logger.info('Flushed $syncedCount operations from offline queue');
 
       _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now()));
@@ -591,4 +598,28 @@ class SyncEngine {
     _currentStatus = status;
     _statusController.add(status);
   }
+
+  /// Emit pending status when online but queue has items.
+  Future<void> _emitPendingStatus() async {
+    if (_isOnline) {
+      final count = await _offlineQueue.getPendingCount();
+      if (count > 0) {
+        _updateStatus(SyncStatus.pending(pendingChanges: count));
+      }
+    }
+  }
+
+  // ========== Battery-Aware Queue Processing ==========
+
+  bool _isBatterySaverMode = false;
+
+  /// Set battery saver mode. When enabled, queue flush uses larger batch
+  /// intervals to reduce network activity (NFR27).
+  void setBatterySaverMode(bool enabled) {
+    _isBatterySaverMode = enabled;
+    _logger.info('Battery saver mode: ${enabled ? "on" : "off"}');
+  }
+
+  /// Whether battery saver mode is currently active.
+  bool get isBatterySaverMode => _isBatterySaverMode;
 }
