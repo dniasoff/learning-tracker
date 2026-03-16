@@ -3,12 +3,15 @@
 @Tags(['epic_10'])
 library;
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
@@ -182,6 +185,46 @@ void main() {
           value: any(named: 'value'),
         ),
       ).called(1);
+    });
+
+    testWidgets('PinSetupScreen shows error on mismatched PINs', (
+      tester,
+    ) async {
+      final mockStorage = _createMockStorage();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            flutterSecureStorageProvider.overrideWithValue(mockStorage),
+          ],
+          child: const MaterialApp(home: PinSetupScreen()),
+        ),
+      );
+
+      // Enter first PIN: 1234 — one digit per TextField
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), '1');
+      await tester.pump();
+      await tester.enterText(fields.at(1), '2');
+      await tester.pump();
+      await tester.enterText(fields.at(2), '3');
+      await tester.pump();
+      await tester.enterText(fields.at(3), '4');
+      await tester.pumpAndSettle();
+
+      // Now in confirm step — enter mismatched PIN: 5678
+      final confirmFields = find.byType(TextField);
+      await tester.enterText(confirmFields.at(0), '5');
+      await tester.pump();
+      await tester.enterText(confirmFields.at(1), '6');
+      await tester.pump();
+      await tester.enterText(confirmFields.at(2), '7');
+      await tester.pump();
+      await tester.enterText(confirmFields.at(3), '8');
+      await tester.pumpAndSettle();
+
+      // Verify error message is displayed
+      expect(find.text('PINs do not match'), findsOneWidget);
     });
 
     test('integration: set PIN, verify, fail 5 times, lockout', () async {

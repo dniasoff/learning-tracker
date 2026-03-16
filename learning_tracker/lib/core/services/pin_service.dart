@@ -254,6 +254,6 @@ final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
 /// Provider for the PIN service.
 @riverpod
 PinService pinService(Ref ref) {
-  final storage = ref.read(flutterSecureStorageProvider);
+  final storage = ref.watch(flutterSecureStorageProvider);
   return PinService(storage);
 }

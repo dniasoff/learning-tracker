@@ -2,30 +2,44 @@
 @Tags(['story_10_1'])
 library;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/test_database.dart';
 
+class MockNavigationResolver extends Mock implements NavigationResolver {}
+
+class MockStackRouter extends Mock implements StackRouter {}
+
 void main() {
   late AppDatabase db;
+  late MockNavigationResolver mockResolver;
+  late MockStackRouter mockRouter;
 
   setUp(() {
     db = createTestDatabase();
+    mockResolver = MockNavigationResolver();
+    mockRouter = MockStackRouter();
   });
 
   tearDown(() async {
     await db.close();
   });
 
-  test('no profiles defaults to adult (blocks parent mode access)', () async {
-    final profiles = await db.userProfileDao.getAllUserProfiles();
-    expect(profiles, isEmpty);
-    // ChildModeGuard defaults to adult when no profiles → denies access
+  test('no profiles defaults to adult — resolver.next(false)', () async {
+    final guard = ChildModeGuard(database: db);
+
+    await guard.onNavigation(mockResolver, mockRouter);
+
+    verify(() => mockResolver.next(false)).called(1);
+    verifyNever(() => mockResolver.next(true));
   });
 
-  test('adult account cannot access parent mode', () async {
+  test('adult account blocked — resolver.next(false)', () async {
     await db.userProfileDao.insertUserProfile(
       UserProfilesCompanion.insert(
         firebaseUid: 'uid-1',
@@ -35,16 +49,16 @@ void main() {
         updatedAt: DateTime.now(),
       ),
     );
-    final profiles = await db.userProfileDao.getAllUserProfiles();
-    final mode = UserMode.values.firstWhere(
-      (m) => m.name == profiles.first.userMode,
-      orElse: () => UserMode.adult,
-    );
-    expect(mode, UserMode.adult);
-    expect(mode, isNot(UserMode.child));
+
+    final guard = ChildModeGuard(database: db);
+
+    await guard.onNavigation(mockResolver, mockRouter);
+
+    verify(() => mockResolver.next(false)).called(1);
+    verifyNever(() => mockResolver.next(true));
   });
 
-  test('child account can access parent mode', () async {
+  test('child account allowed — resolver.next(true)', () async {
     await db.userProfileDao.insertUserProfile(
       UserProfilesCompanion.insert(
         firebaseUid: 'uid-2',
@@ -54,11 +68,12 @@ void main() {
         updatedAt: DateTime.now(),
       ),
     );
-    final profiles = await db.userProfileDao.getAllUserProfiles();
-    final mode = UserMode.values.firstWhere(
-      (m) => m.name == profiles.first.userMode,
-      orElse: () => UserMode.adult,
-    );
-    expect(mode, UserMode.child);
+
+    final guard = ChildModeGuard(database: db);
+
+    await guard.onNavigation(mockResolver, mockRouter);
+
+    verify(() => mockResolver.next(true)).called(1);
+    verifyNever(() => mockResolver.next(false));
   });
 }

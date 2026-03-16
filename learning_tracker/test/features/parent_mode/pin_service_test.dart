@@ -123,6 +123,13 @@ void main() {
         await pinService.verifyParentPin('0000');
       }
       await pinService.verifyParentPin('1234');
+
+      // Verify count and timestamp are cleared in storage
+      final count = await storage.read(key: 'parent_lockout_count');
+      expect(count, isNull);
+      final timestamp = await storage.read(key: 'parent_lockout_timestamp');
+      expect(timestamp, isNull);
+
       // Counter reset; 4 failures should not trigger lockout
       for (var i = 0; i < 4; i++) {
         expect(await pinService.verifyParentPin('0000'), isFalse);
