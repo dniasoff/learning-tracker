@@ -610,6 +610,54 @@ class ParentModeRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [PinChangeScreen]
+class PinChangeRoute extends PageRouteInfo<void> {
+  const PinChangeRoute({List<PageRouteInfo>? children})
+    : super(PinChangeRoute.name, initialChildren: children);
+
+  static const String name = 'PinChangeRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PinChangeScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [PinEntryScreen]
+class PinEntryRoute extends PageRouteInfo<void> {
+  const PinEntryRoute({List<PageRouteInfo>? children})
+    : super(PinEntryRoute.name, initialChildren: children);
+
+  static const String name = 'PinEntryRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PinEntryScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [PinSetupScreen]
+class PinSetupRoute extends PageRouteInfo<void> {
+  const PinSetupRoute({List<PageRouteInfo>? children})
+    : super(PinSetupRoute.name, initialChildren: children);
+
+  static const String name = 'PinSetupRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PinSetupScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [ProgressChartsScreen]
 class ProgressChartsRoute extends PageRouteInfo<void> {
   const ProgressChartsRoute({List<PageRouteInfo>? children})

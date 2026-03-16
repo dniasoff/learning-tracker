@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 
@@ -14,9 +16,11 @@ import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 /// uses secure storage rather than hard-coded stubs.
 final routerProvider = Provider<AppRouter>((ref) {
   final pinSvc = ref.watch(pinServiceProvider);
+  final db = ref.watch(appDatabaseProvider);
 
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: FirebaseAuth.instance),
+    childModeGuard: ChildModeGuard(database: db),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
       promptForPin: () =>

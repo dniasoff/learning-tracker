@@ -24,7 +24,7 @@ class PinService {
 
   // Lockout configuration
   static const _maxFailedAttempts = 5;
-  static const _lockoutDurationMinutes = 5;
+  static const _lockoutDurationMinutes = 15;
 
   /// Sets the parent PIN by hashing it with bcrypt and storing securely.
   ///

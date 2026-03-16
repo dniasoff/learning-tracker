@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_shell.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
@@ -21,6 +22,9 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/mode_s
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_change_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_entry_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
@@ -38,11 +42,13 @@ part 'app_router.gr.dart';
 @AutoRouterConfig(replaceInRouteName: 'Screen,Route')
 class AppRouter extends RootStackRouter {
   final AuthGuard authGuard;
+  final ChildModeGuard childModeGuard;
   final ParentPinGuard parentPinGuard;
   final TutorPinGuard tutorPinGuard;
 
   AppRouter({
     required this.authGuard,
+    required this.childModeGuard,
     required this.parentPinGuard,
     required this.tutorPinGuard,
   });
@@ -139,7 +145,22 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode',
       page: ParentModeRoute.page,
-      guards: [authGuard, parentPinGuard],
+      guards: [authGuard, childModeGuard, parentPinGuard],
+    ),
+    AutoRoute(
+      path: '/parent-mode/pin-setup',
+      page: PinSetupRoute.page,
+      guards: [authGuard, childModeGuard],
+    ),
+    AutoRoute(
+      path: '/parent-mode/pin-entry',
+      page: PinEntryRoute.page,
+      guards: [authGuard, childModeGuard],
+    ),
+    AutoRoute(
+      path: '/parent-mode/pin-change',
+      page: PinChangeRoute.page,
+      guards: [authGuard, childModeGuard, parentPinGuard],
     ),
     AutoRoute(
       path: '/tutor-mode',

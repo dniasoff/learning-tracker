@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -34,6 +35,7 @@ AppRouter _createAuthenticatedRouter() {
 
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
+    childModeGuard: ChildModeGuard(database: createTestDatabase()),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,
@@ -55,6 +57,7 @@ AppRouter _createUnauthenticatedRouter() {
 
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
+    childModeGuard: ChildModeGuard(database: createTestDatabase()),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,
