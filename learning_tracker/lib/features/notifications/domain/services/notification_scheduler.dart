@@ -15,7 +15,8 @@ class NotificationScheduler {
     required int taskCount,
     required int curriculumCount,
   }) async {
-    final body = 'You have $taskCount '
+    final body =
+        'You have $taskCount '
         'task${taskCount == 1 ? '' : 's'} across '
         '$curriculumCount curricul${curriculumCount == 1 ? 'um' : 'a'} today';
     await service.scheduleDailyReminder(

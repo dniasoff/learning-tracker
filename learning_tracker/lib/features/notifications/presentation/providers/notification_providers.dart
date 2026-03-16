@@ -48,7 +48,10 @@ class ReminderTime extends _$ReminderTime {
   @override
   TimeOfDay build() {
     _loadFromPrefs();
-    return const TimeOfDay(hour: defaultReminderHour, minute: defaultReminderMinute);
+    return const TimeOfDay(
+      hour: defaultReminderHour,
+      minute: defaultReminderMinute,
+    );
   }
 
   Future<void> _loadFromPrefs() async {
