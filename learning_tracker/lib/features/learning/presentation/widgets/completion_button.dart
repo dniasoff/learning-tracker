@@ -72,7 +72,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
           : 0.0;
 
       // Capture streak before completion
-      final streakData = ref.read(dashboardStreakProvider).valueOrNull;
+      final streakData = ref.read(dashboardStreakProvider).value;
       final streakBefore = streakData?.currentStreak ?? 0;
 
       final useCase = ref.read(markCompletionUseCaseProvider);
@@ -105,7 +105,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
             ))
           : progressBefore + 0.01;
 
-      final streakDataAfter = ref.read(dashboardStreakProvider).valueOrNull;
+      final streakDataAfter = ref.read(dashboardStreakProvider).value;
       final streakAfter = streakDataAfter?.currentStreak ?? streakBefore;
 
       setState(() {
