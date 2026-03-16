@@ -4,7 +4,8 @@ library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart' hide group, test, setUp, tearDown;
+import 'package:flutter_test/flutter_test.dart'
+    hide group, test, setUp, tearDown, expect;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -19,7 +20,7 @@ import 'package:learning_tracker/features/progress/domain/services/chart_data_se
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
-import 'package:test/test.dart';
+import 'package:test/test.dart' hide isNull, isNotNull;
 
 import '../helpers/test_database.dart';
 
@@ -395,6 +396,118 @@ void main() {
         );
       },
     );
+
+    // --- Widget tests ---
+
+    testWidgets(
+      'CurriculumSummaryCard renders name, percentage, and pace indicator',
+      (tester) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: CurriculumSummaryCard(
+                summary: CurriculumSummary(
+                  curriculumId: CurriculumId.mishnayos,
+                  completionPercentage: 0.75,
+                  paceStatus: const PaceStatus(
+                    status: PaceStatusType.ahead,
+                    daysDelta: 3,
+                    rollingAverage: 2.0,
+                  ),
+                  nextDueItem: 'Berachos 1:1',
+                  todayTaskCount: 5,
+                  lastCompletionAt: DateTime.utc(2026, 3, 16),
+                ),
+                onTap: () => tapped = true,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Mishnayos'), findsOneWidget);
+        expect(find.text('75% complete'), findsOneWidget);
+        expect(find.text('Next: Berachos 1:1'), findsOneWidget);
+        expect(find.byIcon(Icons.trending_up), findsOneWidget);
+
+        await tester.tap(find.byType(CurriculumSummaryCard));
+        expect(tapped, isTrue);
+      },
+    );
+
+    testWidgets('StreakWidget displays animated variant in child mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StreakWidget(
+              currentStreak: 7,
+              maxStreak: 14,
+              userMode: UserMode.child,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('7 day streak!'), findsOneWidget);
+      expect(find.text('Best: 14 days'), findsOneWidget);
+      expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
+    });
+
+    testWidgets('StreakWidget displays subtle variant in adult mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StreakWidget(
+              currentStreak: 7,
+              maxStreak: 14,
+              userMode: UserMode.adult,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('7'), findsOneWidget);
+      expect(find.text('(best: 14)'), findsOneWidget);
+    });
+
+    testWidgets('PointsSummaryWidget is visible and shows points', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: PointsSummaryWidget(totalPoints: 250)),
+        ),
+      );
+
+      expect(find.text('250 points'), findsOneWidget);
+      expect(find.byIcon(Icons.star), findsOneWidget);
+    });
+
+    testWidgets('TodaysTasksWidget shows task count and start button', (
+      tester,
+    ) async {
+      var started = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TodaysTasksWidget(
+              taskCount: 12,
+              onQuickStart: () => started = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('12 tasks due today'), findsOneWidget);
+      expect(find.text('Start'), findsOneWidget);
+
+      await tester.tap(find.text('Start'));
+      expect(started, isTrue);
+    });
   });
 
   // ── Story 7.2: Per-Curriculum Progress Views ────────────────
