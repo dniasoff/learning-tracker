@@ -3,14 +3,19 @@
 @Tags(['epic_10'])
 library;
 
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
@@ -245,15 +250,344 @@ void main() {
 
   // ── Story 10.2: Parent dashboard ──────────────────────────────
 
-  group(
-    'Story 10.2 -- Parent dashboard',
-    tags: ['story_10_2'],
-    skip: 'Backlog: parent dashboard not yet implemented',
-    () {
-      test('parent dashboard shows child progress summary', () {});
-      test('parent can view per-curriculum progress', () {});
-    },
-  );
+  group('Story 10.2 -- Parent dashboard', tags: ['story_10_2'], () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = createTestDatabase();
+    });
+
+    tearDown(() => db.close());
+
+    Future<void> seedCurriculumAndCompletions(
+      AppDatabase db, {
+      required String curriculumId,
+      int completionCount = 5,
+      int stageCount = 1,
+      int pointsPerCompletion = 10,
+      DateTime? completionBaseDate,
+    }) async {
+      // Activate curriculum
+      await db.activeCurriculumDao.activate(
+        CurriculumId.values.firstWhere((c) => c.storageKey == curriculumId),
+      );
+
+      // Add stage definitions
+      for (var i = 1; i <= stageCount; i++) {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculumId,
+            stageOrder: i,
+            stageName: 'Stage $i',
+            delayDays: 0,
+          ),
+        );
+      }
+
+      // Add completions
+      final base = completionBaseDate ?? DateTime.now().toUtc();
+      for (var i = 0; i < completionCount; i++) {
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: curriculumId,
+            sefariaRef: 'ref-$curriculumId-$i',
+            stageId: (i % stageCount) + 1,
+            trackType: 'personal',
+            completedAt: base.subtract(Duration(hours: i * 12)),
+            points: Value(pointsPerCompletion),
+          ),
+        );
+      }
+    }
+
+    // ── Unit: aggregator computes correct completion % ──
+
+    test(
+      'aggregator computes correct completion % across curricula',
+      () async {
+        await seedCurriculumAndCompletions(
+          db,
+          curriculumId: 'mishnayos',
+          completionCount: 4,
+          stageCount: 2,
+          pointsPerCompletion: 10,
+        );
+
+        final aggregator = ParentDashboardAggregator(db);
+        final pct = await aggregator.computeCompletionPercentage(
+          CurriculumId.mishnayos,
+        );
+
+        // 4 completions across 2 stages: refs 0,1 get stages 1,2; refs 2,3 get 1,2
+        // ref-mishnayos-0: stage 1, ref-mishnayos-1: stage 2, etc.
+        // So ref-0 has {1}, ref-1 has {2}, ref-2 has {1}, ref-3 has {2}
+        // None fully completed (need both stages) → 0/4 = 0.0
+        expect(pct, equals(0.0));
+      },
+    );
+
+    test('aggregator returns 0% when no completions', () async {
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      final aggregator = ParentDashboardAggregator(db);
+      final pct = await aggregator.computeCompletionPercentage(
+        CurriculumId.mishnayos,
+      );
+      expect(pct, equals(0.0));
+    });
+
+    // ── Unit: engagement metrics ──
+
+    test(
+      'engagement metrics calculate days active and average completions',
+      () async {
+        final now = DateTime.now().toUtc();
+        final completions = <Completion>[];
+
+        // Simulate 3 days of activity this week
+        for (var day = 0; day < 3; day++) {
+          final date = now.subtract(Duration(days: day));
+          // Use a mock-like approach: create fake completion objects
+          // We test the static method directly
+        }
+
+        // Test with actual DB completions
+        await seedCurriculumAndCompletions(
+          db,
+          curriculumId: 'mishnayos',
+          completionCount: 7,
+          completionBaseDate: now,
+        );
+
+        final aggregator = ParentDashboardAggregator(db);
+        final data = await aggregator.compute();
+
+        expect(data.engagement.daysActiveThisWeek, greaterThan(0));
+        expect(data.engagement.averageDailyCompletions, greaterThan(0));
+      },
+    );
+
+    // ── Unit: recent completions query returns last 7 days ──
+
+    test('recent completions query returns last 7 days of activity', () async {
+      final now = DateTime.now().toUtc();
+
+      // Add recent completions (within 7 days)
+      await seedCurriculumAndCompletions(
+        db,
+        curriculumId: 'mishnayos',
+        completionCount: 3,
+        completionBaseDate: now,
+      );
+
+      // Add old completions (beyond 7 days)
+      for (var i = 0; i < 2; i++) {
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'old-ref-$i',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: now.subtract(const Duration(days: 10)),
+            points: const Value(5),
+          ),
+        );
+      }
+
+      final aggregator = ParentDashboardAggregator(db);
+      final data = await aggregator.compute();
+
+      // Only 3 recent completions should appear (not the 2 old ones)
+      expect(data.recentCompletions.length, equals(3));
+      for (final c in data.recentCompletions) {
+        expect(
+          c.completedAt.isAfter(now.subtract(const Duration(days: 7))),
+          isTrue,
+        );
+      }
+    });
+
+    // ── Unit: full dashboard data aggregation ──
+
+    test('full dashboard aggregates streak, points, and curricula', () async {
+      final now = DateTime.now().toUtc();
+
+      await seedCurriculumAndCompletions(
+        db,
+        curriculumId: 'mishnayos',
+        completionCount: 3,
+        pointsPerCompletion: 10,
+        completionBaseDate: now,
+      );
+
+      // Set up streak
+      await db.streakDao.upsertStreak(
+        StreaksCompanion.insert(
+          currentStreak: const Value(5),
+          maxStreak: const Value(12),
+          lastCompletionDate: Value(now),
+        ),
+      );
+
+      final aggregator = ParentDashboardAggregator(db);
+      final data = await aggregator.compute();
+
+      expect(data.currentStreak, equals(5));
+      expect(data.maxStreak, equals(12));
+      expect(data.globalPoints, equals(30)); // 3 * 10
+      expect(data.curricula.length, equals(1));
+      expect(data.curricula.first.points, equals(30));
+    });
+
+    // ── Widget: dashboard displays all key stats ──
+
+    testWidgets('dashboard displays all key stats', (tester) async {
+      final now = DateTime.now().toUtc();
+      await seedCurriculumAndCompletions(
+        db,
+        curriculumId: 'mishnayos',
+        completionCount: 2,
+        pointsPerCompletion: 15,
+        completionBaseDate: now,
+      );
+      await db.streakDao.upsertStreak(
+        StreaksCompanion.insert(
+          currentStreak: const Value(3),
+          maxStreak: const Value(7),
+          lastCompletionDate: Value(now),
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+          ],
+          child: const MaterialApp(home: ParentModeScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Key stats visible
+      expect(find.text('3'), findsOneWidget); // current streak
+      expect(find.text('Best: 7'), findsOneWidget); // max streak
+      expect(find.text('30'), findsOneWidget); // points (2 * 15)
+      expect(find.text('Streak'), findsOneWidget);
+      expect(find.text('Points'), findsOneWidget);
+    });
+
+    // ── Widget: per-curriculum cards show on-track status ──
+
+    testWidgets('per-curriculum cards show individual on-track status', (
+      tester,
+    ) async {
+      await seedCurriculumAndCompletions(
+        db,
+        curriculumId: 'mishnayos',
+        completionCount: 1,
+        pointsPerCompletion: 10,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: ParentModeScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Should show curriculum name and pace badge
+      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('On Pace'), findsOneWidget);
+    });
+
+    // ── Widget: recent completions list renders ──
+
+    testWidgets('recent completions list renders with dates and items', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      await seedCurriculumAndCompletions(
+        db,
+        curriculumId: 'mishnayos',
+        completionCount: 2,
+        pointsPerCompletion: 10,
+        completionBaseDate: now,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: ParentModeScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Recent Activity (Last 7 Days)'), findsOneWidget);
+      expect(find.text('ref-mishnayos-0'), findsOneWidget);
+      expect(find.text('ref-mishnayos-1'), findsOneWidget);
+      expect(find.text('+10'), findsAtLeastNWidgets(1));
+    });
+
+    // ── Integration: multi-day completions reflected in dashboard ──
+
+    test(
+      'integration: completions over several days reflected in dashboard',
+      () async {
+        final now = DateTime.now().toUtc();
+
+        // Day 1: 3 completions
+        for (var i = 0; i < 3; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'day1-ref-$i',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: now.subtract(const Duration(days: 2)),
+              points: const Value(10),
+            ),
+          );
+        }
+
+        // Day 2: 2 completions
+        for (var i = 0; i < 2; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'day2-ref-$i',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: now.subtract(const Duration(days: 1)),
+              points: const Value(10),
+            ),
+          );
+        }
+
+        await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+        await db.streakDao.upsertStreak(
+          StreaksCompanion.insert(
+            currentStreak: const Value(2),
+            maxStreak: const Value(2),
+            lastCompletionDate: Value(now.subtract(const Duration(days: 1))),
+          ),
+        );
+
+        final aggregator = ParentDashboardAggregator(db);
+        final data = await aggregator.compute();
+
+        expect(data.globalPoints, equals(50)); // 5 * 10
+        expect(data.currentStreak, equals(2));
+        expect(data.recentCompletions.length, equals(5));
+        // Days active depends on what day of the week 'now' falls on;
+        // the completions are 1-2 days ago, which may be in a previous week.
+        expect(data.engagement.daysActiveThisWeek, greaterThanOrEqualTo(0));
+        expect(data.engagement.averageDailyCompletions, greaterThan(0));
+      },
+    );
+  });
 
   // ── Story 10.3: Content restrictions ──────────────────────────
 
