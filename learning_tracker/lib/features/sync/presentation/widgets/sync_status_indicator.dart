@@ -16,39 +16,38 @@ class SyncStatusIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(syncStatusProvider);
 
-    final (IconData icon, Color color, String label, bool spinning) =
-        switch (status) {
-          SyncStatusSynced() => (
-            Icons.cloud_done,
-            Colors.green,
-            'Synced',
-            false,
-          ),
-          SyncStatusSyncing() => (
-            Icons.sync,
-            Theme.of(context).colorScheme.primary,
-            'Syncing',
-            true,
-          ),
-          SyncStatusPending(:final pendingChanges) => (
-            Icons.schedule,
-            Colors.orange,
-            '$pendingChanges pending',
-            false,
-          ),
-          SyncStatusOffline(:final pendingChanges) => (
-            Icons.cloud_off,
-            Colors.grey,
-            pendingChanges > 0 ? '$pendingChanges queued' : 'Offline',
-            false,
-          ),
-          SyncStatusError() => (
-            Icons.warning_amber,
-            Colors.red,
-            'Sync error',
-            false,
-          ),
-        };
+    final (
+      IconData icon,
+      Color color,
+      String label,
+      bool spinning,
+    ) = switch (status) {
+      SyncStatusSynced() => (Icons.cloud_done, Colors.green, 'Synced', false),
+      SyncStatusSyncing() => (
+        Icons.sync,
+        Theme.of(context).colorScheme.primary,
+        'Syncing',
+        true,
+      ),
+      SyncStatusPending(:final pendingChanges) => (
+        Icons.schedule,
+        Colors.orange,
+        '$pendingChanges pending',
+        false,
+      ),
+      SyncStatusOffline(:final pendingChanges) => (
+        Icons.cloud_off,
+        Colors.grey,
+        pendingChanges > 0 ? '$pendingChanges queued' : 'Offline',
+        false,
+      ),
+      SyncStatusError() => (
+        Icons.warning_amber,
+        Colors.red,
+        'Sync error',
+        false,
+      ),
+    };
 
     return _buildIndicator(
       context,
@@ -67,16 +66,15 @@ class SyncStatusIndicator extends ConsumerWidget {
     required bool spinning,
   }) {
     final iconWidget = Icon(icon, color: color, size: 20);
-    final displayIcon =
-        spinning
-            ? SizedBox(
-              width: 20,
-              height: 20,
-              child: RepaintBoundary(
-                child: _SpinningIcon(icon: icon, color: color),
-              ),
-            )
-            : iconWidget;
+    final displayIcon = spinning
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: RepaintBoundary(
+              child: _SpinningIcon(icon: icon, color: color),
+            ),
+          )
+        : iconWidget;
 
     if (!showLabel) {
       return Tooltip(message: label, child: displayIcon);

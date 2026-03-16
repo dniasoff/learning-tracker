@@ -37,6 +37,36 @@ void main() {
       });
     });
 
+    group('pending', () {
+      test('creates pending status with pendingChanges', () {
+        const status = SyncStatus.pending(pendingChanges: 3);
+
+        final result = status.maybeWhen(
+          pending: (pendingChanges) {
+            expect(pendingChanges, equals(3));
+            return true;
+          },
+          orElse: () => false,
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('allows zero pending changes', () {
+        const status = SyncStatus.pending(pendingChanges: 0);
+
+        final result = status.maybeWhen(
+          pending: (pendingChanges) {
+            expect(pendingChanges, equals(0));
+            return true;
+          },
+          orElse: () => false,
+        );
+
+        expect(result, isTrue);
+      });
+    });
+
     group('offline', () {
       test('creates offline status with pendingChanges', () {
         const status = SyncStatus.offline(pendingChanges: 5);
@@ -113,6 +143,13 @@ void main() {
 
         expect(syncing, isNot(equals(synced)));
       });
+
+      test('pending and offline are different types', () {
+        const pending = SyncStatus.pending(pendingChanges: 3);
+        const offline = SyncStatus.offline(pendingChanges: 3);
+
+        expect(pending, isNot(equals(offline)));
+      });
     });
 
     group('pattern matching', () {
@@ -122,6 +159,7 @@ void main() {
         final result = status.when(
           syncing: (_) => 'syncing',
           synced: (_) => 'synced',
+          pending: (_) => 'pending',
           offline: (_) => 'offline',
           error: (_, __) => 'error',
         );
@@ -138,6 +176,34 @@ void main() {
         );
 
         expect(result, equals('other'));
+      });
+
+      test('when handles pending state', () {
+        const status = SyncStatus.pending(pendingChanges: 2);
+
+        final result = status.when(
+          syncing: (_) => 'syncing',
+          synced: (_) => 'synced',
+          pending: (count) => 'pending:$count',
+          offline: (_) => 'offline',
+          error: (_, __) => 'error',
+        );
+
+        expect(result, equals('pending:2'));
+      });
+
+      test('Dart 3 switch expression works', () {
+        const status = SyncStatus.pending(pendingChanges: 5);
+
+        final label = switch (status) {
+          SyncStatusSyncing() => 'syncing',
+          SyncStatusSynced() => 'synced',
+          SyncStatusPending(:final pendingChanges) => 'pending:$pendingChanges',
+          SyncStatusOffline() => 'offline',
+          SyncStatusError() => 'error',
+        };
+
+        expect(label, equals('pending:5'));
       });
     });
   });

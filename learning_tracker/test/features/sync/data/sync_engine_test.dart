@@ -571,6 +571,7 @@ void main() {
       when(
         () => mockOfflineQueue.enqueueCompletion(any()),
       ).thenAnswer((_) async {});
+      when(() => mockOfflineQueue.getPendingCount()).thenAnswer((_) async => 1);
 
       final data = {'curriculum_id': 'mishnayos', 'content_item_id': 'm-1'};
       await syncEngine.pushCompletion(data);

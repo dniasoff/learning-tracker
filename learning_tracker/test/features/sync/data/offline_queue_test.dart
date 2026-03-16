@@ -239,4 +239,129 @@ void main() {
       expect(count, 0);
     });
   });
+
+  group('OfflineQueue FIFO ordering', () {
+    test('flush processes entries in FIFO order', () async {
+      final pushOrder = <String>[];
+
+      when(() => mockFirestore.pushCompletion(any())).thenAnswer((inv) async {
+        final payload = inv.positionalArguments[0] as Map<String, dynamic>;
+        pushOrder.add('completion:${payload['id']}');
+      });
+      when(() => mockFirestore.pushBookmark(any())).thenAnswer((inv) async {
+        final payload = inv.positionalArguments[0] as Map<String, dynamic>;
+        pushOrder.add('bookmark:${payload['id']}');
+      });
+      when(() => mockFirestore.pushSettings(any())).thenAnswer((inv) async {
+        final payload = inv.positionalArguments[0] as Map<String, dynamic>;
+        pushOrder.add('settings:${payload['id']}');
+      });
+
+      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueBookmark({'id': '2'});
+      await offlineQueue.enqueueSettings({'id': '3'});
+
+      await offlineQueue.flush();
+
+      expect(pushOrder, ['completion:1', 'bookmark:2', 'settings:3']);
+    });
+  });
+
+  group('OfflineQueue persistence', () {
+    test('queue entries persist across simulated app restart', () async {
+      // Enqueue items
+      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueBookmark({'id': '2'});
+
+      // Create a new OfflineQueue instance pointing to the same database
+      // (simulates app restart with same persistent DB)
+      final newQueue = OfflineQueue(
+        database: database,
+        firestoreDataSource: mockFirestore,
+        logger: logger,
+      );
+
+      final count = await newQueue.getPendingCount();
+      expect(count, 2);
+    });
+  });
+
+  group('OfflineQueue retry with exponential backoff', () {
+    test('failed push increments retry count', () async {
+      when(
+        () => mockFirestore.pushCompletion(any()),
+      ).thenThrow(Exception('Network error'));
+
+      await offlineQueue.enqueueCompletion({'id': '1'});
+
+      // First flush: fails, marks retry count = 1
+      await offlineQueue.flush();
+      expect(await offlineQueue.getPendingCount(), 1);
+
+      final pending = await database.syncQueueDao.getAllPending();
+      expect(pending.first.retryCount, 1);
+      expect(pending.first.lastError, contains('Network error'));
+    });
+
+    test('after 5 retries, entry marked as failed (not retried)', () async {
+      when(
+        () => mockFirestore.pushCompletion(any()),
+      ).thenThrow(Exception('persistent error'));
+
+      // Enqueue and manually set retryCount to 4 (one below max)
+      await offlineQueue.enqueueCompletion({'id': '1'});
+      final pending = await database.syncQueueDao.getAllPending();
+      final id = pending.first.id;
+
+      // Manually set retry count to 4
+      for (var i = 0; i < 4; i++) {
+        await database.syncQueueDao.markFailed(id, 'error $i');
+      }
+
+      // Flush: retryCount=4, will fail → becomes 5 (= maxRetries)
+      await offlineQueue.flush();
+
+      final updated = await database.syncQueueDao.getAllPending();
+      expect(updated.first.retryCount, 5);
+
+      // Next flush should skip the dead-letter item
+      final synced = await offlineQueue.flush();
+      expect(synced, 0);
+    });
+
+    test('maxRetries is 5 per FR93', () {
+      expect(OfflineQueue.maxRetries, 5);
+    });
+  });
+
+  group('OfflineQueue batch processing', () {
+    test('flush with batchSize limits processed items', () async {
+      when(() => mockFirestore.pushCompletion(any())).thenAnswer((_) async {});
+      when(() => mockFirestore.pushBookmark(any())).thenAnswer((_) async {});
+      when(() => mockFirestore.pushSettings(any())).thenAnswer((_) async {});
+
+      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueBookmark({'id': '2'});
+      await offlineQueue.enqueueSettings({'id': '3'});
+
+      final synced = await offlineQueue.flush(batchSize: 2);
+      expect(synced, 2);
+
+      final remaining = await offlineQueue.getPendingCount();
+      expect(remaining, 1);
+    });
+  });
+
+  group('OfflineQueue sync status reflects queue state', () {
+    test('empty queue means synced (count = 0)', () async {
+      final count = await offlineQueue.getPendingCount();
+      expect(count, 0);
+    });
+
+    test('non-empty queue means pending', () async {
+      await offlineQueue.enqueueCompletion({'id': '1'});
+      final count = await offlineQueue.getPendingCount();
+      expect(count, greaterThan(0));
+    });
+  });
 }
