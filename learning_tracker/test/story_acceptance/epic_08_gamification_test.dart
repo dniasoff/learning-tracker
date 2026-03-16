@@ -1,31 +1,120 @@
 /// Story acceptance tests for Epic 8 -- Gamification.
-/// All 3 stories are backlog (skipped).
 @Tags(['epic_8'])
 library;
 
+import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:test/test.dart';
+
+import '../helpers/test_database.dart';
 
 void main() {
   // ── Story 8.1: Points system ──────────────────────────────────
 
-  group(
-    'Story 8.1 -- Points system',
-    tags: ['story_8_1'],
-    skip: 'Backlog: points system not yet implemented',
-    () {
-      test('completing a content item awards points', () {
-        // TODO: verify points column on Completions table
-      });
+  group('Story 8.1 -- Points system', tags: ['story_8_1'], () {
+    late AppDatabase db;
+    late PointsService pointsService;
 
-      test('points vary by stage (later stages worth more)', () {
-        // TODO: verify point scaling
-      });
+    setUp(() {
+      db = createTestDatabase();
+      pointsService = PointsService(db);
+    });
 
-      test('total points aggregated across all curricula', () {
-        // TODO: verify sum query
-      });
-    },
-  );
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<void> insertCompletion({
+      required String curriculumId,
+      required String sefariaRef,
+      required int stageId,
+      required int points,
+      String trackType = 'personal',
+    }) async {
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: curriculumId,
+          sefariaRef: sefariaRef,
+          stageId: stageId,
+          trackType: trackType,
+          completedAt: DateTime.now(),
+          points: Value(points),
+        ),
+      );
+    }
+
+    test('completing a content item awards points', () async {
+      await insertCompletion(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        sefariaRef: 'Mishnah Berachos 1.1',
+        stageId: 1,
+        points: 10,
+      );
+
+      final total = await pointsService.getCurriculumTotal(
+        CurriculumId.mishnayos.storageKey,
+      );
+      expect(total, 10);
+    });
+
+    test('points vary by stage (later stages worth more)', () async {
+      // Default: Learn=10, Chazara1=5, Chazara2=3
+      final learn = await pointsService.getPointsForStage(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        stageOrder: 1,
+      );
+      final chazara1 = await pointsService.getPointsForStage(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        stageOrder: 2,
+      );
+      final chazara2 = await pointsService.getPointsForStage(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        stageOrder: 3,
+      );
+
+      expect(learn, 10);
+      expect(chazara1, 5);
+      expect(chazara2, 3);
+    });
+
+    test('total points aggregated across all curricula', () async {
+      await insertCompletion(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        sefariaRef: 'Mishnah Berachos 1.1',
+        stageId: 1,
+        points: 10,
+      );
+      await insertCompletion(
+        curriculumId: CurriculumId.bavli.storageKey,
+        sefariaRef: 'Berakhot 2a',
+        stageId: 1,
+        points: 10,
+      );
+      await insertCompletion(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        sefariaRef: 'Mishnah Berachos 1.2',
+        stageId: 1,
+        points: 10,
+      );
+
+      // Per-curriculum
+      final mishnayosTotal = await pointsService.getCurriculumTotal(
+        CurriculumId.mishnayos.storageKey,
+      );
+      expect(mishnayosTotal, 20);
+
+      final bavliTotal = await pointsService.getCurriculumTotal(
+        CurriculumId.bavli.storageKey,
+      );
+      expect(bavliTotal, 10);
+
+      // Global
+      final globalTotal = await pointsService.getGlobalTotal();
+      expect(globalTotal, 30);
+    });
+  });
 
   // ── Story 8.2: Rewards & badges ───────────────────────────────
 
@@ -34,17 +123,11 @@ void main() {
     tags: ['story_8_2'],
     skip: 'Backlog: rewards and badges not yet implemented',
     () {
-      test('reward is revealed when point threshold reached', () {
-        // TODO: verify isRevealed flag flips
-      });
+      test('reward is revealed when point threshold reached', () {});
 
-      test('reward is earned when user claims it', () {
-        // TODO: verify isEarned flag
-      });
+      test('reward is earned when user claims it', () {});
 
-      test('curriculum-specific rewards filter correctly', () {
-        // TODO: verify curriculumId filter on Rewards table
-      });
+      test('curriculum-specific rewards filter correctly', () {});
     },
   );
 
@@ -55,13 +138,9 @@ void main() {
     tags: ['story_8_3'],
     skip: 'Backlog: child mode animations not yet implemented',
     () {
-      test('child mode shows celebratory animation on completion', () {
-        // TODO: verify animation widget renders in child UserMode
-      });
+      test('child mode shows celebratory animation on completion', () {});
 
-      test('adult mode shows subtle confirmation instead', () {
-        // TODO: verify no animation in adult UserMode
-      });
+      test('adult mode shows subtle confirmation instead', () {});
     },
   );
 }

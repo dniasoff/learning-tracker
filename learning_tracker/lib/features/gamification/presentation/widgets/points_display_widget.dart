@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
+
+/// Displays total points with curriculum breakdown.
+///
+/// In [UserMode.child] mode, points are displayed prominently.
+/// In [UserMode.adult] mode, points are hidden.
+class PointsDisplayWidget extends ConsumerWidget {
+  final UserMode userMode;
+
+  const PointsDisplayWidget({super.key, required this.userMode});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (userMode == UserMode.adult) {
+      return const SizedBox.shrink();
+    }
+
+    final globalPoints = ref.watch(globalPointsProvider);
+    final breakdown = ref.watch(curriculumBreakdownProvider);
+
+    return globalPoints.when(
+      data: (total) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$total',
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          Text('Total Points', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 8),
+          breakdown.when(
+            data: (map) => Wrap(
+              spacing: 12,
+              children: map.entries
+                  .map(
+                    (e) =>
+                        Chip(label: Text('${e.key.displayNameEn}: ${e.value}')),
+                  )
+                  .toList(),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+      loading: () => const CircularProgressIndicator(),
+      error: (_, __) => const Text('Error loading points'),
+    );
+  }
+}
+
+/// Popup that appears on completion showing points earned.
+///
+/// Only shown in [UserMode.child] mode.
+class PointsPopupWidget extends StatelessWidget {
+  final int pointsEarned;
+  final UserMode userMode;
+
+  const PointsPopupWidget({
+    super.key,
+    required this.pointsEarned,
+    required this.userMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (userMode == UserMode.adult) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              '+$pointsEarned points!',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

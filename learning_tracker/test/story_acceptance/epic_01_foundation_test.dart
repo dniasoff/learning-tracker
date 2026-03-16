@@ -81,13 +81,15 @@ void main() {
       expect(db, isNotNull);
     });
 
-    test('schema version is 5', () {
-      expect(db.schemaVersion, equals(5));
+    test('schema version is 6', () {
+      expect(db.schemaVersion, equals(6));
     });
 
-    test('all 10 DAOs are accessible', () {
+    test('all 11 DAOs are accessible', () {
       expect(db.activeCurriculumDao, isNotNull);
       expect(db.completionDao, isNotNull);
+      expect(db.goalDao, isNotNull);
+      expect(db.pointConfigDao, isNotNull);
       expect(db.stageDao, isNotNull);
       expect(db.bookmarkDao, isNotNull);
       expect(db.learningOrderDao, isNotNull);

@@ -208,31 +208,27 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Calculate points for completing this stage.
   ///
-  /// Queries stage definitions for this curriculum and returns points based
-  /// on the stage order (higher stages are worth more). Falls back to a
-  /// default of 10 × stageOrder when no stage definitions are configured.
+  /// Queries point_configs table for configured point values per curriculum
+  /// and stage. Falls back to default values (Learn=10, Chazara1=5, Chazara2=3)
+  /// when no configuration exists.
   Future<int> _calculatePoints({
     required String curriculumId,
     required int stageId,
   }) async {
-    final stages = await _database.stageDao.getStageDefinitionsByCurriculum(
+    // Check point_configs table for configured value
+    final config = await _database.pointConfigDao.getConfig(
       curriculumId,
+      stageId,
     );
+    if (config != null) return config.points;
 
-    if (stages.isEmpty) {
-      // No stage definitions configured — use stageId × 10 as a sensible default
-      return stageId * 10;
-    }
-
-    // Match by stageOrder (stageId corresponds to the 1-based stageOrder)
-    final matching = stages.where((s) => s.stageOrder == stageId);
-    if (matching.isNotEmpty) {
-      // Award stageOrder × 10 points (later stages worth more)
-      return matching.first.stageOrder * 10;
-    }
-
-    // Fallback: multiply by 10
-    return stageId * 10;
+    // Default values when no config is present
+    return switch (stageId) {
+      1 => 10, // Learn
+      2 => 5, // Chazara 1
+      3 => 3, // Chazara 2
+      _ => 1, // Any additional stages
+    };
   }
 
   /// Create the completion record in the database.
