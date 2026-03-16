@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
+import 'package:learning_tracker/core/database/daos/reward_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
@@ -57,6 +58,7 @@ part 'app_database.g.dart';
     TrackDao,
     UserProfileDao,
     StreakDao,
+    RewardDao,
     SyncQueueDao,
     TextCacheDao,
     TextDownloadStatusDao,

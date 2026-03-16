@@ -2,11 +2,13 @@
 @Tags(['epic_8'])
 library;
 
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:test/test.dart';
 
@@ -189,16 +191,242 @@ void main() {
     });
   });
 
-  // ── Story 8.3: Child mode animations ──────────────────────────
+  // ── Story 8.3: Mystery Rewards System ────────────────────────
 
-  group(
-    'Story 8.3 -- Child mode animations',
-    tags: ['story_8_3'],
-    skip: 'Backlog: child mode animations not yet implemented',
-    () {
-      test('child mode shows celebratory animation on completion', () {});
+  group('Story 8.3 -- Mystery Rewards System', tags: ['story_8_3'], () {
+    late AppDatabase db;
+    late RewardService rewardService;
 
-      test('adult mode shows subtle confirmation instead', () {});
-    },
-  );
+    setUp(() {
+      db = createTestDatabase();
+      rewardService = RewardService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<void> insertCompletion({
+      required String curriculumId,
+      required String sefariaRef,
+      required int stageId,
+      required int points,
+    }) async {
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: curriculumId,
+          sefariaRef: sefariaRef,
+          stageId: stageId,
+          trackType: 'personal',
+          completedAt: DateTime.now(),
+          points: Value(points),
+        ),
+      );
+    }
+
+    Future<void> addReward({
+      required String title,
+      required int threshold,
+    }) async {
+      await rewardService.addReward(
+        title: title,
+        description: 'Reward at $threshold points',
+        pointsThreshold: threshold,
+      );
+    }
+
+    test('marks reward as earned when global points reach threshold', () async {
+      await addReward(title: 'Bronze', threshold: 50);
+
+      // Add 50 points
+      for (var i = 0; i < 5; i++) {
+        await insertCompletion(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.${i + 1}',
+          stageId: 1,
+          points: 10,
+        );
+      }
+
+      final earned = await rewardService.checkAndAwardRewards(
+        userMode: UserMode.child,
+      );
+      expect(earned, hasLength(1));
+      expect(earned.first.title, 'Bronze');
+      expect(earned.first.isEarned, isTrue);
+    });
+
+    test('identifies next unearned reward (lowest threshold)', () async {
+      await addReward(title: 'Bronze', threshold: 50);
+      await addReward(title: 'Silver', threshold: 100);
+      await addReward(title: 'Gold', threshold: 200);
+
+      final next = await rewardService.getNextReward();
+      expect(next, isNotNull);
+      expect(next!.title, 'Bronze');
+    });
+
+    test('calculates progress percentage toward next reward', () async {
+      await addReward(title: 'Bronze', threshold: 100);
+
+      // Add 25 points (25% progress)
+      for (var i = 0; i < 5; i++) {
+        await insertCompletion(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.${i + 1}',
+          stageId: 2, // 5 points each
+          points: 5,
+        );
+      }
+
+      final progress = await rewardService.getProgressToNextReward();
+      expect(progress, closeTo(0.25, 0.01));
+    });
+
+    test('reveal toggling works (parent reveals)', () async {
+      await addReward(title: 'Bronze', threshold: 10);
+
+      // Earn it in child mode (not auto-revealed)
+      await insertCompletion(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        sefariaRef: 'Mishnah Berachos 1.1',
+        stageId: 1,
+        points: 10,
+      );
+      await rewardService.checkAndAwardRewards(userMode: UserMode.child);
+
+      // Check it's earned but not revealed
+      var rewards = await rewardService.getEarnedRewards();
+      expect(rewards.first.isEarned, isTrue);
+      expect(rewards.first.isRevealed, isFalse);
+
+      // Parent reveals
+      await rewardService.revealReward(rewards.first.id);
+
+      rewards = await rewardService.getEarnedRewards();
+      expect(rewards.first.isRevealed, isTrue);
+    });
+
+    test(
+      'multiple rewards at different thresholds processed in order',
+      () async {
+        await addReward(title: 'Bronze', threshold: 10);
+        await addReward(title: 'Silver', threshold: 20);
+        await addReward(title: 'Gold', threshold: 30);
+
+        // Add 30 points to earn all
+        for (var i = 0; i < 3; i++) {
+          await insertCompletion(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: 'Mishnah Berachos 1.${i + 1}',
+            stageId: 1,
+            points: 10,
+          );
+        }
+
+        final earned = await rewardService.checkAndAwardRewards(
+          userMode: UserMode.child,
+        );
+        expect(earned, hasLength(3));
+        expect(earned[0].title, 'Bronze');
+        expect(earned[1].title, 'Silver');
+        expect(earned[2].title, 'Gold');
+      },
+    );
+
+    test(
+      'adult mode: reward is_revealed defaults to true on earning',
+      () async {
+        await addReward(title: 'Bronze', threshold: 10);
+
+        await insertCompletion(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.1',
+          stageId: 1,
+          points: 10,
+        );
+
+        final earned = await rewardService.checkAndAwardRewards(
+          userMode: UserMode.adult,
+        );
+        expect(earned.first.isRevealed, isTrue);
+      },
+    );
+
+    test('earned rewards history viewable', () async {
+      await addReward(title: 'Bronze', threshold: 10);
+      await addReward(title: 'Silver', threshold: 20);
+      await addReward(title: 'Gold', threshold: 100);
+
+      // Earn first two
+      for (var i = 0; i < 2; i++) {
+        await insertCompletion(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.${i + 1}',
+          stageId: 1,
+          points: 10,
+        );
+      }
+      await rewardService.checkAndAwardRewards(userMode: UserMode.adult);
+
+      final earned = await rewardService.getEarnedRewards();
+      expect(earned, hasLength(2));
+
+      // Gold should not be in earned list
+      final all = await rewardService.getAllRewards();
+      final unearned = all.where((r) => !r.isEarned).toList();
+      expect(unearned, hasLength(1));
+      expect(unearned.first.title, 'Gold');
+    });
+
+    test('next reward updates after earning current one', () async {
+      await addReward(title: 'Bronze', threshold: 10);
+      await addReward(title: 'Silver', threshold: 20);
+
+      await insertCompletion(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        sefariaRef: 'Mishnah Berachos 1.1',
+        stageId: 1,
+        points: 10,
+      );
+      await rewardService.checkAndAwardRewards(userMode: UserMode.child);
+
+      final next = await rewardService.getNextReward();
+      expect(next, isNotNull);
+      expect(next!.title, 'Silver');
+    });
+
+    test('progress bar resets to next reward after earning', () async {
+      await addReward(title: 'Bronze', threshold: 10);
+      await addReward(title: 'Silver', threshold: 20);
+
+      // Earn 15 points - enough for Bronze, 50% toward Silver
+      await insertCompletion(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        sefariaRef: 'Mishnah Berachos 1.1',
+        stageId: 1,
+        points: 10,
+      );
+      await rewardService.checkAndAwardRewards(userMode: UserMode.child);
+
+      await insertCompletion(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        sefariaRef: 'Mishnah Berachos 1.2',
+        stageId: 2,
+        points: 5,
+      );
+
+      // Progress toward Silver: (15 - 10) / (20 - 10) = 0.5
+      final progress = await rewardService.getProgressToNextReward();
+      expect(progress, closeTo(0.5, 0.01));
+    });
+
+    test('no rewards configured returns null next and 0 progress', () async {
+      final next = await rewardService.getNextReward();
+      expect(next, isNull);
+
+      final progress = await rewardService.getProgressToNextReward();
+      expect(progress, 0.0);
+    });
+  });
 }

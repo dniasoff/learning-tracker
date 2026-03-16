@@ -10,5 +10,7 @@ class Rewards extends Table {
   IntColumn get pointsThreshold => integer()();
   BoolColumn get isRevealed => boolean().withDefault(const Constant(false))();
   BoolColumn get isEarned => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get earnedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get curriculumId => text().nullable()();
 }
