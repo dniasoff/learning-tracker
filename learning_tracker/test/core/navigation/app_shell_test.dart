@@ -3,11 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -61,6 +63,16 @@ AppRouter _createUnauthenticatedRouter() {
   );
 }
 
+/// Provider overrides so the DashboardScreen can render without a real database.
+final _dashboardOverrides = [
+      dashboardActiveCurriculaProvider.overrideWith((ref) async => []),
+      dashboardUserModeProvider.overrideWith((ref) async => UserMode.adult),
+      dashboardStreakProvider.overrideWith(
+        (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+      ),
+      dashboardGlobalPointsProvider.overrideWith((ref) async => 0),
+    ];
+
 void main() {
   group('AppShellScreen bottom navigation', () {
     testWidgets(
@@ -69,9 +81,12 @@ void main() {
         final router = _createAuthenticatedRouter();
 
         await tester.pumpWidget(
-          MaterialApp.router(
-            routerConfig: router.config(
-              deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+          ProviderScope(
+            overrides: _dashboardOverrides,
+            child: MaterialApp.router(
+              routerConfig: router.config(
+                deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+              ),
             ),
           ),
         );
@@ -115,15 +130,19 @@ void main() {
       final router = _createAuthenticatedRouter();
 
       await tester.pumpWidget(
-        MaterialApp.router(
-          routerConfig: router.config(
-            deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+        ProviderScope(
+          overrides: _dashboardOverrides,
+          child: MaterialApp.router(
+            routerConfig: router.config(
+              deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Dashboard Screen'), findsOneWidget);
+      // Dashboard AppBar title confirms we're on the dashboard
+      expect(find.text('Dashboard'), findsWidgets);
 
       await tester.tap(find.text('Learn'));
       await tester.pumpAndSettle();
@@ -137,9 +156,12 @@ void main() {
       final router = _createAuthenticatedRouter();
 
       await tester.pumpWidget(
-        MaterialApp.router(
-          routerConfig: router.config(
-            deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+        ProviderScope(
+          overrides: _dashboardOverrides,
+          child: MaterialApp.router(
+            routerConfig: router.config(
+              deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+            ),
           ),
         ),
       );
@@ -158,6 +180,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: _dashboardOverrides,
           child: MaterialApp.router(
             routerConfig: router.config(
               deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
@@ -221,11 +244,15 @@ void main() {
       final router = _createAuthenticatedRouter();
 
       await tester.pumpWidget(
-        MaterialApp.router(routerConfig: router.config()),
+        ProviderScope(
+          overrides: _dashboardOverrides,
+          child: MaterialApp.router(routerConfig: router.config()),
+        ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Dashboard Screen'), findsOneWidget);
+      // Dashboard AppBar shows 'Dashboard' title
+      expect(find.text('Dashboard'), findsWidgets);
       expect(find.byType(NavigationBar), findsOneWidget);
     });
   });
