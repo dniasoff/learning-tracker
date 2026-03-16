@@ -12,6 +12,18 @@ const String _channelDescription = 'Daily learning reminder notifications';
 /// Notification ID for the daily reminder (single repeating notification).
 const int dailyReminderId = 0;
 
+/// Payload used when a streak protection notification is tapped.
+const String streakAlertPayload = 'streak_protection';
+
+/// Notification channel for streak alerts.
+const String _streakChannelId = 'streak_alerts';
+const String _streakChannelName = 'Streak Alerts';
+const String _streakChannelDescription =
+    'Alerts when your learning streak is at risk';
+
+/// Notification ID for the streak protection alert.
+const int streakAlertId = 1;
+
 /// Service for scheduling and managing local notifications.
 class NotificationService {
   NotificationService({FlutterLocalNotificationsPlugin? plugin})
@@ -108,6 +120,42 @@ class NotificationService {
   /// Cancel the daily reminder notification.
   Future<void> cancelDailyReminder() async {
     await _plugin.cancel(dailyReminderId);
+  }
+
+  /// Schedule a daily streak protection alert at [hour]:[minute].
+  ///
+  /// [body] is the notification text, e.g. "Your 5-day streak is at risk!"
+  Future<void> scheduleStreakAlert({
+    required int hour,
+    required int minute,
+    required String body,
+  }) async {
+    final scheduledTime = _nextInstanceOfTime(hour, minute);
+
+    const androidDetails = AndroidNotificationDetails(
+      _streakChannelId,
+      _streakChannelName,
+      channelDescription: _streakChannelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    await _plugin.zonedSchedule(
+      streakAlertId,
+      'Streak at Risk!',
+      body,
+      scheduledTime,
+      notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: streakAlertPayload,
+    );
+  }
+
+  /// Cancel the streak protection alert.
+  Future<void> cancelStreakAlert() async {
+    await _plugin.cancel(streakAlertId);
   }
 
   /// Get the next instance of the given time (today or tomorrow).

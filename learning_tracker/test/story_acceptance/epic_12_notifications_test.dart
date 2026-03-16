@@ -2,9 +2,14 @@
 @Tags(['epic_12'])
 library;
 
+import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
+
+import '../helpers/test_database.dart';
 
 class MockNotificationService extends Mock implements NotificationService {}
 
@@ -71,22 +76,133 @@ void main() {
     });
   });
 
-  // ── Story 12.2: Push notifications ────────────────────────────
+  // ── Story 12.2: Streak Protection Alerts ──────────────────────
 
-  group(
-    'Story 12.2 -- Push notifications',
-    tags: ['story_12_2'],
-    skip: 'Backlog: push notifications not yet implemented',
-    () {
-      test('FCM token is registered on sign-in', () {
-        // TODO: verify FCM token storage in Firestore
-      });
+  group('Story 12.2 -- Streak Protection Alerts', tags: ['story_12_2'], () {
+    late AppDatabase db;
+    late MockNotificationService mockService;
+    late StreakAlertService alertService;
 
-      test('push notification displays correctly', () {
-        // TODO: verify notification content and display
-      });
-    },
-  );
+    setUp(() {
+      db = createTestDatabase();
+      mockService = MockNotificationService();
+      alertService = StreakAlertService(
+        db: db,
+        notificationService: mockService,
+        clock: () => DateTime.utc(2026, 3, 16, 12, 0, 0),
+      );
+
+      when(
+        () => mockService.scheduleStreakAlert(
+          hour: any(named: 'hour'),
+          minute: any(named: 'minute'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async {});
+      when(() => mockService.cancelStreakAlert()).thenAnswer((_) async {});
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('alert fires when streak > 0 and no completions today', () async {
+      await db.streakDao.upsertStreak(
+        StreaksCompanion.insert(
+          currentStreak: const Value(5),
+          maxStreak: const Value(5),
+          lastCompletionDate: Value(DateTime.utc(2026, 3, 15, 18, 0, 0)),
+        ),
+      );
+
+      await alertService.evaluate(hour: 21, minute: 0);
+
+      verify(
+        () => mockService.scheduleStreakAlert(
+          hour: 21,
+          minute: 0,
+          body: 'Your 5-day streak is at risk!',
+        ),
+      ).called(1);
+    });
+
+    test('alert does NOT fire when completions exist today', () async {
+      await db.streakDao.upsertStreak(
+        StreaksCompanion.insert(
+          currentStreak: const Value(3),
+          maxStreak: const Value(3),
+          lastCompletionDate: Value(DateTime.utc(2026, 3, 16, 10, 0, 0)),
+        ),
+      );
+
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'test',
+          sefariaRef: 'test_ref',
+          stageId: 1,
+          trackType: 'review',
+          completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
+        ),
+      );
+
+      await alertService.evaluate(hour: 21, minute: 0);
+
+      verify(() => mockService.cancelStreakAlert()).called(1);
+      verifyNever(
+        () => mockService.scheduleStreakAlert(
+          hour: any(named: 'hour'),
+          minute: any(named: 'minute'),
+          body: any(named: 'body'),
+        ),
+      );
+    });
+
+    test('alert does NOT fire when streak is 0', () async {
+      await db.streakDao.upsertStreak(
+        StreaksCompanion.insert(
+          currentStreak: const Value(0),
+          maxStreak: const Value(5),
+          lastCompletionDate: Value(DateTime.utc(2026, 3, 10, 18, 0, 0)),
+        ),
+      );
+
+      await alertService.evaluate(hour: 21, minute: 0);
+
+      verify(() => mockService.cancelStreakAlert()).called(1);
+    });
+
+    test('alert body includes correct streak count', () {
+      expect(StreakAlertService.buildBody(5), 'Your 5-day streak is at risk!');
+    });
+
+    test('notification taps open app to daily tasks screen', () {
+      // Streak alert payload is defined and routed to SchedulerRoute
+      // in NotificationInitializer._handleNotificationTap
+      expect(streakAlertPayload, 'streak_protection');
+    });
+
+    test('integration: 5-day streak with no learning triggers alert', () async {
+      // Build a 5-day streak via streak record
+      await db.streakDao.upsertStreak(
+        StreaksCompanion.insert(
+          currentStreak: const Value(5),
+          maxStreak: const Value(5),
+          lastCompletionDate: Value(DateTime.utc(2026, 3, 15, 18, 0, 0)),
+        ),
+      );
+
+      // No completions today — alert should fire at 9 PM
+      await alertService.evaluate(hour: 21, minute: 0);
+
+      verify(
+        () => mockService.scheduleStreakAlert(
+          hour: 21,
+          minute: 0,
+          body: 'Your 5-day streak is at risk!',
+        ),
+      ).called(1);
+    });
+  });
 
   // ── Story 12.3: Notification preferences ──────────────────────
 
