@@ -1,0 +1,17 @@
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'parent_dashboard_providers.g.dart';
+
+@riverpod
+ParentDashboardAggregator parentDashboardAggregator(Ref ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return ParentDashboardAggregator(db);
+}
+
+@riverpod
+Future<ParentDashboardData> parentDashboardData(Ref ref) async {
+  final aggregator = ref.watch(parentDashboardAggregatorProvider);
+  return aggregator.compute();
+}
