@@ -10,11 +10,13 @@ import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_
 class GoalSetupScreen extends StatefulWidget {
   final CurriculumId curriculumId;
   final GoalEntity? existingGoal;
+  final int? totalItems;
 
   const GoalSetupScreen({
     super.key,
     required this.curriculumId,
     this.existingGoal,
+    this.totalItems,
   });
 
   @override
@@ -140,6 +142,51 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
                 ],
               ),
             ),
+            // Daily pace summary
+            if (_targetDate != null && widget.totalItems != null) ...[
+              const SizedBox(height: 16),
+              Builder(
+                builder: (context) {
+                  final daysRemaining = _targetDate!
+                      .difference(DateTime.now())
+                      .inDays;
+                  if (daysRemaining <= 0) {
+                    return Text(
+                      'Deadline has passed',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  }
+                  final remainingItems =
+                      (widget.totalItems! * _targetPercent / 100).ceil();
+                  final pace = (remainingItems / daysRemaining).ceil();
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Text(
+                            '~$pace items per day',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$remainingItems items in $daysRemaining days',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
             const Spacer(),
             FilledButton(
               onPressed: _submit,

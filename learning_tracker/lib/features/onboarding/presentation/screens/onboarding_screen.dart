@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 
 @RoutePage()
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -18,13 +19,17 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-enum _ScreenPhase { selection, importing, done, error }
+enum _ScreenPhase { selection, importing, goalSetup, done, error }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _selected = <CurriculumId>{};
   var _phase = _ScreenPhase.selection;
   CurriculumImportProgress? _importProgress;
   List<CurriculumImportResult> _failures = [];
+
+  // Goal setup state
+  late List<CurriculumId> _goalSetupQueue;
+  int _goalSetupIndex = 0;
 
   Future<void> _startImport() async {
     if (_selected.isEmpty) return;
@@ -42,12 +47,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final failures = _importProgress?.failures ?? [];
     if (failures.isEmpty) {
-      setState(() => _phase = _ScreenPhase.done);
-      // Navigate to main app after brief delay
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        unawaited(context.router.replaceAll([const AppShellRoute()]));
-      }
+      _startGoalSetup();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
@@ -73,16 +73,49 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final newFailures = _importProgress?.failures ?? [];
     if (newFailures.isEmpty) {
-      setState(() => _phase = _ScreenPhase.done);
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        unawaited(context.router.replaceAll([const AppShellRoute()]));
-      }
+      _startGoalSetup();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
         _failures = newFailures;
       });
+    }
+  }
+
+  void _startGoalSetup() {
+    _goalSetupQueue = _selected.toList();
+    _goalSetupIndex = 0;
+    if (_goalSetupQueue.isEmpty) {
+      _finishOnboarding();
+      return;
+    }
+    setState(() => _phase = _ScreenPhase.goalSetup);
+  }
+
+  Future<void> _onGoalResult(GoalFormResult? result) async {
+    if (result != null) {
+      final goalRepo = ref.read(goalRepositoryProvider);
+      await goalRepo.createGoal(
+        curriculumId: _goalSetupQueue[_goalSetupIndex],
+        targetPercent: result.targetPercent,
+        targetDate: result.targetDate,
+        description: result.description,
+      );
+    }
+    // Move to next curriculum or finish
+    _goalSetupIndex++;
+    if (_goalSetupIndex >= _goalSetupQueue.length) {
+      unawaited(_finishOnboarding());
+    } else {
+      setState(() {}); // Refresh to show next curriculum
+    }
+  }
+
+  Future<void> _finishOnboarding() async {
+    setState(() => _phase = _ScreenPhase.done);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
   }
 
@@ -95,6 +128,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: switch (_phase) {
         _ScreenPhase.selection => _buildSelection(theme),
         _ScreenPhase.importing => _buildImporting(theme),
+        _ScreenPhase.goalSetup => _buildGoalSetup(theme),
         _ScreenPhase.done => _buildDone(theme),
         _ScreenPhase.error => _buildError(theme),
       },
@@ -188,6 +222,68 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGoalSetup(ThemeData theme) {
+    final curriculum = _goalSetupQueue[_goalSetupIndex];
+    final configsAsync = ref.watch(allCurriculaConfigsProvider);
+    final totalItems = configsAsync.whenOrNull(
+      data: (configs) => configs[curriculum]?.totalItems,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Set a goal for ${curriculum.displayNameEn}',
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${_goalSetupIndex + 1} of ${_goalSetupQueue.length}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (totalItems != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              '$totalItems items',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+          const Spacer(),
+          FilledButton(
+            onPressed: () async {
+              final result = await Navigator.of(context).push<GoalFormResult>(
+                MaterialPageRoute<GoalFormResult>(
+                  builder: (_) => GoalSetupScreen(
+                    curriculumId: curriculum,
+                    totalItems: totalItems,
+                  ),
+                ),
+              );
+              if (mounted) {
+                await _onGoalResult(result);
+              }
+            },
+            child: const Text('Set Goal'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => _onGoalResult(null),
+            child: const Text('Skip'),
+          ),
+        ],
       ),
     );
   }

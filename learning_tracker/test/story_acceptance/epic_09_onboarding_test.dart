@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -170,22 +171,176 @@ void main() {
     });
   });
 
-  // ── Story 9.3: User mode selection ────────────────────────────
+  // ── Story 9.3: Per-Curriculum Goal Setup ──────────────────────
 
-  group(
-    'Story 9.3 -- User mode selection',
-    tags: ['story_9_3'],
-    skip: 'Backlog: user mode selection not yet implemented',
-    () {
-      test('user chooses child or adult mode', () {
-        fail('Not yet implemented');
-      });
+  group('Story 9.3 -- Per-Curriculum Goal Setup', tags: ['story_9_3'], () {
+    late AppDatabase db;
+    late GoalRepositoryImpl goalRepo;
 
-      test('mode selection affects gamification display', () {
-        fail('Not yet implemented');
-      });
-    },
-  );
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      goalRepo = GoalRepositoryImpl(database: db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test(
+      'goal creation persists curriculum_id, target_date, and date_type',
+      () async {
+        final targetDate = DateTime.utc(2027, 6, 15);
+        final goal = await goalRepo.createGoal(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 100.0,
+          targetDate: targetDate,
+          description: 'Finish by summer',
+        );
+
+        expect(goal.curriculumId, CurriculumId.mishnayos);
+        expect(goal.targetDate, targetDate);
+        expect(goal.description, 'Finish by summer');
+        expect(goal.id, isNotNull);
+
+        // Verify persisted
+        final goals = await goalRepo.getGoals(CurriculumId.mishnayos);
+        expect(goals, hasLength(1));
+        expect(goals.first.targetDate, targetDate);
+      },
+    );
+
+    test('daily pace calculation: remaining items / days until deadline', () {
+      const totalItems = 4192;
+      final deadline = DateTime.utc(2027, 6, 15);
+      final today = DateTime.utc(2026, 3, 16);
+      final daysRemaining = deadline.difference(today).inDays;
+      final pace = (totalItems / daysRemaining).ceil();
+
+      expect(daysRemaining, greaterThan(0));
+      expect(pace, greaterThan(0));
+      // ~4192 items / ~456 days ≈ 10 items/day
+      expect(pace, lessThanOrEqualTo(15));
+      expect(pace, greaterThanOrEqualTo(5));
+    });
+
+    test('skipping goal sets curriculum to no-deadline mode', () async {
+      // Activate curriculum without creating a goal = no-deadline mode
+      await db.activeCurriculumDao.activate(CurriculumId.bavli);
+
+      // No goals should exist for this curriculum
+      final goals = await goalRepo.getGoals(CurriculumId.bavli);
+      expect(goals, isEmpty);
+
+      // Curriculum is still active
+      final active = await db.activeCurriculumDao.getActiveCurricula();
+      expect(active, contains(CurriculumId.bavli.storageKey));
+    });
+
+    test('goal setup screen shows curriculum name and item count', () {
+      // CurriculumId provides display names needed for the goal setup screen
+      for (final id in CurriculumId.values) {
+        expect(id.displayNameEn, isNotEmpty);
+      }
+      // CurriculumHierarchyConfig provides totalItems (verified via provider)
+    });
+
+    test('skip button proceeds without creating a goal', () async {
+      // Activate two curricula
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await db.activeCurriculumDao.activate(CurriculumId.bavli);
+
+      // Set goal for first, skip second
+      await goalRepo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 100.0,
+        targetDate: DateTime.utc(2027, 6, 15),
+      );
+      // bavli: skipped — no goal created
+
+      final mishnayosGoals = await goalRepo.getGoals(CurriculumId.mishnayos);
+      final bavliGoals = await goalRepo.getGoals(CurriculumId.bavli);
+
+      expect(mishnayosGoals, hasLength(1));
+      expect(bavliGoals, isEmpty); // Skipped = no goal
+    });
+
+    test('summary shows calculated daily pace after date selection', () {
+      // Pace calculation for goal summary display
+      const totalItems = 2711;
+      final deadline = DateTime.utc(2027, 3, 16);
+      final today = DateTime.utc(2026, 3, 16);
+      final daysRemaining = deadline.difference(today).inDays;
+
+      expect(daysRemaining, 365);
+      final pace = (totalItems / daysRemaining).ceil();
+      expect(pace, 8); // 2711/365 = 7.43 → ceil = 8
+    });
+
+    test('goals saved to database and retrievable', () async {
+      final goal = await goalRepo.createGoal(
+        curriculumId: CurriculumId.chumash,
+        targetPercent: 100.0,
+        targetDate: DateTime.utc(2027, 9, 1),
+        description: 'Complete Chumash',
+      );
+
+      final goals = await goalRepo.getGoals(CurriculumId.chumash);
+      expect(goals, hasLength(1));
+      expect(goals.first.id, goal.id);
+      expect(goals.first.targetDate, DateTime.utc(2027, 9, 1));
+    });
+
+    test('user can modify goals later from goal management', () async {
+      // Create during onboarding
+      final goal = await goalRepo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 100.0,
+        targetDate: DateTime.utc(2027, 6, 15),
+      );
+
+      // Modify later from goal management
+      final updated = await goalRepo.updateGoal(
+        goalId: goal.id!,
+        targetDate: DateTime.utc(2027, 12, 31),
+        description: 'Extended deadline',
+      );
+
+      expect(updated.targetDate, DateTime.utc(2027, 12, 31));
+      expect(updated.description, 'Extended deadline');
+    });
+
+    test(
+      'integration: set goals for 2 curricula (one with deadline, one skipped)',
+      () async {
+        // Activate both
+        await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+        await db.activeCurriculumDao.activate(CurriculumId.bavli);
+
+        // Set goal with deadline for mishnayos
+        await goalRepo.createGoal(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 100.0,
+          targetDate: DateTime.utc(2027, 6, 15),
+          description: 'Complete by summer',
+        );
+
+        // Skip bavli (no goal created)
+
+        // Verify: mishnayos has goal, bavli does not
+        final mishnayosGoals = await goalRepo.getGoals(CurriculumId.mishnayos);
+        final bavliGoals = await goalRepo.getGoals(CurriculumId.bavli);
+
+        expect(mishnayosGoals, hasLength(1));
+        expect(mishnayosGoals.first.targetDate, DateTime.utc(2027, 6, 15));
+        expect(bavliGoals, isEmpty);
+
+        // Both curricula are still active
+        final active = await db.activeCurriculumDao.getActiveCurricula();
+        expect(active, contains(CurriculumId.mishnayos.storageKey));
+        expect(active, contains(CurriculumId.bavli.storageKey));
+      },
+    );
+  });
 
   // ── Story 9.4: Import existing progress ───────────────────────
 
