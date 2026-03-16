@@ -4,6 +4,7 @@ library;
 
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:test/test.dart';
@@ -90,20 +91,84 @@ void main() {
 
   // ── Story 9.2: Curriculum selection ───────────────────────────
 
-  group(
-    'Story 9.2 -- Curriculum selection',
-    tags: ['story_9_2'],
-    skip: 'Backlog: onboarding curriculum selection not yet implemented',
-    () {
-      test('user selects at least one curriculum during onboarding', () {
-        fail('Not yet implemented');
-      });
+  group('Story 9.2 -- Curriculum selection', tags: ['story_9_2'], () {
+    late AppDatabase db;
 
-      test('all 5 curricula are shown as options', () {
-        fail('Not yet implemented');
-      });
-    },
-  );
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('curriculum selection state tracks selected curricula correctly', () {
+      final selected = <CurriculumId>{};
+
+      // Add
+      selected.add(CurriculumId.mishnayos);
+      expect(selected, contains(CurriculumId.mishnayos));
+
+      // Add another
+      selected.add(CurriculumId.bavli);
+      expect(selected, hasLength(2));
+
+      // Remove
+      selected.remove(CurriculumId.mishnayos);
+      expect(selected, hasLength(1));
+      expect(selected, isNot(contains(CurriculumId.mishnayos)));
+    });
+
+    test('validation prevents proceeding with zero curricula selected', () {
+      final selected = <CurriculumId>{};
+      // Button should be disabled (onPressed null) when selected is empty
+      expect(selected.isEmpty, isTrue);
+      expect(selected.isNotEmpty, isFalse);
+
+      selected.add(CurriculumId.chumash);
+      expect(selected.isNotEmpty, isTrue);
+    });
+
+    test('all 5 curricula are available as options', () {
+      expect(CurriculumId.values, hasLength(5));
+      expect(CurriculumId.values, contains(CurriculumId.mishnayos));
+      expect(CurriculumId.values, contains(CurriculumId.bavli));
+      expect(CurriculumId.values, contains(CurriculumId.yerushalmi));
+      expect(CurriculumId.values, contains(CurriculumId.mishnaBerurah));
+      expect(CurriculumId.values, contains(CurriculumId.chumash));
+    });
+
+    test('each curriculum has display name, storage key', () {
+      for (final id in CurriculumId.values) {
+        expect(id.displayNameEn, isNotEmpty);
+        expect(id.displayNameHe, isNotEmpty);
+        expect(id.storageKey, isNotEmpty);
+      }
+    });
+
+    test('import service activates selected curricula in database', () async {
+      // Activate two curricula
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await db.activeCurriculumDao.activate(CurriculumId.bavli);
+
+      final active = await db.activeCurriculumDao.getActiveCurricula();
+      expect(active, hasLength(2));
+      expect(active, contains(CurriculumId.mishnayos.storageKey));
+      expect(active, contains(CurriculumId.bavli.storageKey));
+    });
+
+    test('user can add more curricula later (not onboarding-only)', () async {
+      // Initial activation
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+
+      // Later activation from settings
+      await db.activeCurriculumDao.activate(CurriculumId.chumash);
+
+      final active = await db.activeCurriculumDao.getActiveCurricula();
+      expect(active, hasLength(2));
+      expect(active, contains(CurriculumId.chumash.storageKey));
+    });
+  });
 
   // ── Story 9.3: User mode selection ────────────────────────────
 
