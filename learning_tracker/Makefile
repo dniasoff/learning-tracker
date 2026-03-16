@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -35,6 +35,12 @@ test-story-7.2: ## Run Story 7.2 (Per-Curriculum Progress Views) acceptance test
 
 test-story-7.3: ## Run Story 7.3 (Progress Charts & Statistics) acceptance tests
 	flutter test test/story_acceptance/epic_07_dashboard_test.dart --name "Story 7.3"
+
+test-epic-8: ## Run all Epic 8 (Gamification) acceptance tests
+	flutter test test/story_acceptance/epic_08_gamification_test.dart
+
+test-story-8.4: ## Run Story 8.4 (Completion Feedback & Animations) acceptance tests
+	flutter test test/story_acceptance/epic_08_gamification_test.dart --name "Story 8.4"
 
 ci: analyze test ## Run full CI pipeline (analyze + all tests)
 

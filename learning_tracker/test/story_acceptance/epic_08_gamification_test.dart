@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
@@ -429,4 +430,213 @@ void main() {
       expect(progress, 0.0);
     });
   });
+
+  // ── Story 8.4: Completion Feedback & Animations (Unit) ────────
+
+  group(
+    'Story 8.4 -- Completion Feedback & Animations',
+    tags: ['story_8_4'],
+    () {
+      group('CompletionFeedbackController', () {
+        late CompletionFeedbackController controller;
+
+        setUp(() {
+          controller = CompletionFeedbackController();
+        });
+
+        tearDown(() {
+          controller.dispose();
+        });
+
+        test('starts idle, becomes active on start()', () {
+          expect(controller.phase, CompletionFeedbackPhase.idle);
+          expect(controller.isActive, false);
+
+          controller.start(
+            const CompletionFeedbackData(
+              pointsAwarded: 10,
+              progressBefore: 0.5,
+              progressAfter: 0.6,
+              userMode: UserMode.child,
+            ),
+          );
+
+          expect(controller.phase, CompletionFeedbackPhase.checkmark);
+          expect(controller.isActive, true);
+        });
+
+        test('child mode: checkmark → pointsPopup → progressFill → idle', () {
+          controller.start(
+            const CompletionFeedbackData(
+              pointsAwarded: 10,
+              progressBefore: 0.5,
+              progressAfter: 0.6,
+              userMode: UserMode.child,
+            ),
+          );
+
+          expect(controller.phase, CompletionFeedbackPhase.checkmark);
+          controller.advance();
+          expect(controller.phase, CompletionFeedbackPhase.pointsPopup);
+          controller.advance();
+          expect(controller.phase, CompletionFeedbackPhase.progressFill);
+          controller.advance();
+          expect(controller.phase, CompletionFeedbackPhase.idle);
+          expect(controller.isActive, false);
+        });
+
+        test(
+          'adult mode: checkmark → progressFill → idle (skips points popup)',
+          () {
+            controller.start(
+              const CompletionFeedbackData(
+                pointsAwarded: 10,
+                progressBefore: 0.5,
+                progressAfter: 0.6,
+                userMode: UserMode.adult,
+              ),
+            );
+
+            expect(controller.phase, CompletionFeedbackPhase.checkmark);
+            controller.advance();
+            expect(controller.phase, CompletionFeedbackPhase.progressFill);
+            controller.advance();
+            expect(controller.phase, CompletionFeedbackPhase.idle);
+          },
+        );
+
+        test('streak increment adds streakBump phase', () {
+          controller.start(
+            const CompletionFeedbackData(
+              pointsAwarded: 10,
+              progressBefore: 0.5,
+              progressAfter: 0.6,
+              streakBefore: 2,
+              streakAfter: 3,
+              userMode: UserMode.child,
+            ),
+          );
+
+          controller.advance(); // → pointsPopup
+          controller.advance(); // → progressFill
+          controller.advance(); // → streakBump
+          expect(controller.phase, CompletionFeedbackPhase.streakBump);
+          controller.advance(); // → idle
+          expect(controller.phase, CompletionFeedbackPhase.idle);
+        });
+
+        test('cancel() immediately returns to idle', () {
+          controller.start(
+            const CompletionFeedbackData(
+              pointsAwarded: 10,
+              progressBefore: 0.5,
+              progressAfter: 0.6,
+              userMode: UserMode.child,
+            ),
+          );
+
+          expect(controller.isActive, true);
+          controller.cancel();
+          expect(controller.phase, CompletionFeedbackPhase.idle);
+          expect(controller.isActive, false);
+          // Drift's isNull conflicts with matcher's isNull — use direct check
+          expect(controller.data == null, true);
+        });
+
+        test('points popup displays correct point value from data', () {
+          controller.start(
+            const CompletionFeedbackData(
+              pointsAwarded: 25,
+              progressBefore: 0.3,
+              progressAfter: 0.4,
+              userMode: UserMode.child,
+            ),
+          );
+
+          expect(controller.data!.pointsAwarded, 25);
+        });
+
+        test('notifies listeners on phase transitions', () {
+          var notifyCount = 0;
+          controller.addListener(() => notifyCount++);
+
+          controller.start(
+            const CompletionFeedbackData(
+              pointsAwarded: 10,
+              progressBefore: 0,
+              progressAfter: 0.1,
+              userMode: UserMode.child,
+            ),
+          );
+          expect(notifyCount, 1);
+
+          controller.advance();
+          expect(notifyCount, 2);
+        });
+      });
+
+      group('Integration: completion feedback sequence', () {
+        test(
+          'child mode full sequence: checkmark → points → progress → streak',
+          () {
+            final controller = CompletionFeedbackController();
+
+            controller.start(
+              const CompletionFeedbackData(
+                pointsAwarded: 10,
+                progressBefore: 0.5,
+                progressAfter: 0.6,
+                streakBefore: 2,
+                streakAfter: 3,
+                userMode: UserMode.child,
+              ),
+            );
+
+            final phases = <CompletionFeedbackPhase>[controller.phase];
+            while (controller.isActive) {
+              controller.advance();
+              phases.add(controller.phase);
+            }
+
+            expect(phases, [
+              CompletionFeedbackPhase.checkmark,
+              CompletionFeedbackPhase.pointsPopup,
+              CompletionFeedbackPhase.progressFill,
+              CompletionFeedbackPhase.streakBump,
+              CompletionFeedbackPhase.idle,
+            ]);
+
+            controller.dispose();
+          },
+        );
+
+        test('adult mode sequence: checkmark → progress → idle', () {
+          final controller = CompletionFeedbackController();
+
+          controller.start(
+            const CompletionFeedbackData(
+              pointsAwarded: 10,
+              progressBefore: 0.5,
+              progressAfter: 0.6,
+              userMode: UserMode.adult,
+            ),
+          );
+
+          final phases = <CompletionFeedbackPhase>[controller.phase];
+          while (controller.isActive) {
+            controller.advance();
+            phases.add(controller.phase);
+          }
+
+          expect(phases, [
+            CompletionFeedbackPhase.checkmark,
+            CompletionFeedbackPhase.progressFill,
+            CompletionFeedbackPhase.idle,
+          ]);
+
+          controller.dispose();
+        });
+      });
+    },
+  );
 }

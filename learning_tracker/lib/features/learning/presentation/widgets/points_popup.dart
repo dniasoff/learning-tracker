@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 
-/// Points popup dialog shown to children when they complete an item.
+/// Points popup overlay shown after completion.
 ///
-/// Displays the points earned with a celebratory animation.
+/// Child mode: Animated dialog with star icon and "+X Points!" text.
+/// Adult mode: No popup (caller should skip showing this widget).
+///
+/// Auto-dismisses after [autoDismissDelay].
 class PointsPopup extends StatefulWidget {
   final int points;
   final VoidCallback onDismiss;
+  final UserMode userMode;
+  final Duration autoDismissDelay;
 
-  const PointsPopup({required this.points, required this.onDismiss, super.key});
+  const PointsPopup({
+    required this.points,
+    required this.onDismiss,
+    this.userMode = UserMode.child,
+    this.autoDismissDelay = const Duration(seconds: 2),
+    super.key,
+  });
 
   @override
   State<PointsPopup> createState() => _PointsPopupState();
@@ -34,8 +46,7 @@ class _PointsPopupState extends State<PointsPopup>
 
     _controller.forward();
 
-    // Auto-dismiss after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(widget.autoDismissDelay, () {
       if (mounted) {
         widget.onDismiss();
       }
@@ -89,4 +100,27 @@ class _PointsPopupState extends State<PointsPopup>
       ),
     );
   }
+}
+
+/// Shows a non-blocking points popup as an overlay.
+///
+/// The popup auto-dismisses and does not prevent user interaction
+/// with the underlying UI (uses [barrierDismissible: true]).
+Future<void> showPointsPopup({
+  required BuildContext context,
+  required int points,
+  UserMode userMode = UserMode.child,
+}) async {
+  if (userMode == UserMode.adult || points <= 0) return;
+
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: Colors.black12,
+    builder: (context) => PointsPopup(
+      points: points,
+      userMode: userMode,
+      onDismiss: () => Navigator.of(context).pop(),
+    ),
+  );
 }

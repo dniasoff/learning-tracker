@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 
 /// Provider family to check whether a specific stage is already completed.
@@ -24,6 +25,7 @@ final isStageCompletedProvider = FutureProvider.autoDispose
 ///
 /// Shows completion animation and points popup (child mode) or
 /// subtle confirmation (adult mode) upon successful completion.
+/// All animations are non-blocking — user can continue immediately.
 class CompletionButton extends ConsumerStatefulWidget {
   final String curriculumId;
   final String sefariaRef;
@@ -48,7 +50,14 @@ class CompletionButton extends ConsumerStatefulWidget {
 
 class _CompletionButtonState extends ConsumerState<CompletionButton> {
   bool _isLoading = false;
-  bool _showAnimation = false;
+  final CompletionFeedbackController _feedbackController =
+      CompletionFeedbackController();
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleMarkComplete() async {
     if (_isLoading) return;
@@ -68,33 +77,42 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
       final completion = await useCase(request);
 
-      // Show completion feedback
       setState(() {
-        _showAnimation = true;
         _isLoading = false;
       });
 
+      // Start feedback sequence
+      _feedbackController.start(
+        CompletionFeedbackData(
+          pointsAwarded: completion.points,
+          progressBefore: 0,
+          progressAfter: 0,
+          userMode: widget.userMode,
+        ),
+      );
+
       // Show appropriate feedback based on user mode
       if (widget.userMode == UserMode.child) {
-        // Show points popup for children
-        await _showPointsPopup(completion.points);
+        // Non-blocking points popup
+        if (mounted) {
+          await showPointsPopup(
+            context: context,
+            points: completion.points,
+            userMode: widget.userMode,
+          );
+        }
       } else {
-        // Show subtle confirmation for adults
+        // Subtle confirmation for adults
         await _showSubtleConfirmation();
       }
 
-      // Reset animation state after feedback
-      setState(() {
-        _showAnimation = false;
-      });
-
+      _feedbackController.cancel();
       widget.onCompleted?.call();
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
 
-      // Show error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -104,17 +122,6 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         );
       }
     }
-  }
-
-  Future<void> _showPointsPopup(int points) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PointsPopup(
-        points: points,
-        onDismiss: () => Navigator.of(context).pop(),
-      ),
-    );
   }
 
   Future<void> _showSubtleConfirmation() async {
@@ -147,38 +154,52 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
     final isAlreadyCompleted = isCompletedAsync.value ?? false;
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        ElevatedButton(
-          onPressed: _isLoading || _showAnimation || isAlreadyCompleted
-              ? null
-              : _handleMarkComplete,
-          style: isAlreadyCompleted
-              ? ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade100,
-                  foregroundColor: Colors.green.shade800,
-                )
-              : null,
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : isAlreadyCompleted
-              ? const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle, size: 18),
-                    SizedBox(width: 4),
-                    Text('Completed'),
-                  ],
-                )
-              : const Text('Mark Complete'),
-        ),
-        if (_showAnimation) const Positioned.fill(child: CompletionAnimation()),
-      ],
+    return ListenableBuilder(
+      listenable: _feedbackController,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            ElevatedButton(
+              onPressed:
+                  _isLoading ||
+                      _feedbackController.isActive ||
+                      isAlreadyCompleted
+                  ? null
+                  : _handleMarkComplete,
+              style: isAlreadyCompleted
+                  ? ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade100,
+                      foregroundColor: Colors.green.shade800,
+                    )
+                  : null,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : isAlreadyCompleted
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, size: 18),
+                        SizedBox(width: 4),
+                        Text('Completed'),
+                      ],
+                    )
+                  : const Text('Mark Complete'),
+            ),
+            if (_feedbackController.phase == CompletionFeedbackPhase.checkmark)
+              Positioned.fill(
+                child: CompletionAnimation(
+                  userMode: widget.userMode,
+                  onComplete: () => _feedbackController.advance(),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
