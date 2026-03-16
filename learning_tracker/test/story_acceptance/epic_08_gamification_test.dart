@@ -5,7 +5,9 @@ library;
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
@@ -116,20 +118,76 @@ void main() {
     });
   });
 
-  // ── Story 8.2: Rewards & badges ───────────────────────────────
+  // ── Story 8.2: Global Streak Tracking ────────────────────────
 
-  group(
-    'Story 8.2 -- Rewards & badges',
-    tags: ['story_8_2'],
-    skip: 'Backlog: rewards and badges not yet implemented',
-    () {
-      test('reward is revealed when point threshold reached', () {});
+  group('Story 8.2 -- Global Streak Tracking', tags: ['story_8_2'], () {
+    late AppDatabase db;
+    late StreakService streakService;
 
-      test('reward is earned when user claims it', () {});
+    setUp(() {
+      db = createTestDatabase();
+      streakService = StreakService(db);
+    });
 
-      test('curriculum-specific rewards filter correctly', () {});
-    },
-  );
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('complete items on 3 consecutive days, verify streak=3; '
+        'skip a day, complete again, verify streak=1 and max=3', () async {
+      final day1 = DateTimeFactory.utc(2026, 3, 10, 12);
+      final day2 = DateTimeFactory.utc(2026, 3, 11, 14);
+      final day3 = DateTimeFactory.utc(2026, 3, 12, 9);
+
+      await streakService.recordCompletion(day1);
+      await streakService.recordCompletion(day2);
+      var streak = await streakService.recordCompletion(day3);
+      expect(streak.currentStreak, 3);
+      expect(streak.maxStreak, 3);
+
+      // Skip day 4 (March 13), complete on day 5
+      final day5 = DateTimeFactory.utc(2026, 3, 14, 12);
+      streak = await streakService.recordCompletion(day5);
+      expect(streak.currentStreak, 1);
+      expect(streak.maxStreak, 3);
+    });
+
+    test('streak does not double-increment on same day', () async {
+      final morning = DateTimeFactory.utc(2026, 3, 10, 8);
+      final evening = DateTimeFactory.utc(2026, 3, 10, 20);
+
+      await streakService.recordCompletion(morning);
+      final streak = await streakService.recordCompletion(evening);
+      expect(streak.currentStreak, 1);
+    });
+
+    test('streak calendar returns active dates for range', () async {
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'test',
+          sefariaRef: 'Genesis.1',
+          stageId: 1,
+          trackType: 'primary',
+          completedAt: DateTimeFactory.utc(2026, 3, 10, 12),
+        ),
+      );
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'test',
+          sefariaRef: 'Genesis.2',
+          stageId: 1,
+          trackType: 'primary',
+          completedAt: DateTimeFactory.utc(2026, 3, 12, 12),
+        ),
+      );
+
+      final calendar = await streakService.getStreakCalendar(
+        startUtc: DateTimeFactory.utc(2026, 3, 9),
+        endUtc: DateTimeFactory.utc(2026, 3, 13),
+      );
+      expect(calendar.length, 2);
+    });
+  });
 
   // ── Story 8.3: Child mode animations ──────────────────────────
 

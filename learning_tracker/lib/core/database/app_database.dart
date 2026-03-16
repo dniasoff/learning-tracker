@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
+import 'package:learning_tracker/core/database/daos/streak_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_cache_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_download_status_dao.dart';
@@ -20,6 +21,7 @@ import 'package:learning_tracker/core/database/tables/learning_order.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
+import 'package:learning_tracker/core/database/tables/streaks.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
@@ -41,6 +43,7 @@ part 'app_database.g.dart';
     Rewards,
     SyncQueue,
     TextCache,
+    Streaks,
     TextDownloadStatuses,
   ],
   daos: [
@@ -53,6 +56,7 @@ part 'app_database.g.dart';
     LearningOrderDao,
     TrackDao,
     UserProfileDao,
+    StreakDao,
     SyncQueueDao,
     TextCacheDao,
     TextDownloadStatusDao,
@@ -62,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -111,6 +115,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 6) {
           // Migration from schema v5 to v6: Add point_configs table
           await m.createTable($PointConfigsTable(attachedDatabase));
+        }
+        if (from < 7) {
+          // Migration from schema v6 to v7: Add streaks table
+          await m.createTable($StreaksTable(attachedDatabase));
         }
       },
     );
