@@ -11,6 +11,22 @@
 part of 'app_router.dart';
 
 /// generated route for
+/// [AccountCreationScreen]
+class AccountCreationRoute extends PageRouteInfo<void> {
+  const AccountCreationRoute({List<PageRouteInfo>? children})
+    : super(AccountCreationRoute.name, initialChildren: children);
+
+  static const String name = 'AccountCreationRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const AccountCreationScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [AppShellScreen]
 class AppShellRoute extends PageRouteInfo<void> {
   const AppShellRoute({List<PageRouteInfo>? children})
@@ -530,6 +546,22 @@ class LearningRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [ModeSelectionScreen]
+class ModeSelectionRoute extends PageRouteInfo<void> {
+  const ModeSelectionRoute({List<PageRouteInfo>? children})
+    : super(ModeSelectionRoute.name, initialChildren: children);
+
+  static const String name = 'ModeSelectionRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const ModeSelectionScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [NotificationsScreen]
 class NotificationsRoute extends PageRouteInfo<void> {
   const NotificationsRoute({List<PageRouteInfo>? children})
@@ -847,6 +879,22 @@ class TutorModeRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const TutorModeScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [WelcomeScreen]
+class WelcomeRoute extends PageRouteInfo<void> {
+  const WelcomeRoute({List<PageRouteInfo>? children})
+    : super(WelcomeRoute.name, initialChildren: children);
+
+  static const String name = 'WelcomeRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const WelcomeScreen();
     },
   );
 }
