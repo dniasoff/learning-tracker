@@ -6,6 +6,8 @@ import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -31,6 +33,12 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
     contentRepository: contentRepo,
     activationService: activationService,
   );
+});
+
+/// Provider for GoalRepository used during onboarding goal setup.
+final goalRepositoryProvider = Provider<GoalRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return GoalRepositoryImpl(database: db);
 });
 
 /// Provides hierarchy configs for all 5 curricula (for the selection screen).
