@@ -338,14 +338,6 @@ void main() {
       'engagement metrics calculate days active and average completions',
       () async {
         final now = DateTime.now().toUtc();
-        final completions = <Completion>[];
-
-        // Simulate 3 days of activity this week
-        for (var day = 0; day < 3; day++) {
-          final date = now.subtract(Duration(days: day));
-          // Use a mock-like approach: create fake completion objects
-          // We test the static method directly
-        }
 
         // Test with actual DB completions
         await seedCurriculumAndCompletions(

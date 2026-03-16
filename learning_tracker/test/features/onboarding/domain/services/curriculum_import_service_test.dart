@@ -1,6 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
@@ -30,7 +29,7 @@ void main() {
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  ContentItem _fakeItem(CurriculumId id) => ContentItem(
+  ContentItem fakeItem(CurriculumId id) => ContentItem(
     curriculumId: id.storageKey,
     level1: 'L1',
     displayNameHe: 'test',
@@ -46,10 +45,10 @@ void main() {
 
       when(
         () => mockContentRepo.getContentForCurriculum(CurriculumId.mishnayos),
-      ).thenAnswer((_) async => [_fakeItem(CurriculumId.mishnayos)]);
+      ).thenAnswer((_) async => [fakeItem(CurriculumId.mishnayos)]);
       when(
         () => mockContentRepo.getContentForCurriculum(CurriculumId.bavli),
-      ).thenAnswer((_) async => [_fakeItem(CurriculumId.bavli)]);
+      ).thenAnswer((_) async => [fakeItem(CurriculumId.bavli)]);
       when(
         () => mockActivationService.activate(any()),
       ).thenAnswer((_) async {});
@@ -70,10 +69,10 @@ void main() {
 
       when(
         () => mockContentRepo.getContentForCurriculum(CurriculumId.mishnayos),
-      ).thenThrow(ContentLoadException('test error'));
+      ).thenThrow(const ContentLoadException('test error'));
       when(
         () => mockContentRepo.getContentForCurriculum(CurriculumId.bavli),
-      ).thenAnswer((_) async => [_fakeItem(CurriculumId.bavli)]);
+      ).thenAnswer((_) async => [fakeItem(CurriculumId.bavli)]);
       when(
         () => mockActivationService.activate(any()),
       ).thenAnswer((_) async {});
@@ -92,8 +91,8 @@ void main() {
         () => mockContentRepo.getContentForCurriculum(CurriculumId.chumash),
       ).thenAnswer(
         (_) async => [
-          _fakeItem(CurriculumId.chumash),
-          _fakeItem(CurriculumId.chumash),
+          fakeItem(CurriculumId.chumash),
+          fakeItem(CurriculumId.chumash),
         ],
       );
       when(
@@ -110,7 +109,7 @@ void main() {
     test('importSingle returns failure on error', () async {
       when(
         () => mockContentRepo.getContentForCurriculum(CurriculumId.chumash),
-      ).thenThrow(ContentLoadException('file not found'));
+      ).thenThrow(const ContentLoadException('file not found'));
 
       final result = await service.importSingle(CurriculumId.chumash);
 
@@ -123,7 +122,7 @@ void main() {
 
       when(
         () => mockContentRepo.getContentForCurriculum(any()),
-      ).thenAnswer((_) async => [_fakeItem(CurriculumId.mishnayos)]);
+      ).thenAnswer((_) async => [fakeItem(CurriculumId.mishnayos)]);
       when(
         () => mockActivationService.activate(any()),
       ).thenAnswer((_) async {});
@@ -146,7 +145,7 @@ void main() {
 
   group('CurriculumImportProgress', () {
     test('fraction computes correctly', () {
-      final progress = CurriculumImportProgress(
+      const progress = CurriculumImportProgress(
         current: 2,
         total: 5,
         currentCurriculum: CurriculumId.mishnayos,
@@ -156,7 +155,7 @@ void main() {
     });
 
     test('fraction handles zero total', () {
-      final progress = CurriculumImportProgress(
+      const progress = CurriculumImportProgress(
         current: 0,
         total: 0,
         currentCurriculum: CurriculumId.mishnayos,

@@ -550,11 +550,17 @@ void main() {
         return c;
       }
 
+      // ignore: close_sinks
       final completionsCtrl = makeErrorController<List<Map<String, dynamic>>>();
+      // ignore: close_sinks
       final bookmarksCtrl = makeErrorController<List<Map<String, dynamic>>>();
+      // ignore: close_sinks
       final settingsCtrl = makeErrorController<List<Map<String, dynamic>>>();
+      // ignore: close_sinks
       final goalsCtrl = makeErrorController<List<Map<String, dynamic>>>();
+      // ignore: close_sinks
       final rewardsCtrl = makeErrorController<List<Map<String, dynamic>>>();
+      // ignore: close_sinks
       final streakCtrl = makeErrorController<Map<String, dynamic>?>();
 
       stubListeners(

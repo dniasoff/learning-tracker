@@ -5,7 +5,6 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:mocktail/mocktail.dart';
 
