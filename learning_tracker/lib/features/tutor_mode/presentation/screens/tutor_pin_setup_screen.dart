@@ -64,8 +64,9 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
           child: PinEntryWidget(
             title: _isConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
             errorMessage: _errorMessage,
-            onPinComplete:
-                _isConfirmStep ? _onConfirmPinEntered : _onFirstPinEntered,
+            onPinComplete: _isConfirmStep
+                ? _onConfirmPinEntered
+                : _onFirstPinEntered,
           ),
         ),
       ),
