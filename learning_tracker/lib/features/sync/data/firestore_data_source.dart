@@ -307,6 +307,34 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
+  // ========== Goal Listener ==========
+
+  /// Listen to real-time goal updates.
+  Stream<List<Map<String, dynamic>>> listenToGoals() {
+    final collection = _userDoc?.collection('goals');
+    if (collection == null) {
+      return Stream.value([]);
+    }
+
+    return collection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    });
+  }
+
+  // ========== Reward Listener ==========
+
+  /// Listen to real-time reward updates.
+  Stream<List<Map<String, dynamic>>> listenToRewards() {
+    final collection = _userDoc?.collection('rewards');
+    if (collection == null) {
+      return Stream.value([]);
+    }
+
+    return collection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    });
+  }
+
   // ========== Active Curricula Operations ==========
 
   /// Get active curricula document reference.

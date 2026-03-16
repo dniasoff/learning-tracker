@@ -42,9 +42,23 @@ class SyncEngine {
   StreamSubscription<List<Map<String, dynamic>>>? _bookmarksSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _settingsSubscription;
   StreamSubscription<Map<String, dynamic>?>? _streakSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _goalsSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _rewardsSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
+
+  /// Tracks consecutive listener errors for quota monitoring (NFR21).
+  int _consecutiveListenerErrors = 0;
+
+  /// Threshold of consecutive errors before disabling listeners.
+  static const int quotaErrorThreshold = 3;
+
+  /// Whether listeners have been disabled due to quota exhaustion.
+  bool _quotaDegraded = false;
+
+  /// Whether listeners are degraded due to Firebase quota issues.
+  bool get isQuotaDegraded => _quotaDegraded;
 
   // ========== Lifecycle Methods ==========
 
@@ -94,6 +108,11 @@ class SyncEngine {
       return;
     }
 
+    if (_quotaDegraded) {
+      _logger.debug('Listeners disabled due to quota degradation');
+      return;
+    }
+
     _logger.info('Attaching foreground listeners');
     _listenersAttached = true;
 
@@ -115,6 +134,16 @@ class SyncEngine {
       _onStreakUpdate,
       onError: _handleListenerError,
     );
+
+    _goalsSubscription = _firestoreDataSource.listenToGoals().listen(
+      _onGoalsUpdate,
+      onError: _handleListenerError,
+    );
+
+    _rewardsSubscription = _firestoreDataSource.listenToRewards().listen(
+      _onRewardsUpdate,
+      onError: _handleListenerError,
+    );
   }
 
   /// Detach foreground listeners (on app background).
@@ -131,11 +160,15 @@ class SyncEngine {
     await _bookmarksSubscription?.cancel();
     await _settingsSubscription?.cancel();
     await _streakSubscription?.cancel();
+    await _goalsSubscription?.cancel();
+    await _rewardsSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
     _settingsSubscription = null;
     _streakSubscription = null;
+    _goalsSubscription = null;
+    _rewardsSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -629,16 +662,19 @@ class SyncEngine {
 
   void _onCompletionsUpdate(List<Map<String, dynamic>> completions) {
     _logger.debug('Received ${completions.length} completions from listener');
+    _consecutiveListenerErrors = 0;
     _mergeCompletions(completions);
   }
 
   void _onBookmarksUpdate(List<Map<String, dynamic>> bookmarks) {
     _logger.debug('Received ${bookmarks.length} bookmarks from listener');
+    _consecutiveListenerErrors = 0;
     _mergeBookmarks(bookmarks);
   }
 
   void _onSettingsUpdate(List<Map<String, dynamic>> settings) {
     _logger.debug('Received ${settings.length} settings from listener');
+    _consecutiveListenerErrors = 0;
     _mergeSettings(settings);
   }
 
@@ -649,8 +685,45 @@ class SyncEngine {
     }
   }
 
+  void _onGoalsUpdate(List<Map<String, dynamic>> goals) {
+    _logger.debug('Received ${goals.length} goals from listener');
+    _consecutiveListenerErrors = 0;
+    _mergeGoals(goals);
+  }
+
+  void _onRewardsUpdate(List<Map<String, dynamic>> rewards) {
+    _logger.debug('Received ${rewards.length} rewards from listener');
+    _consecutiveListenerErrors = 0;
+    _mergeRewards(rewards);
+  }
+
+  /// Handle listener errors with quota monitoring (NFR21).
+  ///
+  /// After [quotaErrorThreshold] consecutive errors, disables all listeners
+  /// to prevent further quota consumption. The app falls back to
+  /// pull-on-launch sync only.
   void _handleListenerError(Object error, StackTrace stackTrace) {
     _logger.error('Listener error', error, stackTrace);
+    _consecutiveListenerErrors++;
+
+    if (_consecutiveListenerErrors >= quotaErrorThreshold && !_quotaDegraded) {
+      _logger.warning(
+        'Firebase quota threshold reached ($_consecutiveListenerErrors '
+        'consecutive errors). Disabling real-time listeners.',
+      );
+      _quotaDegraded = true;
+      detachListeners();
+      _updateStatus(
+        SyncStatus.error(
+          message:
+              'Firebase quota exceeded — real-time sync disabled. '
+              'Data will sync on next app launch.',
+          failedAt: DateTime.now().toUtc(),
+        ),
+      );
+      return;
+    }
+
     _updateStatus(
       SyncStatus.error(
         message: error.toString(),
@@ -663,6 +736,10 @@ class SyncEngine {
 
   Future<void> _onReconnect() async {
     _logger.info('Device reconnected, flushing offline queue');
+
+    // Reset quota degradation on reconnect — give listeners another chance
+    _consecutiveListenerErrors = 0;
+    _quotaDegraded = false;
 
     _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
 
@@ -742,7 +819,9 @@ class SyncEngine {
 
   void _updateStatus(SyncStatus status) {
     _currentStatus = status;
-    _statusController.add(status);
+    if (!_statusController.isClosed) {
+      _statusController.add(status);
+    }
   }
 
   /// Emit pending status when online but queue has items.
