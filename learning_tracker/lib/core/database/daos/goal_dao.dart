@@ -41,13 +41,13 @@ class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
     required DateTime createdAt,
     required DateTime updatedAt,
   }) async {
-    final existing = await (select(goals)
-          ..where(
-            (t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.description.equals(description),
-          ))
-        .getSingleOrNull();
+    final existing =
+        await (select(goals)..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.description.equals(description),
+            ))
+            .getSingleOrNull();
 
     if (existing == null) {
       await insertGoal(

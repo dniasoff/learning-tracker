@@ -33,7 +33,9 @@ class SyncEngine {
   final _statusController = StreamController<SyncStatus>.broadcast();
   Stream<SyncStatus> get statusStream => _statusController.stream;
 
-  SyncStatus _currentStatus = SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc());
+  SyncStatus _currentStatus = SyncStatus.synced(
+    lastSyncedAt: DateTime.now().toUtc(),
+  );
   SyncStatus get currentStatus => _currentStatus;
 
   StreamSubscription<List<Map<String, dynamic>>>? _completionsSubscription;
@@ -177,7 +179,10 @@ class SyncEngine {
     } catch (e, stackTrace) {
       _logger.error('Pull-on-launch failed', e, stackTrace);
       _updateStatus(
-        SyncStatus.error(message: e.toString(), failedAt: DateTime.now().toUtc()),
+        SyncStatus.error(
+          message: e.toString(),
+          failedAt: DateTime.now().toUtc(),
+        ),
       );
     }
   }
@@ -647,7 +652,10 @@ class SyncEngine {
   void _handleListenerError(Object error, StackTrace stackTrace) {
     _logger.error('Listener error', error, stackTrace);
     _updateStatus(
-      SyncStatus.error(message: error.toString(), failedAt: DateTime.now().toUtc()),
+      SyncStatus.error(
+        message: error.toString(),
+        failedAt: DateTime.now().toUtc(),
+      ),
     );
   }
 
@@ -673,7 +681,10 @@ class SyncEngine {
     } catch (e, stackTrace) {
       _logger.error('Failed to flush offline queue', e, stackTrace);
       _updateStatus(
-        SyncStatus.error(message: e.toString(), failedAt: DateTime.now().toUtc()),
+        SyncStatus.error(
+          message: e.toString(),
+          failedAt: DateTime.now().toUtc(),
+        ),
       );
     }
   }

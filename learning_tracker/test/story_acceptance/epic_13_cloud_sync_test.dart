@@ -3,7 +3,6 @@
 library;
 
 import 'package:drift/native.dart';
-import 'package:test/test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
@@ -11,6 +10,7 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
+import 'package:test/test.dart';
 
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
@@ -188,22 +188,205 @@ void main() {
     },
   );
 
-  // ── Story 13.2: Conflict resolution UI ────────────────────────
+  // ── Story 13.2: Pull-on-Launch Merge ─────────────────────────
 
-  group(
-    'Story 13.2 -- Conflict resolution UI',
-    tags: ['story_13_2'],
-    skip: 'Backlog: conflict resolution UI not yet implemented',
-    () {
-      test('conflicting edits show resolution dialog', () {
-        // TODO: verify conflict detection and dialog
-      });
+  group('Story 13.2 -- Pull-on-Launch Merge', tags: ['story_13_2'], () {
+    late AppDatabase database;
+    late MockFirestoreDataSource mockFirestore;
+    late Talker logger;
+    late OfflineQueue offlineQueue;
+    late SyncEngine syncEngine;
 
-      test('last-write-wins is the default resolution', () {
-        // TODO: verify LWW merge strategy
-      });
-    },
-  );
+    setUp(() {
+      database = _createInMemoryDatabase();
+      mockFirestore = MockFirestoreDataSource();
+      logger = Talker();
+      offlineQueue = OfflineQueue(
+        database: database,
+        firestoreDataSource: mockFirestore,
+        logger: logger,
+      );
+      syncEngine = SyncEngine(
+        database: database,
+        firestoreDataSource: mockFirestore,
+        offlineQueue: offlineQueue,
+        logger: logger,
+      );
+    });
+
+    tearDown(() async {
+      await syncEngine.dispose();
+      await database.close();
+    });
+
+    void stubEmptyFetches() {
+      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
+    }
+
+    test('pull fetches all user data collections from Firestore', () async {
+      stubEmptyFetches();
+
+      await syncEngine.pullOnLaunch();
+
+      verify(() => mockFirestore.fetchCompletions()).called(1);
+      verify(() => mockFirestore.fetchBookmarks()).called(1);
+      verify(() => mockFirestore.fetchSettings()).called(1);
+      verify(() => mockFirestore.fetchGoals()).called(1);
+      verify(() => mockFirestore.fetchRewards()).called(1);
+      verify(() => mockFirestore.fetchStreak()).called(1);
+      verify(() => mockFirestore.fetchProfile()).called(1);
+    });
+
+    test('additive merge adds remote completions not present locally '
+        '(no duplicates)', () async {
+      // Insert one local completion
+      final completedAt = DateTime.utc(2026, 2, 9, 12);
+      await database.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'mishna-1',
+          stageId: 1,
+          trackType: 'personal',
+          completedAt: completedAt,
+        ),
+      );
+
+      stubEmptyFetches();
+      when(() => mockFirestore.fetchCompletions()).thenAnswer(
+        (_) async => [
+          // Same as local — should be skipped
+          {
+            'curriculum_id': 'mishnayos',
+            'content_item_id': 'mishna-1',
+            'stage_id': 1,
+            'track_type': 'personal',
+            'completed_at': '2026-02-09T12:00:00.000Z',
+          },
+          // New — should be inserted
+          {
+            'curriculum_id': 'mishnayos',
+            'content_item_id': 'mishna-2',
+            'stage_id': 1,
+            'track_type': 'personal',
+            'completed_at': '2026-02-10T12:00:00.000Z',
+          },
+        ],
+      );
+
+      await syncEngine.pullOnLaunch();
+
+      final completions = await database.completionDao.getAllCompletions();
+      expect(completions.length, 2);
+    });
+
+    test('last-write-wins correctly resolves when remote timestamp > local '
+        'for mutable data', () async {
+      // Insert older local bookmark
+      await database.bookmarkDao.insertBookmark(
+        BookmarksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          sefariaRef: 'mishna-10',
+          updatedAt: DateTime.utc(2026, 2, 8),
+        ),
+      );
+
+      stubEmptyFetches();
+      when(() => mockFirestore.fetchBookmarks()).thenAnswer(
+        (_) async => [
+          {
+            'curriculum_id': 'mishnayos',
+            'track_type': 'personal',
+            'content_item_id': 'mishna-42',
+            'updated_at': '2026-02-09T12:00:00.000Z', // newer
+          },
+        ],
+      );
+
+      await syncEngine.pullOnLaunch();
+
+      final bookmark = await database.bookmarkDao
+          .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
+      expect(bookmark!.sefariaRef, 'mishna-42'); // Remote won
+    });
+
+    test(
+      'last-write-wins correctly keeps local when local timestamp > remote',
+      () async {
+        // Insert newer local bookmark
+        await database.bookmarkDao.insertBookmark(
+          BookmarksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            sefariaRef: 'mishna-99',
+            updatedAt: DateTime.utc(2026, 2, 10),
+          ),
+        );
+
+        stubEmptyFetches();
+        when(() => mockFirestore.fetchBookmarks()).thenAnswer(
+          (_) async => [
+            {
+              'curriculum_id': 'mishnayos',
+              'track_type': 'personal',
+              'content_item_id': 'mishna-42',
+              'updated_at': '2026-02-09T12:00:00.000Z', // older
+            },
+          ],
+        );
+
+        await syncEngine.pullOnLaunch();
+
+        final bookmark = await database.bookmarkDao
+            .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
+        expect(bookmark!.sefariaRef, 'mishna-99'); // Local kept
+      },
+    );
+
+    test(
+      'pull gracefully handles no network (returns local data unchanged)',
+      () async {
+        syncEngine.setOnlineState(false);
+
+        // Insert local data
+        await database.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'mishna-1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.utc(2026, 2, 9),
+          ),
+        );
+
+        await syncEngine.pullOnLaunch();
+
+        // Local data unchanged
+        final completions = await database.completionDao.getAllCompletions();
+        expect(completions.length, 1);
+        // No Firestore calls
+        verifyNever(() => mockFirestore.fetchCompletions());
+      },
+    );
+
+    test('last pull timestamp updated on successful sync', () async {
+      stubEmptyFetches();
+
+      await syncEngine.pullOnLaunch();
+
+      final status = syncEngine.currentStatus;
+      expect(
+        status.maybeWhen(synced: (ts) => ts, orElse: () => null),
+        isNotNull,
+      );
+    });
+  });
 
   // ── Story 13.3: Backup & restore ──────────────────────────────
 

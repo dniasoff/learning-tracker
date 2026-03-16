@@ -101,9 +101,7 @@ class FirestoreDataSource {
     if (collection == null) return [];
 
     final results = <Map<String, dynamic>>[];
-    var query = collection
-        .orderBy(FieldPath.documentId)
-        .limit(pageSize);
+    var query = collection.orderBy(FieldPath.documentId).limit(pageSize);
 
     while (true) {
       final snapshot = await query.get();

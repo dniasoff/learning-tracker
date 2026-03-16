@@ -74,9 +74,9 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
     required DateTime createdAt,
     required String? curriculumId,
   }) async {
-    final existing = await (select(rewards)
-          ..where((t) => t.title.equals(title)))
-        .getSingleOrNull();
+    final existing = await (select(
+      rewards,
+    )..where((t) => t.title.equals(title))).getSingleOrNull();
 
     if (existing == null) {
       await insertReward(
@@ -93,8 +93,8 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
       );
     } else {
       // For rewards, update if remote has more progress (earned > not earned)
-      final shouldUpdate = isEarned && !existing.isEarned ||
-          isRevealed && !existing.isRevealed;
+      final shouldUpdate =
+          isEarned && !existing.isEarned || isRevealed && !existing.isRevealed;
       if (shouldUpdate) {
         await (update(rewards)..where((t) => t.id.equals(existing.id))).write(
           RewardsCompanion(
