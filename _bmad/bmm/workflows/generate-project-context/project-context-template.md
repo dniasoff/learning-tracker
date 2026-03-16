@@ -16,6 +16,10 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 _Documented after discovery phase_
 
+## Tracking System
+
+_Documented after discovery phase — includes cache paths and read/write rules when Linear integration is active._
+
 ## Critical Implementation Rules
 
 _Documented after discovery phase_

@@ -61,7 +61,8 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
   <critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
   **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-  for story details. If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
+  for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
+  If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
   **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
   `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
   Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
