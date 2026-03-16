@@ -97,6 +97,15 @@ class _TutorModeScreenState extends ConsumerState<TutorModeScreen> {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.dashboard),
+              title: const Text('Student Dashboard'),
+              subtitle: const Text(
+                'View completion history, chazara queue, and progress',
+              ),
+              onTap: () => context.router.push(const TutorDashboardRoute()),
+            ),
+            const Divider(),
+            ListTile(
               leading: const Icon(Icons.lock),
               title: const Text('Change Tutor PIN'),
               subtitle: const Text('Update your tutor access PIN'),

@@ -916,6 +916,22 @@ class TrackManagementRouteArgs {
 }
 
 /// generated route for
+/// [TutorDashboardScreen]
+class TutorDashboardRoute extends PageRouteInfo<void> {
+  const TutorDashboardRoute({List<PageRouteInfo>? children})
+    : super(TutorDashboardRoute.name, initialChildren: children);
+
+  static const String name = 'TutorDashboardRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const TutorDashboardScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [TutorModeScreen]
 class TutorModeRoute extends PageRouteInfo<void> {
   const TutorModeRoute({List<PageRouteInfo>? children})
