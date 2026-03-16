@@ -41,6 +41,7 @@ test-epic-8: ## Run all Epic 8 (Gamification) acceptance tests
 
 test-story-8.4: ## Run Story 8.4 (Completion Feedback & Animations) acceptance tests
 	flutter test test/story_acceptance/epic_08_gamification_test.dart --name "Story 8.4"
+	flutter test test/features/learning/presentation/widgets/completion_feedback_widget_test.dart
 
 test-story-13.1: ## Run Story 13.1 (Push-on-Write with Offline Queuing) acceptance tests
 	flutter test test/story_acceptance/epic_13_cloud_sync_test.dart --name "Story 13.1"

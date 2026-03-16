@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
@@ -9,6 +10,20 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_providers.g.dart';
+
+/// Provider family to check whether a specific stage is already completed.
+final isStageCompletedProvider = FutureProvider.autoDispose
+    .family<bool, ({String sefariaRef, int stageId, String trackType})>((
+      ref,
+      params,
+    ) async {
+      final repository = ref.watch(completionRepositoryProvider);
+      return repository.isStageCompleted(
+        sefariaRef: params.sefariaRef,
+        stageId: params.stageId,
+        trackType: params.trackType,
+      );
+    });
 
 /// Provides the completion repository.
 @riverpod

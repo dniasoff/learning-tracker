@@ -111,7 +111,12 @@ Future<void> showPointsPopup({
   required int points,
   UserMode userMode = UserMode.child,
 }) async {
-  if (userMode == UserMode.adult || points <= 0) return;
+  if (userMode == UserMode.adult) return;
+
+  if (points <= 0) {
+    debugPrint('showPointsPopup: points=$points, skipping popup');
+    return;
+  }
 
   await showDialog<void>(
     context: context,

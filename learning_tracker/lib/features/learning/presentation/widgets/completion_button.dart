@@ -13,20 +13,6 @@ import 'package:learning_tracker/features/learning/presentation/widgets/completi
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 
-/// Provider family to check whether a specific stage is already completed.
-final isStageCompletedProvider = FutureProvider.autoDispose
-    .family<bool, ({String sefariaRef, int stageId, String trackType})>((
-      ref,
-      params,
-    ) async {
-      final repository = ref.watch(completionRepositoryProvider);
-      return repository.isStageCompleted(
-        sefariaRef: params.sefariaRef,
-        stageId: params.stageId,
-        trackType: params.trackType,
-      );
-    });
-
 /// Button widget for marking a content item as completed.
 ///
 /// Shows completion animation and points popup (child mode) or

@@ -96,7 +96,7 @@ class _CompletionAnimationState extends State<CompletionAnimation>
   }
 
   List<Widget> _buildConfettiParticles() {
-    final random = Random(42); // Deterministic for consistent visuals
+    final random = Random();
     const particleColors = [
       Colors.amber,
       Colors.red,

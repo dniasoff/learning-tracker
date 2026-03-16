@@ -53,6 +53,12 @@ void main() {
 
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 100));
+
+      // L1: Verify no confetti particles in adult mode
+      // Confetti particles are small Container widgets inside Positioned widgets;
+      // in adult mode the _buildConfettiParticles() method is not called,
+      // so there should be no Positioned widgets in the tree.
+      expect(find.byType(Positioned), findsNothing);
     });
 
     testWidgets('calls onComplete when animation finishes', (tester) async {
@@ -146,6 +152,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('+10 Points!'), findsNothing);
     });
+
+    testWidgets('showPointsPopup with adult mode does not show dialog', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => showPointsPopup(
+                  context: context,
+                  points: 10,
+                  userMode: UserMode.adult,
+                ),
+                child: const Text('Show'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // L3: Adult mode should not show any dialog
+      expect(find.byType(PointsPopup), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
+    });
   });
 
   // ── AnimatedProgressBar ──
@@ -169,6 +204,12 @@ void main() {
       expect(find.byType(AnimatedProgressBar), findsOneWidget);
       await tester.pumpAndSettle();
       expect(find.byType(AnimatedProgressBar), findsOneWidget);
+
+      // L2: Verify FractionallySizedBox widthFactor equals target value
+      final fractionBox = tester.widget<FractionallySizedBox>(
+        find.byType(FractionallySizedBox),
+      );
+      expect(fractionBox.widthFactor, closeTo(0.7, 0.01));
     });
 
     testWidgets('calls onAnimationComplete when fill finishes', (tester) async {
