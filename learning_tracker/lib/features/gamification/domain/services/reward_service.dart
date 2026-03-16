@@ -107,6 +107,38 @@ class RewardService {
     );
   }
 
+  /// Update an existing reward (only allowed for unearned rewards).
+  Future<void> updateReward({
+    required int id,
+    required String title,
+    required String description,
+    required int pointsThreshold,
+  }) async {
+    final reward = await _database.rewardDao.getRewardById(id);
+    if (reward == null) return;
+    if (reward.isEarned) {
+      throw StateError('Cannot edit an earned reward');
+    }
+    await _database.rewardDao.updateReward(
+      RewardsCompanion(
+        id: Value(id),
+        title: Value(title),
+        description: Value(description),
+        pointsThreshold: Value(pointsThreshold),
+      ),
+    );
+  }
+
+  /// Delete a reward (only allowed for unearned rewards).
+  Future<void> deleteReward(int id) async {
+    final reward = await _database.rewardDao.getRewardById(id);
+    if (reward == null) return;
+    if (reward.isEarned) {
+      throw StateError('Cannot delete an earned reward');
+    }
+    await _database.rewardDao.deleteReward(id);
+  }
+
   int _highestEarnedThreshold(List<Reward> earnedRewards) {
     final sorted = [...earnedRewards]
       ..sort((a, b) => b.pointsThreshold.compareTo(a.pointsThreshold));

@@ -14,9 +14,14 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/reward_catalog_screen.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
@@ -576,17 +581,365 @@ void main() {
     );
   });
 
-  // ── Story 10.3: Content restrictions ──────────────────────────
+  // ── Story 10.3: Reward Catalog Management ──────────────────────
 
-  group(
-    'Story 10.3 -- Content restrictions',
-    tags: ['story_10_3'],
-    skip: 'Backlog: content restrictions not yet implemented',
-    () {
-      test('parent can restrict specific curricula', () {});
-      test('restricted content is hidden from child view', () {});
-    },
-  );
+  group('Story 10.3 -- Reward Catalog Management', tags: ['story_10_3'], () {
+    late AppDatabase db;
+    late RewardService rewardService;
+
+    setUp(() {
+      db = createTestDatabase();
+      final pointsService = PointsService(db);
+      rewardService = RewardService(db, pointsService);
+    });
+
+    tearDown(() => db.close());
+
+    // ── Unit: Create reward persists with correct fields ──
+
+    test('create reward persists with correct fields', () async {
+      final id = await rewardService.addReward(
+        title: 'Gold Star',
+        description: 'A shiny gold star',
+        pointsThreshold: 100,
+      );
+
+      final reward = await db.rewardDao.getRewardById(id);
+      expect(reward, isNotNull);
+      expect(reward!.title, 'Gold Star');
+      expect(reward.description, 'A shiny gold star');
+      expect(reward.pointsThreshold, 100);
+      expect(reward.isEarned, isFalse);
+      expect(reward.isRevealed, isFalse);
+    });
+
+    // ── Unit: Edit reward updates fields for unearned reward ──
+
+    test(
+      'edit reward updates title/description/threshold for unearned reward',
+      () async {
+        final id = await rewardService.addReward(
+          title: 'Bronze Star',
+          description: 'A bronze star',
+          pointsThreshold: 50,
+        );
+
+        await rewardService.updateReward(
+          id: id,
+          title: 'Silver Star',
+          description: 'A silver star',
+          pointsThreshold: 75,
+        );
+
+        final reward = await db.rewardDao.getRewardById(id);
+        expect(reward!.title, 'Silver Star');
+        expect(reward.description, 'A silver star');
+        expect(reward.pointsThreshold, 75);
+      },
+    );
+
+    // ── Unit: Delete reward removes unearned reward ──
+
+    test('delete reward removes unearned reward from database', () async {
+      final id = await rewardService.addReward(
+        title: 'Temp Reward',
+        description: 'Will be deleted',
+        pointsThreshold: 10,
+      );
+
+      await rewardService.deleteReward(id);
+
+      final reward = await db.rewardDao.getRewardById(id);
+      expect(reward, isNull);
+    });
+
+    // ── Unit: Edit/delete blocked for earned rewards ──
+
+    test('edit blocked for earned rewards', () async {
+      final id = await rewardService.addReward(
+        title: 'Earned One',
+        description: 'Already earned',
+        pointsThreshold: 10,
+      );
+      await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
+
+      expect(
+        () => rewardService.updateReward(
+          id: id,
+          title: 'Changed',
+          description: 'Changed',
+          pointsThreshold: 20,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('delete blocked for earned rewards', () async {
+      final id = await rewardService.addReward(
+        title: 'Earned Two',
+        description: 'Already earned',
+        pointsThreshold: 10,
+      );
+      await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
+
+      expect(() => rewardService.deleteReward(id), throwsA(isA<StateError>()));
+    });
+
+    // ── Unit: Reveal sets is_revealed=true on earned reward ──
+
+    test('reveal sets is_revealed=true on earned reward', () async {
+      final id = await rewardService.addReward(
+        title: 'Mystery',
+        description: 'A mystery reward',
+        pointsThreshold: 10,
+      );
+      await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
+
+      await rewardService.revealReward(id);
+
+      final reward = await db.rewardDao.getRewardById(id);
+      expect(reward!.isRevealed, isTrue);
+    });
+
+    // ── Unit: Rewards ordered by point threshold ──
+
+    test('rewards ordered by point threshold', () async {
+      await rewardService.addReward(
+        title: 'High',
+        description: 'High threshold',
+        pointsThreshold: 300,
+      );
+      await rewardService.addReward(
+        title: 'Low',
+        description: 'Low threshold',
+        pointsThreshold: 50,
+      );
+      await rewardService.addReward(
+        title: 'Mid',
+        description: 'Mid threshold',
+        pointsThreshold: 150,
+      );
+
+      final all = await rewardService.getAllRewards();
+      expect(all.length, 3);
+      expect(all[0].title, 'Low');
+      expect(all[1].title, 'Mid');
+      expect(all[2].title, 'High');
+    });
+
+    // ── Widget: Reward list displays earned and unearned rewards ──
+
+    testWidgets(
+      'reward list displays earned (with reveal) and unearned rewards',
+      (tester) async {
+        // Seed rewards
+        final id1 = await rewardService.addReward(
+          title: 'Unearned Reward',
+          description: 'Not earned yet',
+          pointsThreshold: 100,
+        );
+        final id2 = await rewardService.addReward(
+          title: 'Earned Reward',
+          description: 'Already earned',
+          pointsThreshold: 50,
+        );
+        await db.rewardDao.markEarned(id2, earnedAt: DateTime.now().toUtc());
+
+        final rewards = await db.rewardDao.getAllRewards();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              allRewardsStreamProvider.overrideWith(
+                (ref) => Stream.value(rewards),
+              ),
+            ],
+            child: const MaterialApp(home: RewardCatalogScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Unearned Reward'), findsOneWidget);
+        expect(find.text('Earned Reward'), findsOneWidget);
+        expect(find.text('Reveal'), findsOneWidget);
+      },
+    );
+
+    // ── Widget: Add reward form validates required fields ──
+
+    testWidgets(
+      'add reward form validates required fields and positive threshold',
+      (tester) async {
+        final rewards = await db.rewardDao.getAllRewards();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              allRewardsStreamProvider.overrideWith(
+                (ref) => Stream.value(rewards),
+              ),
+            ],
+            child: const MaterialApp(home: RewardCatalogScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap FAB to open add dialog
+        await tester.tap(find.byType(FloatingActionButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Add Reward'), findsOneWidget);
+
+        // Try to submit empty form
+        await tester.tap(find.text('Add'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Title is required'), findsOneWidget);
+        expect(find.text('Description is required'), findsOneWidget);
+        expect(find.text('Threshold is required'), findsOneWidget);
+
+        // Enter invalid threshold
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Point Threshold'),
+          '-5',
+        );
+        await tester.tap(find.text('Add'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Must be a positive number'), findsOneWidget);
+      },
+    );
+
+    // ── Widget: Delete confirmation dialog ──
+
+    testWidgets('delete confirmation dialog shown before deletion', (
+      tester,
+    ) async {
+      await rewardService.addReward(
+        title: 'To Delete',
+        description: 'Will be deleted',
+        pointsThreshold: 10,
+      );
+
+      final rewards = await db.rewardDao.getAllRewards();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            allRewardsStreamProvider.overrideWith(
+              (ref) => Stream.value(rewards),
+            ),
+          ],
+          child: const MaterialApp(home: RewardCatalogScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap popup menu
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+
+      // Tap delete
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog appears
+      expect(find.text('Delete Reward'), findsOneWidget);
+      expect(
+        find.text('Are you sure you want to delete "To Delete"?'),
+        findsOneWidget,
+      );
+
+      // Cancel
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      // Reward still exists
+      expect(find.text('To Delete'), findsOneWidget);
+    });
+
+    // ── Widget: Earned rewards show Reveal button ──
+
+    testWidgets('earned rewards show Reveal button if not yet revealed', (
+      tester,
+    ) async {
+      final id = await rewardService.addReward(
+        title: 'Mystery Prize',
+        description: 'A mystery',
+        pointsThreshold: 10,
+      );
+      await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
+
+      final rewards = await db.rewardDao.getAllRewards();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            allRewardsStreamProvider.overrideWith(
+              (ref) => Stream.value(rewards),
+            ),
+          ],
+          child: const MaterialApp(home: RewardCatalogScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reveal'), findsOneWidget);
+
+      // Tap reveal
+      await tester.tap(find.text('Reveal'));
+      await tester.pumpAndSettle();
+
+      // Now shows Revealed chip
+      expect(find.text('Revealed'), findsOneWidget);
+    });
+
+    // ── Integration: full reward lifecycle ──
+
+    test(
+      'integration: add 3 rewards, earn one, verify reveal option, reveal, verify',
+      () async {
+        // Add 3 rewards
+        await rewardService.addReward(
+          title: 'Reward A',
+          description: 'First',
+          pointsThreshold: 10,
+        );
+        final id2 = await rewardService.addReward(
+          title: 'Reward B',
+          description: 'Second',
+          pointsThreshold: 50,
+        );
+        await rewardService.addReward(
+          title: 'Reward C',
+          description: 'Third',
+          pointsThreshold: 100,
+        );
+
+        var all = await rewardService.getAllRewards();
+        expect(all.length, 3);
+
+        // Earn reward B via marking (simulating points threshold met)
+        await db.rewardDao.markEarned(id2, earnedAt: DateTime.now().toUtc());
+
+        all = await rewardService.getAllRewards();
+        final earnedReward = all.firstWhere((r) => r.id == id2);
+        expect(earnedReward.isEarned, isTrue);
+        expect(earnedReward.isRevealed, isFalse);
+
+        // Reveal it
+        await rewardService.revealReward(id2);
+
+        final revealed = await db.rewardDao.getRewardById(id2);
+        expect(revealed!.isRevealed, isTrue);
+
+        // Child sees reward title (revealed rewards show title)
+        final model = RewardModel.fromDriftRow(revealed);
+        expect(model.title, 'Reward B');
+        expect(model.isRevealed, isTrue);
+      },
+    );
+  });
 
   // ── Story 10.4: Time limits ───────────────────────────────────
 

@@ -55,6 +55,10 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
         const RewardsCompanion(isRevealed: Value(true)),
       );
 
+  /// Delete a reward by ID.
+  Future<int> deleteReward(int id) =>
+      (delete(rewards)..where((t) => t.id.equals(id))).go();
+
   /// Watch all rewards for reactive UI updates.
   Stream<List<Reward>> watchAllRewards() => (select(
     rewards,

@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/parent_mode/presentation/screens/paren
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_change_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_entry_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/reward_catalog_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
@@ -149,6 +150,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode',
       page: ParentModeRoute.page,
+      guards: [authGuard, childModeGuard, parentPinGuard],
+    ),
+    AutoRoute(
+      path: '/parent-mode/rewards',
+      page: RewardCatalogRoute.page,
       guards: [authGuard, childModeGuard, parentPinGuard],
     ),
     AutoRoute(
