@@ -87,9 +87,7 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Change Parent PIN'),
-      ),
+      appBar: AppBar(title: const Text('Change Parent PIN')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

@@ -56,17 +56,16 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Set Parent PIN'),
-      ),
+      appBar: AppBar(title: const Text('Set Parent PIN')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: PinEntryWidget(
             title: _isConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
             errorMessage: _errorMessage,
-            onPinComplete:
-                _isConfirmStep ? _onConfirmPinEntered : _onFirstPinEntered,
+            onPinComplete: _isConfirmStep
+                ? _onConfirmPinEntered
+                : _onFirstPinEntered,
           ),
         ),
       ),

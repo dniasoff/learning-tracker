@@ -58,9 +58,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Enter Parent PIN'),
-      ),
+      appBar: AppBar(title: const Text('Enter Parent PIN')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
