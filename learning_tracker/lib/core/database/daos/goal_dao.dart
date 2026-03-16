@@ -28,4 +28,47 @@ class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
 
   Future<int> deleteGoalsByCurriculum(String curriculumId) =>
       (delete(goals)..where((t) => t.curriculumId.equals(curriculumId))).go();
+
+  /// Upsert a goal by curriculum and description (last-write-wins per D4).
+  ///
+  /// Matches by [curriculumId] and [description]. Inserts if not found,
+  /// or updates if remote [updatedAt] is newer than local.
+  Future<void> upsertGoal({
+    required String curriculumId,
+    required String description,
+    required double targetPercent,
+    required DateTime? targetDate,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) async {
+    final existing =
+        await (select(goals)..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.description.equals(description),
+            ))
+            .getSingleOrNull();
+
+    if (existing == null) {
+      await insertGoal(
+        GoalsCompanion.insert(
+          curriculumId: curriculumId,
+          description: Value(description),
+          targetPercent: Value(targetPercent),
+          targetDate: Value(targetDate),
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        ),
+      );
+    } else if (updatedAt.isAfter(existing.updatedAt)) {
+      await (update(goals)..where((t) => t.id.equals(existing.id))).write(
+        GoalsCompanion(
+          targetPercent: Value(targetPercent),
+          targetDate: Value(targetDate),
+          description: Value(description),
+          updatedAt: Value(updatedAt),
+        ),
+      );
+    }
+  }
 }

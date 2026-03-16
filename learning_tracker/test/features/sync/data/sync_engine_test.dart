@@ -52,6 +52,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.initialize();
 
@@ -76,6 +78,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       final statuses = <SyncStatus>[];
       final subscription = syncEngine.statusStream.listen(statuses.add);
@@ -238,6 +242,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -278,6 +284,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -298,6 +306,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -330,6 +340,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -354,6 +366,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -388,6 +402,8 @@ void main() {
       when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -425,6 +441,8 @@ void main() {
         when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
         when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
         when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+        when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+        when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
         await syncEngine.pullOnLaunch();
 
@@ -472,6 +490,8 @@ void main() {
       );
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -498,6 +518,8 @@ void main() {
           'updated_at': '2026-02-09T12:00:00.000Z',
         },
       );
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -533,6 +555,8 @@ void main() {
           'updated_at': '2026-02-09T12:00:00.000Z',
         },
       );
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
 
       await syncEngine.pullOnLaunch();
 
@@ -541,6 +565,185 @@ void main() {
       );
       expect(profile!.displayName, 'New Name');
       expect(profile.userMode, 'child');
+    });
+  });
+
+  group('SyncEngine _mergeGoals', () {
+    void stubAllFetchesExceptGoals(List<Map<String, dynamic>> goals) {
+      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => goals);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
+    }
+
+    test('inserts new goals from Firestore', () async {
+      stubAllFetchesExceptGoals([
+        {
+          'curriculum_id': 'mishnayos',
+          'description': 'Finish Berachos',
+          'target_percent': 100.0,
+          'target_date': '2026-06-01T00:00:00.000Z',
+          'created_at': '2026-02-01T00:00:00.000Z',
+          'updated_at': '2026-02-09T12:00:00.000Z',
+        },
+      ]);
+
+      await syncEngine.pullOnLaunch();
+
+      final goals = await database.goalDao.getGoalsByCurriculum('mishnayos');
+      expect(goals.length, 1);
+      expect(goals.first.description, 'Finish Berachos');
+      expect(goals.first.targetPercent, 100.0);
+    });
+
+    test('remote newer wins — updates goal when remote is newer', () async {
+      await database.goalDao.insertGoal(
+        GoalsCompanion.insert(
+          curriculumId: 'mishnayos',
+          description: const Value('Finish Berachos'),
+          targetPercent: const Value(50.0),
+          createdAt: DateTime.utc(2026, 2, 1),
+          updatedAt: DateTime.utc(2026, 2, 8),
+        ),
+      );
+
+      stubAllFetchesExceptGoals([
+        {
+          'curriculum_id': 'mishnayos',
+          'description': 'Finish Berachos',
+          'target_percent': 100.0,
+          'created_at': '2026-02-01T00:00:00.000Z',
+          'updated_at': '2026-02-09T12:00:00.000Z', // newer
+        },
+      ]);
+
+      await syncEngine.pullOnLaunch();
+
+      final goals = await database.goalDao.getGoalsByCurriculum('mishnayos');
+      expect(goals.length, 1);
+      expect(goals.first.targetPercent, 100.0); // Updated
+    });
+
+    test('local newer wins — keeps local goal when local is newer', () async {
+      await database.goalDao.insertGoal(
+        GoalsCompanion.insert(
+          curriculumId: 'mishnayos',
+          description: const Value('Finish Berachos'),
+          targetPercent: const Value(50.0),
+          createdAt: DateTime.utc(2026, 2, 1),
+          updatedAt: DateTime.utc(2026, 2, 10), // newer than remote
+        ),
+      );
+
+      stubAllFetchesExceptGoals([
+        {
+          'curriculum_id': 'mishnayos',
+          'description': 'Finish Berachos',
+          'target_percent': 100.0,
+          'created_at': '2026-02-01T00:00:00.000Z',
+          'updated_at': '2026-02-09T12:00:00.000Z', // older
+        },
+      ]);
+
+      await syncEngine.pullOnLaunch();
+
+      final goals = await database.goalDao.getGoalsByCurriculum('mishnayos');
+      expect(goals.length, 1);
+      expect(goals.first.targetPercent, 50.0); // Kept local
+    });
+
+    test('skips goals with missing required fields', () async {
+      stubAllFetchesExceptGoals([
+        {
+          'description': 'No curriculum_id',
+          // Missing curriculum_id, created_at, updated_at
+        },
+      ]);
+
+      await syncEngine.pullOnLaunch();
+
+      final goals = await database.goalDao.getAllGoals();
+      expect(goals, isEmpty);
+    });
+  });
+
+  group('SyncEngine _mergeRewards', () {
+    void stubAllFetchesExceptRewards(List<Map<String, dynamic>> rewards) {
+      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => rewards);
+    }
+
+    test('inserts new rewards from Firestore', () async {
+      stubAllFetchesExceptRewards([
+        {
+          'title': 'First Completion',
+          'description': 'Complete your first item',
+          'points_threshold': 10,
+          'is_revealed': true,
+          'is_earned': false,
+          'created_at': '2026-02-01T00:00:00.000Z',
+        },
+      ]);
+
+      await syncEngine.pullOnLaunch();
+
+      final rewards = await database.rewardDao.getAllRewards();
+      expect(rewards.length, 1);
+      expect(rewards.first.title, 'First Completion');
+      expect(rewards.first.pointsThreshold, 10);
+    });
+
+    test('updates reward when remote is earned but local is not', () async {
+      await database.rewardDao.insertReward(
+        RewardsCompanion.insert(
+          title: 'First Completion',
+          description: 'Complete your first item',
+          pointsThreshold: 10,
+          isRevealed: const Value(true),
+          isEarned: const Value(false),
+        ),
+      );
+
+      stubAllFetchesExceptRewards([
+        {
+          'title': 'First Completion',
+          'description': 'Complete your first item',
+          'points_threshold': 10,
+          'is_revealed': true,
+          'is_earned': true,
+          'earned_at': '2026-02-09T12:00:00.000Z',
+          'created_at': '2026-02-01T00:00:00.000Z',
+        },
+      ]);
+
+      await syncEngine.pullOnLaunch();
+
+      final rewards = await database.rewardDao.getAllRewards();
+      expect(rewards.length, 1);
+      expect(rewards.first.isEarned, true);
+      expect(rewards.first.earnedAt, isNotNull);
+    });
+
+    test('skips rewards with missing required fields', () async {
+      stubAllFetchesExceptRewards([
+        {
+          'description': 'No title or threshold',
+          // Missing title, points_threshold, created_at
+        },
+      ]);
+
+      await syncEngine.pullOnLaunch();
+
+      final rewards = await database.rewardDao.getAllRewards();
+      expect(rewards, isEmpty);
     });
   });
 

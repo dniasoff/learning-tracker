@@ -59,4 +59,51 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
   Stream<List<Reward>> watchAllRewards() => (select(
     rewards,
   )..orderBy([(t) => OrderingTerm.asc(t.pointsThreshold)])).watch();
+
+  /// Upsert a reward by title (last-write-wins per D4).
+  ///
+  /// Matches by [title]. Inserts if not found, or updates if remote
+  /// [createdAt] is newer (rewards don't have updatedAt, use createdAt).
+  Future<void> upsertReward({
+    required String title,
+    required String description,
+    required int pointsThreshold,
+    required bool isRevealed,
+    required bool isEarned,
+    required DateTime? earnedAt,
+    required DateTime createdAt,
+    required String? curriculumId,
+  }) async {
+    final existing = await (select(
+      rewards,
+    )..where((t) => t.title.equals(title))).getSingleOrNull();
+
+    if (existing == null) {
+      await insertReward(
+        RewardsCompanion.insert(
+          title: title,
+          description: description,
+          pointsThreshold: pointsThreshold,
+          isRevealed: Value(isRevealed),
+          isEarned: Value(isEarned),
+          earnedAt: Value(earnedAt),
+          createdAt: Value(createdAt),
+          curriculumId: Value(curriculumId),
+        ),
+      );
+    } else {
+      // For rewards, update if remote has more progress (earned > not earned)
+      final shouldUpdate =
+          isEarned && !existing.isEarned || isRevealed && !existing.isRevealed;
+      if (shouldUpdate) {
+        await (update(rewards)..where((t) => t.id.equals(existing.id))).write(
+          RewardsCompanion(
+            isRevealed: Value(isRevealed || existing.isRevealed),
+            isEarned: Value(isEarned || existing.isEarned),
+            earnedAt: Value(earnedAt ?? existing.earnedAt),
+          ),
+        );
+      }
+    }
+  }
 }

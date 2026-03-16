@@ -33,7 +33,9 @@ class SyncEngine {
   final _statusController = StreamController<SyncStatus>.broadcast();
   Stream<SyncStatus> get statusStream => _statusController.stream;
 
-  SyncStatus _currentStatus = SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc());
+  SyncStatus _currentStatus = SyncStatus.synced(
+    lastSyncedAt: DateTime.now().toUtc(),
+  );
   SyncStatus get currentStatus => _currentStatus;
 
   StreamSubscription<List<Map<String, dynamic>>>? _completionsSubscription;
@@ -158,6 +160,8 @@ class SyncEngine {
       final completions = await _firestoreDataSource.fetchCompletions();
       final bookmarks = await _firestoreDataSource.fetchBookmarks();
       final settings = await _firestoreDataSource.fetchSettings();
+      final goals = await _firestoreDataSource.fetchGoals();
+      final rewards = await _firestoreDataSource.fetchRewards();
       final streak = await _firestoreDataSource.fetchStreak();
       final profile = await _firestoreDataSource.fetchProfile();
 
@@ -165,6 +169,8 @@ class SyncEngine {
       await _mergeCompletions(completions);
       await _mergeBookmarks(bookmarks);
       await _mergeSettings(settings);
+      await _mergeGoals(goals);
+      await _mergeRewards(rewards);
       if (streak != null) await _mergeStreak(streak);
       if (profile != null) await _mergeProfile(profile);
 
@@ -173,7 +179,10 @@ class SyncEngine {
     } catch (e, stackTrace) {
       _logger.error('Pull-on-launch failed', e, stackTrace);
       _updateStatus(
-        SyncStatus.error(message: e.toString(), failedAt: DateTime.now().toUtc()),
+        SyncStatus.error(
+          message: e.toString(),
+          failedAt: DateTime.now().toUtc(),
+        ),
       );
     }
   }
@@ -494,6 +503,83 @@ class SyncEngine {
     }
   }
 
+  /// Merge goals from Firestore (last-write-wins per D4).
+  ///
+  /// For each remote goal, upsert into local DB. If local goal
+  /// is older, update it; otherwise keep the local version.
+  Future<void> _mergeGoals(List<Map<String, dynamic>> remoteGoals) async {
+    _logger.debug('Merging ${remoteGoals.length} goals from Firestore');
+
+    for (final remote in remoteGoals) {
+      try {
+        final curriculumId = remote['curriculum_id'] as String?;
+        final description = remote['description'] as String? ?? '';
+        final targetPercent =
+            (remote['target_percent'] as num?)?.toDouble() ?? 100.0;
+        final targetDate = _parseTimestamp(remote['target_date']);
+        final createdAt = _parseTimestamp(remote['created_at']);
+        final updatedAt = _parseTimestamp(remote['updated_at']);
+
+        if (curriculumId == null || createdAt == null || updatedAt == null) {
+          _logger.warning('Skipping invalid remote goal: $remote');
+          continue;
+        }
+
+        await _database.goalDao.upsertGoal(
+          curriculumId: curriculumId,
+          description: description,
+          targetPercent: targetPercent,
+          targetDate: targetDate,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        );
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+        _logger.warning('Failed to merge goal: $e');
+      }
+    }
+  }
+
+  /// Merge rewards from Firestore (last-write-wins per D4).
+  ///
+  /// For each remote reward, upsert into local DB. Rewards that are
+  /// earned remotely but not locally get updated.
+  Future<void> _mergeRewards(List<Map<String, dynamic>> remoteRewards) async {
+    _logger.debug('Merging ${remoteRewards.length} rewards from Firestore');
+
+    for (final remote in remoteRewards) {
+      try {
+        final title = remote['title'] as String?;
+        final description = remote['description'] as String? ?? '';
+        final pointsThreshold = remote['points_threshold'] as int?;
+        final isRevealed = remote['is_revealed'] as bool? ?? false;
+        final isEarned = remote['is_earned'] as bool? ?? false;
+        final earnedAt = _parseTimestamp(remote['earned_at']);
+        final createdAt = _parseTimestamp(remote['created_at']);
+        final curriculumId = remote['curriculum_id'] as String?;
+
+        if (title == null || pointsThreshold == null || createdAt == null) {
+          _logger.warning('Skipping invalid remote reward: $remote');
+          continue;
+        }
+
+        await _database.rewardDao.upsertReward(
+          title: title,
+          description: description,
+          pointsThreshold: pointsThreshold,
+          isRevealed: isRevealed,
+          isEarned: isEarned,
+          earnedAt: earnedAt,
+          createdAt: createdAt,
+          curriculumId: curriculumId,
+        );
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+        _logger.warning('Failed to merge reward: $e');
+      }
+    }
+  }
+
   /// Merge streak from Firestore (last-write-wins per D4).
   ///
   /// Streak is a precomputed cache in Firestore. Locally, streak can be
@@ -566,7 +652,10 @@ class SyncEngine {
   void _handleListenerError(Object error, StackTrace stackTrace) {
     _logger.error('Listener error', error, stackTrace);
     _updateStatus(
-      SyncStatus.error(message: error.toString(), failedAt: DateTime.now().toUtc()),
+      SyncStatus.error(
+        message: error.toString(),
+        failedAt: DateTime.now().toUtc(),
+      ),
     );
   }
 
@@ -592,7 +681,10 @@ class SyncEngine {
     } catch (e, stackTrace) {
       _logger.error('Failed to flush offline queue', e, stackTrace);
       _updateStatus(
-        SyncStatus.error(message: e.toString(), failedAt: DateTime.now().toUtc()),
+        SyncStatus.error(
+          message: e.toString(),
+          failedAt: DateTime.now().toUtc(),
+        ),
       );
     }
   }

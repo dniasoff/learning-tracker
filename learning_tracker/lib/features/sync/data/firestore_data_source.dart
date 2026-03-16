@@ -90,16 +90,33 @@ class FirestoreDataSource {
     });
   }
 
-  /// Fetch all completions from Firestore.
-  Future<List<Map<String, dynamic>>> fetchCompletions() async {
+  /// Page size for paginated Firestore fetches.
+  static const int defaultPageSize = 500;
+
+  /// Fetch all completions from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchCompletions({
+    int pageSize = defaultPageSize,
+  }) async {
     final collection = _completionsCollection;
     if (collection == null) return [];
 
-    final snapshot = await collection.get();
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return {...data, 'firestore_id': doc.id};
-    }).toList();
+    final results = <Map<String, dynamic>>[];
+    var query = collection.orderBy(FieldPath.documentId).limit(pageSize);
+
+    while (true) {
+      final snapshot = await query.get();
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        results.add({...data, 'firestore_id': doc.id});
+      }
+      if (snapshot.docs.length < pageSize) break;
+      query = collection
+          .orderBy(FieldPath.documentId)
+          .startAfterDocument(snapshot.docs.last)
+          .limit(pageSize);
+    }
+
+    return results;
   }
 
   /// Listen to real-time completions updates.
@@ -234,6 +251,15 @@ class FirestoreDataSource {
 
   // ========== Goal Operations ==========
 
+  /// Fetch all goals from Firestore.
+  Future<List<Map<String, dynamic>>> fetchGoals() async {
+    final collection = _userDoc?.collection('goals');
+    if (collection == null) return [];
+
+    final snapshot = await collection.get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
   /// Push a goal to Firestore (last-write-wins).
   Future<void> pushGoal(Map<String, dynamic> goalData) async {
     final collection = _userDoc?.collection('goals');
@@ -253,6 +279,15 @@ class FirestoreDataSource {
   }
 
   // ========== Reward Operations ==========
+
+  /// Fetch all rewards from Firestore.
+  Future<List<Map<String, dynamic>>> fetchRewards() async {
+    final collection = _userDoc?.collection('rewards');
+    if (collection == null) return [];
+
+    final snapshot = await collection.get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
 
   /// Push a reward to Firestore (last-write-wins).
   Future<void> pushReward(Map<String, dynamic> rewardData) async {
