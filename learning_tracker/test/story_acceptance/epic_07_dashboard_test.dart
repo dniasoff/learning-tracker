@@ -5,7 +5,7 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart'
-    hide group, test, setUp, tearDown, expect;
+    hide expect, group, setUp, tearDown, test;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -20,7 +20,7 @@ import 'package:learning_tracker/features/progress/domain/services/chart_data_se
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
-import 'package:test/test.dart' hide isNull, isNotNull;
+import 'package:test/test.dart' hide isNotNull, isNull;
 
 import '../helpers/test_database.dart';
 
