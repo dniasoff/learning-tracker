@@ -80,10 +80,7 @@ class _DashboardBody extends StatelessWidget {
 
           // Per-curriculum cards
           if (data.curricula.isNotEmpty) ...[
-            Text(
-              'Curricula',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Curricula', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ...data.curricula.map(
               (summary) => Padding(

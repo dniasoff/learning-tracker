@@ -11,7 +11,8 @@ class CurriculumCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final pctText = '${(summary.completionPercentage * 100).toStringAsFixed(0)}%';
+    final pctText =
+        '${(summary.completionPercentage * 100).toStringAsFixed(0)}%';
 
     return Card(
       child: Padding(

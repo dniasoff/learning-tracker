@@ -76,21 +76,19 @@ class ParentDashboardAggregator {
   Future<ParentDashboardData> compute() async {
     final completions = await _db.completionDao.getAllCompletions();
     final streak = await _db.streakDao.getStreak();
-    final activeCurriculaKeys =
-        await _db.activeCurriculumDao.getActiveCurricula();
+    final activeCurriculaKeys = await _db.activeCurriculumDao
+        .getActiveCurricula();
 
     final activeCurricula = activeCurriculaKeys
         .map<CurriculumId?>((key) {
-          final matches =
-              CurriculumId.values.where((c) => c.storageKey == key);
+          final matches = CurriculumId.values.where((c) => c.storageKey == key);
           return matches.isNotEmpty ? matches.first : null;
         })
         .whereType<CurriculumId>()
         .toList();
 
     // Global points
-    final globalPoints =
-        completions.fold<int>(0, (sum, c) => sum + c.points);
+    final globalPoints = completions.fold<int>(0, (sum, c) => sum + c.points);
 
     // Per-curriculum summaries
     final curriculaSummaries = <CurriculumSummary>[];
@@ -107,18 +105,19 @@ class ParentDashboardAggregator {
     // Recent completions (last 7 days)
     final now = DateTime.now().toUtc();
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
-    final recent = completions
-        .where((c) => c.completedAt.isAfter(sevenDaysAgo))
-        .map(
-          (c) => RecentCompletion(
-            sefariaRef: c.sefariaRef,
-            curriculumId: c.curriculumId,
-            completedAt: c.completedAt,
-            points: c.points,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+    final recent =
+        completions
+            .where((c) => c.completedAt.isAfter(sevenDaysAgo))
+            .map(
+              (c) => RecentCompletion(
+                sefariaRef: c.sefariaRef,
+                curriculumId: c.curriculumId,
+                completedAt: c.completedAt,
+                points: c.points,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
 
     // Engagement metrics
     final engagement = _computeEngagement(completions, now);
@@ -134,9 +133,7 @@ class ParentDashboardAggregator {
   }
 
   /// Compute completion percentage for a curriculum.
-  Future<double> computeCompletionPercentage(
-    CurriculumId curriculum,
-  ) async {
+  Future<double> computeCompletionPercentage(CurriculumId curriculum) async {
     final completions = await _db.completionDao.getCompletionsByCurriculum(
       curriculum.storageKey,
     );
@@ -181,9 +178,7 @@ class ParentDashboardAggregator {
     CurriculumId curriculum,
     List<Completion> completions,
   ) async {
-    final goals = await _db.goalDao.getGoalsByCurriculum(
-      curriculum.storageKey,
-    );
+    final goals = await _db.goalDao.getGoalsByCurriculum(curriculum.storageKey);
     if (goals.isEmpty) return PaceStatusType.onPace;
 
     final goal = goals.first;
@@ -247,9 +242,7 @@ class ParentDashboardAggregator {
   ) {
     // Days active this week (Mon-Sun containing today)
     final localNow = now.toLocal();
-    final weekStart = localNow.subtract(
-      Duration(days: localNow.weekday - 1),
-    );
+    final weekStart = localNow.subtract(Duration(days: localNow.weekday - 1));
     final weekStartDate = DateTime(
       weekStart.year,
       weekStart.month,
@@ -268,8 +261,9 @@ class ParentDashboardAggregator {
 
     // Average daily completions over last 7 days
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
-    final recentCount =
-        completions.where((c) => c.completedAt.isAfter(sevenDaysAgo)).length;
+    final recentCount = completions
+        .where((c) => c.completedAt.isAfter(sevenDaysAgo))
+        .length;
     final avgDaily = recentCount / 7.0;
 
     return EngagementMetrics(

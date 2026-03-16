@@ -302,29 +302,26 @@ void main() {
 
     // ── Unit: aggregator computes correct completion % ──
 
-    test(
-      'aggregator computes correct completion % across curricula',
-      () async {
-        await seedCurriculumAndCompletions(
-          db,
-          curriculumId: 'mishnayos',
-          completionCount: 4,
-          stageCount: 2,
-          pointsPerCompletion: 10,
-        );
+    test('aggregator computes correct completion % across curricula', () async {
+      await seedCurriculumAndCompletions(
+        db,
+        curriculumId: 'mishnayos',
+        completionCount: 4,
+        stageCount: 2,
+        pointsPerCompletion: 10,
+      );
 
-        final aggregator = ParentDashboardAggregator(db);
-        final pct = await aggregator.computeCompletionPercentage(
-          CurriculumId.mishnayos,
-        );
+      final aggregator = ParentDashboardAggregator(db);
+      final pct = await aggregator.computeCompletionPercentage(
+        CurriculumId.mishnayos,
+      );
 
-        // 4 completions across 2 stages: refs 0,1 get stages 1,2; refs 2,3 get 1,2
-        // ref-mishnayos-0: stage 1, ref-mishnayos-1: stage 2, etc.
-        // So ref-0 has {1}, ref-1 has {2}, ref-2 has {1}, ref-3 has {2}
-        // None fully completed (need both stages) → 0/4 = 0.0
-        expect(pct, equals(0.0));
-      },
-    );
+      // 4 completions across 2 stages: refs 0,1 get stages 1,2; refs 2,3 get 1,2
+      // ref-mishnayos-0: stage 1, ref-mishnayos-1: stage 2, etc.
+      // So ref-0 has {1}, ref-1 has {2}, ref-2 has {1}, ref-3 has {2}
+      // None fully completed (need both stages) → 0/4 = 0.0
+      expect(pct, equals(0.0));
+    });
 
     test('aggregator returns 0% when no completions', () async {
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
@@ -459,9 +456,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-          ],
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentModeScreen()),
         ),
       );

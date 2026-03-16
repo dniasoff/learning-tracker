@@ -13,10 +13,12 @@ class RecentCompletionsList extends StatelessWidget {
     return Card(
       child: Column(
         children: completions.take(20).map((c) {
-          final curriculumName = CurriculumId.values
-              .where((cid) => cid.storageKey == c.curriculumId)
-              .map((cid) => cid.displayNameEn)
-              .firstOrNull ?? c.curriculumId;
+          final curriculumName =
+              CurriculumId.values
+                  .where((cid) => cid.storageKey == c.curriculumId)
+                  .map((cid) => cid.displayNameEn)
+                  .firstOrNull ??
+              c.curriculumId;
           final localDate = c.completedAt.toLocal();
           final dateStr =
               '${localDate.month}/${localDate.day} ${localDate.hour}:${localDate.minute.toString().padLeft(2, '0')}';
