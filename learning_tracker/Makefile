@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-13.1 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-13.1 test-story-13.2 test-epic-13 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -45,6 +45,12 @@ test-story-8.4: ## Run Story 8.4 (Completion Feedback & Animations) acceptance t
 
 test-story-13.1: ## Run Story 13.1 (Push-on-Write with Offline Queuing) acceptance tests
 	flutter test test/story_acceptance/epic_13_cloud_sync_test.dart --name "Story 13.1"
+
+test-story-13.2: ## Run Story 13.2 (Pull-on-Launch Merge) acceptance tests
+	flutter test test/story_acceptance/epic_13_cloud_sync_test.dart --name "Story 13.2"
+
+test-epic-13: ## Run all Epic 13 (Cloud Sync) acceptance tests
+	flutter test test/story_acceptance/epic_13_cloud_sync_test.dart
 
 ci: analyze test ## Run full CI pipeline (analyze + all tests)
 
