@@ -88,14 +88,16 @@ class _DashboardBody extends ConsumerWidget {
         continue;
       }
 
-      summaries.add(CurriculumSummary(
-        curriculumId: curriculum,
-        completionPercentage: percentageAsync.asData?.value ?? 0.0,
-        paceStatus: null,
-        nextDueItem: null,
-        todayTaskCount: 0,
-        lastCompletionAt: lastCompletionAsync.asData?.value,
-      ));
+      summaries.add(
+        CurriculumSummary(
+          curriculumId: curriculum,
+          completionPercentage: percentageAsync.asData?.value ?? 0.0,
+          paceStatus: null,
+          nextDueItem: null,
+          todayTaskCount: 0,
+          lastCompletionAt: lastCompletionAsync.asData?.value,
+        ),
+      );
     }
 
     if (!allLoaded && summaries.isEmpty) {
@@ -150,9 +152,11 @@ class _DashboardBody extends ConsumerWidget {
             child: _ContinueLearningButton(
               curriculum: mostRecent.curriculumId,
               onTap: () {
-                context.router.push(CurriculumProgressRoute(
-                  curriculumId: mostRecent.curriculumId.storageKey,
-                ));
+                context.router.push(
+                  CurriculumProgressRoute(
+                    curriculumId: mostRecent.curriculumId.storageKey,
+                  ),
+                );
               },
             ),
           ),
@@ -162,9 +166,11 @@ class _DashboardBody extends ConsumerWidget {
             child: CurriculumSummaryCard(
               summary: summary,
               onTap: () {
-                context.router.push(CurriculumProgressRoute(
-                  curriculumId: summary.curriculumId.storageKey,
-                ));
+                context.router.push(
+                  CurriculumProgressRoute(
+                    curriculumId: summary.curriculumId.storageKey,
+                  ),
+                );
               },
             ),
           ),

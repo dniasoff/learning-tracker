@@ -47,8 +47,7 @@ class DashboardStats {
     CurriculumSummary? best;
     for (final s in curriculumSummaries) {
       if (s.lastCompletionAt == null) continue;
-      if (best == null ||
-          s.lastCompletionAt!.isAfter(best.lastCompletionAt!)) {
+      if (best == null || s.lastCompletionAt!.isAfter(best.lastCompletionAt!)) {
         best = s;
       }
     }
@@ -82,14 +81,16 @@ class CrossCurriculumAggregator {
     for (final curriculum in activeCurricula) {
       final taskCount = todayTaskCounts[curriculum] ?? 0;
       totalTasks += taskCount;
-      summaries.add(CurriculumSummary(
-        curriculumId: curriculum,
-        completionPercentage: completionPercentages[curriculum] ?? 0.0,
-        paceStatus: paceStatuses[curriculum],
-        nextDueItem: nextDueItems[curriculum],
-        todayTaskCount: taskCount,
-        lastCompletionAt: lastCompletions[curriculum],
-      ));
+      summaries.add(
+        CurriculumSummary(
+          curriculumId: curriculum,
+          completionPercentage: completionPercentages[curriculum] ?? 0.0,
+          paceStatus: paceStatuses[curriculum],
+          nextDueItem: nextDueItems[curriculum],
+          todayTaskCount: taskCount,
+          lastCompletionAt: lastCompletions[curriculum],
+        ),
+      );
     }
 
     return DashboardStats(

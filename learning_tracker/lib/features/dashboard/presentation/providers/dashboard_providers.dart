@@ -122,10 +122,7 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   return db.streakDao.watchStreak().map((streak) {
     if (streak == null) return (currentStreak: 0, maxStreak: 0);
-    return (
-      currentStreak: streak.currentStreak,
-      maxStreak: streak.maxStreak,
-    );
+    return (currentStreak: streak.currentStreak, maxStreak: streak.maxStreak);
   });
 }
 

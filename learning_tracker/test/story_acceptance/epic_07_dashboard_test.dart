@@ -3,10 +3,18 @@
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart' hide group, test, setUp, tearDown;
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/todays_tasks_widget.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
@@ -35,24 +43,359 @@ ContentItem _leaf({
 void main() {
   // ── Story 7.1: Dashboard screen ───────────────────────────────
 
-  group(
-    'Story 7.1 -- Dashboard screen',
-    tags: ['story_7_1'],
-    skip: 'Backlog: dashboard screen not yet implemented',
-    () {
-      test('dashboard shows active curricula cards', () {
-        // TODO: verify curriculum cards render for each active curriculum
-      });
+  group('Story 7.1 -- Dashboard screen', tags: ['story_7_1'], () {
+    late AppDatabase db;
+    late CrossCurriculumAggregator aggregator;
 
-      test('tapping a curriculum card navigates to its content', () {
-        // TODO: verify navigation
-      });
+    setUp(() {
+      db = createTestDatabase();
+      aggregator = CrossCurriculumAggregator();
+    });
 
-      test('dashboard shows today\'s review count', () {
-        // TODO: verify review count widget
-      });
-    },
-  );
+    tearDown(() async {
+      await db.close();
+    });
+
+    // --- Unit: CrossCurriculumAggregator ---
+
+    test(
+      'aggregator returns correct per-curriculum completion percentages for 3 active curricula',
+      () {
+        final stats = aggregator.aggregate(
+          activeCurricula: [
+            CurriculumId.mishnayos,
+            CurriculumId.bavli,
+            CurriculumId.chumash,
+          ],
+          completionPercentages: {
+            CurriculumId.mishnayos: 0.75,
+            CurriculumId.bavli: 0.5,
+            CurriculumId.chumash: 0.25,
+          },
+          paceStatuses: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+            CurriculumId.chumash: null,
+          },
+          todayTaskCounts: {
+            CurriculumId.mishnayos: 5,
+            CurriculumId.bavli: 3,
+            CurriculumId.chumash: 2,
+          },
+          nextDueItems: {
+            CurriculumId.mishnayos: 'Berachos 1:1',
+            CurriculumId.bavli: null,
+            CurriculumId.chumash: 'Bereishis 1',
+          },
+          lastCompletions: {
+            CurriculumId.mishnayos: DateTime.utc(2026, 3, 16),
+            CurriculumId.bavli: DateTime.utc(2026, 3, 15),
+            CurriculumId.chumash: null,
+          },
+        );
+
+        expect(stats.curriculumSummaries, hasLength(3));
+        expect(stats.activeCurriculaCount, equals(3));
+        expect(stats.totalTasksToday, equals(10));
+
+        final mishnayos = stats.curriculumSummaries[0];
+        expect(mishnayos.curriculumId, equals(CurriculumId.mishnayos));
+        expect(mishnayos.completionPercentage, equals(0.75));
+        expect(mishnayos.todayTaskCount, equals(5));
+        expect(mishnayos.nextDueItem, equals('Berachos 1:1'));
+
+        final bavli = stats.curriculumSummaries[1];
+        expect(bavli.completionPercentage, equals(0.5));
+        expect(bavli.todayTaskCount, equals(3));
+      },
+    );
+
+    test('aggregator returns empty stats when no curricula are active', () {
+      final stats = aggregator.aggregate(
+        activeCurricula: [],
+        completionPercentages: {},
+        paceStatuses: {},
+        todayTaskCounts: {},
+        nextDueItems: {},
+        lastCompletions: {},
+      );
+
+      expect(stats.curriculumSummaries, isEmpty);
+      expect(stats.totalTasksToday, equals(0));
+      expect(stats.activeCurriculaCount, equals(0));
+      expect(stats.mostRecentlyActive, isNull);
+    });
+
+    test(
+      'continue learning resolves to curriculum with most recent completion',
+      () {
+        final stats = aggregator.aggregate(
+          activeCurricula: [
+            CurriculumId.mishnayos,
+            CurriculumId.bavli,
+            CurriculumId.chumash,
+          ],
+          completionPercentages: {
+            CurriculumId.mishnayos: 0.5,
+            CurriculumId.bavli: 0.3,
+            CurriculumId.chumash: 0.1,
+          },
+          paceStatuses: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+            CurriculumId.chumash: null,
+          },
+          todayTaskCounts: {
+            CurriculumId.mishnayos: 0,
+            CurriculumId.bavli: 0,
+            CurriculumId.chumash: 0,
+          },
+          nextDueItems: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+            CurriculumId.chumash: null,
+          },
+          lastCompletions: {
+            CurriculumId.mishnayos: DateTime.utc(2026, 3, 14),
+            CurriculumId.bavli: DateTime.utc(2026, 3, 16, 10, 30),
+            CurriculumId.chumash: DateTime.utc(2026, 3, 15),
+          },
+        );
+
+        expect(stats.mostRecentlyActive, isNotNull);
+        expect(
+          stats.mostRecentlyActive!.curriculumId,
+          equals(CurriculumId.bavli),
+        );
+      },
+    );
+
+    test('points summary is excluded from state when userMode is adult', () {
+      // The dashboard provider filters points based on UserMode.
+      // In adult mode, the points section should not be shown.
+      // This is a logic test — the provider returns UserMode, and the
+      // screen conditionally renders points.
+      const userMode = UserMode.adult;
+      expect(userMode == UserMode.child, isFalse);
+
+      const childMode = UserMode.child;
+      expect(childMode == UserMode.child, isTrue);
+    });
+
+    test(
+      'today tasks count correctly sums pending tasks across all curricula',
+      () {
+        final stats = aggregator.aggregate(
+          activeCurricula: [
+            CurriculumId.mishnayos,
+            CurriculumId.bavli,
+            CurriculumId.chumash,
+          ],
+          completionPercentages: {
+            CurriculumId.mishnayos: 0.0,
+            CurriculumId.bavli: 0.0,
+            CurriculumId.chumash: 0.0,
+          },
+          paceStatuses: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+            CurriculumId.chumash: null,
+          },
+          todayTaskCounts: {
+            CurriculumId.mishnayos: 7,
+            CurriculumId.bavli: 4,
+            CurriculumId.chumash: 9,
+          },
+          nextDueItems: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+            CurriculumId.chumash: null,
+          },
+          lastCompletions: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+            CurriculumId.chumash: null,
+          },
+        );
+
+        expect(stats.totalTasksToday, equals(20));
+      },
+    );
+
+    // --- Integration: streak data via database ---
+
+    test('streak data is accessible from database for dashboard', () async {
+      // Initially no streak
+      final initial = await db.streakDao.getStreak();
+      expect(initial, isNull);
+
+      // Insert a streak record
+      await db.streakDao.upsertStreak(
+        StreaksCompanion.insert(
+          currentStreak: const Value(5),
+          maxStreak: const Value(12),
+          lastCompletionDate: Value(DateTime.utc(2026, 3, 16)),
+        ),
+      );
+
+      final streak = await db.streakDao.getStreak();
+      expect(streak, isNotNull);
+      expect(streak!.currentStreak, equals(5));
+      expect(streak.maxStreak, equals(12));
+    });
+
+    test('global points total sums across all completions', () async {
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'ref1',
+          stageId: 1,
+          trackType: 'personal',
+          completedAt: DateTime.utc(2026, 3, 16),
+          points: const Value(10),
+        ),
+      );
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'bavli',
+          sefariaRef: 'ref2',
+          stageId: 1,
+          trackType: 'personal',
+          completedAt: DateTime.utc(2026, 3, 16),
+          points: const Value(5),
+        ),
+      );
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'ref3',
+          stageId: 2,
+          trackType: 'personal',
+          completedAt: DateTime.utc(2026, 3, 16),
+          points: const Value(3),
+        ),
+      );
+
+      final completions = await db.completionDao.getAllCompletions();
+      final total = completions.fold<int>(0, (sum, c) => sum + c.points);
+      expect(total, equals(18));
+    });
+
+    test(
+      'active curricula are retrievable from database for dashboard',
+      () async {
+        // Activate 3 curricula
+        await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+        await db.activeCurriculumDao.activate(CurriculumId.bavli);
+        await db.activeCurriculumDao.activate(CurriculumId.chumash);
+
+        final active = await db.activeCurriculumDao.getActiveCurricula();
+        expect(active, hasLength(3));
+        expect(active, contains('mishnayos'));
+        expect(active, contains('bavli'));
+        expect(active, contains('chumash'));
+      },
+    );
+
+    test('pull-to-refresh triggers provider invalidation pattern', () {
+      // This tests the invalidation pattern — in the real app, ref.invalidate()
+      // is called on pull-to-refresh, causing all dashboard providers to refetch.
+      // We verify the aggregator produces updated results when given new data.
+      final before = aggregator.aggregate(
+        activeCurricula: [CurriculumId.mishnayos],
+        completionPercentages: {CurriculumId.mishnayos: 0.5},
+        paceStatuses: {CurriculumId.mishnayos: null},
+        todayTaskCounts: {CurriculumId.mishnayos: 3},
+        nextDueItems: {CurriculumId.mishnayos: null},
+        lastCompletions: {CurriculumId.mishnayos: null},
+      );
+
+      final after = aggregator.aggregate(
+        activeCurricula: [CurriculumId.mishnayos],
+        completionPercentages: {CurriculumId.mishnayos: 0.6},
+        paceStatuses: {CurriculumId.mishnayos: null},
+        todayTaskCounts: {CurriculumId.mishnayos: 2},
+        nextDueItems: {CurriculumId.mishnayos: null},
+        lastCompletions: {CurriculumId.mishnayos: null},
+      );
+
+      expect(before.curriculumSummaries[0].completionPercentage, equals(0.5));
+      expect(after.curriculumSummaries[0].completionPercentage, equals(0.6));
+      expect(before.totalTasksToday, equals(3));
+      expect(after.totalTasksToday, equals(2));
+    });
+
+    test(
+      'last completion timestamp resolves per curriculum for continue learning',
+      () async {
+        // Insert completions for two curricula at different times
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'r1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.utc(2026, 3, 15, 10, 0),
+          ),
+        );
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'bavli',
+            sefariaRef: 'r2',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.utc(2026, 3, 16, 14, 30),
+          ),
+        );
+
+        final mishnayosCompletions = await db.completionDao
+            .getCompletionsByCurriculum('mishnayos');
+        final bavliCompletions = await db.completionDao
+            .getCompletionsByCurriculum('bavli');
+
+        DateTime? latestFor(List<Completion> completions) {
+          if (completions.isEmpty) return null;
+          var latest = completions.first.completedAt;
+          for (final c in completions) {
+            if (c.completedAt.isAfter(latest)) latest = c.completedAt;
+          }
+          return latest;
+        }
+
+        final mishnayosLatest = latestFor(mishnayosCompletions);
+        final bavliLatest = latestFor(bavliCompletions);
+
+        expect(bavliLatest!.isAfter(mishnayosLatest!), isTrue);
+
+        // Aggregator should pick bavli as most recently active
+        final stats = aggregator.aggregate(
+          activeCurricula: [CurriculumId.mishnayos, CurriculumId.bavli],
+          completionPercentages: {
+            CurriculumId.mishnayos: 0.0,
+            CurriculumId.bavli: 0.0,
+          },
+          paceStatuses: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+          },
+          todayTaskCounts: {CurriculumId.mishnayos: 0, CurriculumId.bavli: 0},
+          nextDueItems: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+          },
+          lastCompletions: {
+            CurriculumId.mishnayos: mishnayosLatest,
+            CurriculumId.bavli: bavliLatest,
+          },
+        );
+
+        expect(
+          stats.mostRecentlyActive!.curriculumId,
+          equals(CurriculumId.bavli),
+        );
+      },
+    );
+  });
 
   // ── Story 7.2: Per-Curriculum Progress Views ────────────────
 

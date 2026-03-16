@@ -6,10 +6,7 @@ import 'package:flutter/material.dart';
 class PointsSummaryWidget extends StatelessWidget {
   final int totalPoints;
 
-  const PointsSummaryWidget({
-    super.key,
-    required this.totalPoints,
-  });
+  const PointsSummaryWidget({super.key, required this.totalPoints});
 
   @override
   Widget build(BuildContext context) {

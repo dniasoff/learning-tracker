@@ -20,11 +20,7 @@ class TodaysTasksWidget extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(
-              Icons.task_alt,
-              color: theme.colorScheme.primary,
-              size: 28,
-            ),
+            Icon(Icons.task_alt, color: theme.colorScheme.primary, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
