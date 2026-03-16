@@ -65,8 +65,9 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       );
       final progressBefore = curriculumEnum.isNotEmpty
           ? (await ref.read(
-              dashboardCompletionPercentageProvider(curriculumEnum.first)
-                  .future,
+              dashboardCompletionPercentageProvider(
+                curriculumEnum.first,
+              ).future,
             ))
           : 0.0;
 
@@ -98,8 +99,9 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
       final progressAfter = curriculumEnum.isNotEmpty
           ? (await ref.read(
-              dashboardCompletionPercentageProvider(curriculumEnum.first)
-                  .future,
+              dashboardCompletionPercentageProvider(
+                curriculumEnum.first,
+              ).future,
             ))
           : progressBefore + 0.01;
 
@@ -125,11 +127,13 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       // Show points popup non-blocking (child mode only)
       if (widget.userMode == UserMode.child) {
         if (mounted) {
-          unawaited(showPointsPopup(
-            context: context,
-            points: completion.points,
-            userMode: widget.userMode,
-          ));
+          unawaited(
+            showPointsPopup(
+              context: context,
+              points: completion.points,
+              userMode: widget.userMode,
+            ),
+          );
         }
       }
       // Adult mode: overlay checkmark animation handles feedback (no snackbar)

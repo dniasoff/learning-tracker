@@ -111,8 +111,9 @@ class OfflineQueue {
     final batches = <List<SyncQueueData>>[];
     if (batchSize != null) {
       for (var i = 0; i < allPending.length; i += batchSize) {
-        final end =
-            (i + batchSize > allPending.length) ? allPending.length : i + batchSize;
+        final end = (i + batchSize > allPending.length)
+            ? allPending.length
+            : i + batchSize;
         batches.add(allPending.sublist(i, end));
       }
     } else {
@@ -129,81 +130,81 @@ class OfflineQueue {
       }
 
       for (final operation in batches[batchIndex]) {
-      // Skip items that have exceeded the retry limit (dead-letter).
-      if (operation.retryCount >= maxRetries) {
-        _logger.warning(
-          'Skipping dead-letter operation #${operation.id} '
-          '(${operation.operationType}) after $maxRetries retries',
-        );
-        continue;
-      }
-
-      // Non-blocking exponential backoff: skip items whose retry time
-      // hasn't arrived yet instead of sleeping in the flush loop.
-      if (operation.retryCount > 0) {
-        final backoffSeconds = pow(2, operation.retryCount).toInt();
-        final nextRetryAt = operation.queuedAt.add(
-          Duration(seconds: backoffSeconds),
-        );
-        if (DateTime.now().toUtc().isBefore(nextRetryAt)) {
-          _logger.debug(
-            'Skipping operation #${operation.id} — backoff until $nextRetryAt '
-            '(retry ${operation.retryCount})',
+        // Skip items that have exceeded the retry limit (dead-letter).
+        if (operation.retryCount >= maxRetries) {
+          _logger.warning(
+            'Skipping dead-letter operation #${operation.id} '
+            '(${operation.operationType}) after $maxRetries retries',
           );
           continue;
         }
-      }
 
-      try {
-        final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
-
-        switch (operation.operationType) {
-          case 'completion':
-            await _firestoreDataSource.pushCompletion(payload);
-            break;
-          case 'bookmark':
-            await _firestoreDataSource.pushBookmark(payload);
-            break;
-          case 'settings':
-            await _firestoreDataSource.pushSettings(payload);
-            break;
-          case 'streak':
-            await _firestoreDataSource.pushStreak(payload);
-            break;
-          case 'profile':
-            await _firestoreDataSource.pushProfile(payload);
-            break;
-          case 'goal':
-            await _firestoreDataSource.pushGoal(payload);
-            break;
-          case 'reward':
-            await _firestoreDataSource.pushReward(payload);
-            break;
-          case 'curriculum_import_metadata':
-            await _firestoreDataSource.pushCurriculumImportMetadata(payload);
-            break;
-          default:
-            _logger.warning(
-              'Unknown operation type: ${operation.operationType}',
+        // Non-blocking exponential backoff: skip items whose retry time
+        // hasn't arrived yet instead of sleeping in the flush loop.
+        if (operation.retryCount > 0) {
+          final backoffSeconds = pow(2, operation.retryCount).toInt();
+          final nextRetryAt = operation.queuedAt.add(
+            Duration(seconds: backoffSeconds),
+          );
+          if (DateTime.now().toUtc().isBefore(nextRetryAt)) {
+            _logger.debug(
+              'Skipping operation #${operation.id} — backoff until $nextRetryAt '
+              '(retry ${operation.retryCount})',
             );
             continue;
+          }
         }
 
-        // Successfully synced, remove from queue
-        await _queue.remove(operation.id);
-        successCount++;
-        _logger.debug(
-          'Synced ${operation.operationType} operation #${operation.id}',
-        );
-      } catch (e, stackTrace) {
-        _logger.error(
-          'Failed to sync ${operation.operationType} operation #${operation.id}',
-          e,
-          stackTrace,
-        );
-        await _queue.markFailed(operation.id, e.toString());
+        try {
+          final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
+
+          switch (operation.operationType) {
+            case 'completion':
+              await _firestoreDataSource.pushCompletion(payload);
+              break;
+            case 'bookmark':
+              await _firestoreDataSource.pushBookmark(payload);
+              break;
+            case 'settings':
+              await _firestoreDataSource.pushSettings(payload);
+              break;
+            case 'streak':
+              await _firestoreDataSource.pushStreak(payload);
+              break;
+            case 'profile':
+              await _firestoreDataSource.pushProfile(payload);
+              break;
+            case 'goal':
+              await _firestoreDataSource.pushGoal(payload);
+              break;
+            case 'reward':
+              await _firestoreDataSource.pushReward(payload);
+              break;
+            case 'curriculum_import_metadata':
+              await _firestoreDataSource.pushCurriculumImportMetadata(payload);
+              break;
+            default:
+              _logger.warning(
+                'Unknown operation type: ${operation.operationType}',
+              );
+              continue;
+          }
+
+          // Successfully synced, remove from queue
+          await _queue.remove(operation.id);
+          successCount++;
+          _logger.debug(
+            'Synced ${operation.operationType} operation #${operation.id}',
+          );
+        } catch (e, stackTrace) {
+          _logger.error(
+            'Failed to sync ${operation.operationType} operation #${operation.id}',
+            e,
+            stackTrace,
+          );
+          await _queue.markFailed(operation.id, e.toString());
+        }
       }
-    }
     }
 
     _logger.info(

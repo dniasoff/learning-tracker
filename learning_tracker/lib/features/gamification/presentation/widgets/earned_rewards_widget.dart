@@ -51,7 +51,9 @@ class EarnedRewardsWidget extends ConsumerWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) {
-        ref.read(talkerProvider).error('Failed to load earned rewards', error, stack);
+        ref
+            .read(talkerProvider)
+            .error('Failed to load earned rewards', error, stack);
         return const Text('Error loading rewards');
       },
     );
