@@ -1,9 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
+import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
+import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'progress_providers.g.dart';
@@ -55,3 +62,96 @@ final allCompletionHistoryProvider =
       final repository = ref.watch(progressRepositoryProvider);
       return repository.getAllCompletions();
     });
+
+/// Per-curriculum progress data provider (family keyed by curriculumId per P3).
+///
+/// Aggregates content hierarchy, completions, and stage definitions into
+/// a [CurriculumProgressData] with hierarchy breakdowns, stage breakdowns,
+/// track breakdowns, and overall stats.
+@riverpod
+Future<CurriculumProgressData> curriculumProgress(
+  Ref ref,
+  String curriculumId,
+) async {
+  final db = ref.watch(appDatabaseProvider);
+
+  // Resolve CurriculumId enum for content repository
+  final curriculumEnum = CurriculumId.values.firstWhere(
+    (c) => c.storageKey == curriculumId,
+  );
+
+  // Fetch content items, completions, stage definitions, hierarchy config
+  final contentItems = await ref.watch(
+    curriculumContentProvider(curriculumEnum).future,
+  );
+  final hierarchyConfig = await ref.watch(
+    curriculumHierarchyConfigProvider(curriculumEnum).future,
+  );
+  final completions = await db.completionDao.getCompletionsByCurriculum(
+    curriculumId,
+  );
+  final stageDefinitions = await db.stageDao.getStageDefinitionsByCurriculum(
+    curriculumId,
+  );
+
+  return CurriculumProgressService.compute(
+    curriculumId: curriculumId,
+    contentItems: contentItems,
+    completions: completions,
+    stageDefinitions: stageDefinitions,
+    levelLabels: hierarchyConfig.levelLabels,
+  );
+}
+
+/// Pace status for a curriculum (null if no goal exists).
+///
+/// Family provider keyed by curriculumId per P3.
+@riverpod
+Future<PaceStatus?> curriculumPaceStatus(Ref ref, String curriculumId) async {
+  final db = ref.watch(appDatabaseProvider);
+  final now = ref.watch(clockProvider);
+
+  // Get the most recent goal for this curriculum
+  final goals = await db.goalDao.getGoalsByCurriculum(curriculumId);
+  if (goals.isEmpty) return null;
+
+  final goal = goals.first;
+  if (goal.targetDate == null) return null;
+
+  // Resolve CurriculumId enum for content
+  final curriculumEnum = CurriculumId.values.firstWhere(
+    (c) => c.storageKey == curriculumId,
+  );
+
+  final hierarchyConfig = await ref.watch(
+    curriculumHierarchyConfigProvider(curriculumEnum).future,
+  );
+
+  // Get personal-track completions
+  final allCompletions = await db.completionDao.getCompletionsByCurriculum(
+    curriculumId,
+  );
+  final personalCompletions = allCompletions
+      .where((c) => c.trackType == TrackType.personal.storageKey)
+      .toList();
+
+  // Build daily counts
+  final dailyCounts = <DateTime, int>{};
+  for (final c in personalCompletions) {
+    final date = DateTime.utc(
+      c.completedAt.year,
+      c.completedAt.month,
+      c.completedAt.day,
+    );
+    dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
+  }
+
+  return PaceCalculator.calculate(
+    goalStartDate: goal.createdAt,
+    goalDeadline: goal.targetDate!,
+    totalItems: hierarchyConfig.totalItems,
+    completedItems: personalCompletions.length,
+    dailyCompletionCounts: dailyCounts,
+    today: now,
+  );
+}

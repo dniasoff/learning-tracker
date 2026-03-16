@@ -1,0 +1,306 @@
+import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
+import 'package:test/test.dart';
+
+import '../../../../helpers/test_database.dart';
+
+void main() {
+  late AppDatabase db;
+
+  setUp(() {
+    db = createTestDatabase();
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  /// Helper to create a leaf content item.
+  ContentItem leaf({
+    required String level1,
+    String? level2,
+    required String sefariaRef,
+  }) {
+    return ContentItem(
+      curriculumId: 'mishnayos',
+      level1: level1,
+      level2: level2,
+      displayNameHe: sefariaRef,
+      displayNameEn: sefariaRef,
+      sefariaRef: sefariaRef,
+      sortOrder: 0,
+      isLeaf: true,
+    );
+  }
+
+  /// Helper to insert a completion and return the generated row.
+  Future<Completion> insertCompletion(
+    AppDatabase db, {
+    required String sefariaRef,
+    required int stageId,
+    String trackType = 'personal',
+    String curriculumId = 'mishnayos',
+  }) async {
+    final id = await db.completionDao.insertCompletion(
+      CompletionsCompanion.insert(
+        curriculumId: curriculumId,
+        sefariaRef: sefariaRef,
+        stageId: stageId,
+        trackType: trackType,
+        completedAt: DateTime.utc(2026, 3, 15),
+      ),
+    );
+    return (await db.completionDao.getCompletionById(id))!;
+  }
+
+  /// Helper to insert a stage definition and return the row.
+  Future<StageDefinition> insertStage(
+    AppDatabase db, {
+    required int stageOrder,
+    required String stageName,
+    String curriculumId = 'mishnayos',
+  }) async {
+    final id = await db.stageDao.insertStageDefinition(
+      StageDefinitionsCompanion.insert(
+        curriculumId: curriculumId,
+        stageOrder: stageOrder,
+        stageName: stageName,
+        delayDays: 0,
+      ),
+    );
+    return (await db.stageDao.getStageDefinitionById(id))!;
+  }
+
+  group('CurriculumProgressService', () {
+    test(
+      'computes completion percentage for seder with 50% masechtos completed',
+      () async {
+        // 4 leaf items in Seder Zeraim, 2 completed
+        final items = [
+          leaf(level1: 'Seder Zeraim', level2: 'Berachos', sefariaRef: 'ref1'),
+          leaf(level1: 'Seder Zeraim', level2: 'Peah', sefariaRef: 'ref2'),
+          leaf(level1: 'Seder Zeraim', level2: 'Demai', sefariaRef: 'ref3'),
+          leaf(level1: 'Seder Zeraim', level2: 'Kilayim', sefariaRef: 'ref4'),
+        ];
+
+        final stage = await insertStage(
+          db,
+          stageOrder: 0,
+          stageName: 'Learned',
+        );
+        final completions = <Completion>[
+          await insertCompletion(db, sefariaRef: 'ref1', stageId: stage.id),
+          await insertCompletion(db, sefariaRef: 'ref2', stageId: stage.id),
+        ];
+
+        final result = CurriculumProgressService.compute(
+          curriculumId: 'mishnayos',
+          contentItems: items,
+          completions: completions,
+          stageDefinitions: [stage],
+          levelLabels: ['Seder', 'Masechta'],
+        );
+
+        expect(result.hierarchyLevels, hasLength(1));
+        final seder = result.hierarchyLevels[0];
+        expect(seder.levelName, 'Seder Zeraim');
+        expect(seder.totalItems, 4);
+        expect(seder.completedItems, 2);
+        expect(seder.completionPercentage, 0.5);
+      },
+    );
+
+    test('stage breakdown counts are accurate per hierarchy level', () async {
+      final items = [
+        leaf(level1: 'Seder Zeraim', sefariaRef: 'ref1'),
+        leaf(level1: 'Seder Zeraim', sefariaRef: 'ref2'),
+        leaf(level1: 'Seder Zeraim', sefariaRef: 'ref3'),
+      ];
+
+      final learnStage = await insertStage(
+        db,
+        stageOrder: 0,
+        stageName: 'Learned',
+      );
+      final chazara1 = await insertStage(
+        db,
+        stageOrder: 1,
+        stageName: 'Chazara 1',
+      );
+      final chazara2 = await insertStage(
+        db,
+        stageOrder: 2,
+        stageName: 'Chazara 2',
+      );
+
+      final completions = <Completion>[
+        // ref1: learned + chazara1
+        await insertCompletion(db, sefariaRef: 'ref1', stageId: learnStage.id),
+        await insertCompletion(db, sefariaRef: 'ref1', stageId: chazara1.id),
+        // ref2: learned only
+        await insertCompletion(db, sefariaRef: 'ref2', stageId: learnStage.id),
+        // ref3: learned + chazara1 + chazara2
+        await insertCompletion(db, sefariaRef: 'ref3', stageId: learnStage.id),
+        await insertCompletion(db, sefariaRef: 'ref3', stageId: chazara1.id),
+        await insertCompletion(db, sefariaRef: 'ref3', stageId: chazara2.id),
+      ];
+
+      final result = CurriculumProgressService.compute(
+        curriculumId: 'mishnayos',
+        contentItems: items,
+        completions: completions,
+        stageDefinitions: [learnStage, chazara1, chazara2],
+        levelLabels: ['Seder'],
+      );
+
+      final seder = result.hierarchyLevels[0];
+      expect(seder.stageBreakdown[0].stageName, 'Learned');
+      expect(seder.stageBreakdown[0].count, 3); // all 3 refs learned
+      expect(seder.stageBreakdown[1].stageName, 'Chazara 1');
+      expect(seder.stageBreakdown[1].count, 2); // ref1 + ref3
+      expect(seder.stageBreakdown[2].stageName, 'Chazara 2');
+      expect(seder.stageBreakdown[2].count, 1); // ref3 only
+    });
+
+    test('track breakdown separates personal, school, tutor counts', () async {
+      final items = [
+        leaf(level1: 'Seder Zeraim', level2: 'Berachos', sefariaRef: 'ref1'),
+      ];
+
+      final stage = await insertStage(db, stageOrder: 0, stageName: 'Learned');
+      final completions = <Completion>[
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref1',
+          stageId: stage.id,
+          trackType: 'personal',
+        ),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref1',
+          stageId: stage.id,
+          trackType: 'school',
+        ),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref1',
+          stageId: stage.id,
+          trackType: 'school',
+        ),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref1',
+          stageId: stage.id,
+          trackType: 'tutor',
+        ),
+      ];
+
+      final result = CurriculumProgressService.compute(
+        curriculumId: 'mishnayos',
+        contentItems: items,
+        completions: completions,
+        stageDefinitions: [stage],
+        levelLabels: ['Seder', 'Masechta'],
+      );
+
+      final seder = result.hierarchyLevels[0];
+      expect(seder.trackBreakdown[TrackType.personal], 1);
+      expect(seder.trackBreakdown[TrackType.school], 2);
+      expect(seder.trackBreakdown[TrackType.tutor], 1);
+    });
+
+    test('overall stats categorize items correctly', () async {
+      final items = [
+        leaf(level1: 'S1', sefariaRef: 'ref1'),
+        leaf(level1: 'S1', sefariaRef: 'ref2'),
+        leaf(level1: 'S1', sefariaRef: 'ref3'),
+        leaf(level1: 'S1', sefariaRef: 'ref4'),
+      ];
+
+      final s1 = await insertStage(db, stageOrder: 0, stageName: 'Learned');
+      final s2 = await insertStage(db, stageOrder: 1, stageName: 'Chazara 1');
+
+      final completions = <Completion>[
+        // ref1: completed all stages
+        await insertCompletion(db, sefariaRef: 'ref1', stageId: s1.id),
+        await insertCompletion(db, sefariaRef: 'ref1', stageId: s2.id),
+        // ref2: in progress (only 1 of 2 stages)
+        await insertCompletion(db, sefariaRef: 'ref2', stageId: s1.id),
+        // ref3, ref4: not started
+      ];
+
+      final result = CurriculumProgressService.compute(
+        curriculumId: 'mishnayos',
+        contentItems: items,
+        completions: completions,
+        stageDefinitions: [s1, s2],
+        levelLabels: ['Seder'],
+      );
+
+      expect(result.overallStats.totalItems, 4);
+      expect(result.overallStats.completedAllStages, 1);
+      expect(result.overallStats.inProgress, 1);
+      expect(result.overallStats.notStarted, 2);
+    });
+
+    test('hierarchy has correct sub-levels', () async {
+      final items = [
+        leaf(level1: 'Seder Zeraim', level2: 'Berachos', sefariaRef: 'ref1'),
+        leaf(level1: 'Seder Zeraim', level2: 'Berachos', sefariaRef: 'ref2'),
+        leaf(level1: 'Seder Zeraim', level2: 'Peah', sefariaRef: 'ref3'),
+        leaf(level1: 'Seder Moed', level2: 'Shabbos', sefariaRef: 'ref4'),
+      ];
+
+      final stage = await insertStage(db, stageOrder: 0, stageName: 'Learned');
+      final completions = <Completion>[
+        await insertCompletion(db, sefariaRef: 'ref1', stageId: stage.id),
+        await insertCompletion(db, sefariaRef: 'ref4', stageId: stage.id),
+      ];
+
+      final result = CurriculumProgressService.compute(
+        curriculumId: 'mishnayos',
+        contentItems: items,
+        completions: completions,
+        stageDefinitions: [stage],
+        levelLabels: ['Seder', 'Masechta'],
+      );
+
+      expect(result.hierarchyLevels, hasLength(2));
+
+      final zeraim = result.hierarchyLevels[0];
+      expect(zeraim.levelName, 'Seder Zeraim');
+      expect(zeraim.totalItems, 3);
+      expect(zeraim.completedItems, 1);
+      expect(zeraim.subLevels, hasLength(2));
+      expect(zeraim.subLevels![0].levelName, 'Berachos');
+      expect(zeraim.subLevels![0].totalItems, 2);
+      expect(zeraim.subLevels![0].completedItems, 1);
+      expect(zeraim.subLevels![1].levelName, 'Peah');
+      expect(zeraim.subLevels![1].totalItems, 1);
+      expect(zeraim.subLevels![1].completedItems, 0);
+
+      final moed = result.hierarchyLevels[1];
+      expect(moed.levelName, 'Seder Moed');
+      expect(moed.totalItems, 1);
+      expect(moed.completedItems, 1);
+    });
+
+    test('empty curriculum returns zero stats', () {
+      final result = CurriculumProgressService.compute(
+        curriculumId: 'mishnayos',
+        contentItems: [],
+        completions: [],
+        stageDefinitions: [],
+        levelLabels: ['Seder', 'Masechta'],
+      );
+
+      expect(result.hierarchyLevels, isEmpty);
+      expect(result.overallStats.totalItems, 0);
+      expect(result.overallStats.completedAllStages, 0);
+      expect(result.overallStats.inProgress, 0);
+      expect(result.overallStats.notStarted, 0);
+    });
+  });
+}

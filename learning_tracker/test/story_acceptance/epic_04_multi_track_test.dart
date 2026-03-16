@@ -659,6 +659,8 @@ void main() {
 
       testWidgets(
         'Toggling between aggregate view and track breakdown view updates the displayed data correctly',
+        // Superseded by Story 7.2: CurriculumProgressScreen now shows hierarchy breakdown instead of toggle
+        skip: true,
         (tester) async {
           // Arrange: Insert completions
           await database.completionDao.insertCompletion(
