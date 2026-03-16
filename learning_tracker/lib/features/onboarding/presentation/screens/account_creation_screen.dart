@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 
 @RoutePage()
 class AccountCreationScreen extends ConsumerStatefulWidget {
@@ -89,7 +91,19 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInWithGoogle();
       if (mounted) {
-        unawaited(context.router.push(const ModeSelectionRoute()));
+        // Check if returning user already has a mode set
+        final user = ref.read(firebaseAuthProvider).currentUser;
+        if (user != null) {
+          final profileService = ref.read(userProfileServiceProvider);
+          final existingMode = await profileService.getUserMode(user.uid);
+          if (mounted) {
+            if (existingMode != null) {
+              unawaited(context.router.replace(const OnboardingRoute()));
+            } else {
+              unawaited(context.router.push(const ModeSelectionRoute()));
+            }
+          }
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {

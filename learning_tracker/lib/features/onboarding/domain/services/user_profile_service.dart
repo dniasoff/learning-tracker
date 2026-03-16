@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -55,12 +57,21 @@ class UserProfileService {
       updatedAt: now,
     );
 
-    // Write to Firestore
-    await _pushUserProfile(
-      firebaseUid: firebaseUid,
-      displayName: displayName,
-      userMode: modeString,
-    );
+    // Write to Firestore (best-effort; local DB is source of truth)
+    try {
+      await _pushUserProfile(
+        firebaseUid: firebaseUid,
+        displayName: displayName,
+        userMode: modeString,
+      );
+    } catch (e, stack) {
+      developer.log(
+        'Firestore push failed for user $firebaseUid',
+        error: e,
+        stackTrace: stack,
+        name: 'UserProfileService',
+      );
+    }
   }
 
   /// Gets the current [UserMode] for the given user, or null if not set.
