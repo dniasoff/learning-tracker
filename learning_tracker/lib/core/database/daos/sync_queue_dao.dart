@@ -12,9 +12,9 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase>
 
   /// Get all pending operations in the queue, ordered FIFO by queued time.
   Future<List<SyncQueueData>> getAllPending() {
-    return (select(syncQueue)
-          ..orderBy([(t) => OrderingTerm.asc(t.queuedAt)]))
-        .get();
+    return (select(
+      syncQueue,
+    )..orderBy([(t) => OrderingTerm.asc(t.queuedAt)])).get();
   }
 
   /// Get count of pending operations.

@@ -1,18 +1,26 @@
 /// Story acceptance tests for Epic 11 -- Tutor Mode.
-/// Story 11.1 is active; stories 11.2-11.4 remain backlog (skipped).
+/// Story 11.1 is active; story 11.2 (tutor dashboard) is active.
+/// Stories 11.3-11.4 remain backlog (skipped).
 @Tags(['epic_11'])
 library;
 
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/tutor_mode/domain/services/tutor_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
+import 'package:learning_tracker/features/tutor_mode/presentation/providers/tutor_dashboard_providers.dart';
+import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_dashboard_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_pin_setup_screen.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
@@ -378,22 +386,463 @@ void main() {
     );
   });
 
-  // ── Story 11.2: Assignment creation ───────────────────────────
+  // ── Story 11.2: Tutor Dashboard (Read-Only) ──────────────────
 
-  group(
-    'Story 11.2 -- Assignment creation',
-    tags: ['story_11_2'],
-    skip: 'Backlog: assignment creation not yet implemented',
-    () {
-      test('tutor can assign specific content to student', () {
-        // TODO: verify assignment creation and storage
-      });
+  group('Story 11.2 -- Tutor Dashboard (Read-Only)', tags: ['story_11_2'], () {
+    late AppDatabase db;
 
-      test('assignments appear in student tutor track', () {
-        // TODO: verify assignment visibility in tutor track
-      });
-    },
-  );
+    setUp(() {
+      db = createTestDatabase();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<void> seedCompletions(AppDatabase db) async {
+      final now = DateTime.now().toUtc();
+      // Seed active curriculum
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+
+      // Seed stage definitions
+      await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              stageOrder: 1,
+              stageName: 'Learn',
+              delayDays: 0,
+            ),
+          );
+      await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              stageOrder: 2,
+              stageName: 'Chazara 1',
+              delayDays: 1,
+            ),
+          );
+      await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              stageOrder: 3,
+              stageName: 'Chazara 2',
+              delayDays: 7,
+            ),
+          );
+
+      // Seed completions with timestamps
+      for (var i = 0; i < 5; i++) {
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Mishnah Berakhot ${i + 1}',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: now.subtract(Duration(days: i)),
+            points: const Value(10),
+          ),
+        );
+      }
+      // Add a chazara completion for item 1
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Mishnah Berakhot 1',
+          stageId: 2,
+          trackType: 'personal',
+          completedAt: now.subtract(const Duration(days: 1)),
+          points: const Value(5),
+        ),
+      );
+    }
+
+    // Unit: Completion history query returns items with correct timestamps, sorted recent-first
+    test('completion history returns items sorted recent-first', () async {
+      await seedCompletions(db);
+      final aggregator = TutorDashboardAggregator(db);
+      final data = await aggregator.compute(
+        now: DateTime.now().toUtc(),
+        allTasks: [],
+      );
+
+      expect(data.completionHistory, isNotEmpty);
+      // Verify sorted by most recent first
+      for (var i = 0; i < data.completionHistory.length - 1; i++) {
+        expect(
+          data.completionHistory[i].completedAt.isAfter(
+                data.completionHistory[i + 1].completedAt,
+              ) ||
+              data.completionHistory[i].completedAt.isAtSameMomentAs(
+                data.completionHistory[i + 1].completedAt,
+              ),
+          isTrue,
+          reason: 'Completions should be sorted recent-first',
+        );
+      }
+      // Verify timestamps are present
+      for (final c in data.completionHistory) {
+        expect(c.completedAt, isNotNull);
+      }
+    });
+
+    // Unit: Chazara queue groups items by urgency correctly
+    test('chazara queue groups items by urgency', () async {
+      await seedCompletions(db);
+      final now = DateTime.now().toUtc();
+
+      // Create tasks with different chazara priorities
+      const tasks = [
+        DailyTask(
+          curriculumId: CurriculumId.mishnayos,
+          contentItemSefariaRef: 'Mishnah Berakhot 2',
+          stageOrder: 2,
+          stageDefinitionId: 2,
+          priority: DailyTaskPriority.overdueChazara,
+          isOverdue: true,
+          reason: 'Chazara 1 overdue by 3 day(s)',
+          stageName: 'Chazara 1',
+        ),
+        DailyTask(
+          curriculumId: CurriculumId.mishnayos,
+          contentItemSefariaRef: 'Mishnah Berakhot 3',
+          stageOrder: 2,
+          stageDefinitionId: 2,
+          priority: DailyTaskPriority.scheduledChazara,
+          isOverdue: false,
+          reason: 'Chazara 1 due today',
+          stageName: 'Chazara 1',
+        ),
+        DailyTask(
+          curriculumId: CurriculumId.mishnayos,
+          contentItemSefariaRef: 'Mishnah Berakhot 6',
+          stageOrder: 1,
+          stageDefinitionId: 1,
+          priority: DailyTaskPriority.newLearning,
+          isOverdue: false,
+          reason: 'New learning',
+          stageName: 'Learn',
+          estimatedEffortMinutes: 5,
+        ),
+      ];
+
+      final aggregator = TutorDashboardAggregator(db);
+      final data = await aggregator.compute(now: now, allTasks: tasks);
+
+      // Only chazara items appear in queue (not new learning)
+      expect(data.chazaraQueue.length, 2);
+      // Overdue first
+      expect(data.chazaraQueue[0].urgency, ChazaraUrgency.overdue);
+      expect(data.chazaraQueue[0].daysOverdue, 3);
+      // Due today second
+      expect(data.chazaraQueue[1].urgency, ChazaraUrgency.dueToday);
+    });
+
+    // Unit: Progress metrics compute correct percentages per curriculum
+    test('progress metrics compute correct percentages', () async {
+      await seedCompletions(db);
+      final aggregator = TutorDashboardAggregator(db);
+      final data = await aggregator.compute(
+        now: DateTime.now().toUtc(),
+        allTasks: [],
+      );
+
+      expect(data.paceInfo, contains(CurriculumId.mishnayos));
+      final mishnayosPace = data.paceInfo[CurriculumId.mishnayos]!;
+      expect(mishnayosPace.totalCompletions, greaterThan(0));
+      expect(mishnayosPace.completionPercentage, greaterThanOrEqualTo(0.0));
+      expect(mishnayosPace.completionPercentage, lessThanOrEqualTo(1.0));
+    });
+
+    // Helper: build a TutorDashboardData with test completions
+    TutorDashboardData buildTestDashboardData({
+      List<Completion>? completions,
+      List<ChazaraQueueItem>? chazaraQueue,
+      List<DailyTask>? dailyTasks,
+      Map<CurriculumId, TutorPaceInfo>? paceInfo,
+    }) {
+      return TutorDashboardData(
+        activeCurricula: [CurriculumId.mishnayos],
+        completionHistory: completions ?? [],
+        chazaraQueue: chazaraQueue ?? [],
+        paceInfo:
+            paceInfo ??
+            {
+              CurriculumId.mishnayos: const TutorPaceInfo(
+                paceStatus: null,
+                completionPercentage: 0.5,
+                totalCompletions: 10,
+              ),
+            },
+        dailyTasks: dailyTasks ?? [],
+      );
+    }
+
+    Completion fakeCompletion({
+      required String ref,
+      required DateTime completedAt,
+      int points = 10,
+    }) {
+      return Completion(
+        id: ref.hashCode,
+        curriculumId: 'mishnayos',
+        sefariaRef: ref,
+        stageId: 1,
+        trackType: 'personal',
+        completedAt: completedAt,
+        points: points,
+      );
+    }
+
+    // Widget: Completion history list renders with dates, items, and stages
+    testWidgets('completion history list renders with dates and items', (
+      tester,
+    ) async {
+      final now = DateTime.now().toUtc();
+      final data = buildTestDashboardData(
+        completions: [
+          fakeCompletion(ref: 'Mishnah Berakhot 1', completedAt: now),
+          fakeCompletion(
+            ref: 'Mishnah Berakhot 2',
+            completedAt: now.subtract(const Duration(days: 1)),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tutorDashboardDataProvider.overrideWith((_) async => data),
+          ],
+          child: const MaterialApp(home: TutorDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Completion History'), findsOneWidget);
+      expect(find.text('Mishnah Berakhot 1'), findsOneWidget);
+      expect(find.text('Mishnah Berakhot 2'), findsOneWidget);
+    });
+
+    // Widget: Chazara queue shows urgency grouping with visual indicators
+    testWidgets('chazara queue shows urgency grouping', (tester) async {
+      final data = buildTestDashboardData(
+        chazaraQueue: [
+          ChazaraQueueItem(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: 'Mishnah Berakhot 2',
+            stageName: 'Chazara 1',
+            urgency: ChazaraUrgency.overdue,
+            dueDate: DateTime.now().toUtc(),
+            daysOverdue: 3,
+          ),
+          ChazaraQueueItem(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: 'Mishnah Berakhot 3',
+            stageName: 'Chazara 1',
+            urgency: ChazaraUrgency.dueToday,
+            dueDate: DateTime.now().toUtc(),
+            daysOverdue: 0,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tutorDashboardDataProvider.overrideWith((_) async => data),
+          ],
+          child: const MaterialApp(home: TutorDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chazara Queue'), findsOneWidget);
+      expect(find.text('Overdue (1)'), findsOneWidget);
+      expect(find.text('Due Today (1)'), findsOneWidget);
+    });
+
+    // Widget: Pace status displays ahead/on-track/behind per curriculum
+    testWidgets('pace status displays per curriculum', (tester) async {
+      final data = buildTestDashboardData(
+        paceInfo: {
+          CurriculumId.mishnayos: const TutorPaceInfo(
+            paceStatus: PaceStatus(
+              status: PaceStatusType.behind,
+              daysDelta: -3,
+              rollingAverage: 2.0,
+            ),
+            completionPercentage: 0.35,
+            totalCompletions: 20,
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tutorDashboardDataProvider.overrideWith((_) async => data),
+          ],
+          child: const MaterialApp(home: TutorDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Progress & Pace'), findsOneWidget);
+      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('Behind'), findsOneWidget);
+      expect(find.text('3 days behind'), findsOneWidget);
+    });
+
+    // Widget: Daily task view renders scheduler recommendations (read-only)
+    testWidgets('daily task view renders tasks', (tester) async {
+      final data = buildTestDashboardData(
+        dailyTasks: [
+          const DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 6',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            reason: 'New learning',
+            stageName: 'Learn',
+            estimatedEffortMinutes: 5,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tutorDashboardDataProvider.overrideWith((_) async => data),
+          ],
+          child: const MaterialApp(home: TutorDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text("Today's Tasks"), findsOneWidget);
+      expect(find.text('Mishnah Berakhot 6'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
+    });
+
+    // Widget: No mark-complete, edit, or delete buttons present in any view
+    testWidgets('no action buttons present in tutor dashboard', (tester) async {
+      final now = DateTime.now().toUtc();
+      final data = buildTestDashboardData(
+        completions: [
+          fakeCompletion(ref: 'Mishnah Berakhot 1', completedAt: now),
+        ],
+        dailyTasks: [
+          const DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 6',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            reason: 'New learning',
+            stageName: 'Learn',
+            estimatedEffortMinutes: 5,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tutorDashboardDataProvider.overrideWith((_) async => data),
+          ],
+          child: const MaterialApp(home: TutorDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Read-Only badge should be visible
+      expect(find.text('Read Only'), findsOneWidget);
+
+      // No action buttons
+      expect(find.text('Mark Complete'), findsNothing);
+      expect(find.text('Complete'), findsNothing);
+      expect(find.text('Edit'), findsNothing);
+      expect(find.text('Delete'), findsNothing);
+      expect(find.text('Skip'), findsNothing);
+      expect(find.byIcon(Icons.check), findsNothing);
+      expect(find.byIcon(Icons.delete), findsNothing);
+      expect(find.byIcon(Icons.edit), findsNothing);
+    });
+
+    // Integration: Tutor views dashboard with actual data
+    test(
+      'integration: aggregator computes full dashboard from database',
+      () async {
+        await seedCompletions(db);
+        final now = DateTime.now().toUtc();
+
+        const tasks = [
+          DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 2',
+            stageOrder: 2,
+            stageDefinitionId: 2,
+            priority: DailyTaskPriority.overdueChazara,
+            isOverdue: true,
+            reason: 'Chazara 1 overdue by 2 day(s)',
+            stageName: 'Chazara 1',
+          ),
+          DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 6',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            reason: 'New learning',
+            stageName: 'Learn',
+            estimatedEffortMinutes: 5,
+          ),
+        ];
+
+        final aggregator = TutorDashboardAggregator(db);
+        final data = await aggregator.compute(now: now, allTasks: tasks);
+
+        // Completion history present and sorted
+        expect(data.completionHistory.length, 6);
+        expect(
+          data.completionHistory.first.completedAt.isAfter(
+            data.completionHistory.last.completedAt,
+          ),
+          isTrue,
+        );
+
+        // Chazara queue has overdue item
+        expect(data.chazaraQueue.length, 1);
+        expect(data.chazaraQueue.first.urgency, ChazaraUrgency.overdue);
+
+        // Daily tasks include all types
+        expect(data.dailyTasks.length, 2);
+
+        // Pace info per curriculum
+        expect(data.paceInfo, contains(CurriculumId.mishnayos));
+        expect(data.paceInfo[CurriculumId.mishnayos]!.totalCompletions, 6);
+
+        // Per-curriculum filtering works
+        final filtered = data.filterByCurriculum(CurriculumId.mishnayos);
+        expect(filtered.completionHistory.length, 6);
+
+        // Filtering by non-active curriculum returns empty
+        final empty = data.filterByCurriculum(CurriculumId.bavli);
+        expect(empty.completionHistory, isEmpty);
+        expect(empty.chazaraQueue, isEmpty);
+      },
+    );
+  });
 
   // ── Story 11.3: Student progress view ─────────────────────────
 

@@ -19,13 +19,13 @@ abstract class RewardModel with _$RewardModel {
 
   /// Converts a Drift [drift.Reward] row into a domain [RewardModel].
   factory RewardModel.fromDriftRow(drift.Reward row) => RewardModel(
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        pointsThreshold: row.pointsThreshold,
-        isEarned: row.isEarned,
-        isRevealed: row.isRevealed,
-        earnedAt: row.earnedAt,
-        createdAt: row.createdAt,
-      );
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    pointsThreshold: row.pointsThreshold,
+    isEarned: row.isEarned,
+    isRevealed: row.isRevealed,
+    earnedAt: row.earnedAt,
+    createdAt: row.createdAt,
+  );
 }

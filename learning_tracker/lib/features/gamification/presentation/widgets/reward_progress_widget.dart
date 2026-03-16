@@ -31,22 +31,18 @@ class RewardProgressWidget extends ConsumerWidget {
           ),
           loading: () => const CircularProgressIndicator(),
           error: (error, stack) {
-            ref.read(talkerProvider).error(
-                  'Failed to load reward progress',
-                  error,
-                  stack,
-                );
+            ref
+                .read(talkerProvider)
+                .error('Failed to load reward progress', error, stack);
             return const SizedBox.shrink();
           },
         );
       },
       loading: () => const CircularProgressIndicator(),
       error: (error, stack) {
-        ref.read(talkerProvider).error(
-              'Failed to load next reward',
-              error,
-              stack,
-            );
+        ref
+            .read(talkerProvider)
+            .error('Failed to load next reward', error, stack);
         return const SizedBox.shrink();
       },
     );
