@@ -74,7 +74,6 @@ Future<void> _pumpDashboard(WidgetTester tester) async {
   await tester.pump(); // rebuild
 }
 
-
 void main() {
   late AppDatabase db;
 
