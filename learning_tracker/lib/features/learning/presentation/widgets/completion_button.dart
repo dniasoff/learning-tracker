@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
@@ -67,6 +72,21 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
     });
 
     try {
+      // Capture progress before completion
+      final curriculumEnum = CurriculumId.values.where(
+        (c) => c.storageKey == widget.curriculumId,
+      );
+      final progressBefore = curriculumEnum.isNotEmpty
+          ? (await ref.read(
+              dashboardCompletionPercentageProvider(curriculumEnum.first)
+                  .future,
+            ))
+          : 0.0;
+
+      // Capture streak before completion
+      final streakData = ref.read(dashboardStreakProvider).valueOrNull;
+      final streakBefore = streakData?.currentStreak ?? 0;
+
       final useCase = ref.read(markCompletionUseCaseProvider);
       final request = CompletionRequest(
         curriculumId: widget.curriculumId,
@@ -77,6 +97,27 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
       final completion = await useCase(request);
 
+      // Invalidate and re-read progress/streak after completion
+      if (curriculumEnum.isNotEmpty) {
+        ref.invalidate(
+          dashboardCompletionPercentageProvider(curriculumEnum.first),
+        );
+      }
+      ref.invalidate(dashboardStreakProvider);
+
+      // Check if any rewards were earned after points changed
+      ref.invalidate(checkRewardsProvider(widget.userMode));
+
+      final progressAfter = curriculumEnum.isNotEmpty
+          ? (await ref.read(
+              dashboardCompletionPercentageProvider(curriculumEnum.first)
+                  .future,
+            ))
+          : progressBefore + 0.01;
+
+      final streakDataAfter = ref.read(dashboardStreakProvider).valueOrNull;
+      final streakAfter = streakDataAfter?.currentStreak ?? streakBefore;
+
       setState(() {
         _isLoading = false;
       });
@@ -85,28 +126,26 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       _feedbackController.start(
         CompletionFeedbackData(
           pointsAwarded: completion.points,
-          progressBefore: 0,
-          progressAfter: 0,
+          progressBefore: progressBefore,
+          progressAfter: progressAfter,
+          streakBefore: streakBefore,
+          streakAfter: streakAfter,
           userMode: widget.userMode,
         ),
       );
 
-      // Show appropriate feedback based on user mode
+      // Show points popup non-blocking (child mode only)
       if (widget.userMode == UserMode.child) {
-        // Non-blocking points popup
         if (mounted) {
-          await showPointsPopup(
+          unawaited(showPointsPopup(
             context: context,
             points: completion.points,
             userMode: widget.userMode,
-          );
+          ));
         }
-      } else {
-        // Subtle confirmation for adults
-        await _showSubtleConfirmation();
       }
+      // Adult mode: overlay checkmark animation handles feedback (no snackbar)
 
-      _feedbackController.cancel();
       widget.onCompleted?.call();
     } catch (e) {
       setState(() {
@@ -122,24 +161,6 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         );
       }
     }
-  }
-
-  Future<void> _showSubtleConfirmation() async {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Marked as complete'),
-          ],
-        ),
-        duration: Duration(seconds: 2),
-        backgroundColor: Colors.green,
-      ),
-    );
   }
 
   @override
@@ -190,11 +211,27 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
                     )
                   : const Text('Mark Complete'),
             ),
+            // H1: IgnorePointer so animation overlay doesn't block taps
             if (_feedbackController.phase == CompletionFeedbackPhase.checkmark)
-              Positioned.fill(
-                child: CompletionAnimation(
-                  userMode: widget.userMode,
-                  onComplete: () => _feedbackController.advance(),
+              IgnorePointer(
+                child: Positioned.fill(
+                  child: CompletionAnimation(
+                    userMode: widget.userMode,
+                    onComplete: () => _feedbackController.advance(),
+                  ),
+                ),
+              ),
+            // M2: Render AnimatedProgressBar during progressFill phase
+            if (_feedbackController.phase ==
+                CompletionFeedbackPhase.progressFill)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AnimatedProgressBar(
+                  value: _feedbackController.data?.progressAfter ?? 0,
+                  duration: const Duration(milliseconds: 600),
+                  onAnimationComplete: () => _feedbackController.advance(),
                 ),
               ),
           ],
