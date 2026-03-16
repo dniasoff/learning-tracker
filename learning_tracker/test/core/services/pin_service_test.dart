@@ -375,9 +375,9 @@ void main() {
     test('should allow verification after lockout period expires', () async {
       const pin = '1234';
 
-      // Set lockout timestamp to 6 minutes ago (lockout is 5 minutes)
+      // Set lockout timestamp to 16 minutes ago (lockout is 15 minutes)
       final lockoutTimestamp = DateTime.now()
-          .subtract(const Duration(minutes: 6))
+          .subtract(const Duration(minutes: 16))
           .millisecondsSinceEpoch;
 
       String? storedHash;
@@ -570,7 +570,7 @@ void main() {
     });
 
     test('should return correct remaining minutes when locked out', () async {
-      // Set lockout to 3 minutes ago (2 minutes remaining)
+      // Set lockout to 3 minutes ago (12 minutes remaining with 15-min lockout)
       final lockoutTimestamp = DateTime.now()
           .subtract(const Duration(minutes: 3))
           .millisecondsSinceEpoch;
@@ -581,9 +581,9 @@ void main() {
 
       final result = await pinService.getParentLockoutRemainingMinutes();
 
-      // Should be approximately 2 minutes (with rounding)
-      expect(result, greaterThanOrEqualTo(1));
-      expect(result, lessThanOrEqualTo(3));
+      // Should be approximately 12 minutes (with rounding)
+      expect(result, greaterThanOrEqualTo(11));
+      expect(result, lessThanOrEqualTo(13));
     });
   });
 }
