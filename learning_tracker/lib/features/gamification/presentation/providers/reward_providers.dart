@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 
@@ -19,7 +20,7 @@ final allRewardsStreamProvider = StreamProvider<List<Reward>>((ref) {
 });
 
 /// Next unearned reward (lowest threshold).
-final nextRewardProvider = FutureProvider<Reward?>((ref) async {
+final nextRewardProvider = FutureProvider<RewardModel?>((ref) async {
   // Depend on the stream so we re-compute when rewards change.
   ref.watch(allRewardsStreamProvider);
   final service = ref.watch(rewardServiceProvider);
@@ -35,7 +36,7 @@ final rewardProgressProvider = FutureProvider<double>((ref) async {
 });
 
 /// All earned rewards for history display.
-final earnedRewardsProvider = FutureProvider<List<Reward>>((ref) async {
+final earnedRewardsProvider = FutureProvider<List<RewardModel>>((ref) async {
   // Depend on the stream so we re-compute when rewards change.
   ref.watch(allRewardsStreamProvider);
   final service = ref.watch(rewardServiceProvider);
@@ -43,19 +44,27 @@ final earnedRewardsProvider = FutureProvider<List<Reward>>((ref) async {
 });
 
 /// All configured rewards.
-final allRewardsProvider = FutureProvider<List<Reward>>((ref) async {
+final allRewardsProvider = FutureProvider<List<RewardModel>>((ref) async {
   ref.watch(allRewardsStreamProvider);
   final service = ref.watch(rewardServiceProvider);
   return service.getAllRewards();
 });
 
-/// Check and award rewards. Call after points change to trigger reward checks.
+/// Check and award rewards after points change.
 ///
-/// Returns newly earned rewards.
-final checkRewardsProvider = FutureProvider.family<List<Reward>, UserMode>((
-  ref,
-  userMode,
-) async {
-  final service = ref.watch(rewardServiceProvider);
+/// This is a plain helper function (not a provider) because it performs
+/// side effects (marking rewards as earned in the database). The stream-based
+/// [allRewardsStreamProvider] automatically refreshes dependent providers
+/// after the database is mutated.
+///
+/// Usage from a widget:
+/// ```dart
+/// final service = ref.read(rewardServiceProvider);
+/// await checkAndAwardRewards(service, userMode: userMode);
+/// ```
+Future<List<RewardModel>> checkAndAwardRewards(
+  RewardService service, {
+  required UserMode userMode,
+}) async {
   return service.checkAndAwardRewards(userMode: userMode);
-});
+}

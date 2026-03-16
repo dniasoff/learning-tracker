@@ -93,7 +93,8 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       ref.invalidate(dashboardStreakProvider);
 
       // Check if any rewards were earned after points changed
-      ref.invalidate(checkRewardsProvider(widget.userMode));
+      final rewardService = ref.read(rewardServiceProvider);
+      await checkAndAwardRewards(rewardService, userMode: widget.userMode);
 
       final progressAfter = curriculumEnum.isNotEmpty
           ? (await ref.read(

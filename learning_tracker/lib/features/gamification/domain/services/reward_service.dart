@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 
 /// Service for managing mystery rewards.
@@ -16,10 +17,10 @@ class RewardService {
 
   /// Get the next unearned reward (lowest threshold above current points or
   /// the lowest unearned regardless).
-  Future<Reward?> getNextReward() async {
+  Future<RewardModel?> getNextReward() async {
     final unearned = await _database.rewardDao.getUnearnedRewards();
     if (unearned.isEmpty) return null;
-    return unearned.first; // Already ordered by pointsThreshold ascending
+    return RewardModel.fromDriftRow(unearned.first);
   }
 
   /// Calculate progress percentage toward the next unearned reward.
@@ -47,12 +48,12 @@ class RewardService {
   ///
   /// In adult mode, rewards are automatically revealed on earning.
   /// Returns list of newly earned rewards.
-  Future<List<Reward>> checkAndAwardRewards({
+  Future<List<RewardModel>> checkAndAwardRewards({
     required UserMode userMode,
   }) async {
     final globalPoints = await _pointsService.getGlobalTotal();
     final unearned = await _database.rewardDao.getUnearnedRewards();
-    final newlyEarned = <Reward>[];
+    final newlyEarned = <RewardModel>[];
 
     for (final reward in unearned) {
       if (globalPoints >= reward.pointsThreshold) {
@@ -65,7 +66,7 @@ class RewardService {
 
         // Fetch updated reward
         final updated = await _database.rewardDao.getRewardById(reward.id);
-        if (updated != null) newlyEarned.add(updated);
+        if (updated != null) newlyEarned.add(RewardModel.fromDriftRow(updated));
       }
     }
 
@@ -78,13 +79,15 @@ class RewardService {
   }
 
   /// Get all earned rewards for display in history.
-  Future<List<Reward>> getEarnedRewards() async {
-    return _database.rewardDao.getEarnedRewards();
+  Future<List<RewardModel>> getEarnedRewards() async {
+    final rows = await _database.rewardDao.getEarnedRewards();
+    return rows.map(RewardModel.fromDriftRow).toList();
   }
 
   /// Get all configured rewards.
-  Future<List<Reward>> getAllRewards() async {
-    return _database.rewardDao.getAllRewards();
+  Future<List<RewardModel>> getAllRewards() async {
+    final rows = await _database.rewardDao.getAllRewards();
+    return rows.map(RewardModel.fromDriftRow).toList();
   }
 
   /// Add a new reward configuration.
@@ -105,9 +108,8 @@ class RewardService {
   }
 
   int _highestEarnedThreshold(List<Reward> earnedRewards) {
-    return earnedRewards.fold<int>(
-      0,
-      (max, r) => r.pointsThreshold > max ? r.pointsThreshold : max,
-    );
+    final sorted = [...earnedRewards]
+      ..sort((a, b) => b.pointsThreshold.compareTo(a.pointsThreshold));
+    return sorted.first.pointsThreshold;
   }
 }

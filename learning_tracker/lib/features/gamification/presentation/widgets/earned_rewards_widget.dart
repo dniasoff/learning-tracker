@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 
 /// Displays earned rewards history.
@@ -25,27 +26,34 @@ class EarnedRewardsWidget extends ConsumerWidget {
           );
         }
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: rewards.length,
-          itemBuilder: (context, index) {
-            final reward = rewards[index];
-            final showDetails = userMode == UserMode.adult || reward.isRevealed;
-
-            return ListTile(
-              leading: Icon(
-                showDetails ? Icons.emoji_events : Icons.help_outline,
-                color: Theme.of(context).colorScheme.primary,
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final reward in rewards)
+              ListTile(
+                leading: Icon(
+                  (userMode == UserMode.adult || reward.isRevealed)
+                      ? Icons.emoji_events
+                      : Icons.help_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                title: Text(
+                  (userMode == UserMode.adult || reward.isRevealed)
+                      ? reward.title
+                      : 'Mystery Reward!',
+                ),
+                subtitle: (userMode == UserMode.adult || reward.isRevealed)
+                    ? Text(reward.description)
+                    : null,
               ),
-              title: Text(showDetails ? reward.title : 'Mystery Reward!'),
-              subtitle: showDetails ? Text(reward.description) : null,
-            );
-          },
+          ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Text('Error loading rewards'),
+      error: (error, stack) {
+        ref.read(talkerProvider).error('Failed to load earned rewards', error, stack);
+        return const Text('Error loading rewards');
+      },
     );
   }
 }

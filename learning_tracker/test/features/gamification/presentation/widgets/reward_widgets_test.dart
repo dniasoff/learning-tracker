@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/earned_rewards_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_progress_widget.dart';
 
-Reward _makeReward({
+RewardModel _makeReward({
   int id = 1,
   String title = 'Bronze',
   String description = 'First reward',
@@ -15,7 +15,7 @@ Reward _makeReward({
   bool isRevealed = false,
   bool isEarned = false,
   DateTime? earnedAt,
-}) => Reward(
+}) => RewardModel(
   id: id,
   title: title,
   description: description,
