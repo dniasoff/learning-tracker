@@ -100,19 +100,35 @@ class OfflineQueue {
   /// (battery-efficient mode per NFR27).
   /// Returns the number of successfully synced operations.
   Future<int> flush({int? batchSize}) async {
-    var pending = await _queue.getAllPending();
-    if (batchSize != null && pending.length > batchSize) {
-      pending = pending.sublist(0, batchSize);
-    }
-    if (pending.isEmpty) {
+    final allPending = await _queue.getAllPending();
+    if (allPending.isEmpty) {
       _logger.debug('No pending operations to flush');
       return 0;
     }
 
-    _logger.info('Flushing ${pending.length} pending operations');
+    // When batchSize is provided, process in batches with a small delay
+    // between each batch to reduce sustained network activity (NFR27).
+    final batches = <List<SyncQueueData>>[];
+    if (batchSize != null) {
+      for (var i = 0; i < allPending.length; i += batchSize) {
+        final end =
+            (i + batchSize > allPending.length) ? allPending.length : i + batchSize;
+        batches.add(allPending.sublist(i, end));
+      }
+    } else {
+      batches.add(allPending);
+    }
+
+    _logger.info('Flushing ${allPending.length} pending operations');
     var successCount = 0;
 
-    for (final operation in pending) {
+    for (var batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      // Add inter-batch delay to reduce sustained network activity.
+      if (batchIndex > 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+
+      for (final operation in batches[batchIndex]) {
       // Skip items that have exceeded the retry limit (dead-letter).
       if (operation.retryCount >= maxRetries) {
         _logger.warning(
@@ -188,9 +204,10 @@ class OfflineQueue {
         await _queue.markFailed(operation.id, e.toString());
       }
     }
+    }
 
     _logger.info(
-      'Flushed $successCount/${pending.length} operations successfully',
+      'Flushed $successCount/${allPending.length} operations successfully',
     );
     return successCount;
   }

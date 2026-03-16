@@ -33,7 +33,7 @@ class SyncEngine {
   final _statusController = StreamController<SyncStatus>.broadcast();
   Stream<SyncStatus> get statusStream => _statusController.stream;
 
-  SyncStatus _currentStatus = SyncStatus.synced(lastSyncedAt: DateTime.now());
+  SyncStatus _currentStatus = SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc());
   SyncStatus get currentStatus => _currentStatus;
 
   StreamSubscription<List<Map<String, dynamic>>>? _completionsSubscription;
@@ -149,7 +149,7 @@ class SyncEngine {
       return;
     }
 
-    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now()));
+    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
 
     try {
       _logger.info('Pull-on-launch: Fetching data from Firestore');
@@ -169,11 +169,11 @@ class SyncEngine {
       if (profile != null) await _mergeProfile(profile);
 
       _logger.info('Pull-on-launch completed successfully');
-      _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now()));
+      _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
     } catch (e, stackTrace) {
       _logger.error('Pull-on-launch failed', e, stackTrace);
       _updateStatus(
-        SyncStatus.error(message: e.toString(), failedAt: DateTime.now()),
+        SyncStatus.error(message: e.toString(), failedAt: DateTime.now().toUtc()),
       );
     }
   }
@@ -566,7 +566,7 @@ class SyncEngine {
   void _handleListenerError(Object error, StackTrace stackTrace) {
     _logger.error('Listener error', error, stackTrace);
     _updateStatus(
-      SyncStatus.error(message: error.toString(), failedAt: DateTime.now()),
+      SyncStatus.error(message: error.toString(), failedAt: DateTime.now().toUtc()),
     );
   }
 
@@ -575,7 +575,7 @@ class SyncEngine {
   Future<void> _onReconnect() async {
     _logger.info('Device reconnected, flushing offline queue');
 
-    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now()));
+    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
 
     try {
       // In battery saver mode, process in smaller batches with delays
@@ -583,7 +583,7 @@ class SyncEngine {
       final syncedCount = await _offlineQueue.flush(batchSize: batchSize);
       _logger.info('Flushed $syncedCount operations from offline queue');
 
-      _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now()));
+      _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
 
       // Reattach listeners — detachListeners() cleared the flag on disconnect,
       // so always attempt to attach them now that we are back online.
@@ -592,7 +592,7 @@ class SyncEngine {
     } catch (e, stackTrace) {
       _logger.error('Failed to flush offline queue', e, stackTrace);
       _updateStatus(
-        SyncStatus.error(message: e.toString(), failedAt: DateTime.now()),
+        SyncStatus.error(message: e.toString(), failedAt: DateTime.now().toUtc()),
       );
     }
   }
@@ -642,6 +642,7 @@ class SyncEngine {
         e,
       );
       await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
+      await _emitPendingStatus();
     }
   }
 

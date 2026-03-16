@@ -274,7 +274,11 @@ void main() {
       await offlineQueue.enqueueBookmark({'id': '2'});
 
       // Create a new OfflineQueue instance pointing to the same database
-      // (simulates app restart with same persistent DB)
+      // (simulates app restart with same persistent DB).
+      // Note: This uses the same in-memory DB instance, so it validates
+      // object re-instantiation over the same backing store rather than
+      // true disk persistence. A full persistence test would require an
+      // on-disk SQLite file.
       final newQueue = OfflineQueue(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -331,7 +335,7 @@ void main() {
   });
 
   group('OfflineQueue batch processing', () {
-    test('flush with batchSize limits processed items', () async {
+    test('flush with batchSize processes all items in batches', () async {
       when(() => mockFirestore.pushCompletion(any())).thenAnswer((_) async {});
       when(() => mockFirestore.pushBookmark(any())).thenAnswer((_) async {});
       when(() => mockFirestore.pushSettings(any())).thenAnswer((_) async {});
@@ -340,11 +344,13 @@ void main() {
       await offlineQueue.enqueueBookmark({'id': '2'});
       await offlineQueue.enqueueSettings({'id': '3'});
 
+      // With batchSize=2, items are processed in two batches (2 + 1)
+      // with an inter-batch delay to reduce sustained network activity.
       final synced = await offlineQueue.flush(batchSize: 2);
-      expect(synced, 2);
+      expect(synced, 3);
 
       final remaining = await offlineQueue.getPendingCount();
-      expect(remaining, 1);
+      expect(remaining, 0);
     });
   });
 

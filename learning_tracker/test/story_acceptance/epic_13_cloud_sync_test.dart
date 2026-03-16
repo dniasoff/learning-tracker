@@ -162,7 +162,7 @@ void main() {
         expect(offlineStatus.pendingChanges, 1);
       });
 
-      test('sync status indicator shows correct state', () {
+      test('SyncStatus sealed class has all expected subtypes', () {
         // Verify all states are constructible
         expect(
           SyncStatus.synced(lastSyncedAt: DateTime.now()),

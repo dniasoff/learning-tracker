@@ -179,11 +179,13 @@ void main() {
 
       // Go offline — this detaches listeners and clears _listenersAttached
       syncEngine.setOnlineState(false);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       // Go back online — _onReconnect should reattach listeners
       syncEngine.setOnlineState(true);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       // listenTo* should have been called twice: once on initial attach and
       // once after reconnect.
@@ -207,10 +209,12 @@ void main() {
       when(() => mockOfflineQueue.getPendingCount()).thenAnswer((_) async => 0);
 
       syncEngine.setOnlineState(false);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       syncEngine.setOnlineState(true);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       verify(() => mockOfflineQueue.flush()).called(1);
     });
@@ -711,7 +715,8 @@ void main() {
       syncEngine.setOnlineState(false);
 
       // Give async ops time to complete
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final status = syncEngine.currentStatus;
       expect(
