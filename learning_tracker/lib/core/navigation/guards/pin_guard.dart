@@ -34,8 +34,11 @@ abstract class PinGuard extends AutoRouteGuard {
         : await pinService.hasTutorPin();
 
     if (!hasPinSet) {
-      // No PIN configured — redirect to setup so parent mode isn't freely accessible.
-      unawaited(router.replace(const PinSetupRoute()));
+      // No PIN configured — redirect to the appropriate setup screen.
+      final setupRoute = pinType == 'tutor'
+          ? const TutorPinSetupRoute()
+          : const PinSetupRoute();
+      unawaited(router.replace(setupRoute));
       resolver.next(false);
       return;
     }

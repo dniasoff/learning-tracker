@@ -36,6 +36,9 @@ import 'package:learning_tracker/features/settings/presentation/screens/track_ma
 import 'package:learning_tracker/features/stages/presentation/screens/stage_editor_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_mode_screen.dart';
+import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_pin_change_screen.dart';
+import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_pin_entry_screen.dart';
+import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_pin_setup_screen.dart';
 
 part 'app_router.gr.dart';
 
@@ -165,6 +168,21 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/tutor-mode',
       page: TutorModeRoute.page,
+      guards: [authGuard, tutorPinGuard],
+    ),
+    AutoRoute(
+      path: '/tutor-mode/pin-setup',
+      page: TutorPinSetupRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/tutor-mode/pin-entry',
+      page: TutorPinEntryRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/tutor-mode/pin-change',
+      page: TutorPinChangeRoute.page,
       guards: [authGuard, tutorPinGuard],
     ),
     AutoRoute(path: '/sync', page: SyncRoute.page, guards: [authGuard]),
