@@ -38,7 +38,8 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
 
   String? _validateEmail(String? value) => validators.validateEmail(value);
 
-  String? _validatePassword(String? value) => validators.validatePassword(value);
+  String? _validatePassword(String? value) =>
+      validators.validatePassword(value);
 
   String? _validateDisplayName(String? value) =>
       validators.validateDisplayName(value);

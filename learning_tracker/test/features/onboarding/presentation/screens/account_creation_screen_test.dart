@@ -63,11 +63,12 @@ void main() {
         userProfileServiceProvider.overrideWith((ref) {
           return UserProfileService(
             userProfileDao: database.userProfileDao,
-            pushUserProfile: ({
-              required String firebaseUid,
-              required String displayName,
-              required String userMode,
-            }) async {},
+            pushUserProfile:
+                ({
+                  required String firebaseUid,
+                  required String displayName,
+                  required String userMode,
+                }) async {},
           );
         }),
       ],
