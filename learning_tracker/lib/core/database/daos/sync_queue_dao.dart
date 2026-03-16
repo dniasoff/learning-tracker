@@ -10,9 +10,11 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase>
     with _$SyncQueueDaoMixin {
   SyncQueueDao(super.db);
 
-  /// Get all pending operations in the queue.
+  /// Get all pending operations in the queue, ordered FIFO by queued time.
   Future<List<SyncQueueData>> getAllPending() {
-    return select(syncQueue).get();
+    return (select(syncQueue)
+          ..orderBy([(t) => OrderingTerm.asc(t.queuedAt)]))
+        .get();
   }
 
   /// Get count of pending operations.
@@ -45,6 +47,8 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase>
       SyncQueueCompanion(
         retryCount: Value(current.retryCount + 1),
         lastError: Value(error),
+        // Update queuedAt so exponential backoff is relative to last failure.
+        queuedAt: Value(DateTimeFactory.nowUtc()),
       ),
     );
   }

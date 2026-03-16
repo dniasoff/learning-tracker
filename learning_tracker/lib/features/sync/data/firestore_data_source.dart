@@ -232,6 +232,46 @@ class FirestoreDataSource {
     return doc.snapshots().map((snapshot) => snapshot.data());
   }
 
+  // ========== Goal Operations ==========
+
+  /// Push a goal to Firestore (last-write-wins).
+  Future<void> pushGoal(Map<String, dynamic> goalData) async {
+    final collection = _userDoc?.collection('goals');
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final id = goalData['id']?.toString();
+    if (id == null) {
+      throw Exception('Goal must have an id');
+    }
+
+    await collection.doc(id).set({
+      ...goalData,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // ========== Reward Operations ==========
+
+  /// Push a reward to Firestore (last-write-wins).
+  Future<void> pushReward(Map<String, dynamic> rewardData) async {
+    final collection = _userDoc?.collection('rewards');
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final id = rewardData['id']?.toString();
+    if (id == null) {
+      throw Exception('Reward must have an id');
+    }
+
+    await collection.doc(id).set({
+      ...rewardData,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   // ========== Active Curricula Operations ==========
 
   /// Get active curricula document reference.

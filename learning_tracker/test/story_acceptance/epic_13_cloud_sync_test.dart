@@ -116,16 +116,17 @@ void main() {
 
         await offlineQueue.enqueueCompletion({'id': '1'});
 
-        // First flush fails, retry count → 1
+        // First flush fails (retryCount=0, no backoff), retry count → 1
         await offlineQueue.flush();
         var pending = await database.syncQueueDao.getAllPending();
         expect(pending.first.retryCount, 1);
 
-        // Second flush fails, retry count → 2 (backoff: 2^1 = 2s)
-        // We verify retryCount increments correctly
-        await offlineQueue.flush();
+        // Second flush: non-blocking backoff skips the item because
+        // the 2^1 = 2s window hasn't elapsed yet. retryCount stays 1.
+        final synced = await offlineQueue.flush();
+        expect(synced, 0); // skipped due to backoff
         pending = await database.syncQueueDao.getAllPending();
-        expect(pending.first.retryCount, 2);
+        expect(pending.first.retryCount, 1);
       });
 
       test('after 5 retries, entry marked as failed (not retried)', () async {

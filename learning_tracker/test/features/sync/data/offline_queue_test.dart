@@ -308,25 +308,21 @@ void main() {
         () => mockFirestore.pushCompletion(any()),
       ).thenThrow(Exception('persistent error'));
 
-      // Enqueue and manually set retryCount to 4 (one below max)
+      // Enqueue and manually set retryCount to 5 (= maxRetries)
       await offlineQueue.enqueueCompletion({'id': '1'});
       final pending = await database.syncQueueDao.getAllPending();
       final id = pending.first.id;
 
-      // Manually set retry count to 4
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 5; i++) {
         await database.syncQueueDao.markFailed(id, 'error $i');
       }
 
-      // Flush: retryCount=4, will fail → becomes 5 (= maxRetries)
-      await offlineQueue.flush();
+      // Flush should skip the dead-letter item (retryCount >= maxRetries)
+      final synced = await offlineQueue.flush();
+      expect(synced, 0);
 
       final updated = await database.syncQueueDao.getAllPending();
       expect(updated.first.retryCount, 5);
-
-      // Next flush should skip the dead-letter item
-      final synced = await offlineQueue.flush();
-      expect(synced, 0);
     });
 
     test('maxRetries is 5 per FR93', () {

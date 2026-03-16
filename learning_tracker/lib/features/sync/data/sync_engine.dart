@@ -60,6 +60,13 @@ class SyncEngine {
   }
 
   /// Set online/offline state.
+  ///
+  /// TODO(connectivity): Wire this to [ConnectivityService] from
+  /// `lib/core/network/connectivity_service.dart` (or a periodic timer /
+  /// app-lifecycle callback) so that [setOnlineState] is called automatically.
+  /// The existing [ConnectivityService] uses DNS-based checks; when
+  /// `connectivity_plus` is added to pubspec.yaml in the future, replace the
+  /// DNS probe with its stream for instant network-change events.
   void setOnlineState(bool isOnline) {
     if (_isOnline == isOnline) return;
 
@@ -290,6 +297,52 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push profile, queuing for later', e);
       await _offlineQueue.enqueueProfile(profile);
+      await _emitPendingStatus();
+    }
+  }
+
+  /// Push a goal to Firestore after local write.
+  Future<void> pushGoal(Map<String, dynamic> goal) async {
+    if (!_isOnline) {
+      await _offlineQueue.enqueueGoal(goal);
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.pushGoal(goal);
+      _logger.debug('Pushed goal to Firestore');
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _logger.warning('Failed to push goal, queuing for later', e);
+      await _offlineQueue.enqueueGoal(goal);
+      await _emitPendingStatus();
+    }
+  }
+
+  /// Push a reward to Firestore after local write.
+  Future<void> pushReward(Map<String, dynamic> reward) async {
+    if (!_isOnline) {
+      await _offlineQueue.enqueueReward(reward);
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.pushReward(reward);
+      _logger.debug('Pushed reward to Firestore');
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _logger.warning('Failed to push reward, queuing for later', e);
+      await _offlineQueue.enqueueReward(reward);
       await _emitPendingStatus();
     }
   }

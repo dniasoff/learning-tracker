@@ -69,6 +69,20 @@ class OfflineQueue {
     _logger.info('Queued profile for offline sync');
   }
 
+  /// Enqueue a goal operation.
+  Future<void> enqueueGoal(Map<String, dynamic> goal) async {
+    final payload = jsonEncode(goal);
+    await _queue.enqueue('goal', payload);
+    _logger.info('Queued goal for offline sync');
+  }
+
+  /// Enqueue a reward operation.
+  Future<void> enqueueReward(Map<String, dynamic> reward) async {
+    final payload = jsonEncode(reward);
+    await _queue.enqueue('reward', payload);
+    _logger.info('Queued reward for offline sync');
+  }
+
   /// Enqueue curriculum import metadata operation.
   Future<void> enqueueCurriculumImportMetadata(
     Map<String, dynamic> metadata,
@@ -108,14 +122,20 @@ class OfflineQueue {
         continue;
       }
 
-      // Exponential backoff: wait 2^retryCount seconds before retrying.
+      // Non-blocking exponential backoff: skip items whose retry time
+      // hasn't arrived yet instead of sleeping in the flush loop.
       if (operation.retryCount > 0) {
         final backoffSeconds = pow(2, operation.retryCount).toInt();
-        _logger.debug(
-          'Backoff ${backoffSeconds}s for operation #${operation.id} '
-          '(retry ${operation.retryCount})',
+        final nextRetryAt = operation.queuedAt.add(
+          Duration(seconds: backoffSeconds),
         );
-        await Future<void>.delayed(Duration(seconds: backoffSeconds));
+        if (DateTime.now().toUtc().isBefore(nextRetryAt)) {
+          _logger.debug(
+            'Skipping operation #${operation.id} — backoff until $nextRetryAt '
+            '(retry ${operation.retryCount})',
+          );
+          continue;
+        }
       }
 
       try {
@@ -136,6 +156,12 @@ class OfflineQueue {
             break;
           case 'profile':
             await _firestoreDataSource.pushProfile(payload);
+            break;
+          case 'goal':
+            await _firestoreDataSource.pushGoal(payload);
+            break;
+          case 'reward':
+            await _firestoreDataSource.pushReward(payload);
             break;
           case 'curriculum_import_metadata':
             await _firestoreDataSource.pushCurriculumImportMetadata(payload);
