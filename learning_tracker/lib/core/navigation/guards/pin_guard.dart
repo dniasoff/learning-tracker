@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 
 /// Abstract base class for PIN-protected route guards.
@@ -31,8 +34,9 @@ abstract class PinGuard extends AutoRouteGuard {
         : await pinService.hasTutorPin();
 
     if (!hasPinSet) {
-      // No PIN configured — allow access so user can set it up in settings.
-      resolver.next(true);
+      // No PIN configured — redirect to setup so parent mode isn't freely accessible.
+      unawaited(router.replace(const PinSetupRoute()));
+      resolver.next(false);
       return;
     }
 

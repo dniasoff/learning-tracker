@@ -23,13 +23,19 @@ final routerProvider = Provider<AppRouter>((ref) {
     childModeGuard: ChildModeGuard(database: db),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
-      promptForPin: () =>
-          _showPinDialog(navigatorKey.currentContext!, 'Enter Parent PIN'),
+      promptForPin: () {
+        final context = navigatorKey.currentContext;
+        if (context == null) return Future.value(null);
+        return _showPinDialog(context, 'Enter Parent PIN');
+      },
     ),
     tutorPinGuard: TutorPinGuard(
       pinService: pinSvc,
-      promptForPin: () =>
-          _showPinDialog(navigatorKey.currentContext!, 'Enter Tutor PIN'),
+      promptForPin: () {
+        final context = navigatorKey.currentContext;
+        if (context == null) return Future.value(null);
+        return _showPinDialog(context, 'Enter Tutor PIN');
+      },
     ),
   );
 });

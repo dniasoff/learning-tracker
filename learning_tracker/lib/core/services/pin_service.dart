@@ -10,9 +10,19 @@ part 'pin_service.g.dart';
 /// PINs are device-local only and never synced to Firestore.
 /// All PINs are hashed with bcrypt before storage - plaintext is never persisted.
 class PinService {
-  PinService(this._secureStorage);
+  PinService(
+    this._secureStorage, {
+    this.maxFailedAttempts = 5,
+    this.lockoutDurationMinutes = 15,
+  });
 
   final FlutterSecureStorage _secureStorage;
+
+  /// Maximum number of failed PIN attempts before lockout.
+  final int maxFailedAttempts;
+
+  /// Duration of lockout in minutes after max failed attempts.
+  final int lockoutDurationMinutes;
 
   // Storage keys for PINs
   static const _parentPinKey = 'parent_pin_hash';
@@ -21,10 +31,6 @@ class PinService {
   static const _tutorLockoutKey = 'tutor_lockout_count';
   static const _parentLockoutTimestampKey = 'parent_lockout_timestamp';
   static const _tutorLockoutTimestampKey = 'tutor_lockout_timestamp';
-
-  // Lockout configuration
-  static const _maxFailedAttempts = 5;
-  static const _lockoutDurationMinutes = 15;
 
   /// Sets the parent PIN by hashing it with bcrypt and storing securely.
   ///
@@ -184,12 +190,12 @@ class PinService {
 
     await _secureStorage.write(key: countKey, value: newCount.toString());
 
-    if (newCount >= _maxFailedAttempts) {
-      // Trigger lockout and reset count so successive lockout cycles don't
-      // grow unboundedly.
-      await _secureStorage.write(key: countKey, value: '0');
+    if (newCount >= maxFailedAttempts) {
+      // Write lockout timestamp FIRST so that if the app is killed between
+      // writes the lockout is still preserved (TOCTOU safety).
       final lockoutTimestamp = DateTime.now().millisecondsSinceEpoch.toString();
       await _secureStorage.write(key: timestampKey, value: lockoutTimestamp);
+      await _secureStorage.write(key: countKey, value: '0');
     }
   }
 
@@ -202,7 +208,7 @@ class PinService {
     final lockoutTimestamp = int.parse(timestampStr);
     final lockoutEnd = DateTime.fromMillisecondsSinceEpoch(
       lockoutTimestamp,
-    ).add(const Duration(minutes: _lockoutDurationMinutes));
+    ).add(Duration(minutes: lockoutDurationMinutes));
 
     return DateTime.now().isBefore(lockoutEnd);
   }
@@ -216,14 +222,14 @@ class PinService {
     final lockoutTimestamp = int.parse(timestampStr);
     final lockoutEnd = DateTime.fromMillisecondsSinceEpoch(
       lockoutTimestamp,
-    ).add(const Duration(minutes: _lockoutDurationMinutes));
+    ).add(Duration(minutes: lockoutDurationMinutes));
 
     final remaining = lockoutEnd.difference(DateTime.now());
     if (remaining.inSeconds <= 0) {
       return 0;
     }
     // Round up so users see at least 1 minute while time is still remaining.
-    return remaining.inMinutes + 1;
+    return (remaining.inSeconds / 60).ceil();
   }
 }
 
