@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
@@ -63,6 +64,13 @@ class AppRouter extends RootStackRouter {
         AutoRoute(path: 'progress', page: ProgressRoute.page),
         AutoRoute(path: 'settings', page: SettingsRoute.page),
       ],
+    ),
+
+    // Progress charts
+    AutoRoute(
+      path: '/progress/charts',
+      page: ProgressChartsRoute.page,
+      guards: [authGuard],
     ),
 
     // Content browsing routes

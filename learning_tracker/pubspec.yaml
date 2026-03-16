@@ -42,6 +42,9 @@ dependencies:
   # Authentication
   google_sign_in: ^7.2.0
 
+  # Charts
+  fl_chart: ^0.70.2
+
   # Hebrew Calendar
   kosher_dart: ^2.0.18
 

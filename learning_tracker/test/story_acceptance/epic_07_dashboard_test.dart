@@ -5,7 +5,9 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
@@ -372,20 +374,268 @@ void main() {
     });
   });
 
-  // ── Story 7.3: Daily summary ──────────────────────────────────
+  // ── Story 7.3: Progress Charts & Statistics ──────────────────
 
-  group(
-    'Story 7.3 -- Daily summary',
-    tags: ['story_7_3'],
-    skip: 'Backlog: daily summary not yet implemented',
-    () {
-      test('summary shows items completed today', () {
-        // TODO: verify today filter on completions
-      });
+  group('Story 7.3 -- Progress Charts & Statistics', tags: ['story_7_3'], () {
+    late AppDatabase db;
+    late ChartDataService chartService;
 
-      test('summary shows points earned today', () {
-        // TODO: verify points aggregation
-      });
-    },
-  );
+    setUp(() {
+      db = createTestDatabase();
+      chartService = ChartDataService(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<void> insertCompletionAt({
+      required DateTime completedAt,
+      String curriculumId = 'mishnayos',
+      int points = 10,
+    }) async {
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: curriculumId,
+          sefariaRef: 'ref_${completedAt.millisecondsSinceEpoch}',
+          stageId: 1,
+          trackType: 'personal',
+          completedAt: completedAt,
+          points: Value(points),
+        ),
+      );
+    }
+
+    // --- Unit tests ---
+
+    test(
+      'daily completions aggregation returns correct count per day for 7-day range with gaps',
+      () async {
+        // Insert completions on days 1, 3, 5 (gaps on 2, 4, 6, 7)
+        final baseDate = DateTime(2026, 3, 10);
+        await insertCompletionAt(completedAt: baseDate); // Day 1
+        await insertCompletionAt(
+          completedAt: baseDate,
+        ); // Day 1 (second completion)
+        await insertCompletionAt(
+          completedAt: baseDate.add(const Duration(days: 2)),
+        ); // Day 3
+        await insertCompletionAt(
+          completedAt: baseDate.add(const Duration(days: 4)),
+        ); // Day 5
+
+        final result = await chartService.getDailyCompletions(
+          startDate: baseDate,
+          endDate: baseDate.add(const Duration(days: 6)),
+        );
+
+        expect(result.length, equals(7));
+        expect(result[0].count, equals(2)); // Day 1: 2 completions
+        expect(result[1].count, equals(0)); // Day 2: gap
+        expect(result[2].count, equals(1)); // Day 3: 1 completion
+        expect(result[3].count, equals(0)); // Day 4: gap
+        expect(result[4].count, equals(1)); // Day 5: 1 completion
+        expect(result[5].count, equals(0)); // Day 6: gap
+        expect(result[6].count, equals(0)); // Day 7: gap
+      },
+    );
+
+    test(
+      'cumulative progress produces monotonically increasing totals',
+      () async {
+        final baseDate = DateTime(2026, 3, 1);
+        await insertCompletionAt(completedAt: baseDate);
+        await insertCompletionAt(
+          completedAt: baseDate.add(const Duration(days: 2)),
+        );
+        await insertCompletionAt(
+          completedAt: baseDate.add(const Duration(days: 2)),
+        );
+        await insertCompletionAt(
+          completedAt: baseDate.add(const Duration(days: 5)),
+        );
+
+        final result = await chartService.getCumulativeProgress(
+          startDate: baseDate,
+          endDate: baseDate.add(const Duration(days: 6)),
+        );
+
+        expect(result.length, equals(7));
+        // Verify monotonically increasing
+        for (var i = 1; i < result.length; i++) {
+          expect(
+            result[i].total,
+            greaterThanOrEqualTo(result[i - 1].total),
+            reason: 'Cumulative total should never decrease at index $i',
+          );
+        }
+        expect(result[0].total, equals(1));
+        expect(result[2].total, equals(3));
+        expect(result[5].total, equals(4));
+        expect(result[6].total, equals(4));
+      },
+    );
+
+    test(
+      'cross-curriculum toggle sums completions across all active curricula',
+      () async {
+        final date = DateTime(2026, 3, 10);
+        await insertCompletionAt(completedAt: date, curriculumId: 'mishnayos');
+        await insertCompletionAt(completedAt: date, curriculumId: 'bavli');
+        await insertCompletionAt(completedAt: date, curriculumId: 'bavli');
+
+        // Cross-curriculum (no filter)
+        final crossResult = await chartService.getDailyCompletions(
+          startDate: date,
+          endDate: date,
+        );
+        expect(crossResult[0].count, equals(3));
+
+        // Per-curriculum (filter to mishnayos)
+        final perResult = await chartService.getDailyCompletions(
+          startDate: date,
+          endDate: date,
+          curriculumId: 'mishnayos',
+        );
+        expect(perResult[0].count, equals(1));
+      },
+    );
+
+    test(
+      'time range filter correctly bounds query to last 7 and 30 days',
+      () async {
+        final today = DateTime(2026, 3, 16);
+        // Insert: 5 days ago (in 7-day range), 20 days ago (in 30-day only), 40 days ago (out of both)
+        await insertCompletionAt(
+          completedAt: today.subtract(const Duration(days: 5)),
+        );
+        await insertCompletionAt(
+          completedAt: today.subtract(const Duration(days: 20)),
+        );
+        await insertCompletionAt(
+          completedAt: today.subtract(const Duration(days: 40)),
+        );
+
+        // 7-day range
+        final result7 = await chartService.getDailyCompletions(
+          startDate: today.subtract(const Duration(days: 6)),
+          endDate: today,
+        );
+        final total7 = result7.fold<int>(0, (s, d) => s + d.count);
+        expect(total7, equals(1));
+
+        // 30-day range
+        final result30 = await chartService.getDailyCompletions(
+          startDate: today.subtract(const Duration(days: 29)),
+          endDate: today,
+        );
+        final total30 = result30.fold<int>(0, (s, d) => s + d.count);
+        expect(total30, equals(2));
+      },
+    );
+
+    test('points-over-time data excluded when userMode is adult', () async {
+      final date = DateTime(2026, 3, 10);
+      await insertCompletionAt(completedAt: date, points: 10);
+
+      final adultResult = await chartService.getDailyPoints(
+        startDate: date,
+        endDate: date,
+        userMode: UserMode.adult,
+      );
+      expect(adultResult, isNull);
+
+      final childResult = await chartService.getDailyPoints(
+        startDate: date,
+        endDate: date,
+        userMode: UserMode.child,
+      );
+      expect(childResult, isNotNull);
+      expect(childResult![0].points, equals(10));
+    });
+
+    test(
+      'streak calendar marks active days and leaves gaps unmarked',
+      () async {
+        final baseDate = DateTime(2026, 3, 10);
+        await insertCompletionAt(completedAt: baseDate);
+        await insertCompletionAt(
+          completedAt: baseDate.add(const Duration(days: 2)),
+        );
+
+        final activeDates = await chartService.getStreakCalendar(
+          startDate: baseDate,
+          endDate: baseDate.add(const Duration(days: 4)),
+        );
+
+        expect(activeDates, contains(baseDate));
+        expect(activeDates, contains(baseDate.add(const Duration(days: 2))));
+        expect(activeDates.length, equals(2));
+        // Gap days should not be included
+        expect(
+          activeDates,
+          isNot(contains(baseDate.add(const Duration(days: 1)))),
+        );
+        expect(
+          activeDates,
+          isNot(contains(baseDate.add(const Duration(days: 3)))),
+        );
+      },
+    );
+
+    // --- Integration test ---
+
+    test(
+      'complete items over multiple days, verify chart data reflects history',
+      () async {
+        // Simulate 10 days of activity with varying completions
+        final baseDate = DateTime(2026, 3, 1);
+        final completionDays = [0, 1, 3, 5, 6, 7, 9]; // gaps on 2, 4, 8
+        for (final day in completionDays) {
+          final date = baseDate.add(Duration(days: day));
+          await insertCompletionAt(completedAt: date, points: 10);
+          if (day == 5) {
+            // Extra completion on day 5
+            await insertCompletionAt(completedAt: date, points: 5);
+          }
+        }
+
+        final endDate = baseDate.add(const Duration(days: 9));
+
+        // Check bar chart data
+        final daily = await chartService.getDailyCompletions(
+          startDate: baseDate,
+          endDate: endDate,
+        );
+        expect(daily.length, equals(10));
+        expect(daily[5].count, equals(2)); // Day 5 had 2 completions
+        expect(daily[2].count, equals(0)); // Day 2 was a gap
+
+        // Check cumulative data
+        final cumulative = await chartService.getCumulativeProgress(
+          startDate: baseDate,
+          endDate: endDate,
+        );
+        expect(cumulative.last.total, equals(8)); // 7 days + 1 extra
+
+        // Check streak calendar
+        final streakDates = await chartService.getStreakCalendar(
+          startDate: baseDate,
+          endDate: endDate,
+        );
+        expect(streakDates.length, equals(7)); // 7 active days
+
+        // Check points (child mode)
+        final points = await chartService.getDailyPoints(
+          startDate: baseDate,
+          endDate: endDate,
+          userMode: UserMode.child,
+        );
+        expect(points, isNotNull);
+        expect(points![5].points, equals(15)); // 10 + 5 on day 5
+        final totalPoints = points.fold<int>(0, (s, d) => s + d.points);
+        expect(totalPoints, equals(75)); // 7*10 + 5
+      },
+    );
+  });
 }
