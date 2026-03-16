@@ -1,22 +1,9 @@
+import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart';
 import 'package:test/test.dart';
 
-/// Tests for email and password validation logic used in account creation.
-///
-/// The validation functions are extracted here for unit testing.
-/// They mirror the logic in AccountCreationScreen.
+/// Tests for the extracted auth validation functions.
 void main() {
   group('Email validation', () {
-    String? validateEmail(String? value) {
-      if (value == null || value.isEmpty) {
-        return 'Email is required';
-      }
-      final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-      if (!emailRegex.hasMatch(value)) {
-        return 'Please enter a valid email address';
-      }
-      return null;
-    }
-
     test('rejects null', () {
       expect(validateEmail(null), 'Email is required');
     });
@@ -47,16 +34,6 @@ void main() {
   });
 
   group('Password validation', () {
-    String? validatePassword(String? value) {
-      if (value == null || value.isEmpty) {
-        return 'Password is required';
-      }
-      if (value.length < 6) {
-        return 'Password must be at least 6 characters';
-      }
-      return null;
-    }
-
     test('rejects null', () {
       expect(validatePassword(null), 'Password is required');
     });
@@ -75,6 +52,20 @@ void main() {
 
     test('accepts long password', () {
       expect(validatePassword('aVeryLongPassword123'), isNull);
+    });
+  });
+
+  group('Display name validation', () {
+    test('rejects null', () {
+      expect(validateDisplayName(null), 'Display name is required');
+    });
+
+    test('rejects empty string', () {
+      expect(validateDisplayName(''), 'Display name is required');
+    });
+
+    test('accepts valid name', () {
+      expect(validateDisplayName('Test User'), isNull);
     });
   });
 }

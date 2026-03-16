@@ -85,7 +85,6 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen> {
             ),
             const SizedBox(height: 32),
             _ModeCard(
-              mode: UserMode.child,
               title: 'Child',
               description:
                   'Full gamification, mystery rewards, parent oversight',
@@ -97,7 +96,6 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen> {
             ),
             const SizedBox(height: 16),
             _ModeCard(
-              mode: UserMode.adult,
               title: 'Adult',
               description:
                   'Streamlined tracking, self-directed, optional engagement features',
@@ -132,15 +130,12 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen> {
 
 class _ModeCard extends StatelessWidget {
   const _ModeCard({
-    required this.mode,
     required this.title,
     required this.description,
     required this.icon,
     required this.isSelected,
     required this.onTap,
   });
-
-  final UserMode mode;
   final String title;
   final String description;
   final IconData icon;

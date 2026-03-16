@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
+    as validators;
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 
 @RoutePage()
@@ -34,33 +36,12 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     super.dispose();
   }
 
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required';
-    }
-    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
-  }
+  String? _validateEmail(String? value) => validators.validateEmail(value);
 
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
+  String? _validatePassword(String? value) => validators.validatePassword(value);
 
-  String? _validateDisplayName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Display name is required';
-    }
-    return null;
-  }
+  String? _validateDisplayName(String? value) =>
+      validators.validateDisplayName(value);
 
   Future<void> _signUpWithEmail() async {
     if (!_formKey.currentState!.validate()) return;

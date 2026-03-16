@@ -95,9 +95,13 @@ void main() {
     tags: ['story_9_2'],
     skip: 'Backlog: onboarding curriculum selection not yet implemented',
     () {
-      test('user selects at least one curriculum during onboarding', () {});
+      test('user selects at least one curriculum during onboarding', () {
+        fail('Not yet implemented');
+      });
 
-      test('all 5 curricula are shown as options', () {});
+      test('all 5 curricula are shown as options', () {
+        fail('Not yet implemented');
+      });
     },
   );
 
@@ -108,9 +112,13 @@ void main() {
     tags: ['story_9_3'],
     skip: 'Backlog: user mode selection not yet implemented',
     () {
-      test('user chooses child or adult mode', () {});
+      test('user chooses child or adult mode', () {
+        fail('Not yet implemented');
+      });
 
-      test('mode selection affects gamification display', () {});
+      test('mode selection affects gamification display', () {
+        fail('Not yet implemented');
+      });
     },
   );
 
@@ -121,9 +129,13 @@ void main() {
     tags: ['story_9_4'],
     skip: 'Backlog: progress import not yet implemented',
     () {
-      test('user can import progress from a backup file', () {});
+      test('user can import progress from a backup file', () {
+        fail('Not yet implemented');
+      });
 
-      test('imported completions appear in progress view', () {});
+      test('imported completions appear in progress view', () {
+        fail('Not yet implemented');
+      });
     },
   );
 
@@ -134,9 +146,13 @@ void main() {
     tags: ['story_9_5'],
     skip: 'Backlog: tutorial walkthrough not yet implemented',
     () {
-      test('tutorial highlights key features step by step', () {});
+      test('tutorial highlights key features step by step', () {
+        fail('Not yet implemented');
+      });
 
-      test('user can skip tutorial', () {});
+      test('user can skip tutorial', () {
+        fail('Not yet implemented');
+      });
     },
   );
 }
