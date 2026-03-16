@@ -200,7 +200,7 @@ void main() {
 
     setUp(() {
       db = createTestDatabase();
-      rewardService = RewardService(db);
+      rewardService = RewardService(db, PointsService(db));
     });
 
     tearDown(() async {

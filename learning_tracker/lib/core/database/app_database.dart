@@ -68,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -121,6 +121,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 7) {
           // Migration from schema v6 to v7: Add streaks table
           await m.createTable($StreaksTable(attachedDatabase));
+        }
+        if (from < 8) {
+          // Migration from schema v7 to v8: Add rewards table
+          await m.createTable($RewardsTable(attachedDatabase));
         }
       },
     );

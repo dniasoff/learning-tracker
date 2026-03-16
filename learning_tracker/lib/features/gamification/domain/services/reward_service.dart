@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 
 /// Service for managing mystery rewards.
 ///
@@ -9,8 +10,9 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 /// rewards are visible immediately upon earning.
 class RewardService {
   final AppDatabase _database;
+  final PointsService _pointsService;
 
-  RewardService(this._database);
+  RewardService(this._database, this._pointsService);
 
   /// Get the next unearned reward (lowest threshold above current points or
   /// the lowest unearned regardless).
@@ -28,7 +30,7 @@ class RewardService {
     final next = await getNextReward();
     if (next == null) return 0.0;
 
-    final globalPoints = await _getGlobalPoints();
+    final globalPoints = await _pointsService.getGlobalTotal();
     // Find the previous earned threshold as the base
     final earned = await _database.rewardDao.getEarnedRewards();
     final base = earned.isEmpty ? 0 : _highestEarnedThreshold(earned);
@@ -48,13 +50,13 @@ class RewardService {
   Future<List<Reward>> checkAndAwardRewards({
     required UserMode userMode,
   }) async {
-    final globalPoints = await _getGlobalPoints();
+    final globalPoints = await _pointsService.getGlobalTotal();
     final unearned = await _database.rewardDao.getUnearnedRewards();
     final newlyEarned = <Reward>[];
 
     for (final reward in unearned) {
       if (globalPoints >= reward.pointsThreshold) {
-        final now = DateTime.now();
+        final now = DateTime.now().toUtc();
         await _database.rewardDao.markEarned(reward.id, earnedAt: now);
 
         if (userMode == UserMode.adult) {
@@ -100,11 +102,6 @@ class RewardService {
         curriculumId: Value(curriculumId),
       ),
     );
-  }
-
-  Future<int> _getGlobalPoints() async {
-    final completions = await _database.completionDao.getAllCompletions();
-    return completions.fold<int>(0, (sum, c) => sum + c.points);
   }
 
   int _highestEarnedThreshold(List<Reward> earnedRewards) {
