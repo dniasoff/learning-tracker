@@ -99,7 +99,21 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
       // Check if any rewards were earned after points changed
       final rewardService = ref.read(rewardServiceProvider);
-      await checkAndAwardRewards(rewardService, userMode: widget.userMode);
+      final newlyEarned = await checkAndAwardRewards(
+        rewardService,
+        userMode: widget.userMode,
+      );
+
+      // Fire instant notification for each newly earned reward
+      if (newlyEarned.isNotEmpty) {
+        final milestoneService = ref.read(
+          rewardMilestoneNotificationServiceProvider,
+        );
+        await milestoneService.notifyNewRewards(
+          newlyEarned: newlyEarned,
+          userMode: widget.userMode,
+        );
+      }
 
       final progressAfter = curriculumEnum.isNotEmpty
           ? (await ref.read(

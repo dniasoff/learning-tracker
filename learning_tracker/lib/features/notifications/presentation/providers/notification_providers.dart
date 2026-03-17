@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/reward_milestone_notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -134,6 +135,13 @@ class StreakAlertTime extends _$StreakAlertTime {
   }
 }
 
+/// Provides the [RewardMilestoneNotificationService] instance.
+@riverpod
+RewardMilestoneNotificationService rewardMilestoneNotificationService(Ref ref) {
+  final notifService = ref.watch(notificationServiceProvider);
+  return RewardMilestoneNotificationService(notificationService: notifService);
+}
+
 /// Provides the [NotificationScheduler] instance.
 @riverpod
 NotificationScheduler notificationScheduler(Ref ref) {
@@ -175,10 +183,7 @@ Future<void> reminderSyncEffect(Ref ref) async {
 StreakAlertService streakAlertService(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   final notifService = ref.watch(notificationServiceProvider);
-  return StreakAlertService(
-    db: db,
-    notificationService: notifService,
-  );
+  return StreakAlertService(db: db, notificationService: notifService);
 }
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
