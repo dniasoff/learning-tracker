@@ -57,6 +57,17 @@ class CurriculumDefaults {
           level4Label: 'Pasuk',
           maxLevels: 4,
         ),
+        CurriculumId.nach: CurriculumHierarchyDefaults(
+          level1Label: 'Sefer',
+          level2Label: 'Perek',
+          level3Label: 'Pasuk',
+          maxLevels: 3,
+        ),
+        CurriculumId.mussar: CurriculumHierarchyDefaults(
+          level1Label: 'Sefer',
+          level2Label: 'Section',
+          maxLevels: 2,
+        ),
       };
 
   /// Default daily learning targets per curriculum (items per day).
@@ -66,6 +77,8 @@ class CurriculumDefaults {
     CurriculumId.yerushalmi: 1,
     CurriculumId.mishnaBerurah: 2,
     CurriculumId.chumash: 5,
+    CurriculumId.nach: 3,
+    CurriculumId.mussar: 1,
   };
 }
 

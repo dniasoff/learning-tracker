@@ -34,6 +34,8 @@ class AppTheme {
   static const Color curriculumYerushalmi = Color(0xFF2ECC71); // Green
   static const Color curriculumMishnaBerurah = Color(0xFFE67E22); // Orange
   static const Color curriculumChumash = Color(0xFFE74C3C); // Red
+  static const Color curriculumNach = Color(0xFF1ABC9C); // Teal
+  static const Color curriculumMussar = Color(0xFF9B59B6); // Violet
 
   /// Get curriculum color by [CurriculumId] enum value.
   static Color getCurriculumColor(CurriculumId curriculum) {
@@ -48,6 +50,10 @@ class AppTheme {
         return curriculumMishnaBerurah;
       case CurriculumId.chumash:
         return curriculumChumash;
+      case CurriculumId.nach:
+        return curriculumNach;
+      case CurriculumId.mussar:
+        return curriculumMussar;
     }
   }
 

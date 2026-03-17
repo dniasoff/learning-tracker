@@ -1,0 +1,20 @@
+[
+  {
+    "section": "Prophets",
+    "title": "Joshua",
+    "heTitle": "יהושע",
+    "length": 24,
+    "chapters": [18, 24, 17],
+    "book": "Joshua",
+    "heBook": "יהושע"
+  },
+  {
+    "section": "Prophets",
+    "title": "Judges",
+    "heTitle": "שופטים",
+    "length": 21,
+    "chapters": [36, 23],
+    "book": "Judges",
+    "heBook": "שופטים"
+  }
+]

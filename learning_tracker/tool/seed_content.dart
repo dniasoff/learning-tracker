@@ -10,6 +10,8 @@ import 'lib/sefaria/bavli_fetcher.dart';
 import 'lib/sefaria/chumash_fetcher.dart';
 import 'lib/sefaria/mishna_berurah_fetcher.dart';
 import 'lib/sefaria/mishna_fetcher.dart';
+import 'lib/sefaria/mussar_fetcher.dart';
+import 'lib/sefaria/nach_fetcher.dart';
 import 'lib/sefaria/yerushalmi_fetcher.dart';
 
 /// CLI script to fetch content from Sefaria API and generate bundled JSON files.
@@ -42,6 +44,8 @@ Future<void> main() async {
     (YerushalmiFetcher(dio: dio), 'yerushalmi.json'),
     (ChumashFetcher(dio: dio), 'chumash.json'),
     (MishnaBerurahFetcher(dio: dio), 'mishna_berurah.json'),
+    (NachFetcher(dio: dio), 'nach.json'),
+    (MussarFetcher(dio: dio), 'mussar.json'),
   ];
 
   var totalSize = 0;

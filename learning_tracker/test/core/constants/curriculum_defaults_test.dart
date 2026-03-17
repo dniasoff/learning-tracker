@@ -91,6 +91,21 @@ void main() {
       expect(config.level3Label, 'Perek');
       expect(config.level4Label, 'Pasuk');
     });
+
+    test('Nach has 3-level hierarchy', () {
+      final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.nach]!;
+      expect(config.maxLevels, 3);
+      expect(config.level1Label, 'Sefer');
+      expect(config.level2Label, 'Perek');
+      expect(config.level3Label, 'Pasuk');
+    });
+
+    test('Mussar has 2-level hierarchy', () {
+      final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.mussar]!;
+      expect(config.maxLevels, 2);
+      expect(config.level1Label, 'Sefer');
+      expect(config.level2Label, 'Section');
+    });
   });
 
   group('CurriculumDefaults - daily targets', () {

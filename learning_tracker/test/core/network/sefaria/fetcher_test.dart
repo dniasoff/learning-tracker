@@ -17,6 +17,10 @@ import '../../../../tool/lib/sefaria/mishna_berurah_fetcher.dart';
 // ignore: avoid_relative_lib_imports
 import '../../../../tool/lib/sefaria/mishna_fetcher.dart';
 // ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/mussar_fetcher.dart';
+// ignore: avoid_relative_lib_imports
+import '../../../../tool/lib/sefaria/nach_fetcher.dart';
+// ignore: avoid_relative_lib_imports
 import '../../../../tool/lib/sefaria/yerushalmi_fetcher.dart';
 
 class MockDio extends Mock implements Dio {}
@@ -609,7 +613,151 @@ void main() {
     });
   });
 
-  group('All fetchers cover all 5 curricula', () {
+  group('NachFetcher', () {
+    late NachFetcher fetcher;
+
+    setUp(() {
+      fetcher = NachFetcher(dio: mockDio);
+    });
+
+    test('curriculumId uses CurriculumId.storageKey', () {
+      expect(fetcher.curriculumId, CurriculumId.nach.storageKey);
+    });
+
+    test('fetchAllContent parses sefer-perek-pasuk correctly', () async {
+      // nach_shape.json has Joshua (3 chapters: 18,24,17) and Judges (2 chapters: 36,23)
+      // but also Torah books may be in Tanakh shape — Nach filters them out.
+      // Our fixture only has Nach books (no Torah).
+      mockShapeResponse('/api/shape/Tanakh', loadFixture('nach_shape.json'));
+
+      final result = await fetcher.fetchAllContent();
+
+      expect(result.items, isNotEmpty);
+      expect(result.hierarchyConfig.levelLabels, ['Sefer', 'Perek', 'Pasuk']);
+
+      // Joshua: 18+24+17 = 59 verses, Judges: 36+23 = 59 verses → 118 total
+      final leaves = result.items.where((i) => i.isLeaf).toList();
+      expect(leaves.length, 118);
+    });
+
+    test('isLeaf is true only on pasuk items', () async {
+      mockShapeResponse('/api/shape/Tanakh', loadFixture('nach_shape.json'));
+
+      final result = await fetcher.fetchAllContent();
+
+      for (final item in result.items.where((i) => i.isLeaf)) {
+        expect(item.level3, isNotNull);
+      }
+    });
+
+    test('populates curriculum_hierarchy_config correctly', () async {
+      mockShapeResponse('/api/shape/Tanakh', loadFixture('nach_shape.json'));
+
+      final result = await fetcher.fetchAllContent();
+
+      expect(result.hierarchyConfig.curriculumId, 'nach');
+      expect(result.hierarchyConfig.depth, 3);
+      expect(result.hierarchyConfig.totalItems, 118);
+    });
+
+    test('excludes Torah books from Tanakh shape', () async {
+      // Use the tanakh_shape.json which has Torah books (Genesis, Exodus)
+      mockShapeResponse('/api/shape/Tanakh', loadFixture('tanakh_shape.json'));
+
+      final result = await fetcher.fetchAllContent();
+
+      // Torah books should be filtered out — no items expected
+      expect(result.items, isEmpty);
+      expect(result.hierarchyConfig.totalItems, 0);
+    });
+  });
+
+  group('MussarFetcher', () {
+    late MussarFetcher fetcher;
+
+    setUp(() {
+      fetcher = MussarFetcher(dio: mockDio);
+    });
+
+    test('curriculumId uses CurriculumId.storageKey', () {
+      expect(fetcher.curriculumId, CurriculumId.mussar.storageKey);
+    });
+
+    test('fetchAllContent parses sefer-section correctly', () async {
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mesillat Yesharim')}',
+        [loadFixture('mussar_shape_mesillat_yesharim.json')],
+      );
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Orchot Tzaddikim')}',
+        [loadFixture('mussar_shape_orchot_tzaddikim.json')],
+      );
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Chovot HaLevavot')}',
+        [loadFixture('mussar_shape_chovot_halevavot.json')],
+      );
+
+      final result = await fetcher.fetchAllContent();
+
+      expect(result.items, isNotEmpty);
+      expect(result.hierarchyConfig.levelLabels, ['Sefer', 'Section']);
+
+      // MY: 3 chapters, OT: 2 chapters, CHL: 3 chapters → 8 total leaves
+      final leaves = result.items.where((i) => i.isLeaf).toList();
+      expect(leaves.length, 8);
+    });
+
+    test('isLeaf is true only on section items', () async {
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mesillat Yesharim')}',
+        [loadFixture('mussar_shape_mesillat_yesharim.json')],
+      );
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Orchot Tzaddikim')}',
+        [loadFixture('mussar_shape_orchot_tzaddikim.json')],
+      );
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Chovot HaLevavot')}',
+        [loadFixture('mussar_shape_chovot_halevavot.json')],
+      );
+
+      final result = await fetcher.fetchAllContent();
+
+      for (final item in result.items.where((i) => i.isLeaf)) {
+        expect(item.level2, isNotNull);
+      }
+
+      // Sefer containers should not be leaves
+      final containers = result.items.where((i) => !i.isLeaf).toList();
+      expect(containers.length, 3); // 3 sefarim
+      for (final c in containers) {
+        expect(c.level2, isNull);
+      }
+    });
+
+    test('populates curriculum_hierarchy_config correctly', () async {
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Mesillat Yesharim')}',
+        [loadFixture('mussar_shape_mesillat_yesharim.json')],
+      );
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Orchot Tzaddikim')}',
+        [loadFixture('mussar_shape_orchot_tzaddikim.json')],
+      );
+      mockShapeResponse(
+        '/api/shape/${Uri.encodeComponent('Chovot HaLevavot')}',
+        [loadFixture('mussar_shape_chovot_halevavot.json')],
+      );
+
+      final result = await fetcher.fetchAllContent();
+
+      expect(result.hierarchyConfig.curriculumId, 'mussar');
+      expect(result.hierarchyConfig.depth, 2);
+      expect(result.hierarchyConfig.totalItems, 8);
+    });
+  });
+
+  group('All fetchers cover all 7 curricula', () {
     test('each CurriculumId has a corresponding fetcher', () {
       final fetchers = {
         CurriculumId.mishnayos: MishnaFetcher(dio: mockDio),
@@ -617,9 +765,11 @@ void main() {
         CurriculumId.yerushalmi: YerushalmiFetcher(dio: mockDio),
         CurriculumId.mishnaBerurah: MishnaBerurahFetcher(dio: mockDio),
         CurriculumId.chumash: ChumashFetcher(dio: mockDio),
+        CurriculumId.nach: NachFetcher(dio: mockDio),
+        CurriculumId.mussar: MussarFetcher(dio: mockDio),
       };
 
-      // All 5 curricula have fetchers.
+      // All 7 curricula have fetchers.
       expect(fetchers.length, CurriculumId.values.length);
 
       // Each fetcher's curriculumId matches its CurriculumId.storageKey.

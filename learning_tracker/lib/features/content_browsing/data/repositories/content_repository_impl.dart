@@ -161,6 +161,10 @@ class ContentRepositoryImpl implements ContentRepository {
         return 'chumash.json';
       case CurriculumId.mishnaBerurah:
         return 'mishna_berurah.json';
+      case CurriculumId.nach:
+        return 'nach.json';
+      case CurriculumId.mussar:
+        return 'mussar.json';
     }
   }
 }
