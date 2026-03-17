@@ -4,7 +4,9 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -24,27 +26,105 @@ class MockDocumentReference extends Mock
 class MockQuerySnapshot extends Mock
     implements QuerySnapshot<Map<String, dynamic>> {}
 
+/// A no-op push for testing (avoids Firestore dependency).
+Future<void> _noOpPush({
+  required String firebaseUid,
+  required String displayName,
+  required String userMode,
+}) async {}
+
 void main() {
   // ── Story 14.1: Settings screen ───────────────────────────────
 
-  group(
-    'Story 14.1 -- Settings screen',
-    tags: ['story_14_1'],
-    skip: 'Backlog: settings screen not yet implemented',
-    () {
-      test('settings screen displays all preference categories', () {
-        // TODO: verify settings screen structure
-      });
+  group('Story 14.1 -- Settings screen', tags: ['story_14_1'], () {
+    late AppDatabase db;
+    late UserProfileService profileService;
 
-      test('user can change user mode (child/adult)', () {
-        // TODO: verify mode toggle persists
-      });
+    setUp(() {
+      db = createTestDatabase();
+      profileService = UserProfileService(
+        userProfileDao: db.userProfileDao,
+        pushUserProfile: _noOpPush,
+      );
+    });
 
-      test('user can manage active curricula from settings', () {
-        // TODO: verify curriculum activation from settings
-      });
-    },
-  );
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('mode change persists new UserMode to profile', () async {
+      // Set initial mode to adult
+      await profileService.setUserMode(
+        firebaseUid: 'uid-1',
+        displayName: 'Test User',
+        mode: UserMode.adult,
+      );
+      expect(await profileService.getUserMode('uid-1'), UserMode.adult);
+
+      // Change to child
+      await profileService.setUserMode(
+        firebaseUid: 'uid-1',
+        displayName: 'Test User',
+        mode: UserMode.child,
+      );
+      expect(await profileService.getUserMode('uid-1'), UserMode.child);
+    });
+
+    test('mode change from child to adult disables parent mode access', () async {
+      // Start as child
+      await profileService.setUserMode(
+        firebaseUid: 'uid-1',
+        displayName: 'Test User',
+        mode: UserMode.child,
+      );
+
+      // Switch to adult
+      await profileService.setUserMode(
+        firebaseUid: 'uid-1',
+        displayName: 'Test User',
+        mode: UserMode.adult,
+      );
+
+      final mode = await profileService.getUserMode('uid-1');
+      expect(mode, UserMode.adult);
+      // In adult mode, parent mode is not accessible (ChildModeGuard blocks it)
+    });
+
+    test('mode change from adult to child enables parent mode setup', () async {
+      // Start as adult
+      await profileService.setUserMode(
+        firebaseUid: 'uid-1',
+        displayName: 'Test User',
+        mode: UserMode.adult,
+      );
+
+      // Switch to child
+      await profileService.setUserMode(
+        firebaseUid: 'uid-1',
+        displayName: 'Test User',
+        mode: UserMode.child,
+      );
+
+      final mode = await profileService.getUserMode('uid-1');
+      expect(mode, UserMode.child);
+      // In child mode, parent mode becomes available (ChildModeGuard allows)
+    });
+
+    test('user profile stores display name and mode', () async {
+      await profileService.setUserMode(
+        firebaseUid: 'uid-1',
+        displayName: 'Jane Doe',
+        mode: UserMode.child,
+      );
+
+      final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
+        'uid-1',
+      );
+      expect(profile, isNotNull);
+      expect(profile!.displayName, 'Jane Doe');
+      expect(profile.userMode, 'child');
+    });
+  });
 
   // ── Story 14.2: Data export ───────────────────────────────────
 

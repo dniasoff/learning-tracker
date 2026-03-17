@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
@@ -14,6 +15,9 @@ import 'package:learning_tracker/features/settings/presentation/widgets/change_p
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/link_provider_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+
+/// App version constant (from pubspec.yaml).
+const String _appVersion = '1.0.0';
 
 @RoutePage()
 class SettingsScreen extends ConsumerWidget {
@@ -28,14 +32,12 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
-          // Change Mode Section
-          ListTile(
-            leading: const Icon(Icons.swap_horiz),
-            title: const Text('Change Mode'),
-            subtitle: const Text('Switch between Child and Adult mode'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showChangeModeDialog(context, ref),
-          ),
+          // User Profile Section
+          _UserProfileSection(user: user),
+          const Divider(),
+
+          // User Mode Section
+          _UserModeSection(user: user),
           const Divider(),
 
           // Active Curricula Section
@@ -48,7 +50,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
-          // Show loading or error states
           activeCurriculaAsync.when(
             data: (activeCurricula) {
               return Column(
@@ -78,6 +79,28 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(height: 32),
 
+          // Settings Navigation Links
+          const ListTile(
+            title: Text(
+              'More Settings',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('Notifications'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.pushRoute(const NotificationsRoute()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.sync_outlined),
+            title: const Text('Data & Sync'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.pushRoute(const SyncRoute()),
+          ),
+
+          const Divider(height: 32),
+
           // Account Management Section
           const ListTile(
             title: Text(
@@ -86,7 +109,6 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          // Change Password (only for email/password users)
           if (user != null &&
               user.providerData.any((info) => info.providerId == 'password'))
             ListTile(
@@ -96,7 +118,6 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () => _showChangePasswordFlow(context, ref, user),
             ),
 
-          // Link Provider
           if (user != null)
             ListTile(
               leading: const Icon(Icons.link),
@@ -108,14 +129,12 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(),
 
-          // Sign Out
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sign Out'),
             onTap: () => _showSignOutConfirmation(context, ref),
           ),
 
-          // Delete Account
           ListTile(
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             title: const Text(
@@ -124,9 +143,194 @@ class SettingsScreen extends ConsumerWidget {
             ),
             onTap: () => _showDeleteAccountFlow(context, ref, user),
           ),
+
+          const Divider(height: 32),
+
+          // App Version
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(
+              child: Text(
+                'Version $_appVersion',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+}
+
+/// Displays user profile info: display name, email, and auth provider.
+class _UserProfileSection extends StatelessWidget {
+  const _UserProfileSection({required this.user});
+
+  final User? user;
+
+  @override
+  Widget build(BuildContext context) {
+    if (user == null) {
+      return const ListTile(
+        leading: Icon(Icons.person_outline),
+        title: Text('Not signed in'),
+      );
+    }
+
+    final providerIds = user!.providerData.map((p) => p.providerId).toList();
+    final providerLabel = providerIds
+        .map((id) {
+          switch (id) {
+            case 'google.com':
+              return 'Google';
+            case 'password':
+              return 'Email/Password';
+            default:
+              return id;
+          }
+        })
+        .join(', ');
+
+    return ListTile(
+      leading: const Icon(Icons.person),
+      title: Text(user!.displayName ?? user!.email?.split('@').first ?? 'User'),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (user!.email != null) Text(user!.email!),
+          Text('Signed in with $providerLabel'),
+        ],
+      ),
+      isThreeLine: user!.email != null,
+    );
+  }
+}
+
+/// Displays current user mode with option to change.
+class _UserModeSection extends ConsumerStatefulWidget {
+  const _UserModeSection({required this.user});
+
+  final User? user;
+
+  @override
+  ConsumerState<_UserModeSection> createState() => _UserModeSectionState();
+}
+
+class _UserModeSectionState extends ConsumerState<_UserModeSection> {
+  UserMode? _currentMode;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMode();
+  }
+
+  Future<void> _loadMode() async {
+    if (widget.user == null) return;
+    final profileService = ref.read(userProfileServiceProvider);
+    final mode = await profileService.getUserMode(widget.user!.uid);
+    if (mounted) {
+      setState(() {
+        _currentMode = mode;
+        _loading = false;
+      });
+    }
+  }
+
+  String _modeDisplayName(UserMode mode) =>
+      mode.name[0].toUpperCase() + mode.name.substring(1);
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.user == null) return const SizedBox.shrink();
+
+    final modeText = _loading
+        ? 'Loading...'
+        : _currentMode != null
+        ? _modeDisplayName(_currentMode!)
+        : 'Not set';
+
+    return ListTile(
+      leading: Icon(
+        _currentMode == UserMode.child ? Icons.child_care : Icons.person,
+      ),
+      title: const Text('User Mode'),
+      subtitle: Text(modeText),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: _loading ? null : () => _showChangeModeConfirmation(context, ref),
+    );
+  }
+
+  Future<void> _showChangeModeConfirmation(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final user = widget.user;
+    if (user == null) return;
+
+    final profileService = ref.read(userProfileServiceProvider);
+    final currentMode = _currentMode ?? UserMode.adult;
+    final newMode = currentMode == UserMode.adult
+        ? UserMode.child
+        : UserMode.adult;
+
+    final implications = newMode == UserMode.child
+        ? 'Switching to Child mode will:\n'
+              '• Enable gamification features (points, rewards)\n'
+              '• Make parent mode available for parental controls\n'
+              '• Show celebratory animations on completions'
+        : 'Switching to Adult mode will:\n'
+              '• Disable gamification popups and animations\n'
+              '• Remove parent mode access\n'
+              '• Show streamlined completion confirmations';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Switch to ${_modeDisplayName(newMode)} Mode?'),
+        content: Text(implications),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Switch to ${_modeDisplayName(newMode)}'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await profileService.setUserMode(
+        firebaseUid: user.uid,
+        displayName: user.displayName ?? user.email?.split('@').first ?? 'User',
+        mode: newMode,
+      );
+      if (mounted) {
+        setState(() => _currentMode = newMode);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Mode changed to ${_modeDisplayName(newMode)}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to change mode. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -181,7 +385,6 @@ Future<void> _showDeleteAccountFlow(
 
   final service = ref.read(accountManagementServiceProvider);
 
-  // Step 1: Re-authenticate
   final hasPassword = user.providerData.any(
     (info) => info.providerId == 'password',
   );
@@ -217,11 +420,9 @@ Future<void> _showDeleteAccountFlow(
 
   if (!reauthenticated || !context.mounted) return;
 
-  // Step 2: Confirm deletion by typing "DELETE"
   final confirmed = await showDeleteAccountDialog(context: context);
   if (confirmed != true || !context.mounted) return;
 
-  // Step 3: Delete account
   try {
     await service.deleteAccount(user.uid);
   } catch (e) {
@@ -243,7 +444,6 @@ Future<void> _showChangePasswordFlow(
 ) async {
   final service = ref.read(accountManagementServiceProvider);
 
-  // Step 1: Re-authenticate
   final reauthenticated = await showReauthenticateDialog(
     context: context,
     email: user.email ?? '',
@@ -251,7 +451,6 @@ Future<void> _showChangePasswordFlow(
   );
   if (reauthenticated != true || !context.mounted) return;
 
-  // Step 2: Change password
   final changed = await showChangePasswordDialog(
     context: context,
     service: service,
@@ -269,65 +468,6 @@ Future<void> _showLinkProviderDialog(
 ) async {
   final service = ref.read(accountManagementServiceProvider);
   await showLinkProviderDialog(context: context, service: service);
-}
-
-Future<void> _showChangeModeDialog(BuildContext context, WidgetRef ref) async {
-  final user = ref.read(firebaseAuthProvider).currentUser;
-  if (user == null) return;
-
-  final profileService = ref.read(userProfileServiceProvider);
-  final currentMode = await profileService.getUserMode(user.uid);
-
-  if (!context.mounted) return;
-
-  final selected = await showDialog<UserMode>(
-    context: context,
-    builder: (context) => SimpleDialog(
-      title: const Text('Select Mode'),
-      children: UserMode.values.map((mode) {
-        return SimpleDialogOption(
-          onPressed: () => Navigator.pop(context, mode),
-          child: ListTile(
-            leading: Icon(
-              mode == UserMode.child ? Icons.child_care : Icons.person,
-            ),
-            title: Text(mode.name[0].toUpperCase() + mode.name.substring(1)),
-            trailing: mode == currentMode
-                ? const Icon(Icons.check, color: Colors.green)
-                : null,
-          ),
-        );
-      }).toList(),
-    ),
-  );
-
-  if (selected == null || selected == currentMode || !context.mounted) return;
-
-  try {
-    await profileService.setUserMode(
-      firebaseUid: user.uid,
-      displayName: user.displayName ?? user.email?.split('@').first ?? 'User',
-      mode: selected,
-    );
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Mode changed to ${selected.name[0].toUpperCase()}${selected.name.substring(1)}',
-          ),
-        ),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to change mode. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 }
 
 class _CurriculumToggleTile extends ConsumerWidget {
@@ -354,11 +494,10 @@ class _CurriculumToggleTile extends ConsumerWidget {
       ),
       value: isActive,
       onChanged: isLastActive
-          ? null // Disable toggle for last active curriculum
+          ? null
           : (newValue) async {
               try {
                 await service.toggle(curriculum);
-                // Invalidate family providers for the toggled curriculum (P3)
                 ref.invalidate(isCurriculumActiveProvider(curriculum));
                 ref.invalidate(activeTracksProvider(curriculum));
                 ref.invalidate(curriculumContentProvider(curriculum));
