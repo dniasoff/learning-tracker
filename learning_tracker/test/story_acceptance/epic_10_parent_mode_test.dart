@@ -328,6 +328,53 @@ void main() {
       expect(pct, equals(0.0));
     });
 
+    test('aggregator returns non-zero completion % for fully completed items',
+        () async {
+      // Set up 3 total items in learning order
+      for (var i = 0; i < 3; i++) {
+        await db.learningOrderDao.insertLearningOrder(
+          LearningOrderCompanion.insert(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'ref-mishnayos-$i',
+            userSortOrder: i,
+          ),
+        );
+      }
+
+      // 1 stage definition
+      await db.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion.insert(
+          curriculumId: 'mishnayos',
+          stageOrder: 1,
+          stageName: 'Stage 1',
+          delayDays: 0,
+        ),
+      );
+
+      // Complete 2 out of 3 items (all stages)
+      for (var i = 0; i < 2; i++) {
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'ref-mishnayos-$i',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+            points: const Value(10),
+          ),
+        );
+      }
+
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      final aggregator = ParentDashboardAggregator(db);
+      final pct = await aggregator.computeCompletionPercentage(
+        CurriculumId.mishnayos,
+      );
+
+      // 2 fully completed / 3 total items ≈ 0.6667
+      expect(pct, closeTo(2 / 3, 0.01));
+    });
+
     test('aggregator returns 0% when no completions', () async {
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
       final aggregator = ParentDashboardAggregator(db);
@@ -523,11 +570,11 @@ void main() {
       expect(find.text('+10'), findsAtLeastNWidgets(1));
     });
 
-    // ── Integration: multi-day completions reflected in dashboard ──
+    // ── Integration: multi-day completions reflected in dashboard UI ──
 
-    test(
-      'integration: completions over several days reflected in dashboard',
-      () async {
+    testWidgets(
+      'integration: multi-day completions reflected in dashboard UI',
+      (tester) async {
         final now = DateTime.now().toUtc();
 
         // Day 1: 3 completions
@@ -567,16 +614,23 @@ void main() {
           ),
         );
 
-        final aggregator = ParentDashboardAggregator(db);
-        final data = await aggregator.compute();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            child: const MaterialApp(home: ParentModeScreen()),
+          ),
+        );
 
-        expect(data.globalPoints, equals(50)); // 5 * 10
-        expect(data.currentStreak, equals(2));
-        expect(data.recentCompletions.length, equals(5));
-        // Days active depends on what day of the week 'now' falls on;
-        // the completions are 1-2 days ago, which may be in a previous week.
-        expect(data.engagement.daysActiveThisWeek, greaterThanOrEqualTo(0));
-        expect(data.engagement.averageDailyCompletions, greaterThan(0));
+        await tester.pumpAndSettle();
+
+        // Verify key stats are displayed in the UI
+        expect(find.text('50'), findsOneWidget); // 5 * 10 points
+        expect(find.text('2'), findsOneWidget); // current streak
+        expect(find.text('Best: 2'), findsOneWidget); // max streak
+        // Verify recent completions are shown
+        expect(find.text('Recent Activity (Last 7 Days)'), findsOneWidget);
+        expect(find.text('day1-ref-0'), findsOneWidget);
+        expect(find.text('day2-ref-0'), findsOneWidget);
       },
     );
   });

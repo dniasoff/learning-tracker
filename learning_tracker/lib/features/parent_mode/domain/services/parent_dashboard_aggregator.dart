@@ -73,7 +73,10 @@ class ParentDashboardAggregator {
   ParentDashboardAggregator(this._db);
 
   /// Compute the full dashboard data snapshot.
-  Future<ParentDashboardData> compute() async {
+  ///
+  /// [now] defaults to the current time; pass explicitly for testability.
+  Future<ParentDashboardData> compute({DateTime? now}) async {
+    now ??= DateTime.now();
     final completions = await _db.completionDao.getAllCompletions();
     final streak = await _db.streakDao.getStreak();
     final activeCurriculaKeys = await _db.activeCurriculumDao
@@ -98,16 +101,21 @@ class ParentDashboardAggregator {
         completions
             .where((c) => c.curriculumId == curriculum.storageKey)
             .toList(),
+        now,
       );
       curriculaSummaries.add(summary);
     }
 
-    // Recent completions (last 7 days)
-    final now = DateTime.now().toUtc();
-    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    // Recent completions (last 7 days, using local time for consistency)
+    final nowLocal = now.toLocal();
+    final sevenDaysAgoLocal = DateTime(
+      nowLocal.year,
+      nowLocal.month,
+      nowLocal.day,
+    ).subtract(const Duration(days: 7));
     final recent =
         completions
-            .where((c) => c.completedAt.isAfter(sevenDaysAgo))
+            .where((c) => c.completedAt.toLocal().isAfter(sevenDaysAgoLocal))
             .map(
               (c) => RecentCompletion(
                 sefariaRef: c.sefariaRef,
@@ -148,23 +156,27 @@ class ParentDashboardAggregator {
       completionsByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
     }
 
+    final totalItems = await _db.learningOrderDao.countByCurriculum(
+      curriculum.storageKey,
+    );
+    if (totalItems == 0) return 0.0;
+
     var fullyCompleted = 0;
     for (final stageSet in completionsByRef.values) {
       if (stageSet.length >= totalStages) fullyCompleted++;
     }
 
-    return completionsByRef.isNotEmpty
-        ? fullyCompleted / completionsByRef.length
-        : 0.0;
+    return fullyCompleted / totalItems;
   }
 
   Future<CurriculumSummary> _computeCurriculumSummary(
     CurriculumId curriculum,
     List<Completion> completions,
+    DateTime now,
   ) async {
     final completionPct = await computeCompletionPercentage(curriculum);
     final points = completions.fold<int>(0, (sum, c) => sum + c.points);
-    final paceStatus = await _computePaceStatus(curriculum, completions);
+    final paceStatus = await _computePaceStatus(curriculum, completions, now);
 
     return CurriculumSummary(
       curriculum: curriculum,
@@ -177,6 +189,7 @@ class ParentDashboardAggregator {
   Future<PaceStatusType> _computePaceStatus(
     CurriculumId curriculum,
     List<Completion> completions,
+    DateTime now,
   ) async {
     final goals = await _db.goalDao.getGoalsByCurriculum(curriculum.storageKey);
     if (goals.isEmpty) return PaceStatusType.onPace;
@@ -184,8 +197,6 @@ class ParentDashboardAggregator {
     final goal = goals.first;
     // targetDate is nullable — cannot compute pace without a deadline
     if (goal.targetDate == null) return PaceStatusType.onPace;
-
-    final now = DateTime.now().toUtc();
 
     // Build daily completion counts
     final dailyCounts = <DateTime, int>{};
@@ -202,12 +213,11 @@ class ParentDashboardAggregator {
     // Count unique content items completed
     final uniqueRefs = completions.map((c) => c.sefariaRef).toSet();
 
-    // Use targetPercent to estimate total items needed.
-    // Since we don't have content count here, use completion count
-    // relative to what's been touched as an approximation.
-    final totalEstimate = uniqueRefs.isNotEmpty
-        ? (uniqueRefs.length / (goal.targetPercent / 100)).ceil()
-        : 100; // Default if no completions yet
+    // Use actual total from curriculum content
+    final totalItems = await _db.learningOrderDao.countByCurriculum(
+      curriculum.storageKey,
+    );
+    final totalEstimate = totalItems > 0 ? totalItems : 100;
 
     final pace = PaceCalculator.calculate(
       goalStartDate: goal.createdAt,

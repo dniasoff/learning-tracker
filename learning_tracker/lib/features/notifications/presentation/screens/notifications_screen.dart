@@ -12,6 +12,9 @@ class NotificationsScreen extends ConsumerWidget {
     final enabled = ref.watch(reminderEnabledProvider);
     final time = ref.watch(reminderTimeProvider);
 
+    // Activate the sync effect so scheduling reacts to setting changes.
+    ref.watch(reminderSyncEffectProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
       body: ListView(

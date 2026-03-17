@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
@@ -15,6 +16,8 @@ import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
+
+class MockConnectivityService extends Mock implements ConnectivityService {}
 
 AppDatabase _createInMemoryDatabase() {
   return AppDatabase(NativeDatabase.memory());
@@ -29,6 +32,7 @@ void main() {
     () {
       late AppDatabase database;
       late MockFirestoreDataSource mockFirestore;
+      late MockConnectivityService mockConnectivity;
       late Talker logger;
       late OfflineQueue offlineQueue;
       late SyncEngine syncEngine;
@@ -36,17 +40,20 @@ void main() {
       setUp(() {
         database = _createInMemoryDatabase();
         mockFirestore = MockFirestoreDataSource();
+        mockConnectivity = MockConnectivityService();
         logger = Talker();
         offlineQueue = OfflineQueue(
           database: database,
           firestoreDataSource: mockFirestore,
           logger: logger,
         );
+        when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
         syncEngine = SyncEngine(
           database: database,
           firestoreDataSource: mockFirestore,
           offlineQueue: offlineQueue,
           logger: logger,
+          connectivityService: mockConnectivity,
         );
       });
 
@@ -195,6 +202,7 @@ void main() {
   group('Story 13.2 -- Pull-on-Launch Merge', tags: ['story_13_2'], () {
     late AppDatabase database;
     late MockFirestoreDataSource mockFirestore;
+    late MockConnectivityService mockConnectivity;
     late Talker logger;
     late OfflineQueue offlineQueue;
     late SyncEngine syncEngine;
@@ -202,17 +210,20 @@ void main() {
     setUp(() {
       database = _createInMemoryDatabase();
       mockFirestore = MockFirestoreDataSource();
+      mockConnectivity = MockConnectivityService();
       logger = Talker();
       offlineQueue = OfflineQueue(
         database: database,
         firestoreDataSource: mockFirestore,
         logger: logger,
       );
+      when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
         offlineQueue: offlineQueue,
         logger: logger,
+        connectivityService: mockConnectivity,
       );
     });
 

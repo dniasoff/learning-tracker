@@ -10,10 +10,16 @@ class MockStackRouter extends Mock implements StackRouter {}
 
 class MockPinService extends Mock implements PinService {}
 
+class FakePageRouteInfo extends Fake implements PageRouteInfo<dynamic> {}
+
 void main() {
   late MockNavigationResolver mockResolver;
   late MockStackRouter mockRouter;
   late MockPinService mockPinService;
+
+  setUpAll(() {
+    registerFallbackValue(FakePageRouteInfo());
+  });
 
   setUp(() {
     mockResolver = MockNavigationResolver();
@@ -22,8 +28,9 @@ void main() {
   });
 
   group('TutorPinGuard', () {
-    test('allows navigation when no tutor PIN has been set', () async {
+    test('pushes setup and blocks when no tutor PIN has been set', () async {
       when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
+      when(() => mockRouter.push<bool>(any())).thenAnswer((_) async => null);
 
       final guard = TutorPinGuard(
         pinService: mockPinService,
@@ -32,6 +39,22 @@ void main() {
 
       await guard.onNavigation(mockResolver, mockRouter);
 
+      verify(() => mockRouter.push<bool>(any())).called(1);
+      verify(() => mockResolver.next(false)).called(1);
+    });
+
+    test('allows navigation after successful PIN setup', () async {
+      when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
+      when(() => mockRouter.push<bool>(any())).thenAnswer((_) async => true);
+
+      final guard = TutorPinGuard(
+        pinService: mockPinService,
+        promptForPin: () async => null,
+      );
+
+      await guard.onNavigation(mockResolver, mockRouter);
+
+      verify(() => mockRouter.push<bool>(any())).called(1);
       verify(() => mockResolver.next(true)).called(1);
     });
 

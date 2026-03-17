@@ -68,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -125,6 +125,13 @@ class AppDatabase extends _$AppDatabase {
         if (from < 8) {
           // Migration from schema v7 to v8: Add rewards table
           await m.createTable($RewardsTable(attachedDatabase));
+        }
+        if (from < 9) {
+          // Migration from schema v8 to v9: Add updatedAt column to rewards
+          await customStatement(
+            'ALTER TABLE rewards ADD COLUMN updated_at INTEGER NOT NULL '
+            "DEFAULT (strftime('%s', 'now'))",
+          );
         }
       },
     );

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Provider for CurriculumActivationService
 final curriculumActivationServiceProvider =
@@ -13,10 +14,13 @@ final curriculumActivationServiceProvider =
       final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
       final trackRepository = ref.watch(trackRepositoryProvider);
 
+      final isTutorMode = ref.watch(tutorModeProvider);
+
       return CurriculumActivationService(
         database: database,
         pushActiveCurricula: firestoreDataSource.pushActiveCurricula,
         trackRepository: trackRepository,
+        isTutorMode: isTutorMode,
       );
     });
 

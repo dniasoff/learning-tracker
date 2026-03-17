@@ -21,11 +21,30 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 enum _ScreenPhase { selection, importing, goalSetup, done, error }
 
+enum _CurriculumStatus { notStarted, importing, done, failed }
+
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _selected = <CurriculumId>{};
   var _phase = _ScreenPhase.selection;
   CurriculumImportProgress? _importProgress;
   List<CurriculumImportResult> _failures = [];
+  int _originalTotal = 0;
+  final _curriculumStatuses = <CurriculumId, _CurriculumStatus>{};
+
+  void _updateStatuses(CurriculumImportProgress progress) {
+    for (final result in progress.results) {
+      _curriculumStatuses[result.curriculumId] = result.success
+          ? _CurriculumStatus.done
+          : _CurriculumStatus.failed;
+    }
+    // Mark the one currently being processed as importing if not yet in results
+    if (!progress.results.any(
+      (r) => r.curriculumId == progress.currentCurriculum,
+    )) {
+      _curriculumStatuses[progress.currentCurriculum] =
+          _CurriculumStatus.importing;
+    }
+  }
 
   // Goal setup state
   late List<CurriculumId> _goalSetupQueue;
@@ -34,13 +53,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _startImport() async {
     if (_selected.isEmpty) return;
 
-    setState(() => _phase = _ScreenPhase.importing);
+    setState(() {
+      _phase = _ScreenPhase.importing;
+      _originalTotal = _selected.length;
+      for (final id in _selected) {
+        _curriculumStatuses[id] = _CurriculumStatus.notStarted;
+      }
+    });
 
     final service = ref.read(curriculumImportServiceProvider);
 
     await for (final progress in service.importAll(_selected.toList())) {
       if (!mounted) return;
-      setState(() => _importProgress = progress);
+      setState(() {
+        _importProgress = progress;
+        _updateStatuses(progress);
+      });
     }
 
     if (!mounted) return;
@@ -59,14 +87,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _retryFailed() async {
     if (_failures.isEmpty) return;
 
-    setState(() => _phase = _ScreenPhase.importing);
+    setState(() {
+      _phase = _ScreenPhase.importing;
+      for (final f in _failures) {
+        _curriculumStatuses[f.curriculumId] = _CurriculumStatus.notStarted;
+      }
+    });
 
     final service = ref.read(curriculumImportServiceProvider);
     final failedIds = _failures.map((f) => f.curriculumId).toList();
 
     await for (final progress in service.importAll(failedIds)) {
       if (!mounted) return;
-      setState(() => _importProgress = progress);
+      setState(() {
+        _importProgress = progress;
+        _updateStatuses(progress);
+      });
     }
 
     if (!mounted) return;
@@ -201,6 +237,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _buildImporting(ThemeData theme) {
     final progress = _importProgress;
+    final doneCount = _curriculumStatuses.values
+        .where((s) => s == _CurriculumStatus.done)
+        .length;
+    final fraction = _originalTotal > 0 ? doneCount / _originalTotal : 0.0;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -210,13 +250,68 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Text('Importing curricula...', style: theme.textTheme.titleLarge),
             const SizedBox(height: 24),
             if (progress != null) ...[
-              LinearProgressIndicator(value: progress.fraction),
+              LinearProgressIndicator(value: fraction),
               const SizedBox(height: 16),
               Text(
-                '${progress.currentCurriculum.displayNameEn} '
-                '(${progress.current}/${progress.total})',
+                '$doneCount/$_originalTotal complete',
                 style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
+              // Per-curriculum progress indicators (AC7)
+              for (final id in _selected)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          id.displayNameEn,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: LinearProgressIndicator(
+                          value: switch (_curriculumStatuses[id]) {
+                            _CurriculumStatus.done => 1.0,
+                            _CurriculumStatus.failed => 1.0,
+                            _CurriculumStatus.importing => null,
+                            _ => 0.0,
+                          },
+                          color:
+                              _curriculumStatuses[id] ==
+                                  _CurriculumStatus.failed
+                              ? theme.colorScheme.error
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 24,
+                        child: switch (_curriculumStatuses[id]) {
+                          _CurriculumStatus.done => Icon(
+                            Icons.check_circle,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          _CurriculumStatus.failed => Icon(
+                            Icons.error,
+                            size: 18,
+                            color: theme.colorScheme.error,
+                          ),
+                          _CurriculumStatus.importing => const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          _ => const SizedBox.shrink(),
+                        },
+                      ),
+                    ],
+                  ),
+                ),
             ] else ...[
               const CircularProgressIndicator(),
             ],

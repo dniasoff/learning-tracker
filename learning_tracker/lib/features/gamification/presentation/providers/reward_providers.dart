@@ -5,12 +5,14 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
+import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Provider for the RewardService singleton.
 final rewardServiceProvider = Provider<RewardService>((ref) {
   final database = ref.watch(appDatabaseProvider);
   final pointsService = ref.watch(pointsServiceProvider);
-  return RewardService(database, pointsService);
+  final isTutorMode = ref.watch(tutorModeProvider);
+  return RewardService(database, pointsService, isTutorMode: isTutorMode);
 });
 
 /// All rewards stream for reactive UI updates.

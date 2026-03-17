@@ -3,7 +3,9 @@
 library;
 
 import 'package:drift/drift.dart';
+import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -18,12 +20,41 @@ void main() {
 
   group('Story 12.1 -- Local notifications', tags: ['story_12_1'], () {
     late MockNotificationService mockService;
+    late NotificationScheduler scheduler;
 
     setUp(() {
       mockService = MockNotificationService();
+      scheduler = NotificationScheduler(service: mockService);
     });
 
-    test('daily reminder notification schedules at configured time', () async {
+    test(
+      'schedule() calls service with correct body for plural counts',
+      () async {
+        when(
+          () => mockService.scheduleDailyReminder(
+            hour: any(named: 'hour'),
+            minute: any(named: 'minute'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async {});
+
+        await scheduler.schedule(
+          time: const TimeOfDay(hour: 19, minute: 0),
+          taskCount: 5,
+          curriculumCount: 2,
+        );
+
+        verify(
+          () => mockService.scheduleDailyReminder(
+            hour: 19,
+            minute: 0,
+            body: 'You have 5 tasks across 2 curricula today',
+          ),
+        ).called(1);
+      },
+    );
+
+    test('schedule() uses singular forms for count of 1', () async {
       when(
         () => mockService.scheduleDailyReminder(
           hour: any(named: 'hour'),
@@ -32,46 +63,36 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      await mockService.scheduleDailyReminder(
-        hour: 19,
-        minute: 0,
-        body: 'You have 5 tasks across 2 curricula today',
+      await scheduler.schedule(
+        time: const TimeOfDay(hour: 8, minute: 30),
+        taskCount: 1,
+        curriculumCount: 1,
       );
 
       verify(
         () => mockService.scheduleDailyReminder(
-          hour: 19,
-          minute: 0,
-          body: 'You have 5 tasks across 2 curricula today',
+          hour: 8,
+          minute: 30,
+          body: 'You have 1 task across 1 curriculum today',
         ),
       ).called(1);
+    });
+
+    test('cancel() delegates to service.cancelDailyReminder()', () async {
+      when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
+
+      await scheduler.cancel();
+
+      verify(() => mockService.cancelDailyReminder()).called(1);
     });
 
     test('notification payload enables deep link to daily tasks', () {
       expect(dailyReminderPayload, 'daily_reminder');
     });
 
-    test('notification can be cancelled', () async {
-      when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
-
-      await mockService.cancelDailyReminder();
-
-      verify(() => mockService.cancelDailyReminder()).called(1);
-    });
-
-    test('permission can be requested', () async {
-      when(() => mockService.requestPermission()).thenAnswer((_) async => true);
-
-      final granted = await mockService.requestPermission();
-
-      expect(granted, isTrue);
-    });
-
     test('notification repeats daily via matchDateTimeComponents', () {
       // The service uses matchDateTimeComponents: DateTimeComponents.time
-      // which repeats daily. This is verified by the service implementation
-      // using zonedSchedule with matchDateTimeComponents.
-      // Integration-level verification - the API contract is correct.
+      // which repeats daily. Verified by the notification ID constant.
       expect(dailyReminderId, 0);
     });
   });

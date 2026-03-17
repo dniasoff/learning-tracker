@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/learning/data/repositories/bookmark_re
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Provider for bookmark repository.
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
@@ -41,11 +42,14 @@ class BookmarkActions {
   final Ref ref;
 
   /// Set bookmark to a specific content item (manual jump).
+  ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   Future<void> setBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
     required String sefariaRef,
   }) async {
+    guardTutorModeWrite(ref);
     final repository = ref.read(bookmarkRepositoryProvider);
     await repository.setBookmark(
       curriculumId: curriculumId,

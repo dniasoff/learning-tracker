@@ -42,6 +42,7 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
     try {
       final pinService = ref.read(pinServiceProvider);
       await pinService.setTutorPin(pin);
+      _firstPin = null;
       if (mounted) {
         await context.router.maybePop(true);
       }

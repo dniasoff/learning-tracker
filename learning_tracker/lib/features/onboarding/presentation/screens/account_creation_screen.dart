@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_provi
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 
 @RoutePage()
 class AccountCreationScreen extends ConsumerStatefulWidget {
@@ -80,7 +81,19 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
           final existingMode = await profileService.getUserMode(user.uid);
           if (mounted) {
             if (existingMode != null) {
-              unawaited(context.router.replace(const OnboardingRoute()));
+              // Check if curricula are active before skipping onboarding.
+              // A user who dropped off after mode selection but before
+              // curriculum import should still see curriculum selection.
+              final activationService = ref.read(
+                curriculumActivationServiceProvider,
+              );
+              final active = await activationService.getActiveCurricula();
+              if (!mounted) return;
+              if (active.isNotEmpty) {
+                unawaited(context.router.replaceAll([const AppShellRoute()]));
+              } else {
+                unawaited(context.router.replace(const OnboardingRoute()));
+              }
             } else {
               unawaited(context.router.push(const ModeSelectionRoute()));
             }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ class _TutorPinEntryScreenState extends ConsumerState<TutorPinEntryScreen> {
   String? _errorMessage;
   bool _isLockedOut = false;
   int _lockoutRemainingMinutes = 0;
+  Timer? _lockoutTimer;
 
   @override
   void initState() {
@@ -27,13 +30,34 @@ class _TutorPinEntryScreenState extends ConsumerState<TutorPinEntryScreen> {
     _checkLockoutStatus();
   }
 
+  @override
+  void dispose() {
+    _lockoutTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startLockoutCountdown() {
+    _lockoutTimer?.cancel();
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _checkLockoutStatus();
+    });
+  }
+
   Future<void> _checkLockoutStatus() async {
     final pinService = ref.read(pinServiceProvider);
     final remaining = await pinService.getTutorLockoutRemainingMinutes();
-    if (remaining > 0 && mounted) {
+    if (!mounted) return;
+    if (remaining > 0) {
       setState(() {
         _isLockedOut = true;
         _lockoutRemainingMinutes = remaining;
+      });
+      _startLockoutCountdown();
+    } else {
+      _lockoutTimer?.cancel();
+      setState(() {
+        _isLockedOut = false;
+        _lockoutRemainingMinutes = 0;
       });
     }
   }

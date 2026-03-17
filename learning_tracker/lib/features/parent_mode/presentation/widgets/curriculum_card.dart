@@ -67,6 +67,8 @@ class _PaceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Exhaustive switch on PaceStatusType — will cause a compile error
+    // if new values are added to the enum, ensuring they are handled.
     final (label, color) = switch (status) {
       PaceStatusType.ahead => ('Ahead', Colors.green),
       PaceStatusType.onPace => ('On Pace', Colors.blue),

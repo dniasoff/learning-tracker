@@ -10,9 +10,13 @@ class RecentCompletionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final totalCount = completions.length;
+    final displayedCompletions = completions.take(20).toList();
+
     return Card(
       child: Column(
-        children: completions.take(20).map((c) {
+        children: [
+          ...displayedCompletions.map((c) {
           final curriculumName =
               CurriculumId.values
                   .where((cid) => cid.storageKey == c.curriculumId)
@@ -38,7 +42,19 @@ class RecentCompletionsList extends StatelessWidget {
                   )
                 : null,
           );
-        }).toList(),
+        }),
+          if (totalCount > 20)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Showing 20 of $totalCount',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -45,9 +45,10 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
 final allCurriculaConfigsProvider =
     FutureProvider<Map<CurriculumId, CurriculumHierarchyConfig>>((ref) async {
       final repo = ref.watch(contentRepositoryProvider);
-      final configs = <CurriculumId, CurriculumHierarchyConfig>{};
-      for (final id in CurriculumId.values) {
-        configs[id] = await repo.getHierarchyConfig(id);
-      }
-      return configs;
+      final entries = await Future.wait(
+        CurriculumId.values.map(
+          (id) async => MapEntry(id, await repo.getHierarchyConfig(id)),
+        ),
+      );
+      return Map.fromEntries(entries);
     });

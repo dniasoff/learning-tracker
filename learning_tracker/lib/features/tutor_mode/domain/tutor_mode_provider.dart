@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'tutor_mode_provider.g.dart';
@@ -26,4 +27,21 @@ class TutorModeReadOnlyException implements Exception {
 
   @override
   String toString() => 'TutorModeReadOnlyException: $message';
+}
+
+/// Throws [TutorModeReadOnlyException] if tutor mode is currently active.
+///
+/// Call this at the top of any service/provider method that performs writes.
+void guardTutorModeWrite(Ref ref) {
+  // Read synchronously — TutorMode is a keepAlive synchronous notifier.
+  if (ref.read(tutorModeProvider)) {
+    throw const TutorModeReadOnlyException();
+  }
+}
+
+/// Overload for [WidgetRef] / [AsyncNotifier] that accepts a direct bool.
+void guardTutorModeWriteFromBool(bool isTutorMode) {
+  if (isTutorMode) {
+    throw const TutorModeReadOnlyException();
+  }
 }

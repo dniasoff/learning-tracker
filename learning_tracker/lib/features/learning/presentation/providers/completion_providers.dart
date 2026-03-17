@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_co
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_providers.g.dart';
@@ -46,14 +47,16 @@ CompletionRepository completionRepository(Ref ref) {
 @riverpod
 MarkCompletionUseCase markCompletionUseCase(Ref ref) {
   final repository = ref.watch(completionRepositoryProvider);
-  return MarkCompletionUseCase(repository);
+  final isTutorMode = ref.watch(tutorModeProvider);
+  return MarkCompletionUseCase(repository, isTutorMode: isTutorMode);
 }
 
 /// Provides the bulk mark completion use case.
 @riverpod
 BulkMarkCompletionUseCase bulkMarkCompletionUseCase(Ref ref) {
   final repository = ref.watch(completionRepositoryProvider);
-  return BulkMarkCompletionUseCase(repository);
+  final isTutorMode = ref.watch(tutorModeProvider);
+  return BulkMarkCompletionUseCase(repository, isTutorMode: isTutorMode);
 }
 
 /// Provides the number of completions for a specific content item.

@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
@@ -15,6 +16,8 @@ class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
 class MockOfflineQueue extends Mock implements OfflineQueue {}
 
+class MockConnectivityService extends Mock implements ConnectivityService {}
+
 AppDatabase _createInMemoryDatabase() {
   return AppDatabase(NativeDatabase.memory());
 }
@@ -23,6 +26,7 @@ void main() {
   late AppDatabase database;
   late MockFirestoreDataSource mockFirestore;
   late MockOfflineQueue mockOfflineQueue;
+  late MockConnectivityService mockConnectivity;
   late Talker logger;
   late SyncEngine syncEngine;
 
@@ -30,13 +34,17 @@ void main() {
     database = _createInMemoryDatabase();
     mockFirestore = MockFirestoreDataSource();
     mockOfflineQueue = MockOfflineQueue();
+    mockConnectivity = MockConnectivityService();
     logger = Talker();
+
+    when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
 
     syncEngine = SyncEngine(
       database: database,
       firestoreDataSource: mockFirestore,
       offlineQueue: mockOfflineQueue,
       logger: logger,
+      connectivityService: mockConnectivity,
     );
   });
 
@@ -721,6 +729,7 @@ void main() {
           'is_earned': true,
           'earned_at': '2026-02-09T12:00:00.000Z',
           'created_at': '2026-02-01T00:00:00.000Z',
+          'updated_at': '2099-01-01T00:00:00.000Z',
         },
       ]);
 

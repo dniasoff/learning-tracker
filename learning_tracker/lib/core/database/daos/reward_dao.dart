@@ -66,8 +66,8 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
 
   /// Upsert a reward by title (last-write-wins per D4).
   ///
-  /// Matches by [title]. Inserts if not found, or updates if remote
-  /// [createdAt] is newer (rewards don't have updatedAt, use createdAt).
+  /// Matches by [title]. Inserts if not found, or updates using LWW on
+  /// [updatedAt], falling back to most-progress-wins when timestamps are equal.
   Future<void> upsertReward({
     required String title,
     required String description,
@@ -76,11 +76,14 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
     required bool isEarned,
     required DateTime? earnedAt,
     required DateTime createdAt,
+    required DateTime? updatedAt,
     required String? curriculumId,
   }) async {
     final existing = await (select(
       rewards,
     )..where((t) => t.title.equals(title))).getSingleOrNull();
+
+    final effectiveUpdatedAt = updatedAt ?? createdAt;
 
     if (existing == null) {
       await insertReward(
@@ -92,19 +95,25 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
           isEarned: Value(isEarned),
           earnedAt: Value(earnedAt),
           createdAt: Value(createdAt),
+          updatedAt: Value(effectiveUpdatedAt),
           curriculumId: Value(curriculumId),
         ),
       );
     } else {
-      // For rewards, update if remote has more progress (earned > not earned)
-      final shouldUpdate =
+      // LWW: only update if remote is newer
+      final remoteIsNewer = effectiveUpdatedAt.isAfter(existing.updatedAt);
+      // Fallback: most-progress-wins when timestamps are equal
+      final sameTime = effectiveUpdatedAt.isAtSameMomentAs(existing.updatedAt);
+      final moreProgress =
           isEarned && !existing.isEarned || isRevealed && !existing.isRevealed;
-      if (shouldUpdate) {
+
+      if (remoteIsNewer || (sameTime && moreProgress)) {
         await (update(rewards)..where((t) => t.id.equals(existing.id))).write(
           RewardsCompanion(
             isRevealed: Value(isRevealed || existing.isRevealed),
             isEarned: Value(isEarned || existing.isEarned),
             earnedAt: Value(earnedAt ?? existing.earnedAt),
+            updatedAt: Value(effectiveUpdatedAt),
           ),
         );
       }

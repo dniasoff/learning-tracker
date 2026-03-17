@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker/talker.dart';
 
 /// Orchestrates sync between local SQLite and Firestore.
@@ -20,15 +22,18 @@ class SyncEngine {
     required FirestoreDataSource firestoreDataSource,
     required OfflineQueue offlineQueue,
     required Talker logger,
+    required ConnectivityService connectivityService,
   }) : _database = database,
        _firestoreDataSource = firestoreDataSource,
        _offlineQueue = offlineQueue,
-       _logger = logger;
+       _logger = logger,
+       _connectivityService = connectivityService;
 
   final AppDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
   final OfflineQueue _offlineQueue;
   final Talker _logger;
+  final ConnectivityService _connectivityService;
 
   final _statusController = StreamController<SyncStatus>.broadcast();
   Stream<SyncStatus> get statusStream => _statusController.stream;
@@ -60,11 +65,27 @@ class SyncEngine {
   /// Whether listeners are degraded due to Firebase quota issues.
   bool get isQuotaDegraded => _quotaDegraded;
 
+  // Merge guards to prevent concurrent merges on the same collection (issue #2)
+  bool _mergingCompletions = false;
+  bool _mergingBookmarks = false;
+  bool _mergingSettings = false;
+
+  /// SharedPreferences key for persisted last-sync timestamp.
+  static const _lastSyncKey = 'sync_engine_last_synced_at';
+
   // ========== Lifecycle Methods ==========
 
   /// Initialize sync engine and pull data on launch.
   Future<void> initialize() async {
     _logger.info('Initializing sync engine');
+
+    // Restore persisted last-sync timestamp (issue #5)
+    await _restoreLastSyncTimestamp();
+
+    // Check connectivity before pulling (issue #7)
+    final online = await _connectivityService.isOnline;
+    setOnlineState(online);
+
     await pullOnLaunch();
   }
 
@@ -77,12 +98,9 @@ class SyncEngine {
 
   /// Set online/offline state.
   ///
-  /// TODO(connectivity): Wire this to [ConnectivityService] from
-  /// `lib/core/network/connectivity_service.dart` (or a periodic timer /
-  /// app-lifecycle callback) so that [setOnlineState] is called automatically.
-  /// The existing [ConnectivityService] uses DNS-based checks; when
-  /// `connectivity_plus` is added to pubspec.yaml in the future, replace the
-  /// DNS probe with its stream for instant network-change events.
+  /// Called automatically during [initialize] via [ConnectivityService].
+  /// When `connectivity_plus` is added to pubspec.yaml, replace the DNS
+  /// probe with its stream for instant network-change events.
   void setOnlineState(bool isOnline) {
     if (_isOnline == isOnline) return;
 
@@ -189,14 +207,23 @@ class SyncEngine {
     try {
       _logger.info('Pull-on-launch: Fetching data from Firestore');
 
-      // Fetch all data from Firestore
-      final completions = await _firestoreDataSource.fetchCompletions();
-      final bookmarks = await _firestoreDataSource.fetchBookmarks();
-      final settings = await _firestoreDataSource.fetchSettings();
-      final goals = await _firestoreDataSource.fetchGoals();
-      final rewards = await _firestoreDataSource.fetchRewards();
-      final streak = await _firestoreDataSource.fetchStreak();
-      final profile = await _firestoreDataSource.fetchProfile();
+      // Fetch all data from Firestore in parallel
+      final results = await Future.wait([
+        _firestoreDataSource.fetchCompletions(),
+        _firestoreDataSource.fetchBookmarks(),
+        _firestoreDataSource.fetchSettings(),
+        _firestoreDataSource.fetchGoals(),
+        _firestoreDataSource.fetchRewards(),
+        _firestoreDataSource.fetchStreak(),
+        _firestoreDataSource.fetchProfile(),
+      ]);
+      final completions = results[0] as List<Map<String, dynamic>>;
+      final bookmarks = results[1] as List<Map<String, dynamic>>;
+      final settings = results[2] as List<Map<String, dynamic>>;
+      final goals = results[3] as List<Map<String, dynamic>>;
+      final rewards = results[4] as List<Map<String, dynamic>>;
+      final streak = results[5] as Map<String, dynamic>?;
+      final profile = results[6] as Map<String, dynamic>?;
 
       // Merge with local database
       await _mergeCompletions(completions);
@@ -208,7 +235,9 @@ class SyncEngine {
       if (profile != null) await _mergeProfile(profile);
 
       _logger.info('Pull-on-launch completed successfully');
-      _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
+      final syncedAt = DateTime.now().toUtc();
+      await _persistLastSyncTimestamp(syncedAt);
+      _updateStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
     } catch (e, stackTrace) {
       _logger.error('Pull-on-launch failed', e, stackTrace);
       _updateStatus(
@@ -498,8 +527,9 @@ class SyncEngine {
 
   /// Merge settings from Firestore (last-write-wins per D4).
   ///
-  /// Settings contain stage definitions per curriculum. If remote has
-  /// an `updated_at` newer than local stages, replace them.
+  /// Settings contain stage definitions per curriculum. Only replaces local
+  /// stages when the remote `updated_at` is newer than the locally persisted
+  /// settings timestamp for that curriculum.
   Future<void> _mergeSettings(List<Map<String, dynamic>> remoteSettings) async {
     _logger.debug('Merging ${remoteSettings.length} settings from Firestore');
 
@@ -507,9 +537,21 @@ class SyncEngine {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
         final stages = remote['stages'] as List<dynamic>?;
+        final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
         if (curriculumId == null || stages == null) {
           _logger.warning('Skipping invalid remote settings: $remote');
           continue;
+        }
+
+        // LWW: compare remote updated_at against local settings timestamp
+        if (remoteUpdatedAt != null) {
+          final localTs = await _getSettingsTimestamp(curriculumId);
+          if (localTs != null && !remoteUpdatedAt.isAfter(localTs)) {
+            _logger.debug(
+              'Skipping settings for $curriculumId: local is newer or equal',
+            );
+            continue;
+          }
         }
 
         final companions = stages
@@ -529,6 +571,11 @@ class SyncEngine {
           curriculumId,
           companions,
         );
+
+        // Persist the remote timestamp as the new local settings timestamp
+        if (remoteUpdatedAt != null) {
+          await _setSettingsTimestamp(curriculumId, remoteUpdatedAt);
+        }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge settings: $e');
@@ -589,6 +636,7 @@ class SyncEngine {
         final isEarned = remote['is_earned'] as bool? ?? false;
         final earnedAt = _parseTimestamp(remote['earned_at']);
         final createdAt = _parseTimestamp(remote['created_at']);
+        final updatedAt = _parseTimestamp(remote['updated_at']);
         final curriculumId = remote['curriculum_id'] as String?;
 
         if (title == null || pointsThreshold == null || createdAt == null) {
@@ -604,6 +652,7 @@ class SyncEngine {
           isEarned: isEarned,
           earnedAt: earnedAt,
           createdAt: createdAt,
+          updatedAt: updatedAt,
           curriculumId: curriculumId,
         );
       } catch (e) {
@@ -660,22 +709,46 @@ class SyncEngine {
 
   // ========== Listener Callbacks ==========
 
-  void _onCompletionsUpdate(List<Map<String, dynamic>> completions) {
-    _logger.debug('Received ${completions.length} completions from listener');
+  Future<void> _onCompletionsUpdate(
+    List<Map<String, dynamic>> completions,
+  ) async {
+    if (_mergingCompletions) return;
+    _mergingCompletions = true;
     _consecutiveListenerErrors = 0;
-    _mergeCompletions(completions);
+    try {
+      _logger.debug('Received ${completions.length} completions from listener');
+      await _mergeCompletions(completions);
+    } finally {
+      _mergingCompletions = false;
+    }
   }
 
-  void _onBookmarksUpdate(List<Map<String, dynamic>> bookmarks) {
-    _logger.debug('Received ${bookmarks.length} bookmarks from listener');
+  Future<void> _onBookmarksUpdate(
+    List<Map<String, dynamic>> bookmarks,
+  ) async {
+    if (_mergingBookmarks) return;
+    _mergingBookmarks = true;
     _consecutiveListenerErrors = 0;
-    _mergeBookmarks(bookmarks);
+    try {
+      _logger.debug('Received ${bookmarks.length} bookmarks from listener');
+      await _mergeBookmarks(bookmarks);
+    } finally {
+      _mergingBookmarks = false;
+    }
   }
 
-  void _onSettingsUpdate(List<Map<String, dynamic>> settings) {
-    _logger.debug('Received ${settings.length} settings from listener');
+  Future<void> _onSettingsUpdate(
+    List<Map<String, dynamic>> settings,
+  ) async {
+    if (_mergingSettings) return;
+    _mergingSettings = true;
     _consecutiveListenerErrors = 0;
-    _mergeSettings(settings);
+    try {
+      _logger.debug('Received ${settings.length} settings from listener');
+      await _mergeSettings(settings);
+    } finally {
+      _mergingSettings = false;
+    }
   }
 
   void _onStreakUpdate(Map<String, dynamic>? streak) {
@@ -812,6 +885,66 @@ class SyncEngine {
       );
       await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
       await _emitPendingStatus();
+    }
+  }
+
+  // ========== Timestamp Persistence ==========
+
+  /// Get the locally persisted settings timestamp for a curriculum.
+  Future<DateTime?> _getSettingsTimestamp(String curriculumId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ms = prefs.getInt('settings_ts_$curriculumId');
+      if (ms == null) return null;
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
+      _logger.warning('Failed to read settings timestamp: $e');
+      return null;
+    }
+  }
+
+  /// Set the locally persisted settings timestamp for a curriculum.
+  Future<void> _setSettingsTimestamp(
+    String curriculumId,
+    DateTime updatedAt,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(
+        'settings_ts_$curriculumId',
+        updatedAt.toUtc().millisecondsSinceEpoch,
+      );
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
+      _logger.warning('Failed to persist settings timestamp: $e');
+    }
+  }
+
+  /// Persist the last successful sync timestamp.
+  Future<void> _persistLastSyncTimestamp(DateTime syncedAt) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_lastSyncKey, syncedAt.millisecondsSinceEpoch);
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
+      _logger.warning('Failed to persist last sync timestamp: $e');
+    }
+  }
+
+  /// Restore persisted last-sync timestamp into current status.
+  Future<void> _restoreLastSyncTimestamp() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ms = prefs.getInt(_lastSyncKey);
+      if (ms != null) {
+        _currentStatus = SyncStatus.synced(
+          lastSyncedAt: DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true),
+        );
+      }
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
+      _logger.warning('Failed to restore last sync timestamp: $e');
     }
   }
 

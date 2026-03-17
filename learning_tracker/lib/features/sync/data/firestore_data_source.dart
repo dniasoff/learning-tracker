@@ -154,13 +154,14 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
-  /// Fetch all bookmarks from Firestore.
-  Future<List<Map<String, dynamic>>> fetchBookmarks() async {
+  /// Fetch all bookmarks from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchBookmarks({
+    int pageSize = defaultPageSize,
+  }) async {
     final collection = _bookmarksCollection;
     if (collection == null) return [];
 
-    final snapshot = await collection.get();
-    return snapshot.docs.map((doc) => doc.data()).toList();
+    return _fetchPaginated(collection, pageSize: pageSize);
   }
 
   /// Listen to real-time bookmark updates.
@@ -194,13 +195,14 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
-  /// Fetch all settings from Firestore.
-  Future<List<Map<String, dynamic>>> fetchSettings() async {
+  /// Fetch all settings from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchSettings({
+    int pageSize = defaultPageSize,
+  }) async {
     final collection = _settingsCollection;
     if (collection == null) return [];
 
-    final snapshot = await collection.get();
-    return snapshot.docs.map((doc) => doc.data()).toList();
+    return _fetchPaginated(collection, pageSize: pageSize);
   }
 
   /// Listen to real-time settings updates.
@@ -251,13 +253,14 @@ class FirestoreDataSource {
 
   // ========== Goal Operations ==========
 
-  /// Fetch all goals from Firestore.
-  Future<List<Map<String, dynamic>>> fetchGoals() async {
+  /// Fetch all goals from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchGoals({
+    int pageSize = defaultPageSize,
+  }) async {
     final collection = _userDoc?.collection('goals');
     if (collection == null) return [];
 
-    final snapshot = await collection.get();
-    return snapshot.docs.map((doc) => doc.data()).toList();
+    return _fetchPaginated(collection, pageSize: pageSize);
   }
 
   /// Push a goal to Firestore (last-write-wins).
@@ -280,13 +283,14 @@ class FirestoreDataSource {
 
   // ========== Reward Operations ==========
 
-  /// Fetch all rewards from Firestore.
-  Future<List<Map<String, dynamic>>> fetchRewards() async {
+  /// Fetch all rewards from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchRewards({
+    int pageSize = defaultPageSize,
+  }) async {
     final collection = _userDoc?.collection('rewards');
     if (collection == null) return [];
 
-    final snapshot = await collection.get();
-    return snapshot.docs.map((doc) => doc.data()).toList();
+    return _fetchPaginated(collection, pageSize: pageSize);
   }
 
   /// Push a reward to Firestore (last-write-wins).
@@ -420,5 +424,30 @@ class FirestoreDataSource {
 
     final snapshot = await collection.doc(curriculumId).get();
     return snapshot.data();
+  }
+
+  // ========== Pagination Helper ==========
+
+  /// Generic paginated fetch for any Firestore collection.
+  Future<List<Map<String, dynamic>>> _fetchPaginated(
+    CollectionReference<Map<String, dynamic>> collection, {
+    required int pageSize,
+  }) async {
+    final results = <Map<String, dynamic>>[];
+    var query = collection.orderBy(FieldPath.documentId).limit(pageSize);
+
+    while (true) {
+      final snapshot = await query.get();
+      for (final doc in snapshot.docs) {
+        results.add(doc.data());
+      }
+      if (snapshot.docs.length < pageSize) break;
+      query = collection
+          .orderBy(FieldPath.documentId)
+          .startAfterDocument(snapshot.docs.last)
+          .limit(pageSize);
+    }
+
+    return results;
   }
 }

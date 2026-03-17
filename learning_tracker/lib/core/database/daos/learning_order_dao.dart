@@ -42,6 +42,16 @@ class LearningOrderDao extends DatabaseAccessor<AppDatabase>
         ),
       );
 
+  /// Count the total number of content items for a curriculum.
+  Future<int> countByCurriculum(String curriculumId) async {
+    final count = learningOrder.id.count();
+    final query = selectOnly(learningOrder)
+      ..addColumns([count])
+      ..where(learningOrder.curriculumId.equals(curriculumId));
+    final result = await query.getSingle();
+    return result.read(count) ?? 0;
+  }
+
   /// Delete all learning order rows for a curriculum (reset to default).
   Future<int> deleteAllForCurriculum(String curriculumId) => (delete(
     learningOrder,

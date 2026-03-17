@@ -6,9 +6,19 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
+
+class _MockContentRepository extends Mock implements ContentRepository {}
+
+class _MockTrackRepository extends Mock implements TrackRepository {}
 
 void main() {
   // ── Story 9.1: Welcome flow ───────────────────────────────────
@@ -92,6 +102,10 @@ void main() {
 
   // ── Story 9.2: Curriculum selection ───────────────────────────
 
+  setUpAll(() {
+    registerFallbackValue(CurriculumId.mishnayos);
+  });
+
   group('Story 9.2 -- Curriculum selection', tags: ['story_9_2'], () {
     late AppDatabase db;
 
@@ -147,16 +161,65 @@ void main() {
       }
     });
 
-    test('import service activates selected curricula in database', () async {
-      // Activate two curricula
-      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
-      await db.activeCurriculumDao.activate(CurriculumId.bavli);
+    test(
+      'import service selects 2 curricula, imports, and activates them',
+      () async {
+        final mockContentRepo = _MockContentRepository();
+        final mockTrackRepo = _MockTrackRepository();
 
-      final active = await db.activeCurriculumDao.getActiveCurricula();
-      expect(active, hasLength(2));
-      expect(active, contains(CurriculumId.mishnayos.storageKey));
-      expect(active, contains(CurriculumId.bavli.storageKey));
-    });
+        ContentItem fakeItem(CurriculumId id) => ContentItem(
+          curriculumId: id.storageKey,
+          level1: 'L1',
+          displayNameHe: 'test',
+          displayNameEn: 'test',
+          sefariaRef: 'ref-${id.storageKey}',
+          sortOrder: 0,
+          isLeaf: true,
+        );
+
+        when(
+          () => mockContentRepo.getContentForCurriculum(CurriculumId.mishnayos),
+        ).thenAnswer((_) async => [fakeItem(CurriculumId.mishnayos)]);
+        when(
+          () => mockContentRepo.getContentForCurriculum(CurriculumId.bavli),
+        ).thenAnswer((_) async => [fakeItem(CurriculumId.bavli)]);
+        when(
+          () => mockTrackRepo.initializeDefaultTracks(any()),
+        ).thenAnswer((_) async {});
+
+        final activationService = CurriculumActivationService(
+          database: db,
+          pushActiveCurricula: (_) async {},
+          trackRepository: mockTrackRepo,
+        );
+        final importService = CurriculumImportService(
+          contentRepository: mockContentRepo,
+          activationService: activationService,
+        );
+
+        // Select 2 curricula and call importAll end-to-end
+        final selected = [CurriculumId.mishnayos, CurriculumId.bavli];
+        final progressList = await importService.importAll(selected).toList();
+
+        // Verify all succeeded
+        expect(progressList.last.isComplete, isTrue);
+        expect(progressList.last.allSucceeded, isTrue);
+        expect(progressList.last.results, hasLength(2));
+
+        // Verify content was loaded (service called getContentForCurriculum)
+        verify(
+          () => mockContentRepo.getContentForCurriculum(CurriculumId.mishnayos),
+        ).called(1);
+        verify(
+          () => mockContentRepo.getContentForCurriculum(CurriculumId.bavli),
+        ).called(1);
+
+        // Verify curricula are active in the database
+        final active = await db.activeCurriculumDao.getActiveCurricula();
+        expect(active, contains(CurriculumId.mishnayos.storageKey));
+        expect(active, contains(CurriculumId.bavli.storageKey));
+      },
+    );
 
     test('user can add more curricula later (not onboarding-only)', () async {
       // Initial activation

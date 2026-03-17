@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Service for managing curriculum activation/deactivation.
 ///
@@ -15,6 +16,7 @@ class CurriculumActivationService {
     required AppDatabase database,
     required Future<void> Function(List<String>) pushActiveCurricula,
     required TrackRepository trackRepository,
+    this.isTutorMode = false,
   }) : _database = database,
        _pushActiveCurricula = pushActiveCurricula,
        _trackRepository = trackRepository;
@@ -22,6 +24,9 @@ class CurriculumActivationService {
   final AppDatabase _database;
   final Future<void> Function(List<String>) _pushActiveCurricula;
   final TrackRepository _trackRepository;
+
+  /// Whether tutor mode is active (read-only).
+  final bool isTutorMode;
 
   /// Initialize default active curricula if none exist.
   ///
@@ -37,7 +42,10 @@ class CurriculumActivationService {
   }
 
   /// Activate a curriculum.
+  ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   Future<void> activate(CurriculumId curriculum) async {
+    guardTutorModeWriteFromBool(isTutorMode);
     await _database.activeCurriculumDao.activate(curriculum);
     await _trackRepository.initializeDefaultTracks(curriculum);
     await _syncToFirestore();
@@ -45,8 +53,10 @@ class CurriculumActivationService {
 
   /// Deactivate a curriculum.
   ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   /// Throws [StateError] if this is the last active curriculum.
   Future<void> deactivate(CurriculumId curriculum) async {
+    guardTutorModeWriteFromBool(isTutorMode);
     await _database.activeCurriculumDao.deactivate(curriculum);
     await _syncToFirestore();
   }
@@ -57,7 +67,9 @@ class CurriculumActivationService {
   /// single database transaction to prevent a TOCTOU race where two concurrent
   /// toggle calls could both read the same state and both activate or both
   /// deactivate the curriculum.
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   Future<void> toggle(CurriculumId curriculum) async {
+    guardTutorModeWriteFromBool(isTutorMode);
     await _database.transaction(() async {
       final isActive = await _database.activeCurriculumDao.isActive(curriculum);
       if (isActive) {

@@ -67,6 +67,9 @@ class _DashboardBody extends StatelessWidget {
       onRefresh: () async {
         final container = ProviderScope.containerOf(context);
         container.invalidate(parentDashboardDataProvider);
+        // Wait for the provider to reload so the refresh indicator
+        // stays visible until new data is ready.
+        await container.read(parentDashboardDataProvider.future);
       },
       child: ListView(
         padding: const EdgeInsets.all(16),

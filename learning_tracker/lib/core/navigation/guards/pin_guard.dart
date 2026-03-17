@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
@@ -34,12 +32,13 @@ abstract class PinGuard extends AutoRouteGuard {
         : await pinService.hasTutorPin();
 
     if (!hasPinSet) {
-      // No PIN configured — redirect to the appropriate setup screen.
+      // No PIN configured — push the setup screen and await result.
+      // If setup succeeds (pops with true), re-attempt navigation.
       final setupRoute = pinType == 'tutor'
           ? const TutorPinSetupRoute()
           : const PinSetupRoute();
-      unawaited(router.replace(setupRoute));
-      resolver.next(false);
+      final result = await router.push<bool>(setupRoute);
+      resolver.next(result ?? false);
       return;
     }
 

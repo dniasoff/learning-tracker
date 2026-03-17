@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Service for managing mystery rewards.
 ///
@@ -12,8 +13,10 @@ import 'package:learning_tracker/features/gamification/domain/services/points_se
 class RewardService {
   final AppDatabase _database;
   final PointsService _pointsService;
+  final bool isTutorMode;
 
-  RewardService(this._database, this._pointsService);
+  RewardService(this._database, this._pointsService,
+      {this.isTutorMode = false});
 
   /// Get the next unearned reward (lowest threshold above current points or
   /// the lowest unearned regardless).
@@ -74,7 +77,10 @@ class RewardService {
   }
 
   /// Reveal a mystery reward (parent action in child mode).
+  ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   Future<void> revealReward(int rewardId) async {
+    guardTutorModeWriteFromBool(isTutorMode);
     await _database.rewardDao.revealReward(rewardId);
   }
 
@@ -91,12 +97,15 @@ class RewardService {
   }
 
   /// Add a new reward configuration.
+  ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   Future<int> addReward({
     required String title,
     required String description,
     required int pointsThreshold,
     String? curriculumId,
   }) async {
+    guardTutorModeWriteFromBool(isTutorMode);
     return _database.rewardDao.insertReward(
       RewardsCompanion.insert(
         title: title,

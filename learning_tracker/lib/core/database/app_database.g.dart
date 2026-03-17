@@ -3495,6 +3495,18 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
   );
@@ -3516,6 +3528,7 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
     isEarned,
     earnedAt,
     createdAt,
+    updatedAt,
     curriculumId,
   ];
   @override
@@ -3587,6 +3600,12 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     if (data.containsKey('curriculum_id')) {
       context.handle(
         _curriculumIdMeta,
@@ -3637,6 +3656,10 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}curriculum_id'],
@@ -3659,6 +3682,7 @@ class Reward extends DataClass implements Insertable<Reward> {
   final bool isEarned;
   final DateTime? earnedAt;
   final DateTime createdAt;
+  final DateTime updatedAt;
   final String? curriculumId;
   const Reward({
     required this.id,
@@ -3669,6 +3693,7 @@ class Reward extends DataClass implements Insertable<Reward> {
     required this.isEarned,
     this.earnedAt,
     required this.createdAt,
+    required this.updatedAt,
     this.curriculumId,
   });
   @override
@@ -3684,6 +3709,7 @@ class Reward extends DataClass implements Insertable<Reward> {
       map['earned_at'] = Variable<DateTime>(earnedAt);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || curriculumId != null) {
       map['curriculum_id'] = Variable<String>(curriculumId);
     }
@@ -3702,6 +3728,7 @@ class Reward extends DataClass implements Insertable<Reward> {
           ? const Value.absent()
           : Value(earnedAt),
       createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
       curriculumId: curriculumId == null && nullToAbsent
           ? const Value.absent()
           : Value(curriculumId),
@@ -3722,6 +3749,7 @@ class Reward extends DataClass implements Insertable<Reward> {
       isEarned: serializer.fromJson<bool>(json['isEarned']),
       earnedAt: serializer.fromJson<DateTime?>(json['earnedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       curriculumId: serializer.fromJson<String?>(json['curriculumId']),
     );
   }
@@ -3737,6 +3765,7 @@ class Reward extends DataClass implements Insertable<Reward> {
       'isEarned': serializer.toJson<bool>(isEarned),
       'earnedAt': serializer.toJson<DateTime?>(earnedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'curriculumId': serializer.toJson<String?>(curriculumId),
     };
   }
@@ -3750,6 +3779,7 @@ class Reward extends DataClass implements Insertable<Reward> {
     bool? isEarned,
     Value<DateTime?> earnedAt = const Value.absent(),
     DateTime? createdAt,
+    DateTime? updatedAt,
     Value<String?> curriculumId = const Value.absent(),
   }) => Reward(
     id: id ?? this.id,
@@ -3760,6 +3790,7 @@ class Reward extends DataClass implements Insertable<Reward> {
     isEarned: isEarned ?? this.isEarned,
     earnedAt: earnedAt.present ? earnedAt.value : this.earnedAt,
     createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
     curriculumId: curriculumId.present ? curriculumId.value : this.curriculumId,
   );
   Reward copyWithCompanion(RewardsCompanion data) {
@@ -3778,6 +3809,7 @@ class Reward extends DataClass implements Insertable<Reward> {
       isEarned: data.isEarned.present ? data.isEarned.value : this.isEarned,
       earnedAt: data.earnedAt.present ? data.earnedAt.value : this.earnedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -3795,6 +3827,7 @@ class Reward extends DataClass implements Insertable<Reward> {
           ..write('isEarned: $isEarned, ')
           ..write('earnedAt: $earnedAt, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('curriculumId: $curriculumId')
           ..write(')'))
         .toString();
@@ -3810,6 +3843,7 @@ class Reward extends DataClass implements Insertable<Reward> {
     isEarned,
     earnedAt,
     createdAt,
+    updatedAt,
     curriculumId,
   );
   @override
@@ -3824,6 +3858,7 @@ class Reward extends DataClass implements Insertable<Reward> {
           other.isEarned == this.isEarned &&
           other.earnedAt == this.earnedAt &&
           other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
           other.curriculumId == this.curriculumId);
 }
 
@@ -3836,6 +3871,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
   final Value<bool> isEarned;
   final Value<DateTime?> earnedAt;
   final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
   final Value<String?> curriculumId;
   const RewardsCompanion({
     this.id = const Value.absent(),
@@ -3846,6 +3882,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     this.isEarned = const Value.absent(),
     this.earnedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.curriculumId = const Value.absent(),
   });
   RewardsCompanion.insert({
@@ -3857,6 +3894,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     this.isEarned = const Value.absent(),
     this.earnedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.curriculumId = const Value.absent(),
   }) : title = Value(title),
        description = Value(description),
@@ -3870,6 +3908,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     Expression<bool>? isEarned,
     Expression<DateTime>? earnedAt,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
     Expression<String>? curriculumId,
   }) {
     return RawValuesInsertable({
@@ -3881,6 +3920,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
       if (isEarned != null) 'is_earned': isEarned,
       if (earnedAt != null) 'earned_at': earnedAt,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (curriculumId != null) 'curriculum_id': curriculumId,
     });
   }
@@ -3894,6 +3934,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     Value<bool>? isEarned,
     Value<DateTime?>? earnedAt,
     Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
     Value<String?>? curriculumId,
   }) {
     return RewardsCompanion(
@@ -3905,6 +3946,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
       isEarned: isEarned ?? this.isEarned,
       earnedAt: earnedAt ?? this.earnedAt,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       curriculumId: curriculumId ?? this.curriculumId,
     );
   }
@@ -3936,6 +3978,9 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
     }
@@ -3953,6 +3998,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
           ..write('isEarned: $isEarned, ')
           ..write('earnedAt: $earnedAt, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('curriculumId: $curriculumId')
           ..write(')'))
         .toString();
@@ -7348,6 +7394,7 @@ typedef $$RewardsTableCreateCompanionBuilder =
       Value<bool> isEarned,
       Value<DateTime?> earnedAt,
       Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
       Value<String?> curriculumId,
     });
 typedef $$RewardsTableUpdateCompanionBuilder =
@@ -7360,6 +7407,7 @@ typedef $$RewardsTableUpdateCompanionBuilder =
       Value<bool> isEarned,
       Value<DateTime?> earnedAt,
       Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
       Value<String?> curriculumId,
     });
 
@@ -7409,6 +7457,11 @@ class $$RewardsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7467,6 +7520,11 @@ class $$RewardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -7512,6 +7570,9 @@ class $$RewardsTableAnnotationComposer
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => column,
@@ -7554,6 +7615,7 @@ class $$RewardsTableTableManager
                 Value<bool> isEarned = const Value.absent(),
                 Value<DateTime?> earnedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> curriculumId = const Value.absent(),
               }) => RewardsCompanion(
                 id: id,
@@ -7564,6 +7626,7 @@ class $$RewardsTableTableManager
                 isEarned: isEarned,
                 earnedAt: earnedAt,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 curriculumId: curriculumId,
               ),
           createCompanionCallback:
@@ -7576,6 +7639,7 @@ class $$RewardsTableTableManager
                 Value<bool> isEarned = const Value.absent(),
                 Value<DateTime?> earnedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> curriculumId = const Value.absent(),
               }) => RewardsCompanion.insert(
                 id: id,
@@ -7586,6 +7650,7 @@ class $$RewardsTableTableManager
                 isEarned: isEarned,
                 earnedAt: earnedAt,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 curriculumId: curriculumId,
               ),
           withReferenceMapper: (p0) => p0

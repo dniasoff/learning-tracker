@@ -12,5 +12,6 @@ class Rewards extends Table {
   BoolColumn get isEarned => boolean().withDefault(const Constant(false))();
   DateTimeColumn get earnedAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get curriculumId => text().nullable()();
 }

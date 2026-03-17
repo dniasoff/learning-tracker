@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -128,4 +130,40 @@ class StreakAlertTime extends _$StreakAlertTime {
     await prefs.setInt(_streakAlertHourKey, time.hour);
     await prefs.setInt(_streakAlertMinuteKey, time.minute);
   }
+}
+
+/// Provides the [NotificationScheduler] instance.
+@riverpod
+NotificationScheduler notificationScheduler(Ref ref) {
+  final service = ref.watch(notificationServiceProvider);
+  return NotificationScheduler(service: service);
+}
+
+/// Watches reminder settings and daily tasks, then schedules or cancels
+/// the notification accordingly.
+///
+/// Read this provider once (e.g. from the notifications screen or app startup)
+/// to activate the watcher. It returns a [Future] that completes after the
+/// initial schedule/cancel call.
+@riverpod
+Future<void> reminderSyncEffect(Ref ref) async {
+  final enabled = ref.watch(reminderEnabledProvider);
+  final time = ref.watch(reminderTimeProvider);
+  final scheduler = ref.watch(notificationSchedulerProvider);
+
+  if (!enabled) {
+    await scheduler.cancel();
+    return;
+  }
+
+  // Get daily tasks to determine counts for notification body.
+  final tasks = await ref.watch(allDailyTasksProvider.future);
+  final taskCount = tasks.length;
+  final curriculumCount = tasks.map((t) => t.curriculumId).toSet().length;
+
+  await scheduler.schedule(
+    time: time,
+    taskCount: taskCount,
+    curriculumCount: curriculumCount,
+  );
 }
