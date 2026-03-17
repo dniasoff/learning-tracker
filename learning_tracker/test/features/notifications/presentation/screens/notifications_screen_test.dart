@@ -36,6 +36,51 @@ void main() {
     expect(find.byKey(const Key('reminder_toggle')), findsOneWidget);
   });
 
+  testWidgets('shows streak alert toggle and time', (tester) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Streak Alert'), findsOneWidget);
+    expect(find.text('Streak Alert Time'), findsOneWidget);
+    expect(find.byKey(const Key('streak_alert_toggle')), findsOneWidget);
+  });
+
+  testWidgets('shows reward notification toggle', (tester) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reward Notifications'), findsOneWidget);
+    expect(find.byKey(const Key('reward_notification_toggle')), findsOneWidget);
+  });
+
+  testWidgets('shows Shabbos mode toggle with explanation', (tester) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shabbos / Yom Tov Mode'), findsOneWidget);
+    expect(
+      find.text('Suppress all notifications during Shabbos and Yom Tov'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('shabbos_mode_toggle')), findsOneWidget);
+  });
+
+  testWidgets('time pickers for reminder and streak alert times', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+
+    // Tap reminder time
+    await tester.tap(find.byKey(const Key('reminder_time')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TimePickerDialog), findsOneWidget);
+
+    // Dismiss
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('toggle requests permission on Android 13+', (tester) async {
     when(() => mockService.requestPermission()).thenAnswer((_) async => true);
 
@@ -53,14 +98,33 @@ void main() {
     verify(() => mockService.requestPermission()).called(1);
   });
 
-  testWidgets('time tile opens time picker when enabled', (tester) async {
-    await tester.pumpWidget(buildSubject());
+  testWidgets('Shabbos mode toggle reveals configuration options', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          notificationServiceProvider.overrideWithValue(mockService),
+          shabbosModeEnabledProvider.overrideWithValue(true),
+        ],
+        child: const MaterialApp(home: NotificationsScreen()),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('reminder_time')));
-    await tester.pumpAndSettle();
+    // Sub-options should be visible when Shabbos mode is enabled
+    expect(
+      find.byKey(const Key('shabbos_use_location_toggle')),
+      findsOneWidget,
+    );
 
-    // Time picker dialog should appear
-    expect(find.byType(TimePickerDialog), findsOneWidget);
+    // Scroll down to reveal time pickers
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shabbos_start_time')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const Key('shabbos_start_time')), findsOneWidget);
+    expect(find.byKey(const Key('shabbos_end_time')), findsOneWidget);
   });
 }

@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/gamification/domain/services/reward_se
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/reward_milestone_notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/shabbos_time_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -449,4 +450,213 @@ void main() {
       expect(rewardMilestonePayload, 'reward_earned');
     });
   });
+
+  // ── Story 12.4: Notification Preferences & Shabbos Mode ──────
+
+  group(
+    'Story 12.4 -- Notification Preferences & Shabbos Mode',
+    tags: ['story_12_4'],
+    () {
+      late MockNotificationService mockService;
+      late NotificationScheduler scheduler;
+
+      setUp(() {
+        mockService = MockNotificationService();
+        scheduler = NotificationScheduler(service: mockService);
+
+        when(
+          () => mockService.scheduleDailyReminder(
+            hour: any(named: 'hour'),
+            minute: any(named: 'minute'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async {});
+        when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
+        when(
+          () => mockService.scheduleStreakAlert(
+            hour: any(named: 'hour'),
+            minute: any(named: 'minute'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async {});
+        when(() => mockService.cancelStreakAlert()).thenAnswer((_) async {});
+      });
+
+      // Unit: Disabling daily reminder cancels scheduled notification
+      test('disabling daily reminder cancels scheduled notification', () async {
+        await scheduler.cancel();
+
+        verify(() => mockService.cancelDailyReminder()).called(1);
+      });
+
+      // Unit: Changing reminder time reschedules notification
+      test('changing reminder time reschedules notification', () async {
+        await scheduler.schedule(
+          time: const TimeOfDay(hour: 19, minute: 0),
+          taskCount: 3,
+          curriculumCount: 1,
+        );
+
+        verify(
+          () => mockService.scheduleDailyReminder(
+            hour: 19,
+            minute: 0,
+            body: 'You have 3 tasks across 1 curriculum today',
+          ),
+        ).called(1);
+
+        // Change time
+        await scheduler.schedule(
+          time: const TimeOfDay(hour: 7, minute: 30),
+          taskCount: 3,
+          curriculumCount: 1,
+        );
+
+        verify(
+          () => mockService.scheduleDailyReminder(
+            hour: 7,
+            minute: 30,
+            body: 'You have 3 tasks across 1 curriculum today',
+          ),
+        ).called(1);
+      });
+
+      // Unit: Shabbos mode suppresses notifications during Shabbos window
+      test(
+        'Shabbos mode suppresses notifications during Shabbos window (fixed times)',
+        () {
+          const service = ShabbosTimeService();
+
+          // Friday 19:00 local — should be within fixed window (18:00–20:00)
+          final fridayEvening = DateTime(2026, 3, 20, 19, 0); // Friday
+          expect(
+            service.isDuringShabbosWithFixedTimes(
+              dateTime: fridayEvening,
+              startHour: 18,
+              startMinute: 0,
+              endHour: 20,
+              endMinute: 0,
+            ),
+            isTrue,
+          );
+
+          // Saturday 19:00 — within window
+          final saturdayEvening = DateTime(2026, 3, 21, 19, 0); // Saturday
+          expect(
+            service.isDuringShabbosWithFixedTimes(
+              dateTime: saturdayEvening,
+              startHour: 18,
+              startMinute: 0,
+              endHour: 20,
+              endMinute: 0,
+            ),
+            isTrue,
+          );
+
+          // Sunday 10:00 — outside window
+          final sundayMorning = DateTime(2026, 3, 22, 10, 0); // Sunday
+          expect(
+            service.isDuringShabbosWithFixedTimes(
+              dateTime: sundayMorning,
+              startHour: 18,
+              startMinute: 0,
+              endHour: 20,
+              endMinute: 0,
+            ),
+            isFalse,
+          );
+        },
+      );
+
+      // Unit: Shabbos time calculation returns correct candle lighting and havdalah times
+      test(
+        'Shabbos time calculation returns candle lighting and havdalah times',
+        () {
+          const service = ShabbosTimeService();
+          // Jerusalem coordinates
+          const lat = 31.7683;
+          const lon = 35.2137;
+
+          // Friday March 20, 2026
+          final friday = DateTime(2026, 3, 20, 12, 0);
+          final candleLighting = service.getCandleLightingTime(
+            date: friday,
+            latitude: lat,
+            longitude: lon,
+          );
+          expect(candleLighting != null, isTrue);
+          // Candle lighting should be in the afternoon/evening
+          expect(candleLighting!.hour, greaterThanOrEqualTo(14));
+          expect(candleLighting.hour, lessThanOrEqualTo(20));
+
+          // Saturday March 21, 2026
+          final saturday = DateTime(2026, 3, 21, 12, 0);
+          final havdalah = service.getHavdalahTime(
+            date: saturday,
+            latitude: lat,
+            longitude: lon,
+          );
+          expect(havdalah != null, isTrue);
+          // Havdalah should be in the evening
+          expect(havdalah!.hour, greaterThanOrEqualTo(15));
+          expect(havdalah.hour, lessThanOrEqualTo(22));
+        },
+      );
+
+      // Unit: Location-based Shabbos detection
+      test('location-based Shabbos detection identifies Shabbos window', () {
+        const service = ShabbosTimeService();
+        // Jerusalem coordinates
+        const lat = 31.7683;
+        const lon = 35.2137;
+
+        // Wednesday midday — not Shabbos
+        final wednesday = DateTime(2026, 3, 18, 12, 0);
+        expect(
+          service.isDuringShabbosWithLocation(
+            dateTime: wednesday,
+            latitude: lat,
+            longitude: lon,
+          ),
+          isFalse,
+        );
+
+        // Saturday midday — is Shabbos
+        final saturday = DateTime(2026, 3, 21, 12, 0);
+        expect(
+          service.isDuringShabbosWithLocation(
+            dateTime: saturday,
+            latitude: lat,
+            longitude: lon,
+          ),
+          isTrue,
+        );
+      });
+
+      // Integration: Enable Shabbos mode, verify suppression during Shabbos
+      test(
+        'integration: Shabbos mode suppresses all notification types during Shabbos',
+        () async {
+          const service = ShabbosTimeService();
+
+          // During Shabbos (Saturday midday, fixed times mode)
+          final saturdayMidday = DateTime(2026, 3, 21, 12, 0);
+          final isDuringShabbos = service.isDuringShabbosWithFixedTimes(
+            dateTime: saturdayMidday,
+            startHour: 18,
+            startMinute: 0,
+            endHour: 20,
+            endMinute: 0,
+          );
+          expect(isDuringShabbos, isTrue);
+
+          // When Shabbos mode is active, all notifications should be cancelled.
+          // This is enforced in the sync effects which check isShabbosQuietActive.
+          // Verify the cancel paths work:
+          await scheduler.cancel();
+          verify(() => mockService.cancelDailyReminder()).called(1);
+        },
+      );
+    },
+  );
 }

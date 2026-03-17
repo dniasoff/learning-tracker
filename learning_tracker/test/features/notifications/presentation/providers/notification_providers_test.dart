@@ -83,4 +83,137 @@ void main() {
       expect(prefs.getBool('daily_reminder_enabled'), isFalse);
     });
   });
+
+  group('StreakAlertEnabled', () {
+    test('defaults to true', () {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(streakAlertEnabledProvider), isTrue);
+    });
+
+    test('toggle switches state and persists', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container.read(streakAlertEnabledProvider.notifier).toggle();
+
+      expect(container.read(streakAlertEnabledProvider), isFalse);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('streak_alert_enabled'), isFalse);
+    });
+  });
+
+  group('StreakAlertTime', () {
+    test('defaults to 9:00 PM', () {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final time = container.read(streakAlertTimeProvider);
+      expect(time.hour, 21);
+      expect(time.minute, 0);
+    });
+
+    test('setTime persists to SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(streakAlertTimeProvider.notifier)
+          .setTime(const TimeOfDay(hour: 22, minute: 30));
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('streak_alert_hour'), 22);
+      expect(prefs.getInt('streak_alert_minute'), 30);
+    });
+  });
+
+  group('RewardNotificationEnabled', () {
+    test('defaults to true', () {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(rewardNotificationEnabledProvider), isTrue);
+    });
+
+    test('toggle switches state and persists', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container.read(rewardNotificationEnabledProvider.notifier).toggle();
+
+      expect(container.read(rewardNotificationEnabledProvider), isFalse);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('reward_notification_enabled'), isFalse);
+    });
+  });
+
+  group('ShabbosModeEnabled', () {
+    test('defaults to false', () {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(shabbosModeEnabledProvider), isFalse);
+    });
+
+    test('toggle switches state and persists', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container.read(shabbosModeEnabledProvider.notifier).toggle();
+
+      expect(container.read(shabbosModeEnabledProvider), isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('shabbos_mode_enabled'), isTrue);
+    });
+  });
+
+  group('ShabbosModeFixedStartTime', () {
+    test('defaults to 18:00', () {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final time = container.read(shabbosModeFixedStartTimeProvider);
+      expect(time.hour, 18);
+      expect(time.minute, 0);
+    });
+
+    test('setTime persists to SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(shabbosModeFixedStartTimeProvider.notifier)
+          .setTime(const TimeOfDay(hour: 17, minute: 45));
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('shabbos_mode_fixed_start_hour'), 17);
+      expect(prefs.getInt('shabbos_mode_fixed_start_minute'), 45);
+    });
+  });
+
+  group('ShabbosModeFixedEndTime', () {
+    test('defaults to 20:00', () {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final time = container.read(shabbosModeFixedEndTimeProvider);
+      expect(time.hour, 20);
+      expect(time.minute, 0);
+    });
+  });
 }
