@@ -11,7 +11,7 @@ class BulkMarkCompletionUseCase {
   final bool _isTutorMode;
 
   BulkMarkCompletionUseCase(this._repository, {bool isTutorMode = false})
-      : _isTutorMode = isTutorMode;
+    : _isTutorMode = isTutorMode;
 
   /// Execute the use case to mark multiple items as completed.
   ///

@@ -26,8 +26,10 @@ void main() {
     });
 
     test('MarkCompletionUseCase throws when tutor mode is active', () {
-      final useCase =
-          MarkCompletionUseCase(mockCompletionRepo, isTutorMode: true);
+      final useCase = MarkCompletionUseCase(
+        mockCompletionRepo,
+        isTutorMode: true,
+      );
 
       expect(
         () => useCase.call(FakeCompletionRequest()),
@@ -37,25 +39,32 @@ void main() {
       verifyNever(() => mockCompletionRepo.markComplete(any()));
     });
 
-    test('MarkCompletionUseCase succeeds when tutor mode is inactive',
-        () async {
-      when(() => mockCompletionRepo.markComplete(any()))
-          .thenAnswer((_) async => throw UnimplementedError());
+    test(
+      'MarkCompletionUseCase succeeds when tutor mode is inactive',
+      () async {
+        when(
+          () => mockCompletionRepo.markComplete(any()),
+        ).thenAnswer((_) async => throw UnimplementedError());
 
-      final useCase =
-          MarkCompletionUseCase(mockCompletionRepo, isTutorMode: false);
+        final useCase = MarkCompletionUseCase(
+          mockCompletionRepo,
+          isTutorMode: false,
+        );
 
-      // Should not throw TutorModeReadOnlyException; will throw
-      // UnimplementedError from the mock instead.
-      expect(
-        () => useCase.call(FakeCompletionRequest()),
-        throwsA(isA<UnimplementedError>()),
-      );
-    });
+        // Should not throw TutorModeReadOnlyException; will throw
+        // UnimplementedError from the mock instead.
+        expect(
+          () => useCase.call(FakeCompletionRequest()),
+          throwsA(isA<UnimplementedError>()),
+        );
+      },
+    );
 
     test('BulkMarkCompletionUseCase throws when tutor mode is active', () {
-      final useCase =
-          BulkMarkCompletionUseCase(mockCompletionRepo, isTutorMode: true);
+      final useCase = BulkMarkCompletionUseCase(
+        mockCompletionRepo,
+        isTutorMode: true,
+      );
 
       expect(
         () => useCase.call(FakeBulkCompletionRequest()),
@@ -65,19 +74,24 @@ void main() {
       verifyNever(() => mockCompletionRepo.bulkMarkComplete(any()));
     });
 
-    test('BulkMarkCompletionUseCase succeeds when tutor mode is inactive',
-        () async {
-      when(() => mockCompletionRepo.bulkMarkComplete(any()))
-          .thenAnswer((_) async => throw UnimplementedError());
+    test(
+      'BulkMarkCompletionUseCase succeeds when tutor mode is inactive',
+      () async {
+        when(
+          () => mockCompletionRepo.bulkMarkComplete(any()),
+        ).thenAnswer((_) async => throw UnimplementedError());
 
-      final useCase =
-          BulkMarkCompletionUseCase(mockCompletionRepo, isTutorMode: false);
+        final useCase = BulkMarkCompletionUseCase(
+          mockCompletionRepo,
+          isTutorMode: false,
+        );
 
-      expect(
-        () => useCase.call(FakeBulkCompletionRequest()),
-        throwsA(isA<UnimplementedError>()),
-      );
-    });
+        expect(
+          () => useCase.call(FakeBulkCompletionRequest()),
+          throwsA(isA<UnimplementedError>()),
+        );
+      },
+    );
 
     test('guardTutorModeWriteFromBool throws when true', () {
       expect(
@@ -91,9 +105,7 @@ void main() {
       guardTutorModeWriteFromBool(false);
     });
 
-    test(
-        'CurriculumActivationService.activate throws in tutor mode',
-        () async {
+    test('CurriculumActivationService.activate throws in tutor mode', () async {
       // Tested via guardTutorModeWriteFromBool since we can't easily
       // construct CurriculumActivationService without a real database.
       // The guard function is the same mechanism used in the service.
