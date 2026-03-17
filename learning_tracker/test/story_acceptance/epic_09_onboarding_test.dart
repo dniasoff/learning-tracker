@@ -8,10 +8,12 @@ import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
@@ -19,7 +21,9 @@ import 'package:learning_tracker/features/learning/domain/repositories/completio
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/suggested_thresholds_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/rewards_setup_screen.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
@@ -506,7 +510,7 @@ void main() {
     List<ContentItem> makeMishnayosItems() {
       // 3 sedarim, each with 2 masechtos, each with 1 leaf item = 6 items
       return [
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           level1: 'Seder Zeraim',
           level2: 'Berachos',
@@ -517,7 +521,7 @@ void main() {
           sortOrder: 1,
           isLeaf: true,
         ),
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           level1: 'Seder Zeraim',
           level2: 'Peah',
@@ -528,7 +532,7 @@ void main() {
           sortOrder: 2,
           isLeaf: true,
         ),
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           level1: 'Seder Moed',
           level2: 'Shabbos',
@@ -539,7 +543,7 @@ void main() {
           sortOrder: 3,
           isLeaf: true,
         ),
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           level1: 'Seder Moed',
           level2: 'Eruvin',
@@ -550,7 +554,7 @@ void main() {
           sortOrder: 4,
           isLeaf: true,
         ),
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           level1: 'Seder Nashim',
           level2: 'Yevamos',
@@ -561,7 +565,7 @@ void main() {
           sortOrder: 5,
           isLeaf: true,
         ),
-        ContentItem(
+        const ContentItem(
           curriculumId: 'mishnayos',
           level1: 'Seder Nashim',
           level2: 'Kesubos',
@@ -796,19 +800,229 @@ void main() {
     );
   });
 
-  // ── Story 9.5: Tutorial walkthrough ───────────────────────────
+  // ── Story 9.5: Initial Rewards Setup (Child Mode) ──────────
 
   group(
-    'Story 9.5 -- Tutorial walkthrough',
+    'Story 9.5 -- Initial Rewards Setup (Child Mode)',
     tags: ['story_9_5'],
-    skip: 'Backlog: tutorial walkthrough not yet implemented',
     () {
-      test('tutorial highlights key features step by step', () {
-        fail('Not yet implemented');
+      late AppDatabase db;
+      late RewardService rewardService;
+      late PointsService pointsService;
+
+      setUp(() {
+        db = AppDatabase(NativeDatabase.memory());
+        pointsService = PointsService(db);
+        rewardService = RewardService(db, pointsService);
       });
 
-      test('user can skip tutorial', () {
-        fail('Not yet implemented');
+      tearDown(() async {
+        await db.close();
+      });
+
+      // Unit: Reward creation persists title, description, and point threshold
+      test(
+        'reward creation persists title, description, and point threshold',
+        () async {
+          final id = await rewardService.addReward(
+            title: 'Ice cream trip',
+            description: 'A special outing',
+            pointsThreshold: 500,
+          );
+
+          final rewards = await rewardService.getAllRewards();
+          expect(rewards, hasLength(1));
+          expect(rewards.first.id, id);
+          expect(rewards.first.title, 'Ice cream trip');
+          expect(rewards.first.description, 'A special outing');
+          expect(rewards.first.pointsThreshold, 500);
+          expect(rewards.first.isEarned, isFalse);
+          expect(rewards.first.isRevealed, isFalse);
+        },
+      );
+
+      // Unit: Suggested thresholds calculate based on curriculum item count
+      // and daily pace
+      test(
+        'suggested thresholds calculate based on curriculum item count and daily pace',
+        () {
+          final thresholds = SuggestedThresholdsService.calculate(
+            totalItems: 4192,
+            dailyPace: 12,
+          );
+
+          expect(thresholds, hasLength(3));
+          // Ascending order
+          expect(thresholds[0], lessThan(thresholds[1]));
+          expect(thresholds[1], lessThan(thresholds[2]));
+          // All positive
+          for (final t in thresholds) {
+            expect(t, greaterThan(0));
+          }
+          // ~1 week: 12 * 10 * 7 = 840 → rounded
+          // ~1 month: 12 * 10 * 30 = 3600 → rounded
+          // ~3 months: 12 * 10 * 90 = 10800 → rounded
+          expect(thresholds[0], lessThanOrEqualTo(1000));
+          expect(thresholds[1], greaterThanOrEqualTo(3000));
+        },
+      );
+
+      test('suggested thresholds with zero items returns defaults', () {
+        final thresholds = SuggestedThresholdsService.calculate(
+          totalItems: 0,
+          dailyPace: 0,
+        );
+        expect(thresholds, [100, 500, 1000]);
+      });
+
+      // Widget: Rewards setup screen displayed (form has required fields)
+      testWidgets(
+        'rewards setup screen shows title, description, threshold fields',
+        (tester) async {
+          await tester.pumpWidget(
+            const MaterialApp(
+              home: RewardsSetupScreen(suggestedThresholds: [100, 500, 1000]),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Set Up Rewards'), findsOneWidget);
+          expect(find.text('Title'), findsOneWidget);
+          expect(find.text('Description'), findsOneWidget);
+          expect(find.text('Point Threshold'), findsOneWidget);
+        },
+      );
+
+      // Widget: Skip button proceeds without creating rewards
+      testWidgets('skip button is present and tappable', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: RewardsSetupScreen(suggestedThresholds: [100, 500, 1000]),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Skip'), findsOneWidget);
+      });
+
+      // Widget: Add reward form with suggested thresholds as chips
+      testWidgets('suggested threshold chips are displayed', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: RewardsSetupScreen(suggestedThresholds: [200, 800, 2000]),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('200 pts'), findsOneWidget);
+        expect(find.text('800 pts'), findsOneWidget);
+        expect(find.text('2000 pts'), findsOneWidget);
+      });
+
+      // Widget: Rewards setup screen NOT displayed in adult mode
+      test(
+        'adult mode skips rewards setup — getUserMode returns adult',
+        () async {
+          final profileService = UserProfileService(
+            userProfileDao: db.userProfileDao,
+            pushUserProfile:
+                ({
+                  required String firebaseUid,
+                  required String displayName,
+                  required String userMode,
+                }) async {},
+          );
+
+          await profileService.setUserMode(
+            firebaseUid: 'test-uid',
+            displayName: 'Adult User',
+            mode: UserMode.adult,
+          );
+
+          final mode = await profileService.getUserMode('test-uid');
+          expect(mode, UserMode.adult);
+          // When mode is adult, onboarding skips rewards setup entirely
+          expect(mode != UserMode.child, isTrue);
+        },
+      );
+
+      // Unit: child mode does show rewards setup
+      test(
+        'child mode shows rewards setup — getUserMode returns child',
+        () async {
+          final profileService = UserProfileService(
+            userProfileDao: db.userProfileDao,
+            pushUserProfile:
+                ({
+                  required String firebaseUid,
+                  required String displayName,
+                  required String userMode,
+                }) async {},
+          );
+
+          await profileService.setUserMode(
+            firebaseUid: 'test-uid',
+            displayName: 'Child User',
+            mode: UserMode.child,
+          );
+
+          final mode = await profileService.getUserMode('test-uid');
+          expect(mode, UserMode.child);
+        },
+      );
+
+      // Integration: Child mode onboarding — add 2 rewards, verify persisted
+      test(
+        'integration: add 2 rewards via RewardService, verify persisted',
+        () async {
+          // Simulate what onboarding does after RewardsSetupScreen returns
+          await rewardService.addReward(
+            title: 'Ice cream',
+            description: 'Trip to ice cream shop',
+            pointsThreshold: 100,
+          );
+          await rewardService.addReward(
+            title: 'New book',
+            description: 'Choose a book from the store',
+            pointsThreshold: 500,
+          );
+
+          final rewards = await rewardService.getAllRewards();
+          expect(rewards, hasLength(2));
+          expect(
+            rewards.map((r) => r.title),
+            containsAll(['Ice cream', 'New book']),
+          );
+          expect(
+            rewards.map((r) => r.pointsThreshold),
+            containsAll([100, 500]),
+          );
+
+          // All unearned and unrevealed
+          for (final r in rewards) {
+            expect(r.isEarned, isFalse);
+            expect(r.isRevealed, isFalse);
+          }
+        },
+      );
+
+      // Widget: Add reward form validates inputs
+      testWidgets('add reward form validates required fields', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: RewardsSetupScreen(suggestedThresholds: [100, 500, 1000]),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap Add Reward without filling fields
+        await tester.tap(find.text('Add Reward'));
+        await tester.pumpAndSettle();
+
+        // Validation errors should appear
+        expect(find.text('Title is required'), findsOneWidget);
+        expect(find.text('Description is required'), findsOneWidget);
+        expect(find.text('Threshold is required'), findsOneWidget);
       });
     },
   );

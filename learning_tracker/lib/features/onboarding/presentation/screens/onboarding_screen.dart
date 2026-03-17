@@ -4,13 +4,18 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/suggested_thresholds_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/rewards_setup_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 
@@ -22,7 +27,15 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-enum _ScreenPhase { selection, importing, bulkMark, goalSetup, done, error }
+enum _ScreenPhase {
+  selection,
+  importing,
+  bulkMark,
+  goalSetup,
+  rewardsSetup,
+  done,
+  error,
+}
 
 enum _CurriculumStatus { notStarted, importing, done, failed }
 
@@ -168,17 +181,71 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       // Invalidate the scheduler so it picks up the new goal deadline.
       ref.invalidate(allDailyTasksProvider);
     }
-    // Move to next curriculum or finish
+    // Move to next curriculum or proceed to rewards setup
     _goalSetupIndex++;
     if (_goalSetupIndex >= _goalSetupQueue.length) {
       unawaited(
-        _finishOnboarding().catchError((Object e) {
-          AppLogger.instance.error('Failed to finish onboarding: $e');
+        _startRewardsSetup().catchError((Object e) {
+          AppLogger.instance.error('Failed to start rewards setup: $e');
         }),
       );
     } else {
       setState(() {}); // Refresh to show next curriculum
     }
+  }
+
+  Future<void> _startRewardsSetup() async {
+    // Check user mode — only show for child mode
+    final profileService = ref.read(userProfileServiceProvider);
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    if (uid == null) {
+      await _finishOnboarding();
+      return;
+    }
+
+    final userMode = await profileService.getUserMode(uid);
+    if (userMode != UserMode.child) {
+      // Adult mode skips rewards setup entirely
+      await _finishOnboarding();
+      return;
+    }
+
+    setState(() => _phase = _ScreenPhase.rewardsSetup);
+  }
+
+  Future<void> _onRewardsResult(RewardSetupResult? result) async {
+    if (result != null && result.rewards.isNotEmpty) {
+      final rewardService = ref.read(rewardServiceProvider);
+      for (final entry in result.rewards) {
+        await rewardService.addReward(
+          title: entry.title,
+          description: entry.description,
+          pointsThreshold: entry.pointsThreshold,
+        );
+      }
+    }
+    await _finishOnboarding();
+  }
+
+  List<int> _computeSuggestedThresholds() {
+    final configsAsync = ref.read(allCurriculaConfigsProvider);
+    final totalItems =
+        configsAsync.whenOrNull(
+          data: (configs) {
+            var sum = 0;
+            for (final id in _selected) {
+              sum += configs[id]?.totalItems ?? 0;
+            }
+            return sum;
+          },
+        ) ??
+        0;
+    // Estimate daily pace from total items / 365 (default 1 year)
+    final dailyPace = totalItems > 0 ? (totalItems / 365).ceil() : 5;
+    return SuggestedThresholdsService.calculate(
+      totalItems: totalItems,
+      dailyPace: dailyPace,
+    );
   }
 
   Future<void> _finishOnboarding() async {
@@ -200,6 +267,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _ScreenPhase.importing => _buildImporting(theme),
         _ScreenPhase.bulkMark => _buildBulkMark(theme),
         _ScreenPhase.goalSetup => _buildGoalSetup(theme),
+        _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
         _ScreenPhase.done => _buildDone(theme),
         _ScreenPhase.error => _buildError(theme),
       },
@@ -455,6 +523,54 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             child: const Text('Skip'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRewardsSetup(ThemeData theme) {
+    final thresholds = _computeSuggestedThresholds();
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Set up mystery rewards',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add rewards your child can earn by learning!',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const Spacer(),
+            FilledButton(
+              onPressed: () async {
+                final result = await Navigator.of(context)
+                    .push<RewardSetupResult>(
+                      MaterialPageRoute<RewardSetupResult>(
+                        builder: (_) =>
+                            RewardsSetupScreen(suggestedThresholds: thresholds),
+                      ),
+                    );
+                if (mounted) {
+                  await _onRewardsResult(result);
+                }
+              },
+              child: const Text('Set Up Rewards'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => _onRewardsResult(null),
+              child: const Text('Skip'),
+            ),
+          ],
+        ),
       ),
     );
   }
