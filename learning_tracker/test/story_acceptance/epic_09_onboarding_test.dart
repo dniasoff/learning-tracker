@@ -326,7 +326,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(
             curriculumId: CurriculumId.mishnayos,
             totalItems: 4192,
@@ -367,7 +367,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(
             curriculumId: CurriculumId.mishnayos,
             totalItems: 365,
@@ -397,7 +397,7 @@ void main() {
 
     testWidgets('Hebrew date toggle switches picker mode', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(
             curriculumId: CurriculumId.mishnayos,
             totalItems: 365,

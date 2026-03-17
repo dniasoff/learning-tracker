@@ -464,6 +464,22 @@ class DashboardRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [DeviceRestoreScreen]
+class DeviceRestoreRoute extends PageRouteInfo<void> {
+  const DeviceRestoreRoute({List<PageRouteInfo>? children})
+    : super(DeviceRestoreRoute.name, initialChildren: children);
+
+  static const String name = 'DeviceRestoreRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const DeviceRestoreScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [GamificationScreen]
 class GamificationRoute extends PageRouteInfo<void> {
   const GamificationRoute({List<PageRouteInfo>? children})

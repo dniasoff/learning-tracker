@@ -37,19 +37,15 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
     DateTime start,
     DateTime end,
   ) =>
-      (select(completions)
-            ..where(
-              (t) =>
-                  t.completedAt.isBiggerOrEqualValue(start) &
-                  t.completedAt.isSmallerOrEqualValue(end),
-            ))
+      (select(completions)..where(
+            (t) =>
+                t.completedAt.isBiggerOrEqualValue(start) &
+                t.completedAt.isSmallerOrEqualValue(end),
+          ))
           .get();
 
   /// Check if any completions exist within a date range.
-  Future<bool> hasCompletionsInDateRange(
-    DateTime start,
-    DateTime end,
-  ) async {
+  Future<bool> hasCompletionsInDateRange(DateTime start, DateTime end) async {
     final result =
         await (select(completions)
               ..where(

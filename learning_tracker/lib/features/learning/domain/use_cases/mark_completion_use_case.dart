@@ -12,7 +12,7 @@ class MarkCompletionUseCase {
   final bool _isTutorMode;
 
   MarkCompletionUseCase(this._repository, {bool isTutorMode = false})
-      : _isTutorMode = isTutorMode;
+    : _isTutorMode = isTutorMode;
 
   /// Execute the use case to mark a content item as completed.
   ///

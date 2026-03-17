@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/navigation/app_shell.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
@@ -36,6 +37,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/curricul
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/track_management_screen.dart';
 import 'package:learning_tracker/features/stages/presentation/screens/stage_editor_screen.dart';
+import 'package:learning_tracker/features/sync/presentation/screens/device_restore_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_dashboard_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_mode_screen.dart';
@@ -48,12 +50,14 @@ part 'app_router.gr.dart';
 @AutoRouterConfig(replaceInRouteName: 'Screen,Route')
 class AppRouter extends RootStackRouter {
   final AuthGuard authGuard;
+  final RestoreGuard restoreGuard;
   final ChildModeGuard childModeGuard;
   final ParentPinGuard parentPinGuard;
   final TutorPinGuard tutorPinGuard;
 
   AppRouter({
     required this.authGuard,
+    required this.restoreGuard,
     required this.childModeGuard,
     required this.parentPinGuard,
     required this.tutorPinGuard,
@@ -70,12 +74,13 @@ class AppRouter extends RootStackRouter {
     AutoRoute(path: '/create-account', page: AccountCreationRoute.page),
     AutoRoute(path: '/mode-selection', page: ModeSelectionRoute.page),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
+    AutoRoute(path: '/restore', page: DeviceRestoreRoute.page),
 
     // App shell with bottom navigation (auth required)
     AutoRoute(
       path: '/',
       page: AppShellRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, restoreGuard],
       children: [
         AutoRoute(path: 'dashboard', page: DashboardRoute.page, initial: true),
         AutoRoute(path: 'learn', page: LearningRoute.page),
