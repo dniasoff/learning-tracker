@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-epic-10 test-story-13.1 test-story-13.2 test-epic-13 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-13.1 test-story-13.2 test-epic-13 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -51,6 +51,9 @@ test-epic-9: ## Run all Epic 9 (Onboarding) acceptance tests
 
 test-story-10.4: ## Run Story 10.4 (Point Value Configuration) acceptance tests
 	flutter test test/story_acceptance/epic_10_parent_mode_test.dart --name "Story 10.4"
+
+test-story-10.5: ## Run Story 10.5 (Parent Track Management) acceptance tests
+	flutter test test/story_acceptance/epic_10_parent_mode_test.dart --name "Story 10.5"
 
 test-epic-10: ## Run all Epic 10 (Parent Mode) acceptance tests
 	flutter test test/story_acceptance/epic_10_parent_mode_test.dart

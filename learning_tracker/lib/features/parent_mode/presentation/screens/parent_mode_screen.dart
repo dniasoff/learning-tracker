@@ -22,6 +22,12 @@ class ParentModeScreen extends ConsumerWidget {
         title: const Text('Parent Dashboard'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.library_books),
+            tooltip: 'Manage Tracks',
+            onPressed: () =>
+                context.router.push(const ParentTrackManagementRoute()),
+          ),
+          IconButton(
             icon: const Icon(Icons.card_giftcard),
             tooltip: 'Manage Rewards',
             onPressed: () => context.router.push(const RewardCatalogRoute()),

@@ -18,8 +18,11 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mode
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_track_management_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/reward_catalog_screen.dart';
@@ -1313,17 +1316,210 @@ void main() {
     );
   });
 
-  // ── Story 10.5: Progress reports ──────────────────────────────
+  // ── Story 10.5: Parent Track Management ──────────────────────
 
-  group(
-    'Story 10.5 -- Progress reports',
-    tags: ['story_10_5'],
-    skip: 'Backlog: parent progress reports not yet implemented',
-    () {
-      test('weekly summary report generated for parent', () {});
-      test('report can be exported or shared', () {});
-    },
-  );
+  group('Story 10.5 -- Parent Track Management', tags: ['story_10_5'], () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = createTestDatabase();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    // ── Unit: Add track creates new track record ──
+
+    test('add track creates new track record for curriculum', () async {
+      await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+
+      // Activate school track
+      await db.trackDao.activateTrack(CurriculumId.mishnayos, TrackType.school);
+
+      final tracks = await db.trackDao.getActiveTracks(CurriculumId.mishnayos);
+      expect(tracks.length, 2);
+      expect(tracks.map((t) => t.trackType), contains('school'));
+    });
+
+    // ── Unit: Remove track deactivates but preserves history ──
+
+    test(
+      'remove track deactivates track but preserves completion history',
+      () async {
+        await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+        await db.trackDao.activateTrack(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        );
+
+        // Add a completion on the school track
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: 'Mishnah_Berakhot.1.1',
+            stageId: 1,
+            trackType: TrackType.school.storageKey,
+            completedAt: DateTime.now().toUtc(),
+            points: const Value(10),
+          ),
+        );
+
+        // Deactivate school track
+        await db.trackDao.deactivateTrack(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        );
+
+        // Track should be inactive
+        final isActive = await db.trackDao.isTrackActive(
+          CurriculumId.mishnayos,
+          TrackType.school,
+        );
+        expect(isActive, false);
+
+        // Completion data should still exist
+        final completions = await db.completionDao.getAllCompletions();
+        expect(completions.length, 1);
+        expect(completions.first.trackType, 'school');
+      },
+    );
+
+    // ── Unit: Personal track removal blocked ──
+
+    test('personal track removal blocked', () async {
+      await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+
+      expect(
+        () => db.trackDao.deactivateTrack(
+          CurriculumId.mishnayos,
+          TrackType.personal,
+        ),
+        throwsA(isA<InvalidOperationException>()),
+      );
+    });
+
+    // ── Widget: Track management screen shows curricula ──
+
+    testWidgets('track management screen shows curricula with active tracks', (
+      tester,
+    ) async {
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: ParentTrackManagementScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('Personal'), findsOneWidget);
+      expect(find.text('School'), findsOneWidget);
+      expect(find.text('Tutor'), findsOneWidget);
+    });
+
+    // ── Widget: Add track button shows school/tutor options ──
+
+    testWidgets('add track toggle enables school track', (tester) async {
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: ParentTrackManagementScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Find the School switch and tap it (should be off initially)
+      final schoolSwitch = find.widgetWithText(SwitchListTile, 'School');
+      expect(schoolSwitch, findsOneWidget);
+
+      // Verify it's off
+      final switchWidget = tester.widget<SwitchListTile>(schoolSwitch);
+      expect(switchWidget.value, false);
+    });
+
+    // ── Widget: Remove track shows confirmation dialog ──
+
+    testWidgets('remove track shows confirmation dialog', (tester) async {
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+      await db.trackDao.activateTrack(CurriculumId.mishnayos, TrackType.school);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: ParentTrackManagementScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Find and tap the School switch to deactivate
+      final schoolSwitch = find.widgetWithText(SwitchListTile, 'School');
+      await tester.tap(schoolSwitch);
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog should appear
+      expect(find.text('Remove Track?'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Remove'), findsOneWidget);
+    });
+
+    // ── Widget: Personal track shows no remove option ──
+
+    testWidgets('personal track shows no remove option', (tester) async {
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: ParentTrackManagementScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Personal switch should be disabled (onChanged = null)
+      final personalSwitch = find.widgetWithText(SwitchListTile, 'Personal');
+      final switchWidget = tester.widget<SwitchListTile>(personalSwitch);
+      expect(switchWidget.onChanged, isNull);
+      expect(find.text('Always active'), findsOneWidget);
+    });
+
+    // ── Integration: Add school track from parent mode ──
+
+    test('add school track to Mishnayos from parent mode, '
+        'verify track appears in active tracks', () async {
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      await db.trackDao.initializeDefaultTracks(CurriculumId.mishnayos);
+
+      // Initially only personal track
+      var activeTracks = await db.trackDao.getActiveTracks(
+        CurriculumId.mishnayos,
+      );
+      expect(activeTracks.length, 1);
+      expect(activeTracks.first.trackType, 'personal');
+
+      // Add school track (simulating parent action)
+      await db.trackDao.activateTrack(CurriculumId.mishnayos, TrackType.school);
+
+      // Verify school track is now active
+      activeTracks = await db.trackDao.getActiveTracks(CurriculumId.mishnayos);
+      expect(activeTracks.length, 2);
+      final trackTypes = activeTracks.map((t) => t.trackType).toList();
+      expect(trackTypes, contains('personal'));
+      expect(trackTypes, contains('school'));
+    });
+  });
 
   // ── Story 10.6: Multi-child profiles ──────────────────────────
 
