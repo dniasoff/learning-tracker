@@ -33,12 +33,9 @@ class PointConfigDao extends DatabaseAccessor<AppDatabase>
     final stage = entry.stageOrder.value;
     final existing = await getConfig(currId, stage);
     if (existing != null) {
-      await (update(pointConfigs)
-            ..where(
-              (t) =>
-                  t.curriculumId.equals(currId) &
-                  t.stageOrder.equals(stage),
-            ))
+      await (update(pointConfigs)..where(
+            (t) => t.curriculumId.equals(currId) & t.stageOrder.equals(stage),
+          ))
           .write(PointConfigsCompanion(points: entry.points));
     } else {
       await insertConfig(entry);
