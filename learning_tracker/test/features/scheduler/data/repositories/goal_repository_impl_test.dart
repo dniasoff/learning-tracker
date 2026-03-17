@@ -1,0 +1,89 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+
+import '../../../../helpers/test_database.dart';
+
+void main() {
+  late AppDatabase db;
+  late GoalRepositoryImpl repo;
+
+  setUp(() {
+    db = createTestDatabase();
+    repo = GoalRepositoryImpl(database: db);
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  group('GoalRepositoryImpl', () {
+    test('createGoal creates and returns a goal entity', () async {
+      final targetDate = DateTime(2026, 12, 31);
+      final goal = await repo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 100.0,
+        targetDate: targetDate,
+        description: 'Finish mishnayos',
+        dateType: 'gregorian',
+      );
+
+      expect(goal.id, isPositive);
+      expect(goal.curriculumId, CurriculumId.mishnayos);
+      expect(goal.targetPercent, 100.0);
+      expect(goal.description, 'Finish mishnayos');
+    });
+
+    test('getGoals returns goals for specific curriculum', () async {
+      await repo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 50.0,
+      );
+      await repo.createGoal(
+        curriculumId: CurriculumId.bavli,
+        targetPercent: 25.0,
+      );
+
+      final mishnayosGoals = await repo.getGoals(CurriculumId.mishnayos);
+      expect(mishnayosGoals, hasLength(1));
+      expect(mishnayosGoals.first.targetPercent, 50.0);
+
+      final bavliGoals = await repo.getGoals(CurriculumId.bavli);
+      expect(bavliGoals, hasLength(1));
+    });
+
+    test('updateGoal modifies existing goal', () async {
+      final goal = await repo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 50.0,
+      );
+
+      final updated = await repo.updateGoal(
+        goalId: goal.id!,
+        targetPercent: 75.0,
+        description: 'Updated goal',
+      );
+
+      expect(updated.targetPercent, 75.0);
+      expect(updated.description, 'Updated goal');
+    });
+
+    test('deleteGoal removes the goal', () async {
+      final goal = await repo.createGoal(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 100.0,
+      );
+
+      await repo.deleteGoal(goal.id!);
+
+      final goals = await repo.getGoals(CurriculumId.mishnayos);
+      expect(goals, isEmpty);
+    });
+
+    test('getGoals returns empty list when no goals', () async {
+      final goals = await repo.getGoals(CurriculumId.mishnayos);
+      expect(goals, isEmpty);
+    });
+  });
+}

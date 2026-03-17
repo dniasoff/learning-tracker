@@ -1,0 +1,122 @@
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/app_database.dart';
+
+void main() {
+  late AppDatabase database;
+
+  setUp(() {
+    database = AppDatabase(NativeDatabase.memory());
+  });
+
+  tearDown(() async {
+    await database.close();
+  });
+
+  group('ProfileDao', () {
+    ProfilesCompanion makeProfile({
+      int accountId = 1,
+      String displayName = 'Test User',
+      String mode = 'adult',
+      int avatarIndex = 0,
+    }) {
+      final now = DateTime.now();
+      return ProfilesCompanion.insert(
+        accountId: accountId,
+        displayName: displayName,
+        mode: mode,
+        avatarIndex: Value(avatarIndex),
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
+
+    test('insertProfile returns an id and getProfileById retrieves it',
+        () async {
+      final id = await database.profileDao.insertProfile(makeProfile());
+
+      final profile = await database.profileDao.getProfileById(id);
+      expect(profile, isNotNull);
+      expect(profile!.displayName, 'Test User');
+      expect(profile.mode, 'adult');
+      expect(profile.accountId, 1);
+    });
+
+    test('getProfileById returns null for non-existent id', () async {
+      final profile = await database.profileDao.getProfileById(999);
+      expect(profile, isNull);
+    });
+
+    test('getProfilesByAccount filters by accountId', () async {
+      await database.profileDao.insertProfile(
+        makeProfile(accountId: 1, displayName: 'A'),
+      );
+      await database.profileDao.insertProfile(
+        makeProfile(accountId: 2, displayName: 'B'),
+      );
+      await database.profileDao.insertProfile(
+        makeProfile(accountId: 1, displayName: 'C'),
+      );
+
+      final profiles = await database.profileDao.getProfilesByAccount(1);
+      expect(profiles, hasLength(2));
+    });
+
+    test('countProfilesForAccount returns correct count', () async {
+      await database.profileDao.insertProfile(makeProfile(accountId: 1));
+      await database.profileDao.insertProfile(makeProfile(accountId: 1));
+      await database.profileDao.insertProfile(makeProfile(accountId: 2));
+
+      expect(await database.profileDao.countProfilesForAccount(1), 2);
+      expect(await database.profileDao.countProfilesForAccount(2), 1);
+      expect(await database.profileDao.countProfilesForAccount(3), 0);
+    });
+
+    test('updateProfile modifies existing profile', () async {
+      final id = await database.profileDao.insertProfile(makeProfile());
+      final profile = await database.profileDao.getProfileById(id);
+
+      final updated = await database.profileDao.updateProfile(
+        ProfilesCompanion(
+          id: Value(profile!.id),
+          accountId: Value(profile.accountId),
+          displayName: const Value('Updated Name'),
+          mode: Value(profile.mode),
+          avatarIndex: Value(profile.avatarIndex),
+          createdAt: Value(profile.createdAt),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+      expect(updated, isTrue);
+
+      final fetched = await database.profileDao.getProfileById(id);
+      expect(fetched!.displayName, 'Updated Name');
+    });
+
+    test('deleteProfile removes the profile', () async {
+      final id = await database.profileDao.insertProfile(makeProfile());
+
+      final deleted = await database.profileDao.deleteProfile(id);
+      expect(deleted, 1);
+
+      final profile = await database.profileDao.getProfileById(id);
+      expect(profile, isNull);
+    });
+
+    test('watchProfilesByAccount emits updates', () async {
+      final stream = database.profileDao.watchProfilesByAccount(1);
+
+      expect(
+        stream,
+        emitsInOrder([
+          <Profile>[], // initial empty
+          hasLength(1), // after insert
+        ]),
+      );
+
+      await Future<void>.delayed(Duration.zero);
+      await database.profileDao.insertProfile(makeProfile(accountId: 1));
+    });
+  });
+}
