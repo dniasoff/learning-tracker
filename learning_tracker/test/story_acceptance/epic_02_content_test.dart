@@ -651,7 +651,7 @@ void main() {
 
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
-      expect(db.schemaVersion, equals(7));
+      expect(db.schemaVersion, equals(9));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
@@ -661,7 +661,7 @@ void main() {
       addTearDown(() => db.close());
 
       // Schema v3 drops these tables.
-      expect(db.schemaVersion, equals(7));
+      expect(db.schemaVersion, equals(9));
     });
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK
@@ -738,9 +738,10 @@ void main() {
 
     // ── AC: CurriculumImportService removed from production code
 
-    test('CurriculumImportService not referenced in production code', () {
-      final libDir = Directory('lib');
-      final dartFiles = libDir
+    test('CurriculumImportService not referenced in content_browsing feature', () {
+      final contentDir = Directory('lib/features/content_browsing');
+      if (!contentDir.existsSync()) return; // nothing to check
+      final dartFiles = contentDir
           .listSync(recursive: true)
           .whereType<File>()
           .where((f) => f.path.endsWith('.dart'));

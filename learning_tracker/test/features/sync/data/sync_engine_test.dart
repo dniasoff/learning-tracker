@@ -183,6 +183,15 @@ void main() {
       when(
         () => mockFirestore.listenToStreak(),
       ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToGoals(),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToRewards(),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToActiveCurricula(),
+      ).thenAnswer((_) => const Stream.empty());
       when(() => mockOfflineQueue.flush()).thenAnswer((_) async => 0);
       when(() => mockOfflineQueue.getPendingCount()).thenAnswer((_) async => 0);
 
@@ -216,6 +225,15 @@ void main() {
       ).thenAnswer((_) => const Stream.empty());
       when(
         () => mockFirestore.listenToStreak(),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToGoals(),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToRewards(),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToActiveCurricula(),
       ).thenAnswer((_) => const Stream.empty());
       when(() => mockOfflineQueue.flush()).thenAnswer((_) async => 2);
       when(() => mockOfflineQueue.getPendingCount()).thenAnswer((_) async => 0);
@@ -858,7 +876,7 @@ void main() {
   });
 
   group('SyncEngine listener lifecycle', () {
-    test('attachListeners skips when already attached', () async {
+    void stubAllListeners() {
       when(
         () => mockFirestore.listenToCompletions(),
       ).thenAnswer((_) => const Stream.empty());
@@ -871,6 +889,19 @@ void main() {
       when(
         () => mockFirestore.listenToStreak(),
       ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToGoals(),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToRewards(),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => mockFirestore.listenToActiveCurricula(),
+      ).thenAnswer((_) => const Stream.empty());
+    }
+
+    test('attachListeners skips when already attached', () async {
+      stubAllListeners();
 
       await syncEngine.attachListeners();
       await syncEngine.attachListeners(); // second call is a no-op
@@ -887,18 +918,7 @@ void main() {
     });
 
     test('detachListeners cancels subscriptions', () async {
-      when(
-        () => mockFirestore.listenToCompletions(),
-      ).thenAnswer((_) => const Stream.empty());
-      when(
-        () => mockFirestore.listenToBookmarks(),
-      ).thenAnswer((_) => const Stream.empty());
-      when(
-        () => mockFirestore.listenToSettings(),
-      ).thenAnswer((_) => const Stream.empty());
-      when(
-        () => mockFirestore.listenToStreak(),
-      ).thenAnswer((_) => const Stream.empty());
+      stubAllListeners();
 
       await syncEngine.attachListeners();
       await syncEngine.detachListeners();

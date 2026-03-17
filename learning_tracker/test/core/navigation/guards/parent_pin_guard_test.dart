@@ -10,15 +10,22 @@ class MockStackRouter extends Mock implements StackRouter {}
 
 class MockPinService extends Mock implements PinService {}
 
+class FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
 void main() {
   late MockNavigationResolver mockResolver;
   late MockStackRouter mockRouter;
   late MockPinService mockPinService;
 
+  setUpAll(() {
+    registerFallbackValue(FakePageRouteInfo());
+  });
+
   setUp(() {
     mockResolver = MockNavigationResolver();
     mockRouter = MockStackRouter();
     mockPinService = MockPinService();
+    when(() => mockRouter.push<bool>(any())).thenAnswer((_) async => true);
   });
 
   group('ParentPinGuard', () {

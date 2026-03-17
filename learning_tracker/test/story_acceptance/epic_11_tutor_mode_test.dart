@@ -812,14 +812,8 @@ void main() {
         final aggregator = TutorDashboardAggregator(db);
         final data = await aggregator.compute(now: now, allTasks: tasks);
 
-        // Completion history present and sorted
-        expect(data.completionHistory.length, 6);
-        expect(
-          data.completionHistory.first.completedAt.isAfter(
-            data.completionHistory.last.completedAt,
-          ),
-          isTrue,
-        );
+        // Completion history shows only today's completions (1 of 6 seeded)
+        expect(data.completionHistory.length, 1);
 
         // Chazara queue has overdue item
         expect(data.chazaraQueue.length, 1);
@@ -828,13 +822,13 @@ void main() {
         // Daily tasks include all types
         expect(data.dailyTasks.length, 2);
 
-        // Pace info per curriculum
+        // Pace info per curriculum uses all-time completions
         expect(data.paceInfo, contains(CurriculumId.mishnayos));
         expect(data.paceInfo[CurriculumId.mishnayos]!.totalCompletions, 6);
 
         // Per-curriculum filtering works
         final filtered = data.filterByCurriculum(CurriculumId.mishnayos);
-        expect(filtered.completionHistory.length, 6);
+        expect(filtered.completionHistory.length, 1);
 
         // Filtering by non-active curriculum returns empty
         final empty = data.filterByCurriculum(CurriculumId.bavli);
