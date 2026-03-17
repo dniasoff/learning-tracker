@@ -24,7 +24,7 @@ void main() {
     await db.close();
   });
 
-  Future<int> _addReward({
+  Future<int> insertReward({
     required String title,
     required int threshold,
   }) async {
@@ -42,8 +42,8 @@ void main() {
     });
 
     test('returns the lowest-threshold unearned reward', () async {
-      await _addReward(title: 'Big', threshold: 500);
-      await _addReward(title: 'Small', threshold: 100);
+      await insertReward(title: 'Big', threshold: 500);
+      await insertReward(title: 'Small', threshold: 100);
 
       final next = await service.getNextReward();
       expect(next, isNotNull);
@@ -52,7 +52,7 @@ void main() {
     });
 
     test('returns null when all rewards are earned', () async {
-      final id = await _addReward(title: 'R1', threshold: 10);
+      final id = await insertReward(title: 'R1', threshold: 10);
       await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
 
       final next = await service.getNextReward();
@@ -68,7 +68,7 @@ void main() {
     });
 
     test('calculates progress from 0 base', () async {
-      await _addReward(title: 'R1', threshold: 100);
+      await insertReward(title: 'R1', threshold: 100);
       when(() => mockPointsService.getGlobalTotal())
           .thenAnswer((_) async => 50);
 
@@ -77,8 +77,8 @@ void main() {
     });
 
     test('calculates progress from previous earned threshold', () async {
-      final id1 = await _addReward(title: 'R1', threshold: 100);
-      await _addReward(title: 'R2', threshold: 200);
+      final id1 = await insertReward(title: 'R1', threshold: 100);
+      await insertReward(title: 'R2', threshold: 200);
       await db.rewardDao.markEarned(id1, earnedAt: DateTime.now().toUtc());
 
       when(() => mockPointsService.getGlobalTotal())
@@ -90,7 +90,7 @@ void main() {
     });
 
     test('clamps to 1.0 when points exceed threshold', () async {
-      await _addReward(title: 'R1', threshold: 100);
+      await insertReward(title: 'R1', threshold: 100);
       when(() => mockPointsService.getGlobalTotal())
           .thenAnswer((_) async => 200);
 
@@ -101,8 +101,8 @@ void main() {
 
   group('checkAndAwardRewards', () {
     test('marks rewards as earned when points exceed threshold', () async {
-      await _addReward(title: 'R1', threshold: 50);
-      await _addReward(title: 'R2', threshold: 200);
+      await insertReward(title: 'R1', threshold: 50);
+      await insertReward(title: 'R2', threshold: 200);
       when(() => mockPointsService.getGlobalTotal())
           .thenAnswer((_) async => 100);
 
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('auto-reveals in adult mode', () async {
-      await _addReward(title: 'R1', threshold: 50);
+      await insertReward(title: 'R1', threshold: 50);
       when(() => mockPointsService.getGlobalTotal())
           .thenAnswer((_) async => 100);
 
@@ -128,7 +128,7 @@ void main() {
     });
 
     test('does not auto-reveal in child mode', () async {
-      await _addReward(title: 'R1', threshold: 50);
+      await insertReward(title: 'R1', threshold: 50);
       when(() => mockPointsService.getGlobalTotal())
           .thenAnswer((_) async => 100);
 
@@ -140,7 +140,7 @@ void main() {
     });
 
     test('returns empty when no rewards exceed threshold', () async {
-      await _addReward(title: 'R1', threshold: 500);
+      await insertReward(title: 'R1', threshold: 500);
       when(() => mockPointsService.getGlobalTotal())
           .thenAnswer((_) async => 10);
 
@@ -154,7 +154,7 @@ void main() {
 
   group('revealReward', () {
     test('reveals an earned reward', () async {
-      final id = await _addReward(title: 'R1', threshold: 50);
+      final id = await insertReward(title: 'R1', threshold: 50);
       await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
 
       await service.revealReward(id);
@@ -165,7 +165,7 @@ void main() {
 
     test('throws in tutor mode', () async {
       final tutorService = RewardService(db, mockPointsService, isTutorMode: true);
-      final id = await _addReward(title: 'R1', threshold: 50);
+      final id = await insertReward(title: 'R1', threshold: 50);
 
       expect(
         () => tutorService.revealReward(id),
@@ -176,7 +176,7 @@ void main() {
 
   group('updateReward', () {
     test('updates an unearned reward', () async {
-      final id = await _addReward(title: 'Old', threshold: 50);
+      final id = await insertReward(title: 'Old', threshold: 50);
 
       await service.updateReward(
         id: id,
@@ -191,7 +191,7 @@ void main() {
     });
 
     test('throws when editing an earned reward', () async {
-      final id = await _addReward(title: 'R1', threshold: 50);
+      final id = await insertReward(title: 'R1', threshold: 50);
       await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
 
       expect(
@@ -207,7 +207,7 @@ void main() {
 
     test('throws in tutor mode', () async {
       final tutorService = RewardService(db, mockPointsService, isTutorMode: true);
-      final id = await _addReward(title: 'R1', threshold: 50);
+      final id = await insertReward(title: 'R1', threshold: 50);
 
       expect(
         () => tutorService.updateReward(
@@ -223,7 +223,7 @@ void main() {
 
   group('deleteReward', () {
     test('deletes an unearned reward', () async {
-      final id = await _addReward(title: 'R1', threshold: 50);
+      final id = await insertReward(title: 'R1', threshold: 50);
       await service.deleteReward(id);
 
       final reward = await db.rewardDao.getRewardById(id);
@@ -231,7 +231,7 @@ void main() {
     });
 
     test('throws when deleting an earned reward', () async {
-      final id = await _addReward(title: 'R1', threshold: 50);
+      final id = await insertReward(title: 'R1', threshold: 50);
       await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
 
       expect(
@@ -243,8 +243,8 @@ void main() {
 
   group('getEarnedRewards', () {
     test('returns only earned rewards', () async {
-      final id1 = await _addReward(title: 'R1', threshold: 50);
-      await _addReward(title: 'R2', threshold: 100);
+      final id1 = await insertReward(title: 'R1', threshold: 50);
+      await insertReward(title: 'R2', threshold: 100);
       await db.rewardDao.markEarned(id1, earnedAt: DateTime.now().toUtc());
 
       final earned = await service.getEarnedRewards();
@@ -255,8 +255,8 @@ void main() {
 
   group('getAllRewards', () {
     test('returns all rewards', () async {
-      await _addReward(title: 'R1', threshold: 50);
-      await _addReward(title: 'R2', threshold: 100);
+      await insertReward(title: 'R1', threshold: 50);
+      await insertReward(title: 'R2', threshold: 100);
 
       final all = await service.getAllRewards();
       expect(all.length, 2);
