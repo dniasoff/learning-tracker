@@ -28,8 +28,22 @@ class PointConfigDao extends DatabaseAccessor<AppDatabase>
           .getSingleOrNull();
 
   /// Insert or update a point config (upsert by curriculum_id + stage_order).
-  Future<int> upsertConfig(PointConfigsCompanion entry) =>
-      into(pointConfigs).insertOnConflictUpdate(entry);
+  Future<void> upsertConfig(PointConfigsCompanion entry) async {
+    final currId = entry.curriculumId.value;
+    final stage = entry.stageOrder.value;
+    final existing = await getConfig(currId, stage);
+    if (existing != null) {
+      await (update(pointConfigs)
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(currId) &
+                  t.stageOrder.equals(stage),
+            ))
+          .write(PointConfigsCompanion(points: entry.points));
+    } else {
+      await insertConfig(entry);
+    }
+  }
 
   /// Insert a point config.
   Future<int> insertConfig(PointConfigsCompanion entry) =>

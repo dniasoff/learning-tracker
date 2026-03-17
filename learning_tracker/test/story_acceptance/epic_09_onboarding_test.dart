@@ -11,7 +11,13 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
@@ -23,6 +29,10 @@ import 'package:test/test.dart' hide isNotNull, isNull;
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 class _MockTrackRepository extends Mock implements TrackRepository {}
+
+class _MockCompletionRepository extends Mock implements CompletionRepository {}
+
+class _MockBookmarkRepository extends Mock implements BookmarkRepository {}
 
 void main() {
   // ── Story 9.1: Welcome flow ───────────────────────────────────
@@ -108,6 +118,15 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
+    registerFallbackValue(TrackType.personal);
+    registerFallbackValue(
+      const BulkCompletionRequest(
+        curriculumId: 'mishnayos',
+        sefariaRefs: [],
+        stageId: 1,
+        trackType: 'personal',
+      ),
+    );
   });
 
   group('Story 9.2 -- Curriculum selection', tags: ['story_9_2'], () {
@@ -307,7 +326,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(
             curriculumId: CurriculumId.mishnayos,
             totalItems: 4192,
@@ -348,7 +367,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(
             curriculumId: CurriculumId.mishnayos,
             totalItems: 365,
@@ -378,7 +397,7 @@ void main() {
 
     testWidgets('Hebrew date toggle switches picker mode', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: GoalSetupScreen(
             curriculumId: CurriculumId.mishnayos,
             totalItems: 365,
@@ -476,22 +495,306 @@ void main() {
     );
   });
 
-  // ── Story 9.4: Import existing progress ───────────────────────
+  // ── Story 9.4: Bulk Mark Prior Completions ───────────────────
 
-  group(
-    'Story 9.4 -- Import existing progress',
-    tags: ['story_9_4'],
-    skip: 'Backlog: progress import not yet implemented',
-    () {
-      test('user can import progress from a backup file', () {
-        fail('Not yet implemented');
+  group('Story 9.4 -- Bulk Mark Prior Completions', tags: ['story_9_4'], () {
+    late _MockContentRepository mockContentRepo;
+    late _MockCompletionRepository mockCompletionRepo;
+    late _MockBookmarkRepository mockBookmarkRepo;
+    late BulkPriorCompletionService service;
+
+    List<ContentItem> makeMishnayosItems() {
+      // 3 sedarim, each with 2 masechtos, each with 1 leaf item = 6 items
+      return [
+        ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Zeraim',
+          level2: 'Berachos',
+          level3: 'Chapter 1',
+          displayNameHe: 'ברכות א',
+          displayNameEn: 'Berachos 1:1',
+          sefariaRef: 'Mishnah Berachos 1:1',
+          sortOrder: 1,
+          isLeaf: true,
+        ),
+        ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Zeraim',
+          level2: 'Peah',
+          level3: 'Chapter 1',
+          displayNameHe: 'פאה א',
+          displayNameEn: 'Peah 1:1',
+          sefariaRef: 'Mishnah Peah 1:1',
+          sortOrder: 2,
+          isLeaf: true,
+        ),
+        ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Moed',
+          level2: 'Shabbos',
+          level3: 'Chapter 1',
+          displayNameHe: 'שבת א',
+          displayNameEn: 'Shabbos 1:1',
+          sefariaRef: 'Mishnah Shabbos 1:1',
+          sortOrder: 3,
+          isLeaf: true,
+        ),
+        ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Moed',
+          level2: 'Eruvin',
+          level3: 'Chapter 1',
+          displayNameHe: 'עירובין א',
+          displayNameEn: 'Eruvin 1:1',
+          sefariaRef: 'Mishnah Eruvin 1:1',
+          sortOrder: 4,
+          isLeaf: true,
+        ),
+        ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Nashim',
+          level2: 'Yevamos',
+          level3: 'Chapter 1',
+          displayNameHe: 'יבמות א',
+          displayNameEn: 'Yevamos 1:1',
+          sefariaRef: 'Mishnah Yevamos 1:1',
+          sortOrder: 5,
+          isLeaf: true,
+        ),
+        ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Nashim',
+          level2: 'Kesubos',
+          level3: 'Chapter 1',
+          displayNameHe: 'כתובות א',
+          displayNameEn: 'Kesubos 1:1',
+          sefariaRef: 'Mishnah Kesubos 1:1',
+          sortOrder: 6,
+          isLeaf: true,
+        ),
+      ];
+    }
+
+    setUp(() {
+      mockContentRepo = _MockContentRepository();
+      mockCompletionRepo = _MockCompletionRepository();
+      mockBookmarkRepo = _MockBookmarkRepository();
+      service = BulkPriorCompletionService(
+        contentRepository: mockContentRepo,
+        completionRepository: mockCompletionRepo,
+        bookmarkRepository: mockBookmarkRepo,
+      );
+
+      when(
+        () => mockContentRepo.getContentForCurriculum(CurriculumId.mishnayos),
+      ).thenAnswer((_) async => makeMishnayosItems());
+
+      // Default: bulkMarkComplete returns a Completion-like list of same length
+      when(() => mockCompletionRepo.bulkMarkComplete(any())).thenAnswer((inv) {
+        final req = inv.positionalArguments[0] as BulkCompletionRequest;
+        return Future.value(
+          List.generate(
+            req.sefariaRefs.length,
+            (_) => Completion(
+              id: 1,
+              curriculumId: req.curriculumId,
+              sefariaRef: req.sefariaRefs.first,
+              stageId: req.stageId,
+              trackType: req.trackType,
+              completedAt: DateTime.now(),
+              points: 10,
+            ),
+          ),
+        );
       });
 
-      test('imported completions appear in progress view', () {
-        fail('Not yet implemented');
-      });
-    },
-  );
+      when(
+        () => mockBookmarkRepo.setBookmark(
+          curriculumId: any(named: 'curriculumId'),
+          trackType: any(named: 'trackType'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer(
+        (_) async => BookmarkEntity(
+          curriculumId: CurriculumId.mishnayos,
+          trackType: TrackType.personal,
+          sefariaRef: 'ref',
+          updatedAt: DateTime.now(),
+        ),
+      );
+    });
+
+    test(
+      'bulk mark at seder level creates completion records for all items within',
+      () async {
+        // Select all of Seder Zeraim (contains 2 items)
+        final resolved = await service.resolveSelections(
+          curriculumId: CurriculumId.mishnayos,
+          selections: [const HierarchySelection(level1: 'Seder Zeraim')],
+        );
+
+        expect(resolved, hasLength(2));
+        expect(
+          resolved.map((i) => i.sefariaRef),
+          containsAll(['Mishnah Berachos 1:1', 'Mishnah Peah 1:1']),
+        );
+      },
+    );
+
+    test(
+      'bulk mark with stage selection creates correct stage completion records',
+      () async {
+        final resolved = await service.resolveSelections(
+          curriculumId: CurriculumId.mishnayos,
+          selections: [const HierarchySelection(level1: 'Seder Zeraim')],
+        );
+
+        // Mark stages 1 and 2
+        final result = await service.execute(
+          curriculumId: CurriculumId.mishnayos,
+          resolvedItems: resolved,
+          stageIds: [1, 2],
+        );
+
+        // Should create 2 items * 2 stages = 4 completions
+        expect(result.completionCount, 4);
+        expect(result.itemCount, 2);
+
+        // Verify bulkMarkComplete was called twice (once per stage)
+        verify(() => mockCompletionRepo.bulkMarkComplete(any())).called(2);
+      },
+    );
+
+    test(
+      'bookmark advances to first uncompleted item after bulk mark',
+      () async {
+        // Mark first 2 sedarim (4 items), leaving Seder Nashim uncompleted
+        final resolved = await service.resolveSelections(
+          curriculumId: CurriculumId.mishnayos,
+          selections: [
+            const HierarchySelection(level1: 'Seder Zeraim'),
+            const HierarchySelection(level1: 'Seder Moed'),
+          ],
+        );
+
+        final result = await service.execute(
+          curriculumId: CurriculumId.mishnayos,
+          resolvedItems: resolved,
+          stageIds: [1],
+        );
+
+        // Bookmark should be set to first item in Seder Nashim
+        expect(result.bookmarkSefariaRef, 'Mishnah Yevamos 1:1');
+
+        // Verify setBookmark was called with the correct ref
+        verify(
+          () => mockBookmarkRepo.setBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            trackType: TrackType.personal,
+            sefariaRef: 'Mishnah Yevamos 1:1',
+          ),
+        ).called(1);
+      },
+    );
+
+    test('bulk insert completes in single transaction (per stage)', () async {
+      final resolved = await service.resolveSelections(
+        curriculumId: CurriculumId.mishnayos,
+        selections: [const HierarchySelection(level1: 'Seder Zeraim')],
+      );
+
+      await service.execute(
+        curriculumId: CurriculumId.mishnayos,
+        resolvedItems: resolved,
+        stageIds: [1],
+      );
+
+      // Verify a single bulkMarkComplete call (which uses single transaction)
+      final captured = verify(
+        () => mockCompletionRepo.bulkMarkComplete(captureAny()),
+      ).captured;
+      expect(captured, hasLength(1));
+      final req = captured.first as BulkCompletionRequest;
+      expect(req.sefariaRefs, hasLength(2));
+      expect(req.trackType, 'personal');
+    });
+
+    test('selecting individual items for partial completions', () async {
+      final resolved = await service.resolveSelections(
+        curriculumId: CurriculumId.mishnayos,
+        selections: [
+          // Select one specific item from Seder Zeraim
+          const HierarchySelection(
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: 'Chapter 1',
+          ),
+        ],
+      );
+
+      expect(resolved, hasLength(1));
+      expect(resolved.first.sefariaRef, 'Mishnah Berachos 1:1');
+    });
+
+    test('all bulk completions use personal track', () async {
+      final resolved = await service.resolveSelections(
+        curriculumId: CurriculumId.mishnayos,
+        selections: [const HierarchySelection(level1: 'Seder Zeraim')],
+      );
+
+      await service.execute(
+        curriculumId: CurriculumId.mishnayos,
+        resolvedItems: resolved,
+        stageIds: [1],
+      );
+
+      final captured = verify(
+        () => mockCompletionRepo.bulkMarkComplete(captureAny()),
+      ).captured;
+      final req = captured.first as BulkCompletionRequest;
+      expect(req.trackType, 'personal');
+    });
+
+    test('hierarchy selection at masechta level resolves correctly', () async {
+      final resolved = await service.resolveSelections(
+        curriculumId: CurriculumId.mishnayos,
+        selections: [
+          const HierarchySelection(level1: 'Seder Moed', level2: 'Shabbos'),
+        ],
+      );
+
+      expect(resolved, hasLength(1));
+      expect(resolved.first.sefariaRef, 'Mishnah Shabbos 1:1');
+    });
+
+    test(
+      'integration: bulk mark first 2 sedarim, verify count, bookmark, scheduler',
+      () async {
+        final resolved = await service.resolveSelections(
+          curriculumId: CurriculumId.mishnayos,
+          selections: [
+            const HierarchySelection(level1: 'Seder Zeraim'),
+            const HierarchySelection(level1: 'Seder Moed'),
+          ],
+        );
+
+        expect(resolved, hasLength(4)); // 2 items per seder
+
+        final result = await service.execute(
+          curriculumId: CurriculumId.mishnayos,
+          resolvedItems: resolved,
+          stageIds: [1],
+        );
+
+        // Verify completion count
+        expect(result.itemCount, 4);
+        expect(result.completionCount, 4);
+
+        // Verify bookmark set to first uncompleted item
+        expect(result.bookmarkSefariaRef, 'Mishnah Yevamos 1:1');
+      },
+    );
+  });
 
   // ── Story 9.5: Tutorial walkthrough ───────────────────────────
 

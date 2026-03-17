@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/gamification/presentation/providers/re
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/reward_catalog_screen.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
@@ -996,17 +997,321 @@ void main() {
     );
   });
 
-  // ── Story 10.4: Time limits ───────────────────────────────────
+  // ── Story 10.4: Point Value Configuration ────────────────────
 
-  group(
-    'Story 10.4 -- Time limits',
-    tags: ['story_10_4'],
-    skip: 'Backlog: time limits not yet implemented',
-    () {
-      test('parent can set daily time limits', () {});
-      test('app locks after time limit reached', () {});
-    },
-  );
+  group('Story 10.4 -- Point Value Configuration', tags: ['story_10_4'], () {
+    late AppDatabase db;
+    late PointsService pointsService;
+
+    setUp(() async {
+      db = createTestDatabase();
+      pointsService = PointsService(db);
+
+      // Activate mishnayos and seed stages + point configs
+      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+      for (var i = 1; i <= 3; i++) {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            stageOrder: i,
+            stageName: i == 1 ? 'Learning' : 'Chazara ${i - 1}',
+            delayDays: 0,
+          ),
+        );
+      }
+      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey);
+    });
+
+    tearDown(() => db.close());
+
+    // ── Unit: Point config update persists new values ──
+
+    test(
+      'point config update persists new values per curriculum per stage',
+      () async {
+        // Update Learn from 10 to 15
+        await db.pointConfigDao.upsertConfig(
+          PointConfigsCompanion(
+            curriculumId: Value(CurriculumId.mishnayos.storageKey),
+            stageOrder: const Value(1),
+            points: const Value(15),
+          ),
+        );
+
+        final config = await db.pointConfigDao.getConfig(
+          CurriculumId.mishnayos.storageKey,
+          1,
+        );
+        expect(config!.points, 15);
+
+        // Other stages unaffected
+        final config2 = await db.pointConfigDao.getConfig(
+          CurriculumId.mishnayos.storageKey,
+          2,
+        );
+        expect(config2!.points, 5);
+      },
+    );
+
+    // ── Unit: Reset to defaults restores original values ──
+
+    test('reset to defaults restores original point values', () async {
+      // Change all values
+      for (var i = 1; i <= 3; i++) {
+        await db.pointConfigDao.upsertConfig(
+          PointConfigsCompanion(
+            curriculumId: Value(CurriculumId.mishnayos.storageKey),
+            stageOrder: Value(i),
+            points: const Value(99),
+          ),
+        );
+      }
+
+      // Reset: delete all then re-seed
+      await db.pointConfigDao.deleteAllForCurriculum(
+        CurriculumId.mishnayos.storageKey,
+      );
+      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey);
+
+      final configs = await db.pointConfigDao.getConfigsByCurriculum(
+        CurriculumId.mishnayos.storageKey,
+      );
+      expect(configs[0].points, 10); // Learn
+      expect(configs[1].points, 5); // Chazara 1
+      expect(configs[2].points, 3); // Chazara 2
+    });
+
+    // ── Unit: Existing points history unaffected by config changes ──
+
+    test('existing points history unaffected by config changes', () async {
+      // Record a completion with current config (10 points for stage 1)
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'test-ref-1',
+          stageId: 1,
+          trackType: 'personal',
+          completedAt: DateTime.now().toUtc(),
+          points: const Value(10),
+        ),
+      );
+
+      // Now change point config for stage 1 to 15
+      await db.pointConfigDao.upsertConfig(
+        PointConfigsCompanion(
+          curriculumId: Value(CurriculumId.mishnayos.storageKey),
+          stageOrder: const Value(1),
+          points: const Value(15),
+        ),
+      );
+
+      // Existing completion still has 10 points
+      final completions = await db.completionDao.getCompletionsByCurriculum(
+        CurriculumId.mishnayos.storageKey,
+      );
+      expect(completions.length, 1);
+      expect(completions.first.points, 10);
+
+      // But new lookups return 15
+      final newPoints = await pointsService.getPointsForStage(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        stageOrder: 1,
+      );
+      expect(newPoints, 15);
+    });
+
+    // ── Widget: Config screen lists all curricula with expandable stage rows ──
+
+    testWidgets('config screen lists curricula with expandable stage rows', (
+      tester,
+    ) async {
+      // Also activate bavli
+      await db.activeCurriculumDao.activate(CurriculumId.bavli);
+      for (var i = 1; i <= 2; i++) {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: CurriculumId.bavli.storageKey,
+            stageOrder: i,
+            stageName: i == 1 ? 'Learning' : 'Chazara 1',
+            delayDays: 0,
+          ),
+        );
+      }
+      await db.pointConfigDao.seedDefaults(CurriculumId.bavli.storageKey);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: PointConfigScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Both curricula visible
+      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('Talmud Bavli'), findsOneWidget);
+
+      // Tap to expand Mishnayos
+      await tester.tap(find.text('Mishnayos'));
+      await tester.pumpAndSettle();
+
+      // Stage names visible
+      expect(find.text('Learning'), findsOneWidget);
+      expect(find.text('Chazara 1'), findsAtLeastNWidgets(1));
+    });
+
+    // ── Widget: Each stage row shows editable point value field ──
+
+    testWidgets('each stage row shows editable point value field', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: PointConfigScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Expand Mishnayos
+      await tester.tap(find.text('Mishnayos'));
+      await tester.pumpAndSettle();
+
+      // Should see point values as text (default: 10, 5, 3)
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    // ── Widget: Reset button with confirmation restores defaults ──
+
+    testWidgets('reset button with confirmation restores defaults', (
+      tester,
+    ) async {
+      // Change a point value first
+      await db.pointConfigDao.upsertConfig(
+        PointConfigsCompanion(
+          curriculumId: Value(CurriculumId.mishnayos.storageKey),
+          stageOrder: const Value(1),
+          points: const Value(99),
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: PointConfigScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Expand Mishnayos
+      await tester.tap(find.text('Mishnayos'));
+      await tester.pumpAndSettle();
+
+      // Find and tap reset button
+      await tester.tap(find.byIcon(Icons.restore));
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog
+      expect(find.text('Reset to Defaults'), findsOneWidget);
+
+      // Confirm
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+
+      // Values should be back to defaults
+      final configs = await db.pointConfigDao.getConfigsByCurriculum(
+        CurriculumId.mishnayos.storageKey,
+      );
+      expect(configs[0].points, 10);
+      expect(configs[1].points, 5);
+      expect(configs[2].points, 3);
+    });
+
+    // ── Widget: Validation prevents zero or negative values ──
+
+    testWidgets('validation prevents zero or negative values', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const MaterialApp(home: PointConfigScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Expand Mishnayos
+      await tester.tap(find.text('Mishnayos'));
+      await tester.pumpAndSettle();
+
+      // Tap edit on the first stage (Learn = 10)
+      final editButtons = find.byIcon(Icons.edit);
+      await tester.tap(editButtons.first);
+      await tester.pumpAndSettle();
+
+      // Clear and enter 0
+      final textField = find.byType(TextFormField);
+      await tester.enterText(textField.first, '0');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Must be a positive integer'), findsOneWidget);
+
+      // Enter negative
+      await tester.enterText(textField.first, '-5');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Must be a positive integer'), findsOneWidget);
+    });
+
+    // ── Integration: Change points, complete item, verify new points ──
+
+    test(
+      'integration: change Mishnayos Learn points from 10 to 15, complete item, verify 15 awarded',
+      () async {
+        // Change Learn points to 15
+        await db.pointConfigDao.upsertConfig(
+          PointConfigsCompanion(
+            curriculumId: Value(CurriculumId.mishnayos.storageKey),
+            stageOrder: const Value(1),
+            points: const Value(15),
+          ),
+        );
+
+        // Verify points service returns 15
+        final points = await pointsService.getPointsForStage(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          stageOrder: 1,
+        );
+        expect(points, 15);
+
+        // Record a completion with the new point value
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: 'new-completion-ref',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+            points: Value(points),
+          ),
+        );
+
+        // Verify the completion has 15 points
+        final completions = await db.completionDao.getCompletionsByCurriculum(
+          CurriculumId.mishnayos.storageKey,
+        );
+        expect(completions.last.points, 15);
+
+        // Verify total
+        final total = await pointsService.getCurriculumTotal(
+          CurriculumId.mishnayos.storageKey,
+        );
+        expect(total, 15);
+      },
+    );
+  });
 
   // ── Story 10.5: Progress reports ──────────────────────────────
 

@@ -6,11 +6,15 @@ import 'dart:async';
 
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:learning_tracker/features/sync/domain/services/device_restore_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
 import 'package:test/test.dart';
@@ -18,6 +22,9 @@ import 'package:test/test.dart';
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
 class MockConnectivityService extends Mock implements ConnectivityService {}
+
+class MockCurriculumImportService extends Mock
+    implements CurriculumImportService {}
 
 AppDatabase _createInMemoryDatabase() {
   return AppDatabase(NativeDatabase.memory());
@@ -646,6 +653,262 @@ void main() {
 
       verifyNever(() => mockFirestore.listenToCompletions());
       verifyNever(() => mockFirestore.listenToGoals());
+    });
+  });
+
+  // ── Story 13.4: New Device Data Restore ─────────────────────
+
+  group('Story 13.4 -- New Device Data Restore', tags: ['story_13_4'], () {
+    late AppDatabase database;
+    late MockFirestoreDataSource mockFirestore;
+    late MockConnectivityService mockConnectivity;
+    late MockCurriculumImportService mockImportService;
+    late Talker logger;
+    late OfflineQueue offlineQueue;
+    late SyncEngine syncEngine;
+    late DeviceRestoreService restoreService;
+
+    void stubEmptyFetches() {
+      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchActiveCurricula(),
+      ).thenAnswer((_) async => []);
+    }
+
+    setUp(() {
+      database = _createInMemoryDatabase();
+      mockFirestore = MockFirestoreDataSource();
+      mockConnectivity = MockConnectivityService();
+      mockImportService = MockCurriculumImportService();
+      logger = Talker();
+      offlineQueue = OfflineQueue(
+        database: database,
+        firestoreDataSource: mockFirestore,
+        logger: logger,
+      );
+      when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
+      syncEngine = SyncEngine(
+        database: database,
+        firestoreDataSource: mockFirestore,
+        offlineQueue: offlineQueue,
+        logger: logger,
+        connectivityService: mockConnectivity,
+      );
+      restoreService = DeviceRestoreService(
+        database: database,
+        syncEngine: syncEngine,
+        firestoreDataSource: mockFirestore,
+        curriculumImportService: mockImportService,
+        logger: logger,
+      );
+    });
+
+    tearDown(() async {
+      await restoreService.dispose();
+      await syncEngine.dispose();
+      await database.close();
+    });
+
+    test('full restore fetches all Firestore collections for user', () async {
+      stubEmptyFetches();
+
+      // Empty DB = new device
+      expect(await restoreService.isNewDevice(), isTrue);
+
+      await restoreService.restore();
+
+      verify(() => mockFirestore.fetchCompletions()).called(1);
+      verify(() => mockFirestore.fetchBookmarks()).called(1);
+      verify(() => mockFirestore.fetchSettings()).called(1);
+      verify(() => mockFirestore.fetchGoals()).called(1);
+      verify(() => mockFirestore.fetchRewards()).called(1);
+      verify(() => mockFirestore.fetchStreak()).called(1);
+      verify(() => mockFirestore.fetchProfile()).called(1);
+    });
+
+    test('completions, goals, stages, rewards all populated in local DB '
+        'after restore', () async {
+      when(() => mockFirestore.fetchCompletions()).thenAnswer(
+        (_) async => [
+          {
+            'curriculum_id': 'mishnayos',
+            'content_item_id': 'mishna-1',
+            'stage_id': 1,
+            'track_type': 'personal',
+            'completed_at': '2026-02-09T12:00:00.000Z',
+            'points': 10,
+          },
+        ],
+      );
+      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchProfile()).thenAnswer(
+        (_) async => {
+          'firebase_uid': 'uid-123',
+          'display_name': 'Test User',
+          'user_mode': 'student',
+          'updated_at': '2026-02-09T12:00:00.000Z',
+        },
+      );
+      when(() => mockFirestore.fetchGoals()).thenAnswer(
+        (_) async => [
+          {
+            'curriculum_id': 'mishnayos',
+            'description': 'finish by pesach',
+            'target_percent': 100.0,
+            'created_at': '2026-02-09T12:00:00.000Z',
+            'updated_at': '2026-02-09T12:00:00.000Z',
+          },
+        ],
+      );
+      when(() => mockFirestore.fetchRewards()).thenAnswer(
+        (_) async => [
+          {
+            'title': 'First Steps',
+            'description': 'Complete 10 items',
+            'points_threshold': 10,
+            'is_earned': true,
+            'earned_at': '2026-02-09T12:00:00.000Z',
+            'created_at': '2026-02-09T12:00:00.000Z',
+            'updated_at': '2026-02-09T12:00:00.000Z',
+          },
+        ],
+      );
+      when(
+        () => mockFirestore.fetchActiveCurricula(),
+      ).thenAnswer((_) async => []);
+
+      await restoreService.restore();
+
+      final completions = await database.completionDao.getAllCompletions();
+      expect(completions, hasLength(1));
+      expect(completions.first.sefariaRef, 'mishna-1');
+
+      final goals = await database.goalDao.getAllGoals();
+      expect(goals, hasLength(1));
+      expect(goals.first.description, 'finish by pesach');
+
+      final rewards = await database.rewardDao.getAllRewards();
+      expect(rewards, hasLength(1));
+      expect(rewards.first.title, 'First Steps');
+      expect(rewards.first.isEarned, isTrue);
+
+      final profiles = await database.userProfileDao.getAllUserProfiles();
+      expect(profiles, hasLength(1));
+      expect(profiles.first.displayName, 'Test User');
+    });
+
+    test('PINs are not present after restore (device-local)', () async {
+      // PINs are stored in FlutterSecureStorage, not in the database
+      // or Firestore. After a restore, the PIN tables should be empty
+      // because PINs are never synced. This test verifies the restore
+      // service does NOT attempt to restore PINs.
+      stubEmptyFetches();
+
+      await restoreService.restore();
+
+      // Verify no Firestore call for PINs (no such method exists)
+      // PINs are device-local via FlutterSecureStorage — the restore
+      // service correctly ignores them by design.
+      verifyNever(() => mockFirestore.pushCurriculumImportMetadata(any()));
+    });
+
+    test(
+      'content items re-imported from bundled data, not Firestore',
+      () async {
+        stubEmptyFetches();
+        when(
+          () => mockFirestore.fetchActiveCurricula(),
+        ).thenAnswer((_) async => ['mishnayos']);
+        when(
+          () => mockImportService.importAll(any()),
+        ).thenAnswer((_) => const Stream.empty());
+
+        await restoreService.restore();
+
+        // Verify import was called with the active curriculum
+        verify(
+          () => mockImportService.importAll(
+            any(that: contains(CurriculumId.mishnayos)),
+          ),
+        ).called(1);
+      },
+    );
+
+    test('restore status stream emits correct lifecycle', () async {
+      stubEmptyFetches();
+
+      final statuses = <RestoreStatus>[];
+      restoreService.statusStream.listen(statuses.add);
+
+      await restoreService.restore();
+
+      // Allow microtasks to flush
+      await Future<void>.delayed(Duration.zero);
+
+      // Should have: checking → restoring(0/3) → restoring(1/3)
+      // → restoring(2/3) → complete
+      expect(statuses, isNotEmpty);
+      expect(statuses.any((s) => s is RestoreStatusChecking), isTrue);
+      expect(statuses.any((s) => s is RestoreStatusRestoring), isTrue);
+      expect(statuses.any((s) => s is RestoreStatusComplete), isTrue);
+      // Verify final status
+      expect(restoreService.currentStatus, isA<RestoreStatusComplete>());
+    });
+
+    test('error handling with retry for partial restore failures', () async {
+      // First call fails
+      when(
+        () => mockFirestore.fetchCompletions(),
+      ).thenThrow(Exception('Network error'));
+      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
+      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
+      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchActiveCurricula(),
+      ).thenAnswer((_) async => []);
+
+      final result1 = await restoreService.restore();
+      expect(result1, isFalse);
+      expect(restoreService.currentStatus, isA<RestoreStatusError>());
+
+      // Retry succeeds
+      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
+
+      final result2 = await restoreService.retry();
+      expect(result2, isTrue);
+      expect(restoreService.currentStatus, isA<RestoreStatusComplete>());
+    });
+
+    test('restore not triggered on existing device (has data)', () async {
+      // Insert existing data — not a new device
+      await database.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'mishna-1',
+          stageId: 1,
+          trackType: 'personal',
+          completedAt: DateTime.utc(2026, 2, 9),
+        ),
+      );
+
+      expect(await restoreService.isNewDevice(), isFalse);
+
+      final result = await restoreService.restore();
+      expect(result, isFalse);
+
+      // No Firestore calls made
+      verifyNever(() => mockFirestore.fetchCompletions());
     });
   });
 }

@@ -27,6 +27,11 @@ class ParentModeScreen extends ConsumerWidget {
             onPressed: () => context.router.push(const RewardCatalogRoute()),
           ),
           IconButton(
+            icon: const Icon(Icons.stars),
+            tooltip: 'Point Configuration',
+            onPressed: () => context.router.push(const PointConfigRoute()),
+          ),
+          IconButton(
             icon: const Icon(Icons.lock),
             tooltip: 'Change PIN',
             onPressed: () => context.router.push(const PinChangeRoute()),

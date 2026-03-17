@@ -175,10 +175,7 @@ Future<void> reminderSyncEffect(Ref ref) async {
 StreakAlertService streakAlertService(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   final notifService = ref.watch(notificationServiceProvider);
-  return StreakAlertService(
-    db: db,
-    notificationService: notifService,
-  );
+  return StreakAlertService(db: db, notificationService: notifService);
 }
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel

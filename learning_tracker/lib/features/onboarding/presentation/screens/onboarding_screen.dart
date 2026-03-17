@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 
@@ -21,7 +22,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-enum _ScreenPhase { selection, importing, goalSetup, done, error }
+enum _ScreenPhase { selection, importing, bulkMark, goalSetup, done, error }
 
 enum _CurriculumStatus { notStarted, importing, done, failed }
 
@@ -47,6 +48,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           _CurriculumStatus.importing;
     }
   }
+
+  // Bulk mark state
+  late List<CurriculumId> _bulkMarkQueue;
+  int _bulkMarkIndex = 0;
+  bool _bulkMarkLaunched = false;
 
   // Goal setup state
   late List<CurriculumId> _goalSetupQueue;
@@ -77,7 +83,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final failures = _importProgress?.failures ?? [];
     if (failures.isEmpty) {
-      _startGoalSetup();
+      _startBulkMark();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
@@ -111,12 +117,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final newFailures = _importProgress?.failures ?? [];
     if (newFailures.isEmpty) {
-      _startGoalSetup();
+      _startBulkMark();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
         _failures = newFailures;
       });
+    }
+  }
+
+  void _startBulkMark() {
+    _bulkMarkQueue = _selected.toList();
+    _bulkMarkIndex = 0;
+    if (_bulkMarkQueue.isEmpty) {
+      _startGoalSetup();
+      return;
+    }
+    setState(() => _phase = _ScreenPhase.bulkMark);
+  }
+
+  Future<void> _onBulkMarkResult(BulkMarkResult? result) async {
+    _bulkMarkIndex++;
+    if (_bulkMarkIndex >= _bulkMarkQueue.length) {
+      _startGoalSetup();
+    } else {
+      setState(() {}); // Show next curriculum's bulk mark screen
     }
   }
 
@@ -173,6 +198,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: switch (_phase) {
         _ScreenPhase.selection => _buildSelection(theme),
         _ScreenPhase.importing => _buildImporting(theme),
+        _ScreenPhase.bulkMark => _buildBulkMark(theme),
         _ScreenPhase.goalSetup => _buildGoalSetup(theme),
         _ScreenPhase.done => _buildDone(theme),
         _ScreenPhase.error => _buildError(theme),
@@ -326,6 +352,47 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBulkMark(ThemeData theme) {
+    final curriculum = _bulkMarkQueue[_bulkMarkIndex];
+
+    if (!_bulkMarkLaunched) {
+      _bulkMarkLaunched = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final result = await Navigator.of(context).push<BulkMarkResult>(
+          MaterialPageRoute<BulkMarkResult>(
+            builder: (_) => BulkMarkScreen(curriculumId: curriculum),
+          ),
+        );
+        if (mounted) {
+          _bulkMarkLaunched = false;
+          await _onBulkMarkResult(result);
+        }
+      });
+    }
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Mark prior completions for ${curriculum.displayNameEn}',
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${_bulkMarkIndex + 1} of ${_bulkMarkQueue.length}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

@@ -738,23 +738,26 @@ void main() {
 
     // ── AC: CurriculumImportService removed from production code
 
-    test('CurriculumImportService not referenced in content_browsing feature', () {
-      final contentDir = Directory('lib/features/content_browsing');
-      if (!contentDir.existsSync()) return; // nothing to check
-      final dartFiles = contentDir
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.dart'));
+    test(
+      'CurriculumImportService not referenced in content_browsing feature',
+      () {
+        final contentDir = Directory('lib/features/content_browsing');
+        if (!contentDir.existsSync()) return; // nothing to check
+        final dartFiles = contentDir
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.dart'));
 
-      for (final file in dartFiles) {
-        final content = file.readAsStringSync();
-        expect(
-          content,
-          isNot(contains('CurriculumImportService')),
-          reason: '${file.path} must not reference CurriculumImportService',
-        );
-      }
-    });
+        for (final file in dartFiles) {
+          final content = file.readAsStringSync();
+          expect(
+            content,
+            isNot(contains('CurriculumImportService')),
+            reason: '${file.path} must not reference CurriculumImportService',
+          );
+        }
+      },
+    );
   });
 
   // ── Story 2.6: DNI-80 Cache-only architecture ─────────────────

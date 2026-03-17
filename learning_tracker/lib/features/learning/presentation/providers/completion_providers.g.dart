@@ -1,0 +1,270 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'completion_providers.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+/// Provides the completion repository.
+
+@ProviderFor(completionRepository)
+final completionRepositoryProvider = CompletionRepositoryProvider._();
+
+/// Provides the completion repository.
+
+final class CompletionRepositoryProvider
+    extends
+        $FunctionalProvider<
+          CompletionRepository,
+          CompletionRepository,
+          CompletionRepository
+        >
+    with $Provider<CompletionRepository> {
+  /// Provides the completion repository.
+  CompletionRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'completionRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<CompletionRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CompletionRepository create(Ref ref) {
+    return completionRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CompletionRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CompletionRepository>(value),
+    );
+  }
+}
+
+String _$completionRepositoryHash() =>
+    r'5b9b292bcaf847f99ae8ed9093625a148adf7596';
+
+/// Provides the mark completion use case.
+
+@ProviderFor(markCompletionUseCase)
+final markCompletionUseCaseProvider = MarkCompletionUseCaseProvider._();
+
+/// Provides the mark completion use case.
+
+final class MarkCompletionUseCaseProvider
+    extends
+        $FunctionalProvider<
+          MarkCompletionUseCase,
+          MarkCompletionUseCase,
+          MarkCompletionUseCase
+        >
+    with $Provider<MarkCompletionUseCase> {
+  /// Provides the mark completion use case.
+  MarkCompletionUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'markCompletionUseCaseProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$markCompletionUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<MarkCompletionUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  MarkCompletionUseCase create(Ref ref) {
+    return markCompletionUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(MarkCompletionUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<MarkCompletionUseCase>(value),
+    );
+  }
+}
+
+String _$markCompletionUseCaseHash() =>
+    r'44d14e46ef4c8b36462f5659b50a82f25388466d';
+
+/// Provides the bulk mark completion use case.
+
+@ProviderFor(bulkMarkCompletionUseCase)
+final bulkMarkCompletionUseCaseProvider = BulkMarkCompletionUseCaseProvider._();
+
+/// Provides the bulk mark completion use case.
+
+final class BulkMarkCompletionUseCaseProvider
+    extends
+        $FunctionalProvider<
+          BulkMarkCompletionUseCase,
+          BulkMarkCompletionUseCase,
+          BulkMarkCompletionUseCase
+        >
+    with $Provider<BulkMarkCompletionUseCase> {
+  /// Provides the bulk mark completion use case.
+  BulkMarkCompletionUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'bulkMarkCompletionUseCaseProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$bulkMarkCompletionUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<BulkMarkCompletionUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  BulkMarkCompletionUseCase create(Ref ref) {
+    return bulkMarkCompletionUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(BulkMarkCompletionUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<BulkMarkCompletionUseCase>(value),
+    );
+  }
+}
+
+String _$bulkMarkCompletionUseCaseHash() =>
+    r'0146990a6fca1fd2750bd84cfcd48172f91f24de';
+
+/// Provides the number of completions for a specific content item.
+///
+/// Used by [ContentItemTile] to show per-item completion indicators.
+
+@ProviderFor(completionCount)
+final completionCountProvider = CompletionCountFamily._();
+
+/// Provides the number of completions for a specific content item.
+///
+/// Used by [ContentItemTile] to show per-item completion indicators.
+
+final class CompletionCountProvider
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
+  /// Provides the number of completions for a specific content item.
+  ///
+  /// Used by [ContentItemTile] to show per-item completion indicators.
+  CompletionCountProvider._({
+    required CompletionCountFamily super.from,
+    required ({String curriculumId, String sefariaRef}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'completionCountProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionCountHash();
+
+  @override
+  String toString() {
+    return r'completionCountProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<int> create(Ref ref) {
+    final argument =
+        this.argument as ({String curriculumId, String sefariaRef});
+    return completionCount(
+      ref,
+      curriculumId: argument.curriculumId,
+      sefariaRef: argument.sefariaRef,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CompletionCountProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$completionCountHash() => r'9f0b8bd3f803a2ac62c765d413609cfd532e0e4e';
+
+/// Provides the number of completions for a specific content item.
+///
+/// Used by [ContentItemTile] to show per-item completion indicators.
+
+final class CompletionCountFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<int>,
+          ({String curriculumId, String sefariaRef})
+        > {
+  CompletionCountFamily._()
+    : super(
+        retry: null,
+        name: r'completionCountProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provides the number of completions for a specific content item.
+  ///
+  /// Used by [ContentItemTile] to show per-item completion indicators.
+
+  CompletionCountProvider call({
+    required String curriculumId,
+    required String sefariaRef,
+  }) => CompletionCountProvider._(
+    argument: (curriculumId: curriculumId, sefariaRef: sefariaRef),
+    from: this,
+  );
+
+  @override
+  String toString() => r'completionCountProvider';
+}

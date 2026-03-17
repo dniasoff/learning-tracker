@@ -464,6 +464,22 @@ class DashboardRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [DeviceRestoreScreen]
+class DeviceRestoreRoute extends PageRouteInfo<void> {
+  const DeviceRestoreRoute({List<PageRouteInfo>? children})
+    : super(DeviceRestoreRoute.name, initialChildren: children);
+
+  static const String name = 'DeviceRestoreRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const DeviceRestoreScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [GamificationScreen]
 class GamificationRoute extends PageRouteInfo<void> {
   const GamificationRoute({List<PageRouteInfo>? children})
@@ -653,6 +669,22 @@ class PinSetupRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const PinSetupScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [PointConfigScreen]
+class PointConfigRoute extends PageRouteInfo<void> {
+  const PointConfigRoute({List<PageRouteInfo>? children})
+    : super(PointConfigRoute.name, initialChildren: children);
+
+  static const String name = 'PointConfigRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PointConfigScreen();
     },
   );
 }

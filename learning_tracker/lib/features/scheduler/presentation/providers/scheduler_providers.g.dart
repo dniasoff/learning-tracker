@@ -1,0 +1,546 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'scheduler_providers.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+/// Provides the current UTC date/time. Override in tests to control time.
+
+@ProviderFor(clock)
+final clockProvider = ClockProvider._();
+
+/// Provides the current UTC date/time. Override in tests to control time.
+
+final class ClockProvider
+    extends $FunctionalProvider<DateTime, DateTime, DateTime>
+    with $Provider<DateTime> {
+  /// Provides the current UTC date/time. Override in tests to control time.
+  ClockProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'clockProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$clockHash();
+
+  @$internal
+  @override
+  $ProviderElement<DateTime> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DateTime create(Ref ref) {
+    return clock(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DateTime value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DateTime>(value),
+    );
+  }
+}
+
+String _$clockHash() => r'06fec5a43106c3c566bb13e4b7835a61774a3ff5';
+
+@ProviderFor(schedulerEngine)
+final schedulerEngineProvider = SchedulerEngineProvider._();
+
+final class SchedulerEngineProvider
+    extends
+        $FunctionalProvider<SchedulerEngine, SchedulerEngine, SchedulerEngine>
+    with $Provider<SchedulerEngine> {
+  SchedulerEngineProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'schedulerEngineProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$schedulerEngineHash();
+
+  @$internal
+  @override
+  $ProviderElement<SchedulerEngine> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SchedulerEngine create(Ref ref) {
+    return schedulerEngine(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SchedulerEngine value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SchedulerEngine>(value),
+    );
+  }
+}
+
+String _$schedulerEngineHash() => r'f037dc9e7df4596b5a5b559e1e148380b3e52d46';
+
+@ProviderFor(dailyTaskGenerator)
+final dailyTaskGeneratorProvider = DailyTaskGeneratorProvider._();
+
+final class DailyTaskGeneratorProvider
+    extends
+        $FunctionalProvider<
+          DailyTaskGenerator,
+          DailyTaskGenerator,
+          DailyTaskGenerator
+        >
+    with $Provider<DailyTaskGenerator> {
+  DailyTaskGeneratorProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dailyTaskGeneratorProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dailyTaskGeneratorHash();
+
+  @$internal
+  @override
+  $ProviderElement<DailyTaskGenerator> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  DailyTaskGenerator create(Ref ref) {
+    return dailyTaskGenerator(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DailyTaskGenerator value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DailyTaskGenerator>(value),
+    );
+  }
+}
+
+String _$dailyTaskGeneratorHash() =>
+    r'2aa2d867a3b1192685f0e3859c1e99ef457f4774';
+
+@ProviderFor(dailyTasks)
+final dailyTasksProvider = DailyTasksFamily._();
+
+final class DailyTasksProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<DailyTask>>,
+          List<DailyTask>,
+          FutureOr<List<DailyTask>>
+        >
+    with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
+  DailyTasksProvider._({
+    required DailyTasksFamily super.from,
+    required ({CurriculumId curriculumId, DateTime? goalDeadline})
+    super.argument,
+  }) : super(
+         retry: null,
+         name: r'dailyTasksProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$dailyTasksHash();
+
+  @override
+  String toString() {
+    return r'dailyTasksProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<DailyTask>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<DailyTask>> create(Ref ref) {
+    final argument =
+        this.argument as ({CurriculumId curriculumId, DateTime? goalDeadline});
+    return dailyTasks(
+      ref,
+      curriculumId: argument.curriculumId,
+      goalDeadline: argument.goalDeadline,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DailyTasksProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$dailyTasksHash() => r'1f63a511925068923961c9e1b4c61023b42d4fcc';
+
+final class DailyTasksFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<DailyTask>>,
+          ({CurriculumId curriculumId, DateTime? goalDeadline})
+        > {
+  DailyTasksFamily._()
+    : super(
+        retry: null,
+        name: r'dailyTasksProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  DailyTasksProvider call({
+    required CurriculumId curriculumId,
+    DateTime? goalDeadline,
+  }) => DailyTasksProvider._(
+    argument: (curriculumId: curriculumId, goalDeadline: goalDeadline),
+    from: this,
+  );
+
+  @override
+  String toString() => r'dailyTasksProvider';
+}
+
+/// Holds the set of sefaria refs skipped (dismissed) today.
+///
+/// Persisted via SharedPreferences. Resets automatically when the date
+/// changes. Previously-skipped refs are tracked so they can receive a
+/// priority boost (see [previouslySkippedRefsProvider]).
+
+@ProviderFor(SkippedTasks)
+final skippedTasksProvider = SkippedTasksProvider._();
+
+/// Holds the set of sefaria refs skipped (dismissed) today.
+///
+/// Persisted via SharedPreferences. Resets automatically when the date
+/// changes. Previously-skipped refs are tracked so they can receive a
+/// priority boost (see [previouslySkippedRefsProvider]).
+final class SkippedTasksProvider
+    extends $NotifierProvider<SkippedTasks, Set<String>> {
+  /// Holds the set of sefaria refs skipped (dismissed) today.
+  ///
+  /// Persisted via SharedPreferences. Resets automatically when the date
+  /// changes. Previously-skipped refs are tracked so they can receive a
+  /// priority boost (see [previouslySkippedRefsProvider]).
+  SkippedTasksProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'skippedTasksProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$skippedTasksHash();
+
+  @$internal
+  @override
+  SkippedTasks create() => SkippedTasks();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Set<String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Set<String>>(value),
+    );
+  }
+}
+
+String _$skippedTasksHash() => r'eccd398a10ef025cfd702e8af63e0c77e067b940';
+
+/// Holds the set of sefaria refs skipped (dismissed) today.
+///
+/// Persisted via SharedPreferences. Resets automatically when the date
+/// changes. Previously-skipped refs are tracked so they can receive a
+/// priority boost (see [previouslySkippedRefsProvider]).
+
+abstract class _$SkippedTasks extends $Notifier<Set<String>> {
+  Set<String> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<Set<String>, Set<String>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Set<String>, Set<String>>,
+              Set<String>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Refs that were skipped yesterday. Used for priority boost logic.
+
+@ProviderFor(previouslySkippedRefs)
+final previouslySkippedRefsProvider = PreviouslySkippedRefsProvider._();
+
+/// Refs that were skipped yesterday. Used for priority boost logic.
+
+final class PreviouslySkippedRefsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Set<String>>,
+          Set<String>,
+          FutureOr<Set<String>>
+        >
+    with $FutureModifier<Set<String>>, $FutureProvider<Set<String>> {
+  /// Refs that were skipped yesterday. Used for priority boost logic.
+  PreviouslySkippedRefsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'previouslySkippedRefsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$previouslySkippedRefsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Set<String>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Set<String>> create(Ref ref) {
+    return previouslySkippedRefs(ref);
+  }
+}
+
+String _$previouslySkippedRefsHash() =>
+    r'6d3c8d4e63cb0ba61df49d9b829a305bfe2c6a82';
+
+/// Pace status for a curriculum goal.
+///
+/// Calculates pace using personal-track completions only and a rolling
+/// 7-day average for projected completion.
+
+@ProviderFor(paceStatus)
+final paceStatusProvider = PaceStatusFamily._();
+
+/// Pace status for a curriculum goal.
+///
+/// Calculates pace using personal-track completions only and a rolling
+/// 7-day average for projected completion.
+
+final class PaceStatusProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<PaceStatus?>,
+          PaceStatus?,
+          FutureOr<PaceStatus?>
+        >
+    with $FutureModifier<PaceStatus?>, $FutureProvider<PaceStatus?> {
+  /// Pace status for a curriculum goal.
+  ///
+  /// Calculates pace using personal-track completions only and a rolling
+  /// 7-day average for projected completion.
+  PaceStatusProvider._({
+    required PaceStatusFamily super.from,
+    required ({
+      CurriculumId curriculumId,
+      DateTime goalStartDate,
+      DateTime goalDeadline,
+      int totalItems,
+    })
+    super.argument,
+  }) : super(
+         retry: null,
+         name: r'paceStatusProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$paceStatusHash();
+
+  @override
+  String toString() {
+    return r'paceStatusProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<PaceStatus?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<PaceStatus?> create(Ref ref) {
+    final argument =
+        this.argument
+            as ({
+              CurriculumId curriculumId,
+              DateTime goalStartDate,
+              DateTime goalDeadline,
+              int totalItems,
+            });
+    return paceStatus(
+      ref,
+      curriculumId: argument.curriculumId,
+      goalStartDate: argument.goalStartDate,
+      goalDeadline: argument.goalDeadline,
+      totalItems: argument.totalItems,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PaceStatusProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$paceStatusHash() => r'0dd2c6e315fd1acf93f46effc2eb4e6a884160c9';
+
+/// Pace status for a curriculum goal.
+///
+/// Calculates pace using personal-track completions only and a rolling
+/// 7-day average for projected completion.
+
+final class PaceStatusFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<PaceStatus?>,
+          ({
+            CurriculumId curriculumId,
+            DateTime goalStartDate,
+            DateTime goalDeadline,
+            int totalItems,
+          })
+        > {
+  PaceStatusFamily._()
+    : super(
+        retry: null,
+        name: r'paceStatusProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Pace status for a curriculum goal.
+  ///
+  /// Calculates pace using personal-track completions only and a rolling
+  /// 7-day average for projected completion.
+
+  PaceStatusProvider call({
+    required CurriculumId curriculumId,
+    required DateTime goalStartDate,
+    required DateTime goalDeadline,
+    required int totalItems,
+  }) => PaceStatusProvider._(
+    argument: (
+      curriculumId: curriculumId,
+      goalStartDate: goalStartDate,
+      goalDeadline: goalDeadline,
+      totalItems: totalItems,
+    ),
+    from: this,
+  );
+
+  @override
+  String toString() => r'paceStatusProvider';
+}
+
+/// All daily tasks across active curricula, filtered by skipped items.
+///
+/// Previously-skipped tasks receive an `overdueChazara`-level priority
+/// boost so they appear near the top of the list.
+
+@ProviderFor(allDailyTasks)
+final allDailyTasksProvider = AllDailyTasksProvider._();
+
+/// All daily tasks across active curricula, filtered by skipped items.
+///
+/// Previously-skipped tasks receive an `overdueChazara`-level priority
+/// boost so they appear near the top of the list.
+
+final class AllDailyTasksProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<DailyTask>>,
+          List<DailyTask>,
+          FutureOr<List<DailyTask>>
+        >
+    with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
+  /// All daily tasks across active curricula, filtered by skipped items.
+  ///
+  /// Previously-skipped tasks receive an `overdueChazara`-level priority
+  /// boost so they appear near the top of the list.
+  AllDailyTasksProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'allDailyTasksProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$allDailyTasksHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<DailyTask>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<DailyTask>> create(Ref ref) {
+    return allDailyTasks(ref);
+  }
+}
+
+String _$allDailyTasksHash() => r'ff9be83f86ad99fc1ce248df9a69901356c2ffe1';

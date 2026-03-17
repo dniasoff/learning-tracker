@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-13.1 test-story-13.2 test-epic-13 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-epic-10 test-story-13.1 test-story-13.2 test-epic-13 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -42,6 +42,18 @@ test-epic-8: ## Run all Epic 8 (Gamification) acceptance tests
 test-story-8.4: ## Run Story 8.4 (Completion Feedback & Animations) acceptance tests
 	flutter test test/story_acceptance/epic_08_gamification_test.dart --name "Story 8.4"
 	flutter test test/features/learning/presentation/widgets/completion_feedback_widget_test.dart
+
+test-story-9.4: ## Run Story 9.4 (Bulk Mark Prior Completions) acceptance tests
+	flutter test test/story_acceptance/epic_09_onboarding_test.dart --name "Story 9.4"
+
+test-epic-9: ## Run all Epic 9 (Onboarding) acceptance tests
+	flutter test test/story_acceptance/epic_09_onboarding_test.dart
+
+test-story-10.4: ## Run Story 10.4 (Point Value Configuration) acceptance tests
+	flutter test test/story_acceptance/epic_10_parent_mode_test.dart --name "Story 10.4"
+
+test-epic-10: ## Run all Epic 10 (Parent Mode) acceptance tests
+	flutter test test/story_acceptance/epic_10_parent_mode_test.dart
 
 test-story-13.1: ## Run Story 13.1 (Push-on-Write with Offline Queuing) acceptance tests
 	flutter test test/story_acceptance/epic_13_cloud_sync_test.dart --name "Story 13.1"

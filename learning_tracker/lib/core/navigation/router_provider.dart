@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
@@ -20,6 +21,7 @@ final routerProvider = Provider<AppRouter>((ref) {
 
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: FirebaseAuth.instance),
+    restoreGuard: RestoreGuard(database: db),
     childModeGuard: ChildModeGuard(database: db),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
