@@ -105,15 +105,20 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         userMode: widget.userMode,
       );
 
-      // Fire instant notification for each newly earned reward
+      // Fire instant notification for each newly earned reward,
+      // respecting the reward notification preference and Shabbos quiet mode.
       if (newlyEarned.isNotEmpty) {
-        final milestoneService = ref.read(
-          rewardMilestoneNotificationServiceProvider,
-        );
-        await milestoneService.notifyNewRewards(
-          newlyEarned: newlyEarned,
-          userMode: widget.userMode,
-        );
+        final rewardNotifEnabled = ref.read(rewardNotificationEnabledProvider);
+        final shabbosQuiet = ref.read(isShabbosQuietActiveProvider);
+        if (rewardNotifEnabled && !shabbosQuiet) {
+          final milestoneService = ref.read(
+            rewardMilestoneNotificationServiceProvider,
+          );
+          await milestoneService.notifyNewRewards(
+            newlyEarned: newlyEarned,
+            userMode: widget.userMode,
+          );
+        }
       }
 
       final progressAfter = curriculumEnum.isNotEmpty

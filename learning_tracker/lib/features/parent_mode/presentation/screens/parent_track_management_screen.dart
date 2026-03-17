@@ -116,7 +116,7 @@ class _TrackRow extends ConsumerWidget {
           ? null
           : (value) async {
               if (value) {
-                await _activateTrack(ref);
+                await _activateTrack(context, ref);
               } else {
                 await _deactivateTrack(context, ref);
               }
@@ -124,10 +124,17 @@ class _TrackRow extends ConsumerWidget {
     );
   }
 
-  Future<void> _activateTrack(WidgetRef ref) async {
-    final repository = ref.read(trackRepositoryProvider);
-    await repository.activateTrack(curriculum, trackType);
-    ref.invalidate(activeTracksProvider(curriculum));
+  Future<void> _activateTrack(BuildContext context, WidgetRef ref) async {
+    try {
+      final repository = ref.read(trackRepositoryProvider);
+      await repository.activateTrack(curriculum, trackType);
+      ref.invalidate(activeTracksProvider(curriculum));
+    } on Exception catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to activate track: $e')),
+      );
+    }
   }
 
   Future<void> _deactivateTrack(BuildContext context, WidgetRef ref) async {
@@ -154,9 +161,17 @@ class _TrackRow extends ConsumerWidget {
     );
 
     if (confirmed ?? false) {
-      final repository = ref.read(trackRepositoryProvider);
-      await repository.deactivateTrack(curriculum, trackType);
-      ref.invalidate(activeTracksProvider(curriculum));
+      if (!context.mounted) return;
+      try {
+        final repository = ref.read(trackRepositoryProvider);
+        await repository.deactivateTrack(curriculum, trackType);
+        ref.invalidate(activeTracksProvider(curriculum));
+      } on Exception catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove track: $e')),
+        );
+      }
     }
   }
 }

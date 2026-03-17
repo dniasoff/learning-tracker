@@ -61,7 +61,7 @@ class _RewardsSetupScreenState extends State<RewardsSetupScreen> {
         RewardEntry(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
-          pointsThreshold: int.parse(_thresholdController.text.trim()),
+          pointsThreshold: int.tryParse(_thresholdController.text.trim()) ?? 0,
         ),
       );
       _titleController.clear();
@@ -153,6 +153,7 @@ class _RewardsSetupScreenState extends State<RewardsSetupScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _titleController,
+            maxLength: 100,
             decoration: const InputDecoration(
               labelText: 'Title',
               hintText: 'e.g. Ice cream trip',
@@ -164,6 +165,7 @@ class _RewardsSetupScreenState extends State<RewardsSetupScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _descriptionController,
+            maxLength: 300,
             decoration: const InputDecoration(
               labelText: 'Description',
               hintText: 'e.g. A special outing for reaching your goal',
@@ -187,6 +189,7 @@ class _RewardsSetupScreenState extends State<RewardsSetupScreen> {
               if (v == null || v.trim().isEmpty) return 'Threshold is required';
               final n = int.tryParse(v.trim());
               if (n == null || n <= 0) return 'Must be a positive number';
+              if (n > 1000000) return 'Maximum is 1,000,000';
               return null;
             },
           ),
