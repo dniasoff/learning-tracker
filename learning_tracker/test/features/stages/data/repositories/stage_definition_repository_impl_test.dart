@@ -33,6 +33,7 @@ void main() {
   }) {
     return db.StageDefinition(
       id: id,
+      profileId: 0,
       curriculumId: curriculumKey,
       stageOrder: stageOrder,
       stageName: stageName,

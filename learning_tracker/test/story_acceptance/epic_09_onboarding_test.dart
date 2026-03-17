@@ -601,6 +601,7 @@ void main() {
             req.sefariaRefs.length,
             (_) => Completion(
               id: 1,
+              profileId: 0,
               curriculumId: req.curriculumId,
               sefariaRef: req.sefariaRefs.first,
               stageId: req.stageId,
@@ -611,6 +612,10 @@ void main() {
           ),
         );
       });
+
+      when(
+        () => mockCompletionRepo.getCompletionsByCurriculum(any()),
+      ).thenAnswer((_) async => <Completion>[]);
 
       when(
         () => mockBookmarkRepo.setBookmark(

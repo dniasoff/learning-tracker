@@ -1,20 +1,28 @@
 import 'package:drift/native.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 void main() {
   late AppDatabase database;
+  late MockFirebaseAuth mockAuth;
 
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
+    mockAuth = MockFirebaseAuth();
+    when(() => mockAuth.currentUser).thenReturn(null);
   });
 
   tearDown(() async {
@@ -31,12 +39,15 @@ void main() {
       }),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const CircularProgressIndicator();
+          return const MaterialApp(
+            home: Scaffold(body: CircularProgressIndicator()),
+          );
         }
 
         return ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
+            firebaseAuthProvider.overrideWithValue(mockAuth),
             curriculumActivationServiceProvider.overrideWith((ref) {
               return CurriculumActivationService(
                 database: database,

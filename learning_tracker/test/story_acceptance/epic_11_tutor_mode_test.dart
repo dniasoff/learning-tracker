@@ -590,6 +590,7 @@ void main() {
     }) {
       return Completion(
         id: ref.hashCode,
+        profileId: 0,
         curriculumId: 'mishnayos',
         sefariaRef: ref,
         stageId: 1,
