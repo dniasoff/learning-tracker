@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/completi
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/reward_milestone_providers.dart';
 
 /// Button widget for marking a content item as completed.
 ///

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
-import 'package:learning_tracker/features/notifications/domain/services/reward_milestone_notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -133,13 +132,6 @@ class StreakAlertTime extends _$StreakAlertTime {
     await prefs.setInt(_streakAlertHourKey, time.hour);
     await prefs.setInt(_streakAlertMinuteKey, time.minute);
   }
-}
-
-/// Provides the [RewardMilestoneNotificationService] instance.
-@riverpod
-RewardMilestoneNotificationService rewardMilestoneNotificationService(Ref ref) {
-  final notifService = ref.watch(notificationServiceProvider);
-  return RewardMilestoneNotificationService(notificationService: notifService);
 }
 
 /// Provides the [NotificationScheduler] instance.
