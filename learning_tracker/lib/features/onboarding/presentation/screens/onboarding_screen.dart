@@ -4,11 +4,13 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 
 @RoutePage()
@@ -136,12 +138,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         targetPercent: result.targetPercent,
         targetDate: result.targetDate,
         description: result.description,
+        dateType: result.dateType,
       );
+      // Invalidate the scheduler so it picks up the new goal deadline.
+      ref.invalidate(allDailyTasksProvider);
     }
     // Move to next curriculum or finish
     _goalSetupIndex++;
     if (_goalSetupIndex >= _goalSetupQueue.length) {
-      unawaited(_finishOnboarding());
+      unawaited(
+        _finishOnboarding().catchError((Object e) {
+          AppLogger.instance.error('Failed to finish onboarding: $e');
+        }),
+      );
     } else {
       setState(() {}); // Refresh to show next curriculum
     }

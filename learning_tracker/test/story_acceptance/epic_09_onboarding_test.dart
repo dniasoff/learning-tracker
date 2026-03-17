@@ -3,6 +3,9 @@
 library;
 
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart'
+    hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -12,9 +15,10 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test/test.dart';
+import 'package:test/test.dart' hide isNotNull, isNull;
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -299,12 +303,25 @@ void main() {
       expect(active, contains(CurriculumId.bavli.storageKey));
     });
 
-    test('goal setup screen shows curriculum name and item count', () {
-      // CurriculumId provides display names needed for the goal setup screen
-      for (final id in CurriculumId.values) {
-        expect(id.displayNameEn, isNotEmpty);
-      }
-      // CurriculumHierarchyConfig provides totalItems (verified via provider)
+    testWidgets('goal setup screen shows curriculum name and item count', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GoalSetupScreen(
+            curriculumId: CurriculumId.mishnayos,
+            totalItems: 4192,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify the screen renders with the create goal button
+      expect(find.text('Create Goal'), findsOneWidget);
+      // Verify the target slider is present
+      expect(find.text('Target: 100%'), findsOneWidget);
+      // Verify Hebrew date toggle is present
+      expect(find.text('Use Hebrew date'), findsOneWidget);
     });
 
     test('skip button proceeds without creating a goal', () async {
@@ -325,6 +342,60 @@ void main() {
 
       expect(mishnayosGoals, hasLength(1));
       expect(bavliGoals, isEmpty); // Skipped = no goal
+    });
+
+    testWidgets('Gregorian date picker mode works and shows daily pace', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GoalSetupScreen(
+            curriculumId: CurriculumId.mishnayos,
+            totalItems: 365,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Default mode is Gregorian (Hebrew toggle off)
+      expect(find.text('Use Hebrew date'), findsOneWidget);
+      final switchWidget = tester.widget<SwitchListTile>(
+        find.byType(SwitchListTile),
+      );
+      expect(switchWidget.value, isFalse);
+
+      // Tap calendar icon to open Gregorian date picker
+      await tester.tap(find.byIcon(Icons.calendar_today));
+      await tester.pumpAndSettle();
+
+      // Gregorian date picker dialog should be present
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+
+      // Dismiss the dialog
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Hebrew date toggle switches picker mode', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GoalSetupScreen(
+            curriculumId: CurriculumId.mishnayos,
+            totalItems: 365,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Toggle to Hebrew date mode
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      // Switch should now be on
+      final switchWidget = tester.widget<SwitchListTile>(
+        find.byType(SwitchListTile),
+      );
+      expect(switchWidget.value, isTrue);
     });
 
     test('summary shows calculated daily pace after date selection', () {

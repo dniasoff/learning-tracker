@@ -85,9 +85,17 @@ class _RewardTile extends ConsumerWidget {
   }
 
   Future<void> _revealReward(BuildContext context, WidgetRef ref) async {
-    final service = ref.read(rewardServiceProvider);
-    await service.revealReward(reward.id);
-    ref.invalidate(allRewardsProvider);
+    try {
+      final service = ref.read(rewardServiceProvider);
+      await service.revealReward(reward.id);
+      ref.invalidate(allRewardsProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to reveal reward: $e')));
+      }
+    }
   }
 
   void _editReward(BuildContext context, WidgetRef ref) {
@@ -145,10 +153,10 @@ class _RewardFormDialogState extends ConsumerState<_RewardFormDialog> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(
-      text: widget.existingReward?.title ?? '',
+      text: widget.existingReward?.title.trim() ?? '',
     );
     _descriptionController = TextEditingController(
-      text: widget.existingReward?.description ?? '',
+      text: widget.existingReward?.description.trim() ?? '',
     );
     _thresholdController = TextEditingController(
       text: widget.existingReward?.pointsThreshold.toString() ?? '',

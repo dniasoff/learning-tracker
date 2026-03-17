@@ -328,52 +328,54 @@ void main() {
       expect(pct, equals(0.0));
     });
 
-    test('aggregator returns non-zero completion % for fully completed items',
-        () async {
-      // Set up 3 total items in learning order
-      for (var i = 0; i < 3; i++) {
-        await db.learningOrderDao.insertLearningOrder(
-          LearningOrderCompanion.insert(
+    test(
+      'aggregator returns non-zero completion % for fully completed items',
+      () async {
+        // Set up 3 total items in learning order
+        for (var i = 0; i < 3; i++) {
+          await db.learningOrderDao.insertLearningOrder(
+            LearningOrderCompanion.insert(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'ref-mishnayos-$i',
+              userSortOrder: i,
+            ),
+          );
+        }
+
+        // 1 stage definition
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
             curriculumId: 'mishnayos',
-            sefariaRef: 'ref-mishnayos-$i',
-            userSortOrder: i,
+            stageOrder: 1,
+            stageName: 'Stage 1',
+            delayDays: 0,
           ),
         );
-      }
 
-      // 1 stage definition
-      await db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          curriculumId: 'mishnayos',
-          stageOrder: 1,
-          stageName: 'Stage 1',
-          delayDays: 0,
-        ),
-      );
+        // Complete 2 out of 3 items (all stages)
+        for (var i = 0; i < 2; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'ref-mishnayos-$i',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: DateTime.now().toUtc(),
+              points: const Value(10),
+            ),
+          );
+        }
 
-      // Complete 2 out of 3 items (all stages)
-      for (var i = 0; i < 2; i++) {
-        await db.completionDao.insertCompletion(
-          CompletionsCompanion.insert(
-            curriculumId: 'mishnayos',
-            sefariaRef: 'ref-mishnayos-$i',
-            stageId: 1,
-            trackType: 'personal',
-            completedAt: DateTime.now().toUtc(),
-            points: const Value(10),
-          ),
+        await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
+        final aggregator = ParentDashboardAggregator(db);
+        final pct = await aggregator.computeCompletionPercentage(
+          CurriculumId.mishnayos,
         );
-      }
 
-      await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
-      final aggregator = ParentDashboardAggregator(db);
-      final pct = await aggregator.computeCompletionPercentage(
-        CurriculumId.mishnayos,
-      );
-
-      // 2 fully completed / 3 total items ≈ 0.6667
-      expect(pct, closeTo(2 / 3, 0.01));
-    });
+        // 2 fully completed / 3 total items ≈ 0.6667
+        expect(pct, closeTo(2 / 3, 0.01));
+      },
+    );
 
     test('aggregator returns 0% when no completions', () async {
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
@@ -787,7 +789,7 @@ void main() {
       'reward list displays earned (with reveal) and unearned rewards',
       (tester) async {
         // Seed rewards
-        final id1 = await rewardService.addReward(
+        await rewardService.addReward(
           title: 'Unearned Reward',
           description: 'Not earned yet',
           pointsThreshold: 100,
@@ -800,13 +802,12 @@ void main() {
         await db.rewardDao.markEarned(id2, earnedAt: DateTime.now().toUtc());
 
         final rewards = await db.rewardDao.getAllRewards();
+        final rewardModels = rewards.map(RewardModel.fromDriftRow).toList();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               appDatabaseProvider.overrideWithValue(db),
-              allRewardsStreamProvider.overrideWith(
-                (ref) => Stream.value(rewards),
-              ),
+              allRewardsProvider.overrideWith((ref) async => rewardModels),
             ],
             child: const MaterialApp(home: RewardCatalogScreen()),
           ),
@@ -829,8 +830,8 @@ void main() {
           ProviderScope(
             overrides: [
               appDatabaseProvider.overrideWithValue(db),
-              allRewardsStreamProvider.overrideWith(
-                (ref) => Stream.value(rewards),
+              allRewardsProvider.overrideWith(
+                (ref) async => rewards.map(RewardModel.fromDriftRow).toList(),
               ),
             ],
             child: const MaterialApp(home: RewardCatalogScreen()),

@@ -21,6 +21,7 @@ class GoalRepositoryImpl implements GoalRepository {
     required double targetPercent,
     DateTime? targetDate,
     String description = '',
+    String dateType = 'gregorian',
   }) async {
     return await _database.transaction(() async {
       final now = DateTimeFactory.nowUtc();
@@ -31,6 +32,7 @@ class GoalRepositoryImpl implements GoalRepository {
           targetPercent: drift.Value(targetPercent),
           targetDate: drift.Value(targetDate?.toUtc()),
           description: drift.Value(description),
+          dateType: drift.Value(dateType),
           createdAt: now,
           updatedAt: now,
         ),
@@ -122,6 +124,7 @@ class GoalRepositoryImpl implements GoalRepository {
       targetPercent: goal.targetPercent,
       targetDate: goal.targetDate?.toUtc(),
       description: goal.description,
+      dateType: goal.dateType,
       createdAt: goal.createdAt.toUtc(),
       updatedAt: goal.updatedAt.toUtc(),
     );

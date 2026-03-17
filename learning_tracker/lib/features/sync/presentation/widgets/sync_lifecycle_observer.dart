@@ -46,8 +46,12 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
         engine.attachListeners();
         break;
 
-      case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
+        // On iOS, inactive fires for transient states (notification shade,
+        // alerts). Do not detach listeners here.
+        break;
+
+      case AppLifecycleState.paused:
         // App going to background, detach listeners
         engine.detachListeners();
         break;

@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 
 /// Button widget for marking a content item as completed.
 ///
@@ -84,6 +85,9 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       );
 
       final completion = await useCase(request);
+
+      // Cancel streak alert since user completed learning today
+      await ref.read(streakAlertServiceProvider).onCompletionRecorded();
 
       // Invalidate and re-read progress/streak after completion
       if (curriculumEnum.isNotEmpty) {

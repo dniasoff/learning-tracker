@@ -35,15 +35,24 @@ class DailyTaskGenerator {
   }
 
   /// Generate daily tasks across multiple curricula.
+  ///
+  /// [goalDeadlines] maps curriculum IDs to their earliest goal deadline,
+  /// enabling deadline-aware pacing.
   Future<List<DailyTask>> generateAll(
     List<CurriculumId> curricula,
     DateTime date, {
     Set<String> skippedRefs = const {},
+    Map<CurriculumId, DateTime> goalDeadlines = const {},
   }) async {
     final allTasks = <DailyTask>[];
 
     for (final curriculum in curricula) {
-      final tasks = await generate(curriculum, date, skippedRefs: skippedRefs);
+      final tasks = await generate(
+        curriculum,
+        date,
+        goalDeadline: goalDeadlines[curriculum],
+        skippedRefs: skippedRefs,
+      );
       allTasks.addAll(tasks);
     }
 

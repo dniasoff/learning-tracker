@@ -183,10 +183,25 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
       .map((key) => CurriculumId.values.where((c) => c.storageKey == key).first)
       .toList();
 
+  // Look up earliest goal deadline per curriculum for pacing.
+  final goalDeadlines = <CurriculumId, DateTime>{};
+  for (final curriculum in activeCurricula) {
+    final goals = await db.goalDao.getGoalsByCurriculum(curriculum.storageKey);
+    for (final goal in goals) {
+      if (goal.targetDate != null) {
+        final existing = goalDeadlines[curriculum];
+        if (existing == null || goal.targetDate!.isBefore(existing)) {
+          goalDeadlines[curriculum] = goal.targetDate!;
+        }
+      }
+    }
+  }
+
   final tasks = await generator.generateAll(
     activeCurricula,
     ref.watch(clockProvider),
     skippedRefs: skipped,
+    goalDeadlines: goalDeadlines,
   );
 
   // Priority boost: previously-skipped tasks get overdueChazara priority

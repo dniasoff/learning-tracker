@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 
 class DailyTaskCard extends ConsumerStatefulWidget {
@@ -38,6 +39,9 @@ class _DailyTaskCardState extends ConsumerState<DailyTaskCard> {
         trackType: TrackType.personal.storageKey,
       );
       await useCase(request);
+
+      // Cancel streak alert since user completed learning today
+      await ref.read(streakAlertServiceProvider).onCompletionRecorded();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

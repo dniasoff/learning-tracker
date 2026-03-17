@@ -34,6 +34,7 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
     super.initState();
     _targetPercent = widget.existingGoal?.targetPercent ?? 100.0;
     _targetDate = widget.existingGoal?.targetDate;
+    _useHebrewDate = widget.existingGoal?.dateType == 'hebrew';
     _descriptionController = TextEditingController(
       text: widget.existingGoal?.description ?? '',
     );
@@ -73,6 +74,7 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
         targetPercent: _targetPercent,
         targetDate: _targetDate,
         description: _descriptionController.text,
+        dateType: _useHebrewDate ? 'hebrew' : 'gregorian',
       ),
     );
   }
@@ -206,10 +208,12 @@ class GoalFormResult {
   final double targetPercent;
   final DateTime? targetDate;
   final String description;
+  final String dateType;
 
   const GoalFormResult({
     required this.targetPercent,
     this.targetDate,
     this.description = '',
+    this.dateType = 'gregorian',
   });
 }

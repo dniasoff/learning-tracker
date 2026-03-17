@@ -406,6 +406,7 @@ void main() {
   group('Story 13.3 -- Real-Time Foreground Listeners', tags: ['story_13_3'], () {
     late AppDatabase database;
     late MockFirestoreDataSource mockFirestore;
+    late MockConnectivityService mockConnectivity;
     late Talker logger;
     late OfflineQueue offlineQueue;
     late SyncEngine syncEngine;
@@ -413,17 +414,20 @@ void main() {
     setUp(() {
       database = _createInMemoryDatabase();
       mockFirestore = MockFirestoreDataSource();
+      mockConnectivity = MockConnectivityService();
       logger = Talker();
       offlineQueue = OfflineQueue(
         database: database,
         firestoreDataSource: mockFirestore,
         logger: logger,
       );
+      when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
         offlineQueue: offlineQueue,
         logger: logger,
+        connectivityService: mockConnectivity,
       );
     });
 
@@ -458,6 +462,9 @@ void main() {
       when(
         () => mockFirestore.listenToRewards(),
       ).thenAnswer((_) => rewards ?? Stream.value([]));
+      when(
+        () => mockFirestore.listenToActiveCurricula(),
+      ).thenAnswer((_) => Stream.value([]));
     }
 
     test(

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
@@ -49,6 +50,7 @@ class SyncEngine {
   StreamSubscription<Map<String, dynamic>?>? _streakSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _goalsSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _rewardsSubscription;
+  StreamSubscription<List<String>>? _activeCurriculaSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
@@ -69,6 +71,10 @@ class SyncEngine {
   bool _mergingCompletions = false;
   bool _mergingBookmarks = false;
   bool _mergingSettings = false;
+  bool _mergingStreak = false;
+  bool _mergingGoals = false;
+  bool _mergingRewards = false;
+  bool _mergingActiveCurricula = false;
 
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
@@ -162,6 +168,10 @@ class SyncEngine {
       _onRewardsUpdate,
       onError: _handleListenerError,
     );
+
+    _activeCurriculaSubscription = _firestoreDataSource
+        .listenToActiveCurricula()
+        .listen(_onActiveCurriculaUpdate, onError: _handleListenerError);
   }
 
   /// Detach foreground listeners (on app background).
@@ -180,6 +190,7 @@ class SyncEngine {
     await _streakSubscription?.cancel();
     await _goalsSubscription?.cancel();
     await _rewardsSubscription?.cancel();
+    await _activeCurriculaSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
@@ -187,6 +198,7 @@ class SyncEngine {
     _streakSubscription = null;
     _goalsSubscription = null;
     _rewardsSubscription = null;
+    _activeCurriculaSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -597,6 +609,7 @@ class SyncEngine {
         final targetPercent =
             (remote['target_percent'] as num?)?.toDouble() ?? 100.0;
         final targetDate = _parseTimestamp(remote['target_date']);
+        final dateType = remote['date_type'] as String? ?? 'gregorian';
         final createdAt = _parseTimestamp(remote['created_at']);
         final updatedAt = _parseTimestamp(remote['updated_at']);
 
@@ -610,6 +623,7 @@ class SyncEngine {
           description: description,
           targetPercent: targetPercent,
           targetDate: targetDate,
+          dateType: dateType,
           createdAt: createdAt,
           updatedAt: updatedAt,
         );
@@ -677,6 +691,40 @@ class SyncEngine {
     // the completions table. No local write needed.
   }
 
+  /// Merge active curricula from Firestore.
+  ///
+  /// Replaces local active curricula with the remote list. This ensures
+  /// cross-device curriculum activation stays in sync.
+  Future<void> _mergeActiveCurricula(List<String> remoteCurricula) async {
+    _logger.debug(
+      'Merging ${remoteCurricula.length} active curricula from Firestore',
+    );
+    if (remoteCurricula.isEmpty) return;
+
+    try {
+      final localCurricula = await _database.activeCurriculumDao
+          .getActiveCurricula();
+
+      // Activate curricula that are remote but not local
+      for (final curriculumKey in remoteCurricula) {
+        if (!localCurricula.contains(curriculumKey)) {
+          final curriculumId = CurriculumId.values
+              .cast<CurriculumId?>()
+              .firstWhere(
+                (c) => c!.storageKey == curriculumKey,
+                orElse: () => null,
+              );
+          if (curriculumId != null) {
+            await _database.activeCurriculumDao.activate(curriculumId);
+          }
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional merge error boundary
+      _logger.warning('Failed to merge active curricula: $e');
+    }
+  }
+
   /// Merge profile from Firestore (last-write-wins per D4).
   Future<void> _mergeProfile(Map<String, dynamic> remoteProfile) async {
     _logger.debug('Merging profile from Firestore');
@@ -723,9 +771,7 @@ class SyncEngine {
     }
   }
 
-  Future<void> _onBookmarksUpdate(
-    List<Map<String, dynamic>> bookmarks,
-  ) async {
+  Future<void> _onBookmarksUpdate(List<Map<String, dynamic>> bookmarks) async {
     if (_mergingBookmarks) return;
     _mergingBookmarks = true;
     _consecutiveListenerErrors = 0;
@@ -737,9 +783,7 @@ class SyncEngine {
     }
   }
 
-  Future<void> _onSettingsUpdate(
-    List<Map<String, dynamic>> settings,
-  ) async {
+  Future<void> _onSettingsUpdate(List<Map<String, dynamic>> settings) async {
     if (_mergingSettings) return;
     _mergingSettings = true;
     _consecutiveListenerErrors = 0;
@@ -751,23 +795,55 @@ class SyncEngine {
     }
   }
 
-  void _onStreakUpdate(Map<String, dynamic>? streak) {
-    if (streak != null) {
+  Future<void> _onStreakUpdate(Map<String, dynamic>? streak) async {
+    if (streak == null) return;
+    if (_mergingStreak) return;
+    _mergingStreak = true;
+    _consecutiveListenerErrors = 0;
+    try {
       _logger.debug('Received streak update from listener');
-      _mergeStreak(streak);
+      await _mergeStreak(streak);
+    } finally {
+      _mergingStreak = false;
     }
   }
 
-  void _onGoalsUpdate(List<Map<String, dynamic>> goals) {
-    _logger.debug('Received ${goals.length} goals from listener');
+  Future<void> _onGoalsUpdate(List<Map<String, dynamic>> goals) async {
+    if (_mergingGoals) return;
+    _mergingGoals = true;
     _consecutiveListenerErrors = 0;
-    _mergeGoals(goals);
+    try {
+      _logger.debug('Received ${goals.length} goals from listener');
+      await _mergeGoals(goals);
+    } finally {
+      _mergingGoals = false;
+    }
   }
 
-  void _onRewardsUpdate(List<Map<String, dynamic>> rewards) {
-    _logger.debug('Received ${rewards.length} rewards from listener');
+  Future<void> _onRewardsUpdate(List<Map<String, dynamic>> rewards) async {
+    if (_mergingRewards) return;
+    _mergingRewards = true;
     _consecutiveListenerErrors = 0;
-    _mergeRewards(rewards);
+    try {
+      _logger.debug('Received ${rewards.length} rewards from listener');
+      await _mergeRewards(rewards);
+    } finally {
+      _mergingRewards = false;
+    }
+  }
+
+  Future<void> _onActiveCurriculaUpdate(List<String> curricula) async {
+    if (_mergingActiveCurricula) return;
+    _mergingActiveCurricula = true;
+    _consecutiveListenerErrors = 0;
+    try {
+      _logger.debug(
+        'Received ${curricula.length} active curricula from listener',
+      );
+      await _mergeActiveCurricula(curricula);
+    } finally {
+      _mergingActiveCurricula = false;
+    }
   }
 
   /// Handle listener errors with quota monitoring (NFR21).

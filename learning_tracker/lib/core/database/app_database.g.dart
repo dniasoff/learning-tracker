@@ -1948,6 +1948,18 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _dateTypeMeta = const VerificationMeta(
+    'dateType',
+  );
+  @override
+  late final GeneratedColumn<String> dateType = GeneratedColumn<String>(
+    'date_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('gregorian'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1977,6 +1989,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     targetPercent,
     targetDate,
     description,
+    dateType,
     createdAt,
     updatedAt,
   ];
@@ -2030,6 +2043,12 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         ),
       );
     }
+    if (data.containsKey('date_type')) {
+      context.handle(
+        _dateTypeMeta,
+        dateType.isAcceptableOrUnknown(data['date_type']!, _dateTypeMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2075,6 +2094,10 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       )!,
+      dateType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date_type'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2098,6 +2121,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   final double targetPercent;
   final DateTime? targetDate;
   final String description;
+  final String dateType;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Goal({
@@ -2106,6 +2130,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     required this.targetPercent,
     this.targetDate,
     required this.description,
+    required this.dateType,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2119,6 +2144,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       map['target_date'] = Variable<DateTime>(targetDate);
     }
     map['description'] = Variable<String>(description);
+    map['date_type'] = Variable<String>(dateType);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2133,6 +2159,7 @@ class Goal extends DataClass implements Insertable<Goal> {
           ? const Value.absent()
           : Value(targetDate),
       description: Value(description),
+      dateType: Value(dateType),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2149,6 +2176,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       targetPercent: serializer.fromJson<double>(json['targetPercent']),
       targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
       description: serializer.fromJson<String>(json['description']),
+      dateType: serializer.fromJson<String>(json['dateType']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2162,6 +2190,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       'targetPercent': serializer.toJson<double>(targetPercent),
       'targetDate': serializer.toJson<DateTime?>(targetDate),
       'description': serializer.toJson<String>(description),
+      'dateType': serializer.toJson<String>(dateType),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2173,6 +2202,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     double? targetPercent,
     Value<DateTime?> targetDate = const Value.absent(),
     String? description,
+    String? dateType,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Goal(
@@ -2181,6 +2211,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     targetPercent: targetPercent ?? this.targetPercent,
     targetDate: targetDate.present ? targetDate.value : this.targetDate,
     description: description ?? this.description,
+    dateType: dateType ?? this.dateType,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -2199,6 +2230,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      dateType: data.dateType.present ? data.dateType.value : this.dateType,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2212,6 +2244,7 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('targetPercent: $targetPercent, ')
           ..write('targetDate: $targetDate, ')
           ..write('description: $description, ')
+          ..write('dateType: $dateType, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2225,6 +2258,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     targetPercent,
     targetDate,
     description,
+    dateType,
     createdAt,
     updatedAt,
   );
@@ -2237,6 +2271,7 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.targetPercent == this.targetPercent &&
           other.targetDate == this.targetDate &&
           other.description == this.description &&
+          other.dateType == this.dateType &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2247,6 +2282,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<double> targetPercent;
   final Value<DateTime?> targetDate;
   final Value<String> description;
+  final Value<String> dateType;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const GoalsCompanion({
@@ -2255,6 +2291,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.targetPercent = const Value.absent(),
     this.targetDate = const Value.absent(),
     this.description = const Value.absent(),
+    this.dateType = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -2264,6 +2301,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.targetPercent = const Value.absent(),
     this.targetDate = const Value.absent(),
     this.description = const Value.absent(),
+    this.dateType = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : curriculumId = Value(curriculumId),
@@ -2275,6 +2313,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<double>? targetPercent,
     Expression<DateTime>? targetDate,
     Expression<String>? description,
+    Expression<String>? dateType,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -2284,6 +2323,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (targetPercent != null) 'target_percent': targetPercent,
       if (targetDate != null) 'target_date': targetDate,
       if (description != null) 'description': description,
+      if (dateType != null) 'date_type': dateType,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -2295,6 +2335,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Value<double>? targetPercent,
     Value<DateTime?>? targetDate,
     Value<String>? description,
+    Value<String>? dateType,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -2304,6 +2345,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       targetPercent: targetPercent ?? this.targetPercent,
       targetDate: targetDate ?? this.targetDate,
       description: description ?? this.description,
+      dateType: dateType ?? this.dateType,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -2327,6 +2369,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
+    if (dateType.present) {
+      map['date_type'] = Variable<String>(dateType.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2344,6 +2389,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('targetPercent: $targetPercent, ')
           ..write('targetDate: $targetDate, ')
           ..write('description: $description, ')
+          ..write('dateType: $dateType, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -6577,6 +6623,7 @@ typedef $$GoalsTableCreateCompanionBuilder =
       Value<double> targetPercent,
       Value<DateTime?> targetDate,
       Value<String> description,
+      Value<String> dateType,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
@@ -6587,6 +6634,7 @@ typedef $$GoalsTableUpdateCompanionBuilder =
       Value<double> targetPercent,
       Value<DateTime?> targetDate,
       Value<String> description,
+      Value<String> dateType,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -6621,6 +6669,11 @@ class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dateType => $composableBuilder(
+    column: $table.dateType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6669,6 +6722,11 @@ class $$GoalsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get dateType => $composableBuilder(
+    column: $table.dateType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -6712,6 +6770,9 @@ class $$GoalsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get dateType =>
+      $composableBuilder(column: $table.dateType, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -6752,6 +6813,7 @@ class $$GoalsTableTableManager
                 Value<double> targetPercent = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
                 Value<String> description = const Value.absent(),
+                Value<String> dateType = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => GoalsCompanion(
@@ -6760,6 +6822,7 @@ class $$GoalsTableTableManager
                 targetPercent: targetPercent,
                 targetDate: targetDate,
                 description: description,
+                dateType: dateType,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -6770,6 +6833,7 @@ class $$GoalsTableTableManager
                 Value<double> targetPercent = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
                 Value<String> description = const Value.absent(),
+                Value<String> dateType = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => GoalsCompanion.insert(
@@ -6778,6 +6842,7 @@ class $$GoalsTableTableManager
                 targetPercent: targetPercent,
                 targetDate: targetDate,
                 description: description,
+                dateType: dateType,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),

@@ -18,6 +18,10 @@ abstract class GoalEntity with _$GoalEntity {
     @Default(100.0) double targetPercent,
     DateTime? targetDate,
     @Default('') String description,
+
+    /// Whether the goal deadline uses Hebrew or Gregorian calendar.
+    /// Values: 'hebrew' or 'gregorian' (default).
+    @Default('gregorian') String dateType,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _GoalEntity;
@@ -41,6 +45,7 @@ abstract class GoalEntity with _$GoalEntity {
       'targetPercent': targetPercent,
       'targetDate': targetDate?.toIso8601String(),
       'description': description,
+      'dateType': dateType,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -60,6 +65,7 @@ abstract class GoalEntity with _$GoalEntity {
           ? DateTime.parse(data['targetDate'] as String).toUtc()
           : null,
       description: data['description'] as String? ?? '',
+      dateType: data['dateType'] as String? ?? 'gregorian',
       createdAt: DateTime.parse(data['createdAt'] as String).toUtc(),
       updatedAt: DateTime.parse(data['updatedAt'] as String).toUtc(),
     );

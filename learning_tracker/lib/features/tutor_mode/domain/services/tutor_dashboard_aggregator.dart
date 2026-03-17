@@ -1,6 +1,7 @@
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
@@ -96,22 +97,27 @@ class TutorDashboardAggregator {
         .whereType<CurriculumId>()
         .toList();
 
-    // Completion history (sorted recent-first)
-    final completions = await _db.completionDao.getAllCompletions();
-    final sortedCompletions = [...completions]
+    // Completion history — only fetch today's completions for the dashboard display
+    final startOfDay = DateUtils.startOfLocalDay(now);
+    final endOfDay = DateUtils.endOfLocalDay(now);
+    final todayCompletions = await _db.completionDao.getCompletionsByDateRange(
+      startOfDay,
+      endOfDay,
+    );
+    final sortedCompletions = [...todayCompletions]
       ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
 
     // Build chazara queue from daily tasks
     final chazaraQueue = _buildChazaraQueue(allTasks, now);
 
-    // Pace info per curriculum
+    // Pace info per curriculum (needs all completions per curriculum)
     final paceInfo = <CurriculumId, TutorPaceInfo>{};
     for (final curriculum in activeCurricula) {
+      final curriculumCompletions = await _db.completionDao
+          .getCompletionsByCurriculum(curriculum.storageKey);
       paceInfo[curriculum] = await _computePaceInfo(
         curriculum,
-        completions
-            .where((c) => c.curriculumId == curriculum.storageKey)
-            .toList(),
+        curriculumCompletions,
         now,
       );
     }
@@ -136,9 +142,6 @@ class TutorDashboardAggregator {
     );
 
     return chazaraTasks.map((task) {
-      final urgency = task.priority == DailyTaskPriority.overdueChazara
-          ? ChazaraUrgency.overdue
-          : ChazaraUrgency.dueToday;
       final daysOverdue = task.isOverdue
           ? int.tryParse(
                   RegExp(r'(\d+) day').firstMatch(task.reason)?.group(1) ?? '0',
@@ -146,12 +149,27 @@ class TutorDashboardAggregator {
                 0
           : 0;
 
+      // Compute actual due date from overdue days
+      final dueDate = task.priority == DailyTaskPriority.overdueChazara
+          ? now.subtract(Duration(days: daysOverdue))
+          : now; // scheduledChazara is due today
+
+      // Assign urgency: overdue, dueToday, or upcoming
+      final ChazaraUrgency urgency;
+      if (task.priority == DailyTaskPriority.overdueChazara) {
+        urgency = ChazaraUrgency.overdue;
+      } else if (dueDate.isAfter(now)) {
+        urgency = ChazaraUrgency.upcoming;
+      } else {
+        urgency = ChazaraUrgency.dueToday;
+      }
+
       return ChazaraQueueItem(
         curriculumId: task.curriculumId,
         sefariaRef: task.contentItemSefariaRef,
         stageName: task.stageName,
         urgency: urgency,
-        dueDate: now,
+        dueDate: dueDate,
         daysOverdue: daysOverdue,
       );
     }).toList()..sort((a, b) {

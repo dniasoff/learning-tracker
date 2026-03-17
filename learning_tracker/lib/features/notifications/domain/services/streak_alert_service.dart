@@ -77,11 +77,9 @@ class StreakAlertService {
     final startOfDay = DateUtils.startOfLocalDay(now);
     final endOfDay = DateUtils.endOfLocalDay(now);
 
-    final completions = await _db.completionDao.getAllCompletions();
-    return completions.any(
-      (c) =>
-          !c.completedAt.isBefore(startOfDay) &&
-          !c.completedAt.isAfter(endOfDay),
+    return await _db.completionDao.hasCompletionsInDateRange(
+      startOfDay,
+      endOfDay,
     );
   }
 

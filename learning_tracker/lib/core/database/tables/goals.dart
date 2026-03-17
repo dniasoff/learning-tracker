@@ -10,6 +10,7 @@ class Goals extends Table {
   RealColumn get targetPercent => real().withDefault(const Constant(100.0))();
   DateTimeColumn get targetDate => dateTime().nullable()();
   TextColumn get description => text().withDefault(const Constant(''))();
+  TextColumn get dateType => text().withDefault(const Constant('gregorian'))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

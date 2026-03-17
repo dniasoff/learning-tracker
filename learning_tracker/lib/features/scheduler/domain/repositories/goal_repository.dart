@@ -12,6 +12,7 @@ abstract class GoalRepository {
     required double targetPercent,
     DateTime? targetDate,
     String description,
+    String dateType,
   });
 
   /// Get all goals for a curriculum, sorted by target date.

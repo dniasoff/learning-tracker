@@ -176,6 +176,7 @@ class _DashboardBody extends StatelessWidget {
           else
             _CompletionHistorySection(
               completions: data.completionHistory.take(50).toList(),
+              totalCount: data.completionHistory.length,
             ),
         ],
       ),
@@ -455,37 +456,53 @@ class _DailyTasksSection extends StatelessWidget {
 
 class _CompletionHistorySection extends StatelessWidget {
   final List<Completion> completions;
+  final int totalCount;
 
-  const _CompletionHistorySection({required this.completions});
+  const _CompletionHistorySection({
+    required this.completions,
+    required this.totalCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: completions.map((completion) {
-        final completedDate = completion.completedAt.toLocal();
-        final formattedDate =
-            '${_monthName(completedDate.month)} ${completedDate.day}, '
-            '${completedDate.year} ${_formatTime(completedDate)}';
+      children: [
+        ...completions.map((completion) {
+          final completedDate = completion.completedAt.toLocal();
+          final formattedDate =
+              '${_monthName(completedDate.month)} ${completedDate.day}, '
+              '${completedDate.year} ${_formatTime(completedDate)}';
 
-        return Card(
-          child: ListTile(
-            dense: true,
-            title: Text(completion.sefariaRef),
-            subtitle: Text(formattedDate),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 16),
-                const SizedBox(width: 2),
-                Text(
-                  '${completion.points}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
+          return Card(
+            child: ListTile(
+              dense: true,
+              title: Text(completion.sefariaRef),
+              subtitle: Text(formattedDate),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 16),
+                  const SizedBox(width: 2),
+                  Text(
+                    '${completion.points}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (totalCount > completions.length)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Showing ${completions.length} of $totalCount completions',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
             ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 

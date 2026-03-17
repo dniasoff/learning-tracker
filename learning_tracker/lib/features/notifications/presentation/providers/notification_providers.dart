@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -166,4 +168,34 @@ Future<void> reminderSyncEffect(Ref ref) async {
     taskCount: taskCount,
     curriculumCount: curriculumCount,
   );
+}
+
+/// Provides the [StreakAlertService] instance.
+@riverpod
+StreakAlertService streakAlertService(Ref ref) {
+  final db = ref.watch(appDatabaseProvider);
+  final notifService = ref.watch(notificationServiceProvider);
+  return StreakAlertService(
+    db: db,
+    notificationService: notifService,
+  );
+}
+
+/// Watches streak alert settings and evaluates whether to schedule or cancel
+/// the streak protection alert.
+///
+/// Mirrors [reminderSyncEffect] — read this provider at app startup to
+/// activate the watcher.
+@riverpod
+Future<void> streakAlertSyncEffect(Ref ref) async {
+  final enabled = ref.watch(streakAlertEnabledProvider);
+  final time = ref.watch(streakAlertTimeProvider);
+  final service = ref.watch(streakAlertServiceProvider);
+
+  if (!enabled) {
+    await service.cancelAlert();
+    return;
+  }
+
+  await service.evaluate(hour: time.hour, minute: time.minute);
 }

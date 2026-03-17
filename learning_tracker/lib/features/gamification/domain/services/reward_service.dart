@@ -15,8 +15,11 @@ class RewardService {
   final PointsService _pointsService;
   final bool isTutorMode;
 
-  RewardService(this._database, this._pointsService,
-      {this.isTutorMode = false});
+  RewardService(
+    this._database,
+    this._pointsService, {
+    this.isTutorMode = false,
+  });
 
   /// Get the next unearned reward (lowest threshold above current points or
   /// the lowest unearned regardless).
@@ -117,12 +120,15 @@ class RewardService {
   }
 
   /// Update an existing reward (only allowed for unearned rewards).
+  ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   Future<void> updateReward({
     required int id,
     required String title,
     required String description,
     required int pointsThreshold,
   }) async {
+    guardTutorModeWriteFromBool(isTutorMode);
     final reward = await _database.rewardDao.getRewardById(id);
     if (reward == null) return;
     if (reward.isEarned) {
@@ -139,7 +145,10 @@ class RewardService {
   }
 
   /// Delete a reward (only allowed for unearned rewards).
+  ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
   Future<void> deleteReward(int id) async {
+    guardTutorModeWriteFromBool(isTutorMode);
     final reward = await _database.rewardDao.getRewardById(id);
     if (reward == null) return;
     if (reward.isEarned) {

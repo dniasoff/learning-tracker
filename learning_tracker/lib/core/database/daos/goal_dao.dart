@@ -38,6 +38,7 @@ class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
     required String description,
     required double targetPercent,
     required DateTime? targetDate,
+    String dateType = 'gregorian',
     required DateTime createdAt,
     required DateTime updatedAt,
   }) async {
@@ -56,6 +57,7 @@ class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
           description: Value(description),
           targetPercent: Value(targetPercent),
           targetDate: Value(targetDate),
+          dateType: Value(dateType),
           createdAt: createdAt,
           updatedAt: updatedAt,
         ),
@@ -66,6 +68,7 @@ class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
           targetPercent: Value(targetPercent),
           targetDate: Value(targetDate),
           description: Value(description),
+          dateType: Value(dateType),
           updatedAt: Value(updatedAt),
         ),
       );
