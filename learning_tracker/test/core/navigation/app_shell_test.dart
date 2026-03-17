@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
@@ -33,8 +34,12 @@ AppRouter _createAuthenticatedRouter() {
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
   when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
 
+  final restoreGuard = RestoreGuard(database: createTestDatabase());
+  restoreGuard.markRestoreComplete();
+
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
+    restoreGuard: restoreGuard,
     childModeGuard: ChildModeGuard(database: createTestDatabase()),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
@@ -55,8 +60,12 @@ AppRouter _createUnauthenticatedRouter() {
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
   when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
 
+  final restoreGuard = RestoreGuard(database: createTestDatabase());
+  restoreGuard.markRestoreComplete();
+
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
+    restoreGuard: restoreGuard,
     childModeGuard: ChildModeGuard(database: createTestDatabase()),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
