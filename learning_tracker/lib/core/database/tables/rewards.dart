@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 /// curriculum_id is nullable to support global (cross-curriculum) rewards.
 class Rewards extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get title => text()();
   TextColumn get description => text()();
   IntColumn get pointsThreshold => integer()();

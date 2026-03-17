@@ -1,0 +1,43 @@
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+
+/// Repository contract for profile operations.
+abstract class ProfileRepository {
+  /// Get all profiles for an account.
+  Future<List<ProfileModel>> getProfilesByAccount(int accountId);
+
+  /// Get a single profile by ID.
+  Future<ProfileModel?> getProfileById(int id);
+
+  /// Create a new profile. Enforces max 10 profiles per account.
+  /// Throws [MaxProfilesExceededException] if limit reached.
+  Future<ProfileModel> createProfile({
+    required int accountId,
+    required String displayName,
+    required String mode,
+    int avatarIndex = 0,
+  });
+
+  /// Update an existing profile.
+  Future<ProfileModel> updateProfile({
+    required int id,
+    String? displayName,
+    String? mode,
+    int? avatarIndex,
+  });
+
+  /// Delete a profile and all associated data (cascade).
+  Future<void> deleteProfile(int id);
+
+  /// Count profiles for an account.
+  Future<int> countProfilesForAccount(int accountId);
+}
+
+/// Thrown when attempting to create more than 10 profiles per account.
+class MaxProfilesExceededException implements Exception {
+  final int accountId;
+  const MaxProfilesExceededException(this.accountId);
+
+  @override
+  String toString() =>
+      'MaxProfilesExceededException: Account $accountId already has 10 profiles';
+}

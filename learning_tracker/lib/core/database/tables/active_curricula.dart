@@ -5,6 +5,8 @@ import 'package:drift/drift.dart';
 /// Each row represents an active curriculum. Deactivating a curriculum
 /// removes its row. At least one curriculum must be active at all times.
 class ActiveCurricula extends Table {
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
+
   /// curriculum_id from CurriculumId enum storageKey
   TextColumn get curriculumId => text()();
 
@@ -12,5 +14,5 @@ class ActiveCurricula extends Table {
   DateTimeColumn get activatedAt => dateTime()();
 
   @override
-  Set<Column> get primaryKey => {curriculumId};
+  Set<Column> get primaryKey => {profileId, curriculumId};
 }

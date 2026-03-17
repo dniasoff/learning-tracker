@@ -9,12 +9,13 @@ import 'package:drift/drift.dart';
 /// replacing the old contentItemId FK to the content_items table.
 class LearningOrder extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
   TextColumn get sefariaRef => text()();
   IntColumn get userSortOrder => integer()();
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {curriculumId, sefariaRef},
+    {profileId, curriculumId, sefariaRef},
   ];
 }

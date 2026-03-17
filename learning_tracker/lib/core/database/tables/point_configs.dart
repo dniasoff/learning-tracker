@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 /// Default values are seeded when a curriculum is activated.
 class PointConfigs extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
   IntColumn get stageOrder => integer()();
   IntColumn get points =>
@@ -13,6 +14,6 @@ class PointConfigs extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {curriculumId, stageOrder},
+    {profileId, curriculumId, stageOrder},
   ];
 }

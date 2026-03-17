@@ -9,6 +9,18 @@ class $ActiveCurriculaTable extends ActiveCurricula
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $ActiveCurriculaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
   );
@@ -32,7 +44,7 @@ class $ActiveCurriculaTable extends ActiveCurricula
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [curriculumId, activatedAt];
+  List<GeneratedColumn> get $columns => [profileId, curriculumId, activatedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -45,6 +57,12 @@ class $ActiveCurriculaTable extends ActiveCurricula
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
     if (data.containsKey('curriculum_id')) {
       context.handle(
         _curriculumIdMeta,
@@ -71,11 +89,15 @@ class $ActiveCurriculaTable extends ActiveCurricula
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {curriculumId};
+  Set<GeneratedColumn> get $primaryKey => {profileId, curriculumId};
   @override
   ActiveCurriculaData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return ActiveCurriculaData(
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}curriculum_id'],
@@ -95,18 +117,22 @@ class $ActiveCurriculaTable extends ActiveCurricula
 
 class ActiveCurriculaData extends DataClass
     implements Insertable<ActiveCurriculaData> {
+  final int profileId;
+
   /// curriculum_id from CurriculumId enum storageKey
   final String curriculumId;
 
   /// When this curriculum was activated
   final DateTime activatedAt;
   const ActiveCurriculaData({
+    required this.profileId,
     required this.curriculumId,
     required this.activatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['activated_at'] = Variable<DateTime>(activatedAt);
     return map;
@@ -114,6 +140,7 @@ class ActiveCurriculaData extends DataClass
 
   ActiveCurriculaCompanion toCompanion(bool nullToAbsent) {
     return ActiveCurriculaCompanion(
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       activatedAt: Value(activatedAt),
     );
@@ -125,6 +152,7 @@ class ActiveCurriculaData extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ActiveCurriculaData(
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       activatedAt: serializer.fromJson<DateTime>(json['activatedAt']),
     );
@@ -133,18 +161,24 @@ class ActiveCurriculaData extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'activatedAt': serializer.toJson<DateTime>(activatedAt),
     };
   }
 
-  ActiveCurriculaData copyWith({String? curriculumId, DateTime? activatedAt}) =>
-      ActiveCurriculaData(
-        curriculumId: curriculumId ?? this.curriculumId,
-        activatedAt: activatedAt ?? this.activatedAt,
-      );
+  ActiveCurriculaData copyWith({
+    int? profileId,
+    String? curriculumId,
+    DateTime? activatedAt,
+  }) => ActiveCurriculaData(
+    profileId: profileId ?? this.profileId,
+    curriculumId: curriculumId ?? this.curriculumId,
+    activatedAt: activatedAt ?? this.activatedAt,
+  );
   ActiveCurriculaData copyWithCompanion(ActiveCurriculaCompanion data) {
     return ActiveCurriculaData(
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -157,6 +191,7 @@ class ActiveCurriculaData extends DataClass
   @override
   String toString() {
     return (StringBuffer('ActiveCurriculaData(')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('activatedAt: $activatedAt')
           ..write(')'))
@@ -164,36 +199,42 @@ class ActiveCurriculaData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(curriculumId, activatedAt);
+  int get hashCode => Object.hash(profileId, curriculumId, activatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ActiveCurriculaData &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.activatedAt == this.activatedAt);
 }
 
 class ActiveCurriculaCompanion extends UpdateCompanion<ActiveCurriculaData> {
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<DateTime> activatedAt;
   final Value<int> rowid;
   const ActiveCurriculaCompanion({
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.activatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ActiveCurriculaCompanion.insert({
+    this.profileId = const Value.absent(),
     required String curriculumId,
     required DateTime activatedAt,
     this.rowid = const Value.absent(),
   }) : curriculumId = Value(curriculumId),
        activatedAt = Value(activatedAt);
   static Insertable<ActiveCurriculaData> custom({
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<DateTime>? activatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (activatedAt != null) 'activated_at': activatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -201,11 +242,13 @@ class ActiveCurriculaCompanion extends UpdateCompanion<ActiveCurriculaData> {
   }
 
   ActiveCurriculaCompanion copyWith({
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<DateTime>? activatedAt,
     Value<int>? rowid,
   }) {
     return ActiveCurriculaCompanion(
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       activatedAt: activatedAt ?? this.activatedAt,
       rowid: rowid ?? this.rowid,
@@ -215,6 +258,9 @@ class ActiveCurriculaCompanion extends UpdateCompanion<ActiveCurriculaData> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
     }
@@ -230,6 +276,7 @@ class ActiveCurriculaCompanion extends UpdateCompanion<ActiveCurriculaData> {
   @override
   String toString() {
     return (StringBuffer('ActiveCurriculaCompanion(')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('activatedAt: $activatedAt, ')
           ..write('rowid: $rowid')
@@ -244,6 +291,18 @@ class $CurriculumTracksTable extends CurriculumTracks
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $CurriculumTracksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
   );
@@ -306,6 +365,7 @@ class $CurriculumTracksTable extends CurriculumTracks
       );
   @override
   List<GeneratedColumn> get $columns => [
+    profileId,
     curriculumId,
     trackType,
     isActive,
@@ -324,6 +384,12 @@ class $CurriculumTracksTable extends CurriculumTracks
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
     if (data.containsKey('curriculum_id')) {
       context.handle(
         _curriculumIdMeta,
@@ -373,11 +439,15 @@ class $CurriculumTracksTable extends CurriculumTracks
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {curriculumId, trackType};
+  Set<GeneratedColumn> get $primaryKey => {profileId, curriculumId, trackType};
   @override
   CurriculumTrack map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CurriculumTrack(
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}curriculum_id'],
@@ -408,6 +478,8 @@ class $CurriculumTracksTable extends CurriculumTracks
 }
 
 class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
+  final int profileId;
+
   /// curriculum_id from CurriculumId enum storageKey
   final String curriculumId;
 
@@ -423,6 +495,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   /// When this track was last deactivated (null if currently active)
   final DateTime? deactivatedAt;
   const CurriculumTrack({
+    required this.profileId,
     required this.curriculumId,
     required this.trackType,
     required this.isActive,
@@ -432,6 +505,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['track_type'] = Variable<String>(trackType);
     map['is_active'] = Variable<bool>(isActive);
@@ -444,6 +518,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
 
   CurriculumTracksCompanion toCompanion(bool nullToAbsent) {
     return CurriculumTracksCompanion(
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       trackType: Value(trackType),
       isActive: Value(isActive),
@@ -460,6 +535,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CurriculumTrack(
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       trackType: serializer.fromJson<String>(json['trackType']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -471,6 +547,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'trackType': serializer.toJson<String>(trackType),
       'isActive': serializer.toJson<bool>(isActive),
@@ -480,12 +557,14 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   }
 
   CurriculumTrack copyWith({
+    int? profileId,
     String? curriculumId,
     String? trackType,
     bool? isActive,
     DateTime? activatedAt,
     Value<DateTime?> deactivatedAt = const Value.absent(),
   }) => CurriculumTrack(
+    profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
     trackType: trackType ?? this.trackType,
     isActive: isActive ?? this.isActive,
@@ -496,6 +575,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   );
   CurriculumTrack copyWithCompanion(CurriculumTracksCompanion data) {
     return CurriculumTrack(
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -513,6 +593,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   @override
   String toString() {
     return (StringBuffer('CurriculumTrack(')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('trackType: $trackType, ')
           ..write('isActive: $isActive, ')
@@ -524,6 +605,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
 
   @override
   int get hashCode => Object.hash(
+    profileId,
     curriculumId,
     trackType,
     isActive,
@@ -534,6 +616,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CurriculumTrack &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.trackType == this.trackType &&
           other.isActive == this.isActive &&
@@ -542,6 +625,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
 }
 
 class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<String> trackType;
   final Value<bool> isActive;
@@ -549,6 +633,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
   final Value<DateTime?> deactivatedAt;
   final Value<int> rowid;
   const CurriculumTracksCompanion({
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.trackType = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -557,6 +642,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     this.rowid = const Value.absent(),
   });
   CurriculumTracksCompanion.insert({
+    this.profileId = const Value.absent(),
     required String curriculumId,
     required String trackType,
     this.isActive = const Value.absent(),
@@ -567,6 +653,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
        trackType = Value(trackType),
        activatedAt = Value(activatedAt);
   static Insertable<CurriculumTrack> custom({
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<String>? trackType,
     Expression<bool>? isActive,
@@ -575,6 +662,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (trackType != null) 'track_type': trackType,
       if (isActive != null) 'is_active': isActive,
@@ -585,6 +673,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
   }
 
   CurriculumTracksCompanion copyWith({
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<String>? trackType,
     Value<bool>? isActive,
@@ -593,6 +682,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     Value<int>? rowid,
   }) {
     return CurriculumTracksCompanion(
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       trackType: trackType ?? this.trackType,
       isActive: isActive ?? this.isActive,
@@ -605,6 +695,9 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
     }
@@ -629,6 +722,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
   @override
   String toString() {
     return (StringBuffer('CurriculumTracksCompanion(')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('trackType: $trackType, ')
           ..write('isActive: $isActive, ')
@@ -658,6 +752,18 @@ class $StageDefinitionsTable extends StageDefinitions
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -721,6 +827,7 @@ class $StageDefinitionsTable extends StageDefinitions
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    profileId,
     curriculumId,
     stageOrder,
     stageName,
@@ -741,6 +848,12 @@ class $StageDefinitionsTable extends StageDefinitions
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('curriculum_id')) {
       context.handle(
@@ -790,7 +903,7 @@ class $StageDefinitionsTable extends StageDefinitions
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {curriculumId, stageOrder},
+    {profileId, curriculumId, stageOrder},
   ];
   @override
   StageDefinition map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -799,6 +912,10 @@ class $StageDefinitionsTable extends StageDefinitions
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
       )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -831,6 +948,7 @@ class $StageDefinitionsTable extends StageDefinitions
 
 class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   final int id;
+  final int profileId;
   final String curriculumId;
   final int stageOrder;
   final String stageName;
@@ -838,6 +956,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   final bool isDefault;
   const StageDefinition({
     required this.id,
+    required this.profileId,
     required this.curriculumId,
     required this.stageOrder,
     required this.stageName,
@@ -848,6 +967,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['stage_order'] = Variable<int>(stageOrder);
     map['stage_name'] = Variable<String>(stageName);
@@ -859,6 +979,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   StageDefinitionsCompanion toCompanion(bool nullToAbsent) {
     return StageDefinitionsCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       stageOrder: Value(stageOrder),
       stageName: Value(stageName),
@@ -874,6 +995,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return StageDefinition(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       stageOrder: serializer.fromJson<int>(json['stageOrder']),
       stageName: serializer.fromJson<String>(json['stageName']),
@@ -886,6 +1008,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'stageOrder': serializer.toJson<int>(stageOrder),
       'stageName': serializer.toJson<String>(stageName),
@@ -896,6 +1019,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
 
   StageDefinition copyWith({
     int? id,
+    int? profileId,
     String? curriculumId,
     int? stageOrder,
     String? stageName,
@@ -903,6 +1027,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     bool? isDefault,
   }) => StageDefinition(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
     stageOrder: stageOrder ?? this.stageOrder,
     stageName: stageName ?? this.stageName,
@@ -912,6 +1037,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   StageDefinition copyWithCompanion(StageDefinitionsCompanion data) {
     return StageDefinition(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -928,6 +1054,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   String toString() {
     return (StringBuffer('StageDefinition(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('stageOrder: $stageOrder, ')
           ..write('stageName: $stageName, ')
@@ -940,6 +1067,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   @override
   int get hashCode => Object.hash(
     id,
+    profileId,
     curriculumId,
     stageOrder,
     stageName,
@@ -951,6 +1079,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       identical(this, other) ||
       (other is StageDefinition &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.stageOrder == this.stageOrder &&
           other.stageName == this.stageName &&
@@ -960,6 +1089,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
 
 class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<int> stageOrder;
   final Value<String> stageName;
@@ -967,6 +1097,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   final Value<bool> isDefault;
   const StageDefinitionsCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.stageOrder = const Value.absent(),
     this.stageName = const Value.absent(),
@@ -975,6 +1106,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   });
   StageDefinitionsCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     required String curriculumId,
     required int stageOrder,
     required String stageName,
@@ -986,6 +1118,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
        delayDays = Value(delayDays);
   static Insertable<StageDefinition> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<int>? stageOrder,
     Expression<String>? stageName,
@@ -994,6 +1127,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (stageOrder != null) 'stage_order': stageOrder,
       if (stageName != null) 'stage_name': stageName,
@@ -1004,6 +1138,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
 
   StageDefinitionsCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<int>? stageOrder,
     Value<String>? stageName,
@@ -1012,6 +1147,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   }) {
     return StageDefinitionsCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       stageOrder: stageOrder ?? this.stageOrder,
       stageName: stageName ?? this.stageName,
@@ -1025,6 +1161,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
@@ -1048,6 +1187,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   String toString() {
     return (StringBuffer('StageDefinitionsCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('stageOrder: $stageOrder, ')
           ..write('stageName: $stageName, ')
@@ -1076,6 +1216,18 @@ class $CompletionsTable extends Completions
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -1145,6 +1297,7 @@ class $CompletionsTable extends Completions
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    profileId,
     curriculumId,
     sefariaRef,
     stageId,
@@ -1166,6 +1319,12 @@ class $CompletionsTable extends Completions
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('curriculum_id')) {
       context.handle(
@@ -1232,6 +1391,10 @@ class $CompletionsTable extends Completions
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}curriculum_id'],
@@ -1267,6 +1430,7 @@ class $CompletionsTable extends Completions
 
 class Completion extends DataClass implements Insertable<Completion> {
   final int id;
+  final int profileId;
   final String curriculumId;
   final String sefariaRef;
   final int stageId;
@@ -1275,6 +1439,7 @@ class Completion extends DataClass implements Insertable<Completion> {
   final int points;
   const Completion({
     required this.id,
+    required this.profileId,
     required this.curriculumId,
     required this.sefariaRef,
     required this.stageId,
@@ -1286,6 +1451,7 @@ class Completion extends DataClass implements Insertable<Completion> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['sefaria_ref'] = Variable<String>(sefariaRef);
     map['stage_id'] = Variable<int>(stageId);
@@ -1298,6 +1464,7 @@ class Completion extends DataClass implements Insertable<Completion> {
   CompletionsCompanion toCompanion(bool nullToAbsent) {
     return CompletionsCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       sefariaRef: Value(sefariaRef),
       stageId: Value(stageId),
@@ -1314,6 +1481,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Completion(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
       stageId: serializer.fromJson<int>(json['stageId']),
@@ -1327,6 +1495,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'sefariaRef': serializer.toJson<String>(sefariaRef),
       'stageId': serializer.toJson<int>(stageId),
@@ -1338,6 +1507,7 @@ class Completion extends DataClass implements Insertable<Completion> {
 
   Completion copyWith({
     int? id,
+    int? profileId,
     String? curriculumId,
     String? sefariaRef,
     int? stageId,
@@ -1346,6 +1516,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     int? points,
   }) => Completion(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
     sefariaRef: sefariaRef ?? this.sefariaRef,
     stageId: stageId ?? this.stageId,
@@ -1356,6 +1527,7 @@ class Completion extends DataClass implements Insertable<Completion> {
   Completion copyWithCompanion(CompletionsCompanion data) {
     return Completion(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -1375,6 +1547,7 @@ class Completion extends DataClass implements Insertable<Completion> {
   String toString() {
     return (StringBuffer('Completion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('stageId: $stageId, ')
@@ -1388,6 +1561,7 @@ class Completion extends DataClass implements Insertable<Completion> {
   @override
   int get hashCode => Object.hash(
     id,
+    profileId,
     curriculumId,
     sefariaRef,
     stageId,
@@ -1400,6 +1574,7 @@ class Completion extends DataClass implements Insertable<Completion> {
       identical(this, other) ||
       (other is Completion &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.sefariaRef == this.sefariaRef &&
           other.stageId == this.stageId &&
@@ -1410,6 +1585,7 @@ class Completion extends DataClass implements Insertable<Completion> {
 
 class CompletionsCompanion extends UpdateCompanion<Completion> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<String> sefariaRef;
   final Value<int> stageId;
@@ -1418,6 +1594,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
   final Value<int> points;
   const CompletionsCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.sefariaRef = const Value.absent(),
     this.stageId = const Value.absent(),
@@ -1427,6 +1604,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
   });
   CompletionsCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     required String curriculumId,
     required String sefariaRef,
     required int stageId,
@@ -1440,6 +1618,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
        completedAt = Value(completedAt);
   static Insertable<Completion> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<String>? sefariaRef,
     Expression<int>? stageId,
@@ -1449,6 +1628,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (sefariaRef != null) 'sefaria_ref': sefariaRef,
       if (stageId != null) 'stage_id': stageId,
@@ -1460,6 +1640,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
 
   CompletionsCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<String>? sefariaRef,
     Value<int>? stageId,
@@ -1469,6 +1650,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
   }) {
     return CompletionsCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       sefariaRef: sefariaRef ?? this.sefariaRef,
       stageId: stageId ?? this.stageId,
@@ -1483,6 +1665,9 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
@@ -1509,6 +1694,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
   String toString() {
     return (StringBuffer('CompletionsCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('stageId: $stageId, ')
@@ -1538,6 +1724,18 @@ class $BookmarksTable extends Bookmarks
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -1586,6 +1784,7 @@ class $BookmarksTable extends Bookmarks
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    profileId,
     curriculumId,
     trackType,
     sefariaRef,
@@ -1605,6 +1804,12 @@ class $BookmarksTable extends Bookmarks
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('curriculum_id')) {
       context.handle(
@@ -1648,7 +1853,7 @@ class $BookmarksTable extends Bookmarks
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {curriculumId, trackType},
+    {profileId, curriculumId, trackType},
   ];
   @override
   Bookmark map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -1657,6 +1862,10 @@ class $BookmarksTable extends Bookmarks
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
       )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -1685,12 +1894,14 @@ class $BookmarksTable extends Bookmarks
 
 class Bookmark extends DataClass implements Insertable<Bookmark> {
   final int id;
+  final int profileId;
   final String curriculumId;
   final String trackType;
   final String sefariaRef;
   final DateTime updatedAt;
   const Bookmark({
     required this.id,
+    required this.profileId,
     required this.curriculumId,
     required this.trackType,
     required this.sefariaRef,
@@ -1700,6 +1911,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['track_type'] = Variable<String>(trackType);
     map['sefaria_ref'] = Variable<String>(sefariaRef);
@@ -1710,6 +1922,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   BookmarksCompanion toCompanion(bool nullToAbsent) {
     return BookmarksCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       trackType: Value(trackType),
       sefariaRef: Value(sefariaRef),
@@ -1724,6 +1937,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Bookmark(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       trackType: serializer.fromJson<String>(json['trackType']),
       sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
@@ -1735,6 +1949,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'trackType': serializer.toJson<String>(trackType),
       'sefariaRef': serializer.toJson<String>(sefariaRef),
@@ -1744,12 +1959,14 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
 
   Bookmark copyWith({
     int? id,
+    int? profileId,
     String? curriculumId,
     String? trackType,
     String? sefariaRef,
     DateTime? updatedAt,
   }) => Bookmark(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
     trackType: trackType ?? this.trackType,
     sefariaRef: sefariaRef ?? this.sefariaRef,
@@ -1758,6 +1975,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   Bookmark copyWithCompanion(BookmarksCompanion data) {
     return Bookmark(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -1773,6 +1991,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   String toString() {
     return (StringBuffer('Bookmark(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('trackType: $trackType, ')
           ..write('sefariaRef: $sefariaRef, ')
@@ -1782,13 +2001,20 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, curriculumId, trackType, sefariaRef, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    curriculumId,
+    trackType,
+    sefariaRef,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Bookmark &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.trackType == this.trackType &&
           other.sefariaRef == this.sefariaRef &&
@@ -1797,12 +2023,14 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
 
 class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<String> trackType;
   final Value<String> sefariaRef;
   final Value<DateTime> updatedAt;
   const BookmarksCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.trackType = const Value.absent(),
     this.sefariaRef = const Value.absent(),
@@ -1810,6 +2038,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   });
   BookmarksCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     required String curriculumId,
     required String trackType,
     required String sefariaRef,
@@ -1820,6 +2049,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
        updatedAt = Value(updatedAt);
   static Insertable<Bookmark> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<String>? trackType,
     Expression<String>? sefariaRef,
@@ -1827,6 +2057,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (trackType != null) 'track_type': trackType,
       if (sefariaRef != null) 'sefaria_ref': sefariaRef,
@@ -1836,6 +2067,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
 
   BookmarksCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<String>? trackType,
     Value<String>? sefariaRef,
@@ -1843,6 +2075,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   }) {
     return BookmarksCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       trackType: trackType ?? this.trackType,
       sefariaRef: sefariaRef ?? this.sefariaRef,
@@ -1855,6 +2088,9 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
@@ -1875,6 +2111,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   String toString() {
     return (StringBuffer('BookmarksCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('trackType: $trackType, ')
           ..write('sefariaRef: $sefariaRef, ')
@@ -1901,6 +2138,18 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -1985,6 +2234,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    profileId,
     curriculumId,
     targetPercent,
     targetDate,
@@ -2007,6 +2257,12 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('curriculum_id')) {
       context.handle(
@@ -2078,6 +2334,10 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}curriculum_id'],
@@ -2117,6 +2377,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
 
 class Goal extends DataClass implements Insertable<Goal> {
   final int id;
+  final int profileId;
   final String curriculumId;
   final double targetPercent;
   final DateTime? targetDate;
@@ -2126,6 +2387,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   final DateTime updatedAt;
   const Goal({
     required this.id,
+    required this.profileId,
     required this.curriculumId,
     required this.targetPercent,
     this.targetDate,
@@ -2138,6 +2400,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['target_percent'] = Variable<double>(targetPercent);
     if (!nullToAbsent || targetDate != null) {
@@ -2153,6 +2416,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   GoalsCompanion toCompanion(bool nullToAbsent) {
     return GoalsCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       targetPercent: Value(targetPercent),
       targetDate: targetDate == null && nullToAbsent
@@ -2172,6 +2436,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Goal(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       targetPercent: serializer.fromJson<double>(json['targetPercent']),
       targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
@@ -2186,6 +2451,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'targetPercent': serializer.toJson<double>(targetPercent),
       'targetDate': serializer.toJson<DateTime?>(targetDate),
@@ -2198,6 +2464,7 @@ class Goal extends DataClass implements Insertable<Goal> {
 
   Goal copyWith({
     int? id,
+    int? profileId,
     String? curriculumId,
     double? targetPercent,
     Value<DateTime?> targetDate = const Value.absent(),
@@ -2207,6 +2474,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     DateTime? updatedAt,
   }) => Goal(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
     targetPercent: targetPercent ?? this.targetPercent,
     targetDate: targetDate.present ? targetDate.value : this.targetDate,
@@ -2218,6 +2486,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   Goal copyWithCompanion(GoalsCompanion data) {
     return Goal(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -2240,6 +2509,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   String toString() {
     return (StringBuffer('Goal(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('targetPercent: $targetPercent, ')
           ..write('targetDate: $targetDate, ')
@@ -2254,6 +2524,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   @override
   int get hashCode => Object.hash(
     id,
+    profileId,
     curriculumId,
     targetPercent,
     targetDate,
@@ -2267,6 +2538,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       identical(this, other) ||
       (other is Goal &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.targetPercent == this.targetPercent &&
           other.targetDate == this.targetDate &&
@@ -2278,6 +2550,7 @@ class Goal extends DataClass implements Insertable<Goal> {
 
 class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<double> targetPercent;
   final Value<DateTime?> targetDate;
@@ -2287,6 +2560,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<DateTime> updatedAt;
   const GoalsCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.targetPercent = const Value.absent(),
     this.targetDate = const Value.absent(),
@@ -2297,6 +2571,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   });
   GoalsCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     required String curriculumId,
     this.targetPercent = const Value.absent(),
     this.targetDate = const Value.absent(),
@@ -2309,6 +2584,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
        updatedAt = Value(updatedAt);
   static Insertable<Goal> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<double>? targetPercent,
     Expression<DateTime>? targetDate,
@@ -2319,6 +2595,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (targetPercent != null) 'target_percent': targetPercent,
       if (targetDate != null) 'target_date': targetDate,
@@ -2331,6 +2608,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
 
   GoalsCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<double>? targetPercent,
     Value<DateTime?>? targetDate,
@@ -2341,6 +2619,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   }) {
     return GoalsCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       targetPercent: targetPercent ?? this.targetPercent,
       targetDate: targetDate ?? this.targetDate,
@@ -2356,6 +2635,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
@@ -2385,6 +2667,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   String toString() {
     return (StringBuffer('GoalsCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('targetPercent: $targetPercent, ')
           ..write('targetDate: $targetDate, ')
@@ -2415,6 +2698,18 @@ class $LearningOrderTable extends LearningOrder
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -2452,6 +2747,7 @@ class $LearningOrderTable extends LearningOrder
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    profileId,
     curriculumId,
     sefariaRef,
     userSortOrder,
@@ -2470,6 +2766,12 @@ class $LearningOrderTable extends LearningOrder
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('curriculum_id')) {
       context.handle(
@@ -2508,7 +2810,7 @@ class $LearningOrderTable extends LearningOrder
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {curriculumId, sefariaRef},
+    {profileId, curriculumId, sefariaRef},
   ];
   @override
   LearningOrderData map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -2517,6 +2819,10 @@ class $LearningOrderTable extends LearningOrder
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
       )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2542,11 +2848,13 @@ class $LearningOrderTable extends LearningOrder
 class LearningOrderData extends DataClass
     implements Insertable<LearningOrderData> {
   final int id;
+  final int profileId;
   final String curriculumId;
   final String sefariaRef;
   final int userSortOrder;
   const LearningOrderData({
     required this.id,
+    required this.profileId,
     required this.curriculumId,
     required this.sefariaRef,
     required this.userSortOrder,
@@ -2555,6 +2863,7 @@ class LearningOrderData extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['sefaria_ref'] = Variable<String>(sefariaRef);
     map['user_sort_order'] = Variable<int>(userSortOrder);
@@ -2564,6 +2873,7 @@ class LearningOrderData extends DataClass
   LearningOrderCompanion toCompanion(bool nullToAbsent) {
     return LearningOrderCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       sefariaRef: Value(sefariaRef),
       userSortOrder: Value(userSortOrder),
@@ -2577,6 +2887,7 @@ class LearningOrderData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LearningOrderData(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
       userSortOrder: serializer.fromJson<int>(json['userSortOrder']),
@@ -2587,6 +2898,7 @@ class LearningOrderData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'sefariaRef': serializer.toJson<String>(sefariaRef),
       'userSortOrder': serializer.toJson<int>(userSortOrder),
@@ -2595,11 +2907,13 @@ class LearningOrderData extends DataClass
 
   LearningOrderData copyWith({
     int? id,
+    int? profileId,
     String? curriculumId,
     String? sefariaRef,
     int? userSortOrder,
   }) => LearningOrderData(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
     sefariaRef: sefariaRef ?? this.sefariaRef,
     userSortOrder: userSortOrder ?? this.userSortOrder,
@@ -2607,6 +2921,7 @@ class LearningOrderData extends DataClass
   LearningOrderData copyWithCompanion(LearningOrderCompanion data) {
     return LearningOrderData(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -2623,6 +2938,7 @@ class LearningOrderData extends DataClass
   String toString() {
     return (StringBuffer('LearningOrderData(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('userSortOrder: $userSortOrder')
@@ -2631,12 +2947,14 @@ class LearningOrderData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, curriculumId, sefariaRef, userSortOrder);
+  int get hashCode =>
+      Object.hash(id, profileId, curriculumId, sefariaRef, userSortOrder);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LearningOrderData &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.sefariaRef == this.sefariaRef &&
           other.userSortOrder == this.userSortOrder);
@@ -2644,17 +2962,20 @@ class LearningOrderData extends DataClass
 
 class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<String> sefariaRef;
   final Value<int> userSortOrder;
   const LearningOrderCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.sefariaRef = const Value.absent(),
     this.userSortOrder = const Value.absent(),
   });
   LearningOrderCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     required String curriculumId,
     required String sefariaRef,
     required int userSortOrder,
@@ -2663,12 +2984,14 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
        userSortOrder = Value(userSortOrder);
   static Insertable<LearningOrderData> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<String>? sefariaRef,
     Expression<int>? userSortOrder,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (sefariaRef != null) 'sefaria_ref': sefariaRef,
       if (userSortOrder != null) 'user_sort_order': userSortOrder,
@@ -2677,12 +3000,14 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
 
   LearningOrderCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<String>? sefariaRef,
     Value<int>? userSortOrder,
   }) {
     return LearningOrderCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       sefariaRef: sefariaRef ?? this.sefariaRef,
       userSortOrder: userSortOrder ?? this.userSortOrder,
@@ -2694,6 +3019,9 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
@@ -2711,6 +3039,7 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
   String toString() {
     return (StringBuffer('LearningOrderCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('userSortOrder: $userSortOrder')
@@ -2737,6 +3066,18 @@ class $PointConfigsTable extends PointConfigs
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -2771,7 +3112,13 @@ class $PointConfigsTable extends PointConfigs
     $customConstraints: 'NOT NULL CHECK (points > 0)',
   );
   @override
-  List<GeneratedColumn> get $columns => [id, curriculumId, stageOrder, points];
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    curriculumId,
+    stageOrder,
+    points,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2786,6 +3133,12 @@ class $PointConfigsTable extends PointConfigs
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('curriculum_id')) {
       context.handle(
@@ -2821,7 +3174,7 @@ class $PointConfigsTable extends PointConfigs
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {curriculumId, stageOrder},
+    {profileId, curriculumId, stageOrder},
   ];
   @override
   PointConfig map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -2830,6 +3183,10 @@ class $PointConfigsTable extends PointConfigs
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
       )!,
       curriculumId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2854,11 +3211,13 @@ class $PointConfigsTable extends PointConfigs
 
 class PointConfig extends DataClass implements Insertable<PointConfig> {
   final int id;
+  final int profileId;
   final String curriculumId;
   final int stageOrder;
   final int points;
   const PointConfig({
     required this.id,
+    required this.profileId,
     required this.curriculumId,
     required this.stageOrder,
     required this.points,
@@ -2867,6 +3226,7 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
     map['stage_order'] = Variable<int>(stageOrder);
     map['points'] = Variable<int>(points);
@@ -2876,6 +3236,7 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
   PointConfigsCompanion toCompanion(bool nullToAbsent) {
     return PointConfigsCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       curriculumId: Value(curriculumId),
       stageOrder: Value(stageOrder),
       points: Value(points),
@@ -2889,6 +3250,7 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PointConfig(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
       stageOrder: serializer.fromJson<int>(json['stageOrder']),
       points: serializer.fromJson<int>(json['points']),
@@ -2899,6 +3261,7 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
       'stageOrder': serializer.toJson<int>(stageOrder),
       'points': serializer.toJson<int>(points),
@@ -2907,11 +3270,13 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
 
   PointConfig copyWith({
     int? id,
+    int? profileId,
     String? curriculumId,
     int? stageOrder,
     int? points,
   }) => PointConfig(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
     stageOrder: stageOrder ?? this.stageOrder,
     points: points ?? this.points,
@@ -2919,6 +3284,7 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
   PointConfig copyWithCompanion(PointConfigsCompanion data) {
     return PointConfig(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
@@ -2933,6 +3299,7 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
   String toString() {
     return (StringBuffer('PointConfig(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('stageOrder: $stageOrder, ')
           ..write('points: $points')
@@ -2941,12 +3308,14 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
   }
 
   @override
-  int get hashCode => Object.hash(id, curriculumId, stageOrder, points);
+  int get hashCode =>
+      Object.hash(id, profileId, curriculumId, stageOrder, points);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PointConfig &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
           other.stageOrder == this.stageOrder &&
           other.points == this.points);
@@ -2954,17 +3323,20 @@ class PointConfig extends DataClass implements Insertable<PointConfig> {
 
 class PointConfigsCompanion extends UpdateCompanion<PointConfig> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<String> curriculumId;
   final Value<int> stageOrder;
   final Value<int> points;
   const PointConfigsCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
     this.stageOrder = const Value.absent(),
     this.points = const Value.absent(),
   });
   PointConfigsCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     required String curriculumId,
     required int stageOrder,
     required int points,
@@ -2973,12 +3345,14 @@ class PointConfigsCompanion extends UpdateCompanion<PointConfig> {
        points = Value(points);
   static Insertable<PointConfig> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<String>? curriculumId,
     Expression<int>? stageOrder,
     Expression<int>? points,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
       if (stageOrder != null) 'stage_order': stageOrder,
       if (points != null) 'points': points,
@@ -2987,12 +3361,14 @@ class PointConfigsCompanion extends UpdateCompanion<PointConfig> {
 
   PointConfigsCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<String>? curriculumId,
     Value<int>? stageOrder,
     Value<int>? points,
   }) {
     return PointConfigsCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
       stageOrder: stageOrder ?? this.stageOrder,
       points: points ?? this.points,
@@ -3004,6 +3380,9 @@ class PointConfigsCompanion extends UpdateCompanion<PointConfig> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
@@ -3021,9 +3400,469 @@ class PointConfigsCompanion extends UpdateCompanion<PointConfig> {
   String toString() {
     return (StringBuffer('PointConfigsCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
           ..write('stageOrder: $stageOrder, ')
           ..write('points: $points')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<int> accountId = GeneratedColumn<int>(
+    'account_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modeMeta = const VerificationMeta('mode');
+  @override
+  late final GeneratedColumn<String> mode = GeneratedColumn<String>(
+    'mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _avatarIndexMeta = const VerificationMeta(
+    'avatarIndex',
+  );
+  @override
+  late final GeneratedColumn<int> avatarIndex = GeneratedColumn<int>(
+    'avatar_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    accountId,
+    displayName,
+    mode,
+    avatarIndex,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'profiles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Profile> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayNameMeta);
+    }
+    if (data.containsKey('mode')) {
+      context.handle(
+        _modeMeta,
+        mode.isAcceptableOrUnknown(data['mode']!, _modeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_modeMeta);
+    }
+    if (data.containsKey('avatar_index')) {
+      context.handle(
+        _avatarIndexMeta,
+        avatarIndex.isAcceptableOrUnknown(
+          data['avatar_index']!,
+          _avatarIndexMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Profile map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Profile(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}account_id'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      mode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mode'],
+      )!,
+      avatarIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}avatar_index'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ProfilesTable createAlias(String alias) {
+    return $ProfilesTable(attachedDatabase, alias);
+  }
+}
+
+class Profile extends DataClass implements Insertable<Profile> {
+  final int id;
+  final int accountId;
+  final String displayName;
+  final String mode;
+  final int avatarIndex;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const Profile({
+    required this.id,
+    required this.accountId,
+    required this.displayName,
+    required this.mode,
+    required this.avatarIndex,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['account_id'] = Variable<int>(accountId);
+    map['display_name'] = Variable<String>(displayName);
+    map['mode'] = Variable<String>(mode);
+    map['avatar_index'] = Variable<int>(avatarIndex);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ProfilesCompanion toCompanion(bool nullToAbsent) {
+    return ProfilesCompanion(
+      id: Value(id),
+      accountId: Value(accountId),
+      displayName: Value(displayName),
+      mode: Value(mode),
+      avatarIndex: Value(avatarIndex),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Profile.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Profile(
+      id: serializer.fromJson<int>(json['id']),
+      accountId: serializer.fromJson<int>(json['accountId']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      mode: serializer.fromJson<String>(json['mode']),
+      avatarIndex: serializer.fromJson<int>(json['avatarIndex']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'accountId': serializer.toJson<int>(accountId),
+      'displayName': serializer.toJson<String>(displayName),
+      'mode': serializer.toJson<String>(mode),
+      'avatarIndex': serializer.toJson<int>(avatarIndex),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Profile copyWith({
+    int? id,
+    int? accountId,
+    String? displayName,
+    String? mode,
+    int? avatarIndex,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => Profile(
+    id: id ?? this.id,
+    accountId: accountId ?? this.accountId,
+    displayName: displayName ?? this.displayName,
+    mode: mode ?? this.mode,
+    avatarIndex: avatarIndex ?? this.avatarIndex,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Profile copyWithCompanion(ProfilesCompanion data) {
+    return Profile(
+      id: data.id.present ? data.id.value : this.id,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      mode: data.mode.present ? data.mode.value : this.mode,
+      avatarIndex: data.avatarIndex.present
+          ? data.avatarIndex.value
+          : this.avatarIndex,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Profile(')
+          ..write('id: $id, ')
+          ..write('accountId: $accountId, ')
+          ..write('displayName: $displayName, ')
+          ..write('mode: $mode, ')
+          ..write('avatarIndex: $avatarIndex, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    accountId,
+    displayName,
+    mode,
+    avatarIndex,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Profile &&
+          other.id == this.id &&
+          other.accountId == this.accountId &&
+          other.displayName == this.displayName &&
+          other.mode == this.mode &&
+          other.avatarIndex == this.avatarIndex &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ProfilesCompanion extends UpdateCompanion<Profile> {
+  final Value<int> id;
+  final Value<int> accountId;
+  final Value<String> displayName;
+  final Value<String> mode;
+  final Value<int> avatarIndex;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const ProfilesCompanion({
+    this.id = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.avatarIndex = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ProfilesCompanion.insert({
+    this.id = const Value.absent(),
+    required int accountId,
+    required String displayName,
+    required String mode,
+    this.avatarIndex = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : accountId = Value(accountId),
+       displayName = Value(displayName),
+       mode = Value(mode),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<Profile> custom({
+    Expression<int>? id,
+    Expression<int>? accountId,
+    Expression<String>? displayName,
+    Expression<String>? mode,
+    Expression<int>? avatarIndex,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (accountId != null) 'account_id': accountId,
+      if (displayName != null) 'display_name': displayName,
+      if (mode != null) 'mode': mode,
+      if (avatarIndex != null) 'avatar_index': avatarIndex,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ProfilesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? accountId,
+    Value<String>? displayName,
+    Value<String>? mode,
+    Value<int>? avatarIndex,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return ProfilesCompanion(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      displayName: displayName ?? this.displayName,
+      mode: mode ?? this.mode,
+      avatarIndex: avatarIndex ?? this.avatarIndex,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<int>(accountId.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (mode.present) {
+      map['mode'] = Variable<String>(mode.value);
+    }
+    if (avatarIndex.present) {
+      map['avatar_index'] = Variable<int>(avatarIndex.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfilesCompanion(')
+          ..write('id: $id, ')
+          ..write('accountId: $accountId, ')
+          ..write('displayName: $displayName, ')
+          ..write('mode: $mode, ')
+          ..write('avatarIndex: $avatarIndex, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -3458,6 +4297,18 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -3568,6 +4419,7 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    profileId,
     title,
     description,
     pointsThreshold,
@@ -3592,6 +4444,12 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -3675,6 +4533,10 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -3722,6 +4584,7 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
 
 class Reward extends DataClass implements Insertable<Reward> {
   final int id;
+  final int profileId;
   final String title;
   final String description;
   final int pointsThreshold;
@@ -3733,6 +4596,7 @@ class Reward extends DataClass implements Insertable<Reward> {
   final String? curriculumId;
   const Reward({
     required this.id,
+    required this.profileId,
     required this.title,
     required this.description,
     required this.pointsThreshold,
@@ -3747,6 +4611,7 @@ class Reward extends DataClass implements Insertable<Reward> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['title'] = Variable<String>(title);
     map['description'] = Variable<String>(description);
     map['points_threshold'] = Variable<int>(pointsThreshold);
@@ -3766,6 +4631,7 @@ class Reward extends DataClass implements Insertable<Reward> {
   RewardsCompanion toCompanion(bool nullToAbsent) {
     return RewardsCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       title: Value(title),
       description: Value(description),
       pointsThreshold: Value(pointsThreshold),
@@ -3789,6 +4655,7 @@ class Reward extends DataClass implements Insertable<Reward> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Reward(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String>(json['description']),
       pointsThreshold: serializer.fromJson<int>(json['pointsThreshold']),
@@ -3805,6 +4672,7 @@ class Reward extends DataClass implements Insertable<Reward> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String>(description),
       'pointsThreshold': serializer.toJson<int>(pointsThreshold),
@@ -3819,6 +4687,7 @@ class Reward extends DataClass implements Insertable<Reward> {
 
   Reward copyWith({
     int? id,
+    int? profileId,
     String? title,
     String? description,
     int? pointsThreshold,
@@ -3830,6 +4699,7 @@ class Reward extends DataClass implements Insertable<Reward> {
     Value<String?> curriculumId = const Value.absent(),
   }) => Reward(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     title: title ?? this.title,
     description: description ?? this.description,
     pointsThreshold: pointsThreshold ?? this.pointsThreshold,
@@ -3843,6 +4713,7 @@ class Reward extends DataClass implements Insertable<Reward> {
   Reward copyWithCompanion(RewardsCompanion data) {
     return Reward(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -3867,6 +4738,7 @@ class Reward extends DataClass implements Insertable<Reward> {
   String toString() {
     return (StringBuffer('Reward(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('pointsThreshold: $pointsThreshold, ')
@@ -3883,6 +4755,7 @@ class Reward extends DataClass implements Insertable<Reward> {
   @override
   int get hashCode => Object.hash(
     id,
+    profileId,
     title,
     description,
     pointsThreshold,
@@ -3898,6 +4771,7 @@ class Reward extends DataClass implements Insertable<Reward> {
       identical(this, other) ||
       (other is Reward &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.title == this.title &&
           other.description == this.description &&
           other.pointsThreshold == this.pointsThreshold &&
@@ -3911,6 +4785,7 @@ class Reward extends DataClass implements Insertable<Reward> {
 
 class RewardsCompanion extends UpdateCompanion<Reward> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<String> title;
   final Value<String> description;
   final Value<int> pointsThreshold;
@@ -3922,6 +4797,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
   final Value<String?> curriculumId;
   const RewardsCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.pointsThreshold = const Value.absent(),
@@ -3934,6 +4810,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
   });
   RewardsCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     required String title,
     required String description,
     required int pointsThreshold,
@@ -3948,6 +4825,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
        pointsThreshold = Value(pointsThreshold);
   static Insertable<Reward> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<String>? title,
     Expression<String>? description,
     Expression<int>? pointsThreshold,
@@ -3960,6 +4838,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (pointsThreshold != null) 'points_threshold': pointsThreshold,
@@ -3974,6 +4853,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
 
   RewardsCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<String>? title,
     Value<String>? description,
     Value<int>? pointsThreshold,
@@ -3986,6 +4866,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
   }) {
     return RewardsCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       title: title ?? this.title,
       description: description ?? this.description,
       pointsThreshold: pointsThreshold ?? this.pointsThreshold,
@@ -4003,6 +4884,9 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -4038,6 +4922,7 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
   String toString() {
     return (StringBuffer('RewardsCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('pointsThreshold: $pointsThreshold, ')
@@ -4816,6 +5701,18 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _currentStreakMeta = const VerificationMeta(
     'currentStreak',
   );
@@ -4854,6 +5751,7 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    profileId,
     currentStreak,
     maxStreak,
     lastCompletionDate,
@@ -4872,6 +5770,12 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
     }
     if (data.containsKey('current_streak')) {
       context.handle(
@@ -4910,6 +5814,10 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
       currentStreak: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}current_streak'],
@@ -4933,11 +5841,13 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
 
 class Streak extends DataClass implements Insertable<Streak> {
   final int id;
+  final int profileId;
   final int currentStreak;
   final int maxStreak;
   final DateTime? lastCompletionDate;
   const Streak({
     required this.id,
+    required this.profileId,
     required this.currentStreak,
     required this.maxStreak,
     this.lastCompletionDate,
@@ -4946,6 +5856,7 @@ class Streak extends DataClass implements Insertable<Streak> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['current_streak'] = Variable<int>(currentStreak);
     map['max_streak'] = Variable<int>(maxStreak);
     if (!nullToAbsent || lastCompletionDate != null) {
@@ -4957,6 +5868,7 @@ class Streak extends DataClass implements Insertable<Streak> {
   StreaksCompanion toCompanion(bool nullToAbsent) {
     return StreaksCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       currentStreak: Value(currentStreak),
       maxStreak: Value(maxStreak),
       lastCompletionDate: lastCompletionDate == null && nullToAbsent
@@ -4972,6 +5884,7 @@ class Streak extends DataClass implements Insertable<Streak> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Streak(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       currentStreak: serializer.fromJson<int>(json['currentStreak']),
       maxStreak: serializer.fromJson<int>(json['maxStreak']),
       lastCompletionDate: serializer.fromJson<DateTime?>(
@@ -4984,6 +5897,7 @@ class Streak extends DataClass implements Insertable<Streak> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'currentStreak': serializer.toJson<int>(currentStreak),
       'maxStreak': serializer.toJson<int>(maxStreak),
       'lastCompletionDate': serializer.toJson<DateTime?>(lastCompletionDate),
@@ -4992,11 +5906,13 @@ class Streak extends DataClass implements Insertable<Streak> {
 
   Streak copyWith({
     int? id,
+    int? profileId,
     int? currentStreak,
     int? maxStreak,
     Value<DateTime?> lastCompletionDate = const Value.absent(),
   }) => Streak(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     currentStreak: currentStreak ?? this.currentStreak,
     maxStreak: maxStreak ?? this.maxStreak,
     lastCompletionDate: lastCompletionDate.present
@@ -5006,6 +5922,7 @@ class Streak extends DataClass implements Insertable<Streak> {
   Streak copyWithCompanion(StreaksCompanion data) {
     return Streak(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       currentStreak: data.currentStreak.present
           ? data.currentStreak.value
           : this.currentStreak,
@@ -5020,6 +5937,7 @@ class Streak extends DataClass implements Insertable<Streak> {
   String toString() {
     return (StringBuffer('Streak(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('currentStreak: $currentStreak, ')
           ..write('maxStreak: $maxStreak, ')
           ..write('lastCompletionDate: $lastCompletionDate')
@@ -5029,12 +5947,13 @@ class Streak extends DataClass implements Insertable<Streak> {
 
   @override
   int get hashCode =>
-      Object.hash(id, currentStreak, maxStreak, lastCompletionDate);
+      Object.hash(id, profileId, currentStreak, maxStreak, lastCompletionDate);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Streak &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.currentStreak == this.currentStreak &&
           other.maxStreak == this.maxStreak &&
           other.lastCompletionDate == this.lastCompletionDate);
@@ -5042,29 +5961,34 @@ class Streak extends DataClass implements Insertable<Streak> {
 
 class StreaksCompanion extends UpdateCompanion<Streak> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<int> currentStreak;
   final Value<int> maxStreak;
   final Value<DateTime?> lastCompletionDate;
   const StreaksCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.currentStreak = const Value.absent(),
     this.maxStreak = const Value.absent(),
     this.lastCompletionDate = const Value.absent(),
   });
   StreaksCompanion.insert({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.currentStreak = const Value.absent(),
     this.maxStreak = const Value.absent(),
     this.lastCompletionDate = const Value.absent(),
   });
   static Insertable<Streak> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<int>? currentStreak,
     Expression<int>? maxStreak,
     Expression<DateTime>? lastCompletionDate,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (currentStreak != null) 'current_streak': currentStreak,
       if (maxStreak != null) 'max_streak': maxStreak,
       if (lastCompletionDate != null)
@@ -5074,12 +5998,14 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
 
   StreaksCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<int>? currentStreak,
     Value<int>? maxStreak,
     Value<DateTime?>? lastCompletionDate,
   }) {
     return StreaksCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       currentStreak: currentStreak ?? this.currentStreak,
       maxStreak: maxStreak ?? this.maxStreak,
       lastCompletionDate: lastCompletionDate ?? this.lastCompletionDate,
@@ -5091,6 +6017,9 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (currentStreak.present) {
       map['current_streak'] = Variable<int>(currentStreak.value);
@@ -5110,6 +6039,7 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
   String toString() {
     return (StringBuffer('StreaksCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('currentStreak: $currentStreak, ')
           ..write('maxStreak: $maxStreak, ')
           ..write('lastCompletionDate: $lastCompletionDate')
@@ -5543,6 +6473,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GoalsTable goals = $GoalsTable(this);
   late final $LearningOrderTable learningOrder = $LearningOrderTable(this);
   late final $PointConfigsTable pointConfigs = $PointConfigsTable(this);
+  late final $ProfilesTable profiles = $ProfilesTable(this);
   late final $UserProfilesTable userProfiles = $UserProfilesTable(this);
   late final $RewardsTable rewards = $RewardsTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
@@ -5564,6 +6495,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final TrackDao trackDao = TrackDao(this as AppDatabase);
+  late final ProfileDao profileDao = ProfileDao(this as AppDatabase);
   late final UserProfileDao userProfileDao = UserProfileDao(
     this as AppDatabase,
   );
@@ -5586,6 +6518,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     goals,
     learningOrder,
     pointConfigs,
+    profiles,
     userProfiles,
     rewards,
     syncQueue,
@@ -5597,12 +6530,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 
 typedef $$ActiveCurriculaTableCreateCompanionBuilder =
     ActiveCurriculaCompanion Function({
+      Value<int> profileId,
       required String curriculumId,
       required DateTime activatedAt,
       Value<int> rowid,
     });
 typedef $$ActiveCurriculaTableUpdateCompanionBuilder =
     ActiveCurriculaCompanion Function({
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<DateTime> activatedAt,
       Value<int> rowid,
@@ -5617,6 +6552,11 @@ class $$ActiveCurriculaTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnFilters(column),
@@ -5637,6 +6577,11 @@ class $$ActiveCurriculaTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -5657,6 +6602,9 @@ class $$ActiveCurriculaTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => column,
@@ -5705,20 +6653,24 @@ class $$ActiveCurriculaTableTableManager
               $$ActiveCurriculaTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<DateTime> activatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ActiveCurriculaCompanion(
+                profileId: profileId,
                 curriculumId: curriculumId,
                 activatedAt: activatedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 required DateTime activatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => ActiveCurriculaCompanion.insert(
+                profileId: profileId,
                 curriculumId: curriculumId,
                 activatedAt: activatedAt,
                 rowid: rowid,
@@ -5754,6 +6706,7 @@ typedef $$ActiveCurriculaTableProcessedTableManager =
     >;
 typedef $$CurriculumTracksTableCreateCompanionBuilder =
     CurriculumTracksCompanion Function({
+      Value<int> profileId,
       required String curriculumId,
       required String trackType,
       Value<bool> isActive,
@@ -5763,6 +6716,7 @@ typedef $$CurriculumTracksTableCreateCompanionBuilder =
     });
 typedef $$CurriculumTracksTableUpdateCompanionBuilder =
     CurriculumTracksCompanion Function({
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<String> trackType,
       Value<bool> isActive,
@@ -5780,6 +6734,11 @@ class $$CurriculumTracksTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnFilters(column),
@@ -5815,6 +6774,11 @@ class $$CurriculumTracksTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -5850,6 +6814,9 @@ class $$CurriculumTracksTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => column,
@@ -5909,6 +6876,7 @@ class $$CurriculumTracksTableTableManager
               $$CurriculumTracksTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<String> trackType = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -5916,6 +6884,7 @@ class $$CurriculumTracksTableTableManager
                 Value<DateTime?> deactivatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CurriculumTracksCompanion(
+                profileId: profileId,
                 curriculumId: curriculumId,
                 trackType: trackType,
                 isActive: isActive,
@@ -5925,6 +6894,7 @@ class $$CurriculumTracksTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 required String trackType,
                 Value<bool> isActive = const Value.absent(),
@@ -5932,6 +6902,7 @@ class $$CurriculumTracksTableTableManager
                 Value<DateTime?> deactivatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CurriculumTracksCompanion.insert(
+                profileId: profileId,
                 curriculumId: curriculumId,
                 trackType: trackType,
                 isActive: isActive,
@@ -5967,6 +6938,7 @@ typedef $$CurriculumTracksTableProcessedTableManager =
 typedef $$StageDefinitionsTableCreateCompanionBuilder =
     StageDefinitionsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       required String curriculumId,
       required int stageOrder,
       required String stageName,
@@ -5976,6 +6948,7 @@ typedef $$StageDefinitionsTableCreateCompanionBuilder =
 typedef $$StageDefinitionsTableUpdateCompanionBuilder =
     StageDefinitionsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<int> stageOrder,
       Value<String> stageName,
@@ -5994,6 +6967,11 @@ class $$StageDefinitionsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6037,6 +7015,11 @@ class $$StageDefinitionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -6074,6 +7057,9 @@ class $$StageDefinitionsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -6133,6 +7119,7 @@ class $$StageDefinitionsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<int> stageOrder = const Value.absent(),
                 Value<String> stageName = const Value.absent(),
@@ -6140,6 +7127,7 @@ class $$StageDefinitionsTableTableManager
                 Value<bool> isDefault = const Value.absent(),
               }) => StageDefinitionsCompanion(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 stageOrder: stageOrder,
                 stageName: stageName,
@@ -6149,6 +7137,7 @@ class $$StageDefinitionsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 required int stageOrder,
                 required String stageName,
@@ -6156,6 +7145,7 @@ class $$StageDefinitionsTableTableManager
                 Value<bool> isDefault = const Value.absent(),
               }) => StageDefinitionsCompanion.insert(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 stageOrder: stageOrder,
                 stageName: stageName,
@@ -6190,6 +7180,7 @@ typedef $$StageDefinitionsTableProcessedTableManager =
 typedef $$CompletionsTableCreateCompanionBuilder =
     CompletionsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       required String curriculumId,
       required String sefariaRef,
       required int stageId,
@@ -6200,6 +7191,7 @@ typedef $$CompletionsTableCreateCompanionBuilder =
 typedef $$CompletionsTableUpdateCompanionBuilder =
     CompletionsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<String> sefariaRef,
       Value<int> stageId,
@@ -6219,6 +7211,11 @@ class $$CompletionsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6267,6 +7264,11 @@ class $$CompletionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -6309,6 +7311,9 @@ class $$CompletionsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -6367,6 +7372,7 @@ class $$CompletionsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<String> sefariaRef = const Value.absent(),
                 Value<int> stageId = const Value.absent(),
@@ -6375,6 +7381,7 @@ class $$CompletionsTableTableManager
                 Value<int> points = const Value.absent(),
               }) => CompletionsCompanion(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 sefariaRef: sefariaRef,
                 stageId: stageId,
@@ -6385,6 +7392,7 @@ class $$CompletionsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 required String sefariaRef,
                 required int stageId,
@@ -6393,6 +7401,7 @@ class $$CompletionsTableTableManager
                 Value<int> points = const Value.absent(),
               }) => CompletionsCompanion.insert(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 sefariaRef: sefariaRef,
                 stageId: stageId,
@@ -6428,6 +7437,7 @@ typedef $$CompletionsTableProcessedTableManager =
 typedef $$BookmarksTableCreateCompanionBuilder =
     BookmarksCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       required String curriculumId,
       required String trackType,
       required String sefariaRef,
@@ -6436,6 +7446,7 @@ typedef $$BookmarksTableCreateCompanionBuilder =
 typedef $$BookmarksTableUpdateCompanionBuilder =
     BookmarksCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<String> trackType,
       Value<String> sefariaRef,
@@ -6453,6 +7464,11 @@ class $$BookmarksTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6491,6 +7507,11 @@ class $$BookmarksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -6523,6 +7544,9 @@ class $$BookmarksTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -6570,12 +7594,14 @@ class $$BookmarksTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<String> trackType = const Value.absent(),
                 Value<String> sefariaRef = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => BookmarksCompanion(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 trackType: trackType,
                 sefariaRef: sefariaRef,
@@ -6584,12 +7610,14 @@ class $$BookmarksTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 required String trackType,
                 required String sefariaRef,
                 required DateTime updatedAt,
               }) => BookmarksCompanion.insert(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 trackType: trackType,
                 sefariaRef: sefariaRef,
@@ -6620,6 +7648,7 @@ typedef $$BookmarksTableProcessedTableManager =
 typedef $$GoalsTableCreateCompanionBuilder =
     GoalsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       required String curriculumId,
       Value<double> targetPercent,
       Value<DateTime?> targetDate,
@@ -6631,6 +7660,7 @@ typedef $$GoalsTableCreateCompanionBuilder =
 typedef $$GoalsTableUpdateCompanionBuilder =
     GoalsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<double> targetPercent,
       Value<DateTime?> targetDate,
@@ -6650,6 +7680,11 @@ class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6703,6 +7738,11 @@ class $$GoalsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -6750,6 +7790,9 @@ class $$GoalsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -6810,6 +7853,7 @@ class $$GoalsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<double> targetPercent = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
@@ -6819,6 +7863,7 @@ class $$GoalsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => GoalsCompanion(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 targetPercent: targetPercent,
                 targetDate: targetDate,
@@ -6830,6 +7875,7 @@ class $$GoalsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 Value<double> targetPercent = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
@@ -6839,6 +7885,7 @@ class $$GoalsTableTableManager
                 required DateTime updatedAt,
               }) => GoalsCompanion.insert(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 targetPercent: targetPercent,
                 targetDate: targetDate,
@@ -6872,6 +7919,7 @@ typedef $$GoalsTableProcessedTableManager =
 typedef $$LearningOrderTableCreateCompanionBuilder =
     LearningOrderCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       required String curriculumId,
       required String sefariaRef,
       required int userSortOrder,
@@ -6879,6 +7927,7 @@ typedef $$LearningOrderTableCreateCompanionBuilder =
 typedef $$LearningOrderTableUpdateCompanionBuilder =
     LearningOrderCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<String> sefariaRef,
       Value<int> userSortOrder,
@@ -6895,6 +7944,11 @@ class $$LearningOrderTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6928,6 +7982,11 @@ class $$LearningOrderTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -6955,6 +8014,9 @@ class $$LearningOrderTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -7008,11 +8070,13 @@ class $$LearningOrderTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<String> sefariaRef = const Value.absent(),
                 Value<int> userSortOrder = const Value.absent(),
               }) => LearningOrderCompanion(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 sefariaRef: sefariaRef,
                 userSortOrder: userSortOrder,
@@ -7020,11 +8084,13 @@ class $$LearningOrderTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 required String sefariaRef,
                 required int userSortOrder,
               }) => LearningOrderCompanion.insert(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 sefariaRef: sefariaRef,
                 userSortOrder: userSortOrder,
@@ -7057,6 +8123,7 @@ typedef $$LearningOrderTableProcessedTableManager =
 typedef $$PointConfigsTableCreateCompanionBuilder =
     PointConfigsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       required String curriculumId,
       required int stageOrder,
       required int points,
@@ -7064,6 +8131,7 @@ typedef $$PointConfigsTableCreateCompanionBuilder =
 typedef $$PointConfigsTableUpdateCompanionBuilder =
     PointConfigsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<String> curriculumId,
       Value<int> stageOrder,
       Value<int> points,
@@ -7080,6 +8148,11 @@ class $$PointConfigsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7113,6 +8186,11 @@ class $$PointConfigsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -7140,6 +8218,9 @@ class $$PointConfigsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -7187,11 +8268,13 @@ class $$PointConfigsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
                 Value<int> stageOrder = const Value.absent(),
                 Value<int> points = const Value.absent(),
               }) => PointConfigsCompanion(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 stageOrder: stageOrder,
                 points: points,
@@ -7199,11 +8282,13 @@ class $$PointConfigsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 required String curriculumId,
                 required int stageOrder,
                 required int points,
               }) => PointConfigsCompanion.insert(
                 id: id,
+                profileId: profileId,
                 curriculumId: curriculumId,
                 stageOrder: stageOrder,
                 points: points,
@@ -7231,6 +8316,236 @@ typedef $$PointConfigsTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $PointConfigsTable, PointConfig>,
       ),
       PointConfig,
+      PrefetchHooks Function()
+    >;
+typedef $$ProfilesTableCreateCompanionBuilder =
+    ProfilesCompanion Function({
+      Value<int> id,
+      required int accountId,
+      required String displayName,
+      required String mode,
+      Value<int> avatarIndex,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$ProfilesTableUpdateCompanionBuilder =
+    ProfilesCompanion Function({
+      Value<int> id,
+      Value<int> accountId,
+      Value<String> displayName,
+      Value<String> mode,
+      Value<int> avatarIndex,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$ProfilesTableFilterComposer
+    extends Composer<_$AppDatabase, $ProfilesTable> {
+  $$ProfilesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get avatarIndex => $composableBuilder(
+    column: $table.avatarIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ProfilesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProfilesTable> {
+  $$ProfilesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get avatarIndex => $composableBuilder(
+    column: $table.avatarIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ProfilesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProfilesTable> {
+  $$ProfilesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mode =>
+      $composableBuilder(column: $table.mode, builder: (column) => column);
+
+  GeneratedColumn<int> get avatarIndex => $composableBuilder(
+    column: $table.avatarIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ProfilesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ProfilesTable,
+          Profile,
+          $$ProfilesTableFilterComposer,
+          $$ProfilesTableOrderingComposer,
+          $$ProfilesTableAnnotationComposer,
+          $$ProfilesTableCreateCompanionBuilder,
+          $$ProfilesTableUpdateCompanionBuilder,
+          (Profile, BaseReferences<_$AppDatabase, $ProfilesTable, Profile>),
+          Profile,
+          PrefetchHooks Function()
+        > {
+  $$ProfilesTableTableManager(_$AppDatabase db, $ProfilesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProfilesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProfilesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProfilesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> accountId = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<String> mode = const Value.absent(),
+                Value<int> avatarIndex = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => ProfilesCompanion(
+                id: id,
+                accountId: accountId,
+                displayName: displayName,
+                mode: mode,
+                avatarIndex: avatarIndex,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int accountId,
+                required String displayName,
+                required String mode,
+                Value<int> avatarIndex = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => ProfilesCompanion.insert(
+                id: id,
+                accountId: accountId,
+                displayName: displayName,
+                mode: mode,
+                avatarIndex: avatarIndex,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ProfilesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ProfilesTable,
+      Profile,
+      $$ProfilesTableFilterComposer,
+      $$ProfilesTableOrderingComposer,
+      $$ProfilesTableAnnotationComposer,
+      $$ProfilesTableCreateCompanionBuilder,
+      $$ProfilesTableUpdateCompanionBuilder,
+      (Profile, BaseReferences<_$AppDatabase, $ProfilesTable, Profile>),
+      Profile,
       PrefetchHooks Function()
     >;
 typedef $$UserProfilesTableCreateCompanionBuilder =
@@ -7453,6 +8768,7 @@ typedef $$UserProfilesTableProcessedTableManager =
 typedef $$RewardsTableCreateCompanionBuilder =
     RewardsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       required String title,
       required String description,
       required int pointsThreshold,
@@ -7466,6 +8782,7 @@ typedef $$RewardsTableCreateCompanionBuilder =
 typedef $$RewardsTableUpdateCompanionBuilder =
     RewardsCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<String> title,
       Value<String> description,
       Value<int> pointsThreshold,
@@ -7488,6 +8805,11 @@ class $$RewardsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7551,6 +8873,11 @@ class $$RewardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -7608,6 +8935,9 @@ class $$RewardsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -7674,6 +9004,7 @@ class $$RewardsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<int> pointsThreshold = const Value.absent(),
@@ -7685,6 +9016,7 @@ class $$RewardsTableTableManager
                 Value<String?> curriculumId = const Value.absent(),
               }) => RewardsCompanion(
                 id: id,
+                profileId: profileId,
                 title: title,
                 description: description,
                 pointsThreshold: pointsThreshold,
@@ -7698,6 +9030,7 @@ class $$RewardsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 required String title,
                 required String description,
                 required int pointsThreshold,
@@ -7709,6 +9042,7 @@ class $$RewardsTableTableManager
                 Value<String?> curriculumId = const Value.absent(),
               }) => RewardsCompanion.insert(
                 id: id,
+                profileId: profileId,
                 title: title,
                 description: description,
                 pointsThreshold: pointsThreshold,
@@ -8148,6 +9482,7 @@ typedef $$TextCacheTableProcessedTableManager =
 typedef $$StreaksTableCreateCompanionBuilder =
     StreaksCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<int> currentStreak,
       Value<int> maxStreak,
       Value<DateTime?> lastCompletionDate,
@@ -8155,6 +9490,7 @@ typedef $$StreaksTableCreateCompanionBuilder =
 typedef $$StreaksTableUpdateCompanionBuilder =
     StreaksCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<int> currentStreak,
       Value<int> maxStreak,
       Value<DateTime?> lastCompletionDate,
@@ -8171,6 +9507,11 @@ class $$StreaksTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8204,6 +9545,11 @@ class $$StreaksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get currentStreak => $composableBuilder(
     column: $table.currentStreak,
     builder: (column) => ColumnOrderings(column),
@@ -8231,6 +9577,9 @@ class $$StreaksTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<int> get currentStreak => $composableBuilder(
     column: $table.currentStreak,
@@ -8275,11 +9624,13 @@ class $$StreaksTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<int> currentStreak = const Value.absent(),
                 Value<int> maxStreak = const Value.absent(),
                 Value<DateTime?> lastCompletionDate = const Value.absent(),
               }) => StreaksCompanion(
                 id: id,
+                profileId: profileId,
                 currentStreak: currentStreak,
                 maxStreak: maxStreak,
                 lastCompletionDate: lastCompletionDate,
@@ -8287,11 +9638,13 @@ class $$StreaksTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<int> currentStreak = const Value.absent(),
                 Value<int> maxStreak = const Value.absent(),
                 Value<DateTime?> lastCompletionDate = const Value.absent(),
               }) => StreaksCompanion.insert(
                 id: id,
+                profileId: profileId,
                 currentStreak: currentStreak,
                 maxStreak: maxStreak,
                 lastCompletionDate: lastCompletionDate,
@@ -8562,6 +9915,8 @@ class $AppDatabaseManager {
       $$LearningOrderTableTableManager(_db, _db.learningOrder);
   $$PointConfigsTableTableManager get pointConfigs =>
       $$PointConfigsTableTableManager(_db, _db.pointConfigs);
+  $$ProfilesTableTableManager get profiles =>
+      $$ProfilesTableTableManager(_db, _db.profiles);
   $$UserProfilesTableTableManager get userProfiles =>
       $$UserProfilesTableTableManager(_db, _db.userProfiles);
   $$RewardsTableTableManager get rewards =>

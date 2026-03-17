@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 /// Multiple goals per curriculum are allowed.
 class Goals extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
   RealColumn get targetPercent => real().withDefault(const Constant(100.0))();
   DateTimeColumn get targetDate => dateTime().nullable()();

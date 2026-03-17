@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
+import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/daos/reward_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
@@ -20,6 +21,7 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
+import 'package:learning_tracker/core/database/tables/profiles.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
@@ -40,6 +42,7 @@ part 'app_database.g.dart';
     Goals,
     LearningOrder,
     PointConfigs,
+    Profiles,
     UserProfiles,
     Rewards,
     SyncQueue,
@@ -56,6 +59,7 @@ part 'app_database.g.dart';
     BookmarkDao,
     LearningOrderDao,
     TrackDao,
+    ProfileDao,
     UserProfileDao,
     StreakDao,
     RewardDao,
@@ -68,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -131,6 +135,93 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE rewards ADD COLUMN updated_at INTEGER NOT NULL '
             "DEFAULT (strftime('%s', 'now'))",
+          );
+        }
+        if (from < 10) {
+          // Migration from schema v9 to v10: Multi-profile support
+          // Step 1: Create profiles table
+          await m.createTable($ProfilesTable(attachedDatabase));
+
+          // Step 2: Create default profile for each existing user
+          await customStatement(
+            'INSERT INTO profiles (account_id, display_name, mode, avatar_index, created_at, updated_at) '
+            'SELECT id, display_name, user_mode, 0, created_at, updated_at FROM user_profiles',
+          );
+
+          // If no user profiles exist, create a fallback default profile
+          await customStatement(
+            'INSERT INTO profiles (account_id, display_name, mode, avatar_index, created_at, updated_at) '
+            "SELECT 0, 'Default', 'adult', 0, strftime('%s', 'now'), strftime('%s', 'now') "
+            'WHERE NOT EXISTS (SELECT 1 FROM profiles)',
+          );
+
+          // Step 3: Add profile_id column to all data tables with default = first profile id
+          final tables = [
+            'completions',
+            'bookmarks',
+            'goals',
+            'rewards',
+            'stage_definitions',
+            'streaks',
+            'learning_order',
+            'point_configs',
+          ];
+          for (final table in tables) {
+            await customStatement(
+              'ALTER TABLE $table ADD COLUMN profile_id INTEGER NOT NULL '
+              'DEFAULT 1',
+            );
+          }
+
+          // Step 4: Recreate active_curricula and curriculum_tracks with profile_id in PK
+          // Active curricula: backup, drop, recreate, restore
+          await customStatement(
+            'CREATE TABLE active_curricula_backup AS SELECT * FROM active_curricula',
+          );
+          await customStatement('DROP TABLE active_curricula');
+          await m.createTable($ActiveCurriculaTable(attachedDatabase));
+          await customStatement(
+            'INSERT INTO active_curricula (profile_id, curriculum_id, activated_at) '
+            'SELECT (SELECT MIN(id) FROM profiles), curriculum_id, activated_at FROM active_curricula_backup',
+          );
+          await customStatement('DROP TABLE active_curricula_backup');
+
+          // Curriculum tracks: backup, drop, recreate, restore
+          await customStatement(
+            'CREATE TABLE curriculum_tracks_backup AS SELECT * FROM curriculum_tracks',
+          );
+          await customStatement('DROP TABLE curriculum_tracks');
+          await m.createTable($CurriculumTracksTable(attachedDatabase));
+          await customStatement(
+            'INSERT INTO curriculum_tracks (profile_id, curriculum_id, track_type, is_active, activated_at, deactivated_at) '
+            'SELECT (SELECT MIN(id) FROM profiles), curriculum_id, track_type, is_active, activated_at, deactivated_at FROM curriculum_tracks_backup',
+          );
+          await customStatement('DROP TABLE curriculum_tracks_backup');
+
+          // Step 5: Update profile_id in all tables to the actual first profile id
+          await customStatement(
+            'UPDATE completions SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
+          );
+          await customStatement(
+            'UPDATE bookmarks SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
+          );
+          await customStatement(
+            'UPDATE goals SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
+          );
+          await customStatement(
+            'UPDATE rewards SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
+          );
+          await customStatement(
+            'UPDATE stage_definitions SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
+          );
+          await customStatement(
+            'UPDATE streaks SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
+          );
+          await customStatement(
+            'UPDATE learning_order SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
+          );
+          await customStatement(
+            'UPDATE point_configs SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
           );
         }
       },

@@ -6,6 +6,8 @@ import 'package:drift/drift.dart';
 /// can be activated/deactivated per curriculum. Deactivating a track hides
 /// it but preserves completion data.
 class CurriculumTracks extends Table {
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
+
   /// curriculum_id from CurriculumId enum storageKey
   TextColumn get curriculumId => text()();
 
@@ -22,5 +24,5 @@ class CurriculumTracks extends Table {
   DateTimeColumn get deactivatedAt => dateTime().nullable()();
 
   @override
-  Set<Column> get primaryKey => {curriculumId, trackType};
+  Set<Column> get primaryKey => {profileId, curriculumId, trackType};
 }

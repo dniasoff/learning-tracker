@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 /// for each curriculum with ordering and delay configuration.
 class StageDefinitions extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
   IntColumn get stageOrder => integer()();
   TextColumn get stageName => text()();
@@ -14,6 +15,6 @@ class StageDefinitions extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {curriculumId, stageOrder},
+    {profileId, curriculumId, stageOrder},
   ];
 }

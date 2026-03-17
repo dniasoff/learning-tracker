@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 /// replacing the old contentItemId FK to the content_items table.
 class Bookmarks extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
   TextColumn get trackType => text()();
   TextColumn get sefariaRef => text()();
@@ -13,6 +14,6 @@ class Bookmarks extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {curriculumId, trackType},
+    {profileId, curriculumId, trackType},
   ];
 }

@@ -38,7 +38,7 @@ class LearningOrderDao extends DatabaseAccessor<AppDatabase>
         entry,
         onConflict: DoUpdate(
           (_) => entry,
-          target: [learningOrder.curriculumId, learningOrder.sefariaRef],
+          target: [learningOrder.profileId, learningOrder.curriculumId, learningOrder.sefariaRef],
         ),
       );
 

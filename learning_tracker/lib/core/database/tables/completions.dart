@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 /// should be performed on completion records.
 class Completions extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
   TextColumn get sefariaRef => text()();
   IntColumn get stageId => integer()();
