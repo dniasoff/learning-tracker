@@ -88,6 +88,8 @@ class _CurriculumListTile extends ConsumerWidget {
       CurriculumId.yerushalmi => Icons.auto_stories,
       CurriculumId.mishnaBerurah => Icons.library_books,
       CurriculumId.chumash => Icons.import_contacts,
+      CurriculumId.nach => Icons.chrome_reader_mode,
+      CurriculumId.mussar => Icons.self_improvement,
     };
   }
 }
