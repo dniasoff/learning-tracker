@@ -2,12 +2,16 @@
 @Tags(['epic_14'])
 library;
 
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
+import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -126,22 +130,493 @@ void main() {
     });
   });
 
-  // ── Story 14.2: Data export ───────────────────────────────────
+  // ── Story 14.2: Data Export & Import (JSON) ─────────────────────
 
-  group(
-    'Story 14.2 -- Data export',
-    tags: ['story_14_2'],
-    skip: 'Backlog: data export not yet implemented',
-    () {
-      test('user can export completions as CSV', () {
-        // TODO: verify CSV export content
+  group('Story 14.2 -- Data Export & Import (JSON)', tags: ['story_14_2'], () {
+    late AppDatabase db;
+    late DataExportImportService service;
+
+    setUp(() {
+      db = createTestDatabase();
+      service = DataExportImportService(database: db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Future<void> _seedTestData(AppDatabase db) async {
+      // Completions
+      await db
+          .into(db.completions)
+          .insert(
+            CompletionsCompanion.insert(
+              curriculumId: 'mishna',
+              sefariaRef: 'Mishnah_Berakhot.1.1',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: DateTime(2026, 1, 15),
+              points: const Value(10),
+            ),
+          );
+      await db
+          .into(db.completions)
+          .insert(
+            CompletionsCompanion.insert(
+              curriculumId: 'mishna',
+              sefariaRef: 'Mishnah_Berakhot.1.2',
+              stageId: 2,
+              trackType: 'personal',
+              completedAt: DateTime(2026, 1, 16),
+              points: const Value(5),
+            ),
+          );
+
+      // Goals
+      await db
+          .into(db.goals)
+          .insert(
+            GoalsCompanion.insert(
+              curriculumId: 'mishna',
+              targetPercent: const Value(50.0),
+              targetDate: Value(DateTime(2026, 6, 1)),
+              description: const Value('Finish half by June'),
+              createdAt: DateTime(2026, 1, 1),
+              updatedAt: DateTime(2026, 1, 1),
+            ),
+          );
+
+      // Stage definitions
+      await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishna',
+              stageOrder: 1,
+              stageName: 'learning',
+              delayDays: 0,
+              isDefault: const Value(true),
+            ),
+          );
+      await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishna',
+              stageOrder: 2,
+              stageName: 'chazara1',
+              delayDays: 1,
+            ),
+          );
+
+      // Rewards
+      await db
+          .into(db.rewards)
+          .insert(
+            RewardsCompanion.insert(
+              title: 'First Steps',
+              description: 'Complete 10 items',
+              pointsThreshold: 100,
+              isRevealed: const Value(true),
+              isEarned: const Value(true),
+              earnedAt: Value(DateTime(2026, 1, 20)),
+              curriculumId: const Value('mishna'),
+            ),
+          );
+
+      // Streaks
+      await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              currentStreak: const Value(5),
+              maxStreak: const Value(12),
+              lastCompletionDate: Value(DateTime(2026, 3, 17)),
+            ),
+          );
+
+      // Point configs
+      await db
+          .into(db.pointConfigs)
+          .insert(
+            PointConfigsCompanion.insert(
+              curriculumId: 'mishna',
+              stageOrder: 1,
+              points: 10,
+            ),
+          );
+
+      // Bookmarks
+      await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              curriculumId: 'mishna',
+              trackType: 'personal',
+              sefariaRef: 'Mishnah_Berakhot.1.3',
+              updatedAt: DateTime(2026, 3, 17),
+            ),
+          );
+
+      // Learning order
+      await db
+          .into(db.learningOrder)
+          .insert(
+            LearningOrderCompanion.insert(
+              curriculumId: 'mishna',
+              sefariaRef: 'Mishnah_Berakhot.1.1',
+              userSortOrder: 1,
+            ),
+          );
+
+      // Active curricula
+      await db
+          .into(db.activeCurricula)
+          .insert(
+            ActiveCurriculaCompanion.insert(
+              curriculumId: 'mishna',
+              activatedAt: DateTime(2026, 1, 1),
+            ),
+          );
+
+      // Curriculum tracks
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              curriculumId: 'mishna',
+              trackType: 'personal',
+              activatedAt: DateTime(2026, 1, 1),
+            ),
+          );
+
+      // User profiles
+      await db.userProfileDao.upsertProfile(
+        firebaseUid: 'uid-export-test',
+        displayName: 'Test User',
+        userMode: 'adult',
+        updatedAt: DateTime(2026, 3, 17),
+      );
+    }
+
+    test(
+      'export generates valid JSON with all required data sections',
+      () async {
+        await _seedTestData(db);
+
+        final jsonString = await service.exportData();
+        final data = json.decode(jsonString) as Map<String, dynamic>;
+
+        // Check metadata
+        expect(data['formatVersion'], equals('1'));
+        expect(data['exportedAt'], isNotNull);
+        expect(data['appVersion'], equals('1.0.0'));
+
+        // Check all required sections present
+        expect(data['completions'], isList);
+        expect(data['goals'], isList);
+        expect(data['stageDefinitions'], isList);
+        expect(data['rewards'], isList);
+        expect(data['streaks'], isList);
+        expect(data['pointConfigs'], isList);
+        expect(data['bookmarks'], isList);
+        expect(data['learningOrder'], isList);
+        expect(data['activeCurricula'], isList);
+        expect(data['curriculumTracks'], isList);
+        expect(data['userProfiles'], isList);
+
+        // Check data counts
+        expect((data['completions'] as List).length, equals(2));
+        expect((data['goals'] as List).length, equals(1));
+        expect((data['stageDefinitions'] as List).length, equals(2));
+        expect((data['rewards'] as List).length, equals(1));
+        expect((data['streaks'] as List).length, equals(1));
+        expect((data['pointConfigs'] as List).length, equals(1));
+        expect((data['bookmarks'] as List).length, equals(1));
+        expect((data['learningOrder'] as List).length, equals(1));
+        expect((data['activeCurricula'] as List).length, equals(1));
+        expect((data['curriculumTracks'] as List).length, equals(1));
+        expect((data['userProfiles'] as List).length, equals(1));
+      },
+    );
+
+    test(
+      'export excludes content items (text cache, download statuses)',
+      () async {
+        // Add text cache and download status data
+        await db
+            .into(db.textCache)
+            .insert(
+              TextCacheCompanion.insert(
+                sefariaRef: 'Mishnah_Berakhot.1.1',
+                hebrewText: 'Hebrew text',
+                englishText: 'English text',
+                fetchedAt: DateTime.now(),
+              ),
+            );
+
+        final jsonString = await service.exportData();
+        final data = json.decode(jsonString) as Map<String, dynamic>;
+
+        // Should NOT contain content tables
+        expect(data.containsKey('textCache'), isFalse);
+        expect(data.containsKey('textDownloadStatuses'), isFalse);
+        expect(data.containsKey('syncQueue'), isFalse);
+      },
+    );
+
+    test(
+      'import validates JSON structure and rejects malformed files',
+      () async {
+        // Malformed JSON
+        expect(
+          () => service.validateAndPreview('not json'),
+          throwsA(isA<FormatException>()),
+        );
+
+        // Valid JSON but missing sections
+        expect(
+          () => service.validateAndPreview('{"completions": []}'),
+          throwsA(isA<FormatException>()),
+        );
+
+        // Missing formatVersion
+        final missingVersion = json.encode({
+          'completions': [],
+          'goals': [],
+          'stageDefinitions': [],
+          'rewards': [],
+          'streaks': [],
+          'pointConfigs': [],
+          'bookmarks': [],
+          'learningOrder': [],
+          'activeCurricula': [],
+          'curriculumTracks': [],
+          'userProfiles': [],
+        });
+        expect(
+          () => service.validateAndPreview(missingVersion),
+          throwsA(isA<FormatException>()),
+        );
+
+        // Section is not a list
+        final badSection = json.encode({
+          'formatVersion': '1',
+          'completions': 'not a list',
+          'goals': [],
+          'stageDefinitions': [],
+          'rewards': [],
+          'streaks': [],
+          'pointConfigs': [],
+          'bookmarks': [],
+          'learningOrder': [],
+          'activeCurricula': [],
+          'curriculumTracks': [],
+          'userProfiles': [],
+        });
+        expect(
+          () => service.validateAndPreview(badSection),
+          throwsA(isA<FormatException>()),
+        );
+      },
+    );
+
+    test('import preview shows data summary', () async {
+      await _seedTestData(db);
+      final jsonString = await service.exportData();
+
+      final preview = service.validateAndPreview(jsonString);
+
+      expect(preview.completionCount, equals(2));
+      expect(preview.goalCount, equals(1));
+      expect(preview.stageCount, equals(2));
+      expect(preview.rewardCount, equals(1));
+      expect(preview.streakCount, equals(1));
+      expect(preview.pointConfigCount, equals(1));
+      expect(preview.bookmarkCount, equals(1));
+      expect(preview.learningOrderCount, equals(1));
+      expect(preview.activeCurriculaCount, equals(1));
+      expect(preview.curriculumTrackCount, equals(1));
+      expect(preview.userProfileCount, equals(1));
+      expect(preview.totalRecords, equals(13));
+      expect(preview.exportedAt, isNot('unknown'));
+      expect(preview.appVersion, equals('1.0.0'));
+    });
+
+    test(
+      'import correctly restores completions, goals, stages, rewards',
+      () async {
+        await _seedTestData(db);
+        final jsonString = await service.exportData();
+
+        // Clear the database
+        await db.transaction(() async {
+          await db.delete(db.completions).go();
+          await db.delete(db.goals).go();
+          await db.delete(db.stageDefinitions).go();
+          await db.delete(db.rewards).go();
+          await db.delete(db.streaks).go();
+          await db.delete(db.pointConfigs).go();
+          await db.delete(db.bookmarks).go();
+          await db.delete(db.learningOrder).go();
+          await db.delete(db.activeCurricula).go();
+          await db.delete(db.curriculumTracks).go();
+          await db.delete(db.userProfiles).go();
+        });
+
+        // Verify empty
+        expect(await db.completionDao.getAllCompletions(), isEmpty);
+
+        // Import
+        await service.importData(jsonString);
+
+        // Verify restored
+        final completions = await db.completionDao.getAllCompletions();
+        expect(completions.length, equals(2));
+        expect(completions.first.curriculumId, equals('mishna'));
+        expect(completions.first.sefariaRef, equals('Mishnah_Berakhot.1.1'));
+        expect(completions.first.points, equals(10));
+
+        final goals = await db.goalDao.getAllGoals();
+        expect(goals.length, equals(1));
+        expect(goals.first.curriculumId, equals('mishna'));
+        expect(goals.first.targetPercent, equals(50.0));
+        expect(goals.first.description, equals('Finish half by June'));
+
+        final stages = await db.stageDao.getAllStageDefinitions();
+        expect(stages.length, equals(2));
+
+        final rewards = await db.rewardDao.getAllRewards();
+        expect(rewards.length, equals(1));
+        expect(rewards.first.title, equals('First Steps'));
+        expect(rewards.first.isEarned, isTrue);
+
+        final streak = await db.streakDao.getStreak();
+        expect(streak, isNotNull);
+        expect(streak!.currentStreak, equals(5));
+        expect(streak.maxStreak, equals(12));
+
+        final bookmarks = await db.bookmarkDao.getAllBookmarks();
+        expect(bookmarks.length, equals(1));
+
+        final profiles = await db.userProfileDao.getAllUserProfiles();
+        expect(profiles.length, equals(1));
+        expect(profiles.first.displayName, equals('Test User'));
+      },
+    );
+
+    test('import transaction rolls back on partial failure', () async {
+      await _seedTestData(db);
+
+      // Create invalid JSON that passes validation but fails on insert
+      // (e.g., duplicate primary keys within import data)
+      final badImport = json.encode({
+        'formatVersion': '1',
+        'exportedAt': DateTime.now().toIso8601String(),
+        'appVersion': '1.0.0',
+        'completions': [
+          {
+            'curriculumId': 'mishna',
+            'sefariaRef': 'ref1',
+            'stageId': 1,
+            'trackType': 'personal',
+            'completedAt': DateTime(2026, 1, 1).toIso8601String(),
+            'points': 10,
+          },
+        ],
+        'goals': [],
+        'stageDefinitions': [],
+        'rewards': [],
+        'streaks': [],
+        'pointConfigs': [],
+        'bookmarks': [
+          {
+            'curriculumId': 'mishna',
+            'trackType': 'personal',
+            'sefariaRef': 'ref1',
+            'updatedAt': DateTime(2026, 1, 1).toIso8601String(),
+          },
+          // Duplicate unique key — will cause constraint violation
+          {
+            'curriculumId': 'mishna',
+            'trackType': 'personal',
+            'sefariaRef': 'ref2',
+            'updatedAt': DateTime(2026, 1, 2).toIso8601String(),
+          },
+        ],
+        'learningOrder': [],
+        'activeCurricula': [
+          {'curriculumId': 'mishna'},
+          // Duplicate PK
+          {'curriculumId': 'mishna'},
+        ],
+        'curriculumTracks': [],
+        'userProfiles': [],
       });
 
-      test('export includes all curricula and tracks', () {
-        // TODO: verify completeness of export
-      });
-    },
-  );
+      // Should fail due to duplicate active curricula PKs
+      expect(() => service.importData(badImport), throwsA(anything));
+
+      // Original data should be preserved (transaction rolled back)
+      final completions = await db.completionDao.getAllCompletions();
+      expect(completions.length, equals(2)); // Original 2 completions
+    });
+
+    test(
+      'full round-trip: export, clear DB, import, verify all data',
+      () async {
+        await _seedTestData(db);
+
+        // Export
+        final exported = await service.exportData();
+
+        // Clear all tables
+        await db.transaction(() async {
+          await db.delete(db.completions).go();
+          await db.delete(db.goals).go();
+          await db.delete(db.stageDefinitions).go();
+          await db.delete(db.rewards).go();
+          await db.delete(db.streaks).go();
+          await db.delete(db.pointConfigs).go();
+          await db.delete(db.bookmarks).go();
+          await db.delete(db.learningOrder).go();
+          await db.delete(db.activeCurricula).go();
+          await db.delete(db.curriculumTracks).go();
+          await db.delete(db.userProfiles).go();
+        });
+
+        // Verify all empty
+        expect(await db.completionDao.getAllCompletions(), isEmpty);
+        expect(await db.goalDao.getAllGoals(), isEmpty);
+        expect(await db.streakDao.getStreak(), isNull);
+
+        // Import
+        await service.importData(exported);
+
+        // Verify all data restored
+        expect((await db.completionDao.getAllCompletions()).length, equals(2));
+        expect((await db.goalDao.getAllGoals()).length, equals(1));
+        expect((await db.stageDao.getAllStageDefinitions()).length, equals(2));
+        expect((await db.rewardDao.getAllRewards()).length, equals(1));
+        expect((await db.streakDao.getStreak())?.currentStreak, equals(5));
+        expect((await db.select(db.pointConfigs).get()).length, equals(1));
+        expect((await db.bookmarkDao.getAllBookmarks()).length, equals(1));
+        expect(
+          (await db.learningOrderDao.getAllLearningOrders()).length,
+          equals(1),
+        );
+        expect(
+          (await db.activeCurriculumDao.getActiveCurricula()).length,
+          equals(1),
+        );
+        expect((await db.select(db.curriculumTracks).get()).length, equals(1));
+        expect(
+          (await db.userProfileDao.getAllUserProfiles()).length,
+          equals(1),
+        );
+      },
+    );
+  });
 
   // ── Story 14.3: Account management ────────────────────────────
 

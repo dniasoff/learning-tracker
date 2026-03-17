@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.3 test-epic-14 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -75,6 +75,9 @@ test-epic-13: ## Run all Epic 13 (Cloud Sync) acceptance tests
 
 test-story-14.1: ## Run Story 14.1 (General Settings & User Profile) acceptance tests
 	flutter test test/story_acceptance/epic_14_settings_test.dart --name "Story 14.1"
+
+test-story-14.2: ## Run Story 14.2 (Data Export & Import) acceptance tests
+	flutter test test/story_acceptance/epic_14_settings_test.dart --name "Story 14.2"
 
 test-story-14.3: ## Run Story 14.3 (Account Management) acceptance tests
 	flutter test test/story_acceptance/epic_14_settings_test.dart --name "Story 14.3"

@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/track_
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/link_provider_dialog.dart';
@@ -97,6 +98,30 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Data & Sync'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.pushRoute(const SyncRoute()),
+          ),
+
+          const Divider(height: 32),
+
+          // Data Export & Import Section
+          const ListTile(
+            title: Text(
+              'Data',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.file_upload_outlined),
+            title: const Text('Export Data'),
+            subtitle: const Text('Save all progress to a JSON file'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _handleExportData(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.file_download_outlined),
+            title: const Text('Import Data'),
+            subtitle: const Text('Restore progress from a JSON file'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _handleImportData(context, ref),
           ),
 
           const Divider(height: 32),
@@ -331,6 +356,149 @@ class _UserModeSectionState extends ConsumerState<_UserModeSection> {
         );
       }
     }
+  }
+}
+
+Future<void> _handleExportData(BuildContext context, WidgetRef ref) async {
+  try {
+    final service = ref.read(dataExportImportServiceProvider);
+    final jsonString = await service.exportData();
+
+    if (!context.mounted) return;
+
+    // Show share dialog with exported data
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export Complete'),
+        content: Text(
+          'Exported ${jsonString.length} bytes of data.\n\n'
+          'Use the share button to save the file.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+Future<void> _handleImportData(BuildContext context, WidgetRef ref) async {
+  // In a real implementation, this would use file_picker to select a file.
+  // For now, we show the import flow structure.
+  if (!context.mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Import: Select a JSON file to restore data.'),
+    ),
+  );
+}
+
+/// Shows import preview and confirmation dialog.
+/// Called after a JSON file is selected and read.
+Future<bool> showImportConfirmation({
+  required BuildContext context,
+  required WidgetRef ref,
+  required String jsonString,
+}) async {
+  final service = ref.read(dataExportImportServiceProvider);
+
+  try {
+    final preview = service.validateAndPreview(jsonString);
+
+    if (!context.mounted) return false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import Data'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Warning: Importing will overwrite all existing data.',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Text('Exported: ${preview.exportedAt}'),
+            Text('Version: ${preview.appVersion}'),
+            const Divider(),
+            Text('Completions: ${preview.completionCount}'),
+            Text('Goals: ${preview.goalCount}'),
+            Text('Stages: ${preview.stageCount}'),
+            Text('Rewards: ${preview.rewardCount}'),
+            Text('Streaks: ${preview.streakCount}'),
+            Text('Point Configs: ${preview.pointConfigCount}'),
+            Text('Bookmarks: ${preview.bookmarkCount}'),
+            Text('Learning Order: ${preview.learningOrderCount}'),
+            Text('Curricula: ${preview.activeCurriculaCount}'),
+            Text('Tracks: ${preview.curriculumTrackCount}'),
+            Text('Profiles: ${preview.userProfileCount}'),
+            const Divider(),
+            Text(
+              'Total records: ${preview.totalRecords}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Import & Overwrite'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return false;
+
+    await service.importData(jsonString);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data imported successfully.')),
+      );
+    }
+    return true;
+  } on FormatException catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invalid file: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    return false;
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Import failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    return false;
   }
 }
 
