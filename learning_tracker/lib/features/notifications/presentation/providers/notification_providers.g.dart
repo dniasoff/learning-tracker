@@ -294,6 +294,522 @@ abstract class _$StreakAlertTime extends $Notifier<TimeOfDay> {
   }
 }
 
+/// Manages the reward notification enabled state.
+
+@ProviderFor(RewardNotificationEnabled)
+final rewardNotificationEnabledProvider = RewardNotificationEnabledProvider._();
+
+/// Manages the reward notification enabled state.
+final class RewardNotificationEnabledProvider
+    extends $NotifierProvider<RewardNotificationEnabled, bool> {
+  /// Manages the reward notification enabled state.
+  RewardNotificationEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'rewardNotificationEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$rewardNotificationEnabledHash();
+
+  @$internal
+  @override
+  RewardNotificationEnabled create() => RewardNotificationEnabled();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$rewardNotificationEnabledHash() =>
+    r'6a07fd08218442a47f6990a3cb230b2054266252';
+
+/// Manages the reward notification enabled state.
+
+abstract class _$RewardNotificationEnabled extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Manages the Shabbos mode enabled state.
+
+@ProviderFor(ShabbosModeEnabled)
+final shabbosModeEnabledProvider = ShabbosModeEnabledProvider._();
+
+/// Manages the Shabbos mode enabled state.
+final class ShabbosModeEnabledProvider
+    extends $NotifierProvider<ShabbosModeEnabled, bool> {
+  /// Manages the Shabbos mode enabled state.
+  ShabbosModeEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shabbosModeEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shabbosModeEnabledHash();
+
+  @$internal
+  @override
+  ShabbosModeEnabled create() => ShabbosModeEnabled();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$shabbosModeEnabledHash() =>
+    r'71a38c7dd929d080d84954e445c7651465f95bad';
+
+/// Manages the Shabbos mode enabled state.
+
+abstract class _$ShabbosModeEnabled extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Manages whether Shabbos mode uses location-based or fixed times.
+
+@ProviderFor(ShabbosModeUseLocation)
+final shabbosModeUseLocationProvider = ShabbosModeUseLocationProvider._();
+
+/// Manages whether Shabbos mode uses location-based or fixed times.
+final class ShabbosModeUseLocationProvider
+    extends $NotifierProvider<ShabbosModeUseLocation, bool> {
+  /// Manages whether Shabbos mode uses location-based or fixed times.
+  ShabbosModeUseLocationProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shabbosModeUseLocationProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shabbosModeUseLocationHash();
+
+  @$internal
+  @override
+  ShabbosModeUseLocation create() => ShabbosModeUseLocation();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$shabbosModeUseLocationHash() =>
+    r'52be04fdfc0bbd2388f56d0a83037a13e96001d3';
+
+/// Manages whether Shabbos mode uses location-based or fixed times.
+
+abstract class _$ShabbosModeUseLocation extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Manages the stored latitude for location-based Shabbos mode.
+
+@ProviderFor(ShabbosModeLatitude)
+final shabbosModeLatitudeProvider = ShabbosModeLatitudeProvider._();
+
+/// Manages the stored latitude for location-based Shabbos mode.
+final class ShabbosModeLatitudeProvider
+    extends $NotifierProvider<ShabbosModeLatitude, double> {
+  /// Manages the stored latitude for location-based Shabbos mode.
+  ShabbosModeLatitudeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shabbosModeLatitudeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shabbosModeLatitudeHash();
+
+  @$internal
+  @override
+  ShabbosModeLatitude create() => ShabbosModeLatitude();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(double value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<double>(value),
+    );
+  }
+}
+
+String _$shabbosModeLatitudeHash() =>
+    r'8e7933dee67a75e0f9e214c05187be6e98406e0a';
+
+/// Manages the stored latitude for location-based Shabbos mode.
+
+abstract class _$ShabbosModeLatitude extends $Notifier<double> {
+  double build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<double, double>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<double, double>,
+              double,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Manages the stored longitude for location-based Shabbos mode.
+
+@ProviderFor(ShabbosModeLongitude)
+final shabbosModeLongitudeProvider = ShabbosModeLongitudeProvider._();
+
+/// Manages the stored longitude for location-based Shabbos mode.
+final class ShabbosModeLongitudeProvider
+    extends $NotifierProvider<ShabbosModeLongitude, double> {
+  /// Manages the stored longitude for location-based Shabbos mode.
+  ShabbosModeLongitudeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shabbosModeLongitudeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shabbosModeLongitudeHash();
+
+  @$internal
+  @override
+  ShabbosModeLongitude create() => ShabbosModeLongitude();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(double value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<double>(value),
+    );
+  }
+}
+
+String _$shabbosModeLongitudeHash() =>
+    r'8f912d2e1897bd1264e0e840b9b2ff2ed557a2e8';
+
+/// Manages the stored longitude for location-based Shabbos mode.
+
+abstract class _$ShabbosModeLongitude extends $Notifier<double> {
+  double build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<double, double>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<double, double>,
+              double,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Manages fixed Shabbos start time (candle lighting).
+
+@ProviderFor(ShabbosModeFixedStartTime)
+final shabbosModeFixedStartTimeProvider = ShabbosModeFixedStartTimeProvider._();
+
+/// Manages fixed Shabbos start time (candle lighting).
+final class ShabbosModeFixedStartTimeProvider
+    extends $NotifierProvider<ShabbosModeFixedStartTime, TimeOfDay> {
+  /// Manages fixed Shabbos start time (candle lighting).
+  ShabbosModeFixedStartTimeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shabbosModeFixedStartTimeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shabbosModeFixedStartTimeHash();
+
+  @$internal
+  @override
+  ShabbosModeFixedStartTime create() => ShabbosModeFixedStartTime();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TimeOfDay value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TimeOfDay>(value),
+    );
+  }
+}
+
+String _$shabbosModeFixedStartTimeHash() =>
+    r'e86f6444c3cff71fd09fdfa220c6350f6c08450d';
+
+/// Manages fixed Shabbos start time (candle lighting).
+
+abstract class _$ShabbosModeFixedStartTime extends $Notifier<TimeOfDay> {
+  TimeOfDay build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<TimeOfDay, TimeOfDay>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<TimeOfDay, TimeOfDay>,
+              TimeOfDay,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Manages fixed Shabbos end time (havdalah).
+
+@ProviderFor(ShabbosModeFixedEndTime)
+final shabbosModeFixedEndTimeProvider = ShabbosModeFixedEndTimeProvider._();
+
+/// Manages fixed Shabbos end time (havdalah).
+final class ShabbosModeFixedEndTimeProvider
+    extends $NotifierProvider<ShabbosModeFixedEndTime, TimeOfDay> {
+  /// Manages fixed Shabbos end time (havdalah).
+  ShabbosModeFixedEndTimeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shabbosModeFixedEndTimeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shabbosModeFixedEndTimeHash();
+
+  @$internal
+  @override
+  ShabbosModeFixedEndTime create() => ShabbosModeFixedEndTime();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TimeOfDay value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TimeOfDay>(value),
+    );
+  }
+}
+
+String _$shabbosModeFixedEndTimeHash() =>
+    r'0a0245bf826362bb3a1f7362e7cccec68782701c';
+
+/// Manages fixed Shabbos end time (havdalah).
+
+abstract class _$ShabbosModeFixedEndTime extends $Notifier<TimeOfDay> {
+  TimeOfDay build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<TimeOfDay, TimeOfDay>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<TimeOfDay, TimeOfDay>,
+              TimeOfDay,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Provides the [ShabbosTimeService] singleton.
+
+@ProviderFor(shabbosTimeService)
+final shabbosTimeServiceProvider = ShabbosTimeServiceProvider._();
+
+/// Provides the [ShabbosTimeService] singleton.
+
+final class ShabbosTimeServiceProvider
+    extends
+        $FunctionalProvider<
+          ShabbosTimeService,
+          ShabbosTimeService,
+          ShabbosTimeService
+        >
+    with $Provider<ShabbosTimeService> {
+  /// Provides the [ShabbosTimeService] singleton.
+  ShabbosTimeServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shabbosTimeServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shabbosTimeServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShabbosTimeService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ShabbosTimeService create(Ref ref) {
+    return shabbosTimeService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShabbosTimeService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShabbosTimeService>(value),
+    );
+  }
+}
+
+String _$shabbosTimeServiceHash() =>
+    r'42e796d1858b80fa4000448963bd29e29fcf8fa9';
+
+/// Returns true if notifications should currently be suppressed due to
+/// Shabbos/Yom Tov quiet mode.
+
+@ProviderFor(isShabbosQuietActive)
+final isShabbosQuietActiveProvider = IsShabbosQuietActiveProvider._();
+
+/// Returns true if notifications should currently be suppressed due to
+/// Shabbos/Yom Tov quiet mode.
+
+final class IsShabbosQuietActiveProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Returns true if notifications should currently be suppressed due to
+  /// Shabbos/Yom Tov quiet mode.
+  IsShabbosQuietActiveProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isShabbosQuietActiveProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$isShabbosQuietActiveHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return isShabbosQuietActive(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$isShabbosQuietActiveHash() =>
+    r'8b16e8579657d0532adfba000b14e849412b2bbb';
+
 /// Provides the [NotificationScheduler] instance.
 
 @ProviderFor(notificationScheduler)
@@ -350,9 +866,7 @@ String _$notificationSchedulerHash() =>
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
 ///
-/// Read this provider once (e.g. from the notifications screen or app startup)
-/// to activate the watcher. It returns a [Future] that completes after the
-/// initial schedule/cancel call.
+/// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
 
 @ProviderFor(reminderSyncEffect)
 final reminderSyncEffectProvider = ReminderSyncEffectProvider._();
@@ -360,9 +874,7 @@ final reminderSyncEffectProvider = ReminderSyncEffectProvider._();
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
 ///
-/// Read this provider once (e.g. from the notifications screen or app startup)
-/// to activate the watcher. It returns a [Future] that completes after the
-/// initial schedule/cancel call.
+/// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
 
 final class ReminderSyncEffectProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
@@ -370,9 +882,7 @@ final class ReminderSyncEffectProvider
   /// Watches reminder settings and daily tasks, then schedules or cancels
   /// the notification accordingly.
   ///
-  /// Read this provider once (e.g. from the notifications screen or app startup)
-  /// to activate the watcher. It returns a [Future] that completes after the
-  /// initial schedule/cancel call.
+  /// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
   ReminderSyncEffectProvider._()
     : super(
         from: null,
@@ -399,7 +909,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'338b7aefb44561123cec6287efda7fe30486f787';
+    r'99148d17ab9b44e07164fde54abee196ce22c550';
 
 /// Provides the [StreakAlertService] instance.
 
@@ -457,8 +967,7 @@ String _$streakAlertServiceHash() =>
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
 ///
-/// Mirrors [reminderSyncEffect] — read this provider at app startup to
-/// activate the watcher.
+/// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
 
 @ProviderFor(streakAlertSyncEffect)
 final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
@@ -466,8 +975,7 @@ final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
 ///
-/// Mirrors [reminderSyncEffect] — read this provider at app startup to
-/// activate the watcher.
+/// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
 
 final class StreakAlertSyncEffectProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
@@ -475,8 +983,7 @@ final class StreakAlertSyncEffectProvider
   /// Watches streak alert settings and evaluates whether to schedule or cancel
   /// the streak protection alert.
   ///
-  /// Mirrors [reminderSyncEffect] — read this provider at app startup to
-  /// activate the watcher.
+  /// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
   StreakAlertSyncEffectProvider._()
     : super(
         from: null,
@@ -503,4 +1010,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'f218b0880828fecdaeeac554ad9f2dbba9b7c274';
+    r'568bcc892b8b42c99ea64691d38a15e4dc60567f';
