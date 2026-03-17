@@ -4,12 +4,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
+import 'package:learning_tracker/firebase_options.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
 
 void main() {
