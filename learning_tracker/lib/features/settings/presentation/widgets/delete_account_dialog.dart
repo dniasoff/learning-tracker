@@ -55,9 +55,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           const SizedBox(height: 8),
           TextField(
             controller: _controller,
-            decoration: const InputDecoration(
-              hintText: 'DELETE',
-            ),
+            decoration: const InputDecoration(hintText: 'DELETE'),
           ),
         ],
       ),

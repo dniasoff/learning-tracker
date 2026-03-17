@@ -22,6 +22,8 @@ class MockGoogleSignInAuthentication extends Mock
 
 class FakeAuthCredential extends Fake implements AuthCredential {}
 
+class MockUserInfo extends Mock implements UserInfo {}
+
 class FakeActionCodeSettings extends Fake implements ActionCodeSettings {}
 
 void main() {
@@ -255,6 +257,105 @@ void main() {
       await repository.deleteAccount();
 
       verify(() => mockUser.delete()).called(1);
+    });
+  });
+
+  group('changePassword', () {
+    test('calls currentUser.updatePassword with new password', () async {
+      final mockUser = MockUser();
+      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+      when(
+        () => mockUser.updatePassword('newPass123'),
+      ).thenAnswer((_) async {});
+
+      await repository.changePassword('newPass123');
+
+      verify(() => mockUser.updatePassword('newPass123')).called(1);
+    });
+  });
+
+  group('reauthenticateWithEmail', () {
+    test('creates EmailAuthProvider credential and reauthenticates', () async {
+      final mockUser = MockUser();
+      final mockCredential = MockUserCredential();
+      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+      when(
+        () => mockUser.reauthenticateWithCredential(any()),
+      ).thenAnswer((_) async => mockCredential);
+
+      await repository.reauthenticateWithEmail('test@example.com', 'pass123');
+
+      verify(() => mockUser.reauthenticateWithCredential(any())).called(1);
+    });
+  });
+
+  group('linkGoogleProvider', () {
+    test(
+      'triggers Google Sign-In and links credential to current user',
+      () async {
+        final mockUser = MockUser();
+        final mockAccount = MockGoogleSignInAccount();
+        final mockAuth = MockGoogleSignInAuthentication();
+        final mockCredential = MockUserCredential();
+
+        when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+        when(
+          () => mockGoogleSignIn.authenticate(),
+        ).thenAnswer((_) async => mockAccount);
+        when(() => mockAccount.authentication).thenReturn(mockAuth);
+        when(() => mockAuth.idToken).thenReturn('test-id-token');
+        when(
+          () => mockUser.linkWithCredential(any()),
+        ).thenAnswer((_) async => mockCredential);
+
+        await repository.linkGoogleProvider();
+
+        verify(() => mockUser.linkWithCredential(any())).called(1);
+      },
+    );
+  });
+
+  group('linkEmailProvider', () {
+    test(
+      'creates EmailAuthProvider credential and links to current user',
+      () async {
+        final mockUser = MockUser();
+        final mockCredential = MockUserCredential();
+        when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+        when(
+          () => mockUser.linkWithCredential(any()),
+        ).thenAnswer((_) async => mockCredential);
+
+        await repository.linkEmailProvider('test@example.com', 'pass123');
+
+        verify(() => mockUser.linkWithCredential(any())).called(1);
+      },
+    );
+  });
+
+  group('getLinkedProviders', () {
+    test('returns list of provider IDs from current user', () {
+      final mockUser = MockUser();
+      final mockProviderInfo1 = MockUserInfo();
+      final mockProviderInfo2 = MockUserInfo();
+      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+      when(
+        () => mockUser.providerData,
+      ).thenReturn([mockProviderInfo1, mockProviderInfo2]);
+      when(() => mockProviderInfo1.providerId).thenReturn('password');
+      when(() => mockProviderInfo2.providerId).thenReturn('google.com');
+
+      final providers = repository.getLinkedProviders();
+
+      expect(providers, ['password', 'google.com']);
+    });
+
+    test('returns empty list when no current user', () {
+      when(() => mockFirebaseAuth.currentUser).thenReturn(null);
+
+      final providers = repository.getLinkedProviders();
+
+      expect(providers, isEmpty);
     });
   });
 

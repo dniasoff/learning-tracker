@@ -88,8 +88,7 @@ class SettingsScreen extends ConsumerWidget {
 
           // Change Password (only for email/password users)
           if (user != null &&
-              user.providerData
-                  .any((info) => info.providerId == 'password'))
+              user.providerData.any((info) => info.providerId == 'password'))
             ListTile(
               leading: const Icon(Icons.lock_outline),
               title: const Text('Change Password'),
@@ -183,15 +182,18 @@ Future<void> _showDeleteAccountFlow(
   final service = ref.read(accountManagementServiceProvider);
 
   // Step 1: Re-authenticate
-  final hasPassword =
-      user.providerData.any((info) => info.providerId == 'password');
-  final hasGoogle =
-      user.providerData.any((info) => info.providerId == 'google.com');
+  final hasPassword = user.providerData.any(
+    (info) => info.providerId == 'password',
+  );
+  final hasGoogle = user.providerData.any(
+    (info) => info.providerId == 'google.com',
+  );
 
   var reauthenticated = false;
 
   if (hasPassword) {
-    reauthenticated = await showReauthenticateDialog(
+    reauthenticated =
+        await showReauthenticateDialog(
           context: context,
           email: user.email ?? '',
           service: service,

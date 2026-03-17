@@ -17,10 +17,7 @@ Future<bool?> showReauthenticateDialog({
 }
 
 class _ReauthenticateDialog extends StatefulWidget {
-  const _ReauthenticateDialog({
-    required this.email,
-    required this.service,
-  });
+  const _ReauthenticateDialog({required this.email, required this.service});
 
   final String email;
   final AccountManagementService service;

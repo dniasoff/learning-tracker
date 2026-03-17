@@ -11,9 +11,9 @@ class AccountManagementService {
     required AuthRepository authRepository,
     required AppDatabase database,
     required FirebaseFirestore firestore,
-  })  : _authRepository = authRepository,
-        _database = database,
-        _firestore = firestore;
+  }) : _authRepository = authRepository,
+       _database = database,
+       _firestore = firestore;
 
   final AuthRepository _authRepository;
   final AppDatabase _database;
@@ -83,11 +83,7 @@ class AccountManagementService {
       final userDocRef = _firestore.collection('users').doc(uid);
 
       // Delete known subcollections
-      const subcollections = [
-        'completions',
-        'bookmarks',
-        'settings',
-      ];
+      const subcollections = ['completions', 'bookmarks', 'settings'];
 
       for (final sub in subcollections) {
         final snapshot = await userDocRef.collection(sub).get();

@@ -85,8 +85,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             TextFormField(
               controller: _confirmPasswordController,
               obscureText: true,
-              decoration:
-                  const InputDecoration(labelText: 'Confirm New Password'),
+              decoration: const InputDecoration(
+                labelText: 'Confirm New Password',
+              ),
               validator: (value) {
                 if (value != _newPasswordController.text) {
                   return 'Passwords do not match';

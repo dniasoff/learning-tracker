@@ -5,8 +5,9 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_provi
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 
 /// Provider for AccountManagementService
-final accountManagementServiceProvider =
-    Provider<AccountManagementService>((ref) {
+final accountManagementServiceProvider = Provider<AccountManagementService>((
+  ref,
+) {
   return AccountManagementService(
     authRepository: ref.watch(authRepositoryProvider),
     database: ref.watch(appDatabaseProvider),
