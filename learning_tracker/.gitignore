@@ -44,6 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Firebase configuration with API keys
+lib/firebase_options.dart
+
 # Generated files (build_runner)
 *.g.dart
 *.freezed.dart
