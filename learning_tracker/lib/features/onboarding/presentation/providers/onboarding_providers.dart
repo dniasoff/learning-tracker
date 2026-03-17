@@ -4,6 +4,9 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
@@ -40,6 +43,20 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return GoalRepositoryImpl(database: db);
 });
+
+/// Provider for BulkPriorCompletionService used during onboarding.
+final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
+  (ref) {
+    final contentRepo = ref.watch(contentRepositoryProvider);
+    final completionRepo = ref.watch(completionRepositoryProvider);
+    final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
+    return BulkPriorCompletionService(
+      contentRepository: contentRepo,
+      completionRepository: completionRepo,
+      bookmarkRepository: bookmarkRepo,
+    );
+  },
+);
 
 /// Provides hierarchy configs for all 5 curricula (for the selection screen).
 final allCurriculaConfigsProvider =
