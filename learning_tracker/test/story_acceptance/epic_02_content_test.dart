@@ -364,13 +364,13 @@ void main() {
       expect(active, isNot(contains(CurriculumId.mishnayos)));
     });
 
-    test('toggle each of the 5 curricula on/off', () async {
-      // Activate all 5
+    test('toggle each of the 7 curricula on/off', () async {
+      // Activate all 7
       for (final curriculum in CurriculumId.values) {
         await service.activate(curriculum);
       }
       final allActive = await service.getActiveCurricula();
-      expect(allActive, hasLength(5));
+      expect(allActive, hasLength(7));
 
       // Deactivate 4, leaving only chumash
       await service.deactivate(CurriculumId.mishnayos);
@@ -468,9 +468,9 @@ void main() {
   // ── Story 2.5: Bundled content JSON & dev seed script ────────
 
   group('Story 2.5 -- Bundled content assets', tags: ['story_2_5'], () {
-    // ── AC: assets/content/ directory contains JSON files for all 5 curricula
+    // ── AC: assets/content/ directory contains JSON files for all 7 curricula
 
-    test('assets/content/ directory contains JSON for all 5 curricula', () {
+    test('assets/content/ directory contains JSON for all 7 curricula', () {
       final contentDir = Directory('assets/content');
       expect(
         contentDir.existsSync(),

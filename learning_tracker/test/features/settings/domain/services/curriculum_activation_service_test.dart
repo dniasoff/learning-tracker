@@ -193,13 +193,13 @@ void main() {
       expect(isActive, isTrue);
     });
 
-    test('all 5 curricula can be activated simultaneously', () async {
+    test('all 7 curricula can be activated simultaneously', () async {
       for (final curriculum in CurriculumId.values) {
         await service.activate(curriculum);
       }
 
       final activeCurricula = await service.getActiveCurricula();
-      expect(activeCurricula, hasLength(5));
+      expect(activeCurricula, hasLength(7));
       expect(activeCurricula, containsAll(CurriculumId.values));
     });
 

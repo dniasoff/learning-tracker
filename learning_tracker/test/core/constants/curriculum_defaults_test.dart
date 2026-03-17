@@ -37,7 +37,7 @@ void main() {
   });
 
   group('CurriculumDefaults - hierarchy configs', () {
-    test('hierarchy configs exist for all 5 curricula', () {
+    test('hierarchy configs exist for all 7 curricula', () {
       for (final curriculum in CurriculumId.values) {
         expect(
           CurriculumDefaults.hierarchyConfigs.containsKey(curriculum),
@@ -109,7 +109,7 @@ void main() {
   });
 
   group('CurriculumDefaults - daily targets', () {
-    test('daily targets exist for all 5 curricula', () {
+    test('daily targets exist for all 7 curricula', () {
       for (final curriculum in CurriculumId.values) {
         expect(
           CurriculumDefaults.defaultDailyTargets.containsKey(curriculum),

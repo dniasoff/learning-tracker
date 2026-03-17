@@ -93,7 +93,7 @@ void main() {
       test('provides all curricula', () {
         final allCurricula = CurriculumFixtures.allCurricula;
 
-        expect(allCurricula.length, 5);
+        expect(allCurricula.length, 7);
         expect(allCurricula, contains(CurriculumId.mishnayos));
         expect(allCurricula, contains(CurriculumId.bavli));
         expect(allCurricula, contains(CurriculumId.yerushalmi));

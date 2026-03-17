@@ -95,7 +95,7 @@ void main() {
   }
 
   group('OnboardingScreen Widget Tests', () {
-    testWidgets('displays all 5 curricula with names', (tester) async {
+    testWidgets('displays all 7 curricula with names', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 

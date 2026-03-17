@@ -52,13 +52,13 @@ void main() {
   }
 
   group('SettingsScreen Widget Tests', () {
-    testWidgets('renders all 5 curricula with toggle switches', (tester) async {
+    testWidgets('renders all 7 curricula with toggle switches', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
       await tester.pumpAndSettle();
 
-      // Verify all 5 curricula are displayed
+      // Verify all 7 curricula are displayed
       expect(find.text('Mishnayos'), findsOneWidget);
       expect(find.text('Talmud Bavli'), findsOneWidget);
       expect(find.text('Talmud Yerushalmi'), findsOneWidget);
@@ -66,7 +66,7 @@ void main() {
       expect(find.text('Chumash'), findsOneWidget);
 
       // Verify all have switches
-      expect(find.byType(SwitchListTile), findsNWidgets(5));
+      expect(find.byType(SwitchListTile), findsNWidgets(7));
     });
 
     testWidgets('shows active curricula with green status', (tester) async {

@@ -106,7 +106,7 @@ void main() {
     );
 
     test('ContentRepository loads content for all curricula', () async {
-      // Verify all 5 curricula can be loaded
+      // Verify all 7 curricula can be loaded
       for (final curriculum in CurriculumId.values) {
         final items = await repository.getContentForCurriculum(curriculum);
         expect(

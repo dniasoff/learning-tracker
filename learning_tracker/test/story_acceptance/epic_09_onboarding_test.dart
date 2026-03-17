@@ -171,8 +171,8 @@ void main() {
       expect(selected.isNotEmpty, isTrue);
     });
 
-    test('all 5 curricula are available as options', () {
-      expect(CurriculumId.values, hasLength(5));
+    test('all 7 curricula are available as options', () {
+      expect(CurriculumId.values, hasLength(7));
       expect(CurriculumId.values, contains(CurriculumId.mishnayos));
       expect(CurriculumId.values, contains(CurriculumId.bavli));
       expect(CurriculumId.values, contains(CurriculumId.yerushalmi));

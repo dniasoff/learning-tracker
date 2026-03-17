@@ -26,7 +26,7 @@ void main() {
 
     test('_getFilename maps all CurriculumId values to filenames', () {
       // Verify the mapping is exhaustive by creating an instance
-      // and checking all 5 curricula map to files that exist
+      // and checking all 7 curricula map to files that exist
       final expectedMappings = {
         CurriculumId.mishnayos: 'mishnayos.json',
         CurriculumId.bavli: 'bavli.json',

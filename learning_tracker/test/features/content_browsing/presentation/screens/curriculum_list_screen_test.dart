@@ -19,10 +19,10 @@ void main() {
   }
 
   group('CurriculumListScreen', () {
-    testWidgets('displays all 5 curricula', (tester) async {
+    testWidgets('displays all 7 curricula', (tester) async {
       final mockRepo = MockContentRepository();
 
-      // Mock all 5 curricula returning empty lists (just need the calls to succeed)
+      // Mock all 7 curricula returning empty lists (just need the calls to succeed)
       for (final curriculum in CurriculumId.values) {
         when(
           () => mockRepo.getContentForCurriculum(curriculum),
