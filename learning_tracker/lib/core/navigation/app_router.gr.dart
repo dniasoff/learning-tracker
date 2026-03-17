@@ -658,6 +658,22 @@ class PinSetupRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [PointConfigScreen]
+class PointConfigRoute extends PageRouteInfo<void> {
+  const PointConfigRoute({List<PageRouteInfo>? children})
+    : super(PointConfigRoute.name, initialChildren: children);
+
+  static const String name = 'PointConfigRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PointConfigScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [ProgressChartsScreen]
 class ProgressChartsRoute extends PageRouteInfo<void> {
   const ProgressChartsRoute({List<PageRouteInfo>? children})
