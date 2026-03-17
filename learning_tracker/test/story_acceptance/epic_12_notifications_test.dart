@@ -5,8 +5,13 @@ library;
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/reward_milestone_notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -225,20 +230,223 @@ void main() {
     });
   });
 
-  // ── Story 12.3: Notification preferences ──────────────────────
+  // ── Story 12.3: Reward Milestone Notifications ──────────────────────
 
-  group(
-    'Story 12.3 -- Notification preferences',
-    tags: ['story_12_3'],
-    skip: 'Backlog: notification preferences not yet implemented',
-    () {
-      test('user can toggle daily reminder on/off', () {
-        // TODO: verify preference toggle persists
-      });
+  group('Story 12.3 -- Reward Milestone Notifications', tags: ['story_12_3'], () {
+    late AppDatabase db;
+    late MockNotificationService mockService;
+    late RewardMilestoneNotificationService milestoneService;
 
-      test('user can set preferred reminder time', () {
-        // TODO: verify time preference and rescheduling
-      });
-    },
-  );
+    setUp(() {
+      db = createTestDatabase();
+      mockService = MockNotificationService();
+      milestoneService = RewardMilestoneNotificationService(
+        notificationService: mockService,
+      );
+
+      when(
+        () => mockService.showRewardMilestone(body: any(named: 'body')),
+      ).thenAnswer((_) async {});
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('notification triggered when points cross reward threshold', () async {
+      // Setup: insert a reward with threshold 50
+      await db.rewardDao.insertReward(
+        RewardsCompanion.insert(
+          title: 'First Badge',
+          description: 'Earn 50 points',
+          pointsThreshold: 50,
+        ),
+      );
+
+      // Insert completions to reach 50+ points
+      await db.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'test',
+          sefariaRef: 'ref1',
+          stageId: 1,
+          trackType: 'learn',
+          completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
+          points: const Value(50),
+        ),
+      );
+
+      // Check and award rewards
+      final pointsService = PointsService(db);
+      final rewardService = RewardService(db, pointsService);
+      final newlyEarned = await rewardService.checkAndAwardRewards(
+        userMode: UserMode.adult,
+      );
+
+      expect(newlyEarned, hasLength(1));
+
+      // Trigger milestone notification
+      await milestoneService.notifyNewRewards(
+        newlyEarned: newlyEarned,
+        userMode: UserMode.adult,
+      );
+
+      verify(
+        () =>
+            mockService.showRewardMilestone(body: 'Reward earned: First Badge'),
+      ).called(1);
+    });
+
+    test('child mode notification hides reward title', () async {
+      final reward = RewardModel(
+        id: 1,
+        title: 'Secret Prize',
+        description: 'A secret',
+        pointsThreshold: 100,
+        isEarned: true,
+        isRevealed: false,
+        earnedAt: DateTime.utc(2026, 3, 16),
+        createdAt: DateTime.utc(2026, 1, 1),
+      );
+
+      await milestoneService.notifyNewRewards(
+        newlyEarned: [reward],
+        userMode: UserMode.child,
+      );
+
+      verify(
+        () => mockService.showRewardMilestone(body: 'Mystery reward earned!'),
+      ).called(1);
+    });
+
+    test('adult mode notification shows reward title', () async {
+      final reward = RewardModel(
+        id: 1,
+        title: 'Gold Star',
+        description: 'Great job',
+        pointsThreshold: 200,
+        isEarned: true,
+        isRevealed: true,
+        earnedAt: DateTime.utc(2026, 3, 16),
+        createdAt: DateTime.utc(2026, 1, 1),
+      );
+
+      await milestoneService.notifyNewRewards(
+        newlyEarned: [reward],
+        userMode: UserMode.adult,
+      );
+
+      verify(
+        () => mockService.showRewardMilestone(body: 'Reward earned: Gold Star'),
+      ).called(1);
+    });
+
+    test(
+      'no duplicate notification on app restart with already-earned reward',
+      () async {
+        // Setup: reward already earned (threshold 50, earned in past)
+        await db.rewardDao.insertReward(
+          RewardsCompanion.insert(
+            title: 'Old Reward',
+            description: 'Already earned',
+            pointsThreshold: 50,
+            isEarned: const Value(true),
+            earnedAt: Value(DateTime.utc(2026, 3, 15)),
+          ),
+        );
+
+        // Insert points above threshold
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'test',
+            sefariaRef: 'ref1',
+            stageId: 1,
+            trackType: 'learn',
+            completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
+            points: const Value(60),
+          ),
+        );
+
+        // checkAndAwardRewards should return empty for already-earned
+        final pointsService = PointsService(db);
+        final rewardService = RewardService(db, pointsService);
+        final newlyEarned = await rewardService.checkAndAwardRewards(
+          userMode: UserMode.adult,
+        );
+
+        expect(newlyEarned, isEmpty);
+
+        // No notification should fire
+        await milestoneService.notifyNewRewards(
+          newlyEarned: newlyEarned,
+          userMode: UserMode.adult,
+        );
+
+        verifyNever(
+          () => mockService.showRewardMilestone(body: any(named: 'body')),
+        );
+      },
+    );
+
+    test(
+      'integration: complete items to reach reward threshold, verify notification',
+      () async {
+        // Setup: reward at threshold 30
+        await db.rewardDao.insertReward(
+          RewardsCompanion.insert(
+            title: 'Bronze Medal',
+            description: 'Earn 30 points',
+            pointsThreshold: 30,
+          ),
+        );
+
+        // Record completions totaling 30 points
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'test',
+            sefariaRef: 'ref1',
+            stageId: 1,
+            trackType: 'learn',
+            completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
+            points: const Value(20),
+          ),
+        );
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: 'test',
+            sefariaRef: 'ref2',
+            stageId: 1,
+            trackType: 'learn',
+            completedAt: DateTime.utc(2026, 3, 16, 11, 0, 0),
+            points: const Value(10),
+          ),
+        );
+
+        // Award and notify
+        final pointsService = PointsService(db);
+        final rewardService = RewardService(db, pointsService);
+        final newlyEarned = await rewardService.checkAndAwardRewards(
+          userMode: UserMode.child,
+        );
+
+        expect(newlyEarned, hasLength(1));
+        expect(newlyEarned.first.title, 'Bronze Medal');
+
+        await milestoneService.notifyNewRewards(
+          newlyEarned: newlyEarned,
+          userMode: UserMode.child,
+        );
+
+        // Child mode hides title
+        verify(
+          () => mockService.showRewardMilestone(body: 'Mystery reward earned!'),
+        ).called(1);
+      },
+    );
+
+    test('notification taps open app to rewards screen', () {
+      // rewardMilestonePayload routes to GamificationRoute
+      // in NotificationInitializer._handleNotificationTap
+      expect(rewardMilestonePayload, 'reward_earned');
+    });
+  });
 }

@@ -21,6 +21,8 @@ class NotificationInitializer {
   void _handleNotificationTap(String? payload) {
     if (payload == dailyReminderPayload || payload == streakAlertPayload) {
       router.navigate(const SchedulerRoute());
+    } else if (payload == rewardMilestonePayload) {
+      router.navigate(const GamificationRoute());
     }
   }
 }
