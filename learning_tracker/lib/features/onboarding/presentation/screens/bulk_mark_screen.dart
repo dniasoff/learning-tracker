@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -170,8 +171,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Mark Prior Completions — ${widget.curriculumId.displayNameEn}',
+        title: AppBarTitle(
+          text: 'Mark Prior Completions — ${widget.curriculumId.displayNameEn}',
         ),
         leading: _phase == _Phase.selection && _navigationStack.isNotEmpty
             ? IconButton(

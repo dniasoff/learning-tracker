@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 
 @RoutePage()
@@ -12,7 +13,7 @@ class CurriculumListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Browse Content')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Browse Content')),
       body: ListView.builder(
         itemCount: CurriculumId.values.length,
         itemBuilder: (context, index) {

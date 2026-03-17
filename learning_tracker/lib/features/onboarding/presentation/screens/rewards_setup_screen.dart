@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 
 /// Result returned from [RewardsSetupScreen] containing the rewards to create.
 class RewardSetupResult {
@@ -90,7 +91,7 @@ class _RewardsSetupScreenState extends State<RewardsSetupScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Set Up Rewards')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Set Up Rewards')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

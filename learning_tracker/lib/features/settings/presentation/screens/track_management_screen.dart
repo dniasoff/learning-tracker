@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
 
 /// Screen for managing track activation per curriculum.
@@ -34,7 +35,7 @@ class TrackManagementScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manage Tracks - ${curriculum.displayNameEn}'),
+        title: AppBarTitle(text: 'Manage Tracks - ${curriculum.displayNameEn}'),
       ),
       body: activeTracksAsync.when(
         data: (activeTracks) =>

@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_dashboard_providers.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/curriculum_card.dart';
@@ -19,7 +20,7 @@ class ParentModeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Parent Dashboard'),
+        title: const AppBarTitle(text: 'Parent Dashboard'),
         actions: [
           IconButton(
             icon: const Icon(Icons.library_books),

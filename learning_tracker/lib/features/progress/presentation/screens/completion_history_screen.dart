@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
@@ -42,7 +43,7 @@ class _CompletionHistoryScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Completion History'),
+        title: const AppBarTitle(text: 'Completion History'),
         actions: [_buildTrackFilterMenu()],
       ),
       body: Column(

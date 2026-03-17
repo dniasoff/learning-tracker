@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/daily_schedule_composer.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -25,7 +26,7 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
     final asyncTasks = ref.watch(allDailyTasksProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Daily Tasks')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Daily Tasks')),
       body: asyncTasks.when(
         data: (tasks) {
           if (tasks.isEmpty) {

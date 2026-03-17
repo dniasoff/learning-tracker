@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/services/tutor_dashboard_aggregator.dart';
@@ -27,7 +28,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tutor Dashboard'),
+        title: const AppBarTitle(text: 'Tutor Dashboard'),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 8),

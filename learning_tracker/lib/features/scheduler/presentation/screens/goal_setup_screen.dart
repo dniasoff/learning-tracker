@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 
@@ -83,7 +84,7 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existingGoal != null ? 'Edit Goal' : 'New Goal'),
+        title: AppBarTitle(text: widget.existingGoal != null ? 'Edit Goal' : 'New Goal'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),

@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 
 /// Full-screen PIN entry for accessing tutor mode.
@@ -83,7 +84,7 @@ class _TutorPinEntryScreenState extends ConsumerState<TutorPinEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Enter Tutor PIN')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Enter Tutor PIN')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

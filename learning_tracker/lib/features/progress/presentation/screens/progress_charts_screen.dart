@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
@@ -45,7 +46,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Progress Charts')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Progress Charts')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

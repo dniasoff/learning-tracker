@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 
 @RoutePage()
@@ -24,7 +25,7 @@ class NotificationsScreen extends ConsumerWidget {
     ref.watch(streakAlertSyncEffectProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Notifications')),
       body: ListView(
         children: [
           // ── Daily Reminder ──────────────────────────────────────

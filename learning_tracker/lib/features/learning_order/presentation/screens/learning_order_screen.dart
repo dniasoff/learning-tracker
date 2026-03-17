@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/providers/learning_order_providers.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/draggable_order_item.dart';
@@ -38,7 +39,7 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.curriculumId.displayNameEn} Order'),
+        title: AppBarTitle(text: '${widget.curriculumId.displayNameEn} Order'),
         actions: [
           if (!isRestricted)
             IconButton(

@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
@@ -40,7 +41,7 @@ class _StageEditorScreenState extends ConsumerState<StageEditorScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manage Stages — ${_curriculum.displayNameEn}'),
+        title: AppBarTitle(text: 'Manage Stages — ${_curriculum.displayNameEn}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.restore),

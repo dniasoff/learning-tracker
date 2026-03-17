@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 
 @RoutePage()
 class CurriculumSettingsScreen extends StatelessWidget {
@@ -14,7 +15,7 @@ class CurriculumSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Settings - $curriculumId')),
+      appBar: AppBar(title: AppBarTitle(text: 'Settings - $curriculumId')),
       body: ListView(
         children: [
           ListTile(

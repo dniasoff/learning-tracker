@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
@@ -71,7 +72,7 @@ class _ContentHierarchyScreenState
 
     if (curriculum == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Unknown Curriculum')),
+        appBar: AppBar(title: const AppBarTitle(text: 'Unknown Curriculum')),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -103,7 +104,7 @@ class _ContentHierarchyScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(curriculum.displayNameEn),
+        title: AppBarTitle(text: curriculum.displayNameEn),
         leading: _navigationStack.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),

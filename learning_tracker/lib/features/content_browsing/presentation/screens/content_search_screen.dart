@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 
@@ -62,7 +63,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
 
     if (curriculum == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Search')),
+        appBar: AppBar(title: const AppBarTitle(text: 'Search')),
         body: Center(
           child: Text('Unknown curriculum: "${widget.curriculumId}"'),
         ),

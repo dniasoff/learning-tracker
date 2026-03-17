@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Main tutor mode screen — read-only view of student data.
@@ -43,7 +44,7 @@ class _TutorModeScreenState extends ConsumerState<TutorModeScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Tutor Mode'),
+          title: const AppBarTitle(text: 'Tutor Mode'),
           actions: [
             if (isTutorMode)
               Container(

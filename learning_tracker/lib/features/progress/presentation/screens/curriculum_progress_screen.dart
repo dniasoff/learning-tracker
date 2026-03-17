@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
@@ -27,7 +28,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
     final curriculumColor = AppTheme.getCurriculumColorByKey(curriculumId);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Progress - $curriculumName')),
+      appBar: AppBar(title: AppBarTitle(text: 'Progress - $curriculumName')),
       body: progressAsync.when(
         data: (progressData) => SingleChildScrollView(
           padding: const EdgeInsets.all(16),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 
 /// Data model pairing a stage definition with its point config.
 class _StagePointConfig {
@@ -67,7 +68,7 @@ class PointConfigScreen extends ConsumerWidget {
     final dataAsync = ref.watch(_pointConfigDataProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Point Configuration')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Point Configuration')),
       body: dataAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),

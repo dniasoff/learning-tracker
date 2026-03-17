@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 
 @RoutePage()
@@ -64,7 +65,7 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose Your Mode')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Choose Your Mode')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

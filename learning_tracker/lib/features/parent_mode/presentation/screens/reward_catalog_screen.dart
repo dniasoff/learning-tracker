@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 
@@ -13,7 +14,7 @@ class RewardCatalogScreen extends ConsumerWidget {
     final rewardsAsync = ref.watch(allRewardsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reward Catalog')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Reward Catalog')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(context, ref),
         child: const Icon(Icons.add),

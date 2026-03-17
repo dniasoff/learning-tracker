@@ -5,7 +5,7 @@ library;
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
@@ -145,7 +145,7 @@ void main() {
       await db.close();
     });
 
-    Future<void> _seedTestData(AppDatabase db) async {
+    Future<void> seedTestData(AppDatabase db) async {
       // Completions
       await db
           .into(db.completions)
@@ -302,7 +302,7 @@ void main() {
     test(
       'export generates valid JSON with all required data sections',
       () async {
-        await _seedTestData(db);
+        await seedTestData(db);
 
         final jsonString = await service.exportData();
         final data = json.decode(jsonString) as Map<String, dynamic>;
@@ -422,7 +422,7 @@ void main() {
     );
 
     test('import preview shows data summary', () async {
-      await _seedTestData(db);
+      await seedTestData(db);
       final jsonString = await service.exportData();
 
       final preview = service.validateAndPreview(jsonString);
@@ -446,7 +446,7 @@ void main() {
     test(
       'import correctly restores completions, goals, stages, rewards',
       () async {
-        await _seedTestData(db);
+        await seedTestData(db);
         final jsonString = await service.exportData();
 
         // Clear the database
@@ -506,7 +506,7 @@ void main() {
     );
 
     test('import transaction rolls back on partial failure', () async {
-      await _seedTestData(db);
+      await seedTestData(db);
 
       // Create invalid JSON that passes validation but fails on insert
       // (e.g., duplicate primary keys within import data)
@@ -565,7 +565,7 @@ void main() {
     test(
       'full round-trip: export, clear DB, import, verify all data',
       () async {
-        await _seedTestData(db);
+        await seedTestData(db);
 
         // Export
         final exported = await service.exportData();

@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 
 /// Screen for setting up a 4-digit parent PIN with confirmation.
@@ -56,7 +57,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Set Parent PIN')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Set Parent PIN')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

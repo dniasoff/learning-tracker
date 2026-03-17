@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 
 /// Screen for changing the tutor PIN.
@@ -88,7 +89,7 @@ class _TutorPinChangeScreenState extends ConsumerState<TutorPinChangeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Change Tutor PIN')),
+      appBar: AppBar(title: const AppBarTitle(text: 'Change Tutor PIN')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
