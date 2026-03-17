@@ -55,7 +55,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   HierarchySelection _selectionForItem(ContentItem item) {
     final depth = _navigationStack.length;
     return HierarchySelection(
-      level1: depth >= 0 ? item.level1 : null,
+      level1: item.level1,
       level2: depth >= 1 ? item.level2 : null,
       level3: depth >= 2 ? item.level3 : null,
       level4: depth >= 3 ? item.level4 : null,
@@ -348,9 +348,16 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   onChanged: (checked) {
                     setState(() {
                       if (checked ?? false) {
-                        _selectedStageIds.add(stage.stageOrder);
+                        // Auto-select all lower stages (e.g., selecting stage 3
+                        // also selects stages 1 and 2).
+                        for (var i = 1; i <= stage.stageOrder; i++) {
+                          _selectedStageIds.add(i);
+                        }
                       } else {
-                        _selectedStageIds.remove(stage.stageOrder);
+                        // Deselecting a stage also deselects all higher stages.
+                        _selectedStageIds.removeWhere(
+                          (id) => id >= stage.stageOrder,
+                        );
                       }
                     });
                   },

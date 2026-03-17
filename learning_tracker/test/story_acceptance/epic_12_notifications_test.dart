@@ -6,9 +6,11 @@ import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/reward_milestone_notification_service.dart';
@@ -21,7 +23,13 @@ import '../helpers/test_database.dart';
 
 class MockNotificationService extends Mock implements NotificationService {}
 
+class MockAppRouter extends Mock implements AppRouter {}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(const GamificationRoute());
+  });
+
   // ── Story 12.1: Local notifications ───────────────────────────
 
   group('Story 12.1 -- Local notifications', tags: ['story_12_1'], () {
@@ -444,10 +452,37 @@ void main() {
       },
     );
 
-    test('notification taps open app to rewards screen', () {
-      // rewardMilestonePayload routes to GamificationRoute
-      // in NotificationInitializer._handleNotificationTap
+    test('notification taps open app to rewards screen', () async {
       expect(rewardMilestonePayload, 'reward_earned');
+
+      // Capture the onNotificationTap callback from initialize()
+      void Function(String? payload)? capturedCallback;
+      final mockRouter = MockAppRouter();
+      final tapMockService = MockNotificationService();
+
+      when(
+        () => tapMockService.initialize(
+          onNotificationTap: any(named: 'onNotificationTap'),
+        ),
+      ).thenAnswer((invocation) async {
+        capturedCallback = invocation.namedArguments[#onNotificationTap]
+            as void Function(String? payload)?;
+        return true;
+      });
+      when(() => mockRouter.navigate(any())).thenAnswer((_) async => null);
+
+      final initializer = NotificationInitializer(
+        service: tapMockService,
+        router: mockRouter,
+      );
+      await initializer.initialize();
+
+      // Simulate tapping a reward milestone notification
+      capturedCallback!(rewardMilestonePayload);
+
+      final captured =
+          verify(() => mockRouter.navigate(captureAny())).captured;
+      expect(captured.single, isA<GamificationRoute>());
     });
   });
 

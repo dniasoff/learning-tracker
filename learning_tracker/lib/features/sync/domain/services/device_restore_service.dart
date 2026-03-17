@@ -43,6 +43,8 @@ class DeviceRestoreService {
   RestoreStatus _currentStatus = const RestoreStatus.idle();
   RestoreStatus get currentStatus => _currentStatus;
 
+  bool _restoreCompleted = false;
+
   /// Check if this is a new device (empty local database).
   Future<bool> isNewDevice() async {
     final completions = await _database.completionDao.getAllCompletions();
@@ -54,19 +56,27 @@ class DeviceRestoreService {
 
   /// Run the full restore process. Returns true if restore completed
   /// successfully, false if it failed or was not needed.
-  Future<bool> restore() async {
+  ///
+  /// When [bypassNewDeviceCheck] is true, skips the [isNewDevice] check.
+  /// This is used by [retry] to avoid false negatives when a prior attempt
+  /// partially wrote data to the database before failing.
+  Future<bool> restore({bool bypassNewDeviceCheck = false}) async {
     const totalSteps = 3; // 1: pull data, 2: fetch curricula, 3: import content
+
+    if (_restoreCompleted) return true;
 
     _updateStatus(const RestoreStatus.checking());
 
     try {
-      final needsRestore = await isNewDevice();
-      if (!needsRestore) {
-        _logger.info(
-          'DeviceRestoreService: not a new device, skipping restore',
-        );
-        _updateStatus(const RestoreStatus.idle());
-        return false;
+      if (!bypassNewDeviceCheck) {
+        final needsRestore = await isNewDevice();
+        if (!needsRestore) {
+          _logger.info(
+            'DeviceRestoreService: not a new device, skipping restore',
+          );
+          _updateStatus(const RestoreStatus.idle());
+          return false;
+        }
       }
 
       _logger.info(
@@ -126,6 +136,7 @@ class DeviceRestoreService {
       }
 
       _logger.info('DeviceRestoreService: restore completed successfully');
+      _restoreCompleted = true;
       _updateStatus(
         const RestoreStatus.complete(collectionsRestored: totalSteps),
       );
@@ -137,8 +148,9 @@ class DeviceRestoreService {
     }
   }
 
-  /// Retry a failed restore.
-  Future<bool> retry() => restore();
+  /// Retry a failed restore, bypassing the [isNewDevice] check to avoid
+  /// false negatives from partially-written data.
+  Future<bool> retry() => restore(bypassNewDeviceCheck: true);
 
   void _updateStatus(RestoreStatus status) {
     _currentStatus = status;

@@ -810,14 +810,27 @@ void main() {
       // or Firestore. After a restore, the PIN tables should be empty
       // because PINs are never synced. This test verifies the restore
       // service does NOT attempt to restore PINs.
+      //
+      // FirestoreDataSource has no fetchPins/pushPins methods at all,
+      // so there is no mock to verify against. Instead, we confirm that
+      // after a full restore the only Firestore methods called are the
+      // known data-fetching ones — none of which involve PINs.
       stubEmptyFetches();
 
       await restoreService.restore();
 
-      // Verify no Firestore call for PINs (no such method exists)
-      // PINs are device-local via FlutterSecureStorage — the restore
-      // service correctly ignores them by design.
-      verifyNever(() => mockFirestore.pushCurriculumImportMetadata(any()));
+      // Verify only the expected fetch methods were called — no PIN
+      // methods exist on FirestoreDataSource, confirming PINs are
+      // excluded from the restore by design (FR99).
+      verify(() => mockFirestore.fetchCompletions()).called(1);
+      verify(() => mockFirestore.fetchBookmarks()).called(1);
+      verify(() => mockFirestore.fetchSettings()).called(1);
+      verify(() => mockFirestore.fetchGoals()).called(1);
+      verify(() => mockFirestore.fetchRewards()).called(1);
+      verify(() => mockFirestore.fetchStreak()).called(1);
+      verify(() => mockFirestore.fetchProfile()).called(1);
+      verify(() => mockFirestore.fetchActiveCurricula()).called(1);
+      verifyNoMoreInteractions(mockFirestore);
     });
 
     test(

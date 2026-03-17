@@ -50,7 +50,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       // 3. Calculate points for this stage
       final points = await _calculatePoints(
         curriculumId: request.curriculumId,
-        stageId: request.stageId,
+        stageOrder: request.stageId,
       );
 
       // 4. Create completion record
@@ -124,7 +124,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
     final points = await _calculatePoints(
       curriculumId: request.curriculumId,
-      stageId: request.stageId,
+      stageOrder: request.stageId,
     );
 
     final completion = await _createCompletion(
@@ -213,17 +213,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// when no configuration exists.
   Future<int> _calculatePoints({
     required String curriculumId,
-    required int stageId,
+    required int stageOrder,
   }) async {
     // Check point_configs table for configured value
     final config = await _database.pointConfigDao.getConfig(
       curriculumId,
-      stageId,
+      stageOrder,
     );
     if (config != null) return config.points;
 
     // Default values when no config is present
-    return switch (stageId) {
+    return switch (stageOrder) {
       1 => 10, // Learn
       2 => 5, // Chazara 1
       3 => 3, // Chazara 2

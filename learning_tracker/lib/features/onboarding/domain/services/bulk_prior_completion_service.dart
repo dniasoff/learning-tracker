@@ -29,6 +29,10 @@ class BulkPriorCompletionService {
   final CompletionRepository _completionRepository;
   final BookmarkRepository _bookmarkRepository;
 
+  /// Cached content items from the last [resolveSelections] call.
+  List<ContentItem>? _cachedAllItems;
+  CurriculumId? _cachedCurriculumId;
+
   BulkPriorCompletionService({
     required ContentRepository contentRepository,
     required CompletionRepository completionRepository,
@@ -48,6 +52,8 @@ class BulkPriorCompletionService {
     final allItems = await _contentRepository.getContentForCurriculum(
       curriculumId,
     );
+    _cachedAllItems = allItems;
+    _cachedCurriculumId = curriculumId;
     final leafItems = allItems.where((item) => item.isLeaf).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
@@ -106,10 +112,18 @@ class BulkPriorCompletionService {
       totalCompletions += completions.length;
     }
 
+    // Query DB for all existing completions for this curriculum
+    final existingCompletions = await _completionRepository
+        .getCompletionsByCurriculum(curriculumId.storageKey);
+    final allCompletedRefs = {
+      ...sefariaRefs,
+      ...existingCompletions.map((c) => c.sefariaRef),
+    };
+
     // Set bookmark to first uncompleted item
     final bookmarkRef = await _findFirstUncompletedItem(
       curriculumId: curriculumId,
-      completedRefs: sefariaRefs.toSet(),
+      completedRefs: allCompletedRefs,
     );
 
     if (bookmarkRef != null) {
@@ -132,9 +146,9 @@ class BulkPriorCompletionService {
     required CurriculumId curriculumId,
     required Set<String> completedRefs,
   }) async {
-    final allItems = await _contentRepository.getContentForCurriculum(
-      curriculumId,
-    );
+    final allItems = (_cachedCurriculumId == curriculumId && _cachedAllItems != null)
+        ? _cachedAllItems!
+        : await _contentRepository.getContentForCurriculum(curriculumId);
     final leafItems = allItems.where((item) => item.isLeaf).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 

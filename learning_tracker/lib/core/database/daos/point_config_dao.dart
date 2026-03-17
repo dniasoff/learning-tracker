@@ -53,20 +53,44 @@ class PointConfigDao extends DatabaseAccessor<AppDatabase>
 
   /// Seed default point configs for a curriculum.
   ///
-  /// Default values: Learn=10, Chazara1=5, Chazara2=3.
+  /// Queries stage definitions for the curriculum to determine how many stages
+  /// exist, then assigns descending point values: first stage gets 10 points,
+  /// subsequent stages get decreasing values (minimum 1).
   Future<void> seedDefaults(String curriculumId) async {
-    const defaults = [
-      (stageOrder: 1, points: 10), // Learn
-      (stageOrder: 2, points: 5), // Chazara 1
-      (stageOrder: 3, points: 3), // Chazara 2
-    ];
+    final stages =
+        await db.stageDao.getStageDefinitionsByCurriculum(curriculumId);
 
-    for (final d in defaults) {
+    // Fallback to 3 hardcoded stages if no stage definitions exist yet
+    if (stages.isEmpty) {
+      const fallbackDefaults = [
+        (stageOrder: 1, points: 10),
+        (stageOrder: 2, points: 5),
+        (stageOrder: 3, points: 3),
+      ];
+      for (final d in fallbackDefaults) {
+        await insertConfig(
+          PointConfigsCompanion.insert(
+            curriculumId: curriculumId,
+            stageOrder: d.stageOrder,
+            points: d.points,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Assign descending point values based on stage order
+    const defaultPoints = [10, 5, 3, 2, 1];
+    for (final stage in stages) {
+      final pointIndex = stage.stageOrder - 1;
+      final points = pointIndex < defaultPoints.length
+          ? defaultPoints[pointIndex]
+          : 1;
       await insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: curriculumId,
-          stageOrder: d.stageOrder,
-          points: d.points,
+          stageOrder: stage.stageOrder,
+          points: points,
         ),
       );
     }

@@ -2768,6 +2768,7 @@ class $PointConfigsTable extends PointConfigs
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (points > 0)',
   );
   @override
   List<GeneratedColumn> get $columns => [id, curriculumId, stageOrder, points];

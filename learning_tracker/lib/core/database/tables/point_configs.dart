@@ -8,7 +8,8 @@ class PointConfigs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get curriculumId => text()();
   IntColumn get stageOrder => integer()();
-  IntColumn get points => integer()();
+  IntColumn get points =>
+      integer().customConstraint('NOT NULL CHECK (points > 0)')();
 
   @override
   List<Set<Column>> get uniqueKeys => [
