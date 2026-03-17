@@ -32,6 +32,28 @@ abstract class AuthRepository {
   /// Deletes the current user's account.
   Future<void> deleteAccount();
 
+  /// Changes the password for the current email/password user.
+  ///
+  /// Requires recent authentication; call [reauthenticateWithEmail] first.
+  Future<void> changePassword(String newPassword);
+
+  /// Re-authenticates the current user with email and password.
+  ///
+  /// Required before destructive operations (delete, password change).
+  Future<void> reauthenticateWithEmail(String email, String password);
+
+  /// Re-authenticates the current user with Google credentials.
+  Future<void> reauthenticateWithGoogle();
+
+  /// Links a Google account to the current email/password user.
+  Future<void> linkGoogleProvider();
+
+  /// Links an email/password credential to the current Google user.
+  Future<void> linkEmailProvider(String email, String password);
+
+  /// Returns the list of provider IDs linked to the current user.
+  List<String> getLinkedProviders();
+
   /// Stream of auth state changes. Emits `null` when signed out.
   Stream<User?> authStateChanges();
 }

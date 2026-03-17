@@ -86,6 +86,57 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> changePassword(String newPassword) async {
+    await _firebaseAuth.currentUser?.updatePassword(newPassword);
+  }
+
+  @override
+  Future<void> reauthenticateWithEmail(String email, String password) async {
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+    await _firebaseAuth.currentUser?.reauthenticateWithCredential(credential);
+  }
+
+  @override
+  Future<void> reauthenticateWithGoogle() async {
+    final googleUser = await _googleSignIn.authenticate();
+    final googleAuth = googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+    );
+    await _firebaseAuth.currentUser?.reauthenticateWithCredential(credential);
+  }
+
+  @override
+  Future<void> linkGoogleProvider() async {
+    final googleUser = await _googleSignIn.authenticate();
+    final googleAuth = googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+    );
+    await _firebaseAuth.currentUser?.linkWithCredential(credential);
+  }
+
+  @override
+  Future<void> linkEmailProvider(String email, String password) async {
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+    await _firebaseAuth.currentUser?.linkWithCredential(credential);
+  }
+
+  @override
+  List<String> getLinkedProviders() {
+    return _firebaseAuth.currentUser?.providerData
+            .map((info) => info.providerId)
+            .toList() ??
+        [];
+  }
+
+  @override
   Stream<User?> authStateChanges() {
     return _firebaseAuth.authStateChanges();
   }
