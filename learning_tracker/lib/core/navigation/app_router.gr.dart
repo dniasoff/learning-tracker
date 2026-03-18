@@ -496,6 +496,59 @@ class GamificationRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [LearningJourneyScreen]
+class LearningJourneyRoute extends PageRouteInfo<LearningJourneyRouteArgs> {
+  LearningJourneyRoute({
+    Key? key,
+    int? profileId,
+    List<PageRouteInfo>? children,
+  }) : super(
+         LearningJourneyRoute.name,
+         args: LearningJourneyRouteArgs(key: key, profileId: profileId),
+         rawQueryParams: {'profileId': profileId},
+         initialChildren: children,
+       );
+
+  static const String name = 'LearningJourneyRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final queryParams = data.queryParams;
+      final args = data.argsAs<LearningJourneyRouteArgs>(
+        orElse: () => LearningJourneyRouteArgs(
+          profileId: queryParams.optInt('profileId'),
+        ),
+      );
+      return LearningJourneyScreen(key: args.key, profileId: args.profileId);
+    },
+  );
+}
+
+class LearningJourneyRouteArgs {
+  const LearningJourneyRouteArgs({this.key, this.profileId});
+
+  final Key? key;
+
+  final int? profileId;
+
+  @override
+  String toString() {
+    return 'LearningJourneyRouteArgs{key: $key, profileId: $profileId}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! LearningJourneyRouteArgs) return false;
+    return key == other.key && profileId == other.profileId;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ profileId.hashCode;
+}
+
+/// generated route for
 /// [LearningOrderScreen]
 class LearningOrderRoute extends PageRouteInfo<LearningOrderRouteArgs> {
   LearningOrderRoute({

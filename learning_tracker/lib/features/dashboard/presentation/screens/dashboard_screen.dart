@@ -180,6 +180,17 @@ class _DashboardBody extends ConsumerWidget {
               },
             ),
           ),
+        // My Learning Journey tile
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.auto_stories, color: Colors.deepPurple),
+            title: const Text('My Learning Journey'),
+            subtitle: const Text('See your lifetime achievements'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.router.push(LearningJourneyRoute()),
+          ),
+        ),
+        const SizedBox(height: 8),
         ...stats.curriculumSummaries.map(
           (summary) => Padding(
             padding: const EdgeInsets.only(bottom: 8),

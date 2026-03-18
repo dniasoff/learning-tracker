@@ -110,6 +110,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.auto_stories),
+            title: const Text('My Learning Journey'),
+            subtitle: const Text('View your lifetime learning achievements'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.pushRoute(LearningJourneyRoute()),
+          ),
+          ListTile(
             leading: const Icon(Icons.notifications_outlined),
             title: const Text('Notifications'),
             trailing: const Icon(Icons.chevron_right),
