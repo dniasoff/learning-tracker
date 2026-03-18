@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/bookma
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -62,6 +63,17 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     );
   },
 );
+
+/// Provider for LearningProcessWizardService used during onboarding.
+final learningProcessWizardServiceProvider =
+    Provider<LearningProcessWizardService>((ref) {
+      final db = ref.watch(appDatabaseProvider);
+      return LearningProcessWizardService(
+        stageDao: db.stageDao,
+        learningProgramDao: db.learningProgramDao,
+        profileProgramDao: db.profileProgramDao,
+      );
+    });
 
 /// Provides hierarchy configs for all curricula (for the selection screen).
 final allCurriculaConfigsProvider =
