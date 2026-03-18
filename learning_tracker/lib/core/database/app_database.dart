@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/curriculum_scope_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/database/daos/learning_ledger_dao.dart';
 import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
@@ -26,6 +27,7 @@ import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
+import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 import 'package:learning_tracker/core/database/tables/content_download_statuses.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
@@ -53,6 +55,7 @@ part 'app_database.g.dart';
     CurriculumTracks,
     StageDefinitions,
     Completions,
+    LearningLedger,
     Bookmarks,
     Goals,
     LearningOrder,
@@ -74,6 +77,7 @@ part 'app_database.g.dart';
     ActiveCurriculumDao,
     CurriculumScopeDao,
     CompletionDao,
+    LearningLedgerDao,
     GoalDao,
     PointConfigDao,
     StageDao,
@@ -98,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration {
@@ -281,6 +285,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 14) {
           // Migration from schema v13 to v14: Add curriculum_scopes table
           await m.createTable($CurriculumScopesTable(attachedDatabase));
+        }
+        if (from < 15) {
+          // Migration from schema v14 to v15: Add learning_ledger table
+          await m.createTable($LearningLedgerTable(attachedDatabase));
         }
       },
     );
