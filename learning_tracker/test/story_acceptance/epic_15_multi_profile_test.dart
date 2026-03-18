@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/content_browsing/domain/services/conte
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
@@ -2285,6 +2286,235 @@ void main() {
         );
         expect(StageValidator.validate(valid), isNull);
       });
+    });
+  });
+
+  group('Story 15.6 -- Learning Process Wizard', tags: ['story_15_6'], () {
+    late AppDatabase db;
+    late LearningProcessWizardService wizardService;
+
+    setUp(() {
+      db = createTestDatabase();
+      wizardService = LearningProcessWizardService(
+        stageDao: db.stageDao,
+        learningProgramDao: db.learningProgramDao,
+        profileProgramDao: db.profileProgramDao,
+      );
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    group('AC: Presets filtered by curriculum type', () {
+      test('returns only programs matching the curriculum type', () async {
+        // Seed programs (they are seeded during DB creation).
+        final bavliPresets = await wizardService.getPresetsForCurriculum(
+          CurriculumId.bavli,
+        );
+        // Bavli should have: Oraysa, Dirshu Kinyan Torah, Dirshu Amud HaYomi, Daf Yomi
+        expect(bavliPresets.length, greaterThanOrEqualTo(3));
+        for (final p in bavliPresets) {
+          expect(p.curriculumType, 'bavli');
+        }
+
+        final yerushalmiPresets = await wizardService.getPresetsForCurriculum(
+          CurriculumId.yerushalmi,
+        );
+        expect(yerushalmiPresets.length, greaterThanOrEqualTo(1));
+        for (final p in yerushalmiPresets) {
+          expect(p.curriculumType, 'yerushalmi');
+        }
+
+        // Chumash has no presets
+        final chumashPresets = await wizardService.getPresetsForCurriculum(
+          CurriculumId.chumash,
+        );
+        expect(chumashPresets, isEmpty);
+      });
+    });
+
+    group('AC: Selecting preset auto-creates correct stages', () {
+      test('creates stages from Oraysa preset config', () async {
+        // Find the Oraysa program.
+        final bavliPresets = await wizardService.getPresetsForCurriculum(
+          CurriculumId.bavli,
+        );
+        final oraysa = bavliPresets.firstWhere((p) => p.name == 'oraysa');
+
+        await wizardService.applyWizardResult(WizardResult(
+          curriculumId: CurriculumId.bavli,
+          choice: WizardChoice.preset,
+          programId: oraysa.id,
+        ));
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'bavli',
+        );
+        // Oraysa has 4 stages: Learn, Next-Day Review, Weekly Review, Rolling Back-20
+        expect(stages.length, 4);
+        expect(stages[0].stageName, 'Learn');
+        expect(stages[1].stageName, 'Next-Day Review');
+        expect(stages[1].delayDays, 1);
+        expect(stages[2].stageName, 'Weekly Review');
+        expect(stages[2].scheduleType, 'weekly');
+        expect(stages[3].stageName, 'Rolling Back-20');
+        expect(stages[3].scheduleType, 'rolling');
+        expect(stages[3].rollingWindowSize, 20);
+      });
+
+      test('stores preset ID in profile_programs', () async {
+        final bavliPresets = await wizardService.getPresetsForCurriculum(
+          CurriculumId.bavli,
+        );
+        final oraysa = bavliPresets.firstWhere((p) => p.name == 'oraysa');
+
+        await wizardService.applyWizardResult(WizardResult(
+          curriculumId: CurriculumId.bavli,
+          choice: WizardChoice.preset,
+          programId: oraysa.id,
+        ));
+
+        final enrollment =
+            await db.profileProgramDao.getProgramForProfileAndCurriculum(
+          0,
+          'bavli',
+        );
+        expect(enrollment, isNotNull);
+        expect(enrollment!.programId, oraysa.id);
+      });
+    });
+
+    group('AC: Custom builder creates stages with correct schedule types', () {
+      test('creates Learn + custom delay-based rounds', () async {
+        await wizardService.applyWizardResult(WizardResult(
+          curriculumId: CurriculumId.mishnayos,
+          choice: WizardChoice.custom,
+          customRounds: [
+            const CustomRound(
+              label: 'Chazara 1',
+              scheduleType: ScheduleType.delay,
+              delayDays: 1,
+            ),
+            const CustomRound(
+              label: 'Chazara 2',
+              scheduleType: ScheduleType.delay,
+              delayDays: 7,
+            ),
+          ],
+        ));
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'mishnayos',
+        );
+        expect(stages.length, 3); // Learn + 2 custom
+        expect(stages[0].stageName, 'Learn');
+        expect(stages[0].delayDays, 0);
+        expect(stages[1].stageName, 'Chazara 1');
+        expect(stages[1].delayDays, 1);
+        expect(stages[1].scheduleType, 'delay');
+        expect(stages[2].stageName, 'Chazara 2');
+        expect(stages[2].delayDays, 7);
+      });
+
+      test('creates weekly schedule rounds with days of week', () async {
+        await wizardService.applyWizardResult(WizardResult(
+          curriculumId: CurriculumId.mishnayos,
+          choice: WizardChoice.custom,
+          customRounds: [
+            const CustomRound(
+              label: 'Chazara 1',
+              scheduleType: ScheduleType.weekly,
+              daysOfWeek: [5, 6], // Friday, Shabbos
+            ),
+          ],
+        ));
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'mishnayos',
+        );
+        expect(stages.length, 2); // Learn + 1 weekly
+        expect(stages[1].stageName, 'Chazara 1');
+        expect(stages[1].scheduleType, 'weekly');
+        final days = jsonDecode(stages[1].daysOfWeek!) as List;
+        expect(days, containsAll([5, 6]));
+      });
+    });
+
+    group('AC: "No review" creates Learn stage only', () {
+      test('creates single Learn stage', () async {
+        await wizardService.applyWizardResult(WizardResult(
+          curriculumId: CurriculumId.bavli,
+          choice: WizardChoice.noReview,
+        ));
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'bavli',
+        );
+        expect(stages.length, 1);
+        expect(stages[0].stageName, 'Learn');
+        expect(stages[0].stageOrder, 1);
+        expect(stages[0].delayDays, 0);
+      });
+    });
+
+    group('AC: Wizard replaces existing stages', () {
+      test('clears previous stages before applying new ones', () async {
+        // First apply a preset.
+        final bavliPresets = await wizardService.getPresetsForCurriculum(
+          CurriculumId.bavli,
+        );
+        final dafYomi = bavliPresets.firstWhere((p) => p.name == 'daf_yomi');
+        await wizardService.applyWizardResult(WizardResult(
+          curriculumId: CurriculumId.bavli,
+          choice: WizardChoice.preset,
+          programId: dafYomi.id,
+        ));
+        var stages = await db.stageDao.getStageDefinitionsByCurriculum('bavli');
+        expect(stages.length, 1); // Daf Yomi = Learn only
+
+        // Now apply a different preset.
+        final oraysa = bavliPresets.firstWhere((p) => p.name == 'oraysa');
+        await wizardService.applyWizardResult(WizardResult(
+          curriculumId: CurriculumId.bavli,
+          choice: WizardChoice.preset,
+          programId: oraysa.id,
+        ));
+        stages = await db.stageDao.getStageDefinitionsByCurriculum('bavli');
+        expect(stages.length, 4); // Oraysa = 4 stages, no leftover from Daf Yomi
+      });
+    });
+
+    group('AC: Wizard shown per curriculum during onboarding', () {
+      test(
+        'wizard service can be invoked independently per curriculum',
+        () async {
+          // Apply different choices for different curricula.
+          await wizardService.applyWizardResult(WizardResult(
+            curriculumId: CurriculumId.bavli,
+            choice: WizardChoice.noReview,
+          ));
+          await wizardService.applyWizardResult(WizardResult(
+            curriculumId: CurriculumId.mishnayos,
+            choice: WizardChoice.custom,
+            customRounds: [
+              const CustomRound(
+                label: 'Chazara 1',
+                scheduleType: ScheduleType.delay,
+                delayDays: 3,
+              ),
+            ],
+          ));
+
+          final bavliStages =
+              await db.stageDao.getStageDefinitionsByCurriculum('bavli');
+          final mishnayosStages =
+              await db.stageDao.getStageDefinitionsByCurriculum('mishnayos');
+
+          expect(bavliStages.length, 1); // No review = Learn only
+          expect(mishnayosStages.length, 2); // Learn + 1 custom
+        },
+      );
     });
   });
 }

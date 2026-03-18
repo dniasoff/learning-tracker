@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-epic-15 ci analyze format
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-epic-15 ci analyze format
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -87,6 +87,9 @@ test-epic-14: ## Run all Epic 14 (Settings) acceptance tests
 
 test-story-15.5: ## Run Story 15.5 (Expanded Stage Scheduling Model) acceptance tests
 	flutter test test/story_acceptance/epic_15_multi_profile_test.dart --name "Story 15.5"
+
+test-story-15.6: ## Run Story 15.6 (Learning Process Wizard) acceptance tests
+	flutter test test/story_acceptance/epic_15_multi_profile_test.dart --name "Story 15.6"
 
 test-epic-15: ## Run all Epic 15 (Multi-Profile) acceptance tests
 	flutter test test/story_acceptance/epic_15_multi_profile_test.dart
