@@ -18,7 +18,7 @@ import 'lib/sefaria/yerushalmi_fetcher.dart';
 ///
 /// Usage: dart run tool/seed_content.dart
 ///
-/// Generates JSON files in assets/content/ for each curriculum.
+/// Generates JSON files in build/seeded_content/ for each curriculum.
 Future<void> main() async {
   print('🌱 Seeding content from Sefaria API...\n');
 
@@ -32,7 +32,7 @@ Future<void> main() async {
   );
 
   // Create output directory
-  final outputDir = Directory('assets/content');
+  final outputDir = Directory('build/seeded_content');
   if (!outputDir.existsSync()) {
     outputDir.createSync(recursive: true);
   }
@@ -110,7 +110,7 @@ Future<void> main() async {
 
   final totalSizeMB = (totalSize / (1024 * 1024)).toStringAsFixed(2);
   print('\n✓ Total bundled content: $totalSizeMB MB');
-  print('📦 Files written to assets/content/\n');
+  print('📦 Files written to build/seeded_content/\n');
 }
 
 /// Validates that the JSON structure matches the expected schema.

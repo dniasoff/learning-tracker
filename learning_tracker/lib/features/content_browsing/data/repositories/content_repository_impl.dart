@@ -7,10 +7,12 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 
-/// In-memory implementation of [ContentRepository].
+/// Asset-backed implementation of [ContentRepository].
 ///
-/// Loads JSON content from assets on first access and caches in memory.
-/// All operations are synchronous after initial load.
+/// Loads hierarchy content from bundled JSON assets on first access
+/// and caches in memory. All operations are synchronous after initial load.
+///
+/// Assets are at: assets/content/hierarchy/{curriculum_id}.json
 class ContentRepositoryImpl implements ContentRepository {
   /// Cache of loaded content, keyed by curriculum storage key.
   final _contentCache = <String, List<ContentItem>>{};
@@ -24,53 +26,18 @@ class ContentRepositoryImpl implements ContentRepository {
   ) async {
     final key = curriculumId.storageKey;
 
-    // Return cached if available
     if (_contentCache.containsKey(key)) {
       return _contentCache[key]!;
     }
 
-    // Load and parse JSON
     try {
       final jsonString = await rootBundle.loadString(
-        'assets/content/${_getFilename(curriculumId)}',
+        'assets/content/hierarchy/$key.json',
       );
-
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
-
-      // Parse hierarchy config
-      final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
-      final config = CurriculumHierarchyConfig(
-        curriculumId: configJson['curriculumId'] as String,
-        levelLabels: (configJson['levelLabels'] as List)
-            .map((e) => e as String)
-            .toList(),
-        totalItems: configJson['totalItems'] as int,
-      );
-      _configCache[key] = config;
-
-      // Parse items
-      final itemsJson = json['items'] as List;
-      final items = itemsJson.map((itemJson) {
-        final item = itemJson as Map<String, dynamic>;
-        return ContentItem(
-          curriculumId: item['curriculumId'] as String,
-          level1: item['level1'] as String,
-          level2: item['level2'] as String?,
-          level3: item['level3'] as String?,
-          level4: item['level4'] as String?,
-          displayNameHe: item['displayNameHe'] as String,
-          displayNameEn: item['displayNameEn'] as String,
-          sefariaRef: item['sefariaRef'] as String,
-          sortOrder: item['sortOrder'] as int,
-          isLeaf: item['isLeaf'] as bool,
-        );
-      }).toList();
-
-      _contentCache[key] = items;
-      return items;
+      _parseAndCache(key, json);
+      return _contentCache[key]!;
     } catch (e) {
-      // Intentional catch-all: wraps any load failure (network, parse, IO)
-      // into a typed ContentLoadException for callers to handle uniformly.
       throw ContentLoadException(
         'Failed to load content for ${curriculumId.displayNameEn}',
         cause: e,
@@ -84,12 +51,10 @@ class ContentRepositoryImpl implements ContentRepository {
   ) async {
     final key = curriculumId.storageKey;
 
-    // Return cached if available
     if (_configCache.containsKey(key)) {
       return _configCache[key]!;
     }
 
-    // Load content (which also loads config)
     await getContentForCurriculum(curriculumId);
     return _configCache[key]!;
   }
@@ -143,15 +108,9 @@ class ContentRepositoryImpl implements ContentRepository {
     required CurriculumId curriculumId,
     required String query,
   }) async {
-    if (query.isEmpty) {
-      return [];
-    }
+    if (query.isEmpty) return [];
 
     final items = await getContentForCurriculum(curriculumId);
-
-    // Normalize the query: lowercase for Latin, strip nikud for Hebrew.
-    // Hebrew toLowerCase() is a no-op, so we strip diacritics (nikud) from
-    // both query and item names to enable nikud-insensitive Hebrew matching.
     final normalizedQuery = HebrewUtils.stripNikud(query.toLowerCase().trim());
 
     return items.where((item) {
@@ -168,13 +127,34 @@ class ContentRepositoryImpl implements ContentRepository {
     required String sefariaRef,
   }) async {
     final items = await getContentForCurriculum(curriculumId);
-
     final matches = items.where((item) => item.sefariaRef == sefariaRef);
     return matches.isNotEmpty ? matches.first : null;
   }
 
-  /// Maps curriculum ID to JSON filename.
-  String _getFilename(CurriculumId curriculumId) {
-    return '${curriculumId.storageKey}.json';
+  void _parseAndCache(String key, Map<String, dynamic> json) {
+    final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
+    _configCache[key] = CurriculumHierarchyConfig(
+      curriculumId: configJson['curriculumId'] as String,
+      levelLabels:
+          (configJson['levelLabels'] as List).map((e) => e as String).toList(),
+      totalItems: configJson['totalItems'] as int,
+    );
+
+    final itemsJson = json['items'] as List;
+    _contentCache[key] = itemsJson.map((itemJson) {
+      final item = itemJson as Map<String, dynamic>;
+      return ContentItem(
+        curriculumId: item['curriculumId'] as String,
+        level1: item['level1'] as String,
+        level2: item['level2'] as String?,
+        level3: item['level3'] as String?,
+        level4: item['level4'] as String?,
+        displayNameHe: item['displayNameHe'] as String,
+        displayNameEn: item['displayNameEn'] as String,
+        sefariaRef: item['sefariaRef'] as String,
+        sortOrder: item['sortOrder'] as int,
+        isLeaf: item['isLeaf'] as bool,
+      );
+    }).toList();
   }
 }

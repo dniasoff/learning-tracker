@@ -12,6 +12,7 @@ part of 'content_providers.dart';
 ///
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
+/// Loads hierarchy content from bundled assets.
 
 @ProviderFor(contentRepository)
 final contentRepositoryProvider = ContentRepositoryProvider._();
@@ -20,6 +21,7 @@ final contentRepositoryProvider = ContentRepositoryProvider._();
 ///
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
+/// Loads hierarchy content from bundled assets.
 
 final class ContentRepositoryProvider
     extends
@@ -33,6 +35,7 @@ final class ContentRepositoryProvider
   ///
   /// keepAlive: true ensures the in-memory content cache persists for the
   /// lifetime of the app — rebuilding this provider would discard cached data.
+  /// Loads hierarchy content from bundled assets.
   ContentRepositoryProvider._()
     : super(
         from: null,
@@ -70,17 +73,11 @@ final class ContentRepositoryProvider
 String _$contentRepositoryHash() => r'15a1d1414ef5a187fe197e36f9f9779b55f85fb5';
 
 /// Provides all content items for a specific curriculum (family provider).
-///
-/// Lazily loads the content from JSON assets on first access for each
-/// curriculum, then caches in memory.
 
 @ProviderFor(curriculumContent)
 final curriculumContentProvider = CurriculumContentFamily._();
 
 /// Provides all content items for a specific curriculum (family provider).
-///
-/// Lazily loads the content from JSON assets on first access for each
-/// curriculum, then caches in memory.
 
 final class CurriculumContentProvider
     extends
@@ -93,9 +90,6 @@ final class CurriculumContentProvider
         $FutureModifier<List<ContentItem>>,
         $FutureProvider<List<ContentItem>> {
   /// Provides all content items for a specific curriculum (family provider).
-  ///
-  /// Lazily loads the content from JSON assets on first access for each
-  /// curriculum, then caches in memory.
   CurriculumContentProvider._({
     required CurriculumContentFamily super.from,
     required CurriculumId super.argument,
@@ -143,9 +137,6 @@ final class CurriculumContentProvider
 String _$curriculumContentHash() => r'b9700b7cebfed94be143af59090f0666d28121b7';
 
 /// Provides all content items for a specific curriculum (family provider).
-///
-/// Lazily loads the content from JSON assets on first access for each
-/// curriculum, then caches in memory.
 
 final class CurriculumContentFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<ContentItem>>, CurriculumId> {
@@ -159,9 +150,6 @@ final class CurriculumContentFamily extends $Family
       );
 
   /// Provides all content items for a specific curriculum (family provider).
-  ///
-  /// Lazily loads the content from JSON assets on first access for each
-  /// curriculum, then caches in memory.
 
   CurriculumContentProvider call(CurriculumId curriculumId) =>
       CurriculumContentProvider._(argument: curriculumId, from: this);

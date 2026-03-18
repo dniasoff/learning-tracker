@@ -1,0 +1,550 @@
+{
+  "hierarchyConfig": {
+    "curriculumId": "mussar",
+    "levelLabels": [
+      "Sefer",
+      "Section"
+    ],
+    "maxLevels": 2,
+    "totalItems": 51
+  },
+  "items": [
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "displayNameHe": "מסילת ישרים",
+      "displayNameEn": "Mesillat Yesharim",
+      "sefariaRef": "Mesillat Yesharim",
+      "sortOrder": 0,
+      "isLeaf": false
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "1",
+      "displayNameHe": "מסילת ישרים פרק 1",
+      "displayNameEn": "Mesillat Yesharim Chapter 1",
+      "sefariaRef": "Mesillat Yesharim 1",
+      "sortOrder": 1,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "2",
+      "displayNameHe": "מסילת ישרים פרק 2",
+      "displayNameEn": "Mesillat Yesharim Chapter 2",
+      "sefariaRef": "Mesillat Yesharim 2",
+      "sortOrder": 2,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "3",
+      "displayNameHe": "מסילת ישרים פרק 3",
+      "displayNameEn": "Mesillat Yesharim Chapter 3",
+      "sefariaRef": "Mesillat Yesharim 3",
+      "sortOrder": 3,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "4",
+      "displayNameHe": "מסילת ישרים פרק 4",
+      "displayNameEn": "Mesillat Yesharim Chapter 4",
+      "sefariaRef": "Mesillat Yesharim 4",
+      "sortOrder": 4,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "5",
+      "displayNameHe": "מסילת ישרים פרק 5",
+      "displayNameEn": "Mesillat Yesharim Chapter 5",
+      "sefariaRef": "Mesillat Yesharim 5",
+      "sortOrder": 5,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "6",
+      "displayNameHe": "מסילת ישרים פרק 6",
+      "displayNameEn": "Mesillat Yesharim Chapter 6",
+      "sefariaRef": "Mesillat Yesharim 6",
+      "sortOrder": 6,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "7",
+      "displayNameHe": "מסילת ישרים פרק 7",
+      "displayNameEn": "Mesillat Yesharim Chapter 7",
+      "sefariaRef": "Mesillat Yesharim 7",
+      "sortOrder": 7,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "8",
+      "displayNameHe": "מסילת ישרים פרק 8",
+      "displayNameEn": "Mesillat Yesharim Chapter 8",
+      "sefariaRef": "Mesillat Yesharim 8",
+      "sortOrder": 8,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "9",
+      "displayNameHe": "מסילת ישרים פרק 9",
+      "displayNameEn": "Mesillat Yesharim Chapter 9",
+      "sefariaRef": "Mesillat Yesharim 9",
+      "sortOrder": 9,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "10",
+      "displayNameHe": "מסילת ישרים פרק 10",
+      "displayNameEn": "Mesillat Yesharim Chapter 10",
+      "sefariaRef": "Mesillat Yesharim 10",
+      "sortOrder": 10,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "11",
+      "displayNameHe": "מסילת ישרים פרק 11",
+      "displayNameEn": "Mesillat Yesharim Chapter 11",
+      "sefariaRef": "Mesillat Yesharim 11",
+      "sortOrder": 11,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "12",
+      "displayNameHe": "מסילת ישרים פרק 12",
+      "displayNameEn": "Mesillat Yesharim Chapter 12",
+      "sefariaRef": "Mesillat Yesharim 12",
+      "sortOrder": 12,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "13",
+      "displayNameHe": "מסילת ישרים פרק 13",
+      "displayNameEn": "Mesillat Yesharim Chapter 13",
+      "sefariaRef": "Mesillat Yesharim 13",
+      "sortOrder": 13,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "14",
+      "displayNameHe": "מסילת ישרים פרק 14",
+      "displayNameEn": "Mesillat Yesharim Chapter 14",
+      "sefariaRef": "Mesillat Yesharim 14",
+      "sortOrder": 14,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "15",
+      "displayNameHe": "מסילת ישרים פרק 15",
+      "displayNameEn": "Mesillat Yesharim Chapter 15",
+      "sefariaRef": "Mesillat Yesharim 15",
+      "sortOrder": 15,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "16",
+      "displayNameHe": "מסילת ישרים פרק 16",
+      "displayNameEn": "Mesillat Yesharim Chapter 16",
+      "sefariaRef": "Mesillat Yesharim 16",
+      "sortOrder": 16,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "17",
+      "displayNameHe": "מסילת ישרים פרק 17",
+      "displayNameEn": "Mesillat Yesharim Chapter 17",
+      "sefariaRef": "Mesillat Yesharim 17",
+      "sortOrder": 17,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "18",
+      "displayNameHe": "מסילת ישרים פרק 18",
+      "displayNameEn": "Mesillat Yesharim Chapter 18",
+      "sefariaRef": "Mesillat Yesharim 18",
+      "sortOrder": 18,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "19",
+      "displayNameHe": "מסילת ישרים פרק 19",
+      "displayNameEn": "Mesillat Yesharim Chapter 19",
+      "sefariaRef": "Mesillat Yesharim 19",
+      "sortOrder": 19,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "20",
+      "displayNameHe": "מסילת ישרים פרק 20",
+      "displayNameEn": "Mesillat Yesharim Chapter 20",
+      "sefariaRef": "Mesillat Yesharim 20",
+      "sortOrder": 20,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "21",
+      "displayNameHe": "מסילת ישרים פרק 21",
+      "displayNameEn": "Mesillat Yesharim Chapter 21",
+      "sefariaRef": "Mesillat Yesharim 21",
+      "sortOrder": 21,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "22",
+      "displayNameHe": "מסילת ישרים פרק 22",
+      "displayNameEn": "Mesillat Yesharim Chapter 22",
+      "sefariaRef": "Mesillat Yesharim 22",
+      "sortOrder": 22,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "23",
+      "displayNameHe": "מסילת ישרים פרק 23",
+      "displayNameEn": "Mesillat Yesharim Chapter 23",
+      "sefariaRef": "Mesillat Yesharim 23",
+      "sortOrder": 23,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "24",
+      "displayNameHe": "מסילת ישרים פרק 24",
+      "displayNameEn": "Mesillat Yesharim Chapter 24",
+      "sefariaRef": "Mesillat Yesharim 24",
+      "sortOrder": 24,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "25",
+      "displayNameHe": "מסילת ישרים פרק 25",
+      "displayNameEn": "Mesillat Yesharim Chapter 25",
+      "sefariaRef": "Mesillat Yesharim 25",
+      "sortOrder": 25,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "26",
+      "displayNameHe": "מסילת ישרים פרק 26",
+      "displayNameEn": "Mesillat Yesharim Chapter 26",
+      "sefariaRef": "Mesillat Yesharim 26",
+      "sortOrder": 26,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Mesillat Yesharim",
+      "level2": "27",
+      "displayNameHe": "מסילת ישרים פרק 27",
+      "displayNameEn": "Mesillat Yesharim Chapter 27",
+      "sefariaRef": "Mesillat Yesharim 27",
+      "sortOrder": 27,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Orchot Tzaddikim",
+      "displayNameHe": "אורחות צדיקים",
+      "displayNameEn": "Orchot Tzaddikim",
+      "sefariaRef": "Orchot Tzaddikim",
+      "sortOrder": 28,
+      "isLeaf": false
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "displayNameHe": "חובות הלבבות",
+      "displayNameEn": "Chovot HaLevavot",
+      "sefariaRef": "Chovot HaLevavot",
+      "sortOrder": 29,
+      "isLeaf": false
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "1",
+      "displayNameHe": "חובות הלבבות פרק 1",
+      "displayNameEn": "Chovot HaLevavot Chapter 1",
+      "sefariaRef": "Chovot HaLevavot 1",
+      "sortOrder": 30,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "2",
+      "displayNameHe": "חובות הלבבות פרק 2",
+      "displayNameEn": "Chovot HaLevavot Chapter 2",
+      "sefariaRef": "Chovot HaLevavot 2",
+      "sortOrder": 31,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "3",
+      "displayNameHe": "חובות הלבבות פרק 3",
+      "displayNameEn": "Chovot HaLevavot Chapter 3",
+      "sefariaRef": "Chovot HaLevavot 3",
+      "sortOrder": 32,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "4",
+      "displayNameHe": "חובות הלבבות פרק 4",
+      "displayNameEn": "Chovot HaLevavot Chapter 4",
+      "sefariaRef": "Chovot HaLevavot 4",
+      "sortOrder": 33,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "5",
+      "displayNameHe": "חובות הלבבות פרק 5",
+      "displayNameEn": "Chovot HaLevavot Chapter 5",
+      "sefariaRef": "Chovot HaLevavot 5",
+      "sortOrder": 34,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "6",
+      "displayNameHe": "חובות הלבבות פרק 6",
+      "displayNameEn": "Chovot HaLevavot Chapter 6",
+      "sefariaRef": "Chovot HaLevavot 6",
+      "sortOrder": 35,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "7",
+      "displayNameHe": "חובות הלבבות פרק 7",
+      "displayNameEn": "Chovot HaLevavot Chapter 7",
+      "sefariaRef": "Chovot HaLevavot 7",
+      "sortOrder": 36,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "8",
+      "displayNameHe": "חובות הלבבות פרק 8",
+      "displayNameEn": "Chovot HaLevavot Chapter 8",
+      "sefariaRef": "Chovot HaLevavot 8",
+      "sortOrder": 37,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "9",
+      "displayNameHe": "חובות הלבבות פרק 9",
+      "displayNameEn": "Chovot HaLevavot Chapter 9",
+      "sefariaRef": "Chovot HaLevavot 9",
+      "sortOrder": 38,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "10",
+      "displayNameHe": "חובות הלבבות פרק 10",
+      "displayNameEn": "Chovot HaLevavot Chapter 10",
+      "sefariaRef": "Chovot HaLevavot 10",
+      "sortOrder": 39,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "11",
+      "displayNameHe": "חובות הלבבות פרק 11",
+      "displayNameEn": "Chovot HaLevavot Chapter 11",
+      "sefariaRef": "Chovot HaLevavot 11",
+      "sortOrder": 40,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "12",
+      "displayNameHe": "חובות הלבבות פרק 12",
+      "displayNameEn": "Chovot HaLevavot Chapter 12",
+      "sefariaRef": "Chovot HaLevavot 12",
+      "sortOrder": 41,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "13",
+      "displayNameHe": "חובות הלבבות פרק 13",
+      "displayNameEn": "Chovot HaLevavot Chapter 13",
+      "sefariaRef": "Chovot HaLevavot 13",
+      "sortOrder": 42,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "14",
+      "displayNameHe": "חובות הלבבות פרק 14",
+      "displayNameEn": "Chovot HaLevavot Chapter 14",
+      "sefariaRef": "Chovot HaLevavot 14",
+      "sortOrder": 43,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "15",
+      "displayNameHe": "חובות הלבבות פרק 15",
+      "displayNameEn": "Chovot HaLevavot Chapter 15",
+      "sefariaRef": "Chovot HaLevavot 15",
+      "sortOrder": 44,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "16",
+      "displayNameHe": "חובות הלבבות פרק 16",
+      "displayNameEn": "Chovot HaLevavot Chapter 16",
+      "sefariaRef": "Chovot HaLevavot 16",
+      "sortOrder": 45,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "17",
+      "displayNameHe": "חובות הלבבות פרק 17",
+      "displayNameEn": "Chovot HaLevavot Chapter 17",
+      "sefariaRef": "Chovot HaLevavot 17",
+      "sortOrder": 46,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "18",
+      "displayNameHe": "חובות הלבבות פרק 18",
+      "displayNameEn": "Chovot HaLevavot Chapter 18",
+      "sefariaRef": "Chovot HaLevavot 18",
+      "sortOrder": 47,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "19",
+      "displayNameHe": "חובות הלבבות פרק 19",
+      "displayNameEn": "Chovot HaLevavot Chapter 19",
+      "sefariaRef": "Chovot HaLevavot 19",
+      "sortOrder": 48,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "20",
+      "displayNameHe": "חובות הלבבות פרק 20",
+      "displayNameEn": "Chovot HaLevavot Chapter 20",
+      "sefariaRef": "Chovot HaLevavot 20",
+      "sortOrder": 49,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "21",
+      "displayNameHe": "חובות הלבבות פרק 21",
+      "displayNameEn": "Chovot HaLevavot Chapter 21",
+      "sefariaRef": "Chovot HaLevavot 21",
+      "sortOrder": 50,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "22",
+      "displayNameHe": "חובות הלבבות פרק 22",
+      "displayNameEn": "Chovot HaLevavot Chapter 22",
+      "sefariaRef": "Chovot HaLevavot 22",
+      "sortOrder": 51,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "23",
+      "displayNameHe": "חובות הלבבות פרק 23",
+      "displayNameEn": "Chovot HaLevavot Chapter 23",
+      "sefariaRef": "Chovot HaLevavot 23",
+      "sortOrder": 52,
+      "isLeaf": true
+    },
+    {
+      "curriculumId": "mussar",
+      "level1": "Chovot HaLevavot",
+      "level2": "24",
+      "displayNameHe": "חובות הלבבות פרק 24",
+      "displayNameEn": "Chovot HaLevavot Chapter 24",
+      "sefariaRef": "Chovot HaLevavot 24",
+      "sortOrder": 53,
+      "isLeaf": true
+    }
+  ]
+}

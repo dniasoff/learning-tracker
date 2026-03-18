@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/completi
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/reward_milestone_providers.dart';
 
 /// Button widget for marking a content item as completed.
@@ -61,22 +62,11 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
     });
 
     try {
-      // Capture progress before completion
-      final curriculumEnum = CurriculumId.values.where(
-        (c) => c.storageKey == widget.curriculumId,
-      );
-      final progressBefore = curriculumEnum.isNotEmpty
-          ? (await ref.read(
-              dashboardCompletionPercentageProvider(
-                curriculumEnum.first,
-              ).future,
-            ))
-          : 0.0;
-
-      // Capture streak before completion
+      // Capture streak before completion (already cached, instant)
       final streakData = ref.read(dashboardStreakProvider).value;
       final streakBefore = streakData?.currentStreak ?? 0;
 
+      // Mark the completion — this is the only thing the user is waiting for
       final useCase = ref.read(markCompletionUseCaseProvider);
       final request = CompletionRequest(
         curriculumId: widget.curriculumId,
@@ -87,10 +77,28 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
       final completion = await useCase(request);
 
-      // Cancel streak alert since user completed learning today
-      await ref.read(streakAlertServiceProvider).onCompletionRecorded();
+      setState(() {
+        _isLoading = false;
+      });
 
-      // Invalidate and re-read progress/streak after completion
+      // Start feedback immediately with optimistic values
+      _feedbackController.start(
+        CompletionFeedbackData(
+          pointsAwarded: completion.points,
+          progressBefore: 0,
+          progressAfter: 0,
+          streakBefore: streakBefore,
+          streakAfter: streakBefore + 1,
+          userMode: widget.userMode,
+        ),
+      );
+
+      // --- Everything below is fire-and-forget background work ---
+      final curriculumEnum = CurriculumId.values.where(
+        (c) => c.storageKey == widget.curriculumId,
+      );
+
+      // Invalidate providers so dashboard updates lazily
       if (curriculumEnum.isNotEmpty) {
         ref.invalidate(
           dashboardCompletionPercentageProvider(curriculumEnum.first),
@@ -98,55 +106,8 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       }
       ref.invalidate(dashboardStreakProvider);
 
-      // Check if any rewards were earned after points changed
-      final rewardService = ref.read(rewardServiceProvider);
-      final newlyEarned = await checkAndAwardRewards(
-        rewardService,
-        userMode: widget.userMode,
-      );
-
-      // Fire instant notification for each newly earned reward,
-      // respecting the reward notification preference and Shabbos quiet mode.
-      if (newlyEarned.isNotEmpty) {
-        final rewardNotifEnabled = ref.read(rewardNotificationEnabledProvider);
-        final shabbosQuiet = ref.read(isShabbosQuietActiveProvider);
-        if (rewardNotifEnabled && !shabbosQuiet) {
-          final milestoneService = ref.read(
-            rewardMilestoneNotificationServiceProvider,
-          );
-          await milestoneService.notifyNewRewards(
-            newlyEarned: newlyEarned,
-            userMode: widget.userMode,
-          );
-        }
-      }
-
-      final progressAfter = curriculumEnum.isNotEmpty
-          ? (await ref.read(
-              dashboardCompletionPercentageProvider(
-                curriculumEnum.first,
-              ).future,
-            ))
-          : progressBefore + 0.01;
-
-      final streakDataAfter = ref.read(dashboardStreakProvider).value;
-      final streakAfter = streakDataAfter?.currentStreak ?? streakBefore;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Start feedback sequence
-      _feedbackController.start(
-        CompletionFeedbackData(
-          pointsAwarded: completion.points,
-          progressBefore: progressBefore,
-          progressAfter: progressAfter,
-          streakBefore: streakBefore,
-          streakAfter: streakAfter,
-          userMode: widget.userMode,
-        ),
-      );
+      // Background: streak alert, rewards
+      unawaited(_postCompletionWork(completion));
 
       // Show points popup non-blocking (child mode only)
       if (widget.userMode == UserMode.child) {
@@ -176,6 +137,36 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
           ),
         );
       }
+    }
+  }
+
+  /// Background work after completion — doesn't block UI.
+  Future<void> _postCompletionWork(dynamic completion) async {
+    try {
+      await ref.read(streakAlertServiceProvider).onCompletionRecorded();
+
+      final rewardService = ref.read(rewardServiceProvider);
+      final newlyEarned = await checkAndAwardRewards(
+        rewardService,
+        userMode: widget.userMode,
+      );
+
+      if (newlyEarned.isNotEmpty && mounted) {
+        final rewardNotifEnabled = ref.read(rewardNotificationEnabledProvider);
+        final shabbosQuiet = ref.read(isShabbosQuietActiveProvider);
+        if (rewardNotifEnabled && !shabbosQuiet) {
+          final milestoneService = ref.read(
+            rewardMilestoneNotificationServiceProvider,
+          );
+          await milestoneService.notifyNewRewards(
+            newlyEarned: newlyEarned,
+            userMode: widget.userMode,
+          );
+        }
+      }
+    } catch (e) {
+      // Background work failure shouldn't crash the app
+      AppLogger.instance.error('Post-completion work failed', e);
     }
   }
 

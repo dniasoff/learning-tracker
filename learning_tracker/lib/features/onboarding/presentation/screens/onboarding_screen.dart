@@ -8,8 +8,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
@@ -50,6 +50,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 enum _ScreenPhase {
   profileCreation,
+  languageSelection,
   selection,
   importing,
   scopeSelection,
@@ -70,9 +71,21 @@ const _kOnboardingProfileId = 'onboarding_profile_id';
 const _kOnboardingProfileName = 'onboarding_profile_name';
 const _kOnboardingProfileMode = 'onboarding_profile_mode';
 const _kOnboardingSelectedCurricula = 'onboarding_selected_curricula';
+const _kOnboardingLanguage = 'onboarding_language';
+
+/// Supported content languages.
+const _supportedLanguages = <String, String>{
+  'he': 'עברית (Hebrew with nikud)',
+  'he_plain': 'עברית (Hebrew without nikud)',
+  'en': 'English',
+  'fr': 'Français',
+  'es': 'Español',
+  'it': 'Italiano',
+};
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _selected = <CurriculumId>{};
+  String _selectedLanguage = 'he';
   var _phase = _ScreenPhase.profileCreation;
   CurriculumImportProgress? _importProgress;
   List<CurriculumImportResult> _failures = [];
@@ -153,6 +166,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       }
     }
 
+    final savedLanguage = prefs.getString(_kOnboardingLanguage);
+    if (savedLanguage != null) _selectedLanguage = savedLanguage;
+
     final phase = _ScreenPhase.values.where((p) => p.name == savedPhase);
     if (phase.isNotEmpty && mounted) {
       setState(() => _phase = phase.first);
@@ -173,6 +189,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _kOnboardingSelectedCurricula,
       jsonEncode(_selected.map((c) => c.name).toList()),
     );
+    await prefs.setString(_kOnboardingLanguage, _selectedLanguage);
   }
 
   Future<void> _clearSavedState() async {
@@ -210,8 +227,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _profileName = name;
     ref.read(activeProfileIdProvider.notifier).switchTo(profile.id);
 
-    setState(() => _phase = _ScreenPhase.selection);
+    setState(() => _phase = _ScreenPhase.languageSelection);
     await _saveState();
+  }
+
+  void _onLanguageSelected() {
+    setState(() => _phase = _ScreenPhase.selection);
+    _saveState();
   }
 
   Future<void> _startImport() async {
@@ -414,18 +436,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   List<int> _computeSuggestedThresholds() {
-    final configsAsync = ref.read(allCurriculaConfigsProvider);
-    final totalItems =
-        configsAsync.whenOrNull(
-          data: (configs) {
-            var sum = 0;
-            for (final id in _selected) {
-              sum += configs[id]?.totalItems ?? 0;
-            }
-            return sum;
-          },
-        ) ??
-        0;
+    // After import, content is cached in the repository. Try to read
+    // totalItems from already-imported results; fall back to defaults.
+    var totalItems = 0;
+    for (final result in _curriculumStatuses.entries) {
+      if (result.value == _CurriculumStatus.done) {
+        // Use import result item counts if available
+        final importResult = _importProgress?.results
+            .where((r) => r.curriculumId == result.key && r.success)
+            .firstOrNull;
+        totalItems += importResult?.itemCount ?? 0;
+      }
+    }
     final dailyPace = totalItems > 0 ? (totalItems / 365).ceil() : 5;
     return SuggestedThresholdsService.calculate(
       totalItems: totalItems,
@@ -473,6 +495,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation => 'Add a Learner',
+      _ScreenPhase.languageSelection => 'Choose Language',
       _ScreenPhase.selection => childAwareText(
           'Select Curricula',
           'What is {name} learning?',
@@ -485,8 +508,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: appBarTitle)),
-      body: switch (_phase) {
+      body: SafeArea(
+        child: switch (_phase) {
         _ScreenPhase.profileCreation => _buildProfileCreation(theme),
+        _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
         _ScreenPhase.selection => _buildSelection(theme),
         _ScreenPhase.importing => _buildImporting(theme),
         _ScreenPhase.scopeSelection => _buildScopeSelection(theme),
@@ -499,6 +524,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _ScreenPhase.done => _buildDone(theme),
         _ScreenPhase.error => _buildError(theme),
       },
+      ),
     );
   }
 
@@ -553,9 +579,100 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Widget _buildSelection(ThemeData theme) {
-    final configsAsync = ref.watch(allCurriculaConfigsProvider);
+  Widget _buildLanguageSelection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          child: Text(
+            'Choose your preferred language for content',
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'You can change this later in Settings.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _supportedLanguages.length,
+            itemBuilder: (context, index) {
+              final entry = _supportedLanguages.entries.elementAt(index);
+              final isSelected = _selectedLanguage == entry.key;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Card(
+                  elevation: isSelected ? 4 : 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline.withValues(alpha: 0.3),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedLanguage = entry.key),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              entry.value,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight:
+                                    isSelected ? FontWeight.bold : null,
+                                color: isSelected
+                                    ? theme.colorScheme.primary
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            Icon(
+                              Icons.check_circle,
+                              color: theme.colorScheme.primary,
+                            )
+                          else
+                            Icon(
+                              Icons.circle_outlined,
+                              color: theme.colorScheme.outline
+                                  .withValues(alpha: 0.5),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: FilledButton(
+            onPressed: _onLanguageSelected,
+            child: const Text('Continue'),
+          ),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildSelection(ThemeData theme) {
     final header = childAwareText(
       'Choose which curricula to track',
       'What is {name} learning?',
@@ -563,67 +680,58 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       isChildMode: _isChildMode,
     );
 
-    return SafeArea(
-      top: false,
-      child: configsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Failed to load curricula: $e')),
-        data: (configs) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-            child: Text(
-              header,
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          child: Text(
+            header,
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'You can add more later from Settings.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'You can add more later from Settings.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: CurriculumId.values.length,
-              itemBuilder: (context, index) {
-                final curriculum = CurriculumId.values[index];
-                final config = configs[curriculum];
-                return _CurriculumCard(
-                  curriculum: curriculum,
-                  config: config,
-                  isSelected: _selected.contains(curriculum),
-                  onTap: () {
-                    setState(() {
-                      if (_selected.contains(curriculum)) {
-                        _selected.remove(curriculum);
-                      } else {
-                        _selected.add(curriculum);
-                      }
-                    });
-                  },
-                );
-              },
-            ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: CurriculumId.values.length,
+            itemBuilder: (context, index) {
+              final curriculum = CurriculumId.values[index];
+              return _CurriculumCard(
+                curriculum: curriculum,
+                isSelected: _selected.contains(curriculum),
+                onTap: () {
+                  setState(() {
+                    if (_selected.contains(curriculum)) {
+                      _selected.remove(curriculum);
+                    } else {
+                      _selected.add(curriculum);
+                    }
+                  });
+                },
+              );
+            },
           ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: FilledButton(
-              onPressed: _selected.isNotEmpty ? _startImport : null,
-              child: const Text('Continue'),
-            ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: FilledButton(
+            onPressed: _selected.isNotEmpty ? _startImport : null,
+            child: const Text('Continue'),
           ),
-        ],
-      ),
-      ),
+        ),
+      ],
     );
   }
 
@@ -883,9 +991,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _buildGoalSetup(ThemeData theme) {
     final curriculum = _goalSetupQueue[_goalSetupIndex];
-    final configsAsync = ref.watch(allCurriculaConfigsProvider);
-    final totalItems = configsAsync.whenOrNull(
-      data: (configs) => configs[curriculum]?.totalItems,
+    // Try to get totalItems from already-downloaded content
+    final contentAsync = ref.watch(
+      curriculumContentProvider(curriculum),
+    );
+    final totalItems = contentAsync.whenOrNull<int>(
+      data: (items) => items.where((i) => i.isLeaf).length,
     );
 
     final headerText = childAwareText(
@@ -1099,13 +1210,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 class _CurriculumCard extends StatelessWidget {
   const _CurriculumCard({
     required this.curriculum,
-    required this.config,
     required this.isSelected,
     required this.onTap,
   });
 
   final CurriculumId curriculum;
-  final CurriculumHierarchyConfig? config;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -1145,32 +1254,12 @@ class _CurriculumCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        curriculum.displayNameEn,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? color : null,
-                        ),
-                      ),
-                      if (config != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          '${config!.totalItems} items',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        Text(
-                          config!.levelLabels.join(' > '),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    curriculum.displayNameEn,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? color : null,
+                    ),
                   ),
                 ),
                 if (isSelected)

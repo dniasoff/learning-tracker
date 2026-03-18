@@ -47,6 +47,10 @@ class SettingsScreen extends ConsumerWidget {
           _UserModeSection(user: user),
           const Divider(),
 
+          // Content Language Section
+          const _ContentLanguageSection(),
+          const Divider(),
+
           // Active Curricula Section
           const ListTile(
             title: Text(
@@ -617,6 +621,9 @@ Future<void> _showSignOutConfirmation(
   try {
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
+    if (context.mounted) {
+      context.router.replaceAll([const WelcomeRoute()]);
+    }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -678,6 +685,9 @@ Future<void> _showDeleteAccountFlow(
 
   try {
     await service.deleteAccount(user.uid);
+    if (context.mounted) {
+      context.router.replaceAll([const WelcomeRoute()]);
+    }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -917,6 +927,50 @@ class _AddCurriculumTile extends ConsumerWidget {
       MaterialPageRoute(
         builder: (_) => BulkMarkScreen(curriculumId: selected),
       ),
+    );
+  }
+}
+
+/// Supported content languages (shared with onboarding).
+const _supportedLanguages = <String, String>{
+  'he': 'עברית (Hebrew with nikud)',
+  'he_plain': 'עברית (Hebrew without nikud)',
+  'en': 'English',
+  'fr': 'Français',
+  'es': 'Español',
+  'it': 'Italiano',
+};
+
+class _ContentLanguageSection extends StatelessWidget {
+  const _ContentLanguageSection();
+
+  @override
+  Widget build(BuildContext context) {
+    // Language preference is stored but not yet wired to content loading.
+    // All languages are bundled — future: load language-specific assets.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const ListTile(
+          title: Text(
+            'Content Language',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          subtitle: Text('Language for curriculum content'),
+        ),
+        ListTile(
+          title: const Text('עברית (Hebrew with nikud)'),
+          subtitle: const Text('More languages coming soon'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Additional languages coming in a future update'),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

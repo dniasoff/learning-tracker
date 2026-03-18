@@ -94,6 +94,7 @@ flutter:
   assets:
     - assets/images/
     - assets/fonts/
+    - assets/content/hierarchy/
 
   fonts:
     - family: Noto Sans Hebrew

@@ -11,15 +11,13 @@ part 'content_providers.g.dart';
 ///
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
+/// Loads hierarchy content from bundled assets.
 @Riverpod(keepAlive: true)
 ContentRepository contentRepository(Ref ref) {
   return ContentRepositoryImpl();
 }
 
 /// Provides all content items for a specific curriculum (family provider).
-///
-/// Lazily loads the content from JSON assets on first access for each
-/// curriculum, then caches in memory.
 @riverpod
 Future<List<ContentItem>> curriculumContent(
   Ref ref,

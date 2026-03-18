@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -35,60 +37,73 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   @override
   Future<Completion> markComplete(CompletionRequest request) async {
-    // Perform all operations in a single transaction for atomicity
-    return await _database.transaction(() async {
-      // 1. Validate stage progression
-      await _validateStageProgression(
-        sefariaRef: request.sefariaRef,
-        stageId: request.stageId,
-        trackType: request.trackType,
+    // Perform DB operations in a single transaction for atomicity
+    final completion = await _database.transaction(() async {
+      // 1. Get existing completions for this item (single query for both
+      //    stage validation and duplicate check)
+      final completions =
+          await _database.completionDao.getCompletionsForContent(
+        request.sefariaRef,
       );
 
       // 2. Check for duplicate (idempotent)
-      final existing = await _getExistingCompletion(
-        sefariaRef: request.sefariaRef,
-        stageId: request.stageId,
-        trackType: request.trackType,
-      );
+      final existing = completions
+          .where(
+            (c) =>
+                c.stageId == request.stageId &&
+                c.trackType == request.trackType,
+          )
+          .firstOrNull;
       if (existing != null) {
-        return existing; // Already completed, return existing record
+        return existing;
       }
 
-      // 3. Calculate points for this stage
+      // 3. Validate stage progression using already-fetched completions
+      final trackCompletions = completions
+          .where((c) => c.trackType == request.trackType)
+          .toList();
+      if (trackCompletions.isEmpty && request.stageId != 1) {
+        throw StageProgressionException(
+          message: 'Must complete stage 1 before stage ${request.stageId}',
+          attemptedStage: request.stageId,
+          lastCompletedStage: null,
+        );
+      }
+      if (trackCompletions.isNotEmpty) {
+        final completedStageIds =
+            trackCompletions.map((c) => c.stageId).toList()..sort();
+        final lastCompleted = completedStageIds.last;
+        if (request.stageId > lastCompleted + 1) {
+          throw StageProgressionException(
+            message:
+                'Must complete stage ${lastCompleted + 1} before stage ${request.stageId}',
+            attemptedStage: request.stageId,
+            lastCompletedStage: lastCompleted,
+          );
+        }
+      }
+
+      // 4. Calculate points for this stage
       final points = await _calculatePoints(
         curriculumId: request.curriculumId,
         stageOrder: request.stageId,
       );
 
-      // 4. Create completion record
-      final completion = await _createCompletion(
-        request: request,
-        points: points,
-      );
-
-      // 5. Advance bookmark to next item
-      await _advanceBookmark(
-        curriculumId: request.curriculumId,
-        trackType: request.trackType,
-        completedSefariaRef: request.sefariaRef,
-      );
-
-      // 6. Push to Firestore sync queue
-      await _syncCompletion(completion);
-
-      // 7. Check for unit completion (ledger auto-detection)
-      if (_completionDetectionService != null) {
-        await _completionDetectionService.checkAndRecordCompletions(
-          curriculumId: request.curriculumId,
-          sefariaRef: request.sefariaRef,
-          trackType: request.trackType,
-          profileId: _activeProfileId,
-          markedBy: _activeProfileId,
-        );
-      }
-
-      return completion;
+      // 5. Create completion record
+      return await _createCompletion(request: request, points: points);
     });
+
+    // 6. Advance bookmark (outside transaction — uses content repo cache)
+    unawaited(_advanceBookmark(
+      curriculumId: request.curriculumId,
+      trackType: request.trackType,
+      completedSefariaRef: request.sefariaRef,
+    ));
+
+    // 7. Push to Firestore sync queue (fire-and-forget)
+    unawaited(_syncCompletion(completion));
+
+    return completion;
   }
 
   @override

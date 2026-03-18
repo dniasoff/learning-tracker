@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/cloud_content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -33,14 +30,8 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
   ref,
 ) {
   final activationService = ref.watch(curriculumActivationServiceProvider);
-  final cloudContentService = ref.watch(cloudContentServiceProvider);
-  final contentDownloadStatusDao = ref.watch(
-    contentDownloadStatusDaoProviderProvider,
-  );
   return CurriculumImportService(
     activationService: activationService,
-    cloudContentService: cloudContentService,
-    contentDownloadStatusDao: contentDownloadStatusDao,
   );
 });
 
@@ -73,16 +64,4 @@ final learningProcessWizardServiceProvider =
         learningProgramDao: db.learningProgramDao,
         profileProgramDao: db.profileProgramDao,
       );
-    });
-
-/// Provides hierarchy configs for all curricula (for the selection screen).
-final allCurriculaConfigsProvider =
-    FutureProvider<Map<CurriculumId, CurriculumHierarchyConfig>>((ref) async {
-      final repo = ref.watch(contentRepositoryProvider);
-      final entries = await Future.wait(
-        CurriculumId.values.map(
-          (id) async => MapEntry(id, await repo.getHierarchyConfig(id)),
-        ),
-      );
-      return Map.fromEntries(entries);
     });
