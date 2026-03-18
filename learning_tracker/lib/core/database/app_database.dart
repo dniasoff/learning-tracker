@@ -5,8 +5,10 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
+import 'package:learning_tracker/core/database/daos/learning_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
+import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/reward_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
@@ -15,6 +17,7 @@ import 'package:learning_tracker/core/database/daos/text_cache_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
@@ -22,7 +25,9 @@ import 'package:learning_tracker/core/database/tables/content_download_statuses.
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
+import 'package:learning_tracker/core/database/tables/learning_programs.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
+import 'package:learning_tracker/core/database/tables/profile_programs.dart';
 import 'package:learning_tracker/core/database/tables/profiles.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
@@ -52,6 +57,8 @@ part 'app_database.g.dart';
     Streaks,
     TextDownloadStatuses,
     ContentDownloadStatuses,
+    LearningPrograms,
+    ProfilePrograms,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -70,19 +77,22 @@ part 'app_database.g.dart';
     TextCacheDao,
     TextDownloadStatusDao,
     ContentDownloadStatusDao,
+    LearningProgramDao,
+    ProfileProgramDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+        await _seedLearningPrograms();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 3) {
@@ -232,7 +242,33 @@ class AppDatabase extends _$AppDatabase {
           // Migration from schema v10 to v11: Add content_download_statuses table
           await m.createTable($ContentDownloadStatusesTable(attachedDatabase));
         }
+        if (from < 12) {
+          // Migration from schema v11 to v12: Add learning_programs and profile_programs tables
+          await m.createTable($LearningProgramsTable(attachedDatabase));
+          await m.createTable($ProfileProgramsTable(attachedDatabase));
+          await _seedLearningPrograms();
+        }
       },
     );
+  }
+
+  /// Seeds the 9 learning program presets into the database.
+  Future<void> _seedLearningPrograms() async {
+    final now = DateTime.now().toUtc();
+    for (final seed in learningProgramSeeds) {
+      await into($LearningProgramsTable(attachedDatabase)).insert(
+        LearningProgramsCompanion.insert(
+          name: seed['name']! as String,
+          displayName: seed['display_name']! as String,
+          description: Value(seed['description']! as String),
+          curriculumType: seed['curriculum_type']! as String,
+          isActive: Value(seed['is_active']! as bool),
+          stagesConfig: seed['stages_config']! as String,
+          hasTests: Value(seed['has_tests']! as bool),
+          testConfig: Value(seed['test_config']! as String),
+          createdAt: now,
+        ),
+      );
+    }
   }
 }
