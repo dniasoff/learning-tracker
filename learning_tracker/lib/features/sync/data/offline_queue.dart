@@ -83,6 +83,13 @@ class OfflineQueue {
     _logger.info('Queued reward for offline sync');
   }
 
+  /// Enqueue a ledger entry operation.
+  Future<void> enqueueLedgerEntry(Map<String, dynamic> entry) async {
+    final payload = jsonEncode(entry);
+    await _queue.enqueue('ledger_entry', payload);
+    _logger.info('Queued ledger entry for offline sync');
+  }
+
   /// Enqueue curriculum import metadata operation.
   Future<void> enqueueCurriculumImportMetadata(
     Map<String, dynamic> metadata,
@@ -179,6 +186,9 @@ class OfflineQueue {
               break;
             case 'reward':
               await _firestoreDataSource.pushReward(payload);
+              break;
+            case 'ledger_entry':
+              await _firestoreDataSource.pushLedgerEntry(payload);
               break;
             case 'curriculum_import_metadata':
               await _firestoreDataSource.pushCurriculumImportMetadata(payload);

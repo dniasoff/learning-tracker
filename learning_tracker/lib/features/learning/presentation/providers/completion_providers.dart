@@ -3,9 +3,11 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
@@ -36,11 +38,22 @@ CompletionRepository completionRepository(Ref ref) {
 
   final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
 
+  final profileId = ref.watch(activeProfileIdProvider);
+  final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
+
+  final detectionService = CompletionDetectionService(
+    database: database,
+    contentRepository: contentRepository,
+    ledgerRepository: ledgerRepository,
+  );
+
   return CompletionRepositoryImpl(
     database: database,
     syncEngine: syncEngine,
     contentRepository: contentRepository,
     bookmarkRepository: bookmarkRepository,
+    completionDetectionService: detectionService,
+    activeProfileId: profileId,
   );
 }
 

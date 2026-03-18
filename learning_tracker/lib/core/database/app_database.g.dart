@@ -2288,6 +2288,827 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
   }
 }
 
+class $LearningLedgerTable extends LearningLedger
+    with TableInfo<$LearningLedgerTable, LearningLedgerData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LearningLedgerTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
+    'curriculumId',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _unitTypeMeta = const VerificationMeta(
+    'unitType',
+  );
+  @override
+  late final GeneratedColumn<String> unitType = GeneratedColumn<String>(
+    'unit_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _unitIdentifierMeta = const VerificationMeta(
+    'unitIdentifier',
+  );
+  @override
+  late final GeneratedColumn<String> unitIdentifier = GeneratedColumn<String>(
+    'unit_identifier',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _unitDisplayNameHeMeta = const VerificationMeta(
+    'unitDisplayNameHe',
+  );
+  @override
+  late final GeneratedColumn<String> unitDisplayNameHe =
+      GeneratedColumn<String>(
+        'unit_display_name_he',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _unitDisplayNameEnMeta = const VerificationMeta(
+    'unitDisplayNameEn',
+  );
+  @override
+  late final GeneratedColumn<String> unitDisplayNameEn =
+      GeneratedColumn<String>(
+        'unit_display_name_en',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _trackTypeMeta = const VerificationMeta(
+    'trackType',
+  );
+  @override
+  late final GeneratedColumn<String> trackType = GeneratedColumn<String>(
+    'track_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _trackIdMeta = const VerificationMeta(
+    'trackId',
+  );
+  @override
+  late final GeneratedColumn<int> trackId = GeneratedColumn<int>(
+    'track_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completionNumberMeta = const VerificationMeta(
+    'completionNumber',
+  );
+  @override
+  late final GeneratedColumn<int> completionNumber = GeneratedColumn<int>(
+    'completion_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _markedByMeta = const VerificationMeta(
+    'markedBy',
+  );
+  @override
+  late final GeneratedColumn<int> markedBy = GeneratedColumn<int>(
+    'marked_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isManualMeta = const VerificationMeta(
+    'isManual',
+  );
+  @override
+  late final GeneratedColumn<bool> isManual = GeneratedColumn<bool>(
+    'is_manual',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_manual" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    curriculumId,
+    unitType,
+    unitIdentifier,
+    unitDisplayNameHe,
+    unitDisplayNameEn,
+    trackType,
+    trackId,
+    completedAt,
+    completionNumber,
+    markedBy,
+    isManual,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'learning_ledger';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LearningLedgerData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
+    if (data.containsKey('curriculum_id')) {
+      context.handle(
+        _curriculumIdMeta,
+        curriculumId.isAcceptableOrUnknown(
+          data['curriculum_id']!,
+          _curriculumIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumIdMeta);
+    }
+    if (data.containsKey('unit_type')) {
+      context.handle(
+        _unitTypeMeta,
+        unitType.isAcceptableOrUnknown(data['unit_type']!, _unitTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_unitTypeMeta);
+    }
+    if (data.containsKey('unit_identifier')) {
+      context.handle(
+        _unitIdentifierMeta,
+        unitIdentifier.isAcceptableOrUnknown(
+          data['unit_identifier']!,
+          _unitIdentifierMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_unitIdentifierMeta);
+    }
+    if (data.containsKey('unit_display_name_he')) {
+      context.handle(
+        _unitDisplayNameHeMeta,
+        unitDisplayNameHe.isAcceptableOrUnknown(
+          data['unit_display_name_he']!,
+          _unitDisplayNameHeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_unitDisplayNameHeMeta);
+    }
+    if (data.containsKey('unit_display_name_en')) {
+      context.handle(
+        _unitDisplayNameEnMeta,
+        unitDisplayNameEn.isAcceptableOrUnknown(
+          data['unit_display_name_en']!,
+          _unitDisplayNameEnMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_unitDisplayNameEnMeta);
+    }
+    if (data.containsKey('track_type')) {
+      context.handle(
+        _trackTypeMeta,
+        trackType.isAcceptableOrUnknown(data['track_type']!, _trackTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trackTypeMeta);
+    }
+    if (data.containsKey('track_id')) {
+      context.handle(
+        _trackIdMeta,
+        trackId.isAcceptableOrUnknown(data['track_id']!, _trackIdMeta),
+      );
+    }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_completedAtMeta);
+    }
+    if (data.containsKey('completion_number')) {
+      context.handle(
+        _completionNumberMeta,
+        completionNumber.isAcceptableOrUnknown(
+          data['completion_number']!,
+          _completionNumberMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_completionNumberMeta);
+    }
+    if (data.containsKey('marked_by')) {
+      context.handle(
+        _markedByMeta,
+        markedBy.isAcceptableOrUnknown(data['marked_by']!, _markedByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_markedByMeta);
+    }
+    if (data.containsKey('is_manual')) {
+      context.handle(
+        _isManualMeta,
+        isManual.isAcceptableOrUnknown(data['is_manual']!, _isManualMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LearningLedgerData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LearningLedgerData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      unitType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_type'],
+      )!,
+      unitIdentifier: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_identifier'],
+      )!,
+      unitDisplayNameHe: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_display_name_he'],
+      )!,
+      unitDisplayNameEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_display_name_en'],
+      )!,
+      trackType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}track_type'],
+      )!,
+      trackId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}track_id'],
+      ),
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      )!,
+      completionNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completion_number'],
+      )!,
+      markedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}marked_by'],
+      )!,
+      isManual: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_manual'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LearningLedgerTable createAlias(String alias) {
+    return $LearningLedgerTable(attachedDatabase, alias);
+  }
+}
+
+class LearningLedgerData extends DataClass
+    implements Insertable<LearningLedgerData> {
+  final int id;
+  final int profileId;
+  final String curriculumId;
+  final String unitType;
+  final String unitIdentifier;
+  final String unitDisplayNameHe;
+  final String unitDisplayNameEn;
+  final String trackType;
+  final int? trackId;
+  final DateTime completedAt;
+  final int completionNumber;
+  final int markedBy;
+  final bool isManual;
+  final DateTime createdAt;
+  const LearningLedgerData({
+    required this.id,
+    required this.profileId,
+    required this.curriculumId,
+    required this.unitType,
+    required this.unitIdentifier,
+    required this.unitDisplayNameHe,
+    required this.unitDisplayNameEn,
+    required this.trackType,
+    this.trackId,
+    required this.completedAt,
+    required this.completionNumber,
+    required this.markedBy,
+    required this.isManual,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['curriculum_id'] = Variable<String>(curriculumId);
+    map['unit_type'] = Variable<String>(unitType);
+    map['unit_identifier'] = Variable<String>(unitIdentifier);
+    map['unit_display_name_he'] = Variable<String>(unitDisplayNameHe);
+    map['unit_display_name_en'] = Variable<String>(unitDisplayNameEn);
+    map['track_type'] = Variable<String>(trackType);
+    if (!nullToAbsent || trackId != null) {
+      map['track_id'] = Variable<int>(trackId);
+    }
+    map['completed_at'] = Variable<DateTime>(completedAt);
+    map['completion_number'] = Variable<int>(completionNumber);
+    map['marked_by'] = Variable<int>(markedBy);
+    map['is_manual'] = Variable<bool>(isManual);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LearningLedgerCompanion toCompanion(bool nullToAbsent) {
+    return LearningLedgerCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      curriculumId: Value(curriculumId),
+      unitType: Value(unitType),
+      unitIdentifier: Value(unitIdentifier),
+      unitDisplayNameHe: Value(unitDisplayNameHe),
+      unitDisplayNameEn: Value(unitDisplayNameEn),
+      trackType: Value(trackType),
+      trackId: trackId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(trackId),
+      completedAt: Value(completedAt),
+      completionNumber: Value(completionNumber),
+      markedBy: Value(markedBy),
+      isManual: Value(isManual),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LearningLedgerData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LearningLedgerData(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      unitType: serializer.fromJson<String>(json['unitType']),
+      unitIdentifier: serializer.fromJson<String>(json['unitIdentifier']),
+      unitDisplayNameHe: serializer.fromJson<String>(json['unitDisplayNameHe']),
+      unitDisplayNameEn: serializer.fromJson<String>(json['unitDisplayNameEn']),
+      trackType: serializer.fromJson<String>(json['trackType']),
+      trackId: serializer.fromJson<int?>(json['trackId']),
+      completedAt: serializer.fromJson<DateTime>(json['completedAt']),
+      completionNumber: serializer.fromJson<int>(json['completionNumber']),
+      markedBy: serializer.fromJson<int>(json['markedBy']),
+      isManual: serializer.fromJson<bool>(json['isManual']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'unitType': serializer.toJson<String>(unitType),
+      'unitIdentifier': serializer.toJson<String>(unitIdentifier),
+      'unitDisplayNameHe': serializer.toJson<String>(unitDisplayNameHe),
+      'unitDisplayNameEn': serializer.toJson<String>(unitDisplayNameEn),
+      'trackType': serializer.toJson<String>(trackType),
+      'trackId': serializer.toJson<int?>(trackId),
+      'completedAt': serializer.toJson<DateTime>(completedAt),
+      'completionNumber': serializer.toJson<int>(completionNumber),
+      'markedBy': serializer.toJson<int>(markedBy),
+      'isManual': serializer.toJson<bool>(isManual),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LearningLedgerData copyWith({
+    int? id,
+    int? profileId,
+    String? curriculumId,
+    String? unitType,
+    String? unitIdentifier,
+    String? unitDisplayNameHe,
+    String? unitDisplayNameEn,
+    String? trackType,
+    Value<int?> trackId = const Value.absent(),
+    DateTime? completedAt,
+    int? completionNumber,
+    int? markedBy,
+    bool? isManual,
+    DateTime? createdAt,
+  }) => LearningLedgerData(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    curriculumId: curriculumId ?? this.curriculumId,
+    unitType: unitType ?? this.unitType,
+    unitIdentifier: unitIdentifier ?? this.unitIdentifier,
+    unitDisplayNameHe: unitDisplayNameHe ?? this.unitDisplayNameHe,
+    unitDisplayNameEn: unitDisplayNameEn ?? this.unitDisplayNameEn,
+    trackType: trackType ?? this.trackType,
+    trackId: trackId.present ? trackId.value : this.trackId,
+    completedAt: completedAt ?? this.completedAt,
+    completionNumber: completionNumber ?? this.completionNumber,
+    markedBy: markedBy ?? this.markedBy,
+    isManual: isManual ?? this.isManual,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  LearningLedgerData copyWithCompanion(LearningLedgerCompanion data) {
+    return LearningLedgerData(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      curriculumId: data.curriculumId.present
+          ? data.curriculumId.value
+          : this.curriculumId,
+      unitType: data.unitType.present ? data.unitType.value : this.unitType,
+      unitIdentifier: data.unitIdentifier.present
+          ? data.unitIdentifier.value
+          : this.unitIdentifier,
+      unitDisplayNameHe: data.unitDisplayNameHe.present
+          ? data.unitDisplayNameHe.value
+          : this.unitDisplayNameHe,
+      unitDisplayNameEn: data.unitDisplayNameEn.present
+          ? data.unitDisplayNameEn.value
+          : this.unitDisplayNameEn,
+      trackType: data.trackType.present ? data.trackType.value : this.trackType,
+      trackId: data.trackId.present ? data.trackId.value : this.trackId,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+      completionNumber: data.completionNumber.present
+          ? data.completionNumber.value
+          : this.completionNumber,
+      markedBy: data.markedBy.present ? data.markedBy.value : this.markedBy,
+      isManual: data.isManual.present ? data.isManual.value : this.isManual,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LearningLedgerData(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('unitType: $unitType, ')
+          ..write('unitIdentifier: $unitIdentifier, ')
+          ..write('unitDisplayNameHe: $unitDisplayNameHe, ')
+          ..write('unitDisplayNameEn: $unitDisplayNameEn, ')
+          ..write('trackType: $trackType, ')
+          ..write('trackId: $trackId, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('completionNumber: $completionNumber, ')
+          ..write('markedBy: $markedBy, ')
+          ..write('isManual: $isManual, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    curriculumId,
+    unitType,
+    unitIdentifier,
+    unitDisplayNameHe,
+    unitDisplayNameEn,
+    trackType,
+    trackId,
+    completedAt,
+    completionNumber,
+    markedBy,
+    isManual,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LearningLedgerData &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.curriculumId == this.curriculumId &&
+          other.unitType == this.unitType &&
+          other.unitIdentifier == this.unitIdentifier &&
+          other.unitDisplayNameHe == this.unitDisplayNameHe &&
+          other.unitDisplayNameEn == this.unitDisplayNameEn &&
+          other.trackType == this.trackType &&
+          other.trackId == this.trackId &&
+          other.completedAt == this.completedAt &&
+          other.completionNumber == this.completionNumber &&
+          other.markedBy == this.markedBy &&
+          other.isManual == this.isManual &&
+          other.createdAt == this.createdAt);
+}
+
+class LearningLedgerCompanion extends UpdateCompanion<LearningLedgerData> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> curriculumId;
+  final Value<String> unitType;
+  final Value<String> unitIdentifier;
+  final Value<String> unitDisplayNameHe;
+  final Value<String> unitDisplayNameEn;
+  final Value<String> trackType;
+  final Value<int?> trackId;
+  final Value<DateTime> completedAt;
+  final Value<int> completionNumber;
+  final Value<int> markedBy;
+  final Value<bool> isManual;
+  final Value<DateTime> createdAt;
+  const LearningLedgerCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.curriculumId = const Value.absent(),
+    this.unitType = const Value.absent(),
+    this.unitIdentifier = const Value.absent(),
+    this.unitDisplayNameHe = const Value.absent(),
+    this.unitDisplayNameEn = const Value.absent(),
+    this.trackType = const Value.absent(),
+    this.trackId = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.completionNumber = const Value.absent(),
+    this.markedBy = const Value.absent(),
+    this.isManual = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  LearningLedgerCompanion.insert({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    required String curriculumId,
+    required String unitType,
+    required String unitIdentifier,
+    required String unitDisplayNameHe,
+    required String unitDisplayNameEn,
+    required String trackType,
+    this.trackId = const Value.absent(),
+    required DateTime completedAt,
+    required int completionNumber,
+    required int markedBy,
+    this.isManual = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : curriculumId = Value(curriculumId),
+       unitType = Value(unitType),
+       unitIdentifier = Value(unitIdentifier),
+       unitDisplayNameHe = Value(unitDisplayNameHe),
+       unitDisplayNameEn = Value(unitDisplayNameEn),
+       trackType = Value(trackType),
+       completedAt = Value(completedAt),
+       completionNumber = Value(completionNumber),
+       markedBy = Value(markedBy);
+  static Insertable<LearningLedgerData> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? curriculumId,
+    Expression<String>? unitType,
+    Expression<String>? unitIdentifier,
+    Expression<String>? unitDisplayNameHe,
+    Expression<String>? unitDisplayNameEn,
+    Expression<String>? trackType,
+    Expression<int>? trackId,
+    Expression<DateTime>? completedAt,
+    Expression<int>? completionNumber,
+    Expression<int>? markedBy,
+    Expression<bool>? isManual,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (unitType != null) 'unit_type': unitType,
+      if (unitIdentifier != null) 'unit_identifier': unitIdentifier,
+      if (unitDisplayNameHe != null) 'unit_display_name_he': unitDisplayNameHe,
+      if (unitDisplayNameEn != null) 'unit_display_name_en': unitDisplayNameEn,
+      if (trackType != null) 'track_type': trackType,
+      if (trackId != null) 'track_id': trackId,
+      if (completedAt != null) 'completed_at': completedAt,
+      if (completionNumber != null) 'completion_number': completionNumber,
+      if (markedBy != null) 'marked_by': markedBy,
+      if (isManual != null) 'is_manual': isManual,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  LearningLedgerCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? curriculumId,
+    Value<String>? unitType,
+    Value<String>? unitIdentifier,
+    Value<String>? unitDisplayNameHe,
+    Value<String>? unitDisplayNameEn,
+    Value<String>? trackType,
+    Value<int?>? trackId,
+    Value<DateTime>? completedAt,
+    Value<int>? completionNumber,
+    Value<int>? markedBy,
+    Value<bool>? isManual,
+    Value<DateTime>? createdAt,
+  }) {
+    return LearningLedgerCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      curriculumId: curriculumId ?? this.curriculumId,
+      unitType: unitType ?? this.unitType,
+      unitIdentifier: unitIdentifier ?? this.unitIdentifier,
+      unitDisplayNameHe: unitDisplayNameHe ?? this.unitDisplayNameHe,
+      unitDisplayNameEn: unitDisplayNameEn ?? this.unitDisplayNameEn,
+      trackType: trackType ?? this.trackType,
+      trackId: trackId ?? this.trackId,
+      completedAt: completedAt ?? this.completedAt,
+      completionNumber: completionNumber ?? this.completionNumber,
+      markedBy: markedBy ?? this.markedBy,
+      isManual: isManual ?? this.isManual,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (curriculumId.present) {
+      map['curriculum_id'] = Variable<String>(curriculumId.value);
+    }
+    if (unitType.present) {
+      map['unit_type'] = Variable<String>(unitType.value);
+    }
+    if (unitIdentifier.present) {
+      map['unit_identifier'] = Variable<String>(unitIdentifier.value);
+    }
+    if (unitDisplayNameHe.present) {
+      map['unit_display_name_he'] = Variable<String>(unitDisplayNameHe.value);
+    }
+    if (unitDisplayNameEn.present) {
+      map['unit_display_name_en'] = Variable<String>(unitDisplayNameEn.value);
+    }
+    if (trackType.present) {
+      map['track_type'] = Variable<String>(trackType.value);
+    }
+    if (trackId.present) {
+      map['track_id'] = Variable<int>(trackId.value);
+    }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
+    if (completionNumber.present) {
+      map['completion_number'] = Variable<int>(completionNumber.value);
+    }
+    if (markedBy.present) {
+      map['marked_by'] = Variable<int>(markedBy.value);
+    }
+    if (isManual.present) {
+      map['is_manual'] = Variable<bool>(isManual.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LearningLedgerCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('unitType: $unitType, ')
+          ..write('unitIdentifier: $unitIdentifier, ')
+          ..write('unitDisplayNameHe: $unitDisplayNameHe, ')
+          ..write('unitDisplayNameEn: $unitDisplayNameEn, ')
+          ..write('trackType: $trackType, ')
+          ..write('trackId: $trackId, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('completionNumber: $completionNumber, ')
+          ..write('markedBy: $markedBy, ')
+          ..write('isManual: $isManual, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $BookmarksTable extends Bookmarks
     with TableInfo<$BookmarksTable, Bookmark> {
   @override
@@ -9163,6 +9984,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $CompletionsTable completions = $CompletionsTable(this);
+  late final $LearningLedgerTable learningLedger = $LearningLedgerTable(this);
   late final $BookmarksTable bookmarks = $BookmarksTable(this);
   late final $GoalsTable goals = $GoalsTable(this);
   late final $LearningOrderTable learningOrder = $LearningOrderTable(this);
@@ -9192,6 +10014,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final CompletionDao completionDao = CompletionDao(this as AppDatabase);
+  late final LearningLedgerDao learningLedgerDao = LearningLedgerDao(
+    this as AppDatabase,
+  );
   late final GoalDao goalDao = GoalDao(this as AppDatabase);
   late final PointConfigDao pointConfigDao = PointConfigDao(
     this as AppDatabase,
@@ -9232,6 +10057,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     curriculumTracks,
     stageDefinitions,
     completions,
+    learningLedger,
     bookmarks,
     goals,
     learningOrder,
@@ -10443,6 +11269,389 @@ typedef $$CompletionsTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $CompletionsTable, Completion>,
       ),
       Completion,
+      PrefetchHooks Function()
+    >;
+typedef $$LearningLedgerTableCreateCompanionBuilder =
+    LearningLedgerCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      required String curriculumId,
+      required String unitType,
+      required String unitIdentifier,
+      required String unitDisplayNameHe,
+      required String unitDisplayNameEn,
+      required String trackType,
+      Value<int?> trackId,
+      required DateTime completedAt,
+      required int completionNumber,
+      required int markedBy,
+      Value<bool> isManual,
+      Value<DateTime> createdAt,
+    });
+typedef $$LearningLedgerTableUpdateCompanionBuilder =
+    LearningLedgerCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> curriculumId,
+      Value<String> unitType,
+      Value<String> unitIdentifier,
+      Value<String> unitDisplayNameHe,
+      Value<String> unitDisplayNameEn,
+      Value<String> trackType,
+      Value<int?> trackId,
+      Value<DateTime> completedAt,
+      Value<int> completionNumber,
+      Value<int> markedBy,
+      Value<bool> isManual,
+      Value<DateTime> createdAt,
+    });
+
+class $$LearningLedgerTableFilterComposer
+    extends Composer<_$AppDatabase, $LearningLedgerTable> {
+  $$LearningLedgerTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unitType => $composableBuilder(
+    column: $table.unitType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unitIdentifier => $composableBuilder(
+    column: $table.unitIdentifier,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unitDisplayNameHe => $composableBuilder(
+    column: $table.unitDisplayNameHe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unitDisplayNameEn => $composableBuilder(
+    column: $table.unitDisplayNameEn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackType => $composableBuilder(
+    column: $table.trackType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completionNumber => $composableBuilder(
+    column: $table.completionNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get markedBy => $composableBuilder(
+    column: $table.markedBy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isManual => $composableBuilder(
+    column: $table.isManual,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LearningLedgerTableOrderingComposer
+    extends Composer<_$AppDatabase, $LearningLedgerTable> {
+  $$LearningLedgerTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unitType => $composableBuilder(
+    column: $table.unitType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unitIdentifier => $composableBuilder(
+    column: $table.unitIdentifier,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unitDisplayNameHe => $composableBuilder(
+    column: $table.unitDisplayNameHe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unitDisplayNameEn => $composableBuilder(
+    column: $table.unitDisplayNameEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trackType => $composableBuilder(
+    column: $table.trackType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completionNumber => $composableBuilder(
+    column: $table.completionNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get markedBy => $composableBuilder(
+    column: $table.markedBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isManual => $composableBuilder(
+    column: $table.isManual,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LearningLedgerTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LearningLedgerTable> {
+  $$LearningLedgerTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get unitType =>
+      $composableBuilder(column: $table.unitType, builder: (column) => column);
+
+  GeneratedColumn<String> get unitIdentifier => $composableBuilder(
+    column: $table.unitIdentifier,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get unitDisplayNameHe => $composableBuilder(
+    column: $table.unitDisplayNameHe,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get unitDisplayNameEn => $composableBuilder(
+    column: $table.unitDisplayNameEn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get trackType =>
+      $composableBuilder(column: $table.trackType, builder: (column) => column);
+
+  GeneratedColumn<int> get trackId =>
+      $composableBuilder(column: $table.trackId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get completionNumber => $composableBuilder(
+    column: $table.completionNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get markedBy =>
+      $composableBuilder(column: $table.markedBy, builder: (column) => column);
+
+  GeneratedColumn<bool> get isManual =>
+      $composableBuilder(column: $table.isManual, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$LearningLedgerTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LearningLedgerTable,
+          LearningLedgerData,
+          $$LearningLedgerTableFilterComposer,
+          $$LearningLedgerTableOrderingComposer,
+          $$LearningLedgerTableAnnotationComposer,
+          $$LearningLedgerTableCreateCompanionBuilder,
+          $$LearningLedgerTableUpdateCompanionBuilder,
+          (
+            LearningLedgerData,
+            BaseReferences<
+              _$AppDatabase,
+              $LearningLedgerTable,
+              LearningLedgerData
+            >,
+          ),
+          LearningLedgerData,
+          PrefetchHooks Function()
+        > {
+  $$LearningLedgerTableTableManager(
+    _$AppDatabase db,
+    $LearningLedgerTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LearningLedgerTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LearningLedgerTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LearningLedgerTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> curriculumId = const Value.absent(),
+                Value<String> unitType = const Value.absent(),
+                Value<String> unitIdentifier = const Value.absent(),
+                Value<String> unitDisplayNameHe = const Value.absent(),
+                Value<String> unitDisplayNameEn = const Value.absent(),
+                Value<String> trackType = const Value.absent(),
+                Value<int?> trackId = const Value.absent(),
+                Value<DateTime> completedAt = const Value.absent(),
+                Value<int> completionNumber = const Value.absent(),
+                Value<int> markedBy = const Value.absent(),
+                Value<bool> isManual = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LearningLedgerCompanion(
+                id: id,
+                profileId: profileId,
+                curriculumId: curriculumId,
+                unitType: unitType,
+                unitIdentifier: unitIdentifier,
+                unitDisplayNameHe: unitDisplayNameHe,
+                unitDisplayNameEn: unitDisplayNameEn,
+                trackType: trackType,
+                trackId: trackId,
+                completedAt: completedAt,
+                completionNumber: completionNumber,
+                markedBy: markedBy,
+                isManual: isManual,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                required String curriculumId,
+                required String unitType,
+                required String unitIdentifier,
+                required String unitDisplayNameHe,
+                required String unitDisplayNameEn,
+                required String trackType,
+                Value<int?> trackId = const Value.absent(),
+                required DateTime completedAt,
+                required int completionNumber,
+                required int markedBy,
+                Value<bool> isManual = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LearningLedgerCompanion.insert(
+                id: id,
+                profileId: profileId,
+                curriculumId: curriculumId,
+                unitType: unitType,
+                unitIdentifier: unitIdentifier,
+                unitDisplayNameHe: unitDisplayNameHe,
+                unitDisplayNameEn: unitDisplayNameEn,
+                trackType: trackType,
+                trackId: trackId,
+                completedAt: completedAt,
+                completionNumber: completionNumber,
+                markedBy: markedBy,
+                isManual: isManual,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LearningLedgerTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LearningLedgerTable,
+      LearningLedgerData,
+      $$LearningLedgerTableFilterComposer,
+      $$LearningLedgerTableOrderingComposer,
+      $$LearningLedgerTableAnnotationComposer,
+      $$LearningLedgerTableCreateCompanionBuilder,
+      $$LearningLedgerTableUpdateCompanionBuilder,
+      (
+        LearningLedgerData,
+        BaseReferences<_$AppDatabase, $LearningLedgerTable, LearningLedgerData>,
+      ),
+      LearningLedgerData,
       PrefetchHooks Function()
     >;
 typedef $$BookmarksTableCreateCompanionBuilder =
@@ -14039,6 +15248,8 @@ class $AppDatabaseManager {
       $$StageDefinitionsTableTableManager(_db, _db.stageDefinitions);
   $$CompletionsTableTableManager get completions =>
       $$CompletionsTableTableManager(_db, _db.completions);
+  $$LearningLedgerTableTableManager get learningLedger =>
+      $$LearningLedgerTableTableManager(_db, _db.learningLedger);
   $$BookmarksTableTableManager get bookmarks =>
       $$BookmarksTableTableManager(_db, _db.bookmarks);
   $$GoalsTableTableManager get goals =>

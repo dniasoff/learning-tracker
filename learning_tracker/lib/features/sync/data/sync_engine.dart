@@ -51,6 +51,7 @@ class SyncEngine {
   StreamSubscription<List<Map<String, dynamic>>>? _goalsSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _rewardsSubscription;
   StreamSubscription<List<String>>? _activeCurriculaSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _ledgerSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
@@ -75,6 +76,7 @@ class SyncEngine {
   bool _mergingGoals = false;
   bool _mergingRewards = false;
   bool _mergingActiveCurricula = false;
+  bool _mergingLedgerEntries = false;
 
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
@@ -172,6 +174,10 @@ class SyncEngine {
     _activeCurriculaSubscription = _firestoreDataSource
         .listenToActiveCurricula()
         .listen(_onActiveCurriculaUpdate, onError: _handleListenerError);
+
+    _ledgerSubscription = _firestoreDataSource
+        .listenToLedgerEntries()
+        .listen(_onLedgerUpdate, onError: _handleListenerError);
   }
 
   /// Detach foreground listeners (on app background).
@@ -191,6 +197,7 @@ class SyncEngine {
     await _goalsSubscription?.cancel();
     await _rewardsSubscription?.cancel();
     await _activeCurriculaSubscription?.cancel();
+    await _ledgerSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
@@ -199,6 +206,7 @@ class SyncEngine {
     _goalsSubscription = null;
     _rewardsSubscription = null;
     _activeCurriculaSubscription = null;
+    _ledgerSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -228,6 +236,7 @@ class SyncEngine {
         _firestoreDataSource.fetchRewards(),
         _firestoreDataSource.fetchStreak(),
         _firestoreDataSource.fetchProfile(),
+        _firestoreDataSource.fetchLedgerEntries(),
       ]);
       final completions = results[0] as List<Map<String, dynamic>>;
       final bookmarks = results[1] as List<Map<String, dynamic>>;
@@ -236,6 +245,7 @@ class SyncEngine {
       final rewards = results[4] as List<Map<String, dynamic>>;
       final streak = results[5] as Map<String, dynamic>?;
       final profile = results[6] as Map<String, dynamic>?;
+      final ledgerEntries = results[7] as List<Map<String, dynamic>>;
 
       // Merge with local database
       await _mergeCompletions(completions);
@@ -245,6 +255,7 @@ class SyncEngine {
       await _mergeRewards(rewards);
       if (streak != null) await _mergeStreak(streak);
       if (profile != null) await _mergeProfile(profile);
+      await _mergeLedgerEntries(ledgerEntries);
 
       _logger.info('Pull-on-launch completed successfully');
       final syncedAt = DateTime.now().toUtc();
@@ -282,6 +293,29 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to push completion, queuing for later', e);
       await _offlineQueue.enqueueCompletion(completion);
+      await _emitPendingStatus();
+    }
+  }
+
+  /// Push a ledger entry to Firestore after local write.
+  Future<void> pushLedgerEntry(Map<String, dynamic> entry) async {
+    if (!_isOnline) {
+      await _offlineQueue.enqueueLedgerEntry(entry);
+      _updateStatus(
+        SyncStatus.offline(
+          pendingChanges: await _offlineQueue.getPendingCount(),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.pushLedgerEntry(entry);
+      _logger.debug('Pushed ledger entry to Firestore');
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _logger.warning('Failed to push ledger entry, queuing for later', e);
+      await _offlineQueue.enqueueLedgerEntry(entry);
       await _emitPendingStatus();
     }
   }
@@ -498,6 +532,70 @@ class SyncEngine {
     }
 
     _logger.debug('Inserted $insertedCount new completions from Firestore');
+  }
+
+  /// Merge ledger entries from Firestore (append-only).
+  ///
+  /// Ledger entries are append-only. For each remote entry, check if it
+  /// already exists locally by composite key. If not, insert it.
+  Future<void> _mergeLedgerEntries(
+    List<Map<String, dynamic>> remoteLedgerEntries,
+  ) async {
+    _logger.debug(
+      'Merging ${remoteLedgerEntries.length} ledger entries from Firestore',
+    );
+
+    var insertedCount = 0;
+    for (final remote in remoteLedgerEntries) {
+      try {
+        final curriculumId = remote['curriculumId'] as String?;
+        final unitIdentifier = remote['unitIdentifier'] as String?;
+        final trackType = remote['trackType'] as String?;
+        final completedAt = _parseTimestamp(remote['completedAt']);
+        final profileId = remote['profileId'] as int? ?? 0;
+
+        if (curriculumId == null ||
+            unitIdentifier == null ||
+            trackType == null ||
+            completedAt == null) {
+          _logger.warning('Skipping invalid remote ledger entry: $remote');
+          continue;
+        }
+
+        final exists = await _database.learningLedgerDao.entryExists(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          unitIdentifier: unitIdentifier,
+          trackType: trackType,
+          completedAt: completedAt,
+        );
+
+        if (!exists) {
+          await _database.learningLedgerDao.insertEntry(
+            LearningLedgerCompanion.insert(
+              profileId: Value(profileId),
+              curriculumId: curriculumId,
+              unitType: remote['unitType'] as String? ?? 'masechta',
+              unitIdentifier: unitIdentifier,
+              unitDisplayNameHe: remote['unitDisplayNameHe'] as String? ?? '',
+              unitDisplayNameEn: remote['unitDisplayNameEn'] as String? ?? '',
+              trackType: trackType,
+              trackId: Value(remote['trackId'] as int?),
+              completedAt: completedAt,
+              completionNumber: remote['completionNumber'] as int? ?? 1,
+              markedBy: remote['markedBy'] as int? ?? 0,
+              isManual: Value(remote['isManual'] as bool? ?? false),
+            ),
+          );
+          insertedCount++;
+        }
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+        _logger.warning('Failed to merge ledger entry: $e');
+      }
+    }
+
+    _logger.debug('Inserted $insertedCount new ledger entries from Firestore');
   }
 
   /// Merge bookmarks from Firestore (last-write-wins per D4).
@@ -843,6 +941,22 @@ class SyncEngine {
       await _mergeActiveCurricula(curricula);
     } finally {
       _mergingActiveCurricula = false;
+    }
+  }
+
+  Future<void> _onLedgerUpdate(
+    List<Map<String, dynamic>> ledgerEntries,
+  ) async {
+    if (_mergingLedgerEntries) return;
+    _mergingLedgerEntries = true;
+    _consecutiveListenerErrors = 0;
+    try {
+      _logger.debug(
+        'Received ${ledgerEntries.length} ledger entries from listener',
+      );
+      await _mergeLedgerEntries(ledgerEntries);
+    } finally {
+      _mergingLedgerEntries = false;
     }
   }
 

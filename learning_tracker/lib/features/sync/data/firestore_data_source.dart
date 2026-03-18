@@ -147,6 +147,51 @@ class FirestoreDataSource {
     });
   }
 
+  // ========== Learning Ledger Operations ==========
+
+  /// Get learning ledger subcollection reference (profile-scoped).
+  CollectionReference<Map<String, dynamic>>? get _ledgerCollection {
+    return _profileScopedDoc?.collection('learning_ledger');
+  }
+
+  /// Push a ledger entry to Firestore (append-only).
+  Future<void> pushLedgerEntry(Map<String, dynamic> entryData) async {
+    final collection = _ledgerCollection;
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await collection.add({
+      ...entryData,
+      'synced_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Fetch all ledger entries from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchLedgerEntries({
+    int pageSize = defaultPageSize,
+  }) async {
+    final collection = _ledgerCollection;
+    if (collection == null) return [];
+
+    return _fetchPaginated(collection, pageSize: pageSize);
+  }
+
+  /// Listen to real-time ledger entry updates.
+  Stream<List<Map<String, dynamic>>> listenToLedgerEntries() {
+    final collection = _ledgerCollection;
+    if (collection == null) {
+      return Stream.value([]);
+    }
+
+    return collection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {...data, 'firestore_id': doc.id};
+      }).toList();
+    });
+  }
+
   // ========== Bookmarks Operations ==========
 
   /// Push a bookmark to Firestore (last-write-wins with UTC timestamp).
