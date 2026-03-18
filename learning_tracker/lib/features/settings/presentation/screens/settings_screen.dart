@@ -11,15 +11,17 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/link_provider_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 
 /// App version constant (from pubspec.yaml).
 const String _appVersion = '1.0.0';
@@ -84,6 +86,18 @@ class SettingsScreen extends ConsumerWidget {
                 child: Text('Error loading curricula: $error'),
               ),
             ),
+          ),
+
+          // Task 5: Add new curriculum (shown if not all are active)
+          activeCurriculaAsync.when(
+            data: (activeCurricula) {
+              if (activeCurricula.length >= CurriculumId.values.length) {
+                return const SizedBox.shrink();
+              }
+              return _AddCurriculumTile(activeCurricula: activeCurricula);
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
           ),
 
           const Divider(height: 32),
@@ -813,6 +827,89 @@ class _CurriculumToggleTile extends ConsumerWidget {
                 }
               }
             },
+    );
+  }
+}
+
+/// Tile that lets users add a new curriculum post-onboarding.
+///
+/// Shows a picker excluding already-active curricula, then runs the full
+/// activation + wizard + bulk mark flow.
+class _AddCurriculumTile extends ConsumerWidget {
+  const _AddCurriculumTile({required this.activeCurricula});
+
+  final List<CurriculumId> activeCurricula;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      leading: const Icon(Icons.add_circle_outline),
+      title: const Text('Add a curriculum'),
+      subtitle: const Text('Start tracking a new subject'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _onAdd(context, ref),
+    );
+  }
+
+  Future<void> _onAdd(BuildContext context, WidgetRef ref) async {
+    final inactive = CurriculumId.values
+        .where((c) => !activeCurricula.contains(c))
+        .toList();
+
+    final selected = await showDialog<CurriculumId>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Select Curriculum'),
+        children: inactive
+            .map<Widget>(
+              (c) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, c),
+                child: Text(c.displayNameEn),
+              ),
+            )
+            .toList(),
+      ),
+    );
+
+    if (selected == null || !context.mounted) return;
+
+    // Activate the curriculum.
+    final activationService = ref.read(curriculumActivationServiceProvider);
+    await activationService.activate(selected);
+    ref.invalidate(activeCurriculaProvider);
+    ref.invalidate(isCurriculumActiveProvider(selected));
+
+    if (!context.mounted) return;
+
+    // Launch wizard for the new curriculum.
+    final wizardService = ref.read(learningProcessWizardServiceProvider);
+    final presets = await wizardService.getPresetsForCurriculum(selected);
+
+    if (!context.mounted) return;
+
+    final wizardResult =
+        await Navigator.of(context).push<LearningProcessWizardResult>(
+      MaterialPageRoute(
+        builder: (_) => LearningProcessWizardScreen(
+          curriculumId: selected,
+          presets: presets,
+          isChildMode: false,
+        ),
+      ),
+    );
+
+    if (wizardResult != null) {
+      await wizardService.applyWizardResult(wizardResult.wizardResult);
+      ref.invalidate(stageListProvider(selected));
+    }
+
+    if (!context.mounted) return;
+
+    // Launch bulk mark.
+    await Navigator.of(context).push<BulkMarkResult>(
+      MaterialPageRoute(
+        builder: (_) => BulkMarkScreen(curriculumId: selected),
+      ),
     );
   }
 }
