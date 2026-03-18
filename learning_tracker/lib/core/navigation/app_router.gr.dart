@@ -562,6 +562,22 @@ class LearningRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [ManageLearnersScreen]
+class ManageLearnersRoute extends PageRouteInfo<void> {
+  const ManageLearnersRoute({List<PageRouteInfo>? children})
+    : super(ManageLearnersRoute.name, initialChildren: children);
+
+  static const String name = 'ManageLearnersRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const ManageLearnersScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [ModeSelectionScreen]
 class ModeSelectionRoute extends PageRouteInfo<void> {
   const ModeSelectionRoute({List<PageRouteInfo>? children})
@@ -701,6 +717,22 @@ class PointConfigRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const PointConfigScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [ProfilePickerScreen]
+class ProfilePickerRoute extends PageRouteInfo<void> {
+  const ProfilePickerRoute({List<PageRouteInfo>? children})
+    : super(ProfilePickerRoute.name, initialChildren: children);
+
+  static const String name = 'ProfilePickerRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const ProfilePickerScreen();
     },
   );
 }

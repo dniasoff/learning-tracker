@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/navigation/app_shell.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
@@ -29,6 +30,8 @@ import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_e
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/reward_catalog_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
@@ -52,6 +55,7 @@ part 'app_router.gr.dart';
 class AppRouter extends RootStackRouter {
   final AuthGuard authGuard;
   final RestoreGuard restoreGuard;
+  final ProfileGuard profileGuard;
   final ChildModeGuard childModeGuard;
   final ParentPinGuard parentPinGuard;
   final TutorPinGuard tutorPinGuard;
@@ -59,6 +63,7 @@ class AppRouter extends RootStackRouter {
   AppRouter({
     required this.authGuard,
     required this.restoreGuard,
+    required this.profileGuard,
     required this.childModeGuard,
     required this.parentPinGuard,
     required this.tutorPinGuard,
@@ -76,12 +81,14 @@ class AppRouter extends RootStackRouter {
     AutoRoute(path: '/mode-selection', page: ModeSelectionRoute.page),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
     AutoRoute(path: '/restore', page: DeviceRestoreRoute.page),
+    AutoRoute(path: '/profile-picker', page: ProfilePickerRoute.page, guards: [authGuard]),
+    AutoRoute(path: '/manage-learners', page: ManageLearnersRoute.page, guards: [authGuard]),
 
     // App shell with bottom navigation (auth required)
     AutoRoute(
       path: '/',
       page: AppShellRoute.page,
-      guards: [authGuard, restoreGuard],
+      guards: [authGuard, restoreGuard, profileGuard],
       children: [
         AutoRoute(path: 'dashboard', page: DashboardRoute.page, initial: true),
         AutoRoute(path: 'learn', page: LearningRoute.page),

@@ -5,11 +5,13 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Riverpod provider that creates and owns the [AppRouter] singleton.
 ///
@@ -22,6 +24,12 @@ final routerProvider = Provider<AppRouter>((ref) {
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: FirebaseAuth.instance),
     restoreGuard: RestoreGuard(database: db),
+    profileGuard: ProfileGuard(
+      database: db,
+      getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
+      setSelectedProfileId: (id) =>
+          ref.read(selectedProfileIdProvider.notifier).select(id),
+    ),
     childModeGuard: ChildModeGuard(database: db),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
