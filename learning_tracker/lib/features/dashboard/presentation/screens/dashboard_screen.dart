@@ -11,6 +11,8 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/curricu
 import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/todays_tasks_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
@@ -21,9 +23,26 @@ class DashboardScreen extends ConsumerWidget {
     final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
+    final selectedProfileAsync = ref.watch(selectedProfileProvider);
+    final profileName = selectedProfileAsync.asData?.value?.displayName;
+    final profileAvatar = selectedProfileAsync.asData?.value?.avatarIndex;
+    final title = profileName != null ? "$profileName's Dashboard" : 'Dashboard';
 
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Dashboard')),
+      appBar: AppBar(
+        title: AppBarTitle(text: title),
+        actions: [
+          if (profileAvatar != null)
+            IconButton(
+              onPressed: () {
+                ref.read(selectedProfileIdProvider.notifier).clear();
+                context.router.replace(const ProfilePickerRoute());
+              },
+              icon: ProfileAvatar(avatarIndex: profileAvatar, radius: 16),
+              tooltip: 'Switch profile',
+            ),
+        ],
+      ),
       body: activeCurriculaAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('Error: $e')),

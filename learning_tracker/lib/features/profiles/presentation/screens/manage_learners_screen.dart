@@ -1,0 +1,267 @@
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
+
+@RoutePage()
+class ManageLearnersScreen extends ConsumerWidget {
+  const ManageLearnersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profilesAsync = ref.watch(profileListStreamProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const AppBarTitle(text: 'Manage Learners'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddProfileDialog(context, ref),
+        child: const Icon(Icons.add),
+      ),
+      body: profilesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error: $e')),
+        data: (profiles) {
+          if (profiles.isEmpty) {
+            return const Center(child: Text('No profiles yet. Tap + to add one.'));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: profiles.length,
+            itemBuilder: (context, index) {
+              final profile = profiles[index];
+              return _ProfileListTile(profile: profile);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showAddProfileDialog(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<({String name, String mode, int avatar})>(
+      context: context,
+      builder: (ctx) => const _ProfileFormDialog(title: 'Add Learner'),
+    );
+    if (result == null) return;
+
+    final repo = ref.read(profileRepositoryProvider);
+    await repo.createProfile(
+      accountId: 1,
+      displayName: result.name,
+      mode: result.mode,
+      avatarIndex: result.avatar,
+    );
+    ref.invalidate(profileListProvider);
+    ref.invalidate(profileListStreamProvider);
+  }
+}
+
+class _ProfileListTile extends ConsumerWidget {
+  final ProfileModel profile;
+
+  const _ProfileListTile({required this.profile});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: ListTile(
+        leading: ProfileAvatar(avatarIndex: profile.avatarIndex),
+        title: Text(profile.displayName),
+        subtitle: Text(profile.mode == 'child' ? 'Child mode' : 'Adult mode'),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) async {
+            switch (value) {
+              case 'edit':
+                await _editProfile(context, ref);
+              case 'delete':
+                await _deleteProfile(context, ref);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 'edit', child: Text('Edit')),
+            const PopupMenuItem(value: 'delete', child: Text('Delete')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editProfile(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<({String name, String mode, int avatar})>(
+      context: context,
+      builder: (ctx) => _ProfileFormDialog(
+        title: 'Edit Learner',
+        initialName: profile.displayName,
+        initialMode: profile.mode,
+        initialAvatar: profile.avatarIndex,
+      ),
+    );
+    if (result == null) return;
+
+    final repo = ref.read(profileRepositoryProvider);
+    await repo.updateProfile(
+      id: profile.id,
+      displayName: result.name,
+      avatarIndex: result.avatar,
+    );
+    ref.invalidate(profileListProvider);
+    ref.invalidate(profileListStreamProvider);
+    ref.invalidate(selectedProfileProvider);
+  }
+
+  Future<void> _deleteProfile(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Profile'),
+        content: Text(
+          'Are you sure you want to delete "${profile.displayName}"? '
+          'All learning data for this profile will be permanently lost.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final selectedId = ref.read(selectedProfileIdProvider);
+    final repo = ref.read(profileRepositoryProvider);
+    await repo.deleteProfile(profile.id);
+
+    if (selectedId == profile.id) {
+      ref.read(selectedProfileIdProvider.notifier).clear();
+    }
+    ref.invalidate(profileListProvider);
+    ref.invalidate(profileListStreamProvider);
+  }
+}
+
+class _ProfileFormDialog extends StatefulWidget {
+  final String title;
+  final String? initialName;
+  final String? initialMode;
+  final int? initialAvatar;
+
+  const _ProfileFormDialog({
+    required this.title,
+    this.initialName,
+    this.initialMode,
+    this.initialAvatar,
+  });
+
+  @override
+  State<_ProfileFormDialog> createState() => _ProfileFormDialogState();
+}
+
+class _ProfileFormDialogState extends State<_ProfileFormDialog> {
+  late final TextEditingController _nameController;
+  late String _mode;
+  late int _avatarIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _mode = widget.initialMode ?? 'child';
+    _avatarIndex = widget.initialAvatar ?? 0;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                hintText: 'Enter learner name',
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'child', label: Text('Child')),
+                ButtonSegment(value: 'adult', label: Text('Adult')),
+              ],
+              selected: {_mode},
+              onSelectionChanged: (selected) {
+                setState(() => _mode = selected.first);
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('Choose Avatar'),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 60,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: 10,
+                itemBuilder: (context, index) {
+                  final isSelected = index == _avatarIndex;
+                  return GestureDetector(
+                    onTap: () => setState(() => _avatarIndex = index),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: isSelected
+                          ? BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 3,
+                              ),
+                            )
+                          : null,
+                      child: ProfileAvatar(avatarIndex: index, radius: 24),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final name = _nameController.text.trim();
+            if (name.isEmpty) return;
+            Navigator.of(context).pop(
+              (name: name, mode: _mode, avatar: _avatarIndex),
+            );
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
