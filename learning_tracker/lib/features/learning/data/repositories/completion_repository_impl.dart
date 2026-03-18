@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [CompletionRepository] using Drift database and sync engine.
@@ -15,16 +16,22 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final SyncEngine _syncEngine;
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
+  final CompletionDetectionService? _completionDetectionService;
+  final int _activeProfileId;
 
   CompletionRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
     required ContentRepository contentRepository,
     BookmarkRepository? bookmarkRepository,
+    CompletionDetectionService? completionDetectionService,
+    int activeProfileId = 0,
   }) : _database = database,
        _syncEngine = syncEngine,
        _contentRepository = contentRepository,
-       _bookmarkRepository = bookmarkRepository;
+       _bookmarkRepository = bookmarkRepository,
+       _completionDetectionService = completionDetectionService,
+       _activeProfileId = activeProfileId;
 
   @override
   Future<Completion> markComplete(CompletionRequest request) async {
@@ -68,6 +75,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
       // 6. Push to Firestore sync queue
       await _syncCompletion(completion);
+
+      // 7. Check for unit completion (ledger auto-detection)
+      if (_completionDetectionService != null) {
+        await _completionDetectionService.checkAndRecordCompletions(
+          curriculumId: request.curriculumId,
+          sefariaRef: request.sefariaRef,
+          trackType: request.trackType,
+          profileId: _activeProfileId,
+          markedBy: _activeProfileId,
+        );
+      }
 
       return completion;
     });

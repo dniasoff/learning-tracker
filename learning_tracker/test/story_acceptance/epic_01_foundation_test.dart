@@ -82,7 +82,7 @@ void main() {
     });
 
     test('schema version is 7', () {
-      expect(db.schemaVersion, equals(14));
+      expect(db.schemaVersion, equals(15));
     });
 
     test('all 12 DAOs are accessible', () {
@@ -99,6 +99,7 @@ void main() {
       expect(db.syncQueueDao, isNotNull);
       expect(db.textCacheDao, isNotNull);
       expect(db.textDownloadStatusDao, isNotNull);
+      expect(db.learningLedgerDao, isNotNull);
     });
 
     test('basic CRUD round-trip on completions', () async {
