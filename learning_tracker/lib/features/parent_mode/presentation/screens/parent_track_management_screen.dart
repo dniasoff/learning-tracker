@@ -22,7 +22,7 @@ class ParentTrackManagementScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Manage Tracks')),
-      body: activeCurriculaAsync.when(
+      body: SafeArea(top: false, child: activeCurriculaAsync.when(
         data: (curricula) => curricula.isEmpty
             ? const Center(child: Text('No active curricula'))
             : ListView.builder(
@@ -34,7 +34,7 @@ class ParentTrackManagementScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) =>
             Center(child: Text('Error loading curricula: $error')),
-      ),
+      )),
     );
   }
 }

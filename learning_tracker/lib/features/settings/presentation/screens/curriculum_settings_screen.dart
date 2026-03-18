@@ -47,7 +47,7 @@ class _CurriculumSettingsScreenState
       appBar: AppBar(
         title: AppBarTitle(text: 'Settings - ${_curriculum.displayNameEn}'),
       ),
-      body: ListView(
+      body: SafeArea(top: false, child: ListView(
         children: [
           // Task 1: Program display
           programInfo.when(
@@ -91,7 +91,7 @@ class _CurriculumSettingsScreenState
             onTap: () => _onRequestProgram(context),
           ),
         ],
-      ),
+      )),
     );
   }
 

@@ -27,7 +27,7 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Daily Tasks')),
-      body: asyncTasks.when(
+      body: SafeArea(top: false, child: asyncTasks.when(
         data: (tasks) {
           if (tasks.isEmpty) {
             return const EmptyState(
@@ -83,7 +83,7 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 

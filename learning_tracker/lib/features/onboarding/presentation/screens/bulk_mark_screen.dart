@@ -289,7 +289,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       );
     }
 
-    return Column(
+    return SafeArea(
+      top: false,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
@@ -400,6 +402,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -414,7 +417,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     final stagesAsync = ref.watch(stageListProvider(widget.curriculumId));
     final selections = _perSelectionStages.keys.toList();
 
-    return Column(
+    return SafeArea(
+      top: false,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
@@ -547,6 +552,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -555,7 +561,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     final stageCount = _selectedStageIds.length;
     final totalCompletions = itemCount * stageCount;
 
-    return Center(
+    return SafeArea(
+      top: false,
+      child: Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -604,25 +612,31 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
   Widget _buildProcessing(ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 24),
-          Text('Marking completions...', style: theme.textTheme.titleMedium),
-        ],
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text('Marking completions...', style: theme.textTheme.titleMedium),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDone(ThemeData theme) {
     final result = _result;
-    return Center(
+    return SafeArea(
+      top: false,
+      child: Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -658,6 +672,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

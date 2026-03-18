@@ -36,7 +36,7 @@ class TextDisplayScreen extends ConsumerWidget {
           _FontSizeSelector(currentSize: fontSize),
         ],
       ),
-      body: textAsync.when(
+      body: SafeArea(top: false, child: textAsync.when(
         data: (textContent) {
           if (textContent == null) {
             return const _OfflineMessage();
@@ -49,7 +49,7 @@ class TextDisplayScreen extends ConsumerWidget {
         },
         loading: () => const _LoadingView(),
         error: (error, stack) => _ErrorView(error: error),
-      ),
+      )),
     );
   }
 }

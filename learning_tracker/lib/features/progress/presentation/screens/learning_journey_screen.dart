@@ -40,7 +40,7 @@ class LearningJourneyScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: title)),
-      body: journeyAsync.when(
+      body: SafeArea(top: false, child: journeyAsync.when(
         loading: () => const LoadingIndicator(
           message: 'Loading your journey...',
         ),
@@ -100,7 +100,7 @@ class LearningJourneyScreen extends ConsumerWidget {
             ),
           );
         },
-      ),
+      )),
     );
   }
 

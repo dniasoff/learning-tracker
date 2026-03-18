@@ -43,7 +43,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: activeCurriculaAsync.when(
+      body: SafeArea(top: false, child: activeCurriculaAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('Error: $e')),
         data: (activeCurricula) {
@@ -71,7 +71,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
           );
         },
-      ),
+      )),
     );
   }
 }

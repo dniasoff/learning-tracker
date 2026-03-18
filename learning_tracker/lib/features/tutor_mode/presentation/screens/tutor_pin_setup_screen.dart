@@ -60,15 +60,18 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Set Tutor PIN')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: PinEntryWidget(
-            title: _isConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
-            errorMessage: _errorMessage,
-            onPinComplete: _isConfirmStep
-                ? _onConfirmPinEntered
-                : _onFirstPinEntered,
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: PinEntryWidget(
+              title: _isConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
+              errorMessage: _errorMessage,
+              onPinComplete: _isConfirmStep
+                  ? _onConfirmPinEntered
+                  : _onFirstPinEntered,
+            ),
           ),
         ),
       ),

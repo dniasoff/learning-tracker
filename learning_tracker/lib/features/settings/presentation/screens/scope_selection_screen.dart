@@ -101,11 +101,11 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
           ),
         ],
       ),
-      body: contentAsync.when(
+      body: SafeArea(top: false, child: contentAsync.when(
         data: (items) => _buildBody(items),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-      ),
+      )),
     );
   }
 

@@ -171,7 +171,9 @@ class _LearningProcessWizardScreenState
   }
 
   Widget _buildChooseMethod(ThemeData theme) {
-    return Padding(
+    return SafeArea(
+      top: false,
+      child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -213,11 +215,14 @@ class _LearningProcessWizardScreenState
           ),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildSelectPreset(ThemeData theme) {
-    return Column(
+    return SafeArea(
+      top: false,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
@@ -253,17 +258,20 @@ class _LearningProcessWizardScreenState
           ),
         ),
       ],
+      ),
     );
   }
 
   Widget _buildCustomStep1(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Step 1: How many review rounds?',
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Step 1: How many review rounds?',
             style: theme.textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
@@ -296,17 +304,20 @@ class _LearningProcessWizardScreenState
           ),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildCustomStep2(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Step 2: Set timing for each round',
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Step 2: Set timing for each round',
             style: theme.textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
@@ -329,17 +340,20 @@ class _LearningProcessWizardScreenState
           ),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildCustomStep3(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Step 3: Review your schedule',
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Step 3: Review your schedule',
             style: theme.textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
@@ -383,6 +397,7 @@ class _LearningProcessWizardScreenState
             child: const Text('Confirm'),
           ),
         ],
+      ),
       ),
     );
   }

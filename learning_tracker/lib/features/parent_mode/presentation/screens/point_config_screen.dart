@@ -69,7 +69,7 @@ class PointConfigScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Point Configuration')),
-      body: dataAsync.when(
+      body: SafeArea(top: false, child: dataAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
         data: (data) => data.isEmpty
@@ -79,7 +79,7 @@ class PointConfigScreen extends ConsumerWidget {
                 itemBuilder: (context, index) =>
                     _CurriculumExpansionTile(data: data[index]),
               ),
-      ),
+      )),
     );
   }
 }

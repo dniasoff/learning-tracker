@@ -10,7 +10,7 @@ class GamificationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Gamification')),
-      body: const Center(child: Text('Gamification Screen')),
+      body: const SafeArea(top: false, child: Center(child: Text('Gamification Screen'))),
     );
   }
 }

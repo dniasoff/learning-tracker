@@ -46,7 +46,7 @@ class ParentModeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: dashboardAsync.when(
+      body: SafeArea(top: false, child: dashboardAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Column(
@@ -64,7 +64,7 @@ class ParentModeScreen extends ConsumerWidget {
           ),
         ),
         data: (data) => _DashboardBody(data: data),
-      ),
+      )),
     );
   }
 }

@@ -507,45 +507,48 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ? 'What is your child\'s name?'
         : 'What\'s your name?';
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            prompt,
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              border: OutlineInputBorder(),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              prompt,
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
-            textCapitalization: TextCapitalization.words,
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 24),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'adult', label: Text('Adult')),
-              ButtonSegment(value: 'child', label: Text('Child')),
-            ],
-            selected: {_profileMode},
-            onSelectionChanged: (value) {
-              setState(() => _profileMode = value.first);
-            },
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: _nameController.text.trim().isNotEmpty
-                ? _createProfile
-                : null,
-            child: const Text('Continue'),
-          ),
-        ],
+            const SizedBox(height: 24),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 24),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'adult', label: Text('Adult')),
+                ButtonSegment(value: 'child', label: Text('Child')),
+              ],
+              selected: {_profileMode},
+              onSelectionChanged: (value) {
+                setState(() => _profileMode = value.first);
+              },
+            ),
+            const Spacer(),
+            FilledButton(
+              onPressed: _nameController.text.trim().isNotEmpty
+                  ? _createProfile
+                  : null,
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -560,10 +563,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       isChildMode: _isChildMode,
     );
 
-    return configsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Failed to load curricula: $e')),
-      data: (configs) => Column(
+    return SafeArea(
+      top: false,
+      child: configsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Failed to load curricula: $e')),
+        data: (configs) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
@@ -617,6 +622,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -708,7 +714,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _buildScopeSelection(ThemeData theme) {
     final curriculum = _scopeQueue[_scopeIndex];
-    return Column(
+    return SafeArea(
+      top: false,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
@@ -762,6 +770,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -886,19 +895,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       isChildMode: _isChildMode,
     );
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            headerText,
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${_goalSetupIndex + 1} of ${_goalSetupQueue.length}',
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              headerText,
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_goalSetupIndex + 1} of ${_goalSetupQueue.length}',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -938,19 +949,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildRewardsSetup(ThemeData theme) {
     final thresholds = _computeSuggestedThresholds();
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Set up mystery rewards',
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Set up mystery rewards',
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
@@ -986,18 +1000,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
   Widget _buildHandoff(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
               size: 80,
               color: theme.colorScheme.primary,
             ),
@@ -1027,6 +1044,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

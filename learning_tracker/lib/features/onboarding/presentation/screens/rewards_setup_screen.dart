@@ -92,52 +92,55 @@ class _RewardsSetupScreenState extends State<RewardsSetupScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Set Up Rewards')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Add mystery rewards for your child to earn!',
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'You can add more later from Parent Mode.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Add mystery rewards for your child to earn!',
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            if (_rewards.isNotEmpty) ...[
-              for (var i = 0; i < _rewards.length; i++)
-                Card(
-                  child: ListTile(
-                    title: Text(_rewards[i].title),
-                    subtitle: Text(
-                      '${_rewards[i].description} — ${_rewards[i].pointsThreshold} pts',
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => _removeReward(i),
+              const SizedBox(height: 4),
+              Text(
+                'You can add more later from Parent Mode.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              if (_rewards.isNotEmpty) ...[
+                for (var i = 0; i < _rewards.length; i++)
+                  Card(
+                    child: ListTile(
+                      title: Text(_rewards[i].title),
+                      subtitle: Text(
+                        '${_rewards[i].description} — ${_rewards[i].pointsThreshold} pts',
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => _removeReward(i),
+                      ),
                     ),
                   ),
+                const SizedBox(height: 8),
+              ],
+              _buildAddRewardForm(theme),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _rewards.isNotEmpty ? _save : null,
+                child: Text(
+                  'Save ${_rewards.length} Reward${_rewards.length == 1 ? '' : 's'}',
                 ),
-              const SizedBox(height: 8),
-            ],
-            _buildAddRewardForm(theme),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _rewards.isNotEmpty ? _save : null,
-              child: Text(
-                'Save ${_rewards.length} Reward${_rewards.length == 1 ? '' : 's'}',
               ),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(onPressed: _skip, child: const Text('Skip')),
-          ],
+              const SizedBox(height: 8),
+              OutlinedButton(onPressed: _skip, child: const Text('Skip')),
+            ],
+          ),
         ),
       ),
     );

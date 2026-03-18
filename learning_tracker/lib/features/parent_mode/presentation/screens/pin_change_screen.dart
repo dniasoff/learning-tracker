@@ -89,15 +89,18 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Change Parent PIN')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: PinEntryWidget(
-            title: _title,
-            errorMessage: _errorMessage,
-            isLockedOut: _isLockedOut,
-            lockoutRemainingMinutes: _lockoutRemainingMinutes,
-            onPinComplete: _onPinComplete,
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: PinEntryWidget(
+              title: _title,
+              errorMessage: _errorMessage,
+              isLockedOut: _isLockedOut,
+              lockoutRemainingMinutes: _lockoutRemainingMinutes,
+              onPinComplete: _onPinComplete,
+            ),
           ),
         ),
       ),

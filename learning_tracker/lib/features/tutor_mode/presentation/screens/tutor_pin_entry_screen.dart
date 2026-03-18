@@ -85,15 +85,18 @@ class _TutorPinEntryScreenState extends ConsumerState<TutorPinEntryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Enter Tutor PIN')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: PinEntryWidget(
-            title: 'Enter Tutor PIN',
-            errorMessage: _errorMessage,
-            isLockedOut: _isLockedOut,
-            lockoutRemainingMinutes: _lockoutRemainingMinutes,
-            onPinComplete: _onPinEntered,
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: PinEntryWidget(
+              title: 'Enter Tutor PIN',
+              errorMessage: _errorMessage,
+              isLockedOut: _isLockedOut,
+              lockoutRemainingMinutes: _lockoutRemainingMinutes,
+              onPinComplete: _onPinEntered,
+            ),
           ),
         ),
       ),

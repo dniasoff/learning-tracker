@@ -66,63 +66,66 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Choose Your Mode')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'How would you like to use the app?',
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'You can change this later in Settings.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      body: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'How would you like to use the app?',
+                style: theme.textTheme.titleLarge,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            _ModeCard(
-              title: 'Child',
-              description:
-                  'Full gamification, mystery rewards, parent oversight',
-              icon: Icons.child_care,
-              isSelected: _selectedMode == UserMode.child,
-              onTap: _isLoading
-                  ? null
-                  : () => setState(() => _selectedMode = UserMode.child),
-            ),
-            const SizedBox(height: 16),
-            _ModeCard(
-              title: 'Adult',
-              description:
-                  'Streamlined tracking, self-directed, optional engagement features',
-              icon: Icons.person,
-              isSelected: _selectedMode == UserMode.adult,
-              onTap: _isLoading
-                  ? null
-                  : () => setState(() => _selectedMode = UserMode.adult),
-            ),
-            const Spacer(),
-            FilledButton(
-              onPressed: _selectedMode != null && !_isLoading
-                  ? _confirmSelection
-                  : null,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Continue'),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'You can change this later in Settings.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              _ModeCard(
+                title: 'Child',
+                description:
+                    'Full gamification, mystery rewards, parent oversight',
+                icon: Icons.child_care,
+                isSelected: _selectedMode == UserMode.child,
+                onTap: _isLoading
+                    ? null
+                    : () => setState(() => _selectedMode = UserMode.child),
+              ),
+              const SizedBox(height: 16),
+              _ModeCard(
+                title: 'Adult',
+                description:
+                    'Streamlined tracking, self-directed, optional engagement features',
+                icon: Icons.person,
+                isSelected: _selectedMode == UserMode.adult,
+                onTap: _isLoading
+                    ? null
+                    : () => setState(() => _selectedMode = UserMode.adult),
+              ),
+              const Spacer(),
+              FilledButton(
+                onPressed: _selectedMode != null && !_isLoading
+                    ? _confirmSelection
+                    : null,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Continue'),
+              ),
+            ],
+          ),
         ),
       ),
     );

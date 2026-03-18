@@ -29,7 +29,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: 'Progress - $curriculumName')),
-      body: progressAsync.when(
+      body: SafeArea(top: false, child: progressAsync.when(
         data: (progressData) => SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -74,7 +74,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
           message: 'Failed to load progress: $error',
           onRetry: () => ref.invalidate(curriculumProgressProvider),
         ),
-      ),
+      )),
     );
   }
 

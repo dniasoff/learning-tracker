@@ -84,120 +84,125 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(text: widget.existingGoal != null ? 'Edit Goal' : 'New Goal'),
+        title: AppBarTitle(
+          text: widget.existingGoal != null ? 'Edit Goal' : 'New Goal',
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Description
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                hintText: 'e.g., Finish all Mishnayos by bar mitzvah',
+      body: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Description
+              TextField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'e.g., Finish all Mishnayos by bar mitzvah',
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            // Target percentage slider
-            Text(
-              'Target: ${_targetPercent.round()}%',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Slider(
-              value: _targetPercent,
-              min: 1,
-              max: 100,
-              divisions: 99,
-              label: '${_targetPercent.round()}%',
-              onChanged: (v) => setState(() => _targetPercent = v),
-            ),
-            const SizedBox(height: 24),
-            // Date picker toggle
-            SwitchListTile(
-              title: const Text('Use Hebrew date'),
-              value: _useHebrewDate,
-              onChanged: (v) => setState(() => _useHebrewDate = v),
-            ),
-            const SizedBox(height: 8),
-            // Date selection
-            ListTile(
-              title: Text(
-                _targetDate != null
-                    ? 'Target: ${_targetDate!.year}-${_targetDate!.month.toString().padLeft(2, '0')}-${_targetDate!.day.toString().padLeft(2, '0')}'
-                    : 'No deadline (learn at your own pace)',
+              const SizedBox(height: 24),
+              // Target percentage slider
+              Text(
+                'Target: ${_targetPercent.round()}%',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    onPressed: _useHebrewDate
-                        ? _pickHebrewDate
-                        : _pickGregorianDate,
-                  ),
-                  if (_targetDate != null)
+              Slider(
+                value: _targetPercent,
+                min: 1,
+                max: 100,
+                divisions: 99,
+                label: '${_targetPercent.round()}%',
+                onChanged: (v) => setState(() => _targetPercent = v),
+              ),
+              const SizedBox(height: 24),
+              // Date picker toggle
+              SwitchListTile(
+                title: const Text('Use Hebrew date'),
+                value: _useHebrewDate,
+                onChanged: (v) => setState(() => _useHebrewDate = v),
+              ),
+              const SizedBox(height: 8),
+              // Date selection
+              ListTile(
+                title: Text(
+                  _targetDate != null
+                      ? 'Target: ${_targetDate!.year}-${_targetDate!.month.toString().padLeft(2, '0')}-${_targetDate!.day.toString().padLeft(2, '0')}'
+                      : 'No deadline (learn at your own pace)',
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () => setState(() => _targetDate = null),
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: _useHebrewDate
+                          ? _pickHebrewDate
+                          : _pickGregorianDate,
                     ),
-                ],
+                    if (_targetDate != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => setState(() => _targetDate = null),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            // Daily pace summary
-            if (_targetDate != null && widget.totalItems != null) ...[
-              const SizedBox(height: 16),
-              Builder(
-                builder: (context) {
-                  final daysRemaining = _targetDate!
-                      .difference(DateTime.now())
-                      .inDays;
-                  if (daysRemaining <= 0) {
-                    return Text(
-                      'Deadline has passed',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
+              // Daily pace summary
+              if (_targetDate != null && widget.totalItems != null) ...[
+                const SizedBox(height: 16),
+                Builder(
+                  builder: (context) {
+                    final daysRemaining = _targetDate!
+                        .difference(DateTime.now())
+                        .inDays;
+                    if (daysRemaining <= 0) {
+                      return Text(
+                        'Deadline has passed',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      );
+                    }
+                    final remainingItems =
+                        (widget.totalItems! * _targetPercent / 100).ceil();
+                    final pace = (remainingItems / daysRemaining).ceil();
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            Text(
+                              '~$pace items per day',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$remainingItems items in $daysRemaining days',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
-                  }
-                  final remainingItems =
-                      (widget.totalItems! * _targetPercent / 100).ceil();
-                  final pace = (remainingItems / daysRemaining).ceil();
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Text(
-                            '~$pace items per day',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$remainingItems items in $daysRemaining days',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                  },
+                ),
+              ],
+              const Spacer(),
+              FilledButton(
+                onPressed: _submit,
+                child: Text(
+                  widget.existingGoal != null ? 'Update Goal' : 'Create Goal',
+                ),
               ),
             ],
-            const Spacer(),
-            FilledButton(
-              onPressed: _submit,
-              child: Text(
-                widget.existingGoal != null ? 'Update Goal' : 'Create Goal',
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

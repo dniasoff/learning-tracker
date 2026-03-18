@@ -37,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Settings')),
-      body: ListView(
+      body: SafeArea(top: false, child: ListView(
         children: [
           // User Profile Section
           _UserProfileSection(user: user),
@@ -218,7 +218,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

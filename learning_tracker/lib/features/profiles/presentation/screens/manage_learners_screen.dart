@@ -18,9 +18,12 @@ class ManageLearnersScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const AppBarTitle(text: 'Manage Learners'),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddProfileDialog(context, ref),
-        child: const Icon(Icons.add),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom),
+        child: FloatingActionButton(
+          onPressed: () => _showAddProfileDialog(context, ref),
+          child: const Icon(Icons.add),
+        ),
       ),
       body: profilesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
