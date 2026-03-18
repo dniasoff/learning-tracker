@@ -6,6 +6,7 @@ import 'package:learning_tracker/features/scheduler/domain/repositories/schedule
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 
 /// Pure computation service that generates daily task recommendations.
 ///
@@ -13,6 +14,11 @@ import 'package:learning_tracker/features/scheduler/domain/repositories/schedule
 /// 1. Data Loading — fetch content, completions, stages, learning order
 /// 2. Analysis — build completion map, categorize items
 /// 3. Task Assembly — priority ordering + adaptive pacing
+///
+/// Supports three schedule types:
+/// - Delay: item due X days after previous stage completion
+/// - Weekly: review on specific days of the week
+/// - Rolling: always review the last N items
 class SchedulerEngine {
   const SchedulerEngine({
     required SchedulerContentRepository contentRepository,
@@ -88,54 +94,48 @@ class SchedulerEngine {
       // Check each stage for chazara due
       for (final stage in sortedStages) {
         if (stage.stageOrder == firstStageOrder) {
-          // First stage (Learn) — skip if already completed
           continue;
         }
 
-        final previousStage = sortedStages
-            .where((s) => s.stageOrder < stage.stageOrder)
-            .reduce((a, b) => a.stageOrder > b.stageOrder ? a : b);
-
-        final previousCompletedAt = itemCompletions[previousStage.stageOrder];
-        final currentCompletedAt = itemCompletions[stage.stageOrder];
-
-        if (previousCompletedAt != null && currentCompletedAt == null) {
-          // Previous stage done, this stage not done — check if due
-          final dueDate = previousCompletedAt.add(
-            Duration(days: stage.delayDays),
-          );
-          final daysUntilDue = dueDate.difference(config.currentDate).inDays;
-
-          if (daysUntilDue < 0) {
-            overdueTasks.add(
-              DailyTask(
-                curriculumId: config.curriculumId,
-                contentItemSefariaRef: ref,
-                stageOrder: stage.stageOrder,
-                stageDefinitionId: stage.id,
-                priority: DailyTaskPriority.overdueChazara,
-                isOverdue: true,
-                reason: '${stage.stageName} overdue by ${-daysUntilDue} day(s)',
-                stageName: stage.stageName,
-                estimatedEffortMinutes: 3,
-              ),
+        switch (stage.scheduleType) {
+          case ScheduleType.delay:
+            _processDelayStage(
+              stage: stage,
+              sortedStages: sortedStages,
+              itemCompletions: itemCompletions,
+              config: config,
+              ref: ref,
+              overdueTasks: overdueTasks,
+              scheduledTasks: scheduledTasks,
             );
-          } else if (daysUntilDue == 0) {
-            scheduledTasks.add(
-              DailyTask(
-                curriculumId: config.curriculumId,
-                contentItemSefariaRef: ref,
-                stageOrder: stage.stageOrder,
-                stageDefinitionId: stage.id,
-                priority: DailyTaskPriority.scheduledChazara,
-                isOverdue: false,
-                reason: '${stage.stageName} due today',
-                stageName: stage.stageName,
-                estimatedEffortMinutes: 3,
-              ),
+          case ScheduleType.weekly:
+            _processWeeklyStage(
+              stage: stage,
+              sortedStages: sortedStages,
+              itemCompletions: itemCompletions,
+              config: config,
+              ref: ref,
+              scheduledTasks: scheduledTasks,
             );
-          }
+          case ScheduleType.rolling:
+            // Rolling stages handled separately below
+            break;
         }
+      }
+    }
+
+    // Process rolling stages: always include the last N completed items
+    for (final stage in sortedStages) {
+      if (stage.scheduleType == ScheduleType.rolling &&
+          stage.rollingWindowSize != null) {
+        _processRollingStage(
+          stage: stage,
+          sortedStages: sortedStages,
+          completionMap: completionMap,
+          orderedRefs: orderedRefs,
+          config: config,
+          scheduledTasks: scheduledTasks,
+        );
       }
     }
 
@@ -164,6 +164,156 @@ class SchedulerEngine {
 
     // Combine with priority ordering
     return [...overdueTasks, ...scheduledTasks, ...newTasks];
+  }
+
+  /// Process a delay-based stage for a single item.
+  void _processDelayStage({
+    required SchedulerStage stage,
+    required List<SchedulerStage> sortedStages,
+    required Map<int, DateTime> itemCompletions,
+    required ScheduleConfig config,
+    required String ref,
+    required List<DailyTask> overdueTasks,
+    required List<DailyTask> scheduledTasks,
+  }) {
+    final previousStage = sortedStages
+        .where((s) => s.stageOrder < stage.stageOrder)
+        .reduce((a, b) => a.stageOrder > b.stageOrder ? a : b);
+
+    final previousCompletedAt = itemCompletions[previousStage.stageOrder];
+    final currentCompletedAt = itemCompletions[stage.stageOrder];
+
+    if (previousCompletedAt != null && currentCompletedAt == null) {
+      final dueDate = previousCompletedAt.add(
+        Duration(days: stage.delayDays),
+      );
+      final daysUntilDue = dueDate.difference(config.currentDate).inDays;
+
+      if (daysUntilDue < 0) {
+        overdueTasks.add(
+          DailyTask(
+            curriculumId: config.curriculumId,
+            contentItemSefariaRef: ref,
+            stageOrder: stage.stageOrder,
+            stageDefinitionId: stage.id,
+            priority: DailyTaskPriority.overdueChazara,
+            isOverdue: true,
+            reason: '${stage.stageName} overdue by ${-daysUntilDue} day(s)',
+            stageName: stage.stageName,
+            estimatedEffortMinutes: 3,
+          ),
+        );
+      } else if (daysUntilDue == 0) {
+        scheduledTasks.add(
+          DailyTask(
+            curriculumId: config.curriculumId,
+            contentItemSefariaRef: ref,
+            stageOrder: stage.stageOrder,
+            stageDefinitionId: stage.id,
+            priority: DailyTaskPriority.scheduledChazara,
+            isOverdue: false,
+            reason: '${stage.stageName} due today',
+            stageName: stage.stageName,
+            estimatedEffortMinutes: 3,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Process a weekly stage for a single item.
+  ///
+  /// Items that have completed the previous stage but not this stage
+  /// are due on the specified days of the week.
+  void _processWeeklyStage({
+    required SchedulerStage stage,
+    required List<SchedulerStage> sortedStages,
+    required Map<int, DateTime> itemCompletions,
+    required ScheduleConfig config,
+    required String ref,
+    required List<DailyTask> scheduledTasks,
+  }) {
+    if (stage.daysOfWeek == null || stage.daysOfWeek!.isEmpty) return;
+
+    final previousStage = sortedStages
+        .where((s) => s.stageOrder < stage.stageOrder)
+        .reduce((a, b) => a.stageOrder > b.stageOrder ? a : b);
+
+    final previousCompletedAt = itemCompletions[previousStage.stageOrder];
+    final currentCompletedAt = itemCompletions[stage.stageOrder];
+
+    if (previousCompletedAt != null && currentCompletedAt == null) {
+      // Check if today is one of the scheduled days (1=Mon..7=Sun)
+      final todayDow = config.currentDate.weekday; // 1=Mon..7=Sun
+      if (stage.daysOfWeek!.contains(todayDow)) {
+        scheduledTasks.add(
+          DailyTask(
+            curriculumId: config.curriculumId,
+            contentItemSefariaRef: ref,
+            stageOrder: stage.stageOrder,
+            stageDefinitionId: stage.id,
+            priority: DailyTaskPriority.scheduledChazara,
+            isOverdue: false,
+            reason: '${stage.stageName} scheduled for today',
+            stageName: stage.stageName,
+            estimatedEffortMinutes: 3,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Process a rolling window stage.
+  ///
+  /// Finds the most recently completed N items (by first-stage completion)
+  /// that haven't completed this stage yet, and schedules them.
+  void _processRollingStage({
+    required SchedulerStage stage,
+    required List<SchedulerStage> sortedStages,
+    required Map<String, Map<int, DateTime>> completionMap,
+    required List<String> orderedRefs,
+    required ScheduleConfig config,
+    required List<DailyTask> scheduledTasks,
+  }) {
+    final windowSize = stage.rollingWindowSize!;
+    final firstStageOrder = sortedStages.first.stageOrder;
+
+    // Collect refs that have completed the first stage, sorted by completion date (most recent first)
+    final completedRefs = <MapEntry<String, DateTime>>[];
+    for (final ref in orderedRefs) {
+      final itemCompletions = completionMap[ref];
+      if (itemCompletions != null &&
+          itemCompletions.containsKey(firstStageOrder)) {
+        completedRefs.add(
+          MapEntry(ref, itemCompletions[firstStageOrder]!),
+        );
+      }
+    }
+
+    // Sort by first-stage completion date descending (most recent first)
+    completedRefs.sort((a, b) => b.value.compareTo(a.value));
+
+    // Take the last N, filter out those already completed for this stage
+    final windowRefs = completedRefs.take(windowSize);
+    for (final entry in windowRefs) {
+      final ref = entry.key;
+      final itemCompletions = completionMap[ref]!;
+      if (!itemCompletions.containsKey(stage.stageOrder)) {
+        scheduledTasks.add(
+          DailyTask(
+            curriculumId: config.curriculumId,
+            contentItemSefariaRef: ref,
+            stageOrder: stage.stageOrder,
+            stageDefinitionId: stage.id,
+            priority: DailyTaskPriority.scheduledChazara,
+            isOverdue: false,
+            reason: '${stage.stageName} (rolling window)',
+            stageName: stage.stageName,
+            estimatedEffortMinutes: 3,
+          ),
+        );
+      }
+    }
   }
 
   /// Build ordered list of sefariaRefs respecting custom learning order.

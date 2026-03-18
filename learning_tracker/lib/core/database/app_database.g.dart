@@ -824,6 +824,40 @@ class $StageDefinitionsTable extends StageDefinitions
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _scheduleTypeMeta = const VerificationMeta(
+    'scheduleType',
+  );
+  @override
+  late final GeneratedColumn<String> scheduleType = GeneratedColumn<String>(
+    'schedule_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('delay'),
+  );
+  static const VerificationMeta _daysOfWeekMeta = const VerificationMeta(
+    'daysOfWeek',
+  );
+  @override
+  late final GeneratedColumn<String> daysOfWeek = GeneratedColumn<String>(
+    'days_of_week',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rollingWindowSizeMeta = const VerificationMeta(
+    'rollingWindowSize',
+  );
+  @override
+  late final GeneratedColumn<int> rollingWindowSize = GeneratedColumn<int>(
+    'rolling_window_size',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -833,6 +867,9 @@ class $StageDefinitionsTable extends StageDefinitions
     stageName,
     delayDays,
     isDefault,
+    scheduleType,
+    daysOfWeek,
+    rollingWindowSize,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -896,6 +933,33 @@ class $StageDefinitionsTable extends StageDefinitions
         isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
       );
     }
+    if (data.containsKey('schedule_type')) {
+      context.handle(
+        _scheduleTypeMeta,
+        scheduleType.isAcceptableOrUnknown(
+          data['schedule_type']!,
+          _scheduleTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('days_of_week')) {
+      context.handle(
+        _daysOfWeekMeta,
+        daysOfWeek.isAcceptableOrUnknown(
+          data['days_of_week']!,
+          _daysOfWeekMeta,
+        ),
+      );
+    }
+    if (data.containsKey('rolling_window_size')) {
+      context.handle(
+        _rollingWindowSizeMeta,
+        rollingWindowSize.isAcceptableOrUnknown(
+          data['rolling_window_size']!,
+          _rollingWindowSizeMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -937,6 +1001,18 @@ class $StageDefinitionsTable extends StageDefinitions
         DriftSqlType.bool,
         data['${effectivePrefix}is_default'],
       )!,
+      scheduleType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schedule_type'],
+      )!,
+      daysOfWeek: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}days_of_week'],
+      ),
+      rollingWindowSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rolling_window_size'],
+      ),
     );
   }
 
@@ -954,6 +1030,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   final String stageName;
   final int delayDays;
   final bool isDefault;
+  final String scheduleType;
+  final String? daysOfWeek;
+  final int? rollingWindowSize;
   const StageDefinition({
     required this.id,
     required this.profileId,
@@ -962,6 +1041,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     required this.stageName,
     required this.delayDays,
     required this.isDefault,
+    required this.scheduleType,
+    this.daysOfWeek,
+    this.rollingWindowSize,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -973,6 +1055,13 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     map['stage_name'] = Variable<String>(stageName);
     map['delay_days'] = Variable<int>(delayDays);
     map['is_default'] = Variable<bool>(isDefault);
+    map['schedule_type'] = Variable<String>(scheduleType);
+    if (!nullToAbsent || daysOfWeek != null) {
+      map['days_of_week'] = Variable<String>(daysOfWeek);
+    }
+    if (!nullToAbsent || rollingWindowSize != null) {
+      map['rolling_window_size'] = Variable<int>(rollingWindowSize);
+    }
     return map;
   }
 
@@ -985,6 +1074,13 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       stageName: Value(stageName),
       delayDays: Value(delayDays),
       isDefault: Value(isDefault),
+      scheduleType: Value(scheduleType),
+      daysOfWeek: daysOfWeek == null && nullToAbsent
+          ? const Value.absent()
+          : Value(daysOfWeek),
+      rollingWindowSize: rollingWindowSize == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rollingWindowSize),
     );
   }
 
@@ -1001,6 +1097,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       stageName: serializer.fromJson<String>(json['stageName']),
       delayDays: serializer.fromJson<int>(json['delayDays']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
+      scheduleType: serializer.fromJson<String>(json['scheduleType']),
+      daysOfWeek: serializer.fromJson<String?>(json['daysOfWeek']),
+      rollingWindowSize: serializer.fromJson<int?>(json['rollingWindowSize']),
     );
   }
   @override
@@ -1014,6 +1113,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       'stageName': serializer.toJson<String>(stageName),
       'delayDays': serializer.toJson<int>(delayDays),
       'isDefault': serializer.toJson<bool>(isDefault),
+      'scheduleType': serializer.toJson<String>(scheduleType),
+      'daysOfWeek': serializer.toJson<String?>(daysOfWeek),
+      'rollingWindowSize': serializer.toJson<int?>(rollingWindowSize),
     };
   }
 
@@ -1025,6 +1127,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     String? stageName,
     int? delayDays,
     bool? isDefault,
+    String? scheduleType,
+    Value<String?> daysOfWeek = const Value.absent(),
+    Value<int?> rollingWindowSize = const Value.absent(),
   }) => StageDefinition(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -1033,6 +1138,11 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     stageName: stageName ?? this.stageName,
     delayDays: delayDays ?? this.delayDays,
     isDefault: isDefault ?? this.isDefault,
+    scheduleType: scheduleType ?? this.scheduleType,
+    daysOfWeek: daysOfWeek.present ? daysOfWeek.value : this.daysOfWeek,
+    rollingWindowSize: rollingWindowSize.present
+        ? rollingWindowSize.value
+        : this.rollingWindowSize,
   );
   StageDefinition copyWithCompanion(StageDefinitionsCompanion data) {
     return StageDefinition(
@@ -1047,6 +1157,15 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       stageName: data.stageName.present ? data.stageName.value : this.stageName,
       delayDays: data.delayDays.present ? data.delayDays.value : this.delayDays,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+      scheduleType: data.scheduleType.present
+          ? data.scheduleType.value
+          : this.scheduleType,
+      daysOfWeek: data.daysOfWeek.present
+          ? data.daysOfWeek.value
+          : this.daysOfWeek,
+      rollingWindowSize: data.rollingWindowSize.present
+          ? data.rollingWindowSize.value
+          : this.rollingWindowSize,
     );
   }
 
@@ -1059,7 +1178,10 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
           ..write('stageOrder: $stageOrder, ')
           ..write('stageName: $stageName, ')
           ..write('delayDays: $delayDays, ')
-          ..write('isDefault: $isDefault')
+          ..write('isDefault: $isDefault, ')
+          ..write('scheduleType: $scheduleType, ')
+          ..write('daysOfWeek: $daysOfWeek, ')
+          ..write('rollingWindowSize: $rollingWindowSize')
           ..write(')'))
         .toString();
   }
@@ -1073,6 +1195,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     stageName,
     delayDays,
     isDefault,
+    scheduleType,
+    daysOfWeek,
+    rollingWindowSize,
   );
   @override
   bool operator ==(Object other) =>
@@ -1084,7 +1209,10 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
           other.stageOrder == this.stageOrder &&
           other.stageName == this.stageName &&
           other.delayDays == this.delayDays &&
-          other.isDefault == this.isDefault);
+          other.isDefault == this.isDefault &&
+          other.scheduleType == this.scheduleType &&
+          other.daysOfWeek == this.daysOfWeek &&
+          other.rollingWindowSize == this.rollingWindowSize);
 }
 
 class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
@@ -1095,6 +1223,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   final Value<String> stageName;
   final Value<int> delayDays;
   final Value<bool> isDefault;
+  final Value<String> scheduleType;
+  final Value<String?> daysOfWeek;
+  final Value<int?> rollingWindowSize;
   const StageDefinitionsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -1103,6 +1234,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     this.stageName = const Value.absent(),
     this.delayDays = const Value.absent(),
     this.isDefault = const Value.absent(),
+    this.scheduleType = const Value.absent(),
+    this.daysOfWeek = const Value.absent(),
+    this.rollingWindowSize = const Value.absent(),
   });
   StageDefinitionsCompanion.insert({
     this.id = const Value.absent(),
@@ -1112,6 +1246,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     required String stageName,
     required int delayDays,
     this.isDefault = const Value.absent(),
+    this.scheduleType = const Value.absent(),
+    this.daysOfWeek = const Value.absent(),
+    this.rollingWindowSize = const Value.absent(),
   }) : curriculumId = Value(curriculumId),
        stageOrder = Value(stageOrder),
        stageName = Value(stageName),
@@ -1124,6 +1261,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     Expression<String>? stageName,
     Expression<int>? delayDays,
     Expression<bool>? isDefault,
+    Expression<String>? scheduleType,
+    Expression<String>? daysOfWeek,
+    Expression<int>? rollingWindowSize,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1133,6 +1273,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
       if (stageName != null) 'stage_name': stageName,
       if (delayDays != null) 'delay_days': delayDays,
       if (isDefault != null) 'is_default': isDefault,
+      if (scheduleType != null) 'schedule_type': scheduleType,
+      if (daysOfWeek != null) 'days_of_week': daysOfWeek,
+      if (rollingWindowSize != null) 'rolling_window_size': rollingWindowSize,
     });
   }
 
@@ -1144,6 +1287,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     Value<String>? stageName,
     Value<int>? delayDays,
     Value<bool>? isDefault,
+    Value<String>? scheduleType,
+    Value<String?>? daysOfWeek,
+    Value<int?>? rollingWindowSize,
   }) {
     return StageDefinitionsCompanion(
       id: id ?? this.id,
@@ -1153,6 +1299,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
       stageName: stageName ?? this.stageName,
       delayDays: delayDays ?? this.delayDays,
       isDefault: isDefault ?? this.isDefault,
+      scheduleType: scheduleType ?? this.scheduleType,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      rollingWindowSize: rollingWindowSize ?? this.rollingWindowSize,
     );
   }
 
@@ -1180,6 +1329,15 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     if (isDefault.present) {
       map['is_default'] = Variable<bool>(isDefault.value);
     }
+    if (scheduleType.present) {
+      map['schedule_type'] = Variable<String>(scheduleType.value);
+    }
+    if (daysOfWeek.present) {
+      map['days_of_week'] = Variable<String>(daysOfWeek.value);
+    }
+    if (rollingWindowSize.present) {
+      map['rolling_window_size'] = Variable<int>(rollingWindowSize.value);
+    }
     return map;
   }
 
@@ -1192,7 +1350,10 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
           ..write('stageOrder: $stageOrder, ')
           ..write('stageName: $stageName, ')
           ..write('delayDays: $delayDays, ')
-          ..write('isDefault: $isDefault')
+          ..write('isDefault: $isDefault, ')
+          ..write('scheduleType: $scheduleType, ')
+          ..write('daysOfWeek: $daysOfWeek, ')
+          ..write('rollingWindowSize: $rollingWindowSize')
           ..write(')'))
         .toString();
   }
@@ -8300,6 +8461,9 @@ typedef $$StageDefinitionsTableCreateCompanionBuilder =
       required String stageName,
       required int delayDays,
       Value<bool> isDefault,
+      Value<String> scheduleType,
+      Value<String?> daysOfWeek,
+      Value<int?> rollingWindowSize,
     });
 typedef $$StageDefinitionsTableUpdateCompanionBuilder =
     StageDefinitionsCompanion Function({
@@ -8310,6 +8474,9 @@ typedef $$StageDefinitionsTableUpdateCompanionBuilder =
       Value<String> stageName,
       Value<int> delayDays,
       Value<bool> isDefault,
+      Value<String> scheduleType,
+      Value<String?> daysOfWeek,
+      Value<int?> rollingWindowSize,
     });
 
 class $$StageDefinitionsTableFilterComposer
@@ -8353,6 +8520,21 @@ class $$StageDefinitionsTableFilterComposer
 
   ColumnFilters<bool> get isDefault => $composableBuilder(
     column: $table.isDefault,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scheduleType => $composableBuilder(
+    column: $table.scheduleType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get daysOfWeek => $composableBuilder(
+    column: $table.daysOfWeek,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rollingWindowSize => $composableBuilder(
+    column: $table.rollingWindowSize,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8400,6 +8582,21 @@ class $$StageDefinitionsTableOrderingComposer
     column: $table.isDefault,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get scheduleType => $composableBuilder(
+    column: $table.scheduleType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get daysOfWeek => $composableBuilder(
+    column: $table.daysOfWeek,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rollingWindowSize => $composableBuilder(
+    column: $table.rollingWindowSize,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$StageDefinitionsTableAnnotationComposer
@@ -8435,6 +8632,21 @@ class $$StageDefinitionsTableAnnotationComposer
 
   GeneratedColumn<bool> get isDefault =>
       $composableBuilder(column: $table.isDefault, builder: (column) => column);
+
+  GeneratedColumn<String> get scheduleType => $composableBuilder(
+    column: $table.scheduleType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get daysOfWeek => $composableBuilder(
+    column: $table.daysOfWeek,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rollingWindowSize => $composableBuilder(
+    column: $table.rollingWindowSize,
+    builder: (column) => column,
+  );
 }
 
 class $$StageDefinitionsTableTableManager
@@ -8481,6 +8693,9 @@ class $$StageDefinitionsTableTableManager
                 Value<String> stageName = const Value.absent(),
                 Value<int> delayDays = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
+                Value<String> scheduleType = const Value.absent(),
+                Value<String?> daysOfWeek = const Value.absent(),
+                Value<int?> rollingWindowSize = const Value.absent(),
               }) => StageDefinitionsCompanion(
                 id: id,
                 profileId: profileId,
@@ -8489,6 +8704,9 @@ class $$StageDefinitionsTableTableManager
                 stageName: stageName,
                 delayDays: delayDays,
                 isDefault: isDefault,
+                scheduleType: scheduleType,
+                daysOfWeek: daysOfWeek,
+                rollingWindowSize: rollingWindowSize,
               ),
           createCompanionCallback:
               ({
@@ -8499,6 +8717,9 @@ class $$StageDefinitionsTableTableManager
                 required String stageName,
                 required int delayDays,
                 Value<bool> isDefault = const Value.absent(),
+                Value<String> scheduleType = const Value.absent(),
+                Value<String?> daysOfWeek = const Value.absent(),
+                Value<int?> rollingWindowSize = const Value.absent(),
               }) => StageDefinitionsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -8507,6 +8728,9 @@ class $$StageDefinitionsTableTableManager
                 stageName: stageName,
                 delayDays: delayDays,
                 isDefault: isDefault,
+                scheduleType: scheduleType,
+                daysOfWeek: daysOfWeek,
+                rollingWindowSize: rollingWindowSize,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

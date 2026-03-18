@@ -85,7 +85,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -247,6 +247,20 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable($LearningProgramsTable(attachedDatabase));
           await m.createTable($ProfileProgramsTable(attachedDatabase));
           await _seedLearningPrograms();
+        }
+        if (from < 13) {
+          // Migration from schema v12 to v13: Expanded stage scheduling model
+          // Add schedule_type (defaults to 'delay' for existing rows),
+          // days_of_week (nullable JSON list), rolling_window_size (nullable int)
+          await customStatement(
+            "ALTER TABLE stage_definitions ADD COLUMN schedule_type TEXT NOT NULL DEFAULT 'delay'",
+          );
+          await customStatement(
+            'ALTER TABLE stage_definitions ADD COLUMN days_of_week TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE stage_definitions ADD COLUMN rolling_window_size INTEGER',
+          );
         }
       },
     );

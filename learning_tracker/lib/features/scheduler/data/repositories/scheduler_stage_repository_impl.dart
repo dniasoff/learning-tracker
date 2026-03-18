@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 
 /// Adapts [StageDao] for scheduler consumption.
 class SchedulerStageRepositoryImpl implements SchedulerStageRepository {
@@ -21,6 +24,12 @@ class SchedulerStageRepositoryImpl implements SchedulerStageRepository {
             stageOrder: r.stageOrder,
             stageName: r.stageName,
             delayDays: r.delayDays,
+            scheduleType: ScheduleType.fromStorageKey(r.scheduleType),
+            daysOfWeek: r.daysOfWeek != null
+                ? (jsonDecode(r.daysOfWeek!) as List)
+                    .cast<int>()
+                : null,
+            rollingWindowSize: r.rollingWindowSize,
           ),
         )
         .toList();
