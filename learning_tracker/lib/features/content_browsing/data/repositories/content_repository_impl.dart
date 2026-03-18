@@ -114,6 +114,31 @@ class ContentRepositoryImpl implements ContentRepository {
   }
 
   @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) async {
+    if (scopeValues.isEmpty) {
+      return getContentForCurriculum(curriculumId);
+    }
+
+    final items = await getContentForCurriculum(curriculumId);
+    final valueSet = scopeValues.toSet();
+
+    return items.where((item) {
+      final levelValue = switch (scopeLevel) {
+        1 => item.level1,
+        2 => item.level2,
+        3 => item.level3,
+        4 => item.level4,
+        _ => null,
+      };
+      return levelValue != null && valueSet.contains(levelValue);
+    }).toList();
+  }
+
+  @override
   Future<List<ContentItem>> search({
     required CurriculumId curriculumId,
     required String query,

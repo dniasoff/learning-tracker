@@ -34,6 +34,18 @@ abstract class ContentRepository {
     String? level4,
   });
 
+  /// Get content items filtered by curriculum scopes.
+  ///
+  /// [scopeLevel] is which hierarchy level scopes apply to (1-4).
+  /// [scopeValues] are the selected values at that level.
+  /// Returns only leaf items matching any of the scope values.
+  /// If [scopeValues] is empty, returns all content (no filtering).
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  });
+
   /// Search content by display name.
   ///
   /// Returns all items where displayNameHe or displayNameEn contains the

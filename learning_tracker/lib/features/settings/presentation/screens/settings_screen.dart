@@ -12,6 +12,8 @@ import 'package:learning_tracker/features/learning/presentation/providers/track_
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
@@ -55,13 +57,17 @@ class SettingsScreen extends ConsumerWidget {
           activeCurriculaAsync.when(
             data: (activeCurricula) {
               return Column(
-                children: CurriculumId.values.map((curriculum) {
+                children: CurriculumId.values.expand((curriculum) {
                   final isActive = activeCurricula.contains(curriculum);
-                  return _CurriculumToggleTile(
-                    curriculum: curriculum,
-                    isActive: isActive,
-                    activeCurriculaCount: activeCurricula.length,
-                  );
+                  return [
+                    _CurriculumToggleTile(
+                      curriculum: curriculum,
+                      isActive: isActive,
+                      activeCurriculaCount: activeCurricula.length,
+                    ),
+                    if (isActive)
+                      _CurriculumScopeTile(curriculum: curriculum),
+                  ];
                 }).toList(),
               );
             },
@@ -637,6 +643,42 @@ Future<void> _showLinkProviderDialog(
 ) async {
   final service = ref.read(accountManagementServiceProvider);
   await showLinkProviderDialog(context: context, service: service);
+}
+
+class _CurriculumScopeTile extends ConsumerWidget {
+  const _CurriculumScopeTile({required this.curriculum});
+
+  final CurriculumId curriculum;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(curriculumScopeSummaryProvider(curriculum));
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 32),
+      child: ListTile(
+        leading: const Icon(Icons.filter_list, size: 20),
+        title: const Text('Learning Scope'),
+        subtitle: Text(
+          summaryAsync.when(
+            data: (s) => s,
+            loading: () => 'Loading...',
+            error: (_, __) => 'Error',
+          ),
+          style: const TextStyle(fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right, size: 20),
+        dense: true,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ScopeSelectionScreen(curriculumId: curriculum),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _CurriculumToggleTile extends ConsumerWidget {

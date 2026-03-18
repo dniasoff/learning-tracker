@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/onboarding/presentation/screens/rewards_setup_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 
 @RoutePage()
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 enum _ScreenPhase {
   selection,
   importing,
+  scopeSelection,
   bulkMark,
   goalSetup,
   rewardsSetup,
@@ -62,6 +64,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           _CurriculumStatus.importing;
     }
   }
+
+  // Scope selection state
+  late List<CurriculumId> _scopeQueue;
+  int _scopeIndex = 0;
 
   // Bulk mark state
   late List<CurriculumId> _bulkMarkQueue;
@@ -97,7 +103,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final failures = _importProgress?.failures ?? [];
     if (failures.isEmpty) {
-      _startBulkMark();
+      _startScopeSelection();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
@@ -131,12 +137,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final newFailures = _importProgress?.failures ?? [];
     if (newFailures.isEmpty) {
-      _startBulkMark();
+      _startScopeSelection();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
         _failures = newFailures;
       });
+    }
+  }
+
+  void _startScopeSelection() {
+    _scopeQueue = _selected.toList();
+    _scopeIndex = 0;
+    if (_scopeQueue.isEmpty) {
+      _startBulkMark();
+      return;
+    }
+    setState(() => _phase = _ScreenPhase.scopeSelection);
+  }
+
+  void _onScopeSelectionDone() {
+    _scopeIndex++;
+    if (_scopeIndex >= _scopeQueue.length) {
+      _startBulkMark();
+    } else {
+      setState(() {}); // Show next curriculum's scope selection
     }
   }
 
@@ -266,6 +291,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: switch (_phase) {
         _ScreenPhase.selection => _buildSelection(theme),
         _ScreenPhase.importing => _buildImporting(theme),
+        _ScreenPhase.scopeSelection => _buildScopeSelection(theme),
         _ScreenPhase.bulkMark => _buildBulkMark(theme),
         _ScreenPhase.goalSetup => _buildGoalSetup(theme),
         _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
@@ -422,6 +448,65 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildScopeSelection(ThemeData theme) {
+    final curriculum = _scopeQueue[_scopeIndex];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          child: Text(
+            'Set Learning Scope',
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Choose which parts of ${curriculum.displayNameEn} to track, '
+            'or skip to track everything.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Text(
+            '${_scopeIndex + 1} of ${_scopeQueue.length}',
+            style: theme.textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ),
+        Expanded(
+          child: ScopeSelectionScreen(curriculumId: curriculum),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _onScopeSelectionDone,
+                  child: const Text('Skip (Track All)'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _onScopeSelectionDone,
+                  child: const Text('Continue'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

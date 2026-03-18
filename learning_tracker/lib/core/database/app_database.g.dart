@@ -285,6 +285,427 @@ class ActiveCurriculaCompanion extends UpdateCompanion<ActiveCurriculaData> {
   }
 }
 
+class $CurriculumScopesTable extends CurriculumScopes
+    with TableInfo<$CurriculumScopesTable, CurriculumScope> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CurriculumScopesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
+    'curriculumId',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scopeLevelMeta = const VerificationMeta(
+    'scopeLevel',
+  );
+  @override
+  late final GeneratedColumn<int> scopeLevel = GeneratedColumn<int>(
+    'scope_level',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scopeValueMeta = const VerificationMeta(
+    'scopeValue',
+  );
+  @override
+  late final GeneratedColumn<String> scopeValue = GeneratedColumn<String>(
+    'scope_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    curriculumId,
+    scopeLevel,
+    scopeValue,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'curriculum_scopes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CurriculumScope> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
+    if (data.containsKey('curriculum_id')) {
+      context.handle(
+        _curriculumIdMeta,
+        curriculumId.isAcceptableOrUnknown(
+          data['curriculum_id']!,
+          _curriculumIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumIdMeta);
+    }
+    if (data.containsKey('scope_level')) {
+      context.handle(
+        _scopeLevelMeta,
+        scopeLevel.isAcceptableOrUnknown(data['scope_level']!, _scopeLevelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeLevelMeta);
+    }
+    if (data.containsKey('scope_value')) {
+      context.handle(
+        _scopeValueMeta,
+        scopeValue.isAcceptableOrUnknown(data['scope_value']!, _scopeValueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeValueMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {profileId, curriculumId, scopeLevel, scopeValue},
+  ];
+  @override
+  CurriculumScope map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CurriculumScope(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      scopeLevel: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scope_level'],
+      )!,
+      scopeValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope_value'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CurriculumScopesTable createAlias(String alias) {
+    return $CurriculumScopesTable(attachedDatabase, alias);
+  }
+}
+
+class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
+  final int id;
+  final int profileId;
+  final String curriculumId;
+
+  /// Which hierarchy level the scope applies to (1-4, matching level1-level4).
+  final int scopeLevel;
+
+  /// The value at that level (e.g., "Seder Zeraim", "Berachos").
+  final String scopeValue;
+  final DateTime createdAt;
+  const CurriculumScope({
+    required this.id,
+    required this.profileId,
+    required this.curriculumId,
+    required this.scopeLevel,
+    required this.scopeValue,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['curriculum_id'] = Variable<String>(curriculumId);
+    map['scope_level'] = Variable<int>(scopeLevel);
+    map['scope_value'] = Variable<String>(scopeValue);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CurriculumScopesCompanion toCompanion(bool nullToAbsent) {
+    return CurriculumScopesCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      curriculumId: Value(curriculumId),
+      scopeLevel: Value(scopeLevel),
+      scopeValue: Value(scopeValue),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CurriculumScope.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CurriculumScope(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      scopeLevel: serializer.fromJson<int>(json['scopeLevel']),
+      scopeValue: serializer.fromJson<String>(json['scopeValue']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'scopeLevel': serializer.toJson<int>(scopeLevel),
+      'scopeValue': serializer.toJson<String>(scopeValue),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CurriculumScope copyWith({
+    int? id,
+    int? profileId,
+    String? curriculumId,
+    int? scopeLevel,
+    String? scopeValue,
+    DateTime? createdAt,
+  }) => CurriculumScope(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    curriculumId: curriculumId ?? this.curriculumId,
+    scopeLevel: scopeLevel ?? this.scopeLevel,
+    scopeValue: scopeValue ?? this.scopeValue,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CurriculumScope copyWithCompanion(CurriculumScopesCompanion data) {
+    return CurriculumScope(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      curriculumId: data.curriculumId.present
+          ? data.curriculumId.value
+          : this.curriculumId,
+      scopeLevel: data.scopeLevel.present
+          ? data.scopeLevel.value
+          : this.scopeLevel,
+      scopeValue: data.scopeValue.present
+          ? data.scopeValue.value
+          : this.scopeValue,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurriculumScope(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('scopeLevel: $scopeLevel, ')
+          ..write('scopeValue: $scopeValue, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    curriculumId,
+    scopeLevel,
+    scopeValue,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CurriculumScope &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.curriculumId == this.curriculumId &&
+          other.scopeLevel == this.scopeLevel &&
+          other.scopeValue == this.scopeValue &&
+          other.createdAt == this.createdAt);
+}
+
+class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> curriculumId;
+  final Value<int> scopeLevel;
+  final Value<String> scopeValue;
+  final Value<DateTime> createdAt;
+  const CurriculumScopesCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.curriculumId = const Value.absent(),
+    this.scopeLevel = const Value.absent(),
+    this.scopeValue = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  CurriculumScopesCompanion.insert({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    required String curriculumId,
+    required int scopeLevel,
+    required String scopeValue,
+    required DateTime createdAt,
+  }) : curriculumId = Value(curriculumId),
+       scopeLevel = Value(scopeLevel),
+       scopeValue = Value(scopeValue),
+       createdAt = Value(createdAt);
+  static Insertable<CurriculumScope> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? curriculumId,
+    Expression<int>? scopeLevel,
+    Expression<String>? scopeValue,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (scopeLevel != null) 'scope_level': scopeLevel,
+      if (scopeValue != null) 'scope_value': scopeValue,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  CurriculumScopesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? curriculumId,
+    Value<int>? scopeLevel,
+    Value<String>? scopeValue,
+    Value<DateTime>? createdAt,
+  }) {
+    return CurriculumScopesCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      curriculumId: curriculumId ?? this.curriculumId,
+      scopeLevel: scopeLevel ?? this.scopeLevel,
+      scopeValue: scopeValue ?? this.scopeValue,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (curriculumId.present) {
+      map['curriculum_id'] = Variable<String>(curriculumId.value);
+    }
+    if (scopeLevel.present) {
+      map['scope_level'] = Variable<int>(scopeLevel.value);
+    }
+    if (scopeValue.present) {
+      map['scope_value'] = Variable<String>(scopeValue.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurriculumScopesCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('scopeLevel: $scopeLevel, ')
+          ..write('scopeValue: $scopeValue, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CurriculumTracksTable extends CurriculumTracks
     with TableInfo<$CurriculumTracksTable, CurriculumTrack> {
   @override
@@ -8732,6 +9153,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ActiveCurriculaTable activeCurricula = $ActiveCurriculaTable(
     this,
   );
+  late final $CurriculumScopesTable curriculumScopes = $CurriculumScopesTable(
+    this,
+  );
   late final $CurriculumTracksTable curriculumTracks = $CurriculumTracksTable(
     this,
   );
@@ -8762,6 +9186,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TestDatesTable testDates = $TestDatesTable(this);
   late final $TestScoresTable testScores = $TestScoresTable(this);
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
+    this as AppDatabase,
+  );
+  late final CurriculumScopeDao curriculumScopeDao = CurriculumScopeDao(
     this as AppDatabase,
   );
   late final CompletionDao completionDao = CompletionDao(this as AppDatabase);
@@ -8801,6 +9228,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     activeCurricula,
+    curriculumScopes,
     curriculumTracks,
     stageDefinitions,
     completions,
@@ -8997,6 +9425,231 @@ typedef $$ActiveCurriculaTableProcessedTableManager =
         >,
       ),
       ActiveCurriculaData,
+      PrefetchHooks Function()
+    >;
+typedef $$CurriculumScopesTableCreateCompanionBuilder =
+    CurriculumScopesCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      required String curriculumId,
+      required int scopeLevel,
+      required String scopeValue,
+      required DateTime createdAt,
+    });
+typedef $$CurriculumScopesTableUpdateCompanionBuilder =
+    CurriculumScopesCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> curriculumId,
+      Value<int> scopeLevel,
+      Value<String> scopeValue,
+      Value<DateTime> createdAt,
+    });
+
+class $$CurriculumScopesTableFilterComposer
+    extends Composer<_$AppDatabase, $CurriculumScopesTable> {
+  $$CurriculumScopesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get scopeLevel => $composableBuilder(
+    column: $table.scopeLevel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scopeValue => $composableBuilder(
+    column: $table.scopeValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CurriculumScopesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CurriculumScopesTable> {
+  $$CurriculumScopesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get scopeLevel => $composableBuilder(
+    column: $table.scopeLevel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scopeValue => $composableBuilder(
+    column: $table.scopeValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CurriculumScopesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CurriculumScopesTable> {
+  $$CurriculumScopesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get scopeLevel => $composableBuilder(
+    column: $table.scopeLevel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get scopeValue => $composableBuilder(
+    column: $table.scopeValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CurriculumScopesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CurriculumScopesTable,
+          CurriculumScope,
+          $$CurriculumScopesTableFilterComposer,
+          $$CurriculumScopesTableOrderingComposer,
+          $$CurriculumScopesTableAnnotationComposer,
+          $$CurriculumScopesTableCreateCompanionBuilder,
+          $$CurriculumScopesTableUpdateCompanionBuilder,
+          (
+            CurriculumScope,
+            BaseReferences<
+              _$AppDatabase,
+              $CurriculumScopesTable,
+              CurriculumScope
+            >,
+          ),
+          CurriculumScope,
+          PrefetchHooks Function()
+        > {
+  $$CurriculumScopesTableTableManager(
+    _$AppDatabase db,
+    $CurriculumScopesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CurriculumScopesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CurriculumScopesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CurriculumScopesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> curriculumId = const Value.absent(),
+                Value<int> scopeLevel = const Value.absent(),
+                Value<String> scopeValue = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => CurriculumScopesCompanion(
+                id: id,
+                profileId: profileId,
+                curriculumId: curriculumId,
+                scopeLevel: scopeLevel,
+                scopeValue: scopeValue,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                required String curriculumId,
+                required int scopeLevel,
+                required String scopeValue,
+                required DateTime createdAt,
+              }) => CurriculumScopesCompanion.insert(
+                id: id,
+                profileId: profileId,
+                curriculumId: curriculumId,
+                scopeLevel: scopeLevel,
+                scopeValue: scopeValue,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CurriculumScopesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CurriculumScopesTable,
+      CurriculumScope,
+      $$CurriculumScopesTableFilterComposer,
+      $$CurriculumScopesTableOrderingComposer,
+      $$CurriculumScopesTableAnnotationComposer,
+      $$CurriculumScopesTableCreateCompanionBuilder,
+      $$CurriculumScopesTableUpdateCompanionBuilder,
+      (
+        CurriculumScope,
+        BaseReferences<_$AppDatabase, $CurriculumScopesTable, CurriculumScope>,
+      ),
+      CurriculumScope,
       PrefetchHooks Function()
     >;
 typedef $$CurriculumTracksTableCreateCompanionBuilder =
@@ -13378,6 +14031,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$ActiveCurriculaTableTableManager get activeCurricula =>
       $$ActiveCurriculaTableTableManager(_db, _db.activeCurricula);
+  $$CurriculumScopesTableTableManager get curriculumScopes =>
+      $$CurriculumScopesTableTableManager(_db, _db.curriculumScopes);
   $$CurriculumTracksTableTableManager get curriculumTracks =>
       $$CurriculumTracksTableTableManager(_db, _db.curriculumTracks);
   $$StageDefinitionsTableTableManager get stageDefinitions =>

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
+import 'package:learning_tracker/core/database/daos/curriculum_scope_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
@@ -22,6 +23,7 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/tables/content_download_statuses.dart';
@@ -47,6 +49,7 @@ part 'app_database.g.dart';
 @DriftDatabase(
   tables: [
     ActiveCurricula,
+    CurriculumScopes,
     CurriculumTracks,
     StageDefinitions,
     Completions,
@@ -69,6 +72,7 @@ part 'app_database.g.dart';
   ],
   daos: [
     ActiveCurriculumDao,
+    CurriculumScopeDao,
     CompletionDao,
     GoalDao,
     PointConfigDao,
@@ -94,7 +98,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration {
@@ -273,6 +277,10 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE stage_definitions ADD COLUMN rolling_window_size INTEGER',
           );
+        }
+        if (from < 14) {
+          // Migration from schema v13 to v14: Add curriculum_scopes table
+          await m.createTable($CurriculumScopesTable(attachedDatabase));
         }
       },
     );
