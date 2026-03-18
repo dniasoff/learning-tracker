@@ -1,6 +1,8 @@
 @Tags(['epic_15'])
 library;
 
+import 'dart:convert';
+
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
@@ -12,8 +14,8 @@ import 'package:learning_tracker/features/content_browsing/domain/services/conte
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
-import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -478,6 +480,156 @@ void main() {
     });
   });
 
+  group('Story 15.4 -- Learning Program Preset Model & Seed Data',
+      tags: ['story_15_4'], () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = createTestDatabase();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    group('AC: All 9 presets seeded in DB on first launch', () {
+      test('9 programs exist after database creation', () async {
+        final programs = await db.learningProgramDao.getAllPrograms();
+        expect(programs.length, 9);
+      });
+
+      test('all expected programs are present by name', () async {
+        final programs = await db.learningProgramDao.getAllPrograms();
+        final names = programs.map((p) => p.name).toSet();
+        expect(names, containsAll([
+          'oraysa',
+          'dirshu_kinyan_torah',
+          'dirshu_amud_hayomi',
+          'dirshu_kinyan_yerushalmi',
+          'dirshu_daf_hayomi_bhalacha',
+          'dirshu_kinyan_chochma',
+          'daf_yomi',
+          'mishnah_yomis',
+          'nach_yomi',
+        ]));
+      });
+    });
+
+    group('AC: Preset data includes full stage configuration', () {
+      test('every preset has valid JSON stages_config', () async {
+        final programs = await db.learningProgramDao.getAllPrograms();
+        for (final p in programs) {
+          final stages = jsonDecode(p.stagesConfig) as List;
+          expect(stages, isNotEmpty, reason: '${p.name} has empty stages');
+          // Each stage has at minimum a "stage" and "label" key
+          for (final stage in stages) {
+            final map = stage as Map<String, dynamic>;
+            expect(map.containsKey('stage'), isTrue,
+                reason: '${p.name} stage missing "stage" key');
+            expect(map.containsKey('label'), isTrue,
+                reason: '${p.name} stage missing "label" key');
+          }
+        }
+      });
+
+      test('programs with tests have valid test_config', () async {
+        final programs = await db.learningProgramDao.getAllPrograms();
+        final withTests = programs.where((p) => p.hasTests);
+        for (final p in withTests) {
+          final config = jsonDecode(p.testConfig) as Map<String, dynamic>;
+          expect(config.containsKey('frequency'), isTrue,
+              reason: '${p.name} test_config missing frequency');
+        }
+      });
+    });
+
+    group('AC: Profile-program association stored per curriculum', () {
+      test('profile can select a program per curriculum', () async {
+        final programs = await db.learningProgramDao.getAllPrograms();
+        final bavli = programs.firstWhere((p) => p.name == 'oraysa');
+
+        await db.profileProgramDao.setProfileProgram(
+          profileId: 1,
+          curriculumType: 'bavli',
+          programId: bavli.id,
+        );
+
+        final result = await db.profileProgramDao
+            .getProgramForProfileAndCurriculum(1, 'bavli');
+        expect(result, isNotNull);
+        expect(result!.programId, bavli.id);
+      });
+
+      test('profile can have different programs for different curricula', () async {
+        final programs = await db.learningProgramDao.getAllPrograms();
+        final bavli = programs.firstWhere((p) => p.name == 'daf_yomi');
+        final nach = programs.firstWhere((p) => p.name == 'nach_yomi');
+
+        await db.profileProgramDao.setProfileProgram(
+          profileId: 1,
+          curriculumType: 'bavli',
+          programId: bavli.id,
+        );
+        await db.profileProgramDao.setProfileProgram(
+          profileId: 1,
+          curriculumType: 'nach',
+          programId: nach.id,
+        );
+
+        final all = await db.profileProgramDao.getProgramsForProfile(1);
+        expect(all.length, 2);
+      });
+    });
+
+    group('AC: Presets queryable by curriculum type', () {
+      test('bavli returns 4 programs', () async {
+        final bavli = await db.learningProgramDao
+            .getProgramsByCurriculumType('bavli');
+        expect(bavli.length, 4);
+      });
+
+      test('yerushalmi returns 1 program', () async {
+        final yerushalmi = await db.learningProgramDao
+            .getProgramsByCurriculumType('yerushalmi');
+        expect(yerushalmi.length, 1);
+        expect(yerushalmi.first.name, 'dirshu_kinyan_yerushalmi');
+      });
+
+      test('each curriculum type has at least one program', () async {
+        for (final type in ['bavli', 'yerushalmi', 'mishna_berurah', 'mussar', 'mishnayos', 'nach']) {
+          final programs = await db.learningProgramDao
+              .getProgramsByCurriculumType(type);
+          expect(programs, isNotEmpty, reason: '$type has no programs');
+        }
+      });
+    });
+
+    group('AC: Preset marked as active/deprecated (not deleted)', () {
+      test('all seeded presets are active', () async {
+        final programs = await db.learningProgramDao.getAllPrograms();
+        for (final p in programs) {
+          expect(p.isActive, isTrue, reason: '${p.name} not active');
+        }
+      });
+
+      test('deprecating a preset keeps it in DB but marks inactive', () async {
+        final program = await db.learningProgramDao.getProgramByName('daf_yomi');
+        expect(program, isNotNull);
+
+        await db.learningProgramDao.deprecateProgram(program!.id);
+
+        // Still in DB
+        final all = await db.learningProgramDao.getAllPrograms();
+        expect(all.length, 9);
+
+        // But not in active list
+        final active = await db.learningProgramDao.getActivePrograms();
+        expect(active.length, 8);
+        expect(active.where((p) => p.name == 'daf_yomi'), isEmpty);
+      });
+    });
+  });
+
   group('Story 15.13 -- Cloud Content Storage & Multilingual Fetch',
       tags: ['story_15_13'], () {
     late AppDatabase db;
@@ -633,7 +785,7 @@ void main() {
 
     group('AC: Content cached locally after first fetch', () {
       test('content_download_statuses table exists in schema v11', () {
-        expect(db.schemaVersion, equals(11));
+        expect(db.schemaVersion, greaterThanOrEqualTo(11));
         // Table creation is validated by successfully marking a download
       });
 

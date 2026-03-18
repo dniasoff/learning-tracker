@@ -6862,6 +6862,937 @@ class ContentDownloadStatusesCompanion
   }
 }
 
+class $LearningProgramsTable extends LearningPrograms
+    with TableInfo<$LearningProgramsTable, LearningProgram> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LearningProgramsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _curriculumTypeMeta = const VerificationMeta(
+    'curriculumType',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumType = GeneratedColumn<String>(
+    'curriculum_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _stagesConfigMeta = const VerificationMeta(
+    'stagesConfig',
+  );
+  @override
+  late final GeneratedColumn<String> stagesConfig = GeneratedColumn<String>(
+    'stages_config',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hasTestsMeta = const VerificationMeta(
+    'hasTests',
+  );
+  @override
+  late final GeneratedColumn<bool> hasTests = GeneratedColumn<bool>(
+    'has_tests',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_tests" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _testConfigMeta = const VerificationMeta(
+    'testConfig',
+  );
+  @override
+  late final GeneratedColumn<String> testConfig = GeneratedColumn<String>(
+    'test_config',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    displayName,
+    description,
+    curriculumType,
+    isActive,
+    stagesConfig,
+    hasTests,
+    testConfig,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'learning_programs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LearningProgram> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayNameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('curriculum_type')) {
+      context.handle(
+        _curriculumTypeMeta,
+        curriculumType.isAcceptableOrUnknown(
+          data['curriculum_type']!,
+          _curriculumTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumTypeMeta);
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('stages_config')) {
+      context.handle(
+        _stagesConfigMeta,
+        stagesConfig.isAcceptableOrUnknown(
+          data['stages_config']!,
+          _stagesConfigMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_stagesConfigMeta);
+    }
+    if (data.containsKey('has_tests')) {
+      context.handle(
+        _hasTestsMeta,
+        hasTests.isAcceptableOrUnknown(data['has_tests']!, _hasTestsMeta),
+      );
+    }
+    if (data.containsKey('test_config')) {
+      context.handle(
+        _testConfigMeta,
+        testConfig.isAcceptableOrUnknown(data['test_config']!, _testConfigMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LearningProgram map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LearningProgram(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      curriculumType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_type'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      stagesConfig: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stages_config'],
+      )!,
+      hasTests: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_tests'],
+      )!,
+      testConfig: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}test_config'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LearningProgramsTable createAlias(String alias) {
+    return $LearningProgramsTable(attachedDatabase, alias);
+  }
+}
+
+class LearningProgram extends DataClass implements Insertable<LearningProgram> {
+  final int id;
+  final String name;
+  final String displayName;
+  final String description;
+  final String curriculumType;
+  final bool isActive;
+  final String stagesConfig;
+  final bool hasTests;
+  final String testConfig;
+  final DateTime createdAt;
+  const LearningProgram({
+    required this.id,
+    required this.name,
+    required this.displayName,
+    required this.description,
+    required this.curriculumType,
+    required this.isActive,
+    required this.stagesConfig,
+    required this.hasTests,
+    required this.testConfig,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['display_name'] = Variable<String>(displayName);
+    map['description'] = Variable<String>(description);
+    map['curriculum_type'] = Variable<String>(curriculumType);
+    map['is_active'] = Variable<bool>(isActive);
+    map['stages_config'] = Variable<String>(stagesConfig);
+    map['has_tests'] = Variable<bool>(hasTests);
+    map['test_config'] = Variable<String>(testConfig);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LearningProgramsCompanion toCompanion(bool nullToAbsent) {
+    return LearningProgramsCompanion(
+      id: Value(id),
+      name: Value(name),
+      displayName: Value(displayName),
+      description: Value(description),
+      curriculumType: Value(curriculumType),
+      isActive: Value(isActive),
+      stagesConfig: Value(stagesConfig),
+      hasTests: Value(hasTests),
+      testConfig: Value(testConfig),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LearningProgram.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LearningProgram(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      description: serializer.fromJson<String>(json['description']),
+      curriculumType: serializer.fromJson<String>(json['curriculumType']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      stagesConfig: serializer.fromJson<String>(json['stagesConfig']),
+      hasTests: serializer.fromJson<bool>(json['hasTests']),
+      testConfig: serializer.fromJson<String>(json['testConfig']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'displayName': serializer.toJson<String>(displayName),
+      'description': serializer.toJson<String>(description),
+      'curriculumType': serializer.toJson<String>(curriculumType),
+      'isActive': serializer.toJson<bool>(isActive),
+      'stagesConfig': serializer.toJson<String>(stagesConfig),
+      'hasTests': serializer.toJson<bool>(hasTests),
+      'testConfig': serializer.toJson<String>(testConfig),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LearningProgram copyWith({
+    int? id,
+    String? name,
+    String? displayName,
+    String? description,
+    String? curriculumType,
+    bool? isActive,
+    String? stagesConfig,
+    bool? hasTests,
+    String? testConfig,
+    DateTime? createdAt,
+  }) => LearningProgram(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    displayName: displayName ?? this.displayName,
+    description: description ?? this.description,
+    curriculumType: curriculumType ?? this.curriculumType,
+    isActive: isActive ?? this.isActive,
+    stagesConfig: stagesConfig ?? this.stagesConfig,
+    hasTests: hasTests ?? this.hasTests,
+    testConfig: testConfig ?? this.testConfig,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  LearningProgram copyWithCompanion(LearningProgramsCompanion data) {
+    return LearningProgram(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      curriculumType: data.curriculumType.present
+          ? data.curriculumType.value
+          : this.curriculumType,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      stagesConfig: data.stagesConfig.present
+          ? data.stagesConfig.value
+          : this.stagesConfig,
+      hasTests: data.hasTests.present ? data.hasTests.value : this.hasTests,
+      testConfig: data.testConfig.present
+          ? data.testConfig.value
+          : this.testConfig,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LearningProgram(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('displayName: $displayName, ')
+          ..write('description: $description, ')
+          ..write('curriculumType: $curriculumType, ')
+          ..write('isActive: $isActive, ')
+          ..write('stagesConfig: $stagesConfig, ')
+          ..write('hasTests: $hasTests, ')
+          ..write('testConfig: $testConfig, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    displayName,
+    description,
+    curriculumType,
+    isActive,
+    stagesConfig,
+    hasTests,
+    testConfig,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LearningProgram &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.displayName == this.displayName &&
+          other.description == this.description &&
+          other.curriculumType == this.curriculumType &&
+          other.isActive == this.isActive &&
+          other.stagesConfig == this.stagesConfig &&
+          other.hasTests == this.hasTests &&
+          other.testConfig == this.testConfig &&
+          other.createdAt == this.createdAt);
+}
+
+class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> displayName;
+  final Value<String> description;
+  final Value<String> curriculumType;
+  final Value<bool> isActive;
+  final Value<String> stagesConfig;
+  final Value<bool> hasTests;
+  final Value<String> testConfig;
+  final Value<DateTime> createdAt;
+  const LearningProgramsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.description = const Value.absent(),
+    this.curriculumType = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.stagesConfig = const Value.absent(),
+    this.hasTests = const Value.absent(),
+    this.testConfig = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  LearningProgramsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String displayName,
+    this.description = const Value.absent(),
+    required String curriculumType,
+    this.isActive = const Value.absent(),
+    required String stagesConfig,
+    this.hasTests = const Value.absent(),
+    this.testConfig = const Value.absent(),
+    required DateTime createdAt,
+  }) : name = Value(name),
+       displayName = Value(displayName),
+       curriculumType = Value(curriculumType),
+       stagesConfig = Value(stagesConfig),
+       createdAt = Value(createdAt);
+  static Insertable<LearningProgram> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? displayName,
+    Expression<String>? description,
+    Expression<String>? curriculumType,
+    Expression<bool>? isActive,
+    Expression<String>? stagesConfig,
+    Expression<bool>? hasTests,
+    Expression<String>? testConfig,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (displayName != null) 'display_name': displayName,
+      if (description != null) 'description': description,
+      if (curriculumType != null) 'curriculum_type': curriculumType,
+      if (isActive != null) 'is_active': isActive,
+      if (stagesConfig != null) 'stages_config': stagesConfig,
+      if (hasTests != null) 'has_tests': hasTests,
+      if (testConfig != null) 'test_config': testConfig,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  LearningProgramsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String>? displayName,
+    Value<String>? description,
+    Value<String>? curriculumType,
+    Value<bool>? isActive,
+    Value<String>? stagesConfig,
+    Value<bool>? hasTests,
+    Value<String>? testConfig,
+    Value<DateTime>? createdAt,
+  }) {
+    return LearningProgramsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      displayName: displayName ?? this.displayName,
+      description: description ?? this.description,
+      curriculumType: curriculumType ?? this.curriculumType,
+      isActive: isActive ?? this.isActive,
+      stagesConfig: stagesConfig ?? this.stagesConfig,
+      hasTests: hasTests ?? this.hasTests,
+      testConfig: testConfig ?? this.testConfig,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (curriculumType.present) {
+      map['curriculum_type'] = Variable<String>(curriculumType.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (stagesConfig.present) {
+      map['stages_config'] = Variable<String>(stagesConfig.value);
+    }
+    if (hasTests.present) {
+      map['has_tests'] = Variable<bool>(hasTests.value);
+    }
+    if (testConfig.present) {
+      map['test_config'] = Variable<String>(testConfig.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LearningProgramsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('displayName: $displayName, ')
+          ..write('description: $description, ')
+          ..write('curriculumType: $curriculumType, ')
+          ..write('isActive: $isActive, ')
+          ..write('stagesConfig: $stagesConfig, ')
+          ..write('hasTests: $hasTests, ')
+          ..write('testConfig: $testConfig, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ProfileProgramsTable extends ProfilePrograms
+    with TableInfo<$ProfileProgramsTable, ProfileProgram> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfileProgramsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _curriculumTypeMeta = const VerificationMeta(
+    'curriculumType',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumType = GeneratedColumn<String>(
+    'curriculum_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _programIdMeta = const VerificationMeta(
+    'programId',
+  );
+  @override
+  late final GeneratedColumn<int> programId = GeneratedColumn<int>(
+    'program_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    curriculumType,
+    programId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'profile_programs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ProfileProgram> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('curriculum_type')) {
+      context.handle(
+        _curriculumTypeMeta,
+        curriculumType.isAcceptableOrUnknown(
+          data['curriculum_type']!,
+          _curriculumTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumTypeMeta);
+    }
+    if (data.containsKey('program_id')) {
+      context.handle(
+        _programIdMeta,
+        programId.isAcceptableOrUnknown(data['program_id']!, _programIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_programIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {profileId, curriculumType},
+  ];
+  @override
+  ProfileProgram map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProfileProgram(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      curriculumType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_type'],
+      )!,
+      programId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}program_id'],
+      )!,
+    );
+  }
+
+  @override
+  $ProfileProgramsTable createAlias(String alias) {
+    return $ProfileProgramsTable(attachedDatabase, alias);
+  }
+}
+
+class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
+  final int id;
+  final int profileId;
+  final String curriculumType;
+  final int programId;
+  const ProfileProgram({
+    required this.id,
+    required this.profileId,
+    required this.curriculumType,
+    required this.programId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['curriculum_type'] = Variable<String>(curriculumType);
+    map['program_id'] = Variable<int>(programId);
+    return map;
+  }
+
+  ProfileProgramsCompanion toCompanion(bool nullToAbsent) {
+    return ProfileProgramsCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      curriculumType: Value(curriculumType),
+      programId: Value(programId),
+    );
+  }
+
+  factory ProfileProgram.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProfileProgram(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      curriculumType: serializer.fromJson<String>(json['curriculumType']),
+      programId: serializer.fromJson<int>(json['programId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'curriculumType': serializer.toJson<String>(curriculumType),
+      'programId': serializer.toJson<int>(programId),
+    };
+  }
+
+  ProfileProgram copyWith({
+    int? id,
+    int? profileId,
+    String? curriculumType,
+    int? programId,
+  }) => ProfileProgram(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    curriculumType: curriculumType ?? this.curriculumType,
+    programId: programId ?? this.programId,
+  );
+  ProfileProgram copyWithCompanion(ProfileProgramsCompanion data) {
+    return ProfileProgram(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      curriculumType: data.curriculumType.present
+          ? data.curriculumType.value
+          : this.curriculumType,
+      programId: data.programId.present ? data.programId.value : this.programId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileProgram(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumType: $curriculumType, ')
+          ..write('programId: $programId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, profileId, curriculumType, programId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileProgram &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.curriculumType == this.curriculumType &&
+          other.programId == this.programId);
+}
+
+class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> curriculumType;
+  final Value<int> programId;
+  const ProfileProgramsCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.curriculumType = const Value.absent(),
+    this.programId = const Value.absent(),
+  });
+  ProfileProgramsCompanion.insert({
+    this.id = const Value.absent(),
+    required int profileId,
+    required String curriculumType,
+    required int programId,
+  }) : profileId = Value(profileId),
+       curriculumType = Value(curriculumType),
+       programId = Value(programId);
+  static Insertable<ProfileProgram> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? curriculumType,
+    Expression<int>? programId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (curriculumType != null) 'curriculum_type': curriculumType,
+      if (programId != null) 'program_id': programId,
+    });
+  }
+
+  ProfileProgramsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? curriculumType,
+    Value<int>? programId,
+  }) {
+    return ProfileProgramsCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      curriculumType: curriculumType ?? this.curriculumType,
+      programId: programId ?? this.programId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (curriculumType.present) {
+      map['curriculum_type'] = Variable<String>(curriculumType.value);
+    }
+    if (programId.present) {
+      map['program_id'] = Variable<int>(programId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileProgramsCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumType: $curriculumType, ')
+          ..write('programId: $programId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6889,6 +7820,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $TextDownloadStatusesTable(this);
   late final $ContentDownloadStatusesTable contentDownloadStatuses =
       $ContentDownloadStatusesTable(this);
+  late final $LearningProgramsTable learningPrograms = $LearningProgramsTable(
+    this,
+  );
+  late final $ProfileProgramsTable profilePrograms = $ProfileProgramsTable(
+    this,
+  );
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
     this as AppDatabase,
   );
@@ -6915,6 +7852,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       TextDownloadStatusDao(this as AppDatabase);
   late final ContentDownloadStatusDao contentDownloadStatusDao =
       ContentDownloadStatusDao(this as AppDatabase);
+  late final LearningProgramDao learningProgramDao = LearningProgramDao(
+    this as AppDatabase,
+  );
+  late final ProfileProgramDao profileProgramDao = ProfileProgramDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6936,6 +7879,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     streaks,
     textDownloadStatuses,
     contentDownloadStatuses,
+    learningPrograms,
+    profilePrograms,
   ];
 }
 
@@ -10533,6 +11478,494 @@ typedef $$ContentDownloadStatusesTableProcessedTableManager =
       ContentDownloadStatuse,
       PrefetchHooks Function()
     >;
+typedef $$LearningProgramsTableCreateCompanionBuilder =
+    LearningProgramsCompanion Function({
+      Value<int> id,
+      required String name,
+      required String displayName,
+      Value<String> description,
+      required String curriculumType,
+      Value<bool> isActive,
+      required String stagesConfig,
+      Value<bool> hasTests,
+      Value<String> testConfig,
+      required DateTime createdAt,
+    });
+typedef $$LearningProgramsTableUpdateCompanionBuilder =
+    LearningProgramsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String> displayName,
+      Value<String> description,
+      Value<String> curriculumType,
+      Value<bool> isActive,
+      Value<String> stagesConfig,
+      Value<bool> hasTests,
+      Value<String> testConfig,
+      Value<DateTime> createdAt,
+    });
+
+class $$LearningProgramsTableFilterComposer
+    extends Composer<_$AppDatabase, $LearningProgramsTable> {
+  $$LearningProgramsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get curriculumType => $composableBuilder(
+    column: $table.curriculumType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stagesConfig => $composableBuilder(
+    column: $table.stagesConfig,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasTests => $composableBuilder(
+    column: $table.hasTests,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get testConfig => $composableBuilder(
+    column: $table.testConfig,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LearningProgramsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LearningProgramsTable> {
+  $$LearningProgramsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get curriculumType => $composableBuilder(
+    column: $table.curriculumType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stagesConfig => $composableBuilder(
+    column: $table.stagesConfig,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasTests => $composableBuilder(
+    column: $table.hasTests,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get testConfig => $composableBuilder(
+    column: $table.testConfig,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LearningProgramsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LearningProgramsTable> {
+  $$LearningProgramsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get curriculumType => $composableBuilder(
+    column: $table.curriculumType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<String> get stagesConfig => $composableBuilder(
+    column: $table.stagesConfig,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hasTests =>
+      $composableBuilder(column: $table.hasTests, builder: (column) => column);
+
+  GeneratedColumn<String> get testConfig => $composableBuilder(
+    column: $table.testConfig,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$LearningProgramsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LearningProgramsTable,
+          LearningProgram,
+          $$LearningProgramsTableFilterComposer,
+          $$LearningProgramsTableOrderingComposer,
+          $$LearningProgramsTableAnnotationComposer,
+          $$LearningProgramsTableCreateCompanionBuilder,
+          $$LearningProgramsTableUpdateCompanionBuilder,
+          (
+            LearningProgram,
+            BaseReferences<
+              _$AppDatabase,
+              $LearningProgramsTable,
+              LearningProgram
+            >,
+          ),
+          LearningProgram,
+          PrefetchHooks Function()
+        > {
+  $$LearningProgramsTableTableManager(
+    _$AppDatabase db,
+    $LearningProgramsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LearningProgramsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LearningProgramsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LearningProgramsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<String> curriculumType = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<String> stagesConfig = const Value.absent(),
+                Value<bool> hasTests = const Value.absent(),
+                Value<String> testConfig = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LearningProgramsCompanion(
+                id: id,
+                name: name,
+                displayName: displayName,
+                description: description,
+                curriculumType: curriculumType,
+                isActive: isActive,
+                stagesConfig: stagesConfig,
+                hasTests: hasTests,
+                testConfig: testConfig,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required String displayName,
+                Value<String> description = const Value.absent(),
+                required String curriculumType,
+                Value<bool> isActive = const Value.absent(),
+                required String stagesConfig,
+                Value<bool> hasTests = const Value.absent(),
+                Value<String> testConfig = const Value.absent(),
+                required DateTime createdAt,
+              }) => LearningProgramsCompanion.insert(
+                id: id,
+                name: name,
+                displayName: displayName,
+                description: description,
+                curriculumType: curriculumType,
+                isActive: isActive,
+                stagesConfig: stagesConfig,
+                hasTests: hasTests,
+                testConfig: testConfig,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LearningProgramsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LearningProgramsTable,
+      LearningProgram,
+      $$LearningProgramsTableFilterComposer,
+      $$LearningProgramsTableOrderingComposer,
+      $$LearningProgramsTableAnnotationComposer,
+      $$LearningProgramsTableCreateCompanionBuilder,
+      $$LearningProgramsTableUpdateCompanionBuilder,
+      (
+        LearningProgram,
+        BaseReferences<_$AppDatabase, $LearningProgramsTable, LearningProgram>,
+      ),
+      LearningProgram,
+      PrefetchHooks Function()
+    >;
+typedef $$ProfileProgramsTableCreateCompanionBuilder =
+    ProfileProgramsCompanion Function({
+      Value<int> id,
+      required int profileId,
+      required String curriculumType,
+      required int programId,
+    });
+typedef $$ProfileProgramsTableUpdateCompanionBuilder =
+    ProfileProgramsCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> curriculumType,
+      Value<int> programId,
+    });
+
+class $$ProfileProgramsTableFilterComposer
+    extends Composer<_$AppDatabase, $ProfileProgramsTable> {
+  $$ProfileProgramsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get curriculumType => $composableBuilder(
+    column: $table.curriculumType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ProfileProgramsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProfileProgramsTable> {
+  $$ProfileProgramsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get curriculumType => $composableBuilder(
+    column: $table.curriculumType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ProfileProgramsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProfileProgramsTable> {
+  $$ProfileProgramsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<String> get curriculumType => $composableBuilder(
+    column: $table.curriculumType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get programId =>
+      $composableBuilder(column: $table.programId, builder: (column) => column);
+}
+
+class $$ProfileProgramsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ProfileProgramsTable,
+          ProfileProgram,
+          $$ProfileProgramsTableFilterComposer,
+          $$ProfileProgramsTableOrderingComposer,
+          $$ProfileProgramsTableAnnotationComposer,
+          $$ProfileProgramsTableCreateCompanionBuilder,
+          $$ProfileProgramsTableUpdateCompanionBuilder,
+          (
+            ProfileProgram,
+            BaseReferences<
+              _$AppDatabase,
+              $ProfileProgramsTable,
+              ProfileProgram
+            >,
+          ),
+          ProfileProgram,
+          PrefetchHooks Function()
+        > {
+  $$ProfileProgramsTableTableManager(
+    _$AppDatabase db,
+    $ProfileProgramsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProfileProgramsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProfileProgramsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProfileProgramsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> curriculumType = const Value.absent(),
+                Value<int> programId = const Value.absent(),
+              }) => ProfileProgramsCompanion(
+                id: id,
+                profileId: profileId,
+                curriculumType: curriculumType,
+                programId: programId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int profileId,
+                required String curriculumType,
+                required int programId,
+              }) => ProfileProgramsCompanion.insert(
+                id: id,
+                profileId: profileId,
+                curriculumType: curriculumType,
+                programId: programId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ProfileProgramsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ProfileProgramsTable,
+      ProfileProgram,
+      $$ProfileProgramsTableFilterComposer,
+      $$ProfileProgramsTableOrderingComposer,
+      $$ProfileProgramsTableAnnotationComposer,
+      $$ProfileProgramsTableCreateCompanionBuilder,
+      $$ProfileProgramsTableUpdateCompanionBuilder,
+      (
+        ProfileProgram,
+        BaseReferences<_$AppDatabase, $ProfileProgramsTable, ProfileProgram>,
+      ),
+      ProfileProgram,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10572,4 +12005,8 @@ class $AppDatabaseManager {
         _db,
         _db.contentDownloadStatuses,
       );
+  $$LearningProgramsTableTableManager get learningPrograms =>
+      $$LearningProgramsTableTableManager(_db, _db.learningPrograms);
+  $$ProfileProgramsTableTableManager get profilePrograms =>
+      $$ProfileProgramsTableTableManager(_db, _db.profilePrograms);
 }
