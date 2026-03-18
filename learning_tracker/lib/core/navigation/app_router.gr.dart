@@ -834,59 +834,6 @@ class SignInRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [StageEditorScreen]
-class StageEditorRoute extends PageRouteInfo<StageEditorRouteArgs> {
-  StageEditorRoute({
-    Key? key,
-    required String curriculumId,
-    List<PageRouteInfo>? children,
-  }) : super(
-         StageEditorRoute.name,
-         args: StageEditorRouteArgs(key: key, curriculumId: curriculumId),
-         rawPathParams: {'curriculumId': curriculumId},
-         initialChildren: children,
-       );
-
-  static const String name = 'StageEditorRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      final pathParams = data.inheritedPathParams;
-      final args = data.argsAs<StageEditorRouteArgs>(
-        orElse: () => StageEditorRouteArgs(
-          curriculumId: pathParams.getString('curriculumId'),
-        ),
-      );
-      return StageEditorScreen(key: args.key, curriculumId: args.curriculumId);
-    },
-  );
-}
-
-class StageEditorRouteArgs {
-  const StageEditorRouteArgs({this.key, required this.curriculumId});
-
-  final Key? key;
-
-  final String curriculumId;
-
-  @override
-  String toString() {
-    return 'StageEditorRouteArgs{key: $key, curriculumId: $curriculumId}';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! StageEditorRouteArgs) return false;
-    return key == other.key && curriculumId == other.curriculumId;
-  }
-
-  @override
-  int get hashCode => key.hashCode ^ curriculumId.hashCode;
-}
-
-/// generated route for
 /// [SyncScreen]
 class SyncRoute extends PageRouteInfo<void> {
   const SyncRoute({List<PageRouteInfo>? children})
