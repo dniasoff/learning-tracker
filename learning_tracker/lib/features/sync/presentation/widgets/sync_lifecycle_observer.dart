@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -23,10 +24,14 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Attach listeners on app start
+    // Only attach listeners if user is authenticated — attaching before
+    // auth causes permission-denied errors that permanently disable
+    // real-time sync for the session.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final engine = ref.read(syncEngineProvider);
-      engine.attachListeners();
+      if (FirebaseAuth.instance.currentUser != null) {
+        final engine = ref.read(syncEngineProvider);
+        engine.attachListeners();
+      }
     });
   }
 
@@ -42,8 +47,10 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
 
     switch (state) {
       case AppLifecycleState.resumed:
-        // App came to foreground, attach listeners
-        engine.attachListeners();
+        // Only attach if authenticated
+        if (FirebaseAuth.instance.currentUser != null) {
+          engine.attachListeners();
+        }
         break;
 
       case AppLifecycleState.inactive:

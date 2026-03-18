@@ -218,6 +218,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 icon: const Icon(Icons.g_mobiledata, size: 24),
                 label: const Text('Sign in with Google'),
               ),
+              const SizedBox(height: 32),
+              TextButton(
+                onPressed: _isLoading
+                    ? null
+                    : () =>
+                        context.router.replace(const AccountCreationRoute()),
+                child: const Text("Don't have an account? Create one"),
+              ),
             ],
           ),
         ),

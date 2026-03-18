@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -16,9 +17,16 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } on FirebaseException catch (_) {
+        // Already initialized (e.g. hot restart) — use existing app.
+      }
+
+      // google_sign_in v7 requires initialize() before authenticate().
+      await GoogleSignIn.instance.initialize();
 
       final talker = AppLogger.init();
       AppLogger.setupFlutterErrorHandlers();
@@ -39,12 +47,18 @@ void main() {
       );
 
       // Initialize notification system (timezone data + plugin).
-      final router = container.read(routerProvider);
-      final notificationInitializer = NotificationInitializer(
-        service: NotificationService(),
-        router: router,
-      );
-      await notificationInitializer.initialize();
+      // Wrapped in try/catch so a notification init failure doesn't block
+      // the entire app from starting (user sees stuck Flutter logo).
+      try {
+        final router = container.read(routerProvider);
+        final notificationInitializer = NotificationInitializer(
+          service: NotificationService(),
+          router: router,
+        );
+        await notificationInitializer.initialize();
+      } catch (e, stack) {
+        talker.error('Notification init failed (non-fatal)', e, stack);
+      }
 
       runApp(
         UncontrolledProviderScope(

@@ -55,7 +55,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () => context.router.replace(const SignInRoute()),
+                onPressed: () => context.router.push(const SignInRoute()),
                 child: const Text('Already have an account? Sign in'),
               ),
               const Spacer(),

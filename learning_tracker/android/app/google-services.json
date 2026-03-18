@@ -14,13 +14,21 @@
       },
       "oauth_client": [
         {
+          "client_id": "346569574648-0a75eauuqciu0jtmpmj3a50n7meq99l4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jcom.torah.learning_tracker",
+            "certificate_hash": "aa085b6a3949c4c1018731a48168c102bdd9a855"
+          }
+        },
+        {
           "client_id": "346569574648-tots1edf04513on4oojgumfumdjasl68.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAhdnu2I8fJeUO3gZlsqwy8w-lcyU6hAeI"
+          "current_key": "AIzaSyDWtsMS00AtG1nMQj9dkRJD6mM7ImA5GNI"
         }
       ],
       "services": {
