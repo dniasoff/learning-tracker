@@ -320,7 +320,7 @@ final class CurriculumProgressProvider
 }
 
 String _$curriculumProgressHash() =>
-    r'c736262f40b742437f0be757c01b180b1586ddea';
+    r'c5d48a83925fe978347ecc2166ee92a4d5bd7452';
 
 /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
 ///
@@ -419,7 +419,7 @@ final class CurriculumPaceStatusProvider
 }
 
 String _$curriculumPaceStatusHash() =>
-    r'16366d56a0484c381bef31c114dd8e0f098c09c0';
+    r'39e806a9783c9b801e827113e1c0f29212916084';
 
 /// Pace status for a curriculum (null if no goal exists).
 ///

@@ -46,6 +46,26 @@ final scopedCurriculumContentProvider =
   );
 });
 
+/// Scope-aware filtered content provider.
+/// First applies scope filters, then applies hierarchy level filters.
+final scopedFilteredContentProvider = FutureProvider.family
+    .autoDispose<List<ContentItem>, ({CurriculumId curriculumId, String? level1, String? level2, String? level3, String? level4})>((
+  ref,
+  params,
+) async {
+  final items = await ref.watch(
+    scopedCurriculumContentProvider(params.curriculumId).future,
+  );
+
+  return items.where((item) {
+    if (params.level1 != null && item.level1 != params.level1) return false;
+    if (params.level2 != null && item.level2 != params.level2) return false;
+    if (params.level3 != null && item.level3 != params.level3) return false;
+    if (params.level4 != null && item.level4 != params.level4) return false;
+    return true;
+  }).toList();
+});
+
 /// Count of leaf items in scoped content.
 final scopedItemCountProvider =
     FutureProvider.family<int, CurriculumId>((ref, curriculumId) async {

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
@@ -81,9 +82,9 @@ Future<CurriculumProgressData> curriculumProgress(
     (c) => c.storageKey == curriculumId,
   );
 
-  // Fetch content items, completions, stage definitions, hierarchy config
+  // Fetch scoped content items, completions, stage definitions, hierarchy config
   final contentItems = await ref.watch(
-    curriculumContentProvider(curriculumEnum).future,
+    scopedCurriculumContentProvider(curriculumEnum).future,
   );
   final hierarchyConfig = await ref.watch(
     curriculumHierarchyConfigProvider(curriculumEnum).future,
@@ -130,8 +131,9 @@ Future<PaceStatus?> curriculumPaceStatus(Ref ref, String curriculumId) async {
     (c) => c.storageKey == curriculumId,
   );
 
-  final hierarchyConfig = await ref.watch(
-    curriculumHierarchyConfigProvider(curriculumEnum).future,
+  // Use scoped item count for pace calculation
+  final scopedTotal = await ref.watch(
+    scopedItemCountProvider(curriculumEnum).future,
   );
 
   // Get personal-track completions
@@ -158,7 +160,7 @@ Future<PaceStatus?> curriculumPaceStatus(Ref ref, String curriculumId) async {
   return PaceCalculator.calculate(
     goalStartDate: goal.createdAt,
     goalDeadline: goal.targetDate!,
-    totalItems: hierarchyConfig.totalItems,
+    totalItems: scopedTotal,
     completedItems: personalCompletions.length,
     dailyCompletionCounts: dailyCounts,
     today: now,

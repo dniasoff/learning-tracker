@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
@@ -278,12 +279,13 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       );
     } else {
       itemsAsync = ref.watch(
-        filteredContentProvider(
+        scopedFilteredContentProvider((
           curriculumId: widget.curriculumId,
           level1: _currentLevel1,
           level2: _currentLevel2,
           level3: _currentLevel3,
-        ),
+          level4: null,
+        )),
       );
     }
 

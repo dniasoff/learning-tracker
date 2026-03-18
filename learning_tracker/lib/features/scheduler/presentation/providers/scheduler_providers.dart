@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -13,6 +14,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/schedule_confi
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,11 +27,16 @@ DateTime clock(Ref ref) => DateTime.now().toUtc();
 @riverpod
 SchedulerEngine schedulerEngine(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
-  final contentRepo = ref.watch(contentRepositoryProvider);
+
+  // Use scope-aware content: returns scoped content if scopes are set,
+  // otherwise returns full curriculum content.
+  Future<List<ContentItem>> getScopedContent(CurriculumId curriculumId) async {
+    return ref.read(scopedCurriculumContentProvider(curriculumId).future);
+  }
 
   return SchedulerEngine(
     contentRepository: SchedulerContentRepositoryImpl(
-      getContent: contentRepo.getContentForCurriculum,
+      getContent: getScopedContent,
     ),
     completionRepository: SchedulerCompletionRepositoryImpl(
       completionDao: db.completionDao,
