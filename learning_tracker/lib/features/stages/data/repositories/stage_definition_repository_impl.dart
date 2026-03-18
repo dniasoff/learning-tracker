@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart' as db;
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
@@ -5,6 +7,7 @@ import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 
@@ -91,6 +94,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         stageName: Value(name ?? existing.stageName),
         delayDays: Value(delayDays ?? existing.delayDays),
         isDefault: Value(existing.isDefault),
+        scheduleType: Value(existing.scheduleType),
+        daysOfWeek: Value(existing.daysOfWeek),
+        rollingWindowSize: Value(existing.rollingWindowSize),
       ),
     );
 
@@ -132,6 +138,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
           stageName: Value(existing.stageName),
           delayDays: Value(existing.delayDays),
           isDefault: Value(existing.isDefault),
+          scheduleType: Value(existing.scheduleType),
+          daysOfWeek: Value(existing.daysOfWeek),
+          rollingWindowSize: Value(existing.rollingWindowSize),
         ),
       );
     }
@@ -148,6 +157,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
           stageName: Value(existing.stageName),
           delayDays: Value(existing.delayDays),
           isDefault: Value(existing.isDefault),
+          scheduleType: Value(existing.scheduleType),
+          daysOfWeek: Value(existing.daysOfWeek),
+          rollingWindowSize: Value(existing.rollingWindowSize),
         ),
       );
     }
@@ -205,6 +217,11 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       stageName: row.stageName,
       delayDays: row.delayDays,
       isDefault: row.isDefault,
+      scheduleType: ScheduleType.fromStorageKey(row.scheduleType),
+      daysOfWeek: row.daysOfWeek != null
+          ? (jsonDecode(row.daysOfWeek!) as List).cast<int>()
+          : null,
+      rollingWindowSize: row.rollingWindowSize,
     );
   }
 
@@ -225,6 +242,10 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
               'stage_name': s.stageName,
               'delay_days': s.delayDays,
               'is_default': s.isDefault,
+              'schedule_type': s.scheduleType,
+              if (s.daysOfWeek != null) 'days_of_week': s.daysOfWeek,
+              if (s.rollingWindowSize != null)
+                'rolling_window_size': s.rollingWindowSize,
             },
           )
           .toList(),

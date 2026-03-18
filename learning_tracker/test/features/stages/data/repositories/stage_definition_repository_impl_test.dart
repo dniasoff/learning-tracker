@@ -30,6 +30,9 @@ void main() {
     String stageName = 'Learn',
     int delayDays = 0,
     bool isDefault = true,
+    String scheduleType = 'delay',
+    String? daysOfWeek,
+    int? rollingWindowSize,
   }) {
     return db.StageDefinition(
       id: id,
@@ -39,6 +42,9 @@ void main() {
       stageName: stageName,
       delayDays: delayDays,
       isDefault: isDefault,
+      scheduleType: scheduleType,
+      daysOfWeek: daysOfWeek,
+      rollingWindowSize: rollingWindowSize,
     );
   }
 

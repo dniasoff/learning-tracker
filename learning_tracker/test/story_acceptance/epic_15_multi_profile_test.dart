@@ -17,13 +17,31 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
+import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart' as domain;
+import 'package:learning_tracker/features/stages/domain/services/stage_validator.dart';
 import 'package:learning_tracker/features/test_tracking/domain/services/test_reminder_service.dart';
 import 'package:learning_tracker/features/test_tracking/domain/services/test_score_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
+
+class _InMemoryContentRepo implements SchedulerContentRepository {
+  final List<SchedulerContentItem> items;
+  _InMemoryContentRepo(this.items);
+  @override
+  Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async =>
+      items;
+}
 
 class _MockCloudContentService extends Mock implements CloudContentService {}
 
@@ -1839,6 +1857,433 @@ void main() {
         final testDates =
             await db.testDateDao.getTestDatesForProgram(program.id);
         expect(testDates, isNotEmpty);
+      });
+    });
+  });
+
+  // ── Story 15.5: Expanded Stage Scheduling Model ────────────────────
+  group('Story 15.5 -- Expanded Stage Scheduling Model',
+      tags: ['story_15_5'], () {
+    late AppDatabase db;
+    late SchedulerEngine engine;
+    final now = DateTime.utc(2026, 3, 18); // Wednesday (weekday=3)
+    const curriculum = CurriculumId.bavli;
+
+    final contentItems = List.generate(
+      30,
+      (i) => SchedulerContentItem(
+        sefariaRef: 'Berakhot.${i + 1}a',
+        sortOrder: i,
+      ),
+    );
+
+    setUp(() async {
+      db = createTestDatabase();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    SchedulerEngine _createEngine() {
+      return SchedulerEngine(
+        contentRepository: _InMemoryContentRepo(contentItems),
+        completionRepository: SchedulerCompletionRepositoryImpl(
+          completionDao: db.completionDao,
+          stageDao: db.stageDao,
+        ),
+        stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
+        learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
+          learningOrderDao: db.learningOrderDao,
+        ),
+      );
+    }
+
+    group('AC: Stage model supports all three schedule types', () {
+      test('delay stage can be created and persisted', () async {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
+        );
+
+        final stages = await db.stageDao
+            .getStageDefinitionsByCurriculum(curriculum.storageKey);
+        expect(stages, hasLength(1));
+        expect(stages.first.scheduleType, 'delay');
+      });
+
+      test('weekly stage can be created with days_of_week', () async {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 2,
+            stageName: 'Weekly Review',
+            delayDays: 0,
+            scheduleType: const Value('weekly'),
+            daysOfWeek: const Value('[5, 6]'), // Friday, Saturday
+          ),
+        );
+
+        final stages = await db.stageDao
+            .getStageDefinitionsByCurriculum(curriculum.storageKey);
+        expect(stages, hasLength(1));
+        expect(stages.first.scheduleType, 'weekly');
+        expect(stages.first.daysOfWeek, '[5, 6]');
+      });
+
+      test('rolling stage can be created with window size', () async {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 3,
+            stageName: 'Rolling Back-20',
+            delayDays: 0,
+            scheduleType: const Value('rolling'),
+            rollingWindowSize: const Value(20),
+          ),
+        );
+
+        final stages = await db.stageDao
+            .getStageDefinitionsByCurriculum(curriculum.storageKey);
+        expect(stages, hasLength(1));
+        expect(stages.first.scheduleType, 'rolling');
+        expect(stages.first.rollingWindowSize, 20);
+      });
+    });
+
+    group('AC: Existing delay-based stages migrated without data loss', () {
+      test(
+          'stages inserted without schedule_type default to delay',
+          () async {
+        // Insert a stage without specifying schedule_type (simulates pre-migration)
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
+        );
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 2,
+            stageName: 'Chazara 1',
+            delayDays: 1,
+          ),
+        );
+
+        final stages = await db.stageDao
+            .getStageDefinitionsByCurriculum(curriculum.storageKey);
+        expect(stages, hasLength(2));
+        for (final stage in stages) {
+          expect(stage.scheduleType, 'delay');
+          expect(stage.daysOfWeek, isNull);
+          expect(stage.rollingWindowSize, isNull);
+        }
+        // delayDays preserved
+        expect(stages[1].delayDays, 1);
+      });
+    });
+
+    group('AC: Weekly stages generate tasks on correct days', () {
+      test('weekly stage generates tasks on matching day', () async {
+        // Stage 1: Learn (delay)
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
+        );
+        // Stage 2: Weekly review on Wednesday (3) and Friday (5)
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 2,
+            stageName: 'Weekly Review',
+            delayDays: 0,
+            scheduleType: const Value('weekly'),
+            daysOfWeek: const Value('[3, 5]'),
+          ),
+        );
+
+        // Complete Learn for first 3 items
+        for (var i = 0; i < 3; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              curriculumId: curriculum.storageKey,
+              sefariaRef: 'Berakhot.${i + 1}a',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: now.subtract(const Duration(days: 3)),
+              points: const Value(10),
+            ),
+          );
+        }
+
+        engine = _createEngine();
+        // now = Wednesday (weekday=3), should match
+        final tasks = await engine.generateDailyTasks(ScheduleConfig(
+          curriculumId: curriculum,
+          currentDate: now, // Wednesday
+        ));
+
+        final weeklyTasks = tasks
+            .where((t) => t.stageName == 'Weekly Review')
+            .toList();
+        expect(weeklyTasks, hasLength(3));
+        expect(weeklyTasks.every((t) => t.reason.contains('scheduled')), isTrue);
+      });
+
+      test('weekly stage does NOT generate tasks on non-matching day',
+          () async {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
+        );
+        // Only on Friday (5) and Saturday (6)
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 2,
+            stageName: 'Weekly Review',
+            delayDays: 0,
+            scheduleType: const Value('weekly'),
+            daysOfWeek: const Value('[5, 6]'),
+          ),
+        );
+
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            sefariaRef: 'Berakhot.1a',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: now.subtract(const Duration(days: 3)),
+            points: const Value(10),
+          ),
+        );
+
+        engine = _createEngine();
+        // now = Wednesday (3), stages are for Fri/Sat
+        final tasks = await engine.generateDailyTasks(ScheduleConfig(
+          curriculumId: curriculum,
+          currentDate: now,
+        ));
+
+        final weeklyTasks = tasks
+            .where((t) => t.stageName == 'Weekly Review')
+            .toList();
+        expect(weeklyTasks, isEmpty);
+      });
+    });
+
+    group('AC: Rolling window stages maintain correct active set', () {
+      test('rolling stage includes last N completed items', () async {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
+        );
+        // Rolling window of 5
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 2,
+            stageName: 'Rolling Back-5',
+            delayDays: 0,
+            scheduleType: const Value('rolling'),
+            rollingWindowSize: const Value(5),
+          ),
+        );
+
+        // Complete Learn for 10 items at different times
+        for (var i = 0; i < 10; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              curriculumId: curriculum.storageKey,
+              sefariaRef: 'Berakhot.${i + 1}a',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: now.subtract(Duration(days: 10 - i)),
+              points: const Value(10),
+            ),
+          );
+        }
+
+        engine = _createEngine();
+        final tasks = await engine.generateDailyTasks(ScheduleConfig(
+          curriculumId: curriculum,
+          currentDate: now,
+        ));
+
+        final rollingTasks = tasks
+            .where((t) => t.stageName == 'Rolling Back-5')
+            .toList();
+        // Should have 5 items (the most recently completed)
+        expect(rollingTasks, hasLength(5));
+
+        // Should be the 5 most recent (items 6-10)
+        final refs = rollingTasks.map((t) => t.contentItemSefariaRef).toSet();
+        for (var i = 6; i <= 10; i++) {
+          expect(refs, contains('Berakhot.${i}a'));
+        }
+      });
+
+      test('rolling stage excludes items already completed for that stage',
+          () async {
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
+        );
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            stageOrder: 2,
+            stageName: 'Rolling Back-3',
+            delayDays: 0,
+            scheduleType: const Value('rolling'),
+            rollingWindowSize: const Value(3),
+          ),
+        );
+
+        // Complete Learn for 5 items
+        for (var i = 0; i < 5; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              curriculumId: curriculum.storageKey,
+              sefariaRef: 'Berakhot.${i + 1}a',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: now.subtract(Duration(days: 5 - i)),
+              points: const Value(10),
+            ),
+          );
+        }
+        // Complete rolling stage for the most recent item
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: curriculum.storageKey,
+            sefariaRef: 'Berakhot.5a',
+            stageId: 2,
+            trackType: 'personal',
+            completedAt: now.subtract(const Duration(days: 1)),
+            points: const Value(5),
+          ),
+        );
+
+        engine = _createEngine();
+        final tasks = await engine.generateDailyTasks(ScheduleConfig(
+          curriculumId: curriculum,
+          currentDate: now,
+        ));
+
+        final rollingTasks = tasks
+            .where((t) => t.stageName == 'Rolling Back-3')
+            .toList();
+        // Window is 3 (items 3,4,5), but item 5 already done → 2 remaining
+        expect(rollingTasks, hasLength(2));
+        expect(
+          rollingTasks.map((t) => t.contentItemSefariaRef).toSet(),
+          containsAll(['Berakhot.3a', 'Berakhot.4a']),
+        );
+      });
+    });
+
+    group('AC: Stage validation -- each type requires its specific fields',
+        () {
+      test('delay stage validates without extra fields', () {
+        final stage = domain.StageDefinition(
+          id: 1,
+          curriculumId: CurriculumId.bavli,
+          stageOrder: 1,
+          stageName: 'Learn',
+          delayDays: 0,
+          isDefault: true,
+          scheduleType: ScheduleType.delay,
+        );
+        expect(StageValidator.validate(stage), isNull);
+      });
+
+      test('weekly stage requires daysOfWeek', () {
+        final invalid = domain.StageDefinition(
+          id: 2,
+          curriculumId: CurriculumId.bavli,
+          stageOrder: 2,
+          stageName: 'Weekly Review',
+          delayDays: 0,
+          isDefault: false,
+          scheduleType: ScheduleType.weekly,
+        );
+        expect(StageValidator.validate(invalid), isNotNull);
+
+        final valid = domain.StageDefinition(
+          id: 2,
+          curriculumId: CurriculumId.bavli,
+          stageOrder: 2,
+          stageName: 'Weekly Review',
+          delayDays: 0,
+          isDefault: false,
+          scheduleType: ScheduleType.weekly,
+          daysOfWeek: [5, 6],
+        );
+        expect(StageValidator.validate(valid), isNull);
+      });
+
+      test('weekly stage rejects invalid day numbers', () {
+        final invalid = domain.StageDefinition(
+          id: 2,
+          curriculumId: CurriculumId.bavli,
+          stageOrder: 2,
+          stageName: 'Weekly Review',
+          delayDays: 0,
+          isDefault: false,
+          scheduleType: ScheduleType.weekly,
+          daysOfWeek: [0, 8],
+        );
+        expect(StageValidator.validate(invalid), isNotNull);
+      });
+
+      test('rolling stage requires positive window size', () {
+        final invalid = domain.StageDefinition(
+          id: 3,
+          curriculumId: CurriculumId.bavli,
+          stageOrder: 3,
+          stageName: 'Rolling',
+          delayDays: 0,
+          isDefault: false,
+          scheduleType: ScheduleType.rolling,
+        );
+        expect(StageValidator.validate(invalid), isNotNull);
+
+        final valid = domain.StageDefinition(
+          id: 3,
+          curriculumId: CurriculumId.bavli,
+          stageOrder: 3,
+          stageName: 'Rolling',
+          delayDays: 0,
+          isDefault: false,
+          scheduleType: ScheduleType.rolling,
+          rollingWindowSize: 20,
+        );
+        expect(StageValidator.validate(valid), isNull);
       });
     });
   });
