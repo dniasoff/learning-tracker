@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/parent_mode/presentation/widgets/curri
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/engagement_card.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/key_stats_row.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/recent_completions_list.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
 @RoutePage()
 class ParentModeScreen extends ConsumerWidget {
@@ -111,6 +112,10 @@ class _DashboardBody extends StatelessWidget {
             const SizedBox(height: 16),
           ],
 
+          // View child's learning journey
+          _ViewChildJourneyTile(),
+          const SizedBox(height: 16),
+
           // Recent completions
           if (data.recentCompletions.isNotEmpty) ...[
             Text(
@@ -121,6 +126,27 @@ class _DashboardBody extends StatelessWidget {
             RecentCompletionsList(completions: data.recentCompletions),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _ViewChildJourneyTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.auto_stories, color: Colors.deepPurple),
+        title: const Text("View Child's Learning Journey"),
+        subtitle: const Text('See lifetime achievements'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          context.router.push(
+            LearningJourneyRoute(profileId: activeProfileId),
+          );
+        },
       ),
     );
   }
