@@ -43,6 +43,14 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   BulkPriorCompletionResult? _result;
   String? _error;
 
+  // Search state
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isSearching = false;
+
+  // Per-stage marking: maps each selection to its own stage set
+  final _perSelectionStages = <HierarchySelection, Set<int>>{};
+
   // Navigation stack for hierarchy browsing within selection
   List<String> _navigationStack = [];
 
@@ -118,6 +126,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _proceedToStageSelection() async {
     if (_selections.isEmpty) return;
 
@@ -130,12 +144,19 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     setState(() {
       _resolvedItems = resolved;
       _phase = _Phase.stageSelection;
-      _selectedStageIds.add(1); // Default: stage 1 (Learn) pre-selected
+      // Initialize per-selection stage maps with stage 1 (Learn) as default
+      for (final sel in _selections) {
+        _perSelectionStages.putIfAbsent(sel, () => {1});
+      }
+      // Also keep the global set for backward compat
+      _selectedStageIds.add(1);
     });
   }
 
   Future<void> _proceedToConfirmation() async {
-    if (_selectedStageIds.isEmpty) return;
+    // Validate at least one selection has stages
+    final hasStages = _perSelectionStages.values.any((s) => s.isNotEmpty);
+    if (!hasStages) return;
     setState(() => _phase = _Phase.confirmation);
   }
 
@@ -146,21 +167,44 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
     try {
       final service = ref.read(bulkPriorCompletionServiceProvider);
-      final sortedStageIds = _selectedStageIds.toList()..sort();
-      final result = await service.execute(
-        curriculumId: widget.curriculumId,
-        resolvedItems: _resolvedItems!,
-        stageIds: sortedStageIds,
-      );
+      var totalItems = 0;
+      var totalCompletions = 0;
+      String? bookmarkRef;
+
+      // Execute per-selection-group with their own stage sets
+      for (final entry in _perSelectionStages.entries) {
+        final selection = entry.key;
+        final stageIds = entry.value.toList()..sort();
+        if (stageIds.isEmpty) continue;
+
+        final groupItems = await service.resolveSelections(
+          curriculumId: widget.curriculumId,
+          selections: [selection],
+        );
+        if (groupItems.isEmpty) continue;
+
+        final result = await service.execute(
+          curriculumId: widget.curriculumId,
+          resolvedItems: groupItems,
+          stageIds: stageIds,
+        );
+        totalItems += result.itemCount;
+        totalCompletions += result.completionCount;
+        bookmarkRef ??= result.bookmarkSefariaRef;
+      }
 
       setState(() {
-        _result = result;
+        _result = BulkPriorCompletionResult(
+          itemCount: totalItems,
+          completionCount: totalCompletions,
+          bookmarkSefariaRef: bookmarkRef,
+        );
         _phase = _Phase.done;
       });
     } catch (e) {
       setState(() {
         _error = e.toString();
-        _phase = _Phase.confirmation; // Go back to confirmation
+        _phase = _Phase.confirmation;
       });
     }
   }
@@ -171,15 +215,41 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(
-          text: 'Mark Prior Completions — ${widget.curriculumId.displayNameEn}',
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Search content...',
+                  border: InputBorder.none,
+                ),
+                onChanged: (value) => setState(() => _searchQuery = value),
+              )
+            : AppBarTitle(
+                text:
+                    'Mark Prior Completions — ${widget.curriculumId.displayNameEn}',
+              ),
         leading: _phase == _Phase.selection && _navigationStack.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: _navigateUp,
               )
             : null,
+        actions: [
+          if (_phase == _Phase.selection)
+            IconButton(
+              icon: Icon(_isSearching ? Icons.close : Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _searchController.clear();
+                    _searchQuery = '';
+                  }
+                });
+              },
+            ),
+        ],
       ),
       body: switch (_phase) {
         _Phase.selection => _buildSelection(theme),
@@ -195,14 +265,27 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     final configAsync = ref.watch(
       curriculumHierarchyConfigProvider(widget.curriculumId),
     );
-    final itemsAsync = ref.watch(
-      filteredContentProvider(
-        curriculumId: widget.curriculumId,
-        level1: _currentLevel1,
-        level2: _currentLevel2,
-        level3: _currentLevel3,
-      ),
-    );
+
+    // Use search results when searching, hierarchy browsing otherwise
+    final isSearchActive = _searchQuery.length >= 2;
+    final AsyncValue<List<ContentItem>> itemsAsync;
+    if (isSearchActive) {
+      itemsAsync = ref.watch(
+        contentSearchProvider(
+          curriculumId: widget.curriculumId,
+          query: _searchQuery,
+        ),
+      );
+    } else {
+      itemsAsync = ref.watch(
+        filteredContentProvider(
+          curriculumId: widget.curriculumId,
+          level1: _currentLevel1,
+          level2: _currentLevel2,
+          level3: _currentLevel3,
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -215,7 +298,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             textAlign: TextAlign.center,
           ),
         ),
-        if (_navigationStack.isNotEmpty)
+        if (_navigationStack.isNotEmpty && !isSearchActive)
           configAsync.when(
             data: (config) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -241,15 +324,23 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         Expanded(
           child: itemsAsync.when(
             data: (items) {
-              final grouped = _groupItemsByNextLevel(items);
-              if (grouped.isEmpty) {
-                return const Center(child: Text('No content available'));
+              final displayItems = isSearchActive
+                  ? items
+                  : _groupItemsByNextLevel(items);
+              if (displayItems.isEmpty) {
+                return Center(
+                  child: Text(
+                    isSearchActive
+                        ? 'No results for "$_searchQuery"'
+                        : 'No content available',
+                  ),
+                );
               }
 
               return ListView.builder(
-                itemCount: grouped.length,
+                itemCount: displayItems.length,
                 itemBuilder: (context, index) {
-                  final item = grouped[index];
+                  final item = displayItems[index];
                   final isSelected = _isItemSelected(item);
 
                   return ListTile(
@@ -261,10 +352,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                     subtitle: item.displayNameHe != item.displayNameEn
                         ? Text(item.displayNameHe)
                         : null,
-                    trailing: item.isLeaf
+                    trailing: item.isLeaf || isSearchActive
                         ? null
                         : const Icon(Icons.chevron_right),
-                    onTap: item.isLeaf
+                    onTap: item.isLeaf || isSearchActive
                         ? () => _toggleItem(item)
                         : () => _drillDown(item),
                   );
@@ -310,8 +401,16 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     );
   }
 
+  String _selectionLabel(HierarchySelection sel) {
+    final parts = [sel.level1, sel.level2, sel.level3, sel.level4]
+        .whereType<String>()
+        .toList();
+    return parts.isEmpty ? 'All' : parts.last;
+  }
+
   Widget _buildStageSelection(ThemeData theme) {
     final stagesAsync = ref.watch(stageListProvider(widget.curriculumId));
+    final selections = _perSelectionStages.keys.toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -327,7 +426,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            'Select which stages are done for the selected content.',
+            'Set stages per selection, or use "Apply to All" for the same stages everywhere.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -337,37 +436,86 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         const SizedBox(height: 16),
         Expanded(
           child: stagesAsync.when(
-            data: (stages) => ListView.builder(
+            data: (stages) => ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: stages.length,
-              itemBuilder: (context, index) {
-                final stage = stages[index];
-                final isSelected = _selectedStageIds.contains(stage.stageOrder);
-
-                return CheckboxListTile(
-                  value: isSelected,
-                  onChanged: (checked) {
-                    setState(() {
-                      if (checked ?? false) {
-                        // Auto-select all lower stages (e.g., selecting stage 3
-                        // also selects stages 1 and 2).
-                        for (var i = 1; i <= stage.stageOrder; i++) {
-                          _selectedStageIds.add(i);
+              children: [
+                for (final sel in selections) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    child: Text(
+                      _selectionLabel(sel),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  for (final stage in stages)
+                    CheckboxListTile(
+                      dense: true,
+                      value: _perSelectionStages[sel]
+                              ?.contains(stage.stageOrder) ??
+                          false,
+                      onChanged: (checked) {
+                        setState(() {
+                          final stageSet = _perSelectionStages[sel] ??= {};
+                          if (checked ?? false) {
+                            for (var i = 1; i <= stage.stageOrder; i++) {
+                              stageSet.add(i);
+                            }
+                          } else {
+                            stageSet.removeWhere(
+                              (id) => id >= stage.stageOrder,
+                            );
+                          }
+                        });
+                      },
+                      title: Text(stage.stageName),
+                      subtitle: stage.delayDays > 0
+                          ? Text('${stage.delayDays} day delay')
+                          : null,
+                    ),
+                  const Divider(),
+                ],
+                // "Apply to All" shortcut
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Apply to All',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                for (final stage in stages)
+                  CheckboxListTile(
+                    dense: true,
+                    value: _selectedStageIds.contains(stage.stageOrder),
+                    onChanged: (checked) {
+                      setState(() {
+                        if (checked ?? false) {
+                          for (var i = 1; i <= stage.stageOrder; i++) {
+                            _selectedStageIds.add(i);
+                            for (final s in selections) {
+                              _perSelectionStages[s]?.add(i);
+                            }
+                          }
+                        } else {
+                          _selectedStageIds
+                              .removeWhere((id) => id >= stage.stageOrder);
+                          for (final s in selections) {
+                            _perSelectionStages[s]
+                                ?.removeWhere((id) => id >= stage.stageOrder);
+                          }
                         }
-                      } else {
-                        // Deselecting a stage also deselects all higher stages.
-                        _selectedStageIds.removeWhere(
-                          (id) => id >= stage.stageOrder,
-                        );
-                      }
-                    });
-                  },
-                  title: Text(stage.stageName),
-                  subtitle: stage.delayDays > 0
-                      ? Text('${stage.delayDays} day delay')
-                      : null,
-                );
-              },
+                      });
+                    },
+                    title: Text(stage.stageName),
+                    subtitle: stage.delayDays > 0
+                        ? Text('${stage.delayDays} day delay')
+                        : null,
+                  ),
+              ],
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
@@ -386,7 +534,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: FilledButton(
-                  onPressed: _selectedStageIds.isNotEmpty
+                  onPressed: _perSelectionStages.values
+                          .any((s) => s.isNotEmpty)
                       ? _proceedToConfirmation
                       : null,
                   child: const Text('Next'),

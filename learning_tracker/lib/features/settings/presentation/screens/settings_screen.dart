@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -105,6 +106,13 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Data & Sync'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.pushRoute(const SyncRoute()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.checklist_outlined),
+            title: const Text('Mark Prior Completions'),
+            subtitle: const Text('Bulk mark content as already learned'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showBulkMarkCurriculumPicker(context, ref),
           ),
 
           const Divider(height: 32),
@@ -364,6 +372,55 @@ class _UserModeSectionState extends ConsumerState<_UserModeSection> {
       }
     }
   }
+}
+
+Future<void> _showBulkMarkCurriculumPicker(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final activeCurricula = ref.read(activeCurriculaStreamProvider).value;
+  if (activeCurricula == null || activeCurricula.isEmpty) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active curricula found.')),
+      );
+    }
+    return;
+  }
+
+  if (activeCurricula.length == 1) {
+    // Skip picker, go directly to bulk mark
+    if (!context.mounted) return;
+    await Navigator.of(context).push<BulkMarkResult>(
+      MaterialPageRoute<BulkMarkResult>(
+        builder: (_) => BulkMarkScreen(curriculumId: activeCurricula.first),
+      ),
+    );
+    return;
+  }
+
+  final selected = await showDialog<CurriculumId>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: const Text('Select Curriculum'),
+      children: activeCurricula
+          .map<Widget>(
+            (CurriculumId c) => SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, c),
+              child: Text(c.displayNameEn),
+            ),
+          )
+          .toList(),
+    ),
+  );
+
+  if (selected == null || !context.mounted) return;
+
+  await Navigator.of(context).push<BulkMarkResult>(
+    MaterialPageRoute<BulkMarkResult>(
+      builder: (_) => BulkMarkScreen(curriculumId: selected),
+    ),
+  );
 }
 
 Future<void> _handleExportData(BuildContext context, WidgetRef ref) async {
@@ -708,10 +765,43 @@ class _CurriculumToggleTile extends ConsumerWidget {
           ? null
           : (newValue) async {
               try {
+                final wasActive = isActive;
                 await service.toggle(curriculum);
                 ref.invalidate(isCurriculumActiveProvider(curriculum));
                 ref.invalidate(activeTracksProvider(curriculum));
                 ref.invalidate(curriculumContentProvider(curriculum));
+                // Offer bulk mark when activating a new curriculum
+                if (!wasActive && context.mounted) {
+                  final shouldBulkMark = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(
+                        'Mark prior completions for ${curriculum.displayNameEn}?',
+                      ),
+                      content: const Text(
+                        'Would you like to mark content you\'ve already completed?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Skip'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Mark Now'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if ((shouldBulkMark ?? false) && context.mounted) {
+                    await Navigator.of(context).push<BulkMarkResult>(
+                      MaterialPageRoute<BulkMarkResult>(
+                        builder: (_) =>
+                            BulkMarkScreen(curriculumId: curriculum),
+                      ),
+                    );
+                  }
+                }
               } on StateError catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
