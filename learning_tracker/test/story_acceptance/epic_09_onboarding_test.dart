@@ -649,6 +649,7 @@ void main() {
             req.sefariaRefs.length,
             (_) => Completion(
               id: 1,
+              profileId: 0,
               curriculumId: req.curriculumId,
               sefariaRef: req.sefariaRefs.first,
               stageId: req.stageId,

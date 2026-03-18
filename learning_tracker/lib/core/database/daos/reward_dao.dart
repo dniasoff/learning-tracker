@@ -14,6 +14,32 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
     rewards,
   )..orderBy([(t) => OrderingTerm.asc(t.pointsThreshold)])).get();
 
+  // ========== Profile-Scoped Queries ==========
+
+  /// Get all rewards for a specific profile.
+  Future<List<Reward>> getRewardsByProfile(int profileId) =>
+      (select(rewards)
+            ..where((t) => t.profileId.equals(profileId))
+            ..orderBy([(t) => OrderingTerm.asc(t.pointsThreshold)]))
+          .get();
+
+  /// Get earned rewards for a specific profile.
+  Future<List<Reward>> getEarnedRewardsByProfile(int profileId) =>
+      (select(rewards)
+            ..where(
+              (t) =>
+                  t.profileId.equals(profileId) & t.isEarned.equals(true),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.earnedAt)]))
+          .get();
+
+  /// Watch all rewards for a specific profile.
+  Stream<List<Reward>> watchRewardsByProfile(int profileId) =>
+      (select(rewards)
+            ..where((t) => t.profileId.equals(profileId))
+            ..orderBy([(t) => OrderingTerm.asc(t.pointsThreshold)]))
+          .watch();
+
   /// Get a single reward by ID.
   Future<Reward?> getRewardById(int id) =>
       (select(rewards)..where((t) => t.id.equals(id))).getSingleOrNull();

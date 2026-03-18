@@ -441,7 +441,7 @@ final class PaceStatusProvider
   }
 }
 
-String _$paceStatusHash() => r'0dd2c6e315fd1acf93f46effc2eb4e6a884160c9';
+String _$paceStatusHash() => r'8ae647bcbb37da0e5cf3b0f2d1b3d6b7ac61c3f2';
 
 /// Pace status for a curriculum goal.
 ///
@@ -543,4 +543,4 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'ff9be83f86ad99fc1ce248df9a69901356c2ffe1';
+String _$allDailyTasksHash() => r'62eb25d9ef3224440df756ee9fd3d954dfe63e93';

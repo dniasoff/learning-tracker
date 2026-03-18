@@ -10,6 +10,26 @@ class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
 
   Future<List<Goal>> getAllGoals() => select(goals).get();
 
+  // ========== Profile-Scoped Queries ==========
+
+  /// Get goals for a curriculum scoped to a specific profile.
+  Future<List<Goal>> getGoalsByCurriculumAndProfile(
+    String curriculumId,
+    int profileId,
+  ) =>
+      (select(goals)
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.profileId.equals(profileId),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.targetDate)]))
+          .get();
+
+  /// Get all goals for a specific profile.
+  Future<List<Goal>> getGoalsByProfile(int profileId) =>
+      (select(goals)..where((t) => t.profileId.equals(profileId))).get();
+
   Future<Goal?> getGoalById(int id) =>
       (select(goals)..where((t) => t.id.equals(id))).getSingleOrNull();
 

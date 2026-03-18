@@ -34,6 +34,60 @@ class BookmarkDao extends DatabaseAccessor<AppDatabase>
   Future<int> deleteBookmark(int id) =>
       (delete(bookmarks)..where((t) => t.id.equals(id))).go();
 
+  // ========== Profile-Scoped Queries ==========
+
+  /// Get a bookmark by curriculum, track, and profile.
+  Future<Bookmark?> getBookmarkByCurriculumTrackAndProfile(
+    String curriculumId,
+    String trackType,
+    int profileId,
+  ) =>
+      (select(bookmarks)..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.trackType.equals(trackType) &
+                t.profileId.equals(profileId),
+          ))
+          .getSingleOrNull();
+
+  /// Get all bookmarks for a specific profile.
+  Future<List<Bookmark>> getBookmarksByProfile(int profileId) =>
+      (select(bookmarks)..where((t) => t.profileId.equals(profileId))).get();
+
+  /// Upsert a bookmark by curriculum, track, and profile (last-write-wins).
+  Future<void> upsertBookmarkByProfile({
+    required String curriculumId,
+    required String trackType,
+    required String sefariaRef,
+    required DateTime updatedAt,
+    required int profileId,
+  }) async {
+    final existing = await getBookmarkByCurriculumTrackAndProfile(
+      curriculumId,
+      trackType,
+      profileId,
+    );
+
+    if (existing == null) {
+      await insertBookmark(
+        BookmarksCompanion.insert(
+          profileId: Value(profileId),
+          curriculumId: curriculumId,
+          trackType: trackType,
+          sefariaRef: sefariaRef,
+          updatedAt: updatedAt,
+        ),
+      );
+    } else if (updatedAt.isAfter(existing.updatedAt)) {
+      await (update(bookmarks)..where((t) => t.id.equals(existing.id))).write(
+        BookmarksCompanion(
+          sefariaRef: Value(sefariaRef),
+          updatedAt: Value(updatedAt),
+        ),
+      );
+    }
+  }
+
   /// Upsert a bookmark by curriculum and track (last-write-wins per D4).
   ///
   /// Inserts if no bookmark exists for the curriculum+track pair,

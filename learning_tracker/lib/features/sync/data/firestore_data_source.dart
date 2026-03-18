@@ -3,21 +3,28 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 /// Handles all Firestore read/write operations for sync.
 ///
-/// Collection structure per P4:
-/// - `users/{uid}/profile` - User profile (single doc)
-/// - `users/{uid}/completions/{autoId}` - Completions (append-only)
-/// - `users/{uid}/bookmarks/{curriculumId}_{trackType}` - Bookmarks (last-write-wins)
-/// - `users/{uid}/settings/{curriculumId}` - Settings (last-write-wins)
-/// - `users/{uid}/streak` - Streak data (single doc)
+/// Collection structure (profile-scoped per story 15.11):
+/// - `users/{uid}/profiles/{profileId}/completions/{autoId}` - Completions (append-only)
+/// - `users/{uid}/profiles/{profileId}/bookmarks/{curriculumId}_{trackType}` - Bookmarks (LWW)
+/// - `users/{uid}/profiles/{profileId}/settings/{curriculumId}` - Settings (LWW)
+/// - `users/{uid}/profiles/{profileId}/goals/{id}` - Goals (LWW)
+/// - `users/{uid}/profiles/{profileId}/rewards/{id}` - Rewards (LWW)
+/// - `users/{uid}/profiles/{profileId}/streak/data` - Streak (single doc)
+/// - `users/{uid}/profiles/{profileId}/active_curricula/data` - Active curricula
+/// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
 class FirestoreDataSource {
   FirestoreDataSource({
     required FirebaseFirestore firestore,
     required FirebaseAuth auth,
+    this.profileId = 0,
   }) : _firestore = firestore,
        _auth = auth;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+
+  /// The active profile ID for Firestore path scoping.
+  final int profileId;
 
   /// Get current user's Firestore document reference.
   DocumentReference<Map<String, dynamic>>? get _userDoc {
@@ -26,29 +33,35 @@ class FirestoreDataSource {
     return _firestore.collection('users').doc(uid);
   }
 
-  /// Get profile subcollection reference.
+  /// Get the profile-scoped base document reference.
+  /// All profile-scoped data lives under `users/{uid}/profiles/{profileId}/`.
+  DocumentReference<Map<String, dynamic>>? get _profileScopedDoc {
+    return _userDoc?.collection('profiles').doc(profileId.toString());
+  }
+
+  /// Get profile subcollection reference (account-level, not profile-scoped).
   DocumentReference<Map<String, dynamic>>? get _profileDoc {
     return _userDoc?.collection('profile').doc('data');
   }
 
-  /// Get completions subcollection reference.
+  /// Get completions subcollection reference (profile-scoped).
   CollectionReference<Map<String, dynamic>>? get _completionsCollection {
-    return _userDoc?.collection('completions');
+    return _profileScopedDoc?.collection('completions');
   }
 
-  /// Get bookmarks subcollection reference.
+  /// Get bookmarks subcollection reference (profile-scoped).
   CollectionReference<Map<String, dynamic>>? get _bookmarksCollection {
-    return _userDoc?.collection('bookmarks');
+    return _profileScopedDoc?.collection('bookmarks');
   }
 
-  /// Get settings subcollection reference.
+  /// Get settings subcollection reference (profile-scoped).
   CollectionReference<Map<String, dynamic>>? get _settingsCollection {
-    return _userDoc?.collection('settings');
+    return _profileScopedDoc?.collection('settings');
   }
 
-  /// Get streak document reference.
+  /// Get streak document reference (profile-scoped).
   DocumentReference<Map<String, dynamic>>? get _streakDoc {
-    return _userDoc?.collection('streak').doc('data');
+    return _profileScopedDoc?.collection('streak').doc('data');
   }
 
   // ========== Profile Operations ==========
@@ -257,7 +270,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchGoals({
     int pageSize = defaultPageSize,
   }) async {
-    final collection = _userDoc?.collection('goals');
+    final collection = _profileScopedDoc?.collection('goals');
     if (collection == null) return [];
 
     return _fetchPaginated(collection, pageSize: pageSize);
@@ -265,7 +278,7 @@ class FirestoreDataSource {
 
   /// Push a goal to Firestore (last-write-wins).
   Future<void> pushGoal(Map<String, dynamic> goalData) async {
-    final collection = _userDoc?.collection('goals');
+    final collection = _profileScopedDoc?.collection('goals');
     if (collection == null) {
       throw Exception('User not authenticated');
     }
@@ -287,7 +300,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchRewards({
     int pageSize = defaultPageSize,
   }) async {
-    final collection = _userDoc?.collection('rewards');
+    final collection = _profileScopedDoc?.collection('rewards');
     if (collection == null) return [];
 
     return _fetchPaginated(collection, pageSize: pageSize);
@@ -295,7 +308,7 @@ class FirestoreDataSource {
 
   /// Push a reward to Firestore (last-write-wins).
   Future<void> pushReward(Map<String, dynamic> rewardData) async {
-    final collection = _userDoc?.collection('rewards');
+    final collection = _profileScopedDoc?.collection('rewards');
     if (collection == null) {
       throw Exception('User not authenticated');
     }
@@ -315,7 +328,7 @@ class FirestoreDataSource {
 
   /// Listen to real-time goal updates.
   Stream<List<Map<String, dynamic>>> listenToGoals() {
-    final collection = _userDoc?.collection('goals');
+    final collection = _profileScopedDoc?.collection('goals');
     if (collection == null) {
       return Stream.value([]);
     }
@@ -329,7 +342,7 @@ class FirestoreDataSource {
 
   /// Listen to real-time reward updates.
   Stream<List<Map<String, dynamic>>> listenToRewards() {
-    final collection = _userDoc?.collection('rewards');
+    final collection = _profileScopedDoc?.collection('rewards');
     if (collection == null) {
       return Stream.value([]);
     }
@@ -341,9 +354,9 @@ class FirestoreDataSource {
 
   // ========== Active Curricula Operations ==========
 
-  /// Get active curricula document reference.
+  /// Get active curricula document reference (profile-scoped).
   DocumentReference<Map<String, dynamic>>? get _activeCurriculaDoc {
-    return _userDoc?.collection('active_curricula').doc('data');
+    return _profileScopedDoc?.collection('active_curricula').doc('data');
   }
 
   /// Push active curricula list to Firestore.
@@ -403,7 +416,7 @@ class FirestoreDataSource {
   Future<void> pushCurriculumImportMetadata(
     Map<String, dynamic> metadata,
   ) async {
-    final collection = _userDoc?.collection('curriculum_imports');
+    final collection = _profileScopedDoc?.collection('curriculum_imports');
     if (collection == null) {
       throw Exception('User not authenticated');
     }
@@ -419,7 +432,7 @@ class FirestoreDataSource {
   Future<Map<String, dynamic>?> fetchCurriculumImportMetadata(
     String curriculumId,
   ) async {
-    final collection = _userDoc?.collection('curriculum_imports');
+    final collection = _profileScopedDoc?.collection('curriculum_imports');
     if (collection == null) return null;
 
     final snapshot = await collection.doc(curriculumId).get();

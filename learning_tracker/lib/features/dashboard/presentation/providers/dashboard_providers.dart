@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
@@ -27,13 +28,13 @@ Future<UserMode> dashboardUserMode(Ref ref) async {
   );
 }
 
-/// Provider for list of active curricula IDs.
-///
-/// P6 compliant: uses only core database DAO.
+/// Provider for list of active curricula IDs, scoped to active profile.
 @riverpod
 Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
   final db = ref.watch(appDatabaseProvider);
-  final storageKeys = await db.activeCurriculumDao.getActiveCurricula();
+  final profileId = ref.watch(activeProfileIdProvider);
+  final storageKeys =
+      await db.activeCurriculumDao.getActiveCurriculaByProfile(profileId);
   return storageKeys
       .map<CurriculumId?>((key) {
         final matches = CurriculumId.values.where((c) => c.storageKey == key);
@@ -43,11 +44,14 @@ Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
       .toList();
 }
 
-/// Stream provider for watching active curricula changes (P6 compliant).
+/// Stream provider for watching active curricula changes, scoped to active profile.
 @riverpod
 Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
-  return db.activeCurriculumDao.watchActiveCurricula().map((storageKeys) {
+  final profileId = ref.watch(activeProfileIdProvider);
+  return db.activeCurriculumDao
+      .watchActiveCurriculaByProfile(profileId)
+      .map((storageKeys) {
     return storageKeys
         .map<CurriculumId?>((key) {
           final matches = CurriculumId.values.where((c) => c.storageKey == key);
@@ -58,15 +62,18 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
   });
 }
 
-/// Per-curriculum completion percentage (P6 compliant — uses core DB).
+/// Per-curriculum completion percentage, scoped to active profile.
 @riverpod
 Future<double> dashboardCompletionPercentage(
   Ref ref,
   CurriculumId curriculum,
 ) async {
   final db = ref.watch(appDatabaseProvider);
-  final completions = await db.completionDao.getCompletionsByCurriculum(
+  final profileId = ref.watch(activeProfileIdProvider);
+  final completions =
+      await db.completionDao.getCompletionsByCurriculumAndProfile(
     curriculum.storageKey,
+    profileId,
   );
   final stages = await db.stageDao.getStageDefinitionsByCurriculum(
     curriculum.storageKey,
@@ -97,15 +104,18 @@ Future<double> dashboardCompletionPercentage(
       : 0.0;
 }
 
-/// Per-curriculum last completion timestamp (P6 compliant).
+/// Per-curriculum last completion timestamp, scoped to active profile.
 @riverpod
 Future<DateTime?> dashboardLastCompletion(
   Ref ref,
   CurriculumId curriculum,
 ) async {
   final db = ref.watch(appDatabaseProvider);
-  final completions = await db.completionDao.getCompletionsByCurriculum(
+  final profileId = ref.watch(activeProfileIdProvider);
+  final completions =
+      await db.completionDao.getCompletionsByCurriculumAndProfile(
     curriculum.storageKey,
+    profileId,
   );
   if (completions.isEmpty) return null;
   // Completions are returned in insertion order; find the latest
@@ -126,10 +136,12 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
   });
 }
 
-/// Global points total (P6 compliant — uses core DB).
+/// Global points total, scoped to active profile.
 @riverpod
 Future<int> dashboardGlobalPoints(Ref ref) async {
   final db = ref.watch(appDatabaseProvider);
-  final completions = await db.completionDao.getAllCompletions();
+  final profileId = ref.watch(activeProfileIdProvider);
+  final completions =
+      await db.completionDao.getCompletionsByProfile(profileId);
   return completions.fold<int>(0, (sum, c) => sum + c.points);
 }

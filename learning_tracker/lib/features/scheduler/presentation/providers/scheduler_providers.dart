@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_content_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
@@ -136,9 +137,13 @@ Future<PaceStatus?> paceStatus(
   final db = ref.watch(appDatabaseProvider);
   final now = ref.watch(clockProvider);
 
+  final profileId = ref.watch(activeProfileIdProvider);
+
   // Get personal-track completions only
-  final allCompletions = await db.completionDao.getCompletionsByCurriculum(
+  final allCompletions =
+      await db.completionDao.getCompletionsByCurriculumAndProfile(
     curriculumId.storageKey,
+    profileId,
   );
   final personalCompletions = allCompletions
       .where((c) => c.trackType == TrackType.personal.storageKey)
@@ -178,7 +183,9 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     previouslySkippedRefsProvider.future,
   );
 
-  final activeKeys = await db.activeCurriculumDao.getActiveCurricula();
+  final profileId = ref.watch(activeProfileIdProvider);
+  final activeKeys =
+      await db.activeCurriculumDao.getActiveCurriculaByProfile(profileId);
   final activeCurricula = activeKeys
       .map((key) => CurriculumId.values.where((c) => c.storageKey == key).first)
       .toList();
@@ -186,7 +193,10 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   // Look up earliest goal deadline per curriculum for pacing.
   final goalDeadlines = <CurriculumId, DateTime>{};
   for (final curriculum in activeCurricula) {
-    final goals = await db.goalDao.getGoalsByCurriculum(curriculum.storageKey);
+    final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
+      curriculum.storageKey,
+      profileId,
+    );
     for (final goal in goals) {
       if (goal.targetDate != null) {
         final existing = goalDeadlines[curriculum];

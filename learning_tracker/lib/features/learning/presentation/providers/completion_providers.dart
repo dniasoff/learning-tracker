@@ -6,6 +6,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/completio
 import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -59,9 +60,8 @@ BulkMarkCompletionUseCase bulkMarkCompletionUseCase(Ref ref) {
   return BulkMarkCompletionUseCase(repository, isTutorMode: isTutorMode);
 }
 
-/// Provides the number of completions for a specific content item.
-///
-/// Used by [ContentItemTile] to show per-item completion indicators.
+/// Provides the number of completions for a specific content item,
+/// scoped to the active profile.
 @riverpod
 Future<int> completionCount(
   Ref ref, {
@@ -69,8 +69,11 @@ Future<int> completionCount(
   required String sefariaRef,
 }) async {
   final database = ref.watch(appDatabaseProvider);
-  final completions = await database.completionDao.getCompletionsForContent(
+  final profileId = ref.watch(activeProfileIdProvider);
+  final completions =
+      await database.completionDao.getCompletionsForContentAndProfile(
     sefariaRef,
+    profileId,
   );
   return completions.where((c) => c.curriculumId == curriculumId).length;
 }

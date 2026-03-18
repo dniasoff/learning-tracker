@@ -167,23 +167,20 @@ final class BulkMarkCompletionUseCaseProvider
 String _$bulkMarkCompletionUseCaseHash() =>
     r'0146990a6fca1fd2750bd84cfcd48172f91f24de';
 
-/// Provides the number of completions for a specific content item.
-///
-/// Used by [ContentItemTile] to show per-item completion indicators.
+/// Provides the number of completions for a specific content item,
+/// scoped to the active profile.
 
 @ProviderFor(completionCount)
 final completionCountProvider = CompletionCountFamily._();
 
-/// Provides the number of completions for a specific content item.
-///
-/// Used by [ContentItemTile] to show per-item completion indicators.
+/// Provides the number of completions for a specific content item,
+/// scoped to the active profile.
 
 final class CompletionCountProvider
     extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
     with $FutureModifier<int>, $FutureProvider<int> {
-  /// Provides the number of completions for a specific content item.
-  ///
-  /// Used by [ContentItemTile] to show per-item completion indicators.
+  /// Provides the number of completions for a specific content item,
+  /// scoped to the active profile.
   CompletionCountProvider._({
     required CompletionCountFamily super.from,
     required ({String curriculumId, String sefariaRef}) super.argument,
@@ -232,11 +229,10 @@ final class CompletionCountProvider
   }
 }
 
-String _$completionCountHash() => r'9f0b8bd3f803a2ac62c765d413609cfd532e0e4e';
+String _$completionCountHash() => r'0a9090349dae10e96ad81e1ddef53ad3da8a33b1';
 
-/// Provides the number of completions for a specific content item.
-///
-/// Used by [ContentItemTile] to show per-item completion indicators.
+/// Provides the number of completions for a specific content item,
+/// scoped to the active profile.
 
 final class CompletionCountFamily extends $Family
     with
@@ -253,9 +249,8 @@ final class CompletionCountFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Provides the number of completions for a specific content item.
-  ///
-  /// Used by [ContentItemTile] to show per-item completion indicators.
+  /// Provides the number of completions for a specific content item,
+  /// scoped to the active profile.
 
   CompletionCountProvider call({
     required String curriculumId,

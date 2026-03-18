@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
-/// Provider for the PointsService singleton.
+/// Provider for the PointsService, scoped to active profile.
 final pointsServiceProvider = Provider<PointsService>((ref) {
   final database = ref.watch(appDatabaseProvider);
-  return PointsService(database);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return PointsService(database, profileId: profileId);
 });
 
 /// Per-curriculum points total, keyed by curriculumId (P3 family pattern).
