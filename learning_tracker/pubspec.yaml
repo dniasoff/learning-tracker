@@ -38,6 +38,7 @@ dependencies:
   firebase_core: ^4.4.0
   firebase_auth: ^6.1.4
   cloud_firestore: ^6.1.2
+  firebase_storage: ^13.0.6
 
   # Authentication
   google_sign_in: ^7.2.0
@@ -90,7 +91,6 @@ flutter:
   assets:
     - assets/images/
     - assets/fonts/
-    - assets/content/
 
   fonts:
     - family: Noto Sans Hebrew

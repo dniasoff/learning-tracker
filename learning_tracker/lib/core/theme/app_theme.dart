@@ -49,7 +49,10 @@ class AppTheme {
       case CurriculumId.mishnaBerurah:
         return curriculumMishnaBerurah;
       case CurriculumId.chumash:
+      case CurriculumId.torah:
         return curriculumChumash;
+      case CurriculumId.tanach:
+        return const Color(0xFF1ABC9C); // Teal
       case CurriculumId.nach:
         return curriculumNach;
       case CurriculumId.mussar:

@@ -8,6 +8,8 @@ enum CurriculumId {
   yerushalmi('yerushalmi'),
   mishnaBerurah('mishna_berurah'),
   chumash('chumash'),
+  torah('torah'),
+  tanach('tanach'),
   nach('nach'),
   mussar('mussar');
 
@@ -23,6 +25,8 @@ enum CurriculumId {
     CurriculumId.yerushalmi => 'Talmud Yerushalmi',
     CurriculumId.mishnaBerurah => 'Mishna Berurah',
     CurriculumId.chumash => 'Chumash',
+    CurriculumId.torah => 'Torah',
+    CurriculumId.tanach => 'Tanach',
     CurriculumId.nach => 'Nach',
     CurriculumId.mussar => 'Mussar',
   };
@@ -37,7 +41,9 @@ enum CurriculumId {
     CurriculumId.mishnaBerurah =>
       '\u05DE\u05E9\u05E0\u05D4 \u05D1\u05E8\u05D5\u05E8\u05D4',
     CurriculumId.chumash => '\u05D7\u05D5\u05DE\u05E9',
-    CurriculumId.nach => '\u05E0\u05F4\u05DA',
+    CurriculumId.torah => '\u05EA\u05D5\u05E8\u05D4',
+    CurriculumId.tanach => '\u05EA\u05E0"\u05DA',
+    CurriculumId.nach => '\u05E0"\u05DA',
     CurriculumId.mussar => '\u05DE\u05D5\u05E1\u05E8',
   };
 }

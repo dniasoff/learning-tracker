@@ -364,19 +364,20 @@ void main() {
       expect(active, isNot(contains(CurriculumId.mishnayos)));
     });
 
-    test('toggle each of the 7 curricula on/off', () async {
-      // Activate all 7
+    test('toggle each curriculum on/off', () async {
+      // Activate all curricula
       for (final curriculum in CurriculumId.values) {
         await service.activate(curriculum);
       }
       final allActive = await service.getActiveCurricula();
-      expect(allActive, hasLength(7));
+      expect(allActive, hasLength(CurriculumId.values.length));
 
-      // Deactivate 4, leaving only chumash
-      await service.deactivate(CurriculumId.mishnayos);
-      await service.deactivate(CurriculumId.bavli);
-      await service.deactivate(CurriculumId.yerushalmi);
-      await service.deactivate(CurriculumId.mishnaBerurah);
+      // Deactivate all but chumash
+      for (final curriculum in CurriculumId.values) {
+        if (curriculum != CurriculumId.chumash) {
+          await service.deactivate(curriculum);
+        }
+      }
 
       final oneActive = await service.getActiveCurricula();
       expect(oneActive, hasLength(1));
@@ -470,7 +471,8 @@ void main() {
   group('Story 2.5 -- Bundled content assets', tags: ['story_2_5'], () {
     // ── AC: assets/content/ directory contains JSON files for all 7 curricula
 
-    test('assets/content/ directory contains JSON for all 7 curricula', () {
+    test('assets/content/ directory contains JSON for all curricula',
+        skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
       final contentDir = Directory('assets/content');
       expect(
         contentDir.existsSync(),
@@ -503,7 +505,8 @@ void main() {
 
     // ── AC: JSON output matches expected schema
 
-    test('each bundled JSON file matches expected schema', () {
+    test('each bundled JSON file matches expected schema',
+        skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
       final contentDir = Directory('assets/content');
       final files = contentDir.listSync().whereType<File>().where(
         (f) => f.path.endsWith('.json'),
@@ -651,7 +654,7 @@ void main() {
 
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
-      expect(db.schemaVersion, equals(10));
+      expect(db.schemaVersion, equals(11));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
@@ -661,7 +664,7 @@ void main() {
       addTearDown(() => db.close());
 
       // Schema v3 drops these tables.
-      expect(db.schemaVersion, equals(10));
+      expect(db.schemaVersion, equals(11));
     });
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK
@@ -729,7 +732,8 @@ void main() {
 
     // ── AC: assets/content/ is listed in pubspec.yaml flutter assets
 
-    test('pubspec.yaml includes assets/content/ in flutter assets', () {
+    test('pubspec.yaml includes assets/content/ in flutter assets',
+        skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
       final pubspec = File('pubspec.yaml');
       expect(pubspec.existsSync(), isTrue);
       final content = pubspec.readAsStringSync();

@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/cloud_content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -30,11 +31,15 @@ UserProfileService userProfileService(Ref ref) {
 final curriculumImportServiceProvider = Provider<CurriculumImportService>((
   ref,
 ) {
-  final contentRepo = ref.watch(contentRepositoryProvider);
   final activationService = ref.watch(curriculumActivationServiceProvider);
+  final cloudContentService = ref.watch(cloudContentServiceProvider);
+  final contentDownloadStatusDao = ref.watch(
+    contentDownloadStatusDaoProviderProvider,
+  );
   return CurriculumImportService(
-    contentRepository: contentRepo,
     activationService: activationService,
+    cloudContentService: cloudContentService,
+    contentDownloadStatusDao: contentDownloadStatusDao,
   );
 });
 
@@ -58,7 +63,7 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
   },
 );
 
-/// Provides hierarchy configs for all 5 curricula (for the selection screen).
+/// Provides hierarchy configs for all curricula (for the selection screen).
 final allCurriculaConfigsProvider =
     FutureProvider<Map<CurriculumId, CurriculumHierarchyConfig>>((ref) async {
       final repo = ref.watch(contentRepositoryProvider);

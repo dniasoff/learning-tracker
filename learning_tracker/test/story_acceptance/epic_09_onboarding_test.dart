@@ -7,10 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/features/content_browsing/data/services/cloud_content_service.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
@@ -37,6 +40,11 @@ class _MockTrackRepository extends Mock implements TrackRepository {}
 class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockBookmarkRepository extends Mock implements BookmarkRepository {}
+
+class _MockCloudContentService extends Mock implements CloudContentService {}
+
+class _MockContentDownloadStatusDao extends Mock
+    implements ContentDownloadStatusDao {}
 
 void main() {
   // ── Story 9.1: Welcome flow ───────────────────────────────────
@@ -193,6 +201,8 @@ void main() {
       () async {
         final mockContentRepo = _MockContentRepository();
         final mockTrackRepo = _MockTrackRepository();
+        final mockCloudService = _MockCloudContentService();
+        final mockDownloadStatusDao = _MockContentDownloadStatusDao();
 
         ContentItem fakeItem(CurriculumId id) => ContentItem(
           curriculumId: id.storageKey,
@@ -204,12 +214,49 @@ void main() {
           isLeaf: true,
         );
 
+        for (final curriculum in [CurriculumId.mishnayos, CurriculumId.bavli]) {
+          when(
+            () => mockCloudService.downloadContent(
+              curriculum: curriculum,
+              languageCode: any(named: 'languageCode'),
+            ),
+          ).thenAnswer(
+            (_) => Stream.fromIterable([
+              const ContentDownloadProgress(
+                state: ContentDownloadState.completed,
+              ),
+            ]),
+          );
+
+          when(
+            () => mockCloudService.parseContent(
+              curriculum: curriculum,
+              languageCode: any(named: 'languageCode'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              items: [fakeItem(curriculum)],
+              config: CurriculumHierarchyConfig(
+                curriculumId: curriculum.storageKey,
+                levelLabels: ['Level1'],
+                totalItems: 1,
+              ),
+            ),
+          );
+
+          when(
+            () => mockCloudService.getContentVersion(curriculum),
+          ).thenAnswer((_) async => null);
+        }
+
         when(
-          () => mockContentRepo.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer((_) async => [fakeItem(CurriculumId.mishnayos)]);
-        when(
-          () => mockContentRepo.getContentForCurriculum(CurriculumId.bavli),
-        ).thenAnswer((_) async => [fakeItem(CurriculumId.bavli)]);
+          () => mockDownloadStatusDao.markDownloaded(
+            curriculumId: any(named: 'curriculumId'),
+            languageCode: any(named: 'languageCode'),
+            contentVersion: any(named: 'contentVersion'),
+            itemCount: any(named: 'itemCount'),
+          ),
+        ).thenAnswer((_) async {});
         when(
           () => mockTrackRepo.initializeDefaultTracks(any()),
         ).thenAnswer((_) async {});
@@ -220,8 +267,9 @@ void main() {
           trackRepository: mockTrackRepo,
         );
         final importService = CurriculumImportService(
-          contentRepository: mockContentRepo,
           activationService: activationService,
+          cloudContentService: mockCloudService,
+          contentDownloadStatusDao: mockDownloadStatusDao,
         );
 
         // Select 2 curricula and call importAll end-to-end

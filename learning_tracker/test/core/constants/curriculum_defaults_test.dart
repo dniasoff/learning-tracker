@@ -37,7 +37,7 @@ void main() {
   });
 
   group('CurriculumDefaults - hierarchy configs', () {
-    test('hierarchy configs exist for all 7 curricula', () {
+    test('hierarchy configs exist for all curricula', () {
       for (final curriculum in CurriculumId.values) {
         expect(
           CurriculumDefaults.hierarchyConfigs.containsKey(curriculum),
@@ -92,24 +92,26 @@ void main() {
       expect(config.level4Label, 'Pasuk');
     });
 
-    test('Nach has 3-level hierarchy', () {
+    test('Nach has 4-level hierarchy', () {
       final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.nach]!;
-      expect(config.maxLevels, 3);
-      expect(config.level1Label, 'Sefer');
-      expect(config.level2Label, 'Perek');
-      expect(config.level3Label, 'Pasuk');
+      expect(config.maxLevels, 4);
+      expect(config.level1Label, 'Section');
+      expect(config.level2Label, 'Sefer');
+      expect(config.level3Label, 'Perek');
+      expect(config.level4Label, 'Pasuk');
     });
 
-    test('Mussar has 2-level hierarchy', () {
+    test('Mussar has 3-level hierarchy', () {
       final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.mussar]!;
-      expect(config.maxLevels, 2);
+      expect(config.maxLevels, 3);
       expect(config.level1Label, 'Sefer');
       expect(config.level2Label, 'Section');
+      expect(config.level3Label, 'Chapter');
     });
   });
 
   group('CurriculumDefaults - daily targets', () {
-    test('daily targets exist for all 7 curricula', () {
+    test('daily targets exist for all curricula', () {
       for (final curriculum in CurriculumId.values) {
         expect(
           CurriculumDefaults.defaultDailyTargets.containsKey(curriculum),

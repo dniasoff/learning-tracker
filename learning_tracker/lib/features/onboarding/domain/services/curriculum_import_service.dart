@@ -1,6 +1,7 @@
+import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/data/services/cloud_content_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 
 /// Result of importing a single curriculum.
@@ -18,21 +19,24 @@ class CurriculumImportResult {
   final String? error;
 }
 
-/// Orchestrates importing bundled content for selected curricula during onboarding.
+/// Orchestrates importing content for selected curricula during onboarding.
 ///
-/// For each selected curriculum:
-/// 1. Loads bundled JSON content (validates it's accessible)
-/// 2. Activates the curriculum in the database
-/// 3. Reports progress per curriculum
+/// Fetches content from Firebase Cloud Storage (not bundled assets),
+/// activates the curriculum in the database, and tracks download status.
 class CurriculumImportService {
   CurriculumImportService({
-    required ContentRepository contentRepository,
     required CurriculumActivationService activationService,
-  }) : _contentRepository = contentRepository,
-       _activationService = activationService;
+    required CloudContentService cloudContentService,
+    required ContentDownloadStatusDao contentDownloadStatusDao,
+    this.languageCode = 'he',
+  }) : _activationService = activationService,
+       _cloudContentService = cloudContentService,
+       _contentDownloadStatusDao = contentDownloadStatusDao;
 
-  final ContentRepository _contentRepository;
   final CurriculumActivationService _activationService;
+  final CloudContentService _cloudContentService;
+  final ContentDownloadStatusDao _contentDownloadStatusDao;
+  final String languageCode;
 
   /// Import all selected curricula, yielding progress after each one.
   ///
@@ -66,9 +70,34 @@ class CurriculumImportService {
 
   Future<CurriculumImportResult> _importOne(CurriculumId curriculum) async {
     try {
-      // Load bundled content to validate it's accessible
-      final items = await _contentRepository.getContentForCurriculum(
-        curriculum,
+      // Download content from cloud storage
+      await for (final progress
+          in _cloudContentService.downloadContent(
+            curriculum: curriculum,
+            languageCode: languageCode,
+          )) {
+        if (progress.state == ContentDownloadState.failed) {
+          throw ContentDownloadException(
+            progress.error ?? 'Download failed',
+          );
+        }
+      }
+
+      // Parse and cache the content
+      final result = await _cloudContentService.parseContent(
+        curriculum: curriculum,
+        languageCode: languageCode,
+      );
+
+      // Track download version
+      final versionInfo =
+          await _cloudContentService.getContentVersion(curriculum);
+
+      await _contentDownloadStatusDao.markDownloaded(
+        curriculumId: curriculum.storageKey,
+        languageCode: languageCode,
+        contentVersion: versionInfo?.version ?? 'unknown',
+        itemCount: result.items.length,
       );
 
       // Activate in database (also initializes default tracks)
@@ -76,13 +105,13 @@ class CurriculumImportService {
 
       AppLogger.instance.info(
         'CurriculumImportService: imported ${curriculum.displayNameEn} '
-        '(${items.length} items)',
+        '(${result.items.length} items)',
       );
 
       return CurriculumImportResult(
         curriculumId: curriculum,
         success: true,
-        itemCount: items.length,
+        itemCount: result.items.length,
       );
     } catch (e) {
       AppLogger.instance.error(

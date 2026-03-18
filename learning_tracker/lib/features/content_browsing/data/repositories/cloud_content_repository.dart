@@ -1,22 +1,34 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
+import 'package:learning_tracker/features/content_browsing/data/services/cloud_content_service.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 
-/// In-memory implementation of [ContentRepository].
+/// Implementation of [ContentRepository] that fetches content from
+/// Firebase Cloud Storage instead of bundled assets.
 ///
-/// Loads JSON content from assets on first access and caches in memory.
-/// All operations are synchronous after initial load.
-class ContentRepositoryImpl implements ContentRepository {
+/// Content is downloaded on first access per curriculum/language and cached
+/// in memory. Falls back to the cloud service for initial fetch.
+class CloudContentRepository implements ContentRepository {
+  CloudContentRepository({
+    required CloudContentService cloudContentService,
+    this.languageCode = 'he',
+  }) : _cloudContentService = cloudContentService;
+
+  final CloudContentService _cloudContentService;
+  final String languageCode;
+
   /// Cache of loaded content, keyed by curriculum storage key.
   final _contentCache = <String, List<ContentItem>>{};
 
   /// Cache of hierarchy configs, keyed by curriculum storage key.
   final _configCache = <String, CurriculumHierarchyConfig>{};
+
+  /// Whether content has been downloaded for a curriculum.
+  bool isDownloaded(CurriculumId curriculumId) {
+    return _contentCache.containsKey(curriculumId.storageKey);
+  }
 
   @override
   Future<List<ContentItem>> getContentForCurriculum(
@@ -24,55 +36,22 @@ class ContentRepositoryImpl implements ContentRepository {
   ) async {
     final key = curriculumId.storageKey;
 
-    // Return cached if available
     if (_contentCache.containsKey(key)) {
       return _contentCache[key]!;
     }
 
-    // Load and parse JSON
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/content/${_getFilename(curriculumId)}',
+      final result = await _cloudContentService.parseContent(
+        curriculum: curriculumId,
+        languageCode: languageCode,
       );
 
-      final json = jsonDecode(jsonString) as Map<String, dynamic>;
-
-      // Parse hierarchy config
-      final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
-      final config = CurriculumHierarchyConfig(
-        curriculumId: configJson['curriculumId'] as String,
-        levelLabels: (configJson['levelLabels'] as List)
-            .map((e) => e as String)
-            .toList(),
-        totalItems: configJson['totalItems'] as int,
-      );
-      _configCache[key] = config;
-
-      // Parse items
-      final itemsJson = json['items'] as List;
-      final items = itemsJson.map((itemJson) {
-        final item = itemJson as Map<String, dynamic>;
-        return ContentItem(
-          curriculumId: item['curriculumId'] as String,
-          level1: item['level1'] as String,
-          level2: item['level2'] as String?,
-          level3: item['level3'] as String?,
-          level4: item['level4'] as String?,
-          displayNameHe: item['displayNameHe'] as String,
-          displayNameEn: item['displayNameEn'] as String,
-          sefariaRef: item['sefariaRef'] as String,
-          sortOrder: item['sortOrder'] as int,
-          isLeaf: item['isLeaf'] as bool,
-        );
-      }).toList();
-
-      _contentCache[key] = items;
-      return items;
+      _contentCache[key] = result.items;
+      _configCache[key] = result.config;
+      return result.items;
     } catch (e) {
-      // Intentional catch-all: wraps any load failure (network, parse, IO)
-      // into a typed ContentLoadException for callers to handle uniformly.
       throw ContentLoadException(
-        'Failed to load content for ${curriculumId.displayNameEn}',
+        'Failed to load content for ${curriculumId.displayNameEn} from cloud',
         cause: e,
       );
     }
@@ -84,12 +63,10 @@ class ContentRepositoryImpl implements ContentRepository {
   ) async {
     final key = curriculumId.storageKey;
 
-    // Return cached if available
     if (_configCache.containsKey(key)) {
       return _configCache[key]!;
     }
 
-    // Load content (which also loads config)
     await getContentForCurriculum(curriculumId);
     return _configCache[key]!;
   }
@@ -123,10 +100,6 @@ class ContentRepositoryImpl implements ContentRepository {
     }
 
     final items = await getContentForCurriculum(curriculumId);
-
-    // Normalize the query: lowercase for Latin, strip nikud for Hebrew.
-    // Hebrew toLowerCase() is a no-op, so we strip diacritics (nikud) from
-    // both query and item names to enable nikud-insensitive Hebrew matching.
     final normalizedQuery = HebrewUtils.stripNikud(query.toLowerCase().trim());
 
     return items.where((item) {
@@ -143,13 +116,7 @@ class ContentRepositoryImpl implements ContentRepository {
     required String sefariaRef,
   }) async {
     final items = await getContentForCurriculum(curriculumId);
-
     final matches = items.where((item) => item.sefariaRef == sefariaRef);
     return matches.isNotEmpty ? matches.first : null;
-  }
-
-  /// Maps curriculum ID to JSON filename.
-  String _getFilename(CurriculumId curriculumId) {
-    return '${curriculumId.storageKey}.json';
   }
 }

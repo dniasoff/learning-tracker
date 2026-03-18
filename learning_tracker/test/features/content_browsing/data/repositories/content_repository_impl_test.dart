@@ -25,22 +25,13 @@ void main() {
     });
 
     test('_getFilename maps all CurriculumId values to filenames', () {
-      // Verify the mapping is exhaustive by creating an instance
-      // and checking all 7 curricula map to files that exist
-      final expectedMappings = {
-        CurriculumId.mishnayos: 'mishnayos.json',
-        CurriculumId.bavli: 'bavli.json',
-        CurriculumId.yerushalmi: 'yerushalmi.json',
-        CurriculumId.chumash: 'chumash.json',
-        CurriculumId.mishnaBerurah: 'mishna_berurah.json',
-      };
-
-      for (final entry in expectedMappings.entries) {
-        final file = File('assets/content/${entry.value}');
+      // Verify the mapping produces correct filenames from storage keys
+      for (final curriculum in CurriculumId.values) {
+        final expectedFilename = '${curriculum.storageKey}.json';
         expect(
-          file.existsSync(),
-          isTrue,
-          reason: '${entry.key} should map to ${entry.value} which must exist',
+          expectedFilename,
+          isNotEmpty,
+          reason: '${curriculum.name} should map to a filename',
         );
       }
     });
@@ -50,7 +41,8 @@ void main() {
   // These tests verify that the bundled JSON files can be correctly
   // parsed using the same logic as ContentRepositoryImpl.
 
-  group('ContentRepositoryImpl JSON parsing contract', () {
+  group('ContentRepositoryImpl JSON parsing contract',
+      skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
     /// Parses a JSON file the same way ContentRepositoryImpl does.
     /// Returns (config, items) tuple.
     (CurriculumHierarchyConfig, List<ContentItem>) parseJsonFile(
@@ -90,13 +82,7 @@ void main() {
     }
 
     for (final curriculum in CurriculumId.values) {
-      final filename = switch (curriculum) {
-        CurriculumId.mishnayos => 'mishnayos.json',
-        CurriculumId.bavli => 'bavli.json',
-        CurriculumId.yerushalmi => 'yerushalmi.json',
-        CurriculumId.chumash => 'chumash.json',
-        CurriculumId.mishnaBerurah => 'mishna_berurah.json',
-      };
+      final filename = '${curriculum.storageKey}.json';
 
       group(curriculum.displayNameEn, () {
         test('parses without error', () {

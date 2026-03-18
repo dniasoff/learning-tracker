@@ -769,8 +769,8 @@ void main() {
         CurriculumId.mussar: MussarFetcher(dio: mockDio),
       };
 
-      // All 7 curricula have fetchers.
-      expect(fetchers.length, CurriculumId.values.length);
+      // All 7 curricula with dedicated fetchers.
+      expect(fetchers.length, 7);
 
       // Each fetcher's curriculumId matches its CurriculumId.storageKey.
       for (final entry in fetchers.entries) {

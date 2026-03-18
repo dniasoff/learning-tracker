@@ -6456,6 +6456,412 @@ class TextDownloadStatusesCompanion
   }
 }
 
+class $ContentDownloadStatusesTable extends ContentDownloadStatuses
+    with TableInfo<$ContentDownloadStatusesTable, ContentDownloadStatuse> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ContentDownloadStatusesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
+    'curriculumId',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _languageCodeMeta = const VerificationMeta(
+    'languageCode',
+  );
+  @override
+  late final GeneratedColumn<String> languageCode = GeneratedColumn<String>(
+    'language_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentVersionMeta = const VerificationMeta(
+    'contentVersion',
+  );
+  @override
+  late final GeneratedColumn<String> contentVersion = GeneratedColumn<String>(
+    'content_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemCountMeta = const VerificationMeta(
+    'itemCount',
+  );
+  @override
+  late final GeneratedColumn<int> itemCount = GeneratedColumn<int>(
+    'item_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _downloadedAtMeta = const VerificationMeta(
+    'downloadedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> downloadedAt = GeneratedColumn<DateTime>(
+    'downloaded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    curriculumId,
+    languageCode,
+    contentVersion,
+    itemCount,
+    downloadedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'content_download_statuses';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ContentDownloadStatuse> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('curriculum_id')) {
+      context.handle(
+        _curriculumIdMeta,
+        curriculumId.isAcceptableOrUnknown(
+          data['curriculum_id']!,
+          _curriculumIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumIdMeta);
+    }
+    if (data.containsKey('language_code')) {
+      context.handle(
+        _languageCodeMeta,
+        languageCode.isAcceptableOrUnknown(
+          data['language_code']!,
+          _languageCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_languageCodeMeta);
+    }
+    if (data.containsKey('content_version')) {
+      context.handle(
+        _contentVersionMeta,
+        contentVersion.isAcceptableOrUnknown(
+          data['content_version']!,
+          _contentVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentVersionMeta);
+    }
+    if (data.containsKey('item_count')) {
+      context.handle(
+        _itemCountMeta,
+        itemCount.isAcceptableOrUnknown(data['item_count']!, _itemCountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemCountMeta);
+    }
+    if (data.containsKey('downloaded_at')) {
+      context.handle(
+        _downloadedAtMeta,
+        downloadedAt.isAcceptableOrUnknown(
+          data['downloaded_at']!,
+          _downloadedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_downloadedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {curriculumId, languageCode};
+  @override
+  ContentDownloadStatuse map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContentDownloadStatuse(
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      languageCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language_code'],
+      )!,
+      contentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_version'],
+      )!,
+      itemCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}item_count'],
+      )!,
+      downloadedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}downloaded_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ContentDownloadStatusesTable createAlias(String alias) {
+    return $ContentDownloadStatusesTable(attachedDatabase, alias);
+  }
+}
+
+class ContentDownloadStatuse extends DataClass
+    implements Insertable<ContentDownloadStatuse> {
+  /// curriculum_id from CurriculumId enum storageKey
+  final String curriculumId;
+
+  /// Language code of the downloaded content (e.g. 'he', 'en')
+  final String languageCode;
+
+  /// Version string of the content
+  final String contentVersion;
+
+  /// Number of content items in this download
+  final int itemCount;
+
+  /// When the download completed
+  final DateTime downloadedAt;
+  const ContentDownloadStatuse({
+    required this.curriculumId,
+    required this.languageCode,
+    required this.contentVersion,
+    required this.itemCount,
+    required this.downloadedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['curriculum_id'] = Variable<String>(curriculumId);
+    map['language_code'] = Variable<String>(languageCode);
+    map['content_version'] = Variable<String>(contentVersion);
+    map['item_count'] = Variable<int>(itemCount);
+    map['downloaded_at'] = Variable<DateTime>(downloadedAt);
+    return map;
+  }
+
+  ContentDownloadStatusesCompanion toCompanion(bool nullToAbsent) {
+    return ContentDownloadStatusesCompanion(
+      curriculumId: Value(curriculumId),
+      languageCode: Value(languageCode),
+      contentVersion: Value(contentVersion),
+      itemCount: Value(itemCount),
+      downloadedAt: Value(downloadedAt),
+    );
+  }
+
+  factory ContentDownloadStatuse.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContentDownloadStatuse(
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      languageCode: serializer.fromJson<String>(json['languageCode']),
+      contentVersion: serializer.fromJson<String>(json['contentVersion']),
+      itemCount: serializer.fromJson<int>(json['itemCount']),
+      downloadedAt: serializer.fromJson<DateTime>(json['downloadedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'languageCode': serializer.toJson<String>(languageCode),
+      'contentVersion': serializer.toJson<String>(contentVersion),
+      'itemCount': serializer.toJson<int>(itemCount),
+      'downloadedAt': serializer.toJson<DateTime>(downloadedAt),
+    };
+  }
+
+  ContentDownloadStatuse copyWith({
+    String? curriculumId,
+    String? languageCode,
+    String? contentVersion,
+    int? itemCount,
+    DateTime? downloadedAt,
+  }) => ContentDownloadStatuse(
+    curriculumId: curriculumId ?? this.curriculumId,
+    languageCode: languageCode ?? this.languageCode,
+    contentVersion: contentVersion ?? this.contentVersion,
+    itemCount: itemCount ?? this.itemCount,
+    downloadedAt: downloadedAt ?? this.downloadedAt,
+  );
+  ContentDownloadStatuse copyWithCompanion(
+    ContentDownloadStatusesCompanion data,
+  ) {
+    return ContentDownloadStatuse(
+      curriculumId: data.curriculumId.present
+          ? data.curriculumId.value
+          : this.curriculumId,
+      languageCode: data.languageCode.present
+          ? data.languageCode.value
+          : this.languageCode,
+      contentVersion: data.contentVersion.present
+          ? data.contentVersion.value
+          : this.contentVersion,
+      itemCount: data.itemCount.present ? data.itemCount.value : this.itemCount,
+      downloadedAt: data.downloadedAt.present
+          ? data.downloadedAt.value
+          : this.downloadedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentDownloadStatuse(')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('languageCode: $languageCode, ')
+          ..write('contentVersion: $contentVersion, ')
+          ..write('itemCount: $itemCount, ')
+          ..write('downloadedAt: $downloadedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    curriculumId,
+    languageCode,
+    contentVersion,
+    itemCount,
+    downloadedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContentDownloadStatuse &&
+          other.curriculumId == this.curriculumId &&
+          other.languageCode == this.languageCode &&
+          other.contentVersion == this.contentVersion &&
+          other.itemCount == this.itemCount &&
+          other.downloadedAt == this.downloadedAt);
+}
+
+class ContentDownloadStatusesCompanion
+    extends UpdateCompanion<ContentDownloadStatuse> {
+  final Value<String> curriculumId;
+  final Value<String> languageCode;
+  final Value<String> contentVersion;
+  final Value<int> itemCount;
+  final Value<DateTime> downloadedAt;
+  final Value<int> rowid;
+  const ContentDownloadStatusesCompanion({
+    this.curriculumId = const Value.absent(),
+    this.languageCode = const Value.absent(),
+    this.contentVersion = const Value.absent(),
+    this.itemCount = const Value.absent(),
+    this.downloadedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ContentDownloadStatusesCompanion.insert({
+    required String curriculumId,
+    required String languageCode,
+    required String contentVersion,
+    required int itemCount,
+    required DateTime downloadedAt,
+    this.rowid = const Value.absent(),
+  }) : curriculumId = Value(curriculumId),
+       languageCode = Value(languageCode),
+       contentVersion = Value(contentVersion),
+       itemCount = Value(itemCount),
+       downloadedAt = Value(downloadedAt);
+  static Insertable<ContentDownloadStatuse> custom({
+    Expression<String>? curriculumId,
+    Expression<String>? languageCode,
+    Expression<String>? contentVersion,
+    Expression<int>? itemCount,
+    Expression<DateTime>? downloadedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (languageCode != null) 'language_code': languageCode,
+      if (contentVersion != null) 'content_version': contentVersion,
+      if (itemCount != null) 'item_count': itemCount,
+      if (downloadedAt != null) 'downloaded_at': downloadedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ContentDownloadStatusesCompanion copyWith({
+    Value<String>? curriculumId,
+    Value<String>? languageCode,
+    Value<String>? contentVersion,
+    Value<int>? itemCount,
+    Value<DateTime>? downloadedAt,
+    Value<int>? rowid,
+  }) {
+    return ContentDownloadStatusesCompanion(
+      curriculumId: curriculumId ?? this.curriculumId,
+      languageCode: languageCode ?? this.languageCode,
+      contentVersion: contentVersion ?? this.contentVersion,
+      itemCount: itemCount ?? this.itemCount,
+      downloadedAt: downloadedAt ?? this.downloadedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (curriculumId.present) {
+      map['curriculum_id'] = Variable<String>(curriculumId.value);
+    }
+    if (languageCode.present) {
+      map['language_code'] = Variable<String>(languageCode.value);
+    }
+    if (contentVersion.present) {
+      map['content_version'] = Variable<String>(contentVersion.value);
+    }
+    if (itemCount.present) {
+      map['item_count'] = Variable<int>(itemCount.value);
+    }
+    if (downloadedAt.present) {
+      map['downloaded_at'] = Variable<DateTime>(downloadedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentDownloadStatusesCompanion(')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('languageCode: $languageCode, ')
+          ..write('contentVersion: $contentVersion, ')
+          ..write('itemCount: $itemCount, ')
+          ..write('downloadedAt: $downloadedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6481,6 +6887,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StreaksTable streaks = $StreaksTable(this);
   late final $TextDownloadStatusesTable textDownloadStatuses =
       $TextDownloadStatusesTable(this);
+  late final $ContentDownloadStatusesTable contentDownloadStatuses =
+      $ContentDownloadStatusesTable(this);
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
     this as AppDatabase,
   );
@@ -6505,6 +6913,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final TextCacheDao textCacheDao = TextCacheDao(this as AppDatabase);
   late final TextDownloadStatusDao textDownloadStatusDao =
       TextDownloadStatusDao(this as AppDatabase);
+  late final ContentDownloadStatusDao contentDownloadStatusDao =
+      ContentDownloadStatusDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6525,6 +6935,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     textCache,
     streaks,
     textDownloadStatuses,
+    contentDownloadStatuses,
   ];
 }
 
@@ -9895,6 +10306,233 @@ typedef $$TextDownloadStatusesTableProcessedTableManager =
       TextDownloadStatuse,
       PrefetchHooks Function()
     >;
+typedef $$ContentDownloadStatusesTableCreateCompanionBuilder =
+    ContentDownloadStatusesCompanion Function({
+      required String curriculumId,
+      required String languageCode,
+      required String contentVersion,
+      required int itemCount,
+      required DateTime downloadedAt,
+      Value<int> rowid,
+    });
+typedef $$ContentDownloadStatusesTableUpdateCompanionBuilder =
+    ContentDownloadStatusesCompanion Function({
+      Value<String> curriculumId,
+      Value<String> languageCode,
+      Value<String> contentVersion,
+      Value<int> itemCount,
+      Value<DateTime> downloadedAt,
+      Value<int> rowid,
+    });
+
+class $$ContentDownloadStatusesTableFilterComposer
+    extends Composer<_$AppDatabase, $ContentDownloadStatusesTable> {
+  $$ContentDownloadStatusesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get languageCode => $composableBuilder(
+    column: $table.languageCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get itemCount => $composableBuilder(
+    column: $table.itemCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get downloadedAt => $composableBuilder(
+    column: $table.downloadedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ContentDownloadStatusesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ContentDownloadStatusesTable> {
+  $$ContentDownloadStatusesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get languageCode => $composableBuilder(
+    column: $table.languageCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get itemCount => $composableBuilder(
+    column: $table.itemCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get downloadedAt => $composableBuilder(
+    column: $table.downloadedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ContentDownloadStatusesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ContentDownloadStatusesTable> {
+  $$ContentDownloadStatusesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get languageCode => $composableBuilder(
+    column: $table.languageCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get itemCount =>
+      $composableBuilder(column: $table.itemCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get downloadedAt => $composableBuilder(
+    column: $table.downloadedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$ContentDownloadStatusesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ContentDownloadStatusesTable,
+          ContentDownloadStatuse,
+          $$ContentDownloadStatusesTableFilterComposer,
+          $$ContentDownloadStatusesTableOrderingComposer,
+          $$ContentDownloadStatusesTableAnnotationComposer,
+          $$ContentDownloadStatusesTableCreateCompanionBuilder,
+          $$ContentDownloadStatusesTableUpdateCompanionBuilder,
+          (
+            ContentDownloadStatuse,
+            BaseReferences<
+              _$AppDatabase,
+              $ContentDownloadStatusesTable,
+              ContentDownloadStatuse
+            >,
+          ),
+          ContentDownloadStatuse,
+          PrefetchHooks Function()
+        > {
+  $$ContentDownloadStatusesTableTableManager(
+    _$AppDatabase db,
+    $ContentDownloadStatusesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ContentDownloadStatusesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ContentDownloadStatusesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ContentDownloadStatusesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> curriculumId = const Value.absent(),
+                Value<String> languageCode = const Value.absent(),
+                Value<String> contentVersion = const Value.absent(),
+                Value<int> itemCount = const Value.absent(),
+                Value<DateTime> downloadedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ContentDownloadStatusesCompanion(
+                curriculumId: curriculumId,
+                languageCode: languageCode,
+                contentVersion: contentVersion,
+                itemCount: itemCount,
+                downloadedAt: downloadedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String curriculumId,
+                required String languageCode,
+                required String contentVersion,
+                required int itemCount,
+                required DateTime downloadedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ContentDownloadStatusesCompanion.insert(
+                curriculumId: curriculumId,
+                languageCode: languageCode,
+                contentVersion: contentVersion,
+                itemCount: itemCount,
+                downloadedAt: downloadedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ContentDownloadStatusesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ContentDownloadStatusesTable,
+      ContentDownloadStatuse,
+      $$ContentDownloadStatusesTableFilterComposer,
+      $$ContentDownloadStatusesTableOrderingComposer,
+      $$ContentDownloadStatusesTableAnnotationComposer,
+      $$ContentDownloadStatusesTableCreateCompanionBuilder,
+      $$ContentDownloadStatusesTableUpdateCompanionBuilder,
+      (
+        ContentDownloadStatuse,
+        BaseReferences<
+          _$AppDatabase,
+          $ContentDownloadStatusesTable,
+          ContentDownloadStatuse
+        >,
+      ),
+      ContentDownloadStatuse,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9929,4 +10567,9 @@ class $AppDatabaseManager {
       $$StreaksTableTableManager(_db, _db.streaks);
   $$TextDownloadStatusesTableTableManager get textDownloadStatuses =>
       $$TextDownloadStatusesTableTableManager(_db, _db.textDownloadStatuses);
+  $$ContentDownloadStatusesTableTableManager get contentDownloadStatuses =>
+      $$ContentDownloadStatusesTableTableManager(
+        _db,
+        _db.contentDownloadStatuses,
+      );
 }

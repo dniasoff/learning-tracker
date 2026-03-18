@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
@@ -17,6 +18,7 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
+import 'package:learning_tracker/core/database/tables/content_download_statuses.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
@@ -49,6 +51,7 @@ part 'app_database.g.dart';
     TextCache,
     Streaks,
     TextDownloadStatuses,
+    ContentDownloadStatuses,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -66,13 +69,14 @@ part 'app_database.g.dart';
     SyncQueueDao,
     TextCacheDao,
     TextDownloadStatusDao,
+    ContentDownloadStatusDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -223,6 +227,10 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'UPDATE point_configs SET profile_id = (SELECT MIN(id) FROM profiles) WHERE profile_id = 1',
           );
+        }
+        if (from < 11) {
+          // Migration from schema v10 to v11: Add content_download_statuses table
+          await m.createTable($ContentDownloadStatusesTable(attachedDatabase));
         }
       },
     );

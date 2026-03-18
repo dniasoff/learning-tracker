@@ -16,6 +16,9 @@ class _FakeImportService implements CurriculumImportService {
   final bool shouldFail;
 
   @override
+  String get languageCode => 'he';
+
+  @override
   Stream<CurriculumImportProgress> importAll(
     List<CurriculumId> selectedCurricula,
   ) async* {
@@ -51,6 +54,9 @@ class _FakeImportService implements CurriculumImportService {
 
 /// Fake import service that never completes (stays in importing state).
 class _HangingImportService implements CurriculumImportService {
+  @override
+  String get languageCode => 'he';
+
   @override
   Stream<CurriculumImportProgress> importAll(
     List<CurriculumId> selectedCurricula,

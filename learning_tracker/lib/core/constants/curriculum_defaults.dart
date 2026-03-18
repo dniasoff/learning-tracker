@@ -57,16 +57,32 @@ class CurriculumDefaults {
           level4Label: 'Pasuk',
           maxLevels: 4,
         ),
-        CurriculumId.nach: CurriculumHierarchyDefaults(
+        CurriculumId.torah: CurriculumHierarchyDefaults(
           level1Label: 'Sefer',
-          level2Label: 'Perek',
-          level3Label: 'Pasuk',
-          maxLevels: 3,
+          level2Label: 'Parsha',
+          level3Label: 'Perek',
+          level4Label: 'Pasuk',
+          maxLevels: 4,
+        ),
+        CurriculumId.tanach: CurriculumHierarchyDefaults(
+          level1Label: 'Section',
+          level2Label: 'Sefer',
+          level3Label: 'Perek',
+          level4Label: 'Pasuk',
+          maxLevels: 4,
+        ),
+        CurriculumId.nach: CurriculumHierarchyDefaults(
+          level1Label: 'Section',
+          level2Label: 'Sefer',
+          level3Label: 'Perek',
+          level4Label: 'Pasuk',
+          maxLevels: 4,
         ),
         CurriculumId.mussar: CurriculumHierarchyDefaults(
           level1Label: 'Sefer',
           level2Label: 'Section',
-          maxLevels: 2,
+          level3Label: 'Chapter',
+          maxLevels: 3,
         ),
       };
 
@@ -77,6 +93,8 @@ class CurriculumDefaults {
     CurriculumId.yerushalmi: 1,
     CurriculumId.mishnaBerurah: 2,
     CurriculumId.chumash: 5,
+    CurriculumId.torah: 5,
+    CurriculumId.tanach: 3,
     CurriculumId.nach: 3,
     CurriculumId.mussar: 1,
   };

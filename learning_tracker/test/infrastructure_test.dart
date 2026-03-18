@@ -93,7 +93,7 @@ void main() {
       test('provides all curricula', () {
         final allCurricula = CurriculumFixtures.allCurricula;
 
-        expect(allCurricula.length, 7);
+        expect(allCurricula.length, CurriculumId.values.length);
         expect(allCurricula, contains(CurriculumId.mishnayos));
         expect(allCurricula, contains(CurriculumId.bavli));
         expect(allCurricula, contains(CurriculumId.yerushalmi));
@@ -121,7 +121,7 @@ void main() {
         final db = createTestDatabase();
 
         expect(db, isNotNull);
-        expect(db.schemaVersion, 9);
+        expect(db.schemaVersion, 11);
 
         db.close();
       });

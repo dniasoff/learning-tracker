@@ -82,7 +82,7 @@ void main() {
     });
 
     test('schema version is 7', () {
-      expect(db.schemaVersion, equals(10));
+      expect(db.schemaVersion, equals(11));
     });
 
     test('all 12 DAOs are accessible', () {
@@ -194,7 +194,7 @@ void main() {
 
   group('Story 1.7 -- Riverpod state enums', tags: ['story_1_7'], () {
     test('CurriculumId has 5 values', () {
-      expect(CurriculumId.values, hasLength(5));
+      expect(CurriculumId.values, hasLength(9));
       expect(
         CurriculumId.values.map((c) => c.storageKey),
         containsAll([
