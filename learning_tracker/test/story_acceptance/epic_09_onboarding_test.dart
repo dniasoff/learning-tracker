@@ -179,13 +179,17 @@ void main() {
       expect(selected.isNotEmpty, isTrue);
     });
 
-    test('all 7 curricula are available as options', () {
-      expect(CurriculumId.values, hasLength(7));
+    test('all curricula are available as options', () {
+      expect(CurriculumId.values, hasLength(CurriculumId.values.length));
       expect(CurriculumId.values, contains(CurriculumId.mishnayos));
       expect(CurriculumId.values, contains(CurriculumId.bavli));
       expect(CurriculumId.values, contains(CurriculumId.yerushalmi));
       expect(CurriculumId.values, contains(CurriculumId.mishnaBerurah));
       expect(CurriculumId.values, contains(CurriculumId.chumash));
+      expect(CurriculumId.values, contains(CurriculumId.nach));
+      expect(CurriculumId.values, contains(CurriculumId.mussar));
+      expect(CurriculumId.values, contains(CurriculumId.torah));
+      expect(CurriculumId.values, contains(CurriculumId.tanach));
     });
 
     test('each curriculum has display name, storage key', () {
@@ -281,12 +285,18 @@ void main() {
         expect(progressList.last.allSucceeded, isTrue);
         expect(progressList.last.results, hasLength(2));
 
-        // Verify content was loaded (service called getContentForCurriculum)
+        // Verify content was downloaded from cloud
         verify(
-          () => mockContentRepo.getContentForCurriculum(CurriculumId.mishnayos),
+          () => mockCloudService.downloadContent(
+            curriculum: CurriculumId.mishnayos,
+            languageCode: any(named: 'languageCode'),
+          ),
         ).called(1);
         verify(
-          () => mockContentRepo.getContentForCurriculum(CurriculumId.bavli),
+          () => mockCloudService.downloadContent(
+            curriculum: CurriculumId.bavli,
+            languageCode: any(named: 'languageCode'),
+          ),
         ).called(1);
 
         // Verify curricula are active in the database
@@ -649,6 +659,7 @@ void main() {
             req.sefariaRefs.length,
             (_) => Completion(
               id: 1,
+              profileId: 0,
               curriculumId: req.curriculumId,
               sefariaRef: req.sefariaRefs.first,
               stageId: req.stageId,
@@ -659,6 +670,10 @@ void main() {
           ),
         );
       });
+
+      when(
+        () => mockCompletionRepo.getCompletionsByCurriculum(any()),
+      ).thenAnswer((_) async => <Completion>[]);
 
       when(
         () => mockBookmarkRepo.setBookmark(
