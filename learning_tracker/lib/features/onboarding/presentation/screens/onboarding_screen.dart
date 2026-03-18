@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/curriculum_
 import 'package:learning_tracker/features/onboarding/domain/services/suggested_thresholds_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/rewards_setup_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
@@ -33,6 +34,7 @@ enum _ScreenPhase {
   selection,
   importing,
   scopeSelection,
+  learningProcessWizard,
   bulkMark,
   goalSetup,
   rewardsSetup,
@@ -68,6 +70,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Scope selection state
   late List<CurriculumId> _scopeQueue;
   int _scopeIndex = 0;
+
+  // Wizard state
+  late List<CurriculumId> _wizardQueue;
+  int _wizardIndex = 0;
+  bool _wizardLaunched = false;
 
   // Bulk mark state
   late List<CurriculumId> _bulkMarkQueue;
@@ -150,7 +157,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _scopeQueue = _selected.toList();
     _scopeIndex = 0;
     if (_scopeQueue.isEmpty) {
-      _startBulkMark();
+      _startLearningProcessWizard();
       return;
     }
     setState(() => _phase = _ScreenPhase.scopeSelection);
@@ -159,9 +166,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _onScopeSelectionDone() {
     _scopeIndex++;
     if (_scopeIndex >= _scopeQueue.length) {
-      _startBulkMark();
+      _startLearningProcessWizard();
     } else {
       setState(() {}); // Show next curriculum's scope selection
+    }
+  }
+
+  void _startLearningProcessWizard() {
+    _wizardQueue = _selected.toList();
+    _wizardIndex = 0;
+    if (_wizardQueue.isEmpty) {
+      _startBulkMark();
+      return;
+    }
+    setState(() => _phase = _ScreenPhase.learningProcessWizard);
+  }
+
+  Future<void> _onWizardResult(LearningProcessWizardResult? result) async {
+    if (result != null) {
+      final wizardService = ref.read(learningProcessWizardServiceProvider);
+      await wizardService.applyWizardResult(result.wizardResult);
+    }
+    _wizardIndex++;
+    if (_wizardIndex >= _wizardQueue.length) {
+      _startBulkMark();
+    } else {
+      _wizardLaunched = false;
+      setState(() {});
     }
   }
 
@@ -292,6 +323,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _ScreenPhase.selection => _buildSelection(theme),
         _ScreenPhase.importing => _buildImporting(theme),
         _ScreenPhase.scopeSelection => _buildScopeSelection(theme),
+        _ScreenPhase.learningProcessWizard => _buildLearningProcessWizard(theme),
         _ScreenPhase.bulkMark => _buildBulkMark(theme),
         _ScreenPhase.goalSetup => _buildGoalSetup(theme),
         _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
@@ -507,6 +539,66 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLearningProcessWizard(ThemeData theme) {
+    final curriculum = _wizardQueue[_wizardIndex];
+
+    if (!_wizardLaunched) {
+      _wizardLaunched = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final wizardService = ref.read(learningProcessWizardServiceProvider);
+        final presets = await wizardService.getPresetsForCurriculum(curriculum);
+        if (!mounted) return;
+
+        final profileService = ref.read(userProfileServiceProvider);
+        final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+        var isChildMode = false;
+        if (uid != null) {
+          final mode = await profileService.getUserMode(uid);
+          isChildMode = mode == UserMode.child;
+        }
+
+        if (!mounted) return;
+        final result = await Navigator.of(
+          context,
+        ).push<LearningProcessWizardResult>(
+          MaterialPageRoute<LearningProcessWizardResult>(
+            builder: (_) => LearningProcessWizardScreen(
+              curriculumId: curriculum,
+              presets: presets,
+              isChildMode: isChildMode,
+            ),
+          ),
+        );
+        if (mounted) {
+          _wizardLaunched = false;
+          await _onWizardResult(result);
+        }
+      });
+    }
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Set up review schedule for ${curriculum.displayNameEn}',
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${_wizardIndex + 1} of ${_wizardQueue.length}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
