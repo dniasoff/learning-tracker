@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -18,9 +19,26 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/rewards_setup_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Returns child-aware text based on profile mode.
+///
+/// In adult mode, returns [adultText]. In child mode, replaces `{name}`
+/// in [childTemplate] with [childName].
+String childAwareText(
+  String adultText,
+  String childTemplate,
+  String? childName, {
+  bool isChildMode = false,
+}) {
+  if (!isChildMode || childName == null) return adultText;
+  return childTemplate.replaceAll('{name}', childName);
+}
 
 @RoutePage()
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -31,6 +49,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 enum _ScreenPhase {
+  profileCreation,
   selection,
   importing,
   scopeSelection,
@@ -38,19 +57,33 @@ enum _ScreenPhase {
   bulkMark,
   goalSetup,
   rewardsSetup,
+  handoff,
   done,
   error,
 }
 
 enum _CurriculumStatus { notStarted, importing, done, failed }
 
+// SharedPreferences keys for onboarding state persistence
+const _kOnboardingPhase = 'onboarding_phase';
+const _kOnboardingProfileId = 'onboarding_profile_id';
+const _kOnboardingProfileName = 'onboarding_profile_name';
+const _kOnboardingProfileMode = 'onboarding_profile_mode';
+const _kOnboardingSelectedCurricula = 'onboarding_selected_curricula';
+
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _selected = <CurriculumId>{};
-  var _phase = _ScreenPhase.selection;
+  var _phase = _ScreenPhase.profileCreation;
   CurriculumImportProgress? _importProgress;
   List<CurriculumImportResult> _failures = [];
   int _originalTotal = 0;
   final _curriculumStatuses = <CurriculumId, _CurriculumStatus>{};
+
+  // Profile creation state
+  final _nameController = TextEditingController();
+  String _profileMode = 'adult'; // 'adult' or 'child'
+  int? _createdProfileId;
+  String? _profileName;
 
   void _updateStatuses(CurriculumImportProgress progress) {
     for (final result in progress.results) {
@@ -58,7 +91,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ? _CurriculumStatus.done
           : _CurriculumStatus.failed;
     }
-    // Mark the one currently being processed as importing if not yet in results
     if (!progress.results.any(
       (r) => r.curriculumId == progress.currentCurriculum,
     )) {
@@ -85,6 +117,103 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   late List<CurriculumId> _goalSetupQueue;
   int _goalSetupIndex = 0;
 
+  bool get _isChildMode => _profileMode == 'child';
+
+  @override
+  void initState() {
+    super.initState();
+    _tryResumeFromSavedState();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _tryResumeFromSavedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPhase = prefs.getString(_kOnboardingPhase);
+    if (savedPhase == null) return;
+
+    final profileId = prefs.getInt(_kOnboardingProfileId);
+    final profileName = prefs.getString(_kOnboardingProfileName);
+    final profileMode = prefs.getString(_kOnboardingProfileMode);
+    final curriculaJson = prefs.getString(_kOnboardingSelectedCurricula);
+
+    if (profileId != null) _createdProfileId = profileId;
+    if (profileName != null) _profileName = profileName;
+    if (profileMode != null) _profileMode = profileMode;
+
+    if (curriculaJson != null) {
+      final list = (jsonDecode(curriculaJson) as List<dynamic>).cast<String>();
+      for (final name in list) {
+        final match = CurriculumId.values.where((c) => c.name == name);
+        if (match.isNotEmpty) _selected.add(match.first);
+      }
+    }
+
+    final phase = _ScreenPhase.values.where((p) => p.name == savedPhase);
+    if (phase.isNotEmpty && mounted) {
+      setState(() => _phase = phase.first);
+    }
+  }
+
+  Future<void> _saveState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kOnboardingPhase, _phase.name);
+    if (_createdProfileId != null) {
+      await prefs.setInt(_kOnboardingProfileId, _createdProfileId!);
+    }
+    if (_profileName != null) {
+      await prefs.setString(_kOnboardingProfileName, _profileName!);
+    }
+    await prefs.setString(_kOnboardingProfileMode, _profileMode);
+    await prefs.setString(
+      _kOnboardingSelectedCurricula,
+      jsonEncode(_selected.map((c) => c.name).toList()),
+    );
+  }
+
+  Future<void> _clearSavedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kOnboardingPhase);
+    await prefs.remove(_kOnboardingProfileId);
+    await prefs.remove(_kOnboardingProfileName);
+    await prefs.remove(_kOnboardingProfileMode);
+    await prefs.remove(_kOnboardingSelectedCurricula);
+  }
+
+  Future<void> _createProfile() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+
+    final repo = ref.read(profileRepositoryProvider);
+    final profile = await repo.createProfile(
+      accountId: 1,
+      displayName: name,
+      mode: _profileMode,
+    );
+
+    // Set user mode via profile service
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user != null) {
+      final profileService = ref.read(userProfileServiceProvider);
+      await profileService.setUserMode(
+        firebaseUid: user.uid,
+        displayName: name,
+        mode: _profileMode == 'child' ? UserMode.child : UserMode.adult,
+      );
+    }
+
+    _createdProfileId = profile.id;
+    _profileName = name;
+    ref.read(activeProfileIdProvider.notifier).switchTo(profile.id);
+
+    setState(() => _phase = _ScreenPhase.selection);
+    await _saveState();
+  }
+
   Future<void> _startImport() async {
     if (_selected.isEmpty) return;
 
@@ -95,6 +224,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _curriculumStatuses[id] = _CurriculumStatus.notStarted;
       }
     });
+    await _saveState();
 
     final service = ref.read(curriculumImportServiceProvider);
 
@@ -110,7 +240,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final failures = _importProgress?.failures ?? [];
     if (failures.isEmpty) {
-      _startScopeSelection();
+      _startLearningProcessWizard();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
@@ -144,7 +274,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final newFailures = _importProgress?.failures ?? [];
     if (newFailures.isEmpty) {
-      _startScopeSelection();
+      _startLearningProcessWizard();
     } else {
       setState(() {
         _phase = _ScreenPhase.error;
@@ -153,33 +283,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
-  void _startScopeSelection() {
-    _scopeQueue = _selected.toList();
-    _scopeIndex = 0;
-    if (_scopeQueue.isEmpty) {
-      _startLearningProcessWizard();
-      return;
-    }
-    setState(() => _phase = _ScreenPhase.scopeSelection);
-  }
-
-  void _onScopeSelectionDone() {
-    _scopeIndex++;
-    if (_scopeIndex >= _scopeQueue.length) {
-      _startLearningProcessWizard();
-    } else {
-      setState(() {}); // Show next curriculum's scope selection
-    }
-  }
-
   void _startLearningProcessWizard() {
     _wizardQueue = _selected.toList();
     _wizardIndex = 0;
     if (_wizardQueue.isEmpty) {
-      _startBulkMark();
+      _startScopeSelection();
       return;
     }
     setState(() => _phase = _ScreenPhase.learningProcessWizard);
+    _saveState();
   }
 
   Future<void> _onWizardResult(LearningProcessWizardResult? result) async {
@@ -189,9 +301,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     _wizardIndex++;
     if (_wizardIndex >= _wizardQueue.length) {
-      _startBulkMark();
+      _startScopeSelection();
     } else {
       _wizardLaunched = false;
+      setState(() {});
+    }
+  }
+
+  void _startScopeSelection() {
+    _scopeQueue = _selected.toList();
+    _scopeIndex = 0;
+    if (_scopeQueue.isEmpty) {
+      _startBulkMark();
+      return;
+    }
+    setState(() => _phase = _ScreenPhase.scopeSelection);
+    _saveState();
+  }
+
+  void _onScopeSelectionDone() {
+    _scopeIndex++;
+    if (_scopeIndex >= _scopeQueue.length) {
+      _startBulkMark();
+    } else {
       setState(() {});
     }
   }
@@ -204,6 +336,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       return;
     }
     setState(() => _phase = _ScreenPhase.bulkMark);
+    _saveState();
   }
 
   Future<void> _onBulkMarkResult(BulkMarkResult? result) async {
@@ -211,7 +344,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_bulkMarkIndex >= _bulkMarkQueue.length) {
       _startGoalSetup();
     } else {
-      setState(() {}); // Show next curriculum's bulk mark screen
+      setState(() {});
     }
   }
 
@@ -219,10 +352,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _goalSetupQueue = _selected.toList();
     _goalSetupIndex = 0;
     if (_goalSetupQueue.isEmpty) {
-      _finishOnboarding();
+      _afterGoalSetup();
       return;
     }
     setState(() => _phase = _ScreenPhase.goalSetup);
+    _saveState();
   }
 
   Future<void> _onGoalResult(GoalFormResult? result) async {
@@ -235,39 +369,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         description: result.description,
         dateType: result.dateType,
       );
-      // Invalidate the scheduler so it picks up the new goal deadline.
       ref.invalidate(allDailyTasksProvider);
     }
-    // Move to next curriculum or proceed to rewards setup
     _goalSetupIndex++;
     if (_goalSetupIndex >= _goalSetupQueue.length) {
+      _afterGoalSetup();
+    } else {
+      setState(() {});
+    }
+  }
+
+  void _afterGoalSetup() {
+    if (_isChildMode) {
       unawaited(
         _startRewardsSetup().catchError((Object e) {
           AppLogger.instance.error('Failed to start rewards setup: $e');
         }),
       );
     } else {
-      setState(() {}); // Refresh to show next curriculum
+      // Adult mode: skip rewards and handoff, go straight to done
+      _finishOnboarding();
     }
   }
 
   Future<void> _startRewardsSetup() async {
-    // Check user mode — only show for child mode
-    final profileService = ref.read(userProfileServiceProvider);
-    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
-    if (uid == null) {
-      await _finishOnboarding();
-      return;
-    }
-
-    final userMode = await profileService.getUserMode(uid);
-    if (userMode != UserMode.child) {
-      // Adult mode skips rewards setup entirely
-      await _finishOnboarding();
-      return;
-    }
-
     setState(() => _phase = _ScreenPhase.rewardsSetup);
+    await _saveState();
   }
 
   Future<void> _onRewardsResult(RewardSetupResult? result) async {
@@ -281,7 +408,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         );
       }
     }
-    await _finishOnboarding();
+    // Child mode goes to handoff screen
+    setState(() => _phase = _ScreenPhase.handoff);
+    await _saveState();
   }
 
   List<int> _computeSuggestedThresholds() {
@@ -297,7 +426,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           },
         ) ??
         0;
-    // Estimate daily pace from total items / 365 (default 1 year)
     final dailyPace = totalItems > 0 ? (totalItems / 365).ceil() : 5;
     return SuggestedThresholdsService.calculate(
       totalItems: totalItems,
@@ -307,8 +435,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finishOnboarding() async {
     setState(() => _phase = _ScreenPhase.done);
+    await _clearSavedState();
     await Future<void>.delayed(const Duration(milliseconds: 500));
     if (mounted) {
+      unawaited(context.router.replaceAll([const AppShellRoute()]));
+    }
+  }
+
+  Future<void> _addAnotherLearner() async {
+    // Reset state for a new profile but keep the flow going
+    _nameController.clear();
+    _selected.clear();
+    _createdProfileId = null;
+    _profileName = null;
+    _profileMode = 'adult';
+    setState(() => _phase = _ScreenPhase.profileCreation);
+    await _saveState();
+  }
+
+  Future<void> _startLearningFromHandoff() async {
+    await _clearSavedState();
+    if (!mounted) return;
+    // If 2+ profiles, go to profile picker; otherwise dashboard
+    final repo = ref.read(profileRepositoryProvider);
+    final profiles = await repo.getProfilesByAccount(1);
+    if (!mounted) return;
+    if (profiles.length >= 2) {
+      unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
+    } else {
       unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
   }
@@ -317,24 +471,94 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final appBarTitle = switch (_phase) {
+      _ScreenPhase.profileCreation => 'Add a Learner',
+      _ScreenPhase.selection => childAwareText(
+          'Select Curricula',
+          'What is {name} learning?',
+          _profileName,
+          isChildMode: _isChildMode,
+        ),
+      _ScreenPhase.handoff => 'Setup Complete!',
+      _ => 'Onboarding',
+    };
+
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Select Curricula')),
+      appBar: AppBar(title: AppBarTitle(text: appBarTitle)),
       body: switch (_phase) {
+        _ScreenPhase.profileCreation => _buildProfileCreation(theme),
         _ScreenPhase.selection => _buildSelection(theme),
         _ScreenPhase.importing => _buildImporting(theme),
         _ScreenPhase.scopeSelection => _buildScopeSelection(theme),
-        _ScreenPhase.learningProcessWizard => _buildLearningProcessWizard(theme),
+        _ScreenPhase.learningProcessWizard =>
+          _buildLearningProcessWizard(theme),
         _ScreenPhase.bulkMark => _buildBulkMark(theme),
         _ScreenPhase.goalSetup => _buildGoalSetup(theme),
         _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
+        _ScreenPhase.handoff => _buildHandoff(theme),
         _ScreenPhase.done => _buildDone(theme),
         _ScreenPhase.error => _buildError(theme),
       },
     );
   }
 
+  Widget _buildProfileCreation(ThemeData theme) {
+    final prompt = _profileMode == 'child'
+        ? 'What is your child\'s name?'
+        : 'What\'s your name?';
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            prompt,
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+            textCapitalization: TextCapitalization.words,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 24),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'adult', label: Text('Adult')),
+              ButtonSegment(value: 'child', label: Text('Child')),
+            ],
+            selected: {_profileMode},
+            onSelectionChanged: (value) {
+              setState(() => _profileMode = value.first);
+            },
+          ),
+          const Spacer(),
+          FilledButton(
+            onPressed: _nameController.text.trim().isNotEmpty
+                ? _createProfile
+                : null,
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSelection(ThemeData theme) {
     final configsAsync = ref.watch(allCurriculaConfigsProvider);
+
+    final header = childAwareText(
+      'Choose which curricula to track',
+      'What is {name} learning?',
+      _profileName,
+      isChildMode: _isChildMode,
+    );
 
     return configsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -345,7 +569,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
             child: Text(
-              'Choose which curricula to track',
+              header,
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
@@ -419,7 +643,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 style: theme.textTheme.bodyLarge,
               ),
               const SizedBox(height: 16),
-              // Per-curriculum progress indicators (AC7)
               for (final id in _selected)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -553,14 +776,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         final presets = await wizardService.getPresetsForCurriculum(curriculum);
         if (!mounted) return;
 
-        final profileService = ref.read(userProfileServiceProvider);
-        final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
-        var isChildMode = false;
-        if (uid != null) {
-          final mode = await profileService.getUserMode(uid);
-          isChildMode = mode == UserMode.child;
-        }
-
         if (!mounted) return;
         final result = await Navigator.of(
           context,
@@ -569,7 +784,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             builder: (_) => LearningProcessWizardScreen(
               curriculumId: curriculum,
               presets: presets,
-              isChildMode: isChildMode,
+              isChildMode: _isChildMode,
             ),
           ),
         );
@@ -580,12 +795,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       });
     }
 
+    final headerText = childAwareText(
+      'Set up review schedule for ${curriculum.displayNameEn}',
+      'How does {name} review ${curriculum.displayNameEn}?',
+      _profileName,
+      isChildMode: _isChildMode,
+    );
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Set up review schedule for ${curriculum.displayNameEn}',
+            headerText,
             style: theme.textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
@@ -621,12 +843,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       });
     }
 
+    final headerText = childAwareText(
+      'Mark prior completions for ${curriculum.displayNameEn}',
+      'Mark what {name} has completed in ${curriculum.displayNameEn}',
+      _profileName,
+      isChildMode: _isChildMode,
+    );
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Mark prior completions for ${curriculum.displayNameEn}',
+            headerText,
             style: theme.textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
@@ -650,13 +879,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       data: (configs) => configs[curriculum]?.totalItems,
     );
 
+    final headerText = childAwareText(
+      'Set a goal for ${curriculum.displayNameEn}',
+      'Set a learning goal for {name} in ${curriculum.displayNameEn}',
+      _profileName,
+      isChildMode: _isChildMode,
+    );
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Set a goal for ${curriculum.displayNameEn}',
+            headerText,
             style: theme.textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
@@ -746,6 +982,48 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             OutlinedButton(
               onPressed: () => _onRewardsResult(null),
               child: const Text('Skip'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHandoff(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              size: 80,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "${_profileName ?? 'Your child'}'s learning is all set up",
+              style: theme.textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Hand the device to ${_profileName ?? 'your child'} to start learning',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            FilledButton(
+              onPressed: _startLearningFromHandoff,
+              child: const Text('Start Learning'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _addAnotherLearner,
+              child: const Text('Add Another Learner'),
             ),
           ],
         ),
