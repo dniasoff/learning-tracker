@@ -24,6 +24,35 @@ class ActiveCurriculumDao extends DatabaseAccessor<AppDatabase>
     ).watch().map((rows) => rows.map((row) => row.curriculumId).toList());
   }
 
+  // ========== Profile-Scoped Queries ==========
+
+  /// Returns list of active curriculum IDs for a specific profile.
+  Future<List<String>> getActiveCurriculaByProfile(int profileId) async {
+    final rows = await (select(activeCurricula)
+          ..where((t) => t.profileId.equals(profileId)))
+        .get();
+    return rows.map((row) => row.curriculumId).toList();
+  }
+
+  /// Watch stream of active curriculum IDs for a specific profile.
+  Stream<List<String>> watchActiveCurriculaByProfile(int profileId) {
+    return (select(activeCurricula)
+          ..where((t) => t.profileId.equals(profileId)))
+        .watch()
+        .map((rows) => rows.map((row) => row.curriculumId).toList());
+  }
+
+  /// Activate a curriculum for a specific profile (idempotent).
+  Future<void> activateByProfile(CurriculumId curriculum, int profileId) async {
+    await into(activeCurricula).insertOnConflictUpdate(
+      ActiveCurriculaCompanion.insert(
+        profileId: Value(profileId),
+        curriculumId: curriculum.storageKey,
+        activatedAt: DateTimeFactory.nowUtc(),
+      ),
+    );
+  }
+
   /// Check if a curriculum is currently active
   Future<bool> isActive(CurriculumId curriculum) async {
     final query = select(activeCurricula)

@@ -3,17 +3,26 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
-/// Provider for FirestoreDataSource.
+/// Provider for FirestoreDataSource, scoped to the active profile.
+///
+/// When the active profile changes, this provider rebuilds with the new
+/// profileId, changing all Firestore paths to the new profile's subcollection.
 final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
 
-  return FirestoreDataSource(firestore: firestore, auth: auth);
+  return FirestoreDataSource(
+    firestore: firestore,
+    auth: auth,
+    profileId: profileId,
+  );
 });
 
 /// Provider for OfflineQueue.

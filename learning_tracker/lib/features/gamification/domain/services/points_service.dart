@@ -24,8 +24,9 @@ class PointsHistoryEntry {
 /// This service provides read access to points totals, history, and configuration.
 class PointsService {
   final AppDatabase _database;
+  final int profileId;
 
-  PointsService(this._database);
+  PointsService(this._database, {this.profileId = 0});
 
   /// Get the configured point value for a curriculum + stage.
   ///
@@ -44,16 +45,17 @@ class PointsService {
     return _defaultPoints(stageOrder);
   }
 
-  /// Total points earned for a specific curriculum.
+  /// Total points earned for a specific curriculum, scoped to active profile.
   Future<int> getCurriculumTotal(String curriculumId) async {
     final completions = await _database.completionDao
-        .getCompletionsByCurriculum(curriculumId);
+        .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
     return completions.fold<int>(0, (sum, c) => sum + c.points);
   }
 
-  /// Total points earned across all curricula.
+  /// Total points earned across all curricula, scoped to active profile.
   Future<int> getGlobalTotal() async {
-    final completions = await _database.completionDao.getAllCompletions();
+    final completions =
+        await _database.completionDao.getCompletionsByProfile(profileId);
     return completions.fold<int>(0, (sum, c) => sum + c.points);
   }
 
@@ -69,13 +71,15 @@ class PointsService {
     return totals;
   }
 
-  /// Points history log — all point award events ordered by timestamp.
+  /// Points history log — all point award events ordered by timestamp,
+  /// scoped to active profile.
   Future<List<PointsHistoryEntry>> getPointsHistory({
     String? curriculumId,
   }) async {
     final completions = curriculumId != null
-        ? await _database.completionDao.getCompletionsByCurriculum(curriculumId)
-        : await _database.completionDao.getAllCompletions();
+        ? await _database.completionDao
+            .getCompletionsByCurriculumAndProfile(curriculumId, profileId)
+        : await _database.completionDao.getCompletionsByProfile(profileId);
 
     // Only include completions that actually earned points
     return completions

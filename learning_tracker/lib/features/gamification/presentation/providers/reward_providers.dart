@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Provider for the RewardService singleton.
@@ -15,10 +16,11 @@ final rewardServiceProvider = Provider<RewardService>((ref) {
   return RewardService(database, pointsService, isTutorMode: isTutorMode);
 });
 
-/// All rewards stream for reactive UI updates.
+/// All rewards stream for reactive UI updates, scoped to active profile.
 final allRewardsStreamProvider = StreamProvider<List<Reward>>((ref) {
   final database = ref.watch(appDatabaseProvider);
-  return database.rewardDao.watchAllRewards();
+  final profileId = ref.watch(activeProfileIdProvider);
+  return database.rewardDao.watchRewardsByProfile(profileId);
 });
 
 /// Next unearned reward (lowest threshold).

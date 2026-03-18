@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/data/services/cloud_content_service.dart';
 import 'package:learning_tracker/features/content_browsing/domain/services/content_version_check_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -1058,6 +1059,430 @@ void main() {
         final profiles = await profileRepo.getProfilesByAccount(1);
         expect(profiles.length, greaterThanOrEqualTo(2));
         // With 2+ profiles and no selection, ProfileGuard redirects to picker
+      });
+    });
+  });
+
+  group('Story 15.11 -- Profile-Scoped Providers & Sync',
+      tags: ['story_15_11'], () {
+    late AppDatabase db;
+    late ProfileRepositoryImpl profileRepo;
+
+    setUp(() {
+      db = createTestDatabase();
+      profileRepo = ProfileRepositoryImpl(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    group('AC: Switching profiles shows correct data immediately', () {
+      test('profile-scoped DAO queries return only data for that profile',
+          () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        // Insert completions for each profile
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p1.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p2.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.1.2',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        // Profile-scoped queries return correct data
+        final p1Completions =
+            await db.completionDao.getCompletionsByProfile(p1.id);
+        expect(p1Completions.length, 1);
+        expect(p1Completions.first.sefariaRef, 'Mishnah_Berakhot.1.1');
+
+        final p2Completions =
+            await db.completionDao.getCompletionsByProfile(p2.id);
+        expect(p2Completions.length, 1);
+        expect(p2Completions.first.sefariaRef, 'Mishnah_Berakhot.1.2');
+      });
+
+      test('getCompletionsByCurriculumAndProfile scopes correctly', () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p1.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p2.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.2.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        final p1Result =
+            await db.completionDao.getCompletionsByCurriculumAndProfile(
+          'mishnah',
+          p1.id,
+        );
+        expect(p1Result.length, 1);
+        expect(p1Result.first.sefariaRef, 'Mishnah_Berakhot.1.1');
+
+        final p2Result =
+            await db.completionDao.getCompletionsByCurriculumAndProfile(
+          'mishnah',
+          p2.id,
+        );
+        expect(p2Result.length, 1);
+        expect(p2Result.first.sefariaRef, 'Mishnah_Berakhot.2.1');
+      });
+    });
+
+    group('AC: No data leakage between profiles', () {
+      test('bookmarks are isolated between profiles', () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        await db.bookmarkDao.upsertBookmarkByProfile(
+          curriculumId: 'mishnah',
+          trackType: 'personal',
+          sefariaRef: 'Mishnah_Berakhot.1.1',
+          updatedAt: DateTime.now().toUtc(),
+          profileId: p1.id,
+        );
+        await db.bookmarkDao.upsertBookmarkByProfile(
+          curriculumId: 'mishnah',
+          trackType: 'personal',
+          sefariaRef: 'Mishnah_Berakhot.3.1',
+          updatedAt: DateTime.now().toUtc(),
+          profileId: p2.id,
+        );
+
+        final p1Bookmark =
+            await db.bookmarkDao.getBookmarkByCurriculumTrackAndProfile(
+          'mishnah',
+          'personal',
+          p1.id,
+        );
+        expect(p1Bookmark, isNotNull);
+        expect(p1Bookmark!.sefariaRef, 'Mishnah_Berakhot.1.1');
+
+        final p2Bookmark =
+            await db.bookmarkDao.getBookmarkByCurriculumTrackAndProfile(
+          'mishnah',
+          'personal',
+          p2.id,
+        );
+        expect(p2Bookmark, isNotNull);
+        expect(p2Bookmark!.sefariaRef, 'Mishnah_Berakhot.3.1');
+      });
+
+      test('goals are isolated between profiles', () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        await db.goalDao.insertGoal(
+          GoalsCompanion.insert(
+            profileId: Value(p1.id),
+            curriculumId: 'mishnah',
+            createdAt: DateTime.now().toUtc(),
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
+        await db.goalDao.insertGoal(
+          GoalsCompanion.insert(
+            profileId: Value(p2.id),
+            curriculumId: 'bavli',
+            createdAt: DateTime.now().toUtc(),
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        final p1Goals =
+            await db.goalDao.getGoalsByCurriculumAndProfile('mishnah', p1.id);
+        expect(p1Goals.length, 1);
+
+        final p2MishnahGoals =
+            await db.goalDao.getGoalsByCurriculumAndProfile('mishnah', p2.id);
+        expect(p2MishnahGoals.length, 0);
+      });
+
+      test('rewards are isolated between profiles', () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        await db.rewardDao.insertReward(
+          RewardsCompanion.insert(
+            profileId: Value(p1.id),
+            title: 'P1 Reward',
+            description: 'desc',
+            pointsThreshold: 100,
+          ),
+        );
+        await db.rewardDao.insertReward(
+          RewardsCompanion.insert(
+            profileId: Value(p2.id),
+            title: 'P2 Reward',
+            description: 'desc',
+            pointsThreshold: 200,
+          ),
+        );
+
+        final p1Rewards = await db.rewardDao.getRewardsByProfile(p1.id);
+        expect(p1Rewards.length, 1);
+        expect(p1Rewards.first.title, 'P1 Reward');
+
+        final p2Rewards = await db.rewardDao.getRewardsByProfile(p2.id);
+        expect(p2Rewards.length, 1);
+        expect(p2Rewards.first.title, 'P2 Reward');
+      });
+
+      test('active curricula are isolated between profiles', () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        await db.activeCurriculumDao
+            .activateByProfile(CurriculumId.mishnayos, p1.id);
+        await db.activeCurriculumDao
+            .activateByProfile(CurriculumId.bavli, p2.id);
+
+        final p1Curricula =
+            await db.activeCurriculumDao.getActiveCurriculaByProfile(p1.id);
+        expect(p1Curricula, contains('mishnayos'));
+        expect(p1Curricula, isNot(contains('bavli')));
+
+        final p2Curricula =
+            await db.activeCurriculumDao.getActiveCurriculaByProfile(p2.id);
+        expect(p2Curricula, contains('bavli'));
+        expect(p2Curricula, isNot(contains('mishnayos')));
+      });
+    });
+
+    group('AC: Firestore paths include profile_id', () {
+      // FirestoreDataSource accepts profileId and scopes all collection
+      // paths under users/{uid}/profiles/{profileId}/...
+      // Actual Firestore path validation requires Flutter SDK integration
+      // tests. Here we verify the DB layer supports profile scoping.
+
+      test('completions with different profileIds are stored separately',
+          () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'SyncChild1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'SyncChild2',
+          mode: 'child',
+        );
+
+        // Simulate synced completions for different profiles
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p1.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p2.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        // Both profiles can have the same content completed independently
+        final p1Data =
+            await db.completionDao.getCompletionsByProfile(p1.id);
+        final p2Data =
+            await db.completionDao.getCompletionsByProfile(p2.id);
+        expect(p1Data.length, 1);
+        expect(p2Data.length, 1);
+        expect(p1Data.first.profileId, p1.id);
+        expect(p2Data.first.profileId, p2.id);
+      });
+    });
+
+    group('AC: Provider invalidation is complete — no stale state', () {
+      test('completions track breakdown scoped by profile', () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        // P1 has 2 personal completions
+        for (var i = 1; i <= 2; i++) {
+          await db.completionDao.insertCompletion(
+            CompletionsCompanion.insert(
+              profileId: Value(p1.id),
+              curriculumId: 'mishnah',
+              sefariaRef: 'Mishnah_Berakhot.1.$i',
+              stageId: 1,
+              trackType: 'personal',
+              completedAt: DateTime.now().toUtc(),
+            ),
+          );
+        }
+
+        // P2 has 1 personal completion
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p2.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.2.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+          ),
+        );
+
+        final p1Breakdown = await db.completionDao
+            .getTrackBreakdownByProfile('mishnah', p1.id);
+        expect(p1Breakdown['personal'], 2);
+
+        final p2Breakdown = await db.completionDao
+            .getTrackBreakdownByProfile('mishnah', p2.id);
+        expect(p2Breakdown['personal'], 1);
+
+        // Aggregate count is also scoped
+        final p1Count = await db.completionDao
+            .getAggregateCountByProfile('mishnah', p1.id);
+        expect(p1Count, 2);
+
+        final p2Count = await db.completionDao
+            .getAggregateCountByProfile('mishnah', p2.id);
+        expect(p2Count, 1);
+      });
+
+      test('PointsService scoped by profileId', () async {
+        final p1 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child1',
+          mode: 'child',
+        );
+        final p2 = await profileRepo.createProfile(
+          accountId: 1,
+          displayName: 'Child2',
+          mode: 'child',
+        );
+
+        // P1 earns 10 points
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p1.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+            points: Value(10),
+          ),
+        );
+
+        // P2 earns 5 points
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: Value(p2.id),
+            curriculumId: 'mishnah',
+            sefariaRef: 'Mishnah_Berakhot.2.1',
+            stageId: 1,
+            trackType: 'personal',
+            completedAt: DateTime.now().toUtc(),
+            points: Value(5),
+          ),
+        );
+
+        final p1Service = PointsService(db, profileId: p1.id);
+        final p2Service = PointsService(db, profileId: p2.id);
+
+        expect(await p1Service.getGlobalTotal(), 10);
+        expect(await p2Service.getGlobalTotal(), 5);
+        expect(await p1Service.getCurriculumTotal('mishnah'), 10);
+        expect(await p2Service.getCurriculumTotal('mishnah'), 5);
       });
     });
   });

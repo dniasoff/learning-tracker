@@ -109,16 +109,12 @@ final class DashboardUserModeProvider
 
 String _$dashboardUserModeHash() => r'e3557fadb9ed67a00a1417ee7ee4146e550f6f95';
 
-/// Provider for list of active curricula IDs.
-///
-/// P6 compliant: uses only core database DAO.
+/// Provider for list of active curricula IDs, scoped to active profile.
 
 @ProviderFor(dashboardActiveCurricula)
 final dashboardActiveCurriculaProvider = DashboardActiveCurriculaProvider._();
 
-/// Provider for list of active curricula IDs.
-///
-/// P6 compliant: uses only core database DAO.
+/// Provider for list of active curricula IDs, scoped to active profile.
 
 final class DashboardActiveCurriculaProvider
     extends
@@ -130,9 +126,7 @@ final class DashboardActiveCurriculaProvider
     with
         $FutureModifier<List<CurriculumId>>,
         $FutureProvider<List<CurriculumId>> {
-  /// Provider for list of active curricula IDs.
-  ///
-  /// P6 compliant: uses only core database DAO.
+  /// Provider for list of active curricula IDs, scoped to active profile.
   DashboardActiveCurriculaProvider._()
     : super(
         from: null,
@@ -160,15 +154,15 @@ final class DashboardActiveCurriculaProvider
 }
 
 String _$dashboardActiveCurriculaHash() =>
-    r'78285f9cf83f9b534700f1bc3b7e61cdc9dff006';
+    r'5a748c490812c856063dadca8cf4fec13dc2ae78';
 
-/// Stream provider for watching active curricula changes (P6 compliant).
+/// Stream provider for watching active curricula changes, scoped to active profile.
 
 @ProviderFor(dashboardActiveCurriculaStream)
 final dashboardActiveCurriculaStreamProvider =
     DashboardActiveCurriculaStreamProvider._();
 
-/// Stream provider for watching active curricula changes (P6 compliant).
+/// Stream provider for watching active curricula changes, scoped to active profile.
 
 final class DashboardActiveCurriculaStreamProvider
     extends
@@ -180,7 +174,7 @@ final class DashboardActiveCurriculaStreamProvider
     with
         $FutureModifier<List<CurriculumId>>,
         $StreamProvider<List<CurriculumId>> {
-  /// Stream provider for watching active curricula changes (P6 compliant).
+  /// Stream provider for watching active curricula changes, scoped to active profile.
   DashboardActiveCurriculaStreamProvider._()
     : super(
         from: null,
@@ -208,20 +202,20 @@ final class DashboardActiveCurriculaStreamProvider
 }
 
 String _$dashboardActiveCurriculaStreamHash() =>
-    r'c676b18cdb9e0c3d9d79939b16b49ca38f7198bb';
+    r'd22707c8346b40236bab79b1341fd90de0d3fc8d';
 
-/// Per-curriculum completion percentage (P6 compliant — uses core DB).
+/// Per-curriculum completion percentage, scoped to active profile.
 
 @ProviderFor(dashboardCompletionPercentage)
 final dashboardCompletionPercentageProvider =
     DashboardCompletionPercentageFamily._();
 
-/// Per-curriculum completion percentage (P6 compliant — uses core DB).
+/// Per-curriculum completion percentage, scoped to active profile.
 
 final class DashboardCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
-  /// Per-curriculum completion percentage (P6 compliant — uses core DB).
+  /// Per-curriculum completion percentage, scoped to active profile.
   DashboardCompletionPercentageProvider._({
     required DashboardCompletionPercentageFamily super.from,
     required CurriculumId super.argument,
@@ -267,9 +261,9 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'20eed9ae9653b5fb5a0716d9cd9df030bd917d71';
+    r'984f34a412f64faf16316d2a802dabc1d7db5c1e';
 
-/// Per-curriculum completion percentage (P6 compliant — uses core DB).
+/// Per-curriculum completion percentage, scoped to active profile.
 
 final class DashboardCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
@@ -282,7 +276,7 @@ final class DashboardCompletionPercentageFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Per-curriculum completion percentage (P6 compliant — uses core DB).
+  /// Per-curriculum completion percentage, scoped to active profile.
 
   DashboardCompletionPercentageProvider call(CurriculumId curriculum) =>
       DashboardCompletionPercentageProvider._(argument: curriculum, from: this);
@@ -291,12 +285,12 @@ final class DashboardCompletionPercentageFamily extends $Family
   String toString() => r'dashboardCompletionPercentageProvider';
 }
 
-/// Per-curriculum last completion timestamp (P6 compliant).
+/// Per-curriculum last completion timestamp, scoped to active profile.
 
 @ProviderFor(dashboardLastCompletion)
 final dashboardLastCompletionProvider = DashboardLastCompletionFamily._();
 
-/// Per-curriculum last completion timestamp (P6 compliant).
+/// Per-curriculum last completion timestamp, scoped to active profile.
 
 final class DashboardLastCompletionProvider
     extends
@@ -306,7 +300,7 @@ final class DashboardLastCompletionProvider
           FutureOr<DateTime?>
         >
     with $FutureModifier<DateTime?>, $FutureProvider<DateTime?> {
-  /// Per-curriculum last completion timestamp (P6 compliant).
+  /// Per-curriculum last completion timestamp, scoped to active profile.
   DashboardLastCompletionProvider._({
     required DashboardLastCompletionFamily super.from,
     required CurriculumId super.argument,
@@ -352,9 +346,9 @@ final class DashboardLastCompletionProvider
 }
 
 String _$dashboardLastCompletionHash() =>
-    r'917417e087a2a316974a956ca7d4bf41123c2260';
+    r'2dbfcf2c43503cebbfa09a9ac244f77058be0713';
 
-/// Per-curriculum last completion timestamp (P6 compliant).
+/// Per-curriculum last completion timestamp, scoped to active profile.
 
 final class DashboardLastCompletionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<DateTime?>, CurriculumId> {
@@ -367,7 +361,7 @@ final class DashboardLastCompletionFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Per-curriculum last completion timestamp (P6 compliant).
+  /// Per-curriculum last completion timestamp, scoped to active profile.
 
   DashboardLastCompletionProvider call(CurriculumId curriculum) =>
       DashboardLastCompletionProvider._(argument: curriculum, from: this);
@@ -422,17 +416,17 @@ final class DashboardStreakProvider
 
 String _$dashboardStreakHash() => r'9f262b606eec43dafc352be089daa6649a763588';
 
-/// Global points total (P6 compliant — uses core DB).
+/// Global points total, scoped to active profile.
 
 @ProviderFor(dashboardGlobalPoints)
 final dashboardGlobalPointsProvider = DashboardGlobalPointsProvider._();
 
-/// Global points total (P6 compliant — uses core DB).
+/// Global points total, scoped to active profile.
 
 final class DashboardGlobalPointsProvider
     extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
     with $FutureModifier<int>, $FutureProvider<int> {
-  /// Global points total (P6 compliant — uses core DB).
+  /// Global points total, scoped to active profile.
   DashboardGlobalPointsProvider._()
     : super(
         from: null,
@@ -459,4 +453,4 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'72ffad074d94386e42441d96c6d7f243ad8012c7';
+    r'7b414255ea50c70ee6ed1f4a80cada3871859e54';
