@@ -13,11 +13,14 @@ import 'package:learning_tracker/core/database/daos/reward_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
+import 'package:learning_tracker/core/database/daos/test_date_dao.dart';
+import 'package:learning_tracker/core/database/daos/test_score_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_cache_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
+import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
@@ -33,6 +36,8 @@ import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
+import 'package:learning_tracker/core/database/tables/test_dates.dart';
+import 'package:learning_tracker/core/database/tables/test_scores.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
 import 'package:learning_tracker/core/database/tables/user_profiles.dart';
@@ -59,6 +64,8 @@ part 'app_database.g.dart';
     ContentDownloadStatuses,
     LearningPrograms,
     ProfilePrograms,
+    TestDates,
+    TestScores,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -79,13 +86,15 @@ part 'app_database.g.dart';
     ContentDownloadStatusDao,
     LearningProgramDao,
     ProfileProgramDao,
+    TestDateDao,
+    TestScoreDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -93,6 +102,7 @@ class AppDatabase extends _$AppDatabase {
       onCreate: (Migrator m) async {
         await m.createAll();
         await _seedLearningPrograms();
+        await _seedTestDates();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 3) {
@@ -248,8 +258,37 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable($ProfileProgramsTable(attachedDatabase));
           await _seedLearningPrograms();
         }
+        if (from < 13) {
+          // Migration from schema v12 to v13: Add test_dates and test_scores tables
+          await m.createTable($TestDatesTable(attachedDatabase));
+          await m.createTable($TestScoresTable(attachedDatabase));
+          await _seedTestDates();
+        }
       },
     );
+  }
+
+  /// Seeds test dates for Dirshu programs (first Sunday of each month).
+  Future<void> _seedTestDates() async {
+    final seeds = generateTestDateSeeds();
+    for (final seed in seeds) {
+      // Look up program ID by name
+      final program = await (select($LearningProgramsTable(attachedDatabase))
+            ..where(
+              (t) => t.name.equals(seed['program_name']! as String),
+            ))
+          .getSingleOrNull();
+      if (program != null) {
+        await into($TestDatesTable(attachedDatabase)).insert(
+          TestDatesCompanion.insert(
+            programId: program.id,
+            testDate: seed['test_date']! as DateTime,
+            materialDescription:
+                Value(seed['material_description']! as String),
+          ),
+        );
+      }
+    }
   }
 
   /// Seeds the 9 learning program presets into the database.

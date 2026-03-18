@@ -7793,6 +7793,778 @@ class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
   }
 }
 
+class $TestDatesTable extends TestDates
+    with TableInfo<$TestDatesTable, TestDate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TestDatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _programIdMeta = const VerificationMeta(
+    'programId',
+  );
+  @override
+  late final GeneratedColumn<int> programId = GeneratedColumn<int>(
+    'program_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _testDateMeta = const VerificationMeta(
+    'testDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> testDate = GeneratedColumn<DateTime>(
+    'test_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _materialDescriptionMeta =
+      const VerificationMeta('materialDescription');
+  @override
+  late final GeneratedColumn<String> materialDescription =
+      GeneratedColumn<String>(
+        'material_description',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    programId,
+    testDate,
+    materialDescription,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'test_dates';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TestDate> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('program_id')) {
+      context.handle(
+        _programIdMeta,
+        programId.isAcceptableOrUnknown(data['program_id']!, _programIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_programIdMeta);
+    }
+    if (data.containsKey('test_date')) {
+      context.handle(
+        _testDateMeta,
+        testDate.isAcceptableOrUnknown(data['test_date']!, _testDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_testDateMeta);
+    }
+    if (data.containsKey('material_description')) {
+      context.handle(
+        _materialDescriptionMeta,
+        materialDescription.isAcceptableOrUnknown(
+          data['material_description']!,
+          _materialDescriptionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TestDate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TestDate(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      programId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}program_id'],
+      )!,
+      testDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}test_date'],
+      )!,
+      materialDescription: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}material_description'],
+      )!,
+    );
+  }
+
+  @override
+  $TestDatesTable createAlias(String alias) {
+    return $TestDatesTable(attachedDatabase, alias);
+  }
+}
+
+class TestDate extends DataClass implements Insertable<TestDate> {
+  final int id;
+  final int programId;
+  final DateTime testDate;
+  final String materialDescription;
+  const TestDate({
+    required this.id,
+    required this.programId,
+    required this.testDate,
+    required this.materialDescription,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['program_id'] = Variable<int>(programId);
+    map['test_date'] = Variable<DateTime>(testDate);
+    map['material_description'] = Variable<String>(materialDescription);
+    return map;
+  }
+
+  TestDatesCompanion toCompanion(bool nullToAbsent) {
+    return TestDatesCompanion(
+      id: Value(id),
+      programId: Value(programId),
+      testDate: Value(testDate),
+      materialDescription: Value(materialDescription),
+    );
+  }
+
+  factory TestDate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TestDate(
+      id: serializer.fromJson<int>(json['id']),
+      programId: serializer.fromJson<int>(json['programId']),
+      testDate: serializer.fromJson<DateTime>(json['testDate']),
+      materialDescription: serializer.fromJson<String>(
+        json['materialDescription'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'programId': serializer.toJson<int>(programId),
+      'testDate': serializer.toJson<DateTime>(testDate),
+      'materialDescription': serializer.toJson<String>(materialDescription),
+    };
+  }
+
+  TestDate copyWith({
+    int? id,
+    int? programId,
+    DateTime? testDate,
+    String? materialDescription,
+  }) => TestDate(
+    id: id ?? this.id,
+    programId: programId ?? this.programId,
+    testDate: testDate ?? this.testDate,
+    materialDescription: materialDescription ?? this.materialDescription,
+  );
+  TestDate copyWithCompanion(TestDatesCompanion data) {
+    return TestDate(
+      id: data.id.present ? data.id.value : this.id,
+      programId: data.programId.present ? data.programId.value : this.programId,
+      testDate: data.testDate.present ? data.testDate.value : this.testDate,
+      materialDescription: data.materialDescription.present
+          ? data.materialDescription.value
+          : this.materialDescription,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TestDate(')
+          ..write('id: $id, ')
+          ..write('programId: $programId, ')
+          ..write('testDate: $testDate, ')
+          ..write('materialDescription: $materialDescription')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, programId, testDate, materialDescription);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TestDate &&
+          other.id == this.id &&
+          other.programId == this.programId &&
+          other.testDate == this.testDate &&
+          other.materialDescription == this.materialDescription);
+}
+
+class TestDatesCompanion extends UpdateCompanion<TestDate> {
+  final Value<int> id;
+  final Value<int> programId;
+  final Value<DateTime> testDate;
+  final Value<String> materialDescription;
+  const TestDatesCompanion({
+    this.id = const Value.absent(),
+    this.programId = const Value.absent(),
+    this.testDate = const Value.absent(),
+    this.materialDescription = const Value.absent(),
+  });
+  TestDatesCompanion.insert({
+    this.id = const Value.absent(),
+    required int programId,
+    required DateTime testDate,
+    this.materialDescription = const Value.absent(),
+  }) : programId = Value(programId),
+       testDate = Value(testDate);
+  static Insertable<TestDate> custom({
+    Expression<int>? id,
+    Expression<int>? programId,
+    Expression<DateTime>? testDate,
+    Expression<String>? materialDescription,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (programId != null) 'program_id': programId,
+      if (testDate != null) 'test_date': testDate,
+      if (materialDescription != null)
+        'material_description': materialDescription,
+    });
+  }
+
+  TestDatesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? programId,
+    Value<DateTime>? testDate,
+    Value<String>? materialDescription,
+  }) {
+    return TestDatesCompanion(
+      id: id ?? this.id,
+      programId: programId ?? this.programId,
+      testDate: testDate ?? this.testDate,
+      materialDescription: materialDescription ?? this.materialDescription,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (programId.present) {
+      map['program_id'] = Variable<int>(programId.value);
+    }
+    if (testDate.present) {
+      map['test_date'] = Variable<DateTime>(testDate.value);
+    }
+    if (materialDescription.present) {
+      map['material_description'] = Variable<String>(materialDescription.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TestDatesCompanion(')
+          ..write('id: $id, ')
+          ..write('programId: $programId, ')
+          ..write('testDate: $testDate, ')
+          ..write('materialDescription: $materialDescription')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TestScoresTable extends TestScores
+    with TableInfo<$TestScoresTable, TestScore> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TestScoresTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _programIdMeta = const VerificationMeta(
+    'programId',
+  );
+  @override
+  late final GeneratedColumn<int> programId = GeneratedColumn<int>(
+    'program_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _testDateIdMeta = const VerificationMeta(
+    'testDateId',
+  );
+  @override
+  late final GeneratedColumn<int> testDateId = GeneratedColumn<int>(
+    'test_date_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _scorePercentageMeta = const VerificationMeta(
+    'scorePercentage',
+  );
+  @override
+  late final GeneratedColumn<int> scorePercentage = GeneratedColumn<int>(
+    'score_percentage',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    programId,
+    testDateId,
+    scorePercentage,
+    notes,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'test_scores';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TestScore> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('program_id')) {
+      context.handle(
+        _programIdMeta,
+        programId.isAcceptableOrUnknown(data['program_id']!, _programIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_programIdMeta);
+    }
+    if (data.containsKey('test_date_id')) {
+      context.handle(
+        _testDateIdMeta,
+        testDateId.isAcceptableOrUnknown(
+          data['test_date_id']!,
+          _testDateIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('score_percentage')) {
+      context.handle(
+        _scorePercentageMeta,
+        scorePercentage.isAcceptableOrUnknown(
+          data['score_percentage']!,
+          _scorePercentageMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_scorePercentageMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TestScore map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TestScore(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      programId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}program_id'],
+      )!,
+      testDateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}test_date_id'],
+      ),
+      scorePercentage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}score_percentage'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TestScoresTable createAlias(String alias) {
+    return $TestScoresTable(attachedDatabase, alias);
+  }
+}
+
+class TestScore extends DataClass implements Insertable<TestScore> {
+  final int id;
+  final int profileId;
+  final int programId;
+  final int? testDateId;
+  final int scorePercentage;
+  final String notes;
+  final DateTime createdAt;
+  const TestScore({
+    required this.id,
+    required this.profileId,
+    required this.programId,
+    this.testDateId,
+    required this.scorePercentage,
+    required this.notes,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['program_id'] = Variable<int>(programId);
+    if (!nullToAbsent || testDateId != null) {
+      map['test_date_id'] = Variable<int>(testDateId);
+    }
+    map['score_percentage'] = Variable<int>(scorePercentage);
+    map['notes'] = Variable<String>(notes);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TestScoresCompanion toCompanion(bool nullToAbsent) {
+    return TestScoresCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      programId: Value(programId),
+      testDateId: testDateId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(testDateId),
+      scorePercentage: Value(scorePercentage),
+      notes: Value(notes),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TestScore.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TestScore(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      programId: serializer.fromJson<int>(json['programId']),
+      testDateId: serializer.fromJson<int?>(json['testDateId']),
+      scorePercentage: serializer.fromJson<int>(json['scorePercentage']),
+      notes: serializer.fromJson<String>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'programId': serializer.toJson<int>(programId),
+      'testDateId': serializer.toJson<int?>(testDateId),
+      'scorePercentage': serializer.toJson<int>(scorePercentage),
+      'notes': serializer.toJson<String>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  TestScore copyWith({
+    int? id,
+    int? profileId,
+    int? programId,
+    Value<int?> testDateId = const Value.absent(),
+    int? scorePercentage,
+    String? notes,
+    DateTime? createdAt,
+  }) => TestScore(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    programId: programId ?? this.programId,
+    testDateId: testDateId.present ? testDateId.value : this.testDateId,
+    scorePercentage: scorePercentage ?? this.scorePercentage,
+    notes: notes ?? this.notes,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TestScore copyWithCompanion(TestScoresCompanion data) {
+    return TestScore(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      programId: data.programId.present ? data.programId.value : this.programId,
+      testDateId: data.testDateId.present
+          ? data.testDateId.value
+          : this.testDateId,
+      scorePercentage: data.scorePercentage.present
+          ? data.scorePercentage.value
+          : this.scorePercentage,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TestScore(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('programId: $programId, ')
+          ..write('testDateId: $testDateId, ')
+          ..write('scorePercentage: $scorePercentage, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    programId,
+    testDateId,
+    scorePercentage,
+    notes,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TestScore &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.programId == this.programId &&
+          other.testDateId == this.testDateId &&
+          other.scorePercentage == this.scorePercentage &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt);
+}
+
+class TestScoresCompanion extends UpdateCompanion<TestScore> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<int> programId;
+  final Value<int?> testDateId;
+  final Value<int> scorePercentage;
+  final Value<String> notes;
+  final Value<DateTime> createdAt;
+  const TestScoresCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.programId = const Value.absent(),
+    this.testDateId = const Value.absent(),
+    this.scorePercentage = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  TestScoresCompanion.insert({
+    this.id = const Value.absent(),
+    required int profileId,
+    required int programId,
+    this.testDateId = const Value.absent(),
+    required int scorePercentage,
+    this.notes = const Value.absent(),
+    required DateTime createdAt,
+  }) : profileId = Value(profileId),
+       programId = Value(programId),
+       scorePercentage = Value(scorePercentage),
+       createdAt = Value(createdAt);
+  static Insertable<TestScore> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<int>? programId,
+    Expression<int>? testDateId,
+    Expression<int>? scorePercentage,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (programId != null) 'program_id': programId,
+      if (testDateId != null) 'test_date_id': testDateId,
+      if (scorePercentage != null) 'score_percentage': scorePercentage,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  TestScoresCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<int>? programId,
+    Value<int?>? testDateId,
+    Value<int>? scorePercentage,
+    Value<String>? notes,
+    Value<DateTime>? createdAt,
+  }) {
+    return TestScoresCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      programId: programId ?? this.programId,
+      testDateId: testDateId ?? this.testDateId,
+      scorePercentage: scorePercentage ?? this.scorePercentage,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (programId.present) {
+      map['program_id'] = Variable<int>(programId.value);
+    }
+    if (testDateId.present) {
+      map['test_date_id'] = Variable<int>(testDateId.value);
+    }
+    if (scorePercentage.present) {
+      map['score_percentage'] = Variable<int>(scorePercentage.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TestScoresCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('programId: $programId, ')
+          ..write('testDateId: $testDateId, ')
+          ..write('scorePercentage: $scorePercentage, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7826,6 +8598,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ProfileProgramsTable profilePrograms = $ProfileProgramsTable(
     this,
   );
+  late final $TestDatesTable testDates = $TestDatesTable(this);
+  late final $TestScoresTable testScores = $TestScoresTable(this);
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
     this as AppDatabase,
   );
@@ -7858,6 +8632,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ProfileProgramDao profileProgramDao = ProfileProgramDao(
     this as AppDatabase,
   );
+  late final TestDateDao testDateDao = TestDateDao(this as AppDatabase);
+  late final TestScoreDao testScoreDao = TestScoreDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7881,6 +8657,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     contentDownloadStatuses,
     learningPrograms,
     profilePrograms,
+    testDates,
+    testScores,
   ];
 }
 
@@ -11966,6 +12744,410 @@ typedef $$ProfileProgramsTableProcessedTableManager =
       ProfileProgram,
       PrefetchHooks Function()
     >;
+typedef $$TestDatesTableCreateCompanionBuilder =
+    TestDatesCompanion Function({
+      Value<int> id,
+      required int programId,
+      required DateTime testDate,
+      Value<String> materialDescription,
+    });
+typedef $$TestDatesTableUpdateCompanionBuilder =
+    TestDatesCompanion Function({
+      Value<int> id,
+      Value<int> programId,
+      Value<DateTime> testDate,
+      Value<String> materialDescription,
+    });
+
+class $$TestDatesTableFilterComposer
+    extends Composer<_$AppDatabase, $TestDatesTable> {
+  $$TestDatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get testDate => $composableBuilder(
+    column: $table.testDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get materialDescription => $composableBuilder(
+    column: $table.materialDescription,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TestDatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TestDatesTable> {
+  $$TestDatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get testDate => $composableBuilder(
+    column: $table.testDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get materialDescription => $composableBuilder(
+    column: $table.materialDescription,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TestDatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TestDatesTable> {
+  $$TestDatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get programId =>
+      $composableBuilder(column: $table.programId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get testDate =>
+      $composableBuilder(column: $table.testDate, builder: (column) => column);
+
+  GeneratedColumn<String> get materialDescription => $composableBuilder(
+    column: $table.materialDescription,
+    builder: (column) => column,
+  );
+}
+
+class $$TestDatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TestDatesTable,
+          TestDate,
+          $$TestDatesTableFilterComposer,
+          $$TestDatesTableOrderingComposer,
+          $$TestDatesTableAnnotationComposer,
+          $$TestDatesTableCreateCompanionBuilder,
+          $$TestDatesTableUpdateCompanionBuilder,
+          (TestDate, BaseReferences<_$AppDatabase, $TestDatesTable, TestDate>),
+          TestDate,
+          PrefetchHooks Function()
+        > {
+  $$TestDatesTableTableManager(_$AppDatabase db, $TestDatesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TestDatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TestDatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TestDatesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> programId = const Value.absent(),
+                Value<DateTime> testDate = const Value.absent(),
+                Value<String> materialDescription = const Value.absent(),
+              }) => TestDatesCompanion(
+                id: id,
+                programId: programId,
+                testDate: testDate,
+                materialDescription: materialDescription,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int programId,
+                required DateTime testDate,
+                Value<String> materialDescription = const Value.absent(),
+              }) => TestDatesCompanion.insert(
+                id: id,
+                programId: programId,
+                testDate: testDate,
+                materialDescription: materialDescription,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TestDatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TestDatesTable,
+      TestDate,
+      $$TestDatesTableFilterComposer,
+      $$TestDatesTableOrderingComposer,
+      $$TestDatesTableAnnotationComposer,
+      $$TestDatesTableCreateCompanionBuilder,
+      $$TestDatesTableUpdateCompanionBuilder,
+      (TestDate, BaseReferences<_$AppDatabase, $TestDatesTable, TestDate>),
+      TestDate,
+      PrefetchHooks Function()
+    >;
+typedef $$TestScoresTableCreateCompanionBuilder =
+    TestScoresCompanion Function({
+      Value<int> id,
+      required int profileId,
+      required int programId,
+      Value<int?> testDateId,
+      required int scorePercentage,
+      Value<String> notes,
+      required DateTime createdAt,
+    });
+typedef $$TestScoresTableUpdateCompanionBuilder =
+    TestScoresCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<int> programId,
+      Value<int?> testDateId,
+      Value<int> scorePercentage,
+      Value<String> notes,
+      Value<DateTime> createdAt,
+    });
+
+class $$TestScoresTableFilterComposer
+    extends Composer<_$AppDatabase, $TestScoresTable> {
+  $$TestScoresTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get testDateId => $composableBuilder(
+    column: $table.testDateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get scorePercentage => $composableBuilder(
+    column: $table.scorePercentage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TestScoresTableOrderingComposer
+    extends Composer<_$AppDatabase, $TestScoresTable> {
+  $$TestScoresTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get testDateId => $composableBuilder(
+    column: $table.testDateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get scorePercentage => $composableBuilder(
+    column: $table.scorePercentage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TestScoresTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TestScoresTable> {
+  $$TestScoresTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<int> get programId =>
+      $composableBuilder(column: $table.programId, builder: (column) => column);
+
+  GeneratedColumn<int> get testDateId => $composableBuilder(
+    column: $table.testDateId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get scorePercentage => $composableBuilder(
+    column: $table.scorePercentage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$TestScoresTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TestScoresTable,
+          TestScore,
+          $$TestScoresTableFilterComposer,
+          $$TestScoresTableOrderingComposer,
+          $$TestScoresTableAnnotationComposer,
+          $$TestScoresTableCreateCompanionBuilder,
+          $$TestScoresTableUpdateCompanionBuilder,
+          (
+            TestScore,
+            BaseReferences<_$AppDatabase, $TestScoresTable, TestScore>,
+          ),
+          TestScore,
+          PrefetchHooks Function()
+        > {
+  $$TestScoresTableTableManager(_$AppDatabase db, $TestScoresTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TestScoresTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TestScoresTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TestScoresTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<int> programId = const Value.absent(),
+                Value<int?> testDateId = const Value.absent(),
+                Value<int> scorePercentage = const Value.absent(),
+                Value<String> notes = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => TestScoresCompanion(
+                id: id,
+                profileId: profileId,
+                programId: programId,
+                testDateId: testDateId,
+                scorePercentage: scorePercentage,
+                notes: notes,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int profileId,
+                required int programId,
+                Value<int?> testDateId = const Value.absent(),
+                required int scorePercentage,
+                Value<String> notes = const Value.absent(),
+                required DateTime createdAt,
+              }) => TestScoresCompanion.insert(
+                id: id,
+                profileId: profileId,
+                programId: programId,
+                testDateId: testDateId,
+                scorePercentage: scorePercentage,
+                notes: notes,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TestScoresTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TestScoresTable,
+      TestScore,
+      $$TestScoresTableFilterComposer,
+      $$TestScoresTableOrderingComposer,
+      $$TestScoresTableAnnotationComposer,
+      $$TestScoresTableCreateCompanionBuilder,
+      $$TestScoresTableUpdateCompanionBuilder,
+      (TestScore, BaseReferences<_$AppDatabase, $TestScoresTable, TestScore>),
+      TestScore,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12009,4 +13191,8 @@ class $AppDatabaseManager {
       $$LearningProgramsTableTableManager(_db, _db.learningPrograms);
   $$ProfileProgramsTableTableManager get profilePrograms =>
       $$ProfileProgramsTableTableManager(_db, _db.profilePrograms);
+  $$TestDatesTableTableManager get testDates =>
+      $$TestDatesTableTableManager(_db, _db.testDates);
+  $$TestScoresTableTableManager get testScores =>
+      $$TestScoresTableTableManager(_db, _db.testScores);
 }
