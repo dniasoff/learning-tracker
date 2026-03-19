@@ -10,18 +10,27 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'learning_ledger_providers.g.dart';
 
+/// Fetches the profile mode ('adult' or 'child') for the active profile.
+final _activeProfileModeProvider = FutureProvider.autoDispose<String>((ref) async {
+  final database = ref.watch(appDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final profile = await database.profileDao.getProfileById(profileId);
+  return profile?.mode ?? 'adult';
+});
+
 /// Provides the learning ledger repository.
 @riverpod
 LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final database = ref.watch(appDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
 
   return LearningLedgerRepositoryImpl(
     database: database,
     syncEngine: syncEngine,
     activeProfileId: profileId,
-    activeProfileMode: 'adult',
+    activeProfileMode: profileMode,
   );
 }
 
@@ -30,10 +39,11 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
 ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
   final repository = ref.watch(learningLedgerRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
   return ManualCompletionUseCase(
     repository: repository,
     activeProfileId: profileId,
-    activeProfileMode: 'adult',
+    activeProfileMode: profileMode,
   );
 }
 

@@ -82,21 +82,33 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> deleteAccount() async {
-    await _firebaseAuth.currentUser?.delete();
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
+    await user.delete();
   }
 
   @override
   Future<void> changePassword(String newPassword) async {
-    await _firebaseAuth.currentUser?.updatePassword(newPassword);
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
+    await user.updatePassword(newPassword);
   }
 
   @override
   Future<void> reauthenticateWithEmail(String email, String password) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
     final credential = EmailAuthProvider.credential(
       email: email,
       password: password,
     );
-    await _firebaseAuth.currentUser?.reauthenticateWithCredential(credential);
+    await user.reauthenticateWithCredential(credential);
   }
 
   @override

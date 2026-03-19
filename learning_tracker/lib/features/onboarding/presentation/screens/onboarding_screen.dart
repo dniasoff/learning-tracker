@@ -171,7 +171,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final phase = _ScreenPhase.values.where((p) => p.name == savedPhase);
     if (phase.isNotEmpty && mounted) {
-      setState(() => _phase = phase.first);
+      final resumedPhase = phase.first;
+
+      // Reinitialize queues so late variables are available after resume.
+      final selectedList = _selected.toList();
+      if (resumedPhase == _ScreenPhase.scopeSelection ||
+          resumedPhase == _ScreenPhase.learningProcessWizard ||
+          resumedPhase == _ScreenPhase.bulkMark ||
+          resumedPhase == _ScreenPhase.goalSetup) {
+        _scopeQueue = selectedList;
+        _scopeIndex = 0;
+        _wizardQueue = selectedList;
+        _wizardIndex = 0;
+        _bulkMarkQueue = selectedList;
+        _bulkMarkIndex = 0;
+        _goalSetupQueue = selectedList;
+        _goalSetupIndex = 0;
+      }
+
+      setState(() => _phase = resumedPhase);
     }
   }
 
@@ -199,6 +217,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await prefs.remove(_kOnboardingProfileName);
     await prefs.remove(_kOnboardingProfileMode);
     await prefs.remove(_kOnboardingSelectedCurricula);
+    await prefs.remove(_kOnboardingLanguage);
   }
 
   Future<void> _createProfile() async {
@@ -902,6 +921,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               curriculumId: curriculum,
               presets: presets,
               isChildMode: _isChildMode,
+              childName: _isChildMode ? _profileName : null,
             ),
           ),
         );

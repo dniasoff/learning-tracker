@@ -82,53 +82,7 @@ Are there any version constraints or compatibility notes agents should know abou
 
 Should I document any special version rules or compatibility requirements?"
 
-### 2. Tracking System Rules
-
-<check if="{tracking_system} == linear">
-Document the Linear cache integration rules that ALL agents must follow:
-
-**Linear Cache Rules:**
-"Your project uses Linear for tracking. Here are the rules agents MUST follow:
-
-**MANDATORY: Linear Cache for All Reads**
-
-- **NEVER** call Linear MCP tools (list_issues, get_issue, etc.) for reading data
-- **ALWAYS** read from the local cache at `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/`
-- Cache files:
-  - `sprint-status.yaml` — epic/story status overview
-  - `stories/{team_key}-XX.yaml` — individual story details (description, ACs, comments)
-  - `story-map.md` — epic→story mapping
-  - `.last-sync` — cache freshness timestamp
-- If cache is missing or stale, run `tool/linear-sync.sh sync` to rebuild it
-- If a single story needs refreshing, run `tool/linear-sync.sh story <ID>`
-
-**Writes Go Through Linear First**
-
-- Use `linearis` CLI (pipe through `jq`) to write to Linear
-- Then refresh cache: `tool/linear-sync.sh story <ID>` (single) or `tool/linear-sync.sh sync` (structural changes)
-
-**Why:** Direct MCP calls are slow, can exceed token limits, and bypass the cache architecture. The cache is the sole read path for all agents and workflows.
-
-Any additional tracking rules?"
-
-Present A/P/C menu.
-</check>
-
-<check if="{tracking_system} != linear">
-Document any sprint tracking conventions:
-
-"Your project uses local file tracking (sprint-status.yaml).
-
-**Sprint Tracking Rules:**
-- Sprint status file: `{implementation_artifacts}/sprint-status.yaml`
-- Story files: `{implementation_artifacts}/*.md`
-
-Any specific tracking conventions agents should follow?"
-
-Present A/P/C menu.
-</check>
-
-### 3. Language-Specific Rules
+### 2. Language-Specific Rules
 
 Focus on unobvious language patterns agents might miss:
 
@@ -149,7 +103,7 @@ Are these patterns correct? Any other language-specific rules agents should foll
 **Python/Ruby/Other Language Rules:**
 Adapt to the actual language in use with similar focused questions.
 
-### 4. Framework-Specific Rules
+### 3. Framework-Specific Rules
 
 Document framework-specific patterns:
 
@@ -173,7 +127,7 @@ Should I add any other React-specific rules?"
 **Other Framework Rules:**
 Adapt for Vue, Angular, Next.js, Express, etc.
 
-### 5. Testing Rules
+### 4. Testing Rules
 
 Focus on testing patterns that ensure consistency:
 
@@ -194,7 +148,7 @@ Focus on testing patterns that ensure consistency:
 
 Are there testing rules agents should always follow?"
 
-### 6. Code Quality & Style Rules
+### 5. Code Quality & Style Rules
 
 Document critical style and quality rules:
 
@@ -215,7 +169,7 @@ Document critical style and quality rules:
 
 Any additional code quality rules?"
 
-### 7. Development Workflow Rules
+### 6. Development Workflow Rules
 
 Document workflow patterns that affect implementation:
 
@@ -236,7 +190,7 @@ Document workflow patterns that affect implementation:
 
 Should I document any other workflow rules?"
 
-### 8. Critical Don't-Miss Rules
+### 7. Critical Don't-Miss Rules
 
 Identify rules that prevent common mistakes:
 
@@ -256,11 +210,11 @@ Identify rules that prevent common mistakes:
 
 Are there other 'gotchas' agents should know about?"
 
-### 9. Generate Context Content
+### 8. Generate Context Content
 
 For each category, prepare lean content for the project context file:
 
-#### Content Structure (include Tracking System section when {tracking_system} == linear):
+#### Content Structure:
 
 ```markdown
 ## Technology Stack & Versions
@@ -294,7 +248,7 @@ For each category, prepare lean content for the project context file:
 {{bullet_points_of_anti_patterns_and_edge_cases}}
 ```
 
-### 10. Present Content and Menu
+### 9. Present Content and Menu
 
 After each category, show the generated rules and present choices:
 
@@ -309,7 +263,7 @@ After each category, show the generated rules and present choices:
 [P] Party Mode - Review from different implementation perspectives
 [C] Continue - Save these rules and move to next category"
 
-### 11. Handle Menu Selection
+### 10. Handle Menu Selection
 
 #### If 'A' (Advanced Elicitation):
 

@@ -73,13 +73,18 @@ class LearningProcessWizardService {
   }
 
   /// Apply the wizard result — creates stages for the curriculum.
-  Future<void> applyWizardResult(WizardResult result) async {
+  ///
+  /// [profileId] identifies the profile to associate with the preset program.
+  Future<void> applyWizardResult(
+    WizardResult result, {
+    required int profileId,
+  }) async {
     // Clear any existing stages for this curriculum first.
     await _stageDao.deleteAllForCurriculum(result.curriculumId.storageKey);
 
     switch (result.choice) {
       case WizardChoice.preset:
-        await _applyPreset(result);
+        await _applyPreset(result, profileId: profileId);
       case WizardChoice.custom:
         await _applyCustom(result);
       case WizardChoice.noReview:
@@ -87,13 +92,16 @@ class LearningProcessWizardService {
     }
   }
 
-  Future<void> _applyPreset(WizardResult result) async {
+  Future<void> _applyPreset(
+    WizardResult result, {
+    required int profileId,
+  }) async {
     final program = await _learningProgramDao.getProgramById(result.programId!);
     if (program == null) return;
 
     // Store the preset association.
     await _profileProgramDao.setProfileProgram(
-      profileId: 0,
+      profileId: profileId,
       curriculumType: result.curriculumId.storageKey,
       programId: program.id,
     );

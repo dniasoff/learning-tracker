@@ -13,13 +13,16 @@ class ProfileGuard extends AutoRouteGuard {
     required AppDatabase database,
     required int? Function() getSelectedProfileId,
     required void Function(int) setSelectedProfileId,
+    required int Function() getAccountId,
   })  : _database = database,
         _getSelectedProfileId = getSelectedProfileId,
-        _setSelectedProfileId = setSelectedProfileId;
+        _setSelectedProfileId = setSelectedProfileId,
+        _getAccountId = getAccountId;
 
   final AppDatabase _database;
   final int? Function() _getSelectedProfileId;
   final void Function(int) _setSelectedProfileId;
+  final int Function() _getAccountId;
 
   @override
   Future<void> onNavigation(
@@ -33,7 +36,9 @@ class ProfileGuard extends AutoRouteGuard {
     }
 
     // Check how many profiles exist
-    final profiles = await _database.profileDao.getProfilesByAccount(1);
+    final profiles = await _database.profileDao.getProfilesByAccount(
+      _getAccountId(),
+    );
 
     if (profiles.isEmpty) {
       // No profiles yet — proceed (onboarding will handle)

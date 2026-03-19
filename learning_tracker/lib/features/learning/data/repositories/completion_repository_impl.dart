@@ -103,6 +103,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // 7. Push to Firestore sync queue (fire-and-forget)
     unawaited(_syncCompletion(completion));
 
+    // 8. Auto-detect unit completions (fire-and-forget)
+    if (_completionDetectionService != null) {
+      unawaited(_completionDetectionService.checkAndRecordCompletions(
+        curriculumId: request.curriculumId,
+        sefariaRef: request.sefariaRef,
+        trackType: request.trackType,
+        profileId: _activeProfileId,
+        markedBy: _activeProfileId,
+      ));
+    }
+
     return completion;
   }
 

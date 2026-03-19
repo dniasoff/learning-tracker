@@ -355,9 +355,3 @@ The story now includes comprehensive developer guidance to prevent common implem
 - Miss key implementation signals due to inefficient communication
 
 **Go create the ultimate developer implementation guide! 🚀**
-
-## 🔗 Linear Tracking Validation (when tracking_system=linear)
-
-- [ ] **Linear Issue Exists:** Story has a corresponding Linear issue with BMAD-Managed label
-- [ ] **Dev Notes in Linear:** Dev Notes section written to Linear issue description
-- [ ] **Status Updated:** Linear issue status set to Todo (ready-for-dev)

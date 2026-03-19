@@ -16,15 +16,6 @@ description: 'Creates a dedicated story file with all the context the agent will
 - SAVE QUESTIONS: If you think of questions or clarifications during analysis, save them for the end after the complete story is written
 - ZERO USER INTERVENTION: Process should be fully automated except for initial epic/story selection or missing documents
 
-<critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-**READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
-If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
-**WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-`tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
-Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
-
 ---
 
 ## INITIALIZATION
@@ -75,96 +66,40 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>GOTO step 2a</action>
   </check>
 
-  <!-- LINEAR PATH: Read from cache -->
-  <check if="{tracking_system} == linear">
-    <critical>Linear is the SOLE source of truth. Read from ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ (not sprint-status.yaml in implementation-artifacts).</critical>
-    <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
-      <output>Linear cache not found. Building complete cache...</output>
-      <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
-      <check if="sync command failed">
-        <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
-        <action>HALT</action>
-      </check>
-      <output>✅ Linear cache created successfully.</output>
-    </check>
-    <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and find stories with status Backlog</action>
-    <action>Filter to stories only (exclude epics)</action>
-    <action>Select the first Backlog story, extract epic_num and story_num from title pattern [N.M] or [N-M]</action>
+  <action>Check if {{sprint_status}} file exists for auto discover</action>
+  <check if="sprint status file does NOT exist">
+    <output>🚫 No sprint status file found and no story specified</output>
+    <output>
+      **Required Options:**
+      1. Run `sprint-planning` to initialize sprint tracking (recommended)
+      2. Provide specific epic-story number to create (e.g., "1-2-user-auth")
+      3. Provide path to story documents if sprint status doesn't exist yet
+    </output>
+    <ask>Choose option [1], provide epic-story number, path to story docs, or [q] to quit:</ask>
 
-    <check if="no backlog stories found in Linear">
-      <output>📋 No backlog stories found in Linear project {linear_project}
-
-        All stories are either already created, in progress, or done.
-
-        **Options:**
-        1. Run sprint-planning to refresh story tracking
-        2. Load PM agent and run correct-course to add more stories
-        3. Check if current sprint is complete and run retrospective
-      </output>
-      <action>HALT</action>
+    <check if="user chooses 'q'">
+      <action>HALT - No work needed</action>
     </check>
 
-    <action>Extract from found story title:
-      - epic_num, story_num, story_title
-    </action>
-    <action>Set {{story_id}} = "{{epic_num}}.{{story_num}}"</action>
-    <action>Store story_key for later use</action>
-
-    <!-- Check epic status from cache if this is first story -->
-    <action>Check if this is the first story in epic {{epic_num}}</action>
-    <check if="this is first story in epic {{epic_num}}">
-      <action>Read epic status from cache: find epic {{epic_num}} in `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` under `epics:` section</action>
-      <check if="epic status is Done">
-        <output>🚫 ERROR: Cannot create story in completed epic</output>
-        <output>Epic {{epic_num}} is marked as 'Done' in Linear.</output>
-        <action>HALT - Cannot proceed</action>
-      </check>
-      <check if="epic status is Backlog">
-        <action>Update epic to In Progress in Linear:
-          linearis issues update [epic_id] -s "In Progress"
-        </action>
-        <action>Refresh cache: `tool/linear-sync.sh story [epic_id]`</action>
-        <output>📊 Epic {{epic_num}} status updated to In Progress in Linear</output>
-      </check>
+    <check if="user chooses '1'">
+      <output>Run sprint-planning workflow first to create sprint-status.yaml</output>
+      <action>HALT - User needs to run sprint-planning</action>
     </check>
 
-    <action>GOTO step 2a</action>
+    <check if="user provides epic-story number">
+      <action>Parse user input: extract epic_num, story_num, story_title</action>
+      <action>Set {{epic_num}}, {{story_num}}, {{story_key}} from user input</action>
+      <action>GOTO step 2a</action>
+    </check>
+
+    <check if="user provides story docs path">
+      <action>Use user-provided path for story documents</action>
+      <action>GOTO step 2a</action>
+    </check>
   </check>
 
-  <!-- FILE-SYSTEM PATH: Use local sprint-status.yaml -->
-  <check if="{tracking_system} != linear">
-    <action>Check if {{sprint_status}} file exists for auto discover</action>
-    <check if="sprint status file does NOT exist">
-      <output>🚫 No sprint status file found and no story specified</output>
-      <output>
-        **Required Options:**
-        1. Run `sprint-planning` to initialize sprint tracking (recommended)
-        2. Provide specific epic-story number to create (e.g., "1-2-user-auth")
-        3. Provide path to story documents if sprint status doesn't exist yet
-      </output>
-      <ask>Choose option [1], provide epic-story number, path to story docs, or [q] to quit:</ask>
-
-      <check if="user chooses 'q'">
-        <action>HALT - No work needed</action>
-      </check>
-
-      <check if="user chooses '1'">
-        <output>Run sprint-planning workflow first to create sprint-status.yaml</output>
-        <action>HALT - User needs to run sprint-planning</action>
-      </check>
-
-      <check if="user provides epic-story number">
-        <action>Parse user input: extract epic_num, story_num, story_title</action>
-        <action>Set {{epic_num}}, {{story_num}}, {{story_key}} from user input</action>
-        <action>GOTO step 2a</action>
-      </check>
-
-      <check if="user provides story docs path">
-        <action>Use user-provided path for story documents</action>
-        <action>GOTO step 2a</action>
-      </check>
-    </check>
-
+  <!-- Auto-discover from sprint status only if no user input -->
+  <check if="no user input provided">
     <critical>MUST read COMPLETE {sprint_status} file from start to end to preserve order</critical>
     <action>Load the FULL file: {{sprint_status}}</action>
     <action>Read ALL lines from beginning to end - do not skip any content</action>
@@ -223,6 +158,62 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <action>GOTO step 2a</action>
   </check>
+  <action>Load the FULL file: {{sprint_status}}</action>
+  <action>Read ALL lines from beginning to end - do not skip any content</action>
+  <action>Parse the development_status section completely</action>
+
+  <action>Find the FIRST story (by reading in order from top to bottom) where:
+    - Key matches pattern: number-number-name (e.g., "1-2-user-auth")
+    - NOT an epic key (epic-X) or retrospective (epic-X-retrospective)
+    - Status value equals "backlog"
+  </action>
+
+  <check if="no backlog story found">
+    <output>No backlog stories found in sprint-status.yaml
+
+      All stories are either already created, in progress, or done.
+
+      **Options:**
+      1. Run sprint-planning to refresh story tracking
+      2. Load PM agent and run correct-course to add more stories
+      3. Check if current sprint is complete and run retrospective
+    </output>
+    <action>HALT</action>
+  </check>
+
+  <action>Extract from found story key (e.g., "1-2-user-authentication"):
+    - epic_num: first number before dash (e.g., "1")
+    - story_num: second number after first dash (e.g., "2")
+    - story_title: remainder after second dash (e.g., "user-authentication")
+  </action>
+  <action>Set {{story_id}} = "{{epic_num}}.{{story_num}}"</action>
+  <action>Store story_key for later use (e.g., "1-2-user-authentication")</action>
+
+  <!-- Mark epic as in-progress if this is first story -->
+  <action>Check if this is the first story in epic {{epic_num}} by looking for {{epic_num}}-1-* pattern</action>
+  <check if="this is first story in epic {{epic_num}}">
+    <action>Load {{sprint_status}} and check epic-{{epic_num}} status</action>
+    <action>If epic status is "backlog" → update to "in-progress"</action>
+    <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
+    <action>If epic status is "in-progress" → no change needed</action>
+    <check if="epic status is 'done'">
+      <output>ERROR: Cannot create story in completed epic</output>
+      <output>Epic {{epic_num}} is marked as 'done'. All stories are complete.</output>
+      <output>If you need to add more work, either:</output>
+      <output>1. Manually change epic status back to 'in-progress' in sprint-status.yaml</output>
+      <output>2. Create a new epic for additional work</output>
+      <action>HALT - Cannot proceed</action>
+    </check>
+    <check if="epic status is not one of: backlog, contexted, in-progress, done">
+      <output>ERROR: Invalid epic status '{{epic_status}}'</output>
+      <output>Epic {{epic_num}} has invalid status. Expected: backlog, in-progress, or done</output>
+      <output>Please fix sprint-status.yaml manually or run sprint-planning to regenerate</output>
+      <action>HALT - Cannot proceed</action>
+    </check>
+    <output>Epic {{epic_num}} status updated to in-progress</output>
+  </check>
+
+  <action>GOTO step 2a</action>
 </step>
 
 <step n="2" goal="Load and analyze core artifacts">
@@ -310,142 +301,88 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 <step n="5" goal="Create comprehensive story file">
   <critical>📝 CREATE ULTIMATE STORY FILE - The developer's master implementation guide!</critical>
 
-  <!-- LOCAL FILE PATH: Write story to local file -->
-  <check if="{tracking_system} != linear">
-    <action>Initialize from template.md:
-    {default_output_file}</action>
-    <template-output file="{default_output_file}">story_header</template-output>
+  <action>Initialize from template.md:
+  {default_output_file}</action>
+  <template-output file="{default_output_file}">story_header</template-output>
 
-    <!-- Story foundation from epics analysis -->
-    <template-output
-      file="{default_output_file}">story_requirements</template-output>
+  <!-- Story foundation from epics analysis -->
+  <template-output
+    file="{default_output_file}">story_requirements</template-output>
 
-    <!-- Developer context section - MOST IMPORTANT PART -->
-    <template-output file="{default_output_file}">
-    developer_context_section</template-output> **DEV AGENT GUARDRAILS:** <template-output file="{default_output_file}">
-    technical_requirements</template-output>
-    <template-output file="{default_output_file}">architecture_compliance</template-output>
-    <template-output
-      file="{default_output_file}">library_framework_requirements</template-output>
-    <template-output file="{default_output_file}">
-    file_structure_requirements</template-output>
-    <template-output file="{default_output_file}">testing_requirements</template-output>
+  <!-- Developer context section - MOST IMPORTANT PART -->
+  <template-output file="{default_output_file}">
+  developer_context_section</template-output> **DEV AGENT GUARDRAILS:** <template-output file="{default_output_file}">
+  technical_requirements</template-output>
+  <template-output file="{default_output_file}">architecture_compliance</template-output>
+  <template-output
+    file="{default_output_file}">library_framework_requirements</template-output>
+  <template-output file="{default_output_file}">
+  file_structure_requirements</template-output>
+  <template-output file="{default_output_file}">testing_requirements</template-output>
 
-    <!-- Previous story intelligence -->
-    <check
-      if="previous story learnings available">
-      <template-output file="{default_output_file}">previous_story_intelligence</template-output>
-    </check>
-
-    <!-- Git intelligence -->
-    <check
-      if="git analysis completed">
-      <template-output file="{default_output_file}">git_intelligence_summary</template-output>
-    </check>
-
-    <!-- Latest technical specifics -->
-    <check if="web research completed">
-      <template-output file="{default_output_file}">latest_tech_information</template-output>
-    </check>
-
-    <!-- Project context reference -->
-    <template-output
-      file="{default_output_file}">project_context_reference</template-output>
-
-    <!-- Final status update -->
-    <template-output file="{default_output_file}">
-    story_completion_status</template-output>
-
-    <!-- CRITICAL: Set status to ready-for-dev -->
-    <action>Set story Status to: "ready-for-dev"</action>
-    <action>Add completion note: "Ultimate
-    context engine analysis completed - comprehensive developer guide created"</action>
+  <!-- Previous story intelligence -->
+  <check
+    if="previous story learnings available">
+    <template-output file="{default_output_file}">previous_story_intelligence</template-output>
   </check>
 
-  <!-- LINEAR PATH: Compose dev notes in memory, write ONLY to Linear (no local file) -->
-  <check if="{tracking_system} == linear">
-    <action>Compose the full story dev notes content in memory using template.md sections:
-      - story_header, story_requirements, developer_context_section
-      - technical_requirements, architecture_compliance, library_framework_requirements
-      - file_structure_requirements, testing_requirements
-      - previous_story_intelligence (if available), git_intelligence_summary (if available)
-      - latest_tech_information (if available), project_context_reference
-      - story_completion_status
-    </action>
-    <action>Set story Status to: "ready-for-dev"</action>
-    <action>Write composed dev notes to Linear issue description (NO local file):
-      linearis issues update {{story_key}} -d "$STORY_DEV_NOTES" | jq '{id: .identifier, title: .title}'
-    </action>
+  <!-- Git intelligence -->
+  <check
+    if="git analysis completed">
+    <template-output file="{default_output_file}">git_intelligence_summary</template-output>
   </check>
+
+  <!-- Latest technical specifics -->
+  <check if="web research completed">
+    <template-output file="{default_output_file}">latest_tech_information</template-output>
+  </check>
+
+  <!-- Project context reference -->
+  <template-output
+    file="{default_output_file}">project_context_reference</template-output>
+
+  <!-- Final status update -->
+  <template-output file="{default_output_file}">
+  story_completion_status</template-output>
+
+  <!-- CRITICAL: Set status to ready-for-dev -->
+  <action>Set story Status to: "ready-for-dev"</action>
+  <action>Add completion note: "Ultimate
+  context engine analysis completed - comprehensive developer guide created"</action>
 </step>
 
 <step n="6" goal="Update sprint status and finalize">
-  <check if="{tracking_system} != linear">
-    <action>Validate the newly created story file {story_file} against {installed_path}/checklist.md and apply any required fixes before finalizing</action>
-    <action>Save story document to {default_output_file}</action>
-  </check>
-  <check if="{tracking_system} == linear">
-    <action>Validate the composed dev notes content against {installed_path}/checklist.md and apply any required fixes before finalizing</action>
-    <note>No local file to save — content already written to Linear issue description in Step 5</note>
-  </check>
+  <action>Validate the newly created story file {story_file} against {installed_path}/checklist.md and apply any required fixes before finalizing</action>
+  <action>Save story document unconditionally</action>
 
-  <!-- Update sprint tracking — use the correct system -->
-  <check if="{tracking_system} == linear">
-    <action>Update Linear issue status to Todo:
-      linearis issues update {{story_key}} --status "Todo" | jq '{id: .identifier, status: .state.name}'
-    </action>
-    <action>Refresh cache: tool/linear-sync.sh story {{story_key}}</action>
-  </check>
-
-  <check if="{tracking_system} != linear">
-    <check if="sprint status file exists">
-      <action>Update {{sprint_status}}</action>
-      <action>Load the FULL file and read all development_status entries</action>
-      <action>Find development_status key matching {{story_key}}</action>
-      <action>Verify current status is "backlog" (expected previous state)</action>
-      <action>Update development_status[{{story_key}}] = "ready-for-dev"</action>
-      <action>Update last_updated field to current date</action>
-      <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
-    </check>
+  <!-- Update sprint status -->
+  <check if="sprint status file exists">
+    <action>Update {{sprint_status}}</action>
+    <action>Load the FULL file and read all development_status entries</action>
+    <action>Find development_status key matching {{story_key}}</action>
+    <action>Verify current status is "backlog" (expected previous state)</action>
+    <action>Update development_status[{{story_key}}] = "ready-for-dev"</action>
+    <action>Update last_updated field to current date</action>
+    <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
   </check>
 
   <action>Report completion</action>
-  <check if="{tracking_system} != linear">
-    <output>**🎯 ULTIMATE BMad Method STORY CONTEXT CREATED, {user_name}!**
+  <output>**🎯 ULTIMATE BMad Method STORY CONTEXT CREATED, {user_name}!**
 
-      **Story Details:**
-      - Story ID: {{story_id}}
-      - Story Key: {{story_key}}
-      - File: {{story_file}}
-      - Status: ready-for-dev
+    **Story Details:**
+    - Story ID: {{story_id}}
+    - Story Key: {{story_key}}
+    - File: {{story_file}}
+    - Status: ready-for-dev
 
-      **Next Steps:**
-      1. Review the comprehensive story in {{story_file}}
-      2. Run dev agents `dev-story` for optimized implementation
-      3. Run `code-review` when complete (auto-marks done)
-      4. Optional: If Test Architect module installed, run `/bmad:tea:automate` after `dev-story` to generate guardrail tests
+    **Next Steps:**
+    1. Review the comprehensive story in {{story_file}}
+    2. Run dev agents `dev-story` for optimized implementation
+    3. Run `code-review` when complete (auto-marks done)
+    4. Optional: If Test Architect module installed, run `/bmad:tea:automate` after `dev-story` to generate guardrail tests
 
-      **The developer now has everything needed for flawless implementation!**
-    </output>
-  </check>
-  <check if="{tracking_system} == linear">
-    <output>**🎯 ULTIMATE BMad Method STORY CONTEXT CREATED, {user_name}!**
-
-      **Story Details:**
-      - Story ID: {{story_id}}
-      - Story Key: {{story_key}}
-      - Linear Issue: {{story_key}} (dev notes written to issue description)
-      - Status: Todo (in Linear)
-
-      **Next Steps:**
-      1. Review the dev notes on Linear issue {{story_key}}
-      2. Run dev agents `dev-story` for optimized implementation
-      3. Run `code-review` when complete (auto-marks done)
-      4. Optional: If Test Architect module installed, run `/bmad:tea:automate` after `dev-story` to generate guardrail tests
-
-      **The developer now has everything needed for flawless implementation!**
-    </output>
-  </check>
+    **The developer now has everything needed for flawless implementation!**
+  </output>
 </step>
 
 </workflow>

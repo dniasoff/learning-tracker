@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -172,10 +173,10 @@ final _currentProgramProvider =
   curriculum,
 ) async {
   final database = ref.watch(appDatabaseProvider);
-  // profileId 0 = default/current profile (same as wizard service uses)
+  final profileId = ref.watch(activeProfileIdProvider);
   final profileProgram =
       await database.profileProgramDao.getProgramForProfileAndCurriculum(
-    0,
+    profileId,
     curriculum.storageKey,
   );
   if (profileProgram == null) return null;

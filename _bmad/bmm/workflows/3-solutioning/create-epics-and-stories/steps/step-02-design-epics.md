@@ -182,22 +182,11 @@ If user wants changes:
 
 ## CONTENT TO UPDATE IN DOCUMENT:
 
-<check if="{tracking_system} == linear">
-  <action>Prepare Linear issue creation plan for approved epics. Each epic will be created as a Linear issue when stories are generated in Step 3.</action>
-</check>
-
-<check if="{tracking_system} != linear">
 After approval, update {outputFile}:
 
 1. Replace {{epics_list}} placeholder with the approved epic list
 2. Replace {{requirements_coverage_map}} with the coverage map
 3. Ensure all FRs are mapped to epics
-</check>
-
-<check if="{tracking_system} == linear">
-After approval, all epic/story content goes directly to Linear issue descriptions (no local file writes).
-The approved epic list and coverage map are stored in Linear issue descriptions when stories are created in Step 3.
-</check>
 
 ### 8. Present MENU OPTIONS
 
@@ -207,7 +196,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 - IF A: Read fully and follow: {advancedElicitationTask}
 - IF P: Read fully and follow: {partyModeWorkflow}
-- IF C: {{#if tracking_system != "linear"}}Save approved epics_list to {outputFile}, update frontmatter, then{{/if}} read fully and follow: {nextStepFile}
+- IF C: Save approved epics_list to {outputFile}, update frontmatter, then read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#8-present-menu-options)
 
 #### EXECUTION RULES:

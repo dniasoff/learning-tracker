@@ -24,22 +24,42 @@ ProgressRepository progressRepository(Ref ref) {
   return ProgressRepositoryImpl(database: database);
 }
 
-/// Provider for track breakdown by curriculum.
+/// Provider for track breakdown by curriculum, scoped to the active profile.
 ///
 /// Returns a map of TrackType to completion counts for the given curriculum.
 @riverpod
 Future<Map<TrackType, int>> trackBreakdown(Ref ref, String curriculumId) async {
-  final repository = ref.watch(progressRepositoryProvider);
-  return repository.getTrackBreakdown(curriculumId);
+  final db = ref.watch(appDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final rawBreakdown = await db.completionDao.getTrackBreakdownByProfile(
+    curriculumId,
+    profileId,
+  );
+
+  // Convert string keys to TrackType enum keys
+  final result = <TrackType, int>{};
+  for (final trackType in TrackType.values) {
+    result[trackType] = 0;
+  }
+  for (final entry in rawBreakdown.entries) {
+    try {
+      final trackType = TrackType.fromStorageKey(entry.key);
+      result[trackType] = entry.value;
+    } on ArgumentError {
+      continue;
+    }
+  }
+  return result;
 }
 
-/// Provider for aggregate completion count by curriculum.
+/// Provider for aggregate completion count by curriculum, scoped to the active profile.
 ///
 /// Returns the total completion count across all tracks for the given curriculum.
 @riverpod
 Future<int> aggregateCount(Ref ref, String curriculumId) async {
-  final repository = ref.watch(progressRepositoryProvider);
-  return repository.getAggregateCount(curriculumId);
+  final db = ref.watch(appDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return db.completionDao.getAggregateCountByProfile(curriculumId, profileId);
 }
 
 /// Provider that fetches completions for a single curriculum via

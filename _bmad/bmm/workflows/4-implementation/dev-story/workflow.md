@@ -1,8 +1,6 @@
 ---
 name: dev-story
 description: 'Execute story implementation following a context filled story spec file. Use when the user says "dev this story [story file]" or "implement the next story in the sprint plan"'
-tracking_system: "{config_source}:tracking_system"
-linear_cache: "~/.local/share/linear-sync/{linear_tenant}/{linear_project}"
 ---
 
 # Dev Story Workflow
@@ -59,15 +57,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 6 decides completion.</critical>
   <critical>User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.</critical>
 
-  <critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-  **READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-  for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
-  If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
-  **WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-  `tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-  Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
-  Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
-
   <step n="1" goal="Find next ready story and load it" tag="sprint-status">
     <check if="{{story_path}} is provided">
       <action>Use {{story_path}} directly</action>
@@ -76,52 +65,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       <goto anchor="task_check" />
     </check>
 
-    <!-- Linear-based story discovery — read from cache -->
-    <check if="{tracking_system} == linear">
-      <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
-        <output>Linear cache not found. Building complete cache...</output>
-        <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
-        <check if="sync command failed">
-          <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
-          <action>HALT</action>
-        </check>
-        <output>✅ Linear cache created successfully.</output>
-      </check>
-
-      <check if="{{story_key}} is provided">
-        <action>Read story details from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{story_key}}.yaml`</action>
-        <check if="cache file does not exist">
-          <action>Run `tool/linear-sync.sh story {{story_key}}` to fetch it</action>
-        </check>
-        <goto anchor="linear_load_issue" />
-      </check>
-
-      <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and find stories with status Todo</action>
-      <action>Filter to stories only (exclude epics)</action>
-      <action>Select first Todo story, store as {{linear_issue_id}}</action>
-
-      <check if="no ready stories found">
-        <output>No stories with "Todo" status found in cache.
-Run `make linear-sync` to refresh, or run create-story / sprint-planning.</output>
-        <action>HALT</action>
-      </check>
-
-      <anchor id="linear_load_issue" />
-
-      <action>Read full story details from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml`</action>
-      <action>Parse description for: Story statement, Acceptance Criteria, Dev Notes, Implementation Tasks</action>
-
-      <action if="no Dev Notes section found">
-        <output>Story does not have Dev Notes. Run create-story first.</output>
-        <action>HALT</action>
-      </action>
-
-      <action>Refresh cache to get latest comments: `tool/linear-sync.sh story {{linear_issue_id}}`</action>
-      <action>Read comments from cache: `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml` — parse the `comments:` section for review continuation check</action>
-    </check>
-
     <!-- Sprint-based story discovery -->
-    <check if="{tracking_system} != linear" />
     <check if="{{sprint_status}} file exists">
       <critical>MUST read COMPLETE sprint-status.yaml file from start to end to preserve order</critical>
       <action>Load the FULL file: {{sprint_status}}</action>
@@ -289,17 +233,6 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
   </step>
 
   <step n="4" goal="Mark story in-progress" tag="sprint-status">
-    <check if="{tracking_system} == linear">
-      <action>Update Linear status:
-        linearis issues update {{linear_issue_id}} -s "In Progress"
-      </action>
-      <action>Post progress comment:
-        linearis comments create {{linear_issue_id}} --body "Starting work. Status: In Progress"
-      </action>
-      <action>Refresh cache: tool/linear-sync.sh story {{linear_issue_id}}</action>
-    </check>
-
-    <check if="{tracking_system} != linear" />
     <check if="{{sprint_status}} file exists">
       <action>Load the FULL file: {{sprint_status}}</action>
       <action>Read all development_status entries to find {{story_key}}</action>
@@ -353,14 +286,7 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
     <action>Improve code structure while keeping tests green</action>
     <action>Ensure code follows architecture patterns and coding standards from Dev Notes</action>
 
-    <check if="{tracking_system} != linear">
-      <action>Document technical approach and decisions in Dev Agent Record → Implementation Plan</action>
-    </check>
-    <check if="{tracking_system} == linear">
-      <action>Post technical approach and decisions as Linear comment:
-        linearis comments create {{linear_issue_id}} --body "Implementation Plan: [approach and decisions]"
-      </action>
-    </check>
+    <action>Document technical approach and decisions in Dev Agent Record → Implementation Plan</action>
 
     <action if="new dependencies required beyond story specifications">HALT: "Additional dependencies need user approval"</action>
     <action if="3 consecutive implementation failures occur">HALT and request guidance</action>
@@ -404,36 +330,20 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
       <action>Add to resolution tracking list: {{resolved_review_items}}</action>
 
       <!-- Mark task in Review Follow-ups section -->
-      <check if="{tracking_system} != linear">
-        <action>Mark task checkbox [x] in "Tasks/Subtasks → Review Follow-ups (AI)" section</action>
+      <action>Mark task checkbox [x] in "Tasks/Subtasks → Review Follow-ups (AI)" section</action>
 
-        <!-- CRITICAL: Also mark corresponding action item in review section -->
-        <action>Find matching action item in "Senior Developer Review (AI) → Action Items" section by matching description</action>
-        <action>Mark that action item checkbox [x] as resolved</action>
-      </check>
+      <!-- CRITICAL: Also mark corresponding action item in review section -->
+      <action>Find matching action item in "Senior Developer Review (AI) → Action Items" section by matching description</action>
+      <action>Mark that action item checkbox [x] as resolved</action>
 
-      <check if="{tracking_system} != linear">
-        <action>Add to Dev Agent Record → Completion Notes: "✅ Resolved review finding [{{severity}}]: {{description}}"</action>
-      </check>
-      <check if="{tracking_system} == linear">
-        <action>Post review resolution as Linear comment:
-          linearis comments create {{linear_issue_id}} --body "✅ Resolved review finding [{{severity}}]: {{description}}"
-        </action>
-      </check>
+      <action>Add to Dev Agent Record → Completion Notes: "✅ Resolved review finding [{{severity}}]: {{description}}"</action>
     </check>
 
     <!-- ONLY MARK COMPLETE IF ALL VALIDATION PASS -->
     <check if="ALL validation gates pass AND tests ACTUALLY exist and pass">
-      <check if="{tracking_system} != linear">
-        <action>ONLY THEN mark the task (and subtasks) checkbox with [x]</action>
-        <action>Update File List section with ALL new, modified, or deleted files (paths relative to repo root)</action>
-        <action>Add completion notes to Dev Agent Record summarizing what was ACTUALLY implemented and tested</action>
-      </check>
-      <check if="{tracking_system} == linear">
-        <action>Post completion summary as Linear comment:
-          linearis comments create {{linear_issue_id}} --body "Task validated. Files: [list]. Summary: [what was implemented and tested]"
-        </action>
-      </check>
+      <action>ONLY THEN mark the task (and subtasks) checkbox with [x]</action>
+      <action>Update File List section with ALL new, modified, or deleted files (paths relative to repo root)</action>
+      <action>Add completion notes to Dev Agent Record summarizing what was ACTUALLY implemented and tested</action>
     </check>
 
     <check if="ANY validation fails">
@@ -443,31 +353,10 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
 
     <check if="review_continuation == true and {{resolved_review_items}} is not empty">
       <action>Count total resolved review items in this session</action>
-      <check if="{tracking_system} != linear">
-        <action>Add Change Log entry: "Addressed code review findings - {{resolved_count}} items resolved (Date: {{date}})"</action>
-      </check>
-      <check if="{tracking_system} == linear">
-        <action>Post change log as Linear comment:
-          linearis comments create {{linear_issue_id}} --body "Addressed code review findings - {{resolved_count}} items resolved"
-        </action>
-      </check>
+      <action>Add Change Log entry: "Addressed code review findings - {{resolved_count}} items resolved (Date: {{date}})"</action>
     </check>
 
-    <check if="{tracking_system} == linear">
-      <action>Read description from cache: parse `description:` field from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml`</action>
-      <action>Tick checkbox in description (change `- [ ] TASK_TEXT` to `- [x] TASK_TEXT`)</action>
-      <action>Write updated description to Linear:
-        linearis issues update {{linear_issue_id}} -d "$UPDATED_DESC"
-      </action>
-      <action>Post task progress comment:
-        linearis comments create {{linear_issue_id}} --body "Task complete: [task]. Progress: [n]/[total]"
-      </action>
-      <action>Refresh cache: `tool/linear-sync.sh story {{linear_issue_id}}`</action>
-    </check>
-
-    <check if="{tracking_system} != linear">
-      <action>Save the story file</action>
-    </check>
+    <action>Save the story file</action>
     <action>Determine if more incomplete tasks remain</action>
     <action if="more tasks remain">
       <goto step="5">Next task</goto>
@@ -482,9 +371,7 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
     <action>Run the full regression suite (do not skip)</action>
     <action>Confirm File List includes every changed file</action>
     <action>Execute enhanced definition-of-done validation</action>
-    <check if="{tracking_system} != linear">
-      <action>Update the story Status to: "review"</action>
-    </check>
+    <action>Update the story Status to: "review"</action>
 
     <!-- Enhanced Definition of Done Validation -->
     <action>Validate definition-of-done checklist with essential requirements:
@@ -501,20 +388,7 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
       - Only permitted story sections were modified
     </action>
 
-    <!-- Linear completion -->
-    <check if="{tracking_system} == linear">
-      <action>Refresh cache: `tool/linear-sync.sh story {{linear_issue_id}}`</action>
-      <action>Verify all checkboxes ticked by reading description from cache: `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{linear_issue_id}}.yaml` — count `- [ ]` occurrences in `description:` field</action>
-      <check if="any unchecked items remain">
-        <action>HALT - tick remaining checkboxes or complete the work</action>
-      </check>
-      <action>Post ready-for-review comment:
-        linearis comments create {{linear_issue_id}} --body "Story ready for review. All tasks and ACs ticked."
-      </action>
-    </check>
-
     <!-- Mark story ready for review - sprint status conditional -->
-    <check if="{tracking_system} != linear" />
     <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
       <action>Load the FULL file: {sprint_status}</action>
       <action>Find development_status key matching {{story_key}}</action>
@@ -545,19 +419,7 @@ Run `make linear-sync` to refresh, or run create-story / sprint-planning.</outpu
 
   <step n="10" goal="Completion communication and user support">
     <action>Execute the enhanced definition-of-done checklist using the validation framework</action>
-    <check if="{tracking_system} != linear">
-      <action>Prepare a concise summary in Dev Agent Record → Completion Notes</action>
-    </check>
-
-    <check if="{tracking_system} == linear">
-      <action>Update Linear status:
-        linearis issues update {{linear_issue_id}} -s "Code Complete"
-      </action>
-      <action>Post final comment:
-        linearis comments create {{linear_issue_id}} --body "Code Complete. Ready for review."
-      </action>
-      <action>Refresh cache: tool/linear-sync.sh story {{linear_issue_id}}</action>
-    </check>
+    <action>Prepare a concise summary in Dev Agent Record → Completion Notes</action>
 
     <action>Communicate to {user_name} that story implementation is complete and ready for review</action>
     <action>Summarize key accomplishments: story ID, story key, title, key changes made, tests added, files modified</action>

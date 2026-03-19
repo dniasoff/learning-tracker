@@ -1,7 +1,12 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -25,15 +30,19 @@ class JourneySortModeNotifier extends _$JourneySortModeNotifier {
   }
 }
 
-/// Stub provider for learning ledger entries.
-///
-/// TODO(DNI-124): Replace with real learningLedgerProvider once the Lifetime
-/// Learning Ledger story is merged. Currently returns an empty list.
-@riverpod
-Future<List<LedgerEntry>> learningLedger(Ref ref, int profileId) async {
-  // Stub: no ledger data until DNI-124 is merged
-  return [];
-}
+/// Looks up a profile by ID, used when viewing another user's journey.
+final profileByIdProvider =
+    FutureProvider.autoDispose.family<ProfileModel?, int>((ref, profileId) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.getProfileById(profileId);
+});
+
+/// Provider for learning ledger entries for a given profile.
+final learningLedgerProvider = FutureProvider.autoDispose
+    .family<List<LearningLedgerData>, int>((ref, profileId) async {
+  final database = ref.watch(appDatabaseProvider);
+  return database.learningLedgerDao.getEntriesByProfile(profileId);
+});
 
 /// Computes the full JourneyViewModel for a given profile.
 @riverpod
@@ -118,7 +127,7 @@ int _countTotalUnits(List<ContentItem> content, CurriculumId curriculum) {
 
 /// Detect milestone achievements from ledger entries.
 List<MilestoneAchievement> _detectMilestones(
-  List<LedgerEntry> entries,
+  List<LearningLedgerData> entries,
   List<ContentItem> content,
   CurriculumId curriculum,
 ) {
@@ -168,29 +177,3 @@ List<MilestoneAchievement> _detectMilestones(
   return milestones;
 }
 
-/// Temporary stub model for ledger entries until DNI-124 is merged.
-///
-/// TODO(DNI-124): Remove this class and use the real LearningLedger model.
-class LedgerEntry {
-  const LedgerEntry({
-    required this.curriculumId,
-    required this.unitType,
-    required this.unitIdentifier,
-    required this.unitDisplayNameHe,
-    required this.unitDisplayNameEn,
-    required this.trackType,
-    required this.completedAt,
-    required this.completionNumber,
-    required this.isManual,
-  });
-
-  final String curriculumId;
-  final String unitType;
-  final String unitIdentifier;
-  final String unitDisplayNameHe;
-  final String unitDisplayNameEn;
-  final String trackType;
-  final DateTime completedAt;
-  final int completionNumber;
-  final bool isManual;
-}

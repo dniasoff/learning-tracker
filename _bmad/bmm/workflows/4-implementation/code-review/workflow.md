@@ -19,15 +19,6 @@ description: 'Perform adversarial code review finding specific issues. Use when 
 - Acceptance Criteria not implemented = HIGH severity finding
 - Do not review files that are not part of the application's source code. Always exclude the `_bmad/` and `_bmad-output/` folders from the review. Always exclude IDE and CLI configuration folders like `.cursor/` and `.windsurf/` and `.claude/`
 
-<critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-**READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
-If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
-**WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-`tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
-Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
-
 ---
 
 ## INITIALIZATION
@@ -68,12 +59,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 <step n="1" goal="Load story and discover changes">
   <action>Use provided {{story_path}} or ask user which story file to review</action>
-  <check if="{tracking_system} == linear">
-    <action>Read story from cache: `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{{story_key}}.yaml`</action>
-    <check if="cache file does not exist">
-      <action>Run `tool/linear-sync.sh story {{story_key}}` to fetch it</action>
-    </check>
-  </check>
   <action>Read COMPLETE story file</action>
   <action>Set {{story_key}} = extracted key from filename (e.g., "1-2-user-authentication.md" → "1-2-user-authentication") or story
     metadata</action>
@@ -203,31 +188,15 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <check if="user chooses 1">
     <action>Fix all HIGH and MEDIUM issues in the code</action>
     <action>Add/update tests as needed</action>
-    <check if="{tracking_system} != linear">
-      <action>Update File List in story if files changed</action>
-      <action>Update story Dev Agent Record with fixes applied</action>
-    </check>
-    <check if="{tracking_system} == linear">
-      <action>Post review fixes summary as a Linear comment:
-        linearis issues comment {{story_key}} --body "Code Review: Fixed {{fixed_count}} issues. [details of fixes applied]" | jq '{id: .id}'
-      </action>
-      <action>Refresh cache: tool/linear-sync.sh story {{story_key}}</action>
-    </check>
+    <action>Update File List in story if files changed</action>
+    <action>Update story Dev Agent Record with fixes applied</action>
     <action>Set {{fixed_count}} = number of HIGH and MEDIUM issues fixed</action>
     <action>Set {{action_count}} = 0</action>
   </check>
 
   <check if="user chooses 2">
-    <check if="{tracking_system} != linear">
-      <action>Add "Review Follow-ups (AI)" subsection to Tasks/Subtasks</action>
-      <action>For each issue: `- [ ] [AI-Review][Severity] Description [file:line]`</action>
-    </check>
-    <check if="{tracking_system} == linear">
-      <action>Post review findings as a Linear comment:
-        linearis issues comment {{story_key}} --body "Code Review Action Items:\n{{for each issue: - [Severity] Description [file:line]}}" | jq '{id: .id}'
-      </action>
-      <action>Refresh cache: tool/linear-sync.sh story {{story_key}}</action>
-    </check>
+    <action>Add "Review Follow-ups (AI)" subsection to Tasks/Subtasks</action>
+    <action>For each issue: `- [ ] [AI-Review][Severity] Description [file:line]`</action>
     <action>Set {{action_count}} = number of action items created</action>
     <action>Set {{fixed_count}} = 0</action>
   </check>
@@ -242,53 +211,48 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <!-- Determine new status based on review outcome -->
   <check if="all HIGH and MEDIUM issues fixed AND all ACs implemented">
     <action>Set {{new_status}} = "done"</action>
+    <action>Update story Status field to "done"</action>
   </check>
   <check if="HIGH or MEDIUM issues remain OR ACs not fully implemented">
     <action>Set {{new_status}} = "in-progress"</action>
+    <action>Update story Status field to "in-progress"</action>
+  </check>
+  <action>Save story file</action>
+
+  <!-- Determine sprint tracking status -->
+  <check if="{sprint_status} file exists">
+    <action>Set {{current_sprint_status}} = "enabled"</action>
+  </check>
+  <check if="{sprint_status} file does NOT exist">
+    <action>Set {{current_sprint_status}} = "no-sprint-tracking"</action>
   </check>
 
-  <!-- Update story file only for non-Linear tracking -->
-  <check if="{tracking_system} != linear">
-    <action>Update story Status field to "{{new_status}}"</action>
-    <action>Save story file</action>
-  </check>
+  <!-- Sync sprint-status.yaml when story status changes (only if sprint tracking enabled) -->
+  <check if="{{current_sprint_status}} != 'no-sprint-tracking'">
+    <action>Load the FULL file: {sprint_status}</action>
+    <action>Find development_status key matching {{story_key}}</action>
 
-  <!-- Sync sprint tracking — use the correct system -->
-  <check if="{tracking_system} == linear">
-    <action>Update Linear issue status:
-      linearis issues update {{story_key}} --status "{{new_status}}" | jq '{id: .identifier, status: .state.name}'
-    </action>
-    <action>Refresh cache: tool/linear-sync.sh story {{story_key}}</action>
-    <output>✅ Linear status synced: {{story_key}} → {{new_status}}</output>
-  </check>
-
-  <check if="{tracking_system} != linear">
-    <check if="{sprint_status} file exists">
-      <action>Load the FULL file: {sprint_status}</action>
-      <action>Find development_status key matching {{story_key}}</action>
-
-      <check if="{{new_status}} == 'done'">
-        <action>Update development_status[{{story_key}}] = "done"</action>
-        <action>Update last_updated field to current date</action>
-        <action>Save file, preserving ALL comments and structure</action>
-        <output>✅ Sprint status synced: {{story_key}} → done</output>
-      </check>
-
-      <check if="{{new_status}} == 'in-progress'">
-        <action>Update development_status[{{story_key}}] = "in-progress"</action>
-        <action>Update last_updated field to current date</action>
-        <action>Save file, preserving ALL comments and structure</action>
-        <output>🔄 Sprint status synced: {{story_key}} → in-progress</output>
-      </check>
-
-      <check if="story key not found in sprint status">
-        <output>⚠️ Story file updated, but sprint-status sync failed: {{story_key}} not found in sprint-status.yaml</output>
-      </check>
+    <check if="{{new_status}} == 'done'">
+      <action>Update development_status[{{story_key}}] = "done"</action>
+      <action>Update last_updated field to current date</action>
+      <action>Save file, preserving ALL comments and structure</action>
+      <output>✅ Sprint status synced: {{story_key}} → done</output>
     </check>
 
-    <check if="{sprint_status} file does NOT exist">
-      <output>ℹ️ Story status updated (no sprint tracking configured)</output>
+    <check if="{{new_status}} == 'in-progress'">
+      <action>Update development_status[{{story_key}}] = "in-progress"</action>
+      <action>Update last_updated field to current date</action>
+      <action>Save file, preserving ALL comments and structure</action>
+      <output>🔄 Sprint status synced: {{story_key}} → in-progress</output>
     </check>
+
+    <check if="story key not found in sprint status">
+      <output>⚠️ Story file updated, but sprint-status sync failed: {{story_key}} not found in sprint-status.yaml</output>
+    </check>
+  </check>
+
+  <check if="{{current_sprint_status}} == 'no-sprint-tracking'">
+    <output>ℹ️ Story status updated (no sprint tracking configured)</output>
   </check>
 
   <output>**✅ Review Complete!**

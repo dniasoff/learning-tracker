@@ -261,13 +261,6 @@
 <status>[ ] Done / [ ] N/A / [ ] Action-needed</status>
 </check-item>
 
-<check-item id="6.6">
-<prompt>Update Linear issues to reflect approved changes (when tracking_system=linear)</prompt>
-<action>Update Linear issue descriptions and statuses for modified stories/epics</action>
-<action>Post change proposal summary as comment on affected Linear issues</action>
-<status>[ ] Done / [ ] N/A / [ ] Action-needed</status>
-</check-item>
-
 <check-item id="6.5">
 <prompt>Confirm next steps and handoff plan</prompt>
 <action>Review handoff responsibilities with user</action>

@@ -144,13 +144,6 @@ Append to {outputFile}:
 - Coverage percentage: [percentage]
 ```
 
-<check if="{tracking_system} == linear">
-  <action>Ensure Linear cache is fresh: run `tool/linear-sync.sh sync`</action>
-  <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` to get all epics and stories</action>
-  <action>Read individual story files from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/*.yaml` to verify each epic has all expected stories as sub-issues (check `epic:` field)</action>
-  <action>Cross-reference cached stories against the epics document to identify orphaned issues or missing coverage</action>
-</check>
-
 ### 7. Auto-Proceed to Next Step
 
 After coverage validation complete, immediately load next step.

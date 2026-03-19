@@ -81,12 +81,6 @@ Search for each document type using these patterns:
 - Whole: `{planning_artifacts}/*ux*.md`
 - Sharded: `{planning_artifacts}/*ux*/index.md` and related files
 
-<check if="{tracking_system} == linear">
-  <action>Ensure Linear cache is fresh: run `tool/linear-sync.sh sync`</action>
-  <action>Read Linear project structure from cache: `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` — extract all epics and stories with their statuses</action>
-  <action>Read individual story details from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/*.yaml` as needed</action>
-</check>
-
 ### 3. Organize Findings
 
 For each document type found:

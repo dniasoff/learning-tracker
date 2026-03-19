@@ -83,7 +83,17 @@ class AccountManagementService {
       final userDocRef = _firestore.collection('users').doc(uid);
 
       // Delete known subcollections
-      const subcollections = ['completions', 'bookmarks', 'settings'];
+      const subcollections = [
+        'completions',
+        'bookmarks',
+        'settings',
+        'goals',
+        'rewards',
+        'learning_ledger',
+        'active_curricula',
+        'curriculum_imports',
+        'profile',
+      ];
 
       for (final sub in subcollections) {
         final snapshot = await userDocRef.collection(sub).get();
@@ -124,6 +134,8 @@ class AccountManagementService {
       await _database.delete(_database.userProfiles).go();
       await _database.delete(_database.textCache).go();
       await _database.delete(_database.textDownloadStatuses).go();
+      await _database.delete(_database.stageDefinitions).go();
+      await _database.delete(_database.curriculumTracks).go();
     });
   }
 }

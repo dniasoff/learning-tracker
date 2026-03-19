@@ -131,27 +131,13 @@ For each epic, review stories in order:
 - ❌ WRONG: Story references features not yet implemented
 - ✅ RIGHT: Each story builds only on previous stories
 
-<check if="{tracking_system} == linear">
-  <action>Ensure Linear cache is fresh: run `tool/linear-sync.sh sync`</action>
-  <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` to get all epics and stories</action>
-  <action>Read story files from `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/*.yaml` to verify parent-child relationships (check `epic:` field in each story)</action>
-  <action>Verify all epics/stories have correct parent-child relationships and expected coverage</action>
-</check>
-
 ### 6. Complete and Save
 
 If all validations pass:
 
-<check if="{tracking_system} != linear">
 - Update any remaining placeholders in the document
 - Ensure proper formatting
 - Save the final epics.md
-</check>
-
-<check if="{tracking_system} == linear">
-- Verify all epics and stories exist in Linear with correct descriptions and parent-child relationships
-- No local epics.md file is written — Linear issue descriptions are the sole record
-</check>
 
 **Present Final Menu:**
 **All validations complete!** [C] Complete Workflow

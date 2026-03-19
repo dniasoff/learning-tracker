@@ -18,16 +18,6 @@ description: 'Post-epic review to extract lessons and assess success. Use when t
   - Everyone contributes with specific examples preferred
   - Action items must be achievable with clear ownership
   - Two-part format: (1) Epic Review + (2) Next Epic Preparation
-
-<critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-**READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
-If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
-**WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-`tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
-Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
-
 - Party mode protocol:
   - ALL agent dialogue MUST use format: "Name (Role): dialogue"
   - Example: Bob (Scrum Master): "Let's begin..."
@@ -88,30 +78,10 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 Bob (Scrum Master): "Welcome to the retrospective, {user_name}. Let me help you identify which epic we just completed. I'll check sprint-status first, but you're the ultimate authority on what we're reviewing today."
 </output>
 
-<!-- LINEAR PATH: Read from cache -->
-<check if="{tracking_system} == linear">
-  <critical>Linear is the SOLE source of truth. Read from ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ (not sprint-status.yaml in implementation-artifacts).</critical>
-  <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
-    <output>Linear cache not found. Building complete cache...</output>
-    <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
-    <check if="sync command failed">
-      <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
-      <action>HALT</action>
-    </check>
-    <output>✅ Linear cache created successfully.</output>
-  </check>
-  <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and filter for stories with status Done</action>
-  <action>Find the highest epic number with completed stories from cached data</action>
-  <action>For detailed story comments/learnings, read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml` for each completed story</action>
-</check>
+<action>PRIORITY 1: Check {sprint_status_file} first</action>
 
-<!-- FILE-SYSTEM PATH: Use local sprint-status.yaml -->
-<check if="{tracking_system} != linear">
-  <action>Check {sprint_status_file} for epic completion data</action>
-  <action>Load the FULL file: {sprint_status_file}</action>
-  <action>Read ALL development_status entries</action>
-</check>
-
+<action>Load the FULL file: {sprint_status_file}</action>
+<action>Read ALL development_status entries</action>
 <action>Find the highest epic number with at least one story marked "done"</action>
 <action>Extract epic number from keys like "epic-X-retrospective" or story keys like "X-Y-story-name"</action>
 <action>Set {{detected_epic}} = highest epic number found with completed stories</action>
@@ -1393,59 +1363,37 @@ Bob (Scrum Master): "See you all when prep work is done. Meeting adjourned!"
 - Commitments and next steps
 
 <action>Format retrospective document as readable markdown with clear sections</action>
+<action>Set filename: {implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md</action>
+<action>Save retrospective document</action>
 
-<check if="{tracking_system} != linear">
-  <action>Set filename: {implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md</action>
-  <action>Save retrospective document</action>
+<output>
+✅ Retrospective document saved: {implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md
+</output>
+
+<action>Update {sprint_status_file} to mark retrospective as completed</action>
+
+<action>Load the FULL file: {sprint_status_file}</action>
+<action>Find development_status key "epic-{{epic_number}}-retrospective"</action>
+<action>Verify current status (typically "optional" or "pending")</action>
+<action>Update development_status["epic-{{epic_number}}-retrospective"] = "done"</action>
+<action>Update last_updated field to current date</action>
+<action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+
+<check if="update successful">
   <output>
-  ✅ Retrospective document saved: {implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md
-  </output>
+✅ Retrospective marked as completed in {sprint_status_file}
+
+Retrospective key: epic-{{epic_number}}-retrospective
+Status: {{previous_status}} → done
+</output>
 </check>
 
-<check if="{tracking_system} == linear">
-  <action>Post the FULL retrospective content (not just a summary) as a Linear comment on the epic issue:
-    linearis comments create [EPIC-ID] --body "$FULL_RETROSPECTIVE_CONTENT" | jq
-  </action>
-  <action>Refresh cache: tool/linear-sync.sh story [EPIC-ID]</action>
+<check if="retrospective key not found">
   <output>
-  ✅ Full retrospective posted to Linear epic issue [EPIC-ID]
-  </output>
-</check>
+⚠️ Could not update retrospective status: epic-{{epic_number}}-retrospective not found in {sprint_status_file}
 
-<!-- Update sprint tracking — use the correct system -->
-<check if="{tracking_system} == linear">
-  <action>Update epic retrospective status in Linear — post comment or update label:
-    linearis comments create [EPIC-ID] --body "Retrospective completed and documented."
-  </action>
-  <action>Refresh cache: tool/linear-sync.sh story [EPIC-ID]</action>
-  <output>✅ Retrospective completion recorded in Linear</output>
-</check>
-
-<check if="{tracking_system} != linear">
-  <action>Update {sprint_status_file} to mark retrospective as completed</action>
-  <action>Load the FULL file: {sprint_status_file}</action>
-  <action>Find development_status key "epic-{{epic_number}}-retrospective"</action>
-  <action>Verify current status (typically "optional" or "pending")</action>
-  <action>Update development_status["epic-{{epic_number}}-retrospective"] = "done"</action>
-  <action>Update last_updated field to current date</action>
-  <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
-
-  <check if="update successful">
-    <output>
-  ✅ Retrospective marked as completed in {sprint_status_file}
-
-  Retrospective key: epic-{{epic_number}}-retrospective
-  Status: {{previous_status}} → done
-  </output>
-  </check>
-
-  <check if="retrospective key not found">
-    <output>
-  ⚠️ Could not update retrospective status: epic-{{epic_number}}-retrospective not found in {sprint_status_file}
-
-  Retrospective document was saved successfully, but {sprint_status_file} may need manual update.
-  </output>
-  </check>
+Retrospective document was saved successfully, but {sprint_status_file} may need manual update.
+</output>
 </check>
 
 </step>
@@ -1459,7 +1407,7 @@ Bob (Scrum Master): "See you all when prep work is done. Meeting adjourned!"
 
 - Epic {{epic_number}}: {{epic_title}} reviewed
 - Retrospective Status: completed
-- Retrospective saved: {{#if tracking_system == "linear"}}Linear epic issue [EPIC-ID]{{else}}{implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md{{/if}}
+- Retrospective saved: {implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md
 
 **Commitments Made:**
 
@@ -1469,7 +1417,7 @@ Bob (Scrum Master): "See you all when prep work is done. Meeting adjourned!"
 
 **Next Steps:**
 
-1. **Review retrospective summary**: {{#if tracking_system == "linear"}}Linear epic issue [EPIC-ID] comments{{else}}{implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md{{/if}}
+1. **Review retrospective summary**: {implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md
 
 2. **Execute preparation sprint** (Est: {{prep_days}} days)
    - Complete {{critical_count}} critical path items

@@ -6,6 +6,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'profile_providers.g.dart';
 
+/// The current account ID.
+///
+/// TODO(DNI-110): Replace with actual account ID from auth state once
+/// multi-account support is implemented.
+@Riverpod(keepAlive: true)
+int currentAccountId(Ref ref) => 1;
+
 /// Provider for the ProfileRepository implementation.
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
@@ -28,18 +35,20 @@ class SelectedProfileId extends _$SelectedProfileId {
   }
 }
 
-/// Profiles for the current account (account ID 1 for now).
+/// Profiles for the current account.
 @riverpod
 Future<List<ProfileModel>> profileList(Ref ref) async {
   final repo = ref.watch(profileRepositoryProvider);
-  return repo.getProfilesByAccount(1);
+  final accountId = ref.watch(currentAccountIdProvider);
+  return repo.getProfilesByAccount(accountId);
 }
 
 /// Stream of profiles for the current account, for reactive UI.
 @riverpod
 Stream<List<ProfileModel>> profileListStream(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
-  return db.profileDao.watchProfilesByAccount(1).map(
+  final accountId = ref.watch(currentAccountIdProvider);
+  return db.profileDao.watchProfilesByAccount(accountId).map(
     (rows) => rows.map(ProfileModel.fromDriftRow).toList(),
   );
 }

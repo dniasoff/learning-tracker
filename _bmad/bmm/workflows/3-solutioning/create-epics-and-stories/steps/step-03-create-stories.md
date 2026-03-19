@@ -186,20 +186,9 @@ After writing each story:
 
 When story is approved:
 
-<check if="{tracking_system} != linear">
 - Append it to {outputFile} following template structure
 - Use correct numbering (Epic N, Story M)
 - Maintain proper markdown formatting
-</check>
-
-<check if="{tracking_system} == linear">
-  <action>Create Linear issues for each story:
-    linearis issues create "[Epic-N] Epic Title" --team {team_key} --project "{linear_project}" --labels "BMAD-Managed,Epic" -d "Epic goal"
-    linearis issues create "[N-M-key] Story Title" --team {team_key} --project "{linear_project}" --labels "BMAD-Managed,Story" \
-      --parent-ticket [epic-id] -d "Placeholder — run create-story for Dev Notes" --status "Backlog"
-  </action>
-  <action>After all issues created, refresh cache: `tool/linear-sync.sh sync`</action>
-</check>
 
 ### 4. Epic Completion
 
@@ -248,7 +237,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 - IF A: Read fully and follow: {advancedElicitationTask}
 - IF P: Read fully and follow: {partyModeWorkflow}
-- IF C: {{#if tracking_system != "linear"}}Save content to {outputFile}, update frontmatter, then{{/if}} read fully and follow: {nextStepFile}
+- IF C: Save content to {outputFile}, update frontmatter, then read fully and follow: {nextStepFile}
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#7-present-final-menu-options)
 
 #### EXECUTION RULES:
@@ -260,7 +249,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 ## CRITICAL STEP COMPLETION NOTE
 
-ONLY WHEN [C continue option] is selected and [all epics and stories saved to document (when {tracking_system} != linear) or created in Linear (when {tracking_system} == linear) following the template structure exactly], will you then read fully and follow: `{nextStepFile}` to begin final validation phase.
+ONLY WHEN [C continue option] is selected and [all epics and stories saved to document following the template structure exactly], will you then read fully and follow: `{nextStepFile}` to begin final validation phase.
 
 ---
 

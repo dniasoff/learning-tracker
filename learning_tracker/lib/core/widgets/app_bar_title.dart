@@ -13,9 +13,12 @@ class AppBarTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: child ?? Text(text ?? ''),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 14),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: child ?? Text(text ?? ''),
+      ),
     );
   }
 }

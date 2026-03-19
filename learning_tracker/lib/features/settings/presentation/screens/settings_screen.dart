@@ -23,7 +23,8 @@ import 'package:learning_tracker/features/settings/presentation/widgets/link_pro
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 
-/// App version constant (from pubspec.yaml).
+// TODO(DNI-105): Replace with dynamic version from package_info_plus
+// once the dependency is added to pubspec.yaml.
 const String _appVersion = '1.0.0';
 
 @RoutePage()

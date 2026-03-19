@@ -23,15 +23,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `date` as system-generated current datetime
 - YOU MUST ALWAYS SPEAK OUTPUT in your Agent communication style with the config `{communication_language}`
 
-<critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-**READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
-If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
-**WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-`tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
-Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
-
 ### Paths
 
 - `installed_path` = `{project-root}/_bmad/bmm/workflows/4-implementation/sprint-status`
@@ -69,64 +60,24 @@ Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_syste
   </check>
 </step>
 
-<step n="1" goal="Locate sprint data source">
+<step n="1" goal="Locate sprint status file">
   <action>Load {project_context} for project-wide patterns and conventions (if exists)</action>
-
-  <check if="{tracking_system} == linear">
-    <action>Linear is the sole source of truth — skip local file check</action>
-    <action>Continue to Step 2</action>
-  </check>
-
-  <check if="{tracking_system} != linear">
-    <action>Try {sprint_status_file}</action>
-    <check if="file not found">
-      <output>❌ sprint-status.yaml not found.
+  <action>Try {sprint_status_file}</action>
+  <check if="file not found">
+    <output>❌ sprint-status.yaml not found.
 Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-status.</output>
-      <action>Exit workflow</action>
-    </check>
-    <action>Continue to Step 2</action>
+    <action>Exit workflow</action>
   </check>
+  <action>Continue to Step 2</action>
 </step>
 
-<step n="2" goal="Read and parse sprint data">
-  <!-- LINEAR PATH: Read from local cache -->
-  <check if="{tracking_system} == linear">
-    <critical>Linear is the SOLE source of truth. Read status from ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ (not sprint-status.yaml in implementation-artifacts).</critical>
-    <check if="~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml does not exist">
-      <output>Linear cache not found. Building complete cache...</output>
-      <action>Run `tool/linear-sync.sh sync` to create the full cache (sprint-status.yaml + all story files)</action>
-      <check if="sync command failed">
-        <output>❌ Failed to sync Linear cache. Check that `linearis` CLI is configured and the linear_project / team_key are correct.</output>
-        <action>Exit workflow</action>
-      </check>
-      <output>✅ Linear cache created successfully.</output>
-    </check>
-    <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for all epics and stories with statuses</action>
-    <action>Classify entries from the cached YAML:
-      - Epics: entries under `epics:` section
-      - Stories: entries under `stories:` section
-    </action>
-    <action>Map Linear statuses to sprint statuses:
-      - Backlog → backlog
-      - Todo → ready-for-dev
-      - "In Progress" → in-progress
-      - "Code Complete" or "In Review" → review
-      - Done → done
-    </action>
-    <action>Parse project metadata from the cache file (linear_project, team_key)</action>
-  </check>
-
-  <!-- FILE-SYSTEM PATH: Read local sprint-status.yaml -->
-  <check if="{tracking_system} != linear">
-    <action>Read the FULL file: {sprint_status_file}</action>
-    <action>Parse fields: generated, last_updated, project, project_key, tracking_system, story_location</action>
-  </check>
-
+<step n="2" goal="Read and parse sprint-status.yaml">
+  <action>Read the FULL file: {sprint_status_file}</action>
+  <action>Parse fields: generated, last_updated, project, project_key, tracking_system, story_location</action>
   <action>Parse development_status map. Classify keys:</action>
   - Epics: keys starting with "epic-" (and not ending with "-retrospective")
   - Retrospectives: keys ending with "-retrospective"
   - Stories: everything else (e.g., 1-2-login-form)
-
   <action>Map legacy story status "drafted" → "ready-for-dev"</action>
   <action>Count story statuses: backlog, ready-for-dev, in-progress, review, done</action>
   <action>Map legacy epic status "contexted" → "in-progress"</action>
@@ -160,13 +111,7 @@ Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-stat
 
 Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue without fixing:</ask>
 <check if="user provided corrections">
-<check if="{tracking_system} == linear">
-<action>Apply corrections via Linear: linearis issues update [ID] --status "corrected-status" | jq</action>
-<action>Refresh cache: tool/linear-sync.sh story [ID]</action>
-</check>
-<check if="{tracking_system} != linear">
 <action>Update sprint-status.yaml with corrected values</action>
-</check>
 <action>Re-parse the file with corrected statuses</action>
 </check>
 </check>
@@ -176,7 +121,7 @@ Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue witho
 - IF any story has status "review": suggest `/bmad:bmm:workflows:code-review`
 - IF any story has status "in-progress" AND no stories have status "ready-for-dev": recommend staying focused on active story
 - IF all epics have status "backlog" AND no stories have status "ready-for-dev": prompt `/bmad:bmm:workflows:create-story`
-- IF {tracking_system} != linear AND `last_updated` timestamp is more than 7 days old (or `last_updated` is missing, fall back to `generated`): warn "sprint-status.yaml may be stale"
+- IF `last_updated` timestamp is more than 7 days old (or `last_updated` is missing, fall back to `generated`): warn "sprint-status.yaml may be stale"
 - IF any story key doesn't match an epic pattern (e.g., story "5-1-..." but no "epic-5"): warn "orphaned story detected"
 - IF any epic has status in-progress but has no associated stories: warn "in-progress epic has no stories"
   </step>
@@ -199,7 +144,7 @@ Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue witho
 
 - Project: {{project}} ({{project_key}})
 - Tracking: {{tracking_system}}
-- Status file: {{#if tracking_system == "linear"}}~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml{{else}}{sprint_status_file}{{/if}}
+- Status file: {sprint_status_file}
 
 **Stories:** backlog {{count_backlog}}, ready-for-dev {{count_ready}}, in-progress {{count_in_progress}}, review {{count_review}}, done {{count_done}}
 
@@ -256,7 +201,7 @@ If the command targets a story, set `story_key={{next_story_id}}` when prompted.
 <!-- ========================= -->
 
 <step n="20" goal="Data mode output">
-  <action>Load and parse sprint data same as Steps 1-2 (respecting tracking_system: Linear-first when enabled, local file otherwise)</action>
+  <action>Load and parse {sprint_status_file} same as Step 2</action>
   <action>Compute recommendation same as Step 3</action>
   <template-output>next_workflow_id = {{next_workflow_id}}</template-output>
   <template-output>next_story_id = {{next_story_id}}</template-output>
@@ -276,69 +221,47 @@ If the command targets a story, set `story_key={{next_story_id}}` when prompted.
 <!-- Validate mode -->
 <!-- ========================= -->
 
-<step n="30" goal="Validate sprint tracking">
-  <check if="{tracking_system} == linear">
-    <action>Run `tool/linear-sync.sh sync` to refresh cache and verify Linear connectivity</action>
-    <check if="sync command fails">
-      <template-output>is_valid = false</template-output>
-      <template-output>error = "Linear sync failed for project {linear_project} (team {team_key})"</template-output>
-      <template-output>suggestion = "Check linearis auth and linear_project / team_key in config.yaml"</template-output>
-      <action>Return</action>
-    </check>
-    <action>Read `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` and verify it contains epics/stories</action>
-    <check if="cache file missing or empty">
-      <template-output>is_valid = false</template-output>
-      <template-output>error = "Linear cache empty after sync — no issues found for project {linear_project} (team {team_key})"</template-output>
-      <template-output>suggestion = "Check linear_project / team_key in config.yaml"</template-output>
-      <action>Return</action>
-    </check>
-    <template-output>is_valid = true</template-output>
-    <template-output>message = "Linear tracking valid: cache refreshed, project {linear_project} (team {team_key}) has issues"</template-output>
+<step n="30" goal="Validate sprint-status file">
+  <action>Check that {sprint_status_file} exists</action>
+  <check if="missing">
+    <template-output>is_valid = false</template-output>
+    <template-output>error = "sprint-status.yaml missing"</template-output>
+    <template-output>suggestion = "Run sprint-planning to create it"</template-output>
     <action>Return</action>
   </check>
 
-  <check if="{tracking_system} != linear">
-    <action>Check that {sprint_status_file} exists</action>
-    <check if="missing">
-      <template-output>is_valid = false</template-output>
-      <template-output>error = "sprint-status.yaml missing"</template-output>
-      <template-output>suggestion = "Run sprint-planning to create it"</template-output>
-      <action>Return</action>
-    </check>
+<action>Read and parse {sprint_status_file}</action>
 
-    <action>Read and parse {sprint_status_file}</action>
+<action>Validate required metadata fields exist: generated, project, project_key, tracking_system, story_location (last_updated is optional for backward compatibility)</action>
+<check if="any required field missing">
+<template-output>is_valid = false</template-output>
+<template-output>error = "Missing required field(s): {{missing_fields}}"</template-output>
+<template-output>suggestion = "Re-run sprint-planning or add missing fields manually"</template-output>
+<action>Return</action>
+</check>
 
-    <action>Validate required metadata fields exist: generated, project, project_key, tracking_system, story_location (last_updated is optional for backward compatibility)</action>
-    <check if="any required field missing">
-      <template-output>is_valid = false</template-output>
-      <template-output>error = "Missing required field(s): {{missing_fields}}"</template-output>
-      <template-output>suggestion = "Re-run sprint-planning or add missing fields manually"</template-output>
-      <action>Return</action>
-    </check>
+<action>Verify development_status section exists with at least one entry</action>
+<check if="development_status missing or empty">
+<template-output>is_valid = false</template-output>
+<template-output>error = "development_status missing or empty"</template-output>
+<template-output>suggestion = "Re-run sprint-planning or repair the file manually"</template-output>
+<action>Return</action>
+</check>
 
-    <action>Verify development_status section exists with at least one entry</action>
-    <check if="development_status missing or empty">
-      <template-output>is_valid = false</template-output>
-      <template-output>error = "development_status missing or empty"</template-output>
-      <template-output>suggestion = "Re-run sprint-planning or repair the file manually"</template-output>
-      <action>Return</action>
-    </check>
+<action>Validate all status values against known valid statuses:</action>
 
-    <action>Validate all status values against known valid statuses:</action>
-
-    - Stories: backlog, ready-for-dev, in-progress, review, done (legacy: drafted)
-    - Epics: backlog, in-progress, done (legacy: contexted)
-    - Retrospectives: optional, done
-    <check if="any invalid status found">
-      <template-output>is_valid = false</template-output>
-      <template-output>error = "Invalid status values: {{invalid_entries}}"</template-output>
-      <template-output>suggestion = "Fix invalid statuses in sprint-status.yaml"</template-output>
-      <action>Return</action>
-    </check>
-
-    <template-output>is_valid = true</template-output>
-    <template-output>message = "sprint-status.yaml valid: metadata complete, all statuses recognized"</template-output>
+- Stories: backlog, ready-for-dev, in-progress, review, done (legacy: drafted)
+- Epics: backlog, in-progress, done (legacy: contexted)
+- Retrospectives: optional, done
+  <check if="any invalid status found">
+  <template-output>is_valid = false</template-output>
+  <template-output>error = "Invalid status values: {{invalid_entries}}"</template-output>
+  <template-output>suggestion = "Fix invalid statuses in sprint-status.yaml"</template-output>
+  <action>Return</action>
   </check>
+
+<template-output>is_valid = true</template-output>
+<template-output>message = "sprint-status.yaml valid: metadata complete, all statuses recognized"</template-output>
 </step>
 
 </workflow>

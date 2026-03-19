@@ -20,8 +20,4 @@
 - [ ] Sprint status synced (if sprint tracking enabled)
 - [ ] Story saved successfully
 
-- [ ] Linear checkboxes verified against implementation (when tracking_system=linear)
-- [ ] Review findings posted as Linear comment (when tracking_system=linear)
-- [ ] Linear status synced with review outcome (when tracking_system=linear)
-
 _Reviewer: {{user_name}} on {{date}}_

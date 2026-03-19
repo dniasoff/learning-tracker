@@ -61,14 +61,14 @@ final class ProgressRepositoryProvider
 String _$progressRepositoryHash() =>
     r'8b9ef03690ec431e816b724f72b650c144ece3bc';
 
-/// Provider for track breakdown by curriculum.
+/// Provider for track breakdown by curriculum, scoped to the active profile.
 ///
 /// Returns a map of TrackType to completion counts for the given curriculum.
 
 @ProviderFor(trackBreakdown)
 final trackBreakdownProvider = TrackBreakdownFamily._();
 
-/// Provider for track breakdown by curriculum.
+/// Provider for track breakdown by curriculum, scoped to the active profile.
 ///
 /// Returns a map of TrackType to completion counts for the given curriculum.
 
@@ -82,7 +82,7 @@ final class TrackBreakdownProvider
     with
         $FutureModifier<Map<TrackType, int>>,
         $FutureProvider<Map<TrackType, int>> {
-  /// Provider for track breakdown by curriculum.
+  /// Provider for track breakdown by curriculum, scoped to the active profile.
   ///
   /// Returns a map of TrackType to completion counts for the given curriculum.
   TrackBreakdownProvider._({
@@ -129,9 +129,9 @@ final class TrackBreakdownProvider
   }
 }
 
-String _$trackBreakdownHash() => r'e39ad11866746ad0b0622137ab5961089113a28d';
+String _$trackBreakdownHash() => r'129304be12ee250bb39a6b3c993d9588873fadc3';
 
-/// Provider for track breakdown by curriculum.
+/// Provider for track breakdown by curriculum, scoped to the active profile.
 ///
 /// Returns a map of TrackType to completion counts for the given curriculum.
 
@@ -146,7 +146,7 @@ final class TrackBreakdownFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Provider for track breakdown by curriculum.
+  /// Provider for track breakdown by curriculum, scoped to the active profile.
   ///
   /// Returns a map of TrackType to completion counts for the given curriculum.
 
@@ -157,21 +157,21 @@ final class TrackBreakdownFamily extends $Family
   String toString() => r'trackBreakdownProvider';
 }
 
-/// Provider for aggregate completion count by curriculum.
+/// Provider for aggregate completion count by curriculum, scoped to the active profile.
 ///
 /// Returns the total completion count across all tracks for the given curriculum.
 
 @ProviderFor(aggregateCount)
 final aggregateCountProvider = AggregateCountFamily._();
 
-/// Provider for aggregate completion count by curriculum.
+/// Provider for aggregate completion count by curriculum, scoped to the active profile.
 ///
 /// Returns the total completion count across all tracks for the given curriculum.
 
 final class AggregateCountProvider
     extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
     with $FutureModifier<int>, $FutureProvider<int> {
-  /// Provider for aggregate completion count by curriculum.
+  /// Provider for aggregate completion count by curriculum, scoped to the active profile.
   ///
   /// Returns the total completion count across all tracks for the given curriculum.
   AggregateCountProvider._({
@@ -217,9 +217,9 @@ final class AggregateCountProvider
   }
 }
 
-String _$aggregateCountHash() => r'f57c2a6079d5145cda9648d5df433c4a6b9b209b';
+String _$aggregateCountHash() => r'0b4796e250c8d5a27d0caa0e3d7c2b35c1b98291';
 
-/// Provider for aggregate completion count by curriculum.
+/// Provider for aggregate completion count by curriculum, scoped to the active profile.
 ///
 /// Returns the total completion count across all tracks for the given curriculum.
 
@@ -234,7 +234,7 @@ final class AggregateCountFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Provider for aggregate completion count by curriculum.
+  /// Provider for aggregate completion count by curriculum, scoped to the active profile.
   ///
   /// Returns the total completion count across all tracks for the given curriculum.
 

@@ -29,15 +29,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - Generate all documents in `{document_output_language}`
 - DOCUMENT OUTPUT: Updated epics, stories, or PRD sections. Clear, actionable changes. User skill level (`{user_skill_level}`) affects conversation style ONLY, not document updates.
 
-<critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-**READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
-If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
-**WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-`tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
-Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
-
 ### Paths
 
 - `installed_path` = `{project-root}/_bmad/bmm/workflows/4-implementation/correct-course`
@@ -215,31 +206,11 @@ Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_syste
 - Define success criteria for implementation
 
 <action>Present complete Sprint Change Proposal to user</action>
-
-<check if="{tracking_system} == linear">
-  <action>Post the Sprint Change Proposal as a Linear comment on the relevant epic issue:
-    linearis comments create [EPIC-ID] --body "$CHANGE_PROPOSAL_CONTENT" | jq
-  </action>
-  <action>Refresh cache: tool/linear-sync.sh story [EPIC-ID]</action>
-  <output>✅ Sprint Change Proposal posted to Linear epic issue [EPIC-ID]</output>
-</check>
-
-<check if="{tracking_system} != linear">
-  <action>Write Sprint Change Proposal document to {default_output_file}</action>
-</check>
-
+<action>Write Sprint Change Proposal document to {default_output_file}</action>
 <ask>Review complete proposal. Continue [c] or Edit [e]?</ask>
 </step>
 
 <step n="5" goal="Finalize and Route for Implementation">
-<check if="{tracking_system} == linear">
-  <action>Update affected Linear issues with approved changes:
-    For each modified story: linearis issues update [ID] -d "$UPDATED_DESC"
-    Post change proposal summary: linearis comments create [ID] --body "Change proposal applied: ..."
-  </action>
-  <action>Refresh cache for each affected story: tool/linear-sync.sh story [ID]</action>
-</check>
-
 <action>Get explicit user approval for complete proposal</action>
 <ask>Do you approve this Sprint Change Proposal for implementation? (yes/no/revise)</ask>
 

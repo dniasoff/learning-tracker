@@ -86,8 +86,8 @@ class DataExportImportService {
     final bookmarks = await _database.bookmarkDao.getAllBookmarks();
     final learningOrders = await _database.learningOrderDao
         .getAllLearningOrders();
-    final activeCurricula = await _database.activeCurriculumDao
-        .getActiveCurricula();
+    final activeCurricula = await _database.select(_database.activeCurricula)
+        .get();
     final curriculumTracks = await _database
         .select(_database.curriculumTracks)
         .get();
@@ -195,7 +195,12 @@ class DataExportImportService {
           )
           .toList(),
       'activeCurricula': activeCurricula
-          .map((id) => {'curriculumId': id})
+          .map(
+            (ac) => {
+              'curriculumId': ac.curriculumId,
+              'activatedAt': ac.activatedAt.toIso8601String(),
+            },
+          )
           .toList(),
       'curriculumTracks': curriculumTracks
           .map(
@@ -441,7 +446,9 @@ class DataExportImportService {
             .insert(
               ActiveCurriculaCompanion.insert(
                 curriculumId: map['curriculumId'] as String,
-                activatedAt: DateTime.now(),
+                activatedAt: map['activatedAt'] != null
+                    ? DateTime.parse(map['activatedAt'] as String)
+                    : DateTime.now(),
               ),
             );
       }

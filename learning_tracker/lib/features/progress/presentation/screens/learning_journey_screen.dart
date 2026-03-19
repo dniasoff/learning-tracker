@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/journey_grouped_view.dart';
@@ -31,7 +30,7 @@ class LearningJourneyScreen extends ConsumerWidget {
     // Get profile name for AppBar when viewing another profile
     final isViewingOther = profileId != null && profileId != activeProfileId;
     final profileAsync = isViewingOther
-        ? ref.watch(selectedProfileProvider)
+        ? ref.watch(profileByIdProvider(profileId!))
         : null;
     final profileName = profileAsync?.asData?.value?.displayName;
     final title = profileName != null

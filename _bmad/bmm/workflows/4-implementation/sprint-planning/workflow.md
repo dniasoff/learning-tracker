@@ -24,15 +24,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `date` as system-generated current datetime
 - YOU MUST ALWAYS SPEAK OUTPUT in your Agent communication style with the config `{communication_language}`
 
-<critical>**Linear Integration:** When {tracking_system} == linear, Linear is the **sole source of truth**.
-**READS:** Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for status data and `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/stories/{TEAM}-XX.yaml`
-for story details. NEVER call Linear MCP tools (list_issues, get_issue, etc.) directly — always read from cache.
-If cache is missing, run `tool/linear-sync.sh sync` to auto-create it.
-**WRITES:** Always write to Linear first via `linearis` CLI (pipe through jq), then run
-`tool/linear-sync.sh story <ID>` to refresh that story's cache entry (status, description, comments).
-Use `tool/linear-sync.sh sync` (full sync) after creating/removing issues or changing titles/epics.
-Local sprint-status.yaml in implementation-artifacts is ONLY for {tracking_system} != linear.</critical>
-
 ### Paths
 
 - `installed_path` = `{project-root}/_bmad/bmm/workflows/4-implementation/sprint-planning`
@@ -193,41 +184,20 @@ development_status:
   # All epics, stories, and retrospectives in order
 ```
 
-<check if="{tracking_system} != linear">
-  <action>Write the complete sprint status YAML to {status_file}</action>
-  <action>CRITICAL: Metadata appears TWICE - once as comments (#) for documentation, once as YAML key:value fields for parsing</action>
-  <action>Ensure all items are ordered: epic, its stories, its retrospective, next epic...</action>
-</check>
-
-<check if="{tracking_system} == linear">
-  <action>Create Linear issues for each epic and story:
-    For each epic:
-      linearis issues create "[Epic-N] Epic Title" --team {team_key} --project "{linear_project}" \
-        --labels "BMAD-Managed,Epic" -d "Epic goal statement"
-    For each story:
-      linearis issues create "[N-M-key] Story Title" --team {team_key} --project "{linear_project}" \
-        --labels "BMAD-Managed,Story" --parent-ticket [epic-id] \
-        -d "Story placeholder — run create-story to add Dev Notes" --status "Backlog"
-  </action>
-  <action>Run `tool/linear-sync.sh sync` to populate ~/.local/share/linear-sync/{linear_tenant}/{linear_project}/ with all issue data</action>
-</check>
+<action>Write the complete sprint status YAML to {status_file}</action>
+<action>CRITICAL: Metadata appears TWICE - once as comments (#) for documentation, once as YAML key:value fields for parsing</action>
+<action>Ensure all items are ordered: epic, its stories, its retrospective, next epic...</action>
 </step>
 
 <step n="5" goal="Validate and report">
+<action>Perform validation checks:</action>
 
-<check if="{tracking_system} == linear">
-  <action>Use `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` as the validation source (NOT {status_file})</action>
-  <action>If `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` is missing, instruct user to run `make linear-sync`</action>
-</check>
-
-<action>Perform validation checks (use {status_file} for file-system mode, `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml` for linear mode):</action>
-
-- [ ] Every epic in epic files appears in the status source
-- [ ] Every story in epic files appears in the status source
+- [ ] Every epic in epic files appears in {status_file}
+- [ ] Every story in epic files appears in {status_file}
 - [ ] Every epic has a corresponding retrospective entry
-- [ ] No items in the status source that don't exist in epic files
+- [ ] No items in {status_file} that don't exist in epic files
 - [ ] All status values are legal (match state machine definitions)
-- [ ] Status source is valid YAML syntax
+- [ ] File is valid YAML syntax
 
 <action>Count totals:</action>
 
@@ -236,7 +206,6 @@ development_status:
 - Epics in-progress: {{in_progress_count}}
 - Stories done: {{done_count}}
 
-<check if="{tracking_system} != linear">
 <action>Display completion summary to {user_name} in {communication_language}:</action>
 
 **Sprint Status Generated Successfully**
@@ -253,27 +222,6 @@ development_status:
 2. Use this file to track development progress
 3. Agents will update statuses as they work
 4. Re-run this workflow to refresh auto-detected statuses
-</check>
-
-<check if="{tracking_system} == linear">
-<action>Display completion summary to {user_name} in {communication_language}:</action>
-
-**Sprint Status Generated Successfully (Linear Mode)**
-
-- **Tracking:** Linear issues (source of truth)
-- **Local Cache:** `~/.local/share/linear-sync/{linear_tenant}/{linear_project}/sprint-status.yaml`
-- **Total Epics:** {{epic_count}}
-- **Total Stories:** {{story_count}}
-- **Epics In Progress:** {{in_progress_count}}
-- **Stories Completed:** {{done_count}}
-
-**Next Steps:**
-
-1. Review issues in Linear
-2. Use `make linear-sync` to refresh local cache
-3. Agents will update statuses via `linearis` CLI
-4. Re-run this workflow to detect new epics/stories
-</check>
 
 </step>
 
