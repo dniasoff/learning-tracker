@@ -176,4 +176,3 @@ List<MilestoneAchievement> _detectMilestones(
 
   return milestones;
 }
-
