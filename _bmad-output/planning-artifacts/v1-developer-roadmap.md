@@ -22,6 +22,7 @@ No "profile types" exist in the system. A user who adds themselves is a learner.
 
 | Feature | Priority |
 |---------|----------|
+| CI/CD — Play Store deploy from main | **P0 — Critical** |
 | Onboarding wizard (amazing UX) | **P0 — Critical** |
 | Calendar-linked learning plans (Daf Yomi, etc.) | **P0 — Critical** |
 | Custom learning tracks | **P0 — Critical** |
@@ -64,6 +65,13 @@ This is the **highest priority** and the gateway to testing everything else.
 - Run existing test suite: `flutter test` — 1,293 tests should pass
 - Run app on Android emulator — get familiar with current state
 
+### 1.1b CI/CD — Play Store Deployment Pipeline
+- Set up CI/CD pipeline (GitHub Actions or similar) to automatically deploy main branch to Google Play Store (internal testing track)
+- Must be in place early so every merge to main produces a testable build
+- Pipeline steps: build → test → sign → upload to Play Store
+- Signing keys and service account credentials securely stored (GitHub Secrets or equivalent)
+- This unblocks continuous testing on real devices throughout all phases
+
 ### 1.2 Onboarding UX Design & Specification
 Before writing code, document the complete onboarding flow:
 
@@ -96,8 +104,38 @@ Two paths, presented clearly:
   - And others from API
 - User selects ONE program (can add more later)
 - App shows where the cycle is today
-- Ask: "Start from today?" or "Start from beginning of current masechet/section?"
-- Optional: configure a review plan
+
+**Step 1: Chazarah (Review) Plan — Optional**
+- After selecting a program, ask if user wants to set up a review schedule
+- Review options are program-aware (e.g., Daf Yomi might suggest):
+  - Daily chazarah of the previous day's daf
+  - Weekly review of all 7 dafim on Shabbos
+  - Custom chazarah schedule
+- User can skip — no review is perfectly valid
+- Multiple chazarah rounds supported (e.g., Chazarah 1, Chazarah 2, Chazarah 3)
+
+**Step 2: Start Tracking From**
+- Default: from today (most common)
+- Options:
+  - From today
+  - From beginning of current perek
+  - From beginning of current masechta
+  - From a specific daf (manual selection)
+- This determines the "tracking window" — reminders and daily tasks are generated from this point forward
+
+**Step 3: Mark Already-Completed Content — Two Use Cases**
+
+*Use Case A: Within tracking window (affects reminders)*
+- For dafim from the selected tracking start point onward (i.e., the program's schedule from that point)
+- Marking these as done affects reminder scheduling (won't nag about completed ones)
+- Per chazarah cycle granularity: user can mark individual dafim as completed for specific review rounds (e.g., "learned daf X all 3 chazarah rounds, daf Y only once")
+
+*Use Case B: Before tracking window (achievements only)*
+- For content learned before the tracking start point (historical)
+- Purely for achievement/progress display — does NOT generate reminders
+- Also supports per-chazarah-cycle marking (same granularity as above)
+- Gives users credit for prior learning without cluttering their reminder queue
+
 - Done — today's learning appears
 
 **Path B: Custom Track**
@@ -142,13 +180,34 @@ Two paths, presented clearly:
 - Implement "re-run wizard" entry point
 - Implement bulk-mark prior learning (optional step)
 
-### 1.7 Today View
-- Display today's learning tasks
-- Show English and Hebrew date
-- Show progress / completion state
-- Make it the default landing screen post-onboarding
+### 1.7 Dashboard (Default Landing Screen)
+- **This is the most important screen in the app** — it must feel exciting, vibrant, and make the user want to open the app every day
+- Default landing screen post-onboarding for all users
+- Display today's learning tasks with English and Hebrew date
+- Show progress / completion state with celebration-forward design
 
-**Exit criteria:** A user can install the app, log in, complete onboarding, and see their today view with real learning content displayed in-app in Hebrew + chosen language. The flow feels clean and intuitive. Daniel can test the full app.
+**Dashboard for Learners (adults):**
+- Daily streak counter (prominent, animated)
+- Progress toward current milestones (e.g., "12/120 dafim in Masechet Shabbos")
+- "Up to date" / "behind" status for calendar programs
+- Recent achievements and milestone celebrations
+- Quick-tap completion for today's tasks
+
+**Dashboard for Children:**
+- All of the above, plus:
+- Visible rewards — show what they're working toward (pool or specific non-surprise)
+- Reward progress bar ("15 more dafim until you can pick a reward!")
+- Earned rewards showcase
+- Age-appropriate celebration animations — make completing a daf feel like an event
+- Surprise reward reveal moment when a hidden milestone reward is earned
+
+**Design principles:**
+- Vibrant, colourful, energy — not a bland checklist
+- Celebration-first: progress and achievements are front and centre, not buried in a sub-screen
+- Every app open should feel like positive reinforcement
+- The dashboard sells the app — if this screen doesn't spark excitement, nothing else matters
+
+**Exit criteria:** A user can install the app, log in, complete onboarding, and land on a dashboard that makes them genuinely excited to learn. Today's tasks, streaks, progress, and rewards (for children) are all visible and feel alive. The flow feels clean and intuitive. Daniel can test the full app.
 
 ---
 
@@ -178,25 +237,36 @@ Once onboarding works, Daniel can actually test the app end-to-end. This phase i
 
 ## Phase 3: Progress & Celebration
 
-This is the **heart of the product**. Progress celebration must feel meaningful, not gimmicky. This is Torah learning — achievements should feel like genuine simcha.
+This is the **heart of the product**. The dashboard (built in Phase 1.7) is the canvas — Phase 3 fills it with everything that makes users come back. Progress celebration must feel meaningful, not gimmicky. This is Torah learning — achievements should feel like genuine simcha.
 
 ### 3.1 Audit Existing Achievement System
 - Review what's built in Epics 8 (achievements) and 10 (parent rewards)
 - Identify gaps between what exists and what's needed
+- Map what exists to the dashboard design from Phase 1.7
 
-### 3.2 Progress Visualization
-- Streaks: daily learning streak counter, streak milestones
-- Milestones: "Completed Masechet Brachos!", "100 mishnayos learned!"
-- Visual progress: progress bars, completion percentages
-- Calendar-linked: "You're up to date!" or "3 dafim behind"
-- Make it prominent — this is what keeps learners coming back
+### 3.2 Progress Visualization & Celebration
+- **Streaks:** daily learning streak counter, streak milestones (7 days, 30 days, 100 days, etc.), streak recovery ("you missed 1 day but your 45-day streak is safe!")
+- **Milestones:** "Completed Masechet Brachos!", "100 mishnayos learned!", siyum celebrations
+- **Visual progress:** animated progress bars, completion percentages, masechta/seder progress maps
+- **Calendar-linked:** "You're up to date!" or "3 dafim behind" with encouragement
+- **Celebration moments:** animations/confetti on completion, milestone fanfare, special celebrations for siyumim
+- **Children's experience:** extra vibrant, age-appropriate animations, reward progress prominently displayed
+- All of this lives on the dashboard — not buried in settings or sub-menus
 
 ### 3.3 Parent Rewards
-- Parent can set up and manage rewards for children
-- Children see rewards they've earned
-- PIN-protected reward management
+- PIN-protected reward management (parent only)
+- Rewards are per-child — each child has their own targets and rewards
+- Two reward modes:
+  - **Specific Reward** — a single reward tied to a milestone. Can be configured as a surprise (hidden from child until earned) or visible.
+  - **Reward Pool** — a collection of rewards the child can choose from when they hit the milestone. Always visible to the child (provides motivation). Pools can optionally be shared across children, but targets/milestones are always per-child.
+- Milestone types:
+  - Finish a masechta
+  - Finish a seder
+  - Every N dafim (repeating milestone — must use a pool since it triggers multiple times)
+- Either reward mode (specific or pool) can be used with any milestone type, except repeating milestones which require a pool
+- Child sees available pool rewards in advance; for specific rewards, parent chooses visible vs. surprise
 
-**Exit criteria:** Opening the app feels motivating. Progress is visible, celebrated, and meaningful for both children and adults.
+**Exit criteria:** Opening the app feels motivating and exciting. The dashboard is vibrant and alive with progress, streaks, milestones, and rewards. Children are buzzing to open the app. Adults feel genuine satisfaction seeing their learning journey. Nobody opens this app and feels like they're looking at a spreadsheet.
 
 ---
 
