@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -28,13 +28,13 @@ jobs:
           cache: true
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Cache pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.pub-cache
@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-pub-
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -115,7 +115,7 @@ jobs:
           rm -f learning_tracker/lib/firebase_options.dart
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: learning-tracker-${{ github.event.inputs.build_type }}-apk
           path: learning_tracker/build/app/outputs/flutter-apk/app-${{ github.event.inputs.build_type }}.apk
