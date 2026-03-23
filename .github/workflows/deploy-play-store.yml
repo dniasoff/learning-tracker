@@ -1,20 +1,22 @@
-name: Deploy to Google Play (Internal Test)
+name: Deploy to Google Play
 
 on:
   workflow_dispatch:
     inputs:
       track:
-        description: 'Google Play track'
-        required: true
-        default: 'internal'
+        description: 'Override Play Store track (leave empty for auto)'
+        required: false
         type: choice
         options:
+          - ''
           - internal
           - alpha
           - beta
+          - production
   push:
     branches:
       - dev
+      - main
 
 jobs:
   deploy:
@@ -24,6 +26,21 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 10
+
+      - name: Determine track
+        id: track
+        run: |
+          if [ -n "${{ github.event.inputs.track }}" ]; then
+            TRACK="${{ github.event.inputs.track }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            TRACK="production"
+          else
+            TRACK="internal"
+          fi
+          echo "track=$TRACK" >> "$GITHUB_OUTPUT"
+          echo "Deploying to track: $TRACK (branch: ${{ github.ref_name }})"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v3
@@ -103,11 +120,10 @@ jobs:
           echo "Version: $VERSION_NAME ($VERSION_CODE)"
 
       - name: Generate release notes
-        id: notes
         run: |
           NOTES=$(git log --oneline -10 --no-decorate | sed 's/^[a-f0-9]* /- /')
           mkdir -p release-notes
-          printf 'en-US\n%s\n' "$NOTES" > release-notes/en-US.txt
+          printf '%s\n' "$NOTES" > release-notes/en-US.txt
           # Truncate to 500 chars (Play Store limit)
           head -c 500 release-notes/en-US.txt > release-notes/en-US.tmp && mv release-notes/en-US.tmp release-notes/en-US.txt
           echo "Generated release notes:"
@@ -120,7 +136,7 @@ jobs:
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v5
         with:
-          name: app-release-aab
+          name: app-release-aab-${{ github.ref_name }}
           path: learning_tracker/build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
 
@@ -132,8 +148,8 @@ jobs:
           releaseFiles: learning_tracker/build/app/outputs/bundle/release/app-release.aab
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
           whatsNewDirectory: release-notes
-          track: ${{ github.event.inputs.track || 'internal' }}
-          status: draft
+          track: ${{ steps.track.outputs.track }}
+          status: ${{ steps.track.outputs.track == 'production' && 'draft' || 'completed' }}
 
       - name: Cleanup signing and Firebase files
         if: always()
