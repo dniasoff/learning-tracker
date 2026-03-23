@@ -112,9 +112,8 @@ jobs:
         id: version
         working-directory: learning_tracker
         run: |
-          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
-          VERSION_NAME=$(echo "$VERSION" | cut -d'+' -f1)
-          VERSION_CODE=$(echo "$VERSION" | cut -d'+' -f2)
+          VERSION_NAME=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          VERSION_CODE=${{ github.run_number }}
           echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION_NAME ($VERSION_CODE)"
@@ -131,7 +130,7 @@ jobs:
 
       - name: Build App Bundle
         working-directory: learning_tracker
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --build-number=${{ github.run_number }}
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v5
