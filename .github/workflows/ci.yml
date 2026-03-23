@@ -7,9 +7,27 @@ on:
     branches: [main, dev, dev/**]
 
 jobs:
-  analyze-and-test:
+  format:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify formatting
+        working-directory: learning_tracker
+        run: dart format --set-exit-if-changed .
+
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -49,17 +67,55 @@ jobs:
           FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
         run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
 
-      - name: Verify formatting
-        working-directory: learning_tracker
-        run: dart format --set-exit-if-changed .
-
       - name: Analyze code
         working-directory: learning_tracker
         run: dart analyze --fatal-infos
 
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            learning_tracker/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        working-directory: learning_tracker
+        run: flutter pub get
+
+      - name: Generate code
+        working-directory: learning_tracker
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > learning_tracker/android/app/google-services.json
+
+      - name: Generate firebase_options.dart
+        env:
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
+        run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
+
       - name: Run unit and widget tests
         working-directory: learning_tracker
-        run: flutter test --coverage
+        run: flutter test --concurrency=4 --coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -69,84 +125,3 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  # TODO: Enable integration-tests job once integration_test/ directory
-  # contains real tests. Requires physical device or emulator.
-  # integration-tests:
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 30
-  #   needs: [analyze-and-test]
-  #
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Setup Flutter
-  #       uses: subosito/flutter-action@v2
-  #       with:
-  #         channel: 'stable'
-  #         cache: true
-  #
-  #     - name: Setup Java
-  #       uses: actions/setup-java@v4
-  #       with:
-  #         distribution: 'temurin'
-  #         java-version: '17'
-  #
-  #     - name: Cache pub dependencies
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: |
-  #           ~/.pub-cache
-  #           learning_tracker/.dart_tool
-  #         key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-pub-
-  #
-  #     - name: Install dependencies
-  #       working-directory: learning_tracker
-  #       run: flutter pub get
-  #
-  #     - name: Generate code
-  #       working-directory: learning_tracker
-  #       run: dart run build_runner build --delete-conflicting-outputs
-  #
-  #     - name: Enable KVM (for Android emulator)
-  #       run: |
-  #         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-  #         sudo udevadm control --reload-rules
-  #         sudo udevadm trigger --name-match=kvm
-  #
-  #     - name: AVD cache
-  #       uses: actions/cache@v4
-  #       id: avd-cache
-  #       with:
-  #         path: |
-  #           ~/.android/avd/*
-  #           ~/.android/adb*
-  #         key: avd-34
-  #
-  #     - name: Create AVD and generate snapshot for caching
-  #       if: steps.avd-cache.outputs.cache-hit != 'true'
-  #       uses: reactivecircus/android-emulator-runner@v2
-  #       with:
-  #         api-level: 34
-  #         target: google_apis
-  #         arch: x86_64
-  #         profile: pixel_6
-  #         force-avd-creation: false
-  #         emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-  #         disable-animations: true
-  #         script: echo "Generated AVD snapshot for caching."
-  #
-  #     - name: Run integration tests
-  #       uses: reactivecircus/android-emulator-runner@v2
-  #       with:
-  #         api-level: 34
-  #         target: google_apis
-  #         arch: x86_64
-  #         profile: pixel_6
-  #         force-avd-creation: false
-  #         emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-  #         disable-animations: true
-  #         script: cd learning_tracker && flutter test integration_test
