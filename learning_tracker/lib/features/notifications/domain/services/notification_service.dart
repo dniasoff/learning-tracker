@@ -65,7 +65,7 @@ class NotificationService {
     );
 
     final result = await _plugin.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: (response) {
         onNotificationTap?.call(response.payload);
       },
@@ -120,11 +120,11 @@ class NotificationService {
     const notificationDetails = NotificationDetails(android: androidDetails);
 
     await _plugin.zonedSchedule(
-      dailyReminderId,
-      'Learning Reminder',
-      body,
-      scheduledTime,
-      notificationDetails,
+      id: dailyReminderId,
+      title: 'Learning Reminder',
+      body: body,
+      scheduledDate: scheduledTime,
+      notificationDetails: notificationDetails,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
       payload: dailyReminderPayload,
@@ -133,7 +133,7 @@ class NotificationService {
 
   /// Cancel the daily reminder notification.
   Future<void> cancelDailyReminder() async {
-    await _plugin.cancel(dailyReminderId);
+    await _plugin.cancel(id: dailyReminderId);
   }
 
   /// Schedule a daily streak protection alert at [hour]:[minute].
@@ -156,11 +156,11 @@ class NotificationService {
     const notificationDetails = NotificationDetails(android: androidDetails);
 
     await _plugin.zonedSchedule(
-      streakAlertId,
-      'Streak at Risk!',
-      body,
-      scheduledTime,
-      notificationDetails,
+      id: streakAlertId,
+      title: 'Streak at Risk!',
+      body: body,
+      scheduledDate: scheduledTime,
+      notificationDetails: notificationDetails,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
       payload: streakAlertPayload,
@@ -169,7 +169,7 @@ class NotificationService {
 
   /// Cancel the streak protection alert.
   Future<void> cancelStreakAlert() async {
-    await _plugin.cancel(streakAlertId);
+    await _plugin.cancel(id: streakAlertId);
   }
 
   /// Show an immediate notification for a reward milestone.
@@ -189,10 +189,10 @@ class NotificationService {
     _rewardNotificationCounter++;
 
     await _plugin.show(
-      id,
-      'Reward Milestone',
-      body,
-      notificationDetails,
+      id: id,
+      title: 'Reward Milestone',
+      body: body,
+      notificationDetails: notificationDetails,
       payload: rewardMilestonePayload,
     );
   }

@@ -247,6 +247,9 @@ void main() {
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchLedgerEntries(),
+      ).thenAnswer((_) async => []);
     }
 
     test('pull fetches all user data collections from Firestore', () async {
@@ -261,6 +264,7 @@ void main() {
       verify(() => mockFirestore.fetchRewards()).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
+      verify(() => mockFirestore.fetchLedgerEntries()).called(1);
     });
 
     test('additive merge adds remote completions not present locally '
@@ -450,6 +454,7 @@ void main() {
       Stream<Map<String, dynamic>?>? streak,
       Stream<List<Map<String, dynamic>>>? goals,
       Stream<List<Map<String, dynamic>>>? rewards,
+      Stream<List<Map<String, dynamic>>>? ledgerEntries,
     }) {
       when(
         () => mockFirestore.listenToCompletions(),
@@ -472,6 +477,9 @@ void main() {
       when(
         () => mockFirestore.listenToActiveCurricula(),
       ).thenAnswer((_) => Stream.value([]));
+      when(
+        () => mockFirestore.listenToLedgerEntries(),
+      ).thenAnswer((_) => ledgerEntries ?? Stream.value([]));
     }
 
     test(
@@ -677,6 +685,9 @@ void main() {
       when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
       when(
+        () => mockFirestore.fetchLedgerEntries(),
+      ).thenAnswer((_) async => []);
+      when(
         () => mockFirestore.fetchActiveCurricula(),
       ).thenAnswer((_) async => []);
     }
@@ -782,6 +793,9 @@ void main() {
         ],
       );
       when(
+        () => mockFirestore.fetchLedgerEntries(),
+      ).thenAnswer((_) async => []);
+      when(
         () => mockFirestore.fetchActiveCurricula(),
       ).thenAnswer((_) async => []);
 
@@ -829,6 +843,7 @@ void main() {
       verify(() => mockFirestore.fetchRewards()).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
+      verify(() => mockFirestore.fetchLedgerEntries()).called(1);
       verify(() => mockFirestore.fetchActiveCurricula()).called(1);
       verifyNoMoreInteractions(mockFirestore);
     });
@@ -887,6 +902,9 @@ void main() {
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchLedgerEntries(),
+      ).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchActiveCurricula(),
       ).thenAnswer((_) async => []);

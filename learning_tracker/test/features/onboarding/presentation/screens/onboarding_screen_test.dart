@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Fake import service that controls when import completes via a completer.
 class _FakeImportService implements CurriculumImportService {
@@ -84,6 +85,19 @@ void main() {
   }
 
   group('OnboardingScreen Widget Tests', () {
+    setUp(() {
+      // Pre-seed SharedPreferences so the screen resumes at the selection
+      // phase (skipping profile creation and language selection).
+      SharedPreferences.setMockInitialValues({
+        'onboarding_phase': 'selection',
+        'onboarding_profile_id': 1,
+        'onboarding_profile_name': 'Test',
+        'onboarding_profile_mode': 'adult',
+        'onboarding_selected_curricula': '[]',
+        'onboarding_language': 'he',
+      });
+    });
+
     testWidgets('displays all 7 curricula with names', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
@@ -99,19 +113,22 @@ void main() {
       expect(find.text('Chumash'), findsOneWidget);
     });
 
-    testWidgets('displays item counts for visible curricula', (tester) async {
+    testWidgets('displays curriculum names for visible curricula', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      // At least some visible items show counts
-      expect(find.text('100 items'), findsWidgets);
+      // At least some visible curriculum names are shown
+      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('Talmud Bavli'), findsOneWidget);
     });
 
-    testWidgets('displays hierarchy descriptions', (tester) async {
+    testWidgets('displays instruction text in selection phase', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.text('Level1 > Level2'), findsWidgets);
+      expect(find.text('Choose which curricula to track'), findsOneWidget);
     });
 
     testWidgets('checkmark toggles on tap', (tester) async {

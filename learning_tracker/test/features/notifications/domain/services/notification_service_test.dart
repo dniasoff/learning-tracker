@@ -25,7 +25,7 @@ void main() {
       test('returns true when plugin initializes successfully', () async {
         when(
           () => mockPlugin.initialize(
-            any(),
+            settings: any<InitializationSettings>(named: 'settings'),
             onDidReceiveNotificationResponse: any(
               named: 'onDidReceiveNotificationResponse',
             ),
@@ -40,7 +40,7 @@ void main() {
       test('returns false when plugin returns null', () async {
         when(
           () => mockPlugin.initialize(
-            any(),
+            settings: any<InitializationSettings>(named: 'settings'),
             onDidReceiveNotificationResponse: any(
               named: 'onDidReceiveNotificationResponse',
             ),
@@ -55,21 +55,25 @@ void main() {
 
     group('cancelDailyReminder', () {
       test('cancels notification with dailyReminderId', () async {
-        when(() => mockPlugin.cancel(any())).thenAnswer((_) async {});
+        when(
+          () => mockPlugin.cancel(id: any<int>(named: 'id')),
+        ).thenAnswer((_) async {});
 
         await service.cancelDailyReminder();
 
-        verify(() => mockPlugin.cancel(dailyReminderId)).called(1);
+        verify(() => mockPlugin.cancel(id: dailyReminderId)).called(1);
       });
     });
 
     group('cancelStreakAlert', () {
       test('cancels notification with streakAlertId', () async {
-        when(() => mockPlugin.cancel(any())).thenAnswer((_) async {});
+        when(
+          () => mockPlugin.cancel(id: any<int>(named: 'id')),
+        ).thenAnswer((_) async {});
 
         await service.cancelStreakAlert();
 
-        verify(() => mockPlugin.cancel(streakAlertId)).called(1);
+        verify(() => mockPlugin.cancel(id: streakAlertId)).called(1);
       });
     });
 
@@ -77,11 +81,13 @@ void main() {
       test('shows notification with incrementing IDs', () async {
         when(
           () => mockPlugin.show(
-            any(),
-            any(),
-            any(),
-            any(),
-            payload: any(named: 'payload'),
+            id: any<int>(named: 'id'),
+            title: any<String>(named: 'title'),
+            body: any<String>(named: 'body'),
+            notificationDetails: any<NotificationDetails>(
+              named: 'notificationDetails',
+            ),
+            payload: any<String>(named: 'payload'),
           ),
         ).thenAnswer((_) async {});
 
@@ -90,19 +96,23 @@ void main() {
 
         verify(
           () => mockPlugin.show(
-            100,
-            'Reward Milestone',
-            'First milestone',
-            any(),
+            id: 100,
+            title: 'Reward Milestone',
+            body: 'First milestone',
+            notificationDetails: any<NotificationDetails>(
+              named: 'notificationDetails',
+            ),
             payload: rewardMilestonePayload,
           ),
         ).called(1);
         verify(
           () => mockPlugin.show(
-            101,
-            'Reward Milestone',
-            'Second milestone',
-            any(),
+            id: 101,
+            title: 'Reward Milestone',
+            body: 'Second milestone',
+            notificationDetails: any<NotificationDetails>(
+              named: 'notificationDetails',
+            ),
             payload: rewardMilestonePayload,
           ),
         ).called(1);

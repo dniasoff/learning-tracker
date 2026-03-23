@@ -39,6 +39,12 @@ void main() {
 
     when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
 
+    // Default stubs for methods called by pullOnLaunch / attachListeners
+    when(() => mockFirestore.fetchLedgerEntries()).thenAnswer((_) async => []);
+    when(
+      () => mockFirestore.listenToLedgerEntries(),
+    ).thenAnswer((_) => const Stream.empty());
+
     syncEngine = SyncEngine(
       database: database,
       firestoreDataSource: mockFirestore,

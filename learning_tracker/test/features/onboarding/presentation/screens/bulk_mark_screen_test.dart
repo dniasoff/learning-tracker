@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 
 void main() {
   group('BulkMarkScreen', () {
@@ -12,13 +13,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            filteredContentProvider(
-              curriculumId: CurriculumId.mishnayos,
-            ).overrideWith((ref) => Future.value([])),
-            curriculumHierarchyConfigProvider(
-              CurriculumId.mishnayos,
-            ).overrideWith(
-              (ref) => Future.value(
+            scopedFilteredContentProvider.overrideWith(
+              (ref, params) => Future.value([]),
+            ),
+            curriculumHierarchyConfigProvider.overrideWith(
+              (ref, curriculumId) => Future.value(
                 const CurriculumHierarchyConfig(
                   curriculumId: 'mishnayos',
                   levelLabels: [],
@@ -26,6 +25,7 @@ void main() {
                 ),
               ),
             ),
+            contentSearchProvider.overrideWith((ref, args) => Future.value([])),
           ],
           child: const MaterialApp(
             home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),

@@ -37,8 +37,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   @override
   Future<Completion> markComplete(CompletionRequest request) async {
-    // Perform DB operations in a single transaction for atomicity
-    final completion = await _database.transaction(() async {
+    // Perform DB operations in a single transaction for atomicity.
+    // Returns a record indicating whether the completion was newly created.
+    final (:completion, :isNew) = await _database.transaction(() async {
       // 1. Get existing completions for this item (single query for both
       //    stage validation and duplicate check)
       final completions = await _database.completionDao
@@ -53,7 +54,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
           )
           .firstOrNull;
       if (existing != null) {
-        return existing;
+        return (completion: existing, isNew: false);
       }
 
       // 3. Validate stage progression using already-fetched completions
@@ -88,32 +89,34 @@ class CompletionRepositoryImpl implements CompletionRepository {
       );
 
       // 5. Create completion record
-      return await _createCompletion(request: request, points: points);
+      final created = await _createCompletion(request: request, points: points);
+      return (completion: created, isNew: true);
     });
 
-    // 6. Advance bookmark (outside transaction — uses content repo cache)
-    unawaited(
-      _advanceBookmark(
+    // Only run side effects for genuinely new completions
+    if (isNew) {
+      // 6. Advance bookmark (outside transaction — uses content repo cache)
+      await _advanceBookmark(
         curriculumId: request.curriculumId,
         trackType: request.trackType,
         completedSefariaRef: request.sefariaRef,
-      ),
-    );
-
-    // 7. Push to Firestore sync queue (fire-and-forget)
-    unawaited(_syncCompletion(completion));
-
-    // 8. Auto-detect unit completions (fire-and-forget)
-    if (_completionDetectionService != null) {
-      unawaited(
-        _completionDetectionService.checkAndRecordCompletions(
-          curriculumId: request.curriculumId,
-          sefariaRef: request.sefariaRef,
-          trackType: request.trackType,
-          profileId: _activeProfileId,
-          markedBy: _activeProfileId,
-        ),
       );
+
+      // 7. Push to Firestore sync queue (fire-and-forget)
+      unawaited(_syncCompletion(completion));
+
+      // 8. Auto-detect unit completions (fire-and-forget)
+      if (_completionDetectionService != null) {
+        unawaited(
+          _completionDetectionService.checkAndRecordCompletions(
+            curriculumId: request.curriculumId,
+            sefariaRef: request.sefariaRef,
+            trackType: request.trackType,
+            profileId: _activeProfileId,
+            markedBy: _activeProfileId,
+          ),
+        );
+      }
     }
 
     return completion;

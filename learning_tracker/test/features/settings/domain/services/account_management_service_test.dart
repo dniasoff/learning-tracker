@@ -93,7 +93,17 @@ void main() {
       when(() => mockUsersCollection.doc('test-uid')).thenReturn(mockUserDoc);
 
       // Mock subcollections as empty
-      for (final sub in ['completions', 'bookmarks', 'settings']) {
+      for (final sub in [
+        'completions',
+        'bookmarks',
+        'settings',
+        'goals',
+        'rewards',
+        'learning_ledger',
+        'active_curricula',
+        'curriculum_imports',
+        'profile',
+      ]) {
         final mockSubCollection = MockCollectionReference();
         final mockSnapshot = MockQuerySnapshot();
         when(() => mockUserDoc.collection(sub)).thenReturn(mockSubCollection);

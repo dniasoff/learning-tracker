@@ -26,7 +26,7 @@ class CompletionsBarChart extends StatelessWidget {
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
           maxY: maxY,
-          barTouchData: BarTouchData(enabled: false),
+          barTouchData: const BarTouchData(enabled: false),
           titlesData: FlTitlesData(
             show: true,
             bottomTitles: AxisTitles(

@@ -570,6 +570,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Scroll down to reveal lazily-built Recent Activity section
+      await tester.scrollUntilVisible(
+        find.text('Recent Activity (Last 7 Days)'),
+        200,
+        scrollable: find.byType(Scrollable),
+      );
+      await tester.pumpAndSettle();
+
       expect(find.text('Recent Activity (Last 7 Days)'), findsOneWidget);
       expect(find.text('ref-mishnayos-0'), findsOneWidget);
       expect(find.text('ref-mishnayos-1'), findsOneWidget);
@@ -633,6 +641,15 @@ void main() {
         expect(find.text('50'), findsOneWidget); // 5 * 10 points
         expect(find.text('2'), findsOneWidget); // current streak
         expect(find.text('Best: 2'), findsOneWidget); // max streak
+
+        // Scroll down to reveal lazily-built Recent Activity section
+        await tester.scrollUntilVisible(
+          find.text('Recent Activity (Last 7 Days)'),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.pumpAndSettle();
+
         // Verify recent completions are shown
         expect(find.text('Recent Activity (Last 7 Days)'), findsOneWidget);
         expect(find.text('day1-ref-0'), findsOneWidget);
