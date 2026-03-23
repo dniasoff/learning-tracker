@@ -1,0 +1,44 @@
+SHORT DESCRIPTION (80 chars max):
+Track Torah study across Mishnayos, Bavli, Chumash & more with smart scheduling.
+
+FULL DESCRIPTION (4000 chars max):
+Torah Learning Tracker helps you stay on top of your daily Torah learning across multiple curricula — all in one app.
+
+Whether you're learning Mishnayos, Talmud Bavli, Chumash, Mishna Berurah, Nach, or Mussar, Torah Learning Tracker keeps everything organized with smart scheduling, progress tracking, and chazara management that works offline and syncs across your devices.
+
+KEY FEATURES
+
+📚 7 Curricula in One Place
+Track your progress across Mishnayos, Talmud Bavli, Talmud Yerushalmi, Mishna Berurah, Chumash, Nach, and Mussar — each with full content hierarchies.
+
+📅 Smart Scheduling
+Set learning goals with deadlines (Gregorian or Hebrew calendar) and let the app generate your daily schedule. See at a glance whether you're ahead, on pace, or need to catch up.
+
+📊 Progress Tracking
+View detailed progress charts, weekly activity breakdowns, and curriculum-by-curriculum completion percentages. Track your learning journey over time.
+
+🔄 Chazara Management
+Built-in review stages (Learn, Chazara 1, Chazara 2) ensure you retain what you've learned. The app tracks which items are due for review.
+
+🔥 Streaks & Gamification
+Stay motivated with daily streak tracking, points, and achievements. Child mode adds celebratory animations and a reward system managed by parents.
+
+👨‍👩‍👧‍👦 Multi-Learner Support
+Create separate profiles for each family member. Parents can monitor progress and manage rewards through a PIN-protected parent mode. Tutors get a read-only view of student progress.
+
+🎯 Multi-Track Learning
+Track personal, school, and tutor learning independently — perfect for students juggling multiple schedules.
+
+📶 Offline-First with Cloud Sync
+Learn anywhere without an internet connection. Your progress syncs automatically across devices when you're back online.
+
+🔤 Bilingual Support
+Full Hebrew and English text display with right-to-left layout support.
+
+PERFECT FOR
+• Daily Mishnayos or Daf Yomi learners
+• Students tracking school and personal learning
+• Parents managing children's Torah education
+• Anyone working through a structured Torah curriculum
+
+Torah Learning Tracker is free and open source.
