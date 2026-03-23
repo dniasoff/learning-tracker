@@ -80,7 +80,7 @@ jobs:
           storePassword=$STORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
-          storeFile=app/keystore.jks
+          storeFile=keystore.jks
           EOF
           # Strip leading whitespace from each line
           sed -i 's/^[[:space:]]*//' learning_tracker/android/key.properties
