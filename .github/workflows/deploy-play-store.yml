@@ -87,14 +87,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         run: |
-          cat > learning_tracker/android/key.properties <<EOF
-          storePassword=$STORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=keystore.jks
-          EOF
-          # Strip leading whitespace from each line
-          sed -i 's/^[[:space:]]*//' learning_tracker/android/key.properties
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=keystore.jks\n' \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
+            > learning_tracker/android/key.properties
 
       - name: Build App Bundle
         working-directory: learning_tracker

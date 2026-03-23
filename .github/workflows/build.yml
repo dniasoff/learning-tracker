@@ -80,7 +80,7 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > learning_tracker/android/app/keystore.jks
           else
-            echo "⚠️  KEYSTORE_BASE64 secret not set. Unsigned APK will be built."
+            echo "Warning: KEYSTORE_BASE64 secret not set."
           fi
 
       - name: Create key.properties (Release only)
@@ -91,14 +91,9 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         run: |
           if [ -f learning_tracker/android/app/keystore.jks ]; then
-            cat > learning_tracker/android/key.properties <<EOF
-          storePassword=$STORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=keystore.jks
-          EOF
-            # Strip leading whitespace from each line
-            sed -i 's/^[[:space:]]*//' learning_tracker/android/key.properties
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=keystore.jks\n' \
+              "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
+              > learning_tracker/android/key.properties
           fi
 
       - name: Build APK (Release)
@@ -111,7 +106,7 @@ jobs:
         working-directory: learning_tracker
         run: flutter build apk --debug
 
-      - name: Cleanup signing and Firebase files (runs even on failure)
+      - name: Cleanup signing and Firebase files
         if: always()
         run: |
           rm -f learning_tracker/android/key.properties

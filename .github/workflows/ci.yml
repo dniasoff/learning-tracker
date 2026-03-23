@@ -21,6 +21,20 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            learning_tracker/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        working-directory: learning_tracker
+        run: flutter pub get
+
       - name: Verify formatting
         working-directory: learning_tracker
         run: dart format --set-exit-if-changed .
