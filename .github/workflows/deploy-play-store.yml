@@ -23,22 +23,22 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v3
         with:
           channel: 'stable'
           cache: true
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Cache pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.pub-cache
@@ -48,7 +48,7 @@ jobs:
             ${{ runner.os }}-pub-
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -91,12 +91,34 @@ jobs:
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
             > learning_tracker/android/key.properties
 
+      - name: Extract version info
+        id: version
+        working-directory: learning_tracker
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          VERSION_NAME=$(echo "$VERSION" | cut -d'+' -f1)
+          VERSION_CODE=$(echo "$VERSION" | cut -d'+' -f2)
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION_NAME ($VERSION_CODE)"
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          NOTES=$(git log --oneline -10 --no-decorate | sed 's/^[a-f0-9]* /- /')
+          mkdir -p release-notes
+          printf 'en-US\n%s\n' "$NOTES" > release-notes/en-US.txt
+          # Truncate to 500 chars (Play Store limit)
+          head -c 500 release-notes/en-US.txt > release-notes/en-US.tmp && mv release-notes/en-US.tmp release-notes/en-US.txt
+          echo "Generated release notes:"
+          cat release-notes/en-US.txt
+
       - name: Build App Bundle
         working-directory: learning_tracker
         run: flutter build appbundle --release
 
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: app-release-aab
           path: learning_tracker/build/app/outputs/bundle/release/app-release.aab
@@ -108,6 +130,8 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.jcom.torah.learning_tracker
           releaseFiles: learning_tracker/build/app/outputs/bundle/release/app-release.aab
+          releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
+          whatsNewDirectory: release-notes
           track: ${{ github.event.inputs.track || 'internal' }}
           status: draft
 
