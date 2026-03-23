@@ -148,7 +148,7 @@ jobs:
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
           whatsNewDirectory: release-notes
           track: ${{ steps.track.outputs.track }}
-          status: draft
+          status: completed
 
       - name: Cleanup signing and Firebase files
         if: always()
