@@ -66,6 +66,38 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _sendPasswordReset() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showError('Please enter your email address first.');
+      return;
+    }
+    final emailError = validators.validateEmail(email);
+    if (emailError != null) {
+      _showError(emailError);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.sendPasswordResetEmail(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset email sent. Check your inbox.'),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        _showError(_mapAuthError(e.code));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
@@ -184,7 +216,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   enabled: !_isLoading,
                   onFieldSubmitted: (_) => _signInWithEmail(),
                 ),
-                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _isLoading ? null : _sendPasswordReset,
+                    child: const Text('Forgot password?'),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 FilledButton(
                   onPressed: _isLoading ? null : _signInWithEmail,
                   child: _isLoading

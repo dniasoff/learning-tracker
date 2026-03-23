@@ -26,6 +26,9 @@ abstract class AuthRepository {
   /// Checks whether the given [link] is a valid sign-in email link.
   bool isSignInWithEmailLink(String link);
 
+  /// Sends a password reset email to the given address.
+  Future<void> sendPasswordResetEmail(String email);
+
   /// Signs out the current user.
   Future<void> signOut();
 
