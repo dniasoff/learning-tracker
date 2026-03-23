@@ -108,6 +108,15 @@ jobs:
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
             > learning_tracker/android/key.properties
 
+      - name: Print upload key SHA fingerprints
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          keytool -list -v -keystore learning_tracker/android/app/keystore.jks \
+            -alias "$KEY_ALIAS" -storepass "$STORE_PASSWORD" \
+            | grep -E "SHA1|SHA256"
+
       - name: Extract version info
         id: version
         working-directory: learning_tracker
