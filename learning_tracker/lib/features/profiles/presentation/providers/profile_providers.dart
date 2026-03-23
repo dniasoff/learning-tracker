@@ -48,9 +48,9 @@ Future<List<ProfileModel>> profileList(Ref ref) async {
 Stream<List<ProfileModel>> profileListStream(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   final accountId = ref.watch(currentAccountIdProvider);
-  return db.profileDao.watchProfilesByAccount(accountId).map(
-    (rows) => rows.map(ProfileModel.fromDriftRow).toList(),
-  );
+  return db.profileDao
+      .watchProfilesByAccount(accountId)
+      .map((rows) => rows.map(ProfileModel.fromDriftRow).toList());
 }
 
 /// The currently selected profile model.

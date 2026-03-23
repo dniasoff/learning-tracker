@@ -4,9 +4,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 
 /// Result returned from the bulk mark screen.
@@ -292,124 +292,130 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     return SafeArea(
       top: false,
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-          child: Text(
-            'Select content you\'ve already completed',
-            style: theme.textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        if (_navigationStack.isNotEmpty && !isSearchActive)
-          configAsync.when(
-            data: (config) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                children: [
-                  for (var i = 0; i < _navigationStack.length; i++)
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _navigationStack = _navigationStack.sublist(0, i + 1);
-                        });
-                      },
-                      child: Text(
-                        '${i < config.levelLabels.length ? config.levelLabels[i] : ''}: ${_navigationStack[i]}',
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-        Expanded(
-          child: itemsAsync.when(
-            data: (items) {
-              final displayItems = isSearchActive
-                  ? items
-                  : _groupItemsByNextLevel(items);
-              if (displayItems.isEmpty) {
-                return Center(
-                  child: Text(
-                    isSearchActive
-                        ? 'No results for "$_searchQuery"'
-                        : 'No content available',
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                itemCount: displayItems.length,
-                itemBuilder: (context, index) {
-                  final item = displayItems[index];
-                  final isSelected = _isItemSelected(item);
-
-                  return ListTile(
-                    leading: Checkbox(
-                      value: isSelected,
-                      onChanged: (_) => _toggleItem(item),
-                    ),
-                    title: Text(item.displayNameEn),
-                    subtitle: item.displayNameHe != item.displayNameEn
-                        ? Text(item.displayNameHe)
-                        : null,
-                    trailing: item.isLeaf || isSearchActive
-                        ? null
-                        : const Icon(Icons.chevron_right),
-                    onTap: item.isLeaf || isSearchActive
-                        ? () => _toggleItem(item)
-                        : () => _drillDown(item),
-                  );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-          ),
-        ),
-        if (_selections.isNotEmpty)
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: Text(
-              '${_selections.length} selection(s)',
-              style: theme.textTheme.bodySmall,
+              'Select content you\'ve already completed',
+              style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(null),
-                  child: const Text('Skip'),
+          if (_navigationStack.isNotEmpty && !isSearchActive)
+            configAsync.when(
+              data: (config) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
+                  children: [
+                    for (var i = 0; i < _navigationStack.length; i++)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _navigationStack = _navigationStack.sublist(
+                              0,
+                              i + 1,
+                            );
+                          });
+                        },
+                        child: Text(
+                          '${i < config.levelLabels.length ? config.levelLabels[i] : ''}: ${_navigationStack[i]}',
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _selections.isNotEmpty
-                      ? _proceedToStageSelection
-                      : null,
-                  child: const Text('Next'),
-                ),
-              ),
-            ],
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          Expanded(
+            child: itemsAsync.when(
+              data: (items) {
+                final displayItems = isSearchActive
+                    ? items
+                    : _groupItemsByNextLevel(items);
+                if (displayItems.isEmpty) {
+                  return Center(
+                    child: Text(
+                      isSearchActive
+                          ? 'No results for "$_searchQuery"'
+                          : 'No content available',
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: displayItems.length,
+                  itemBuilder: (context, index) {
+                    final item = displayItems[index];
+                    final isSelected = _isItemSelected(item);
+
+                    return ListTile(
+                      leading: Checkbox(
+                        value: isSelected,
+                        onChanged: (_) => _toggleItem(item),
+                      ),
+                      title: Text(item.displayNameEn),
+                      subtitle: item.displayNameHe != item.displayNameEn
+                          ? Text(item.displayNameHe)
+                          : null,
+                      trailing: item.isLeaf || isSearchActive
+                          ? null
+                          : const Icon(Icons.chevron_right),
+                      onTap: item.isLeaf || isSearchActive
+                          ? () => _toggleItem(item)
+                          : () => _drillDown(item),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
           ),
-        ),
-      ],
+          if (_selections.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Text(
+                '${_selections.length} selection(s)',
+                style: theme.textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(null),
+                    child: const Text('Skip'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _selections.isNotEmpty
+                        ? _proceedToStageSelection
+                        : null,
+                    child: const Text('Next'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   String _selectionLabel(HierarchySelection sel) {
-    final parts = [sel.level1, sel.level2, sel.level3, sel.level4]
-        .whereType<String>()
-        .toList();
+    final parts = [
+      sel.level1,
+      sel.level2,
+      sel.level3,
+      sel.level4,
+    ].whereType<String>().toList();
     return parts.isEmpty ? 'All' : parts.last;
   }
 
@@ -420,59 +426,104 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     return SafeArea(
       top: false,
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text(
-            'Which stages have you completed?',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Set stages per selection, or use "Apply to All" for the same stages everywhere.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Text(
+              'Which stages have you completed?',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: stagesAsync.when(
-            data: (stages) => ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                for (final sel in selections) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'Set stages per selection, or use "Apply to All" for the same stages everywhere.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: stagesAsync.when(
+              data: (stages) => ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final sel in selections) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                      child: Text(
+                        _selectionLabel(sel),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    for (final stage in stages)
+                      CheckboxListTile(
+                        dense: true,
+                        value:
+                            _perSelectionStages[sel]?.contains(
+                              stage.stageOrder,
+                            ) ??
+                            false,
+                        onChanged: (checked) {
+                          setState(() {
+                            final stageSet = _perSelectionStages[sel] ??= {};
+                            if (checked ?? false) {
+                              for (var i = 1; i <= stage.stageOrder; i++) {
+                                stageSet.add(i);
+                              }
+                            } else {
+                              stageSet.removeWhere(
+                                (id) => id >= stage.stageOrder,
+                              );
+                            }
+                          });
+                        },
+                        title: Text(stage.stageName),
+                        subtitle: stage.delayDays > 0
+                            ? Text('${stage.delayDays} day delay')
+                            : null,
+                      ),
+                    const Divider(),
+                  ],
+                  // "Apply to All" shortcut
                   Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
-                      _selectionLabel(sel),
+                      'Apply to All',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                   ),
                   for (final stage in stages)
                     CheckboxListTile(
                       dense: true,
-                      value: _perSelectionStages[sel]
-                              ?.contains(stage.stageOrder) ??
-                          false,
+                      value: _selectedStageIds.contains(stage.stageOrder),
                       onChanged: (checked) {
                         setState(() {
-                          final stageSet = _perSelectionStages[sel] ??= {};
                           if (checked ?? false) {
                             for (var i = 1; i <= stage.stageOrder; i++) {
-                              stageSet.add(i);
+                              _selectedStageIds.add(i);
+                              for (final s in selections) {
+                                _perSelectionStages[s]?.add(i);
+                              }
                             }
                           } else {
-                            stageSet.removeWhere(
+                            _selectedStageIds.removeWhere(
                               (id) => id >= stage.stageOrder,
                             );
+                            for (final s in selections) {
+                              _perSelectionStages[s]?.removeWhere(
+                                (id) => id >= stage.stageOrder,
+                              );
+                            }
                           }
                         });
                       },
@@ -481,77 +532,36 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                           ? Text('${stage.delayDays} day delay')
                           : null,
                     ),
-                  const Divider(),
                 ],
-                // "Apply to All" shortcut
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'Apply to All',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => setState(() => _phase = _Phase.selection),
+                    child: const Text('Back'),
                   ),
                 ),
-                for (final stage in stages)
-                  CheckboxListTile(
-                    dense: true,
-                    value: _selectedStageIds.contains(stage.stageOrder),
-                    onChanged: (checked) {
-                      setState(() {
-                        if (checked ?? false) {
-                          for (var i = 1; i <= stage.stageOrder; i++) {
-                            _selectedStageIds.add(i);
-                            for (final s in selections) {
-                              _perSelectionStages[s]?.add(i);
-                            }
-                          }
-                        } else {
-                          _selectedStageIds
-                              .removeWhere((id) => id >= stage.stageOrder);
-                          for (final s in selections) {
-                            _perSelectionStages[s]
-                                ?.removeWhere((id) => id >= stage.stageOrder);
-                          }
-                        }
-                      });
-                    },
-                    title: Text(stage.stageName),
-                    subtitle: stage.delayDays > 0
-                        ? Text('${stage.delayDays} day delay')
+                const SizedBox(width: 16),
+                Expanded(
+                  child: FilledButton(
+                    onPressed:
+                        _perSelectionStages.values.any((s) => s.isNotEmpty)
+                        ? _proceedToConfirmation
                         : null,
+                    child: const Text('Next'),
                   ),
+                ),
               ],
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => setState(() => _phase = _Phase.selection),
-                  child: const Text('Back'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _perSelectionStages.values
-                          .any((s) => s.isNotEmpty)
-                      ? _proceedToConfirmation
-                      : null,
-                  child: const Text('Next'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -564,54 +574,54 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     return SafeArea(
       top: false,
       child: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.checklist, size: 64, color: theme.colorScheme.primary),
-            const SizedBox(height: 24),
-            Text('Confirm Bulk Mark', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 16),
-            Text(
-              '$itemCount items across $stageCount stage(s)',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$totalCompletions completion records will be created',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (_error != null) ...[
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.checklist, size: 64, color: theme.colorScheme.primary),
+              const SizedBox(height: 24),
+              Text('Confirm Bulk Mark', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 16),
               Text(
-                _error!,
+                '$itemCount items across $stageCount stage(s)',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$totalCompletions completion records will be created',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.error,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ],
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton(
-                  onPressed: () =>
-                      setState(() => _phase = _Phase.stageSelection),
-                  child: const Text('Back'),
-                ),
-                const SizedBox(width: 16),
-                FilledButton(
-                  onPressed: _executeBulkMark,
-                  child: const Text('Confirm'),
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  _error!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
                 ),
               ],
-            ),
-          ],
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton(
+                    onPressed: () =>
+                        setState(() => _phase = _Phase.stageSelection),
+                    child: const Text('Back'),
+                  ),
+                  const SizedBox(width: 16),
+                  FilledButton(
+                    onPressed: _executeBulkMark,
+                    child: const Text('Confirm'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -637,42 +647,42 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     return SafeArea(
       top: false,
       child: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              size: 64,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text('Done!', style: theme.textTheme.headlineSmall),
-            if (result != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Marked ${result.itemCount} items as completed '
-                '(${result.completionCount} records)',
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center,
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: 64,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text('Done!', style: theme.textTheme.headlineSmall),
+              if (result != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Marked ${result.itemCount} items as completed '
+                  '(${result.completionCount} records)',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(
+                  result != null
+                      ? BulkMarkResult(
+                          itemCount: result.itemCount,
+                          completionCount: result.completionCount,
+                        )
+                      : null,
+                ),
+                child: const Text('Continue'),
               ),
             ],
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(
-                result != null
-                    ? BulkMarkResult(
-                        itemCount: result.itemCount,
-                        completionCount: result.completionCount,
-                      )
-                    : null,
-              ),
-              child: const Text('Continue'),
-            ),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }

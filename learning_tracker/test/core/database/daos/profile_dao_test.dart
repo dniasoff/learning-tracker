@@ -32,16 +32,18 @@ void main() {
       );
     }
 
-    test('insertProfile returns an id and getProfileById retrieves it',
-        () async {
-      final id = await database.profileDao.insertProfile(makeProfile());
+    test(
+      'insertProfile returns an id and getProfileById retrieves it',
+      () async {
+        final id = await database.profileDao.insertProfile(makeProfile());
 
-      final profile = await database.profileDao.getProfileById(id);
-      expect(profile, isNotNull);
-      expect(profile!.displayName, 'Test User');
-      expect(profile.mode, 'adult');
-      expect(profile.accountId, 1);
-    });
+        final profile = await database.profileDao.getProfileById(id);
+        expect(profile, isNotNull);
+        expect(profile!.displayName, 'Test User');
+        expect(profile.mode, 'adult');
+        expect(profile.accountId, 1);
+      },
+    );
 
     test('getProfileById returns null for non-existent id', () async {
       final profile = await database.profileDao.getProfileById(999);

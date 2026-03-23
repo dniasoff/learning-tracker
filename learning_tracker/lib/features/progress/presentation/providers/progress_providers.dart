@@ -5,7 +5,6 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
@@ -13,6 +12,7 @@ import 'package:learning_tracker/features/progress/domain/services/curriculum_pr
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'progress_providers.g.dart';
@@ -110,11 +110,8 @@ Future<CurriculumProgressData> curriculumProgress(
     curriculumHierarchyConfigProvider(curriculumEnum).future,
   );
   final profileId = ref.watch(activeProfileIdProvider);
-  final completions =
-      await db.completionDao.getCompletionsByCurriculumAndProfile(
-    curriculumId,
-    profileId,
-  );
+  final completions = await db.completionDao
+      .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
   final stageDefinitions = await db.stageDao.getStageDefinitionsByCurriculum(
     curriculumId,
   );
@@ -139,8 +136,10 @@ Future<PaceStatus?> curriculumPaceStatus(Ref ref, String curriculumId) async {
   final profileId = ref.watch(activeProfileIdProvider);
 
   // Get the most recent goal for this curriculum
-  final goals =
-      await db.goalDao.getGoalsByCurriculumAndProfile(curriculumId, profileId);
+  final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
+    curriculumId,
+    profileId,
+  );
   if (goals.isEmpty) return null;
 
   final goal = goals.first;
@@ -157,11 +156,8 @@ Future<PaceStatus?> curriculumPaceStatus(Ref ref, String curriculumId) async {
   );
 
   // Get personal-track completions
-  final allCompletions =
-      await db.completionDao.getCompletionsByCurriculumAndProfile(
-    curriculumId,
-    profileId,
-  );
+  final allCompletions = await db.completionDao
+      .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
   final personalCompletions = allCompletions
       .where((c) => c.trackType == TrackType.personal.storageKey)
       .toList();

@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -17,8 +16,7 @@ void main() {
   setUp(() {
     db = createTestDatabase();
     mockSyncEngine = _MockSyncEngine();
-    when(() => mockSyncEngine.pushLedgerEntry(any()))
-        .thenAnswer((_) async {});
+    when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
   });
 
   tearDown(() async {

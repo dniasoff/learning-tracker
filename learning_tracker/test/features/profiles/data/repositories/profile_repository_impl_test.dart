@@ -54,21 +54,9 @@ void main() {
     });
 
     test('getProfilesByAccount returns all profiles for account', () async {
-      await repo.createProfile(
-        accountId: 1,
-        displayName: 'A',
-        mode: 'adult',
-      );
-      await repo.createProfile(
-        accountId: 1,
-        displayName: 'B',
-        mode: 'child',
-      );
-      await repo.createProfile(
-        accountId: 2,
-        displayName: 'C',
-        mode: 'adult',
-      );
+      await repo.createProfile(accountId: 1, displayName: 'A', mode: 'adult');
+      await repo.createProfile(accountId: 1, displayName: 'B', mode: 'child');
+      await repo.createProfile(accountId: 2, displayName: 'C', mode: 'adult');
 
       final account1Profiles = await repo.getProfilesByAccount(1);
       expect(account1Profiles, hasLength(2));
@@ -118,39 +106,33 @@ void main() {
     test('countProfilesForAccount returns correct count', () async {
       expect(await repo.countProfilesForAccount(1), 0);
 
-      await repo.createProfile(
-        accountId: 1,
-        displayName: 'A',
-        mode: 'adult',
-      );
+      await repo.createProfile(accountId: 1, displayName: 'A', mode: 'adult');
       expect(await repo.countProfilesForAccount(1), 1);
 
-      await repo.createProfile(
-        accountId: 1,
-        displayName: 'B',
-        mode: 'child',
-      );
+      await repo.createProfile(accountId: 1, displayName: 'B', mode: 'child');
       expect(await repo.countProfilesForAccount(1), 2);
     });
 
-    test('createProfile throws MaxProfilesExceededException at limit',
-        () async {
-      for (var i = 0; i < 10; i++) {
-        await repo.createProfile(
-          accountId: 1,
-          displayName: 'Profile $i',
-          mode: 'adult',
-        );
-      }
+    test(
+      'createProfile throws MaxProfilesExceededException at limit',
+      () async {
+        for (var i = 0; i < 10; i++) {
+          await repo.createProfile(
+            accountId: 1,
+            displayName: 'Profile $i',
+            mode: 'adult',
+          );
+        }
 
-      expect(
-        () => repo.createProfile(
-          accountId: 1,
-          displayName: 'Too Many',
-          mode: 'adult',
-        ),
-        throwsA(isA<MaxProfilesExceededException>()),
-      );
-    });
+        expect(
+          () => repo.createProfile(
+            accountId: 1,
+            displayName: 'Too Many',
+            mode: 'adult',
+          ),
+          throwsA(isA<MaxProfilesExceededException>()),
+        );
+      },
+    );
   });
 }

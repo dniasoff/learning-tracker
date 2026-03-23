@@ -101,10 +101,7 @@ void main() {
     test('deleteGoalsByCurriculum removes all goals for curriculum', () async {
       await insertTestGoal(description: 'Goal 1');
       await insertTestGoal(description: 'Goal 2');
-      await insertTestGoal(
-        curriculumId: 'yerushalmi',
-        description: 'Other',
-      );
+      await insertTestGoal(curriculumId: 'yerushalmi', description: 'Other');
 
       final deleted = await database.goalDao.deleteGoalsByCurriculum('bavli');
       expect(deleted, 2);

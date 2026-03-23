@@ -29,52 +29,55 @@ class CurriculumProgressScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: 'Progress - $curriculumName')),
-      body: SafeArea(top: false, child: progressAsync.when(
-        data: (progressData) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Pace indicator (if goal exists)
-              paceAsync.when(
-                data: (pace) => pace != null
-                    ? Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: PaceIndicator(paceStatus: pace),
-                      )
-                    : const SizedBox.shrink(),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
+      body: SafeArea(
+        top: false,
+        child: progressAsync.when(
+          data: (progressData) => SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Pace indicator (if goal exists)
+                paceAsync.when(
+                  data: (pace) => pace != null
+                      ? Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: PaceIndicator(paceStatus: pace),
+                        )
+                      : const SizedBox.shrink(),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
 
-              // Overall stats card
-              OverallStatsCard(stats: progressData.overallStats),
-              const SizedBox(height: 16),
+                // Overall stats card
+                OverallStatsCard(stats: progressData.overallStats),
+                const SizedBox(height: 16),
 
-              // Hierarchy breakdown
-              Text(
-                'Breakdown by Level',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ...progressData.hierarchyLevels.map(
-                (level) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: HierarchyProgressCard(
-                    level: level,
-                    curriculumColor: curriculumColor,
+                // Hierarchy breakdown
+                Text(
+                  'Breakdown by Level',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                ...progressData.hierarchyLevels.map(
+                  (level) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: HierarchyProgressCard(
+                      level: level,
+                      curriculumColor: curriculumColor,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+          loading: () => const LoadingIndicator(message: 'Loading progress...'),
+          error: (error, _) => ErrorDisplay(
+            message: 'Failed to load progress: $error',
+            onRetry: () => ref.invalidate(curriculumProgressProvider),
           ),
         ),
-        loading: () => const LoadingIndicator(message: 'Loading progress...'),
-        error: (error, _) => ErrorDisplay(
-          message: 'Failed to load progress: $error',
-          onRetry: () => ref.invalidate(curriculumProgressProvider),
-        ),
-      )),
+      ),
     );
   }
 

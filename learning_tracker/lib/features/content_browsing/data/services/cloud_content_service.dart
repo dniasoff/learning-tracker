@@ -55,8 +55,9 @@ class ContentManifest {
     final curricula = <String, CurriculumManifestEntry>{};
     final curriculaJson = json['curricula'] as Map<String, dynamic>? ?? {};
     for (final entry in curriculaJson.entries) {
-      curricula[entry.key] =
-          CurriculumManifestEntry.fromJson(entry.value as Map<String, dynamic>);
+      curricula[entry.key] = CurriculumManifestEntry.fromJson(
+        entry.value as Map<String, dynamic>,
+      );
     }
     return ContentManifest(
       schemaVersion: json['schemaVersion'] as int? ?? 1,
@@ -72,10 +73,7 @@ class ContentManifest {
 
 /// Manifest entry for a single curriculum.
 class CurriculumManifestEntry {
-  const CurriculumManifestEntry({
-    required this.hierarchy,
-    required this.text,
-  });
+  const CurriculumManifestEntry({required this.hierarchy, required this.text});
 
   factory CurriculumManifestEntry.fromJson(Map<String, dynamic> json) {
     return CurriculumManifestEntry(
@@ -103,7 +101,8 @@ class ContentTypeManifest {
   factory ContentTypeManifest.fromJson(Map<String, dynamic> json) {
     return ContentTypeManifest(
       version: json['version'] as String? ?? '0',
-      languages: (json['languages'] as List<dynamic>?)
+      languages:
+          (json['languages'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
@@ -128,12 +127,14 @@ class TextContentManifest {
     final chunks = <String, TextChunkInfo>{};
     final chunksJson = json['chunks'] as Map<String, dynamic>? ?? {};
     for (final entry in chunksJson.entries) {
-      chunks[entry.key] =
-          TextChunkInfo.fromJson(entry.value as Map<String, dynamic>);
+      chunks[entry.key] = TextChunkInfo.fromJson(
+        entry.value as Map<String, dynamic>,
+      );
     }
     return TextContentManifest(
       version: json['version'] as String? ?? '0',
-      languages: (json['languages'] as List<dynamic>?)
+      languages:
+          (json['languages'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
@@ -196,7 +197,10 @@ class CloudContentService {
       _cachedManifest = ContentManifest.fromJson(json);
       return _cachedManifest!;
     } catch (e) {
-      AppLogger.instance.error('CloudContentService: failed to fetch manifest', e);
+      AppLogger.instance.error(
+        'CloudContentService: failed to fetch manifest',
+        e,
+      );
       rethrow;
     }
   }
@@ -205,24 +209,20 @@ class CloudContentService {
   ///
   /// Downloads gzipped JSON from Firebase Storage, decompresses, and parses.
   Future<({List<ContentItem> items, CurriculumHierarchyConfig config})>
-      downloadHierarchy({
+  downloadHierarchy({
     required CurriculumId curriculum,
     required String languageCode,
   }) async {
     final path =
         '$_contentPrefix/${curriculum.storageKey}/hierarchy/$languageCode.json.gz';
 
-    AppLogger.instance.info(
-      'CloudContentService: downloading hierarchy $path',
-    );
+    AppLogger.instance.info('CloudContentService: downloading hierarchy $path');
 
     final ref = _storage.ref(path);
     final data = await ref.getData();
 
     if (data == null) {
-      throw ContentDownloadException(
-        'No hierarchy found at $path',
-      );
+      throw ContentDownloadException('No hierarchy found at $path');
     }
 
     // Decompress gzip
@@ -287,8 +287,7 @@ class CloudContentService {
         if (entry == null) continue;
 
         final localVersion = localVersions[curriculum.storageKey];
-        if (localVersion == null ||
-            localVersion != entry.hierarchy.version) {
+        if (localVersion == null || localVersion != entry.hierarchy.version) {
           updates.add(curriculum);
         }
       }
@@ -315,12 +314,13 @@ class CloudContentService {
 
   /// Parse hierarchy JSON into items and config.
   ({List<ContentItem> items, CurriculumHierarchyConfig config})
-      _parseHierarchyJson(Map<String, dynamic> json) {
+  _parseHierarchyJson(Map<String, dynamic> json) {
     final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
     final config = CurriculumHierarchyConfig(
       curriculumId: configJson['curriculumId'] as String,
-      levelLabels:
-          (configJson['levelLabels'] as List).map((e) => e as String).toList(),
+      levelLabels: (configJson['levelLabels'] as List)
+          .map((e) => e as String)
+          .toList(),
       totalItems: configJson['totalItems'] as int,
     );
 

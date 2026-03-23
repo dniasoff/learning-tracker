@@ -44,7 +44,10 @@ void main() {
         CurriculumId.mishnayos,
       );
       expect(scopes, hasLength(2));
-      expect(scopes.map((s) => s.scopeValue), containsAll(['Seder Zeraim', 'Seder Moed']));
+      expect(
+        scopes.map((s) => s.scopeValue),
+        containsAll(['Seder Zeraim', 'Seder Moed']),
+      );
       expect(scopes.first.scopeLevel, equals(1));
     });
 
@@ -84,7 +87,10 @@ void main() {
       );
       expect(scopes, hasLength(2));
       expect(scopes.first.scopeLevel, equals(2));
-      expect(scopes.map((s) => s.scopeValue), containsAll(['Berachos', 'Shabbos']));
+      expect(
+        scopes.map((s) => s.scopeValue),
+        containsAll(['Berachos', 'Shabbos']),
+      );
     });
 
     test('clearScopes removes all scopes', () async {
@@ -95,10 +101,7 @@ void main() {
         ['Seder Zeraim', 'Seder Moed'],
       );
 
-      await database.curriculumScopeDao.clearScopes(
-        0,
-        CurriculumId.mishnayos,
-      );
+      await database.curriculumScopeDao.clearScopes(0, CurriculumId.mishnayos);
 
       final scopes = await database.curriculumScopeDao.getScopes(
         0,
@@ -181,12 +184,9 @@ void main() {
         ['Seder Zeraim'],
       );
 
-      await database.curriculumScopeDao.setScopes(
-        0,
-        CurriculumId.bavli,
-        1,
-        ['Berachos'],
-      );
+      await database.curriculumScopeDao.setScopes(0, CurriculumId.bavli, 1, [
+        'Berachos',
+      ]);
 
       final mishnayos = await database.curriculumScopeDao.getScopeValues(
         0,

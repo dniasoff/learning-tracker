@@ -52,15 +52,17 @@ void main() {
     test('getUserProfileByFirebaseUid finds by uid', () async {
       await insertTestProfile(firebaseUid: 'abc');
 
-      final profile =
-          await database.userProfileDao.getUserProfileByFirebaseUid('abc');
+      final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
+        'abc',
+      );
       expect(profile, isNotNull);
       expect(profile!.firebaseUid, 'abc');
     });
 
     test('getUserProfileByFirebaseUid returns null for unknown uid', () async {
-      final profile =
-          await database.userProfileDao.getUserProfileByFirebaseUid('unknown');
+      final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
+        'unknown',
+      );
       expect(profile, isNull);
     });
 
@@ -109,8 +111,9 @@ void main() {
         updatedAt: DateTime.utc(2025, 1, 1),
       );
 
-      final profile = await database.userProfileDao
-          .getUserProfileByFirebaseUid('new-uid');
+      final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
+        'new-uid',
+      );
       expect(profile, isNotNull);
       expect(profile!.displayName, 'New User');
       expect(profile.userMode, 'child');
@@ -130,8 +133,9 @@ void main() {
         updatedAt: DateTime.utc(2025, 6, 1),
       );
 
-      final profile =
-          await database.userProfileDao.getUserProfileByFirebaseUid('uid-1');
+      final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
+        'uid-1',
+      );
       expect(profile!.displayName, 'New Name');
       expect(profile.userMode, 'child');
     });
@@ -150,8 +154,9 @@ void main() {
         updatedAt: DateTime.utc(2025, 1, 1),
       );
 
-      final profile =
-          await database.userProfileDao.getUserProfileByFirebaseUid('uid-1');
+      final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
+        'uid-1',
+      );
       expect(profile!.displayName, 'Current Name');
     });
   });

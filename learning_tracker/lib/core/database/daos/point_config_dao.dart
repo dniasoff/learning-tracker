@@ -57,8 +57,9 @@ class PointConfigDao extends DatabaseAccessor<AppDatabase>
   /// exist, then assigns descending point values: first stage gets 10 points,
   /// subsequent stages get decreasing values (minimum 1).
   Future<void> seedDefaults(String curriculumId) async {
-    final stages =
-        await db.stageDao.getStageDefinitionsByCurriculum(curriculumId);
+    final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+      curriculumId,
+    );
 
     // Fallback to 3 hardcoded stages if no stage definitions exist yet
     if (stages.isEmpty) {

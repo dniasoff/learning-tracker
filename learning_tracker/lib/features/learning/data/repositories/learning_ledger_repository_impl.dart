@@ -34,7 +34,9 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     required bool isManual,
   }) async {
     // Permission check: children cannot self-mark
-    if (isManual && _activeProfileMode == 'child' && markedBy == _activeProfileId) {
+    if (isManual &&
+        _activeProfileMode == 'child' &&
+        markedBy == _activeProfileId) {
       throw const ChildSelfMarkException();
     }
 
@@ -95,11 +97,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     final manual = entries.where((e) => e.isManual).length;
     final auto = entries.where((e) => !e.isManual).length;
 
-    return {
-      'total': entries.length,
-      'manual': manual,
-      'auto': auto,
-    };
+    return {'total': entries.length, 'manual': manual, 'auto': auto};
   }
 
   Future<void> _syncLedgerEntry(LearningLedgerData entry) async {

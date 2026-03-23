@@ -31,20 +31,22 @@ void main() {
     });
 
     test('getProgramByName finds a specific program', () async {
-      final program =
-          await db.learningProgramDao.getProgramByName('oraysa');
+      final program = await db.learningProgramDao.getProgramByName('oraysa');
       expect(program, isNotNull);
       expect(program!.displayName, 'Oraysa');
       expect(program.curriculumType, 'bavli');
     });
 
     test('getProgramsByCurriculumType filters correctly', () async {
-      final bavliPrograms =
-          await db.learningProgramDao.getProgramsByCurriculumType('bavli');
-      expect(bavliPrograms.length, 4); // oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_yomi
+      final bavliPrograms = await db.learningProgramDao
+          .getProgramsByCurriculumType('bavli');
+      expect(
+        bavliPrograms.length,
+        4,
+      ); // oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_yomi
 
-      final nachPrograms =
-          await db.learningProgramDao.getProgramsByCurriculumType('nach');
+      final nachPrograms = await db.learningProgramDao
+          .getProgramsByCurriculumType('nach');
       expect(nachPrograms.length, 1);
       expect(nachPrograms.first.name, 'nach_yomi');
     });
@@ -58,14 +60,12 @@ void main() {
     });
 
     test('deprecateProgram marks program inactive', () async {
-      final program =
-          await db.learningProgramDao.getProgramByName('daf_yomi');
+      final program = await db.learningProgramDao.getProgramByName('daf_yomi');
       expect(program!.isActive, isTrue);
 
       await db.learningProgramDao.deprecateProgram(program.id);
 
-      final updated =
-          await db.learningProgramDao.getProgramById(program.id);
+      final updated = await db.learningProgramDao.getProgramById(program.id);
       expect(updated!.isActive, isFalse);
     });
 

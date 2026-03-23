@@ -83,10 +83,7 @@ Future<int> completionCount(
 }) async {
   final database = ref.watch(appDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final completions =
-      await database.completionDao.getCompletionsForContentAndProfile(
-    sefariaRef,
-    profileId,
-  );
+  final completions = await database.completionDao
+      .getCompletionsForContentAndProfile(sefariaRef, profileId);
   return completions.where((c) => c.curriculumId == curriculumId).length;
 }

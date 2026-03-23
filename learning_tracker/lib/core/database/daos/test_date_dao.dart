@@ -25,12 +25,11 @@ class TestDateDao extends DatabaseAccessor<AppDatabase>
             ..limit(1))
           .getSingleOrNull();
 
-  Future<List<TestDate>> getUpcomingTestDates() => (select(testDates)
-        ..where(
-          (t) => t.testDate.isBiggerThanValue(DateTime.now().toUtc()),
-        )
-        ..orderBy([(t) => OrderingTerm.asc(t.testDate)]))
-      .get();
+  Future<List<TestDate>> getUpcomingTestDates() =>
+      (select(testDates)
+            ..where((t) => t.testDate.isBiggerThanValue(DateTime.now().toUtc()))
+            ..orderBy([(t) => OrderingTerm.asc(t.testDate)]))
+          .get();
 
   Future<int> insertTestDate(TestDatesCompanion entry) =>
       into(testDates).insert(entry);

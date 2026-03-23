@@ -5,18 +5,14 @@ import 'package:learning_tracker/features/learning/presentation/screens/learning
 void main() {
   group('LearningScreen', () {
     testWidgets('renders without error', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: LearningScreen()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: LearningScreen()));
       await tester.pumpAndSettle();
 
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
     testWidgets('shows key UI elements', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: LearningScreen()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: LearningScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Learn'), findsOneWidget);

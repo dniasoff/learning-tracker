@@ -26,8 +26,7 @@ class SchedulerStageRepositoryImpl implements SchedulerStageRepository {
             delayDays: r.delayDays,
             scheduleType: ScheduleType.fromStorageKey(r.scheduleType),
             daysOfWeek: r.daysOfWeek != null
-                ? (jsonDecode(r.daysOfWeek!) as List)
-                    .cast<int>()
+                ? (jsonDecode(r.daysOfWeek!) as List).cast<int>()
                 : null,
             rollingWindowSize: r.rollingWindowSize,
           ),

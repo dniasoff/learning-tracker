@@ -35,9 +35,7 @@ void main() {
         // 7 completions in last 7 days => avg 1.0
         final completions = List.generate(
           7,
-          (i) => _makeCompletion(
-            now.subtract(Duration(days: i, hours: 1)),
-          ),
+          (i) => _makeCompletion(now.subtract(Duration(days: i, hours: 1))),
         );
 
         final result = ParentDashboardAggregator.computeEngagement(

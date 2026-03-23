@@ -175,9 +175,10 @@ class SyncEngine {
         .listenToActiveCurricula()
         .listen(_onActiveCurriculaUpdate, onError: _handleListenerError);
 
-    _ledgerSubscription = _firestoreDataSource
-        .listenToLedgerEntries()
-        .listen(_onLedgerUpdate, onError: _handleListenerError);
+    _ledgerSubscription = _firestoreDataSource.listenToLedgerEntries().listen(
+      _onLedgerUpdate,
+      onError: _handleListenerError,
+    );
   }
 
   /// Detach foreground listeners (on app background).
@@ -944,9 +945,7 @@ class SyncEngine {
     }
   }
 
-  Future<void> _onLedgerUpdate(
-    List<Map<String, dynamic>> ledgerEntries,
-  ) async {
+  Future<void> _onLedgerUpdate(List<Map<String, dynamic>> ledgerEntries) async {
     if (_mergingLedgerEntries) return;
     _mergingLedgerEntries = true;
     _consecutiveListenerErrors = 0;

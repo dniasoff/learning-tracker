@@ -48,51 +48,54 @@ class _CurriculumSettingsScreenState
       appBar: AppBar(
         title: AppBarTitle(text: 'Settings - ${_curriculum.displayNameEn}'),
       ),
-      body: SafeArea(top: false, child: ListView(
-        children: [
-          // Task 1: Program display
-          programInfo.when(
-            loading: () => const ListTile(
-              leading: Icon(Icons.school),
-              title: Text('Loading program...'),
-            ),
-            error: (e, _) => ListTile(
-              leading: const Icon(Icons.school),
-              title: const Text('Program'),
-              subtitle: Text('Error: $e'),
-            ),
-            data: (info) => ListTile(
-              leading: const Icon(Icons.school),
-              title: Text(
-                info != null
-                    ? 'Program: ${info.displayName}'
-                    : 'Custom schedule',
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          children: [
+            // Task 1: Program display
+            programInfo.when(
+              loading: () => const ListTile(
+                leading: Icon(Icons.school),
+                title: Text('Loading program...'),
               ),
-              subtitle: info != null ? Text(info.description) : null,
+              error: (e, _) => ListTile(
+                leading: const Icon(Icons.school),
+                title: const Text('Program'),
+                subtitle: Text('Error: $e'),
+              ),
+              data: (info) => ListTile(
+                leading: const Icon(Icons.school),
+                title: Text(
+                  info != null
+                      ? 'Program: ${info.displayName}'
+                      : 'Custom schedule',
+                ),
+                subtitle: info != null ? Text(info.description) : null,
+              ),
             ),
-          ),
 
-          // Task 2: Change Program button
-          ListTile(
-            leading: const Icon(Icons.swap_horiz),
-            title: const Text('Change Program'),
-            subtitle: const Text('Switch to a different learning program'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _onChangeProgram(context),
-          ),
+            // Task 2: Change Program button
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Change Program'),
+              subtitle: const Text('Switch to a different learning program'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _onChangeProgram(context),
+            ),
 
-          const Divider(),
+            const Divider(),
 
-          // Task 4: Request New Program
-          ListTile(
-            leading: const Icon(Icons.mail_outline),
-            title: const Text("Don't see your program?"),
-            subtitle: const Text('Request a new program'),
-            trailing: const Icon(Icons.open_in_new),
-            onTap: () => _onRequestProgram(context),
-          ),
-        ],
-      )),
+            // Task 4: Request New Program
+            ListTile(
+              leading: const Icon(Icons.mail_outline),
+              title: const Text("Don't see your program?"),
+              subtitle: const Text('Request a new program'),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => _onRequestProgram(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -102,20 +105,25 @@ class _CurriculumSettingsScreenState
 
     if (!context.mounted) return;
 
-    final result = await Navigator.of(context).push<LearningProcessWizardResult>(
-      MaterialPageRoute(
-        builder: (_) => LearningProcessWizardScreen(
-          curriculumId: _curriculum,
-          presets: presets,
-          isChildMode: false,
-        ),
-      ),
-    );
+    final result = await Navigator.of(context)
+        .push<LearningProcessWizardResult>(
+          MaterialPageRoute(
+            builder: (_) => LearningProcessWizardScreen(
+              curriculumId: _curriculum,
+              presets: presets,
+              isChildMode: false,
+            ),
+          ),
+        );
 
     if (result == null || !context.mounted) return;
 
     // Apply the wizard result (deletes old stages, creates new ones).
-    await wizardService.applyWizardResult(result.wizardResult);
+    final profileId = ref.read(activeProfileIdProvider);
+    await wizardService.applyWizardResult(
+      result.wizardResult,
+      profileId: profileId,
+    );
 
     // Invalidate providers so UI reflects new stages.
     ref.invalidate(stageListProvider(_curriculum));
@@ -147,9 +155,7 @@ class _CurriculumSettingsScreenState
     } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'No email app found. Copy address instead?',
-          ),
+          content: const Text('No email app found. Copy address instead?'),
           action: SnackBarAction(
             label: 'Copy',
             onPressed: () {
@@ -169,16 +175,15 @@ class _CurriculumSettingsScreenState
 /// Returns null if the user has a custom schedule (no preset program).
 final _currentProgramProvider =
     FutureProvider.family<db.LearningProgram?, CurriculumId>((
-  ref,
-  curriculum,
-) async {
-  final database = ref.watch(appDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final profileProgram =
-      await database.profileProgramDao.getProgramForProfileAndCurriculum(
-    profileId,
-    curriculum.storageKey,
-  );
-  if (profileProgram == null) return null;
-  return database.learningProgramDao.getProgramById(profileProgram.programId);
-});
+      ref,
+      curriculum,
+    ) async {
+      final database = ref.watch(appDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      final profileProgram = await database.profileProgramDao
+          .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+      if (profileProgram == null) return null;
+      return database.learningProgramDao.getProgramById(
+        profileProgram.programId,
+      );
+    });

@@ -26,7 +26,9 @@ class DashboardScreen extends ConsumerWidget {
     final selectedProfileAsync = ref.watch(selectedProfileProvider);
     final profileName = selectedProfileAsync.asData?.value?.displayName;
     final profileAvatar = selectedProfileAsync.asData?.value?.avatarIndex;
-    final title = profileName != null ? "$profileName's Dashboard" : 'Dashboard';
+    final title = profileName != null
+        ? "$profileName's Dashboard"
+        : 'Dashboard';
 
     return Scaffold(
       appBar: AppBar(
@@ -43,35 +45,38 @@ class DashboardScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: SafeArea(top: false, child: activeCurriculaAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
-        data: (activeCurricula) {
-          final userMode = userModeAsync.asData?.value ?? UserMode.adult;
-          final streakData = streakAsync.asData?.value;
-          final currentStreak = streakData?.currentStreak ?? 0;
-          final maxStreak = streakData?.maxStreak ?? 0;
+      body: SafeArea(
+        top: false,
+        child: activeCurriculaAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(child: Text('Error: $e')),
+          data: (activeCurricula) {
+            final userMode = userModeAsync.asData?.value ?? UserMode.adult;
+            final streakData = streakAsync.asData?.value;
+            final currentStreak = streakData?.currentStreak ?? 0;
+            final maxStreak = streakData?.maxStreak ?? 0;
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(dashboardActiveCurriculaProvider);
-              ref.invalidate(dashboardUserModeProvider);
-              ref.invalidate(dashboardStreakProvider);
-              ref.invalidate(dashboardGlobalPointsProvider);
-              for (final c in activeCurricula) {
-                ref.invalidate(dashboardCompletionPercentageProvider(c));
-                ref.invalidate(dashboardLastCompletionProvider(c));
-              }
-            },
-            child: _DashboardBody(
-              activeCurricula: activeCurricula,
-              userMode: userMode,
-              currentStreak: currentStreak,
-              maxStreak: maxStreak,
-            ),
-          );
-        },
-      )),
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(dashboardActiveCurriculaProvider);
+                ref.invalidate(dashboardUserModeProvider);
+                ref.invalidate(dashboardStreakProvider);
+                ref.invalidate(dashboardGlobalPointsProvider);
+                for (final c in activeCurricula) {
+                  ref.invalidate(dashboardCompletionPercentageProvider(c));
+                  ref.invalidate(dashboardLastCompletionProvider(c));
+                }
+              },
+              child: _DashboardBody(
+                activeCurricula: activeCurricula,
+                userMode: userMode,
+                currentStreak: currentStreak,
+                maxStreak: maxStreak,
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

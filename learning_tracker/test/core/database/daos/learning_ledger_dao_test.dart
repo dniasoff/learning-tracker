@@ -37,7 +37,7 @@ void main() {
       });
 
       test('auto-sets createdAt when not provided', () async {
-        final id = await db.learningLedgerDao.insertEntry(
+        await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
             profileId: const Value(1),
             curriculumId: 'mishna',
@@ -163,8 +163,10 @@ void main() {
           ),
         );
 
-        final entries =
-            await db.learningLedgerDao.getEntriesByCurriculum(1, 'mishna');
+        final entries = await db.learningLedgerDao.getEntriesByCurriculum(
+          1,
+          'mishna',
+        );
         expect(entries, hasLength(1));
         expect(entries.first.curriculumId, 'mishna');
       });
@@ -254,8 +256,8 @@ void main() {
           ),
         );
 
-        final grouped =
-            await db.learningLedgerDao.getEntriesGroupedByCurriculum(1);
+        final grouped = await db.learningLedgerDao
+            .getEntriesGroupedByCurriculum(1);
         expect(grouped.keys, containsAll(['mishna', 'daf_yomi']));
         expect(grouped['mishna'], hasLength(1));
         expect(grouped['daf_yomi'], hasLength(1));
@@ -281,8 +283,10 @@ void main() {
           );
         }
 
-        final entries =
-            await db.learningLedgerDao.getLatestEntries(1, limit: 3);
+        final entries = await db.learningLedgerDao.getLatestEntries(
+          1,
+          limit: 3,
+        );
         expect(entries, hasLength(3));
         // Most recent first
         expect(entries.first.unitIdentifier, 'Unit5');

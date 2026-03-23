@@ -28,9 +28,9 @@ class ActiveCurriculumDao extends DatabaseAccessor<AppDatabase>
 
   /// Returns list of active curriculum IDs for a specific profile.
   Future<List<String>> getActiveCurriculaByProfile(int profileId) async {
-    final rows = await (select(activeCurricula)
-          ..where((t) => t.profileId.equals(profileId)))
-        .get();
+    final rows = await (select(
+      activeCurricula,
+    )..where((t) => t.profileId.equals(profileId))).get();
     return rows.map((row) => row.curriculumId).toList();
   }
 

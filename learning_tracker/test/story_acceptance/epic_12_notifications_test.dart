@@ -465,8 +465,9 @@ void main() {
           onNotificationTap: any(named: 'onNotificationTap'),
         ),
       ).thenAnswer((invocation) async {
-        capturedCallback = invocation.namedArguments[#onNotificationTap]
-            as void Function(String? payload)?;
+        capturedCallback =
+            invocation.namedArguments[#onNotificationTap]
+                as void Function(String? payload)?;
         return true;
       });
       when(() => mockRouter.navigate(any())).thenAnswer((_) async => null);
@@ -480,8 +481,7 @@ void main() {
       // Simulate tapping a reward milestone notification
       capturedCallback!(rewardMilestonePayload);
 
-      final captured =
-          verify(() => mockRouter.navigate(captureAny())).captured;
+      final captured = verify(() => mockRouter.navigate(captureAny())).captured;
       expect(captured.single, isA<GamificationRoute>());
     });
   });

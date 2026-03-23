@@ -15,25 +15,25 @@ class LearningProgramDao extends DatabaseAccessor<AppDatabase>
   Future<List<LearningProgram>> getActivePrograms() =>
       (select(learningPrograms)..where((t) => t.isActive.equals(true))).get();
 
-  Future<LearningProgram?> getProgramById(int id) =>
-      (select(learningPrograms)..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+  Future<LearningProgram?> getProgramById(int id) => (select(
+    learningPrograms,
+  )..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  Future<LearningProgram?> getProgramByName(String name) =>
-      (select(learningPrograms)..where((t) => t.name.equals(name)))
-          .getSingleOrNull();
+  Future<LearningProgram?> getProgramByName(String name) => (select(
+    learningPrograms,
+  )..where((t) => t.name.equals(name))).getSingleOrNull();
 
   Future<List<LearningProgram>> getProgramsByCurriculumType(
     String curriculumType,
-  ) =>
-      (select(learningPrograms)
-            ..where((t) => t.curriculumType.equals(curriculumType)))
-          .get();
+  ) => (select(
+    learningPrograms,
+  )..where((t) => t.curriculumType.equals(curriculumType))).get();
 
   Future<int> insertProgram(LearningProgramsCompanion entry) =>
       into(learningPrograms).insert(entry);
 
   Future<void> deprecateProgram(int id) =>
-      (update(learningPrograms)..where((t) => t.id.equals(id)))
-          .write(const LearningProgramsCompanion(isActive: Value(false)));
+      (update(learningPrograms)..where((t) => t.id.equals(id))).write(
+        const LearningProgramsCompanion(isActive: Value(false)),
+      );
 }

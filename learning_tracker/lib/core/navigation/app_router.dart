@@ -81,8 +81,16 @@ class AppRouter extends RootStackRouter {
     AutoRoute(path: '/mode-selection', page: ModeSelectionRoute.page),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
     AutoRoute(path: '/restore', page: DeviceRestoreRoute.page),
-    AutoRoute(path: '/profile-picker', page: ProfilePickerRoute.page, guards: [authGuard]),
-    AutoRoute(path: '/manage-learners', page: ManageLearnersRoute.page, guards: [authGuard]),
+    AutoRoute(
+      path: '/profile-picker',
+      page: ProfilePickerRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/manage-learners',
+      page: ManageLearnersRoute.page,
+      guards: [authGuard],
+    ),
 
     // App shell with bottom navigation (auth required)
     AutoRoute(

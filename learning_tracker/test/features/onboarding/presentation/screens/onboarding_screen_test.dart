@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -14,9 +13,6 @@ class _FakeImportService implements CurriculumImportService {
   _FakeImportService({this.shouldFail = false});
 
   final bool shouldFail;
-
-  @override
-  String get languageCode => 'he';
 
   @override
   Stream<CurriculumImportProgress> importAll(
@@ -55,9 +51,6 @@ class _FakeImportService implements CurriculumImportService {
 /// Fake import service that never completes (stays in importing state).
 class _HangingImportService implements CurriculumImportService {
   @override
-  String get languageCode => 'he';
-
-  @override
   Stream<CurriculumImportProgress> importAll(
     List<CurriculumId> selectedCurricula,
   ) async* {
@@ -80,19 +73,9 @@ class _HangingImportService implements CurriculumImportService {
 }
 
 void main() {
-  final testConfigs = {
-    for (final id in CurriculumId.values)
-      id: CurriculumHierarchyConfig(
-        curriculumId: id.storageKey,
-        levelLabels: ['Level1', 'Level2'],
-        totalItems: 100,
-      ),
-  };
-
   Widget createTestWidget({CurriculumImportService? importService}) {
     return ProviderScope(
       overrides: [
-        allCurriculaConfigsProvider.overrideWith((ref) async => testConfigs),
         if (importService != null)
           curriculumImportServiceProvider.overrideWithValue(importService),
       ],

@@ -36,20 +36,23 @@ class TextDisplayScreen extends ConsumerWidget {
           _FontSizeSelector(currentSize: fontSize),
         ],
       ),
-      body: SafeArea(top: false, child: textAsync.when(
-        data: (textContent) {
-          if (textContent == null) {
-            return const _OfflineMessage();
-          }
-          return _TextContentView(
-            textContent: textContent,
-            fontSize: fontSize,
-            showNikud: showNikud,
-          );
-        },
-        loading: () => const _LoadingView(),
-        error: (error, stack) => _ErrorView(error: error),
-      )),
+      body: SafeArea(
+        top: false,
+        child: textAsync.when(
+          data: (textContent) {
+            if (textContent == null) {
+              return const _OfflineMessage();
+            }
+            return _TextContentView(
+              textContent: textContent,
+              fontSize: fontSize,
+              showNikud: showNikud,
+            );
+          },
+          loading: () => const _LoadingView(),
+          error: (error, stack) => _ErrorView(error: error),
+        ),
+      ),
     );
   }
 }

@@ -54,7 +54,9 @@ void main() {
     group('notifyNewRewards', () {
       test('shows notification for each newly earned reward', () async {
         when(
-          () => mockNotificationService.showRewardMilestone(body: any(named: 'body')),
+          () => mockNotificationService.showRewardMilestone(
+            body: any(named: 'body'),
+          ),
         ).thenAnswer((_) async {});
 
         final rewards = [
@@ -86,7 +88,9 @@ void main() {
         );
 
         verifyNever(
-          () => mockNotificationService.showRewardMilestone(body: any(named: 'body')),
+          () => mockNotificationService.showRewardMilestone(
+            body: any(named: 'body'),
+          ),
         );
       });
     });

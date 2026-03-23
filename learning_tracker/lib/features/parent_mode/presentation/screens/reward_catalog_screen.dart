@@ -16,7 +16,9 @@ class RewardCatalogScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Reward Catalog')),
       floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewPadding.bottom,
+        ),
         child: FloatingActionButton(
           onPressed: () => _showAddEditDialog(context, ref),
           child: const Icon(Icons.add),

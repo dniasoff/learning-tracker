@@ -9,9 +9,9 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/suggested_thresholds_service.dart';
@@ -338,7 +338,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _onWizardResult(LearningProcessWizardResult? result) async {
     if (result != null) {
       final wizardService = ref.read(learningProcessWizardServiceProvider);
-      await wizardService.applyWizardResult(result.wizardResult);
+      await wizardService.applyWizardResult(
+        result.wizardResult,
+        profileId: _createdProfileId!,
+      );
     }
     _wizardIndex++;
     if (_wizardIndex >= _wizardQueue.length) {
@@ -516,11 +519,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _ScreenPhase.profileCreation => 'Add a Learner',
       _ScreenPhase.languageSelection => 'Choose Language',
       _ScreenPhase.selection => childAwareText(
-          'Select Curricula',
-          'What is {name} learning?',
-          _profileName,
-          isChildMode: _isChildMode,
-        ),
+        'Select Curricula',
+        'What is {name} learning?',
+        _profileName,
+        isChildMode: _isChildMode,
+      ),
       _ScreenPhase.handoff => 'Setup Complete!',
       _ => 'Onboarding',
     };
@@ -529,20 +532,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       appBar: AppBar(title: AppBarTitle(text: appBarTitle)),
       body: SafeArea(
         child: switch (_phase) {
-        _ScreenPhase.profileCreation => _buildProfileCreation(theme),
-        _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
-        _ScreenPhase.selection => _buildSelection(theme),
-        _ScreenPhase.importing => _buildImporting(theme),
-        _ScreenPhase.scopeSelection => _buildScopeSelection(theme),
-        _ScreenPhase.learningProcessWizard =>
-          _buildLearningProcessWizard(theme),
-        _ScreenPhase.bulkMark => _buildBulkMark(theme),
-        _ScreenPhase.goalSetup => _buildGoalSetup(theme),
-        _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
-        _ScreenPhase.handoff => _buildHandoff(theme),
-        _ScreenPhase.done => _buildDone(theme),
-        _ScreenPhase.error => _buildError(theme),
-      },
+          _ScreenPhase.profileCreation => _buildProfileCreation(theme),
+          _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
+          _ScreenPhase.selection => _buildSelection(theme),
+          _ScreenPhase.importing => _buildImporting(theme),
+          _ScreenPhase.scopeSelection => _buildScopeSelection(theme),
+          _ScreenPhase.learningProcessWizard => _buildLearningProcessWizard(
+            theme,
+          ),
+          _ScreenPhase.bulkMark => _buildBulkMark(theme),
+          _ScreenPhase.goalSetup => _buildGoalSetup(theme),
+          _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
+          _ScreenPhase.handoff => _buildHandoff(theme),
+          _ScreenPhase.done => _buildDone(theme),
+          _ScreenPhase.error => _buildError(theme),
+        },
       ),
     );
   }
@@ -652,8 +656,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             child: Text(
                               entry.value,
                               style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight:
-                                    isSelected ? FontWeight.bold : null,
+                                fontWeight: isSelected ? FontWeight.bold : null,
                                 color: isSelected
                                     ? theme.colorScheme.primary
                                     : null,
@@ -668,8 +671,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           else
                             Icon(
                               Icons.circle_outlined,
-                              color: theme.colorScheme.outline
-                                  .withValues(alpha: 0.5),
+                              color: theme.colorScheme.outline.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                         ],
                       ),
@@ -844,59 +848,57 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return SafeArea(
       top: false,
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text(
-            'Set Learning Scope',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Choose which parts of ${curriculum.displayNameEn} to track, '
-            'or skip to track everything.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Text(
+              'Set Learning Scope',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Text(
-            '${_scopeIndex + 1} of ${_scopeQueue.length}',
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Expanded(
-          child: ScopeSelectionScreen(curriculumId: curriculum),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _onScopeSelectionDone,
-                  child: const Text('Skip (Track All)'),
-                ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'Choose which parts of ${curriculum.displayNameEn} to track, '
+              'or skip to track everything.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _onScopeSelectionDone,
-                  child: const Text('Continue'),
-                ),
-              ),
-            ],
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Text(
+              '${_scopeIndex + 1} of ${_scopeQueue.length}',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Expanded(child: ScopeSelectionScreen(curriculumId: curriculum)),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _onScopeSelectionDone,
+                    child: const Text('Skip (Track All)'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _onScopeSelectionDone,
+                    child: const Text('Continue'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -913,18 +915,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (!mounted) return;
 
         if (!mounted) return;
-        final result = await Navigator.of(
-          context,
-        ).push<LearningProcessWizardResult>(
-          MaterialPageRoute<LearningProcessWizardResult>(
-            builder: (_) => LearningProcessWizardScreen(
-              curriculumId: curriculum,
-              presets: presets,
-              isChildMode: _isChildMode,
-              childName: _isChildMode ? _profileName : null,
-            ),
-          ),
-        );
+        final result = await Navigator.of(context)
+            .push<LearningProcessWizardResult>(
+              MaterialPageRoute<LearningProcessWizardResult>(
+                builder: (_) => LearningProcessWizardScreen(
+                  curriculumId: curriculum,
+                  presets: presets,
+                  isChildMode: _isChildMode,
+                  childName: _isChildMode ? _profileName : null,
+                ),
+              ),
+            );
         if (mounted) {
           _wizardLaunched = false;
           await _onWizardResult(result);
@@ -1012,9 +1013,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildGoalSetup(ThemeData theme) {
     final curriculum = _goalSetupQueue[_goalSetupIndex];
     // Try to get totalItems from already-downloaded content
-    final contentAsync = ref.watch(
-      curriculumContentProvider(curriculum),
-    );
+    final contentAsync = ref.watch(curriculumContentProvider(curriculum));
     final totalItems = contentAsync.whenOrNull<int>(
       data: (items) => items.where((i) => i.isLeaf).length,
     );
@@ -1041,45 +1040,45 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             const SizedBox(height: 8),
             Text(
               '${_goalSetupIndex + 1} of ${_goalSetupQueue.length}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (totalItems != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              '$totalItems items',
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
-          ],
-          const Spacer(),
-          FilledButton(
-            onPressed: () async {
-              final result = await Navigator.of(context).push<GoalFormResult>(
-                MaterialPageRoute<GoalFormResult>(
-                  builder: (_) => GoalSetupScreen(
-                    curriculumId: curriculum,
-                    totalItems: totalItems,
-                  ),
+            if (totalItems != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                '$totalItems items',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              );
-              if (mounted) {
-                await _onGoalResult(result);
-              }
-            },
-            child: const Text('Set Goal'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: () => _onGoalResult(null),
-            child: const Text('Skip'),
-          ),
-        ],
-      ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            const Spacer(),
+            FilledButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push<GoalFormResult>(
+                  MaterialPageRoute<GoalFormResult>(
+                    builder: (_) => GoalSetupScreen(
+                      curriculumId: curriculum,
+                      totalItems: totalItems,
+                    ),
+                  ),
+                );
+                if (mounted) {
+                  await _onGoalResult(result);
+                }
+              },
+              child: const Text('Set Goal'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => _onGoalResult(null),
+              child: const Text('Skip'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1096,41 +1095,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             children: [
               Text(
                 'Set up mystery rewards',
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add rewards your child can earn by learning!',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                style: theme.textTheme.titleLarge,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const Spacer(),
-            FilledButton(
-              onPressed: () async {
-                final result = await Navigator.of(context)
-                    .push<RewardSetupResult>(
-                      MaterialPageRoute<RewardSetupResult>(
-                        builder: (_) =>
-                            RewardsSetupScreen(suggestedThresholds: thresholds),
-                      ),
-                    );
-                if (mounted) {
-                  await _onRewardsResult(result);
-                }
-              },
-              child: const Text('Set Up Rewards'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => _onRewardsResult(null),
-              child: const Text('Skip'),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'Add rewards your child can earn by learning!',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const Spacer(),
+              FilledButton(
+                onPressed: () async {
+                  final result = await Navigator.of(context)
+                      .push<RewardSetupResult>(
+                        MaterialPageRoute<RewardSetupResult>(
+                          builder: (_) => RewardsSetupScreen(
+                            suggestedThresholds: thresholds,
+                          ),
+                        ),
+                      );
+                  if (mounted) {
+                    await _onRewardsResult(result);
+                  }
+                },
+                child: const Text('Set Up Rewards'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => _onRewardsResult(null),
+                child: const Text('Skip'),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1146,36 +1146,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             children: [
               Icon(
                 Icons.check_circle_outline,
-              size: 80,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              "${_profileName ?? 'Your child'}'s learning is all set up",
-              style: theme.textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Hand the device to ${_profileName ?? 'your child'} to start learning',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                size: 80,
+                color: theme.colorScheme.primary,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            FilledButton(
-              onPressed: _startLearningFromHandoff,
-              child: const Text('Start Learning'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: _addAnotherLearner,
-              child: const Text('Add Another Learner'),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Text(
+                "${_profileName ?? 'Your child'}'s learning is all set up",
+                style: theme.textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Hand the device to ${_profileName ?? 'your child'} to start learning',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              FilledButton(
+                onPressed: _startLearningFromHandoff,
+                child: const Text('Start Learning'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: _addAnotherLearner,
+                child: const Text('Add Another Learner'),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

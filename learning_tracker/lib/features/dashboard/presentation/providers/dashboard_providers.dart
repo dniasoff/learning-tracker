@@ -33,8 +33,9 @@ Future<UserMode> dashboardUserMode(Ref ref) async {
 Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
   final db = ref.watch(appDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final storageKeys =
-      await db.activeCurriculumDao.getActiveCurriculaByProfile(profileId);
+  final storageKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
+    profileId,
+  );
   return storageKeys
       .map<CurriculumId?>((key) {
         final matches = CurriculumId.values.where((c) => c.storageKey == key);
@@ -49,9 +50,9 @@ Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
 Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  return db.activeCurriculumDao
-      .watchActiveCurriculaByProfile(profileId)
-      .map((storageKeys) {
+  return db.activeCurriculumDao.watchActiveCurriculaByProfile(profileId).map((
+    storageKeys,
+  ) {
     return storageKeys
         .map<CurriculumId?>((key) {
           final matches = CurriculumId.values.where((c) => c.storageKey == key);
@@ -70,11 +71,8 @@ Future<double> dashboardCompletionPercentage(
 ) async {
   final db = ref.watch(appDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final completions =
-      await db.completionDao.getCompletionsByCurriculumAndProfile(
-    curriculum.storageKey,
-    profileId,
-  );
+  final completions = await db.completionDao
+      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
   final stages = await db.stageDao.getStageDefinitionsByCurriculum(
     curriculum.storageKey,
   );
@@ -112,11 +110,8 @@ Future<DateTime?> dashboardLastCompletion(
 ) async {
   final db = ref.watch(appDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final completions =
-      await db.completionDao.getCompletionsByCurriculumAndProfile(
-    curriculum.storageKey,
-    profileId,
-  );
+  final completions = await db.completionDao
+      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
   if (completions.isEmpty) return null;
   // Completions are returned in insertion order; find the latest
   var latest = completions.first.completedAt;
@@ -141,7 +136,6 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
 Future<int> dashboardGlobalPoints(Ref ref) async {
   final db = ref.watch(appDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final completions =
-      await db.completionDao.getCompletionsByProfile(profileId);
+  final completions = await db.completionDao.getCompletionsByProfile(profileId);
   return completions.fold<int>(0, (sum, c) => sum + c.points);
 }

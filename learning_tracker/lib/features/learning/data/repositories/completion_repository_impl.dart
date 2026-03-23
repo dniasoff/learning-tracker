@@ -41,10 +41,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final completion = await _database.transaction(() async {
       // 1. Get existing completions for this item (single query for both
       //    stage validation and duplicate check)
-      final completions =
-          await _database.completionDao.getCompletionsForContent(
-        request.sefariaRef,
-      );
+      final completions = await _database.completionDao
+          .getCompletionsForContent(request.sefariaRef);
 
       // 2. Check for duplicate (idempotent)
       final existing = completions
@@ -94,24 +92,28 @@ class CompletionRepositoryImpl implements CompletionRepository {
     });
 
     // 6. Advance bookmark (outside transaction — uses content repo cache)
-    unawaited(_advanceBookmark(
-      curriculumId: request.curriculumId,
-      trackType: request.trackType,
-      completedSefariaRef: request.sefariaRef,
-    ));
+    unawaited(
+      _advanceBookmark(
+        curriculumId: request.curriculumId,
+        trackType: request.trackType,
+        completedSefariaRef: request.sefariaRef,
+      ),
+    );
 
     // 7. Push to Firestore sync queue (fire-and-forget)
     unawaited(_syncCompletion(completion));
 
     // 8. Auto-detect unit completions (fire-and-forget)
     if (_completionDetectionService != null) {
-      unawaited(_completionDetectionService.checkAndRecordCompletions(
-        curriculumId: request.curriculumId,
-        sefariaRef: request.sefariaRef,
-        trackType: request.trackType,
-        profileId: _activeProfileId,
-        markedBy: _activeProfileId,
-      ));
+      unawaited(
+        _completionDetectionService.checkAndRecordCompletions(
+          curriculumId: request.curriculumId,
+          sefariaRef: request.sefariaRef,
+          trackType: request.trackType,
+          profileId: _activeProfileId,
+          markedBy: _activeProfileId,
+        ),
+      );
     }
 
     return completion;

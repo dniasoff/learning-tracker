@@ -5,18 +5,14 @@ import 'package:learning_tracker/features/gamification/presentation/screens/gami
 void main() {
   group('GamificationScreen', () {
     testWidgets('renders without error', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: GamificationScreen()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: GamificationScreen()));
       await tester.pumpAndSettle();
 
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
     testWidgets('shows key UI elements', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: GamificationScreen()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: GamificationScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Gamification'), findsOneWidget);

@@ -11,13 +11,14 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            learningOrderProvider(CurriculumId.mishnayos)
-                .overrideWith((ref) => Future.value([])),
+            learningOrderProvider(
+              CurriculumId.mishnayos,
+            ).overrideWith((ref) => Future.value([])),
             orderingRestrictedProvider.overrideWith(
               (ref) => Future.value(false),
             ),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: LearningOrderScreen(curriculumId: CurriculumId.mishnayos),
           ),
         ),

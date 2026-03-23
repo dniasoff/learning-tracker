@@ -15,8 +15,9 @@ void main() {
             filteredContentProvider(
               curriculumId: CurriculumId.mishnayos,
             ).overrideWith((ref) => Future.value([])),
-            curriculumHierarchyConfigProvider(CurriculumId.mishnayos)
-                .overrideWith(
+            curriculumHierarchyConfigProvider(
+              CurriculumId.mishnayos,
+            ).overrideWith(
               (ref) => Future.value(
                 const CurriculumHierarchyConfig(
                   curriculumId: 'mishnayos',
@@ -26,7 +27,7 @@ void main() {
               ),
             ),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
           ),
         ),

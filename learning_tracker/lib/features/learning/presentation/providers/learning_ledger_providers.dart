@@ -11,7 +11,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'learning_ledger_providers.g.dart';
 
 /// Fetches the profile mode ('adult' or 'child') for the active profile.
-final _activeProfileModeProvider = FutureProvider.autoDispose<String>((ref) async {
+final _activeProfileModeProvider = FutureProvider.autoDispose<String>((
+  ref,
+) async {
   final database = ref.watch(appDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profile = await database.profileDao.getProfileById(profileId);
@@ -50,26 +52,26 @@ ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
 /// Watches all ledger entries for the active profile.
 final learningLedgerProvider =
     FutureProvider.autoDispose<List<LearningLedgerData>>((ref) async {
-  final database = ref.watch(appDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return database.learningLedgerDao.getEntriesByProfile(profileId);
-});
+      final database = ref.watch(appDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      return database.learningLedgerDao.getEntriesByProfile(profileId);
+    });
 
 /// Watches ledger entries filtered by curriculum for the active profile.
 final curriculumLedgerProvider = FutureProvider.autoDispose
     .family<List<LearningLedgerData>, String>((ref, curriculumId) async {
-  final database = ref.watch(appDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return database.learningLedgerDao.getEntriesByCurriculum(
-    profileId,
-    curriculumId,
-  );
-});
+      final database = ref.watch(appDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      return database.learningLedgerDao.getEntriesByCurriculum(
+        profileId,
+        curriculumId,
+      );
+    });
 
 /// Computed completion stats for a curriculum.
 final completionStatsProvider = FutureProvider.autoDispose
     .family<Map<String, int>, String>((ref, curriculumId) async {
-  final repository = ref.watch(learningLedgerRepositoryProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return repository.getCompletionStats(profileId, curriculumId);
-});
+      final repository = ref.watch(learningLedgerRepositoryProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      return repository.getCompletionStats(profileId, curriculumId);
+    });

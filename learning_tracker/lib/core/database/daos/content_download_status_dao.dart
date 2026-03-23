@@ -72,8 +72,8 @@ class ContentDownloadStatusDao extends DatabaseAccessor<AppDatabase>
 
   /// Delete download status for a curriculum (used when content is cleared).
   Future<void> clearForCurriculum(String curriculumId) async {
-    await (delete(contentDownloadStatuses)
-          ..where((t) => t.curriculumId.equals(curriculumId)))
-        .go();
+    await (delete(
+      contentDownloadStatuses,
+    )..where((t) => t.curriculumId.equals(curriculumId))).go();
   }
 }

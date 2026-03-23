@@ -85,17 +85,11 @@ void main() {
       );
 
       await database.streakDao.upsertStreak(
-        const StreaksCompanion(
-          currentStreak: Value(2),
-          maxStreak: Value(2),
-        ),
+        const StreaksCompanion(currentStreak: Value(2), maxStreak: Value(2)),
       );
 
       await database.streakDao.upsertStreak(
-        const StreaksCompanion(
-          currentStreak: Value(3),
-          maxStreak: Value(3),
-        ),
+        const StreaksCompanion(currentStreak: Value(3), maxStreak: Value(3)),
       );
 
       // Should still be a single row

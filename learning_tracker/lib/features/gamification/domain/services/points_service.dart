@@ -54,8 +54,9 @@ class PointsService {
 
   /// Total points earned across all curricula, scoped to active profile.
   Future<int> getGlobalTotal() async {
-    final completions =
-        await _database.completionDao.getCompletionsByProfile(profileId);
+    final completions = await _database.completionDao.getCompletionsByProfile(
+      profileId,
+    );
     return completions.fold<int>(0, (sum, c) => sum + c.points);
   }
 
@@ -77,8 +78,10 @@ class PointsService {
     String? curriculumId,
   }) async {
     final completions = curriculumId != null
-        ? await _database.completionDao
-            .getCompletionsByCurriculumAndProfile(curriculumId, profileId)
+        ? await _database.completionDao.getCompletionsByCurriculumAndProfile(
+            curriculumId,
+            profileId,
+          )
         : await _database.completionDao.getCompletionsByProfile(profileId);
 
     // Only include completions that actually earned points

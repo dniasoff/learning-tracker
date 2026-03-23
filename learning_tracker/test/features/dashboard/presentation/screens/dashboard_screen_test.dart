@@ -19,9 +19,7 @@ void main() {
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
           ),
-          dashboardGlobalPointsProvider.overrideWith(
-            (ref) => Future.value(0),
-          ),
+          dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
         ],
         child: const MaterialApp(home: DashboardScreen()),
       );
@@ -41,8 +39,9 @@ void main() {
       expect(find.text('Dashboard'), findsOneWidget);
     });
 
-    testWidgets('shows empty dashboard with no active curricula',
-        (tester) async {
+    testWidgets('shows empty dashboard with no active curricula', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 

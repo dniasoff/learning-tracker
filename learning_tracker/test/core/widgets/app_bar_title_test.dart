@@ -45,9 +45,7 @@ void main() {
       );
 
       expect(
-        find.text(
-          'Mark Prior Completions — Mishnah Berurah Extended Edition',
-        ),
+        find.text('Mark Prior Completions — Mishnah Berurah Extended Edition'),
         findsOneWidget,
       );
       expect(find.byType(FittedBox), findsOneWidget);
@@ -73,9 +71,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            appBar: AppBar(
-              title: const AppBarTitle(child: Icon(Icons.search)),
-            ),
+            appBar: AppBar(title: const AppBarTitle(child: Icon(Icons.search))),
           ),
         ),
       );

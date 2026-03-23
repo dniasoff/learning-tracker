@@ -5,11 +5,13 @@ const List<Map<String, Object>> learningProgramSeeds = [
   {
     'name': 'oraysa',
     'display_name': 'Oraysa',
-    'description': 'Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.',
+    'description':
+        'Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.',
     'curriculum_type': 'bavli',
     'is_active': true,
     'has_tests': false,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily"},'
         '{"stage":"next_day_review","label":"Next-Day Review","delay_days":1},'
         '{"stage":"weekly_review","label":"Weekly Review","frequency":"weekly","days":["friday","shabbos"]},'
@@ -20,11 +22,13 @@ const List<Map<String, Object>> learningProgramSeeds = [
   {
     'name': 'dirshu_kinyan_torah',
     'display_name': 'Dirshu Kinyan Torah',
-    'description': 'Daf Yomi pace with 3 chazarah review cycles and monthly tests.',
+    'description':
+        'Daf Yomi pace with 3 chazarah review cycles and monthly tests.',
     'curriculum_type': 'bavli',
     'is_active': true,
     'has_tests': true,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily"},'
         '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
         '{"stage":"chazara_2","label":"Chazara 2","delay_days":7},'
@@ -39,7 +43,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'curriculum_type': 'bavli',
     'is_active': true,
     'has_tests': true,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily","pace":"half_daf"},'
         '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
         '{"stage":"chazara_2","label":"Chazara 2","delay_days":7},'
@@ -54,7 +59,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'curriculum_type': 'yerushalmi',
     'is_active': true,
     'has_tests': true,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily"},'
         '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
         '{"stage":"chazara_2","label":"Chazara 2","delay_days":7},'
@@ -69,7 +75,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'curriculum_type': 'mishna_berurah',
     'is_active': true,
     'has_tests': true,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily"},'
         '{"stage":"review","label":"Review","delay_days":7}'
         ']',
@@ -82,7 +89,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'curriculum_type': 'mussar',
     'is_active': true,
     'has_tests': false,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily"},'
         '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
         '{"stage":"chazara_2","label":"Chazara 2","delay_days":7}'
@@ -96,7 +104,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'curriculum_type': 'bavli',
     'is_active': true,
     'has_tests': false,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily","pace":"one_daf"}'
         ']',
     'test_config': '{}',
@@ -108,7 +117,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'curriculum_type': 'mishnayos',
     'is_active': true,
     'has_tests': false,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily","pace":"two_mishnayos"}'
         ']',
     'test_config': '{}',
@@ -120,7 +130,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'curriculum_type': 'nach',
     'is_active': true,
     'has_tests': false,
-    'stages_config': '['
+    'stages_config':
+        '['
         '{"stage":"learn","label":"Learn","frequency":"daily","pace":"one_chapter"}'
         ']',
     'test_config': '{}',

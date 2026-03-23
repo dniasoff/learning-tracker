@@ -184,9 +184,7 @@ class SchedulerEngine {
     final currentCompletedAt = itemCompletions[stage.stageOrder];
 
     if (previousCompletedAt != null && currentCompletedAt == null) {
-      final dueDate = previousCompletedAt.add(
-        Duration(days: stage.delayDays),
-      );
+      final dueDate = previousCompletedAt.add(Duration(days: stage.delayDays));
       final daysUntilDue = dueDate.difference(config.currentDate).inDays;
 
       if (daysUntilDue < 0) {
@@ -284,9 +282,7 @@ class SchedulerEngine {
       final itemCompletions = completionMap[ref];
       if (itemCompletions != null &&
           itemCompletions.containsKey(firstStageOrder)) {
-        completedRefs.add(
-          MapEntry(ref, itemCompletions[firstStageOrder]!),
-        );
+        completedRefs.add(MapEntry(ref, itemCompletions[firstStageOrder]!));
       }
     }
 

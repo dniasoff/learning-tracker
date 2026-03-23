@@ -16,12 +16,11 @@ class CurriculumScopeDao extends DatabaseAccessor<AppDatabase>
     int profileId,
     CurriculumId curriculum,
   ) async {
-    return (select(curriculumScopes)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals(curriculum.storageKey),
-          ))
+    return (select(curriculumScopes)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculum.storageKey),
+        ))
         .get();
   }
 
@@ -30,12 +29,11 @@ class CurriculumScopeDao extends DatabaseAccessor<AppDatabase>
     int profileId,
     CurriculumId curriculum,
   ) {
-    return (select(curriculumScopes)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals(curriculum.storageKey),
-          ))
+    return (select(curriculumScopes)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculum.storageKey),
+        ))
         .watch();
   }
 
@@ -52,12 +50,11 @@ class CurriculumScopeDao extends DatabaseAccessor<AppDatabase>
   ) async {
     await transaction(() async {
       // Delete existing scopes for this profile+curriculum
-      await (delete(curriculumScopes)
-            ..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculum.storageKey),
-            ))
+      await (delete(curriculumScopes)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumId.equals(curriculum.storageKey),
+          ))
           .go();
 
       // Insert new scopes
@@ -78,24 +75,23 @@ class CurriculumScopeDao extends DatabaseAccessor<AppDatabase>
 
   /// Clear all scopes for a profile+curriculum (= track entire curriculum).
   Future<void> clearScopes(int profileId, CurriculumId curriculum) async {
-    await (delete(curriculumScopes)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals(curriculum.storageKey),
-          ))
+    await (delete(curriculumScopes)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculum.storageKey),
+        ))
         .go();
   }
 
   /// Check if a curriculum has any scopes set.
   Future<bool> hasScopes(int profileId, CurriculumId curriculum) async {
-    final count = await (select(curriculumScopes)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals(curriculum.storageKey),
-          ))
-        .get();
+    final count =
+        await (select(curriculumScopes)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculum.storageKey),
+            ))
+            .get();
     return count.isNotEmpty;
   }
 

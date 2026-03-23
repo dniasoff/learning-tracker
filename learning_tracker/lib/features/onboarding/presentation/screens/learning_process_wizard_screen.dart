@@ -35,7 +35,13 @@ class LearningProcessWizardScreen extends StatefulWidget {
       _LearningProcessWizardScreenState();
 }
 
-enum _WizardStep { chooseMethod, selectPreset, customStep1, customStep2, customStep3 }
+enum _WizardStep {
+  chooseMethod,
+  selectPreset,
+  customStep1,
+  customStep2,
+  customStep3,
+}
 
 class _LearningProcessWizardScreenState
     extends State<LearningProcessWizardScreen> {
@@ -52,13 +58,6 @@ class _LearningProcessWizardScreenState
   void initState() {
     super.initState();
     _rounds = [_CustomRoundState()];
-  }
-
-  String get _subjectName {
-    if (widget.isChildMode && widget.childName != null) {
-      return widget.childName!;
-    }
-    return 'you';
   }
 
   String get _questionText {
@@ -120,12 +119,14 @@ class _LearningProcessWizardScreenState
     final rounds = <CustomRound>[];
     for (var i = 0; i < _rounds.length; i++) {
       final r = _rounds[i];
-      rounds.add(CustomRound(
-        label: 'Chazara ${i + 1}',
-        scheduleType: r.useWeekly ? ScheduleType.weekly : ScheduleType.delay,
-        delayDays: r.useWeekly ? null : r.delayDays,
-        daysOfWeek: r.useWeekly ? r.selectedDays.toList() : null,
-      ));
+      rounds.add(
+        CustomRound(
+          label: 'Chazara ${i + 1}',
+          scheduleType: r.useWeekly ? ScheduleType.weekly : ScheduleType.delay,
+          delayDays: r.useWeekly ? null : r.delayDays,
+          daysOfWeek: r.useWeekly ? r.selectedDays.toList() : null,
+        ),
+      );
     }
     Navigator.of(context).pop(
       LearningProcessWizardResult(
@@ -174,47 +175,47 @@ class _LearningProcessWizardScreenState
     return SafeArea(
       top: false,
       child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            _questionText,
-            style: theme.textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.curriculumId.displayNameEn,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _questionText,
+              style: theme.textTheme.headlineSmall,
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          if (widget.presets.isNotEmpty)
+            const SizedBox(height: 8),
+            Text(
+              widget.curriculumId.displayNameEn,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            if (widget.presets.isNotEmpty)
+              _OptionCard(
+                icon: Icons.school,
+                title: 'Follow a program',
+                subtitle: '${widget.presets.length} programs available',
+                onTap: _onChoosePreset,
+              ),
+            const SizedBox(height: 12),
             _OptionCard(
-              icon: Icons.school,
-              title: 'Follow a program',
-              subtitle: '${widget.presets.length} programs available',
-              onTap: _onChoosePreset,
+              icon: Icons.tune,
+              title: 'Custom schedule',
+              subtitle: 'Build your own review cycle',
+              onTap: _onChooseCustom,
             ),
-          const SizedBox(height: 12),
-          _OptionCard(
-            icon: Icons.tune,
-            title: 'Custom schedule',
-            subtitle: 'Build your own review cycle',
-            onTap: _onChooseCustom,
-          ),
-          const SizedBox(height: 12),
-          _OptionCard(
-            icon: Icons.play_arrow,
-            title: 'No formal review',
-            subtitle: 'Just track learning progress',
-            onTap: _onChooseNoReview,
-          ),
-        ],
-      ),
+            const SizedBox(height: 12),
+            _OptionCard(
+              icon: Icons.play_arrow,
+              title: 'No formal review',
+              subtitle: 'Just track learning progress',
+              onTap: _onChooseNoReview,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -223,41 +224,41 @@ class _LearningProcessWizardScreenState
     return SafeArea(
       top: false,
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text(
-            widget.isChildMode && widget.childName != null
-                ? 'What program does ${widget.childName} follow?'
-                : 'Select a program',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Text(
+              widget.isChildMode && widget.childName != null
+                  ? 'What program does ${widget.childName} follow?'
+                  : 'Select a program',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: widget.presets.length,
-            itemBuilder: (context, index) {
-              final preset = widget.presets[index];
-              final isSelected = _selectedPresetId == preset.id;
-              return _PresetCard(
-                preset: preset,
-                isSelected: isSelected,
-                onTap: () => setState(() => _selectedPresetId = preset.id),
-              );
-            },
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: widget.presets.length,
+              itemBuilder: (context, index) {
+                final preset = widget.presets[index];
+                final isSelected = _selectedPresetId == preset.id;
+                return _PresetCard(
+                  preset: preset,
+                  isSelected: isSelected,
+                  onTap: () => setState(() => _selectedPresetId = preset.id),
+                );
+              },
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: FilledButton(
-            onPressed: _selectedPresetId != null ? _onPresetConfirmed : null,
-            child: const Text('Confirm'),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: FilledButton(
+              onPressed: _selectedPresetId != null ? _onPresetConfirmed : null,
+              child: const Text('Confirm'),
+            ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -272,38 +273,38 @@ class _LearningProcessWizardScreenState
           children: [
             Text(
               'Step 1: How many review rounds?',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Plus mandatory Learn stage',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 48),
-          Text(
-            '$_chazarahRounds round${_chazarahRounds == 1 ? '' : 's'}',
-            style: theme.textTheme.displaySmall,
-            textAlign: TextAlign.center,
-          ),
-          Slider(
-            value: _chazarahRounds.toDouble(),
-            min: 1,
-            max: 5,
-            divisions: 4,
-            label: '$_chazarahRounds',
-            onChanged: (v) => setState(() => _chazarahRounds = v.round()),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: _onCustomStep1Next,
-            child: const Text('Next'),
-          ),
-        ],
-      ),
+            const SizedBox(height: 8),
+            Text(
+              'Plus mandatory Learn stage',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            Text(
+              '$_chazarahRounds round${_chazarahRounds == 1 ? '' : 's'}',
+              style: theme.textTheme.displaySmall,
+              textAlign: TextAlign.center,
+            ),
+            Slider(
+              value: _chazarahRounds.toDouble(),
+              min: 1,
+              max: 5,
+              divisions: 4,
+              label: '$_chazarahRounds',
+              onChanged: (v) => setState(() => _chazarahRounds = v.round()),
+            ),
+            const Spacer(),
+            FilledButton(
+              onPressed: _onCustomStep1Next,
+              child: const Text('Next'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -318,28 +319,28 @@ class _LearningProcessWizardScreenState
           children: [
             Text(
               'Step 2: Set timing for each round',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _rounds.length,
-              itemBuilder: (context, index) {
-                return _RoundTimingCard(
-                  roundIndex: index,
-                  state: _rounds[index],
-                  onChanged: () => setState(() {}),
-                );
-              },
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
-          ),
-          FilledButton(
-            onPressed: _onCustomStep2Next,
-            child: const Text('Next'),
-          ),
-        ],
-      ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _rounds.length,
+                itemBuilder: (context, index) {
+                  return _RoundTimingCard(
+                    roundIndex: index,
+                    state: _rounds[index],
+                    onChanged: () => setState(() {}),
+                  );
+                },
+              ),
+            ),
+            FilledButton(
+              onPressed: _onCustomStep2Next,
+              child: const Text('Next'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -354,50 +355,50 @@ class _LearningProcessWizardScreenState
           children: [
             Text(
               'Step 3: Review your schedule',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Learn', style: theme.textTheme.titleMedium),
-                  Text(
-                    'Daily new material',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const Divider(),
-                  for (var i = 0; i < _rounds.length; i++) ...[
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Learn', style: theme.textTheme.titleMedium),
                     Text(
-                      'Chazara ${i + 1}',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    Text(
-                      _rounds[i].useWeekly
-                          ? 'Every ${_formatDays(_rounds[i].selectedDays)}'
-                          : '${_rounds[i].delayDays} days later',
+                      'Daily new material',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    if (i < _rounds.length - 1) const Divider(),
+                    const Divider(),
+                    for (var i = 0; i < _rounds.length; i++) ...[
+                      Text(
+                        'Chazara ${i + 1}',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      Text(
+                        _rounds[i].useWeekly
+                            ? 'Every ${_formatDays(_rounds[i].selectedDays)}'
+                            : '${_rounds[i].delayDays} days later',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (i < _rounds.length - 1) const Divider(),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: _onCustomConfirmed,
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
+            const Spacer(),
+            FilledButton(
+              onPressed: _onCustomConfirmed,
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -463,7 +464,10 @@ class _OptionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),

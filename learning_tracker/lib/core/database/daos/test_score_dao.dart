@@ -21,8 +21,7 @@ class TestScoreDao extends DatabaseAccessor<AppDatabase>
       (select(testScores)
             ..where(
               (t) =>
-                  t.profileId.equals(profileId) &
-                  t.programId.equals(programId),
+                  t.profileId.equals(profileId) & t.programId.equals(programId),
             )
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
@@ -36,8 +35,7 @@ class TestScoreDao extends DatabaseAccessor<AppDatabase>
       (select(testScores)
             ..where(
               (t) =>
-                  t.profileId.equals(profileId) &
-                  t.programId.equals(programId),
+                  t.profileId.equals(profileId) & t.programId.equals(programId),
             )
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
             ..limit(limit))

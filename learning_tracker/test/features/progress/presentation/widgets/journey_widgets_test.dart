@@ -56,7 +56,9 @@ void main() {
       expect(find.textContaining('Seder Zeraim'), findsOneWidget);
     });
 
-    testWidgets('displays curriculum completion with trophy icon', (tester) async {
+    testWidgets('displays curriculum completion with trophy icon', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -103,7 +105,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: JourneyGroupedView(viewModel: viewModel))),
+        MaterialApp(
+          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
+        ),
       );
 
       expect(find.text('Mishnayos'), findsOneWidget);
@@ -111,8 +115,10 @@ void main() {
       expect(find.text('Berakhot'), findsWidgets);
     });
 
-    testWidgets('shows no completions message for empty curriculum', (tester) async {
-      final viewModel = JourneyViewModel(
+    testWidgets('shows no completions message for empty curriculum', (
+      tester,
+    ) async {
+      const viewModel = JourneyViewModel(
         curricula: [
           CurriculumJourney(
             curriculumId: CurriculumId.bavli,
@@ -127,7 +133,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: JourneyGroupedView(viewModel: viewModel))),
+        const MaterialApp(
+          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
+        ),
       );
 
       expect(find.text('No completions yet'), findsOneWidget);
@@ -155,7 +163,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: JourneyGroupedView(viewModel: viewModel))),
+        MaterialApp(
+          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
+        ),
       );
 
       expect(find.byType(MilestoneBadge), findsOneWidget);
@@ -198,7 +208,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: JourneyGroupedView(viewModel: viewModel))),
+        MaterialApp(
+          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
+        ),
       );
 
       expect(find.textContaining('2 completions'), findsOneWidget);
@@ -243,7 +255,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: JourneyTimelineView(viewModel: viewModel))),
+        MaterialApp(
+          home: Scaffold(body: JourneyTimelineView(viewModel: viewModel)),
+        ),
       );
 
       // Month headers should appear
@@ -262,7 +276,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: JourneyTimelineView(viewModel: viewModel))),
+        const MaterialApp(
+          home: Scaffold(body: JourneyTimelineView(viewModel: viewModel)),
+        ),
       );
 
       expect(find.text('No completions to show'), findsOneWidget);
@@ -295,7 +311,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: JourneyTimelineView(viewModel: viewModel))),
+        MaterialApp(
+          home: Scaffold(body: JourneyTimelineView(viewModel: viewModel)),
+        ),
       );
 
       expect(find.byType(TrackTypeBadge), findsOneWidget);

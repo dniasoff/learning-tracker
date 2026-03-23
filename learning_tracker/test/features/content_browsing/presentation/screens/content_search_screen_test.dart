@@ -7,7 +7,7 @@ void main() {
   group('ContentSearchScreen', () {
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(
             home: ContentSearchScreen(curriculumId: 'mishnayos'),
           ),

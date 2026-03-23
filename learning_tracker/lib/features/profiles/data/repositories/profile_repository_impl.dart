@@ -73,9 +73,13 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final now = DateTime.now().toUtc();
     await (_db.update(_db.profiles)..where((t) => t.id.equals(id))).write(
       ProfilesCompanion(
-        displayName: displayName != null ? Value(displayName) : const Value.absent(),
+        displayName: displayName != null
+            ? Value(displayName)
+            : const Value.absent(),
         mode: mode != null ? Value(mode) : const Value.absent(),
-        avatarIndex: avatarIndex != null ? Value(avatarIndex) : const Value.absent(),
+        avatarIndex: avatarIndex != null
+            ? Value(avatarIndex)
+            : const Value.absent(),
         updatedAt: Value(now),
       ),
     );
@@ -88,16 +92,34 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<void> deleteProfile(int id) async {
     await _db.transaction(() async {
       // Cascade delete all associated data
-      await (_db.delete(_db.completions)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.bookmarks)..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.completions,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.bookmarks,
+      )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(_db.goals)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.rewards)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.stageDefinitions)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.streaks)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.learningOrder)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.pointConfigs)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.activeCurricula)..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(_db.curriculumTracks)..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.rewards,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.stageDefinitions,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.streaks,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.learningOrder,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.pointConfigs,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.activeCurricula,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.curriculumTracks,
+      )..where((t) => t.profileId.equals(id))).go();
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);
     });

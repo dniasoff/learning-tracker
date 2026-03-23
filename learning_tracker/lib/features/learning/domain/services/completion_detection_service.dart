@@ -133,10 +133,12 @@ class CompletionDetectionService {
       }
     });
 
-    final unitDisplayHe =
-        unitItems.isNotEmpty ? unitItems.first.displayNameHe : displayHe;
-    final unitDisplayEn =
-        unitItems.isNotEmpty ? unitItems.first.displayNameEn : displayEn;
+    final unitDisplayHe = unitItems.isNotEmpty
+        ? unitItems.first.displayNameHe
+        : displayHe;
+    final unitDisplayEn = unitItems.isNotEmpty
+        ? unitItems.first.displayNameEn
+        : displayEn;
 
     await _ledgerRepository.recordCompletion(
       curriculumId: curriculumId,

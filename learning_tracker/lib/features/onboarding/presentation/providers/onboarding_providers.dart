@@ -30,9 +30,7 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
   ref,
 ) {
   final activationService = ref.watch(curriculumActivationServiceProvider);
-  return CurriculumImportService(
-    activationService: activationService,
-  );
+  return CurriculumImportService(activationService: activationService);
 });
 
 /// Provider for GoalRepository used during onboarding goal setup.

@@ -14,10 +14,10 @@ class ProfileGuard extends AutoRouteGuard {
     required int? Function() getSelectedProfileId,
     required void Function(int) setSelectedProfileId,
     required int Function() getAccountId,
-  })  : _database = database,
-        _getSelectedProfileId = getSelectedProfileId,
-        _setSelectedProfileId = setSelectedProfileId,
-        _getAccountId = getAccountId;
+  }) : _database = database,
+       _getSelectedProfileId = getSelectedProfileId,
+       _setSelectedProfileId = setSelectedProfileId,
+       _getAccountId = getAccountId;
 
   final AppDatabase _database;
   final int? Function() _getSelectedProfileId;

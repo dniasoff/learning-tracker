@@ -55,12 +55,14 @@ void main() {
       expect(bookmark!.sefariaRef, 'Berakhot.2a');
     });
 
-    test('getBookmarkByCurriculumAndTrack returns null when not found',
-        () async {
-      final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('bavli', 'amud');
-      expect(bookmark, isNull);
-    });
+    test(
+      'getBookmarkByCurriculumAndTrack returns null when not found',
+      () async {
+        final bookmark = await database.bookmarkDao
+            .getBookmarkByCurriculumAndTrack('bavli', 'amud');
+        expect(bookmark, isNull);
+      },
+    );
 
     test('updateBookmark modifies existing bookmark', () async {
       final now = DateTime.now();

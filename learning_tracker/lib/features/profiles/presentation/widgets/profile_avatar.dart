@@ -7,11 +7,7 @@ class ProfileAvatar extends StatelessWidget {
   final int avatarIndex;
   final double radius;
 
-  const ProfileAvatar({
-    super.key,
-    required this.avatarIndex,
-    this.radius = 24,
-  });
+  const ProfileAvatar({super.key, required this.avatarIndex, this.radius = 24});
 
   static const _colors = [
     Colors.blue,

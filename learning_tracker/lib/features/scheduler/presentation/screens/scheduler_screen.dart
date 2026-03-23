@@ -27,63 +27,66 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Daily Tasks')),
-      body: SafeArea(top: false, child: asyncTasks.when(
-        data: (tasks) {
-          if (tasks.isEmpty) {
-            return const EmptyState(
-              message: 'All caught up! Great work!',
-              subtitle: 'You have no tasks remaining for today.',
-              icon: Icons.celebration_outlined,
+      body: SafeArea(
+        top: false,
+        child: asyncTasks.when(
+          data: (tasks) {
+            if (tasks.isEmpty) {
+              return const EmptyState(
+                message: 'All caught up! Great work!',
+                subtitle: 'You have no tasks remaining for today.',
+                icon: Icons.celebration_outlined,
+              );
+            }
+
+            final schedule = ComposedDailySchedule(
+              tasks: tasks,
+              summary:
+                  '${tasks.length} task${tasks.length == 1 ? '' : 's'} today',
             );
-          }
 
-          final schedule = ComposedDailySchedule(
-            tasks: tasks,
-            summary:
-                '${tasks.length} task${tasks.length == 1 ? '' : 's'} today',
-          );
-
-          return Column(
-            children: [
-              DailyScheduleHeader(
-                summary: schedule.summary,
-                isGroupedView: _isGroupedView,
-                onToggleView: () =>
-                    setState(() => _isGroupedView = !_isGroupedView),
-              ),
-              Expanded(
-                child: _isGroupedView
-                    ? GroupedDailyView(
-                        schedule: schedule,
-                        onTaskDismissed: (curriculum, index) {
-                          final grouped = schedule.groupedByCurriculum;
-                          final task = grouped[curriculum]![index];
-                          _skipTask(task);
-                        },
-                        onTaskCompleted: (curriculum, index) {
-                          ref.invalidate(allDailyTasksProvider);
-                        },
-                      )
-                    : _TaskList(tasks: tasks),
-              ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Error loading tasks: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(allDailyTasksProvider),
-                child: const Text('Retry'),
-              ),
-            ],
+            return Column(
+              children: [
+                DailyScheduleHeader(
+                  summary: schedule.summary,
+                  isGroupedView: _isGroupedView,
+                  onToggleView: () =>
+                      setState(() => _isGroupedView = !_isGroupedView),
+                ),
+                Expanded(
+                  child: _isGroupedView
+                      ? GroupedDailyView(
+                          schedule: schedule,
+                          onTaskDismissed: (curriculum, index) {
+                            final grouped = schedule.groupedByCurriculum;
+                            final task = grouped[curriculum]![index];
+                            _skipTask(task);
+                          },
+                          onTaskCompleted: (curriculum, index) {
+                            ref.invalidate(allDailyTasksProvider);
+                          },
+                        )
+                      : _TaskList(tasks: tasks),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Error loading tasks: $error'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(allDailyTasksProvider),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
-      )),
+      ),
     );
   }
 

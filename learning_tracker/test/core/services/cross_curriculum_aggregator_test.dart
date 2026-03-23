@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 void main() {
   late CrossCurriculumAggregator aggregator;
@@ -37,14 +36,8 @@ void main() {
           CurriculumId.mishnayos: 0.5,
           CurriculumId.bavli: 0.3,
         },
-        paceStatuses: {
-          CurriculumId.mishnayos: null,
-          CurriculumId.bavli: null,
-        },
-        todayTaskCounts: {
-          CurriculumId.mishnayos: 3,
-          CurriculumId.bavli: 2,
-        },
+        paceStatuses: {CurriculumId.mishnayos: null, CurriculumId.bavli: null},
+        todayTaskCounts: {CurriculumId.mishnayos: 3, CurriculumId.bavli: 2},
         nextDueItems: {
           CurriculumId.mishnayos: 'Berakhot 1:1',
           CurriculumId.bavli: null,
@@ -70,18 +63,9 @@ void main() {
           CurriculumId.mishnayos: 0.0,
           CurriculumId.bavli: 0.0,
         },
-        paceStatuses: {
-          CurriculumId.mishnayos: null,
-          CurriculumId.bavli: null,
-        },
-        todayTaskCounts: {
-          CurriculumId.mishnayos: 0,
-          CurriculumId.bavli: 0,
-        },
-        nextDueItems: {
-          CurriculumId.mishnayos: null,
-          CurriculumId.bavli: null,
-        },
+        paceStatuses: {CurriculumId.mishnayos: null, CurriculumId.bavli: null},
+        todayTaskCounts: {CurriculumId.mishnayos: 0, CurriculumId.bavli: 0},
+        nextDueItems: {CurriculumId.mishnayos: null, CurriculumId.bavli: null},
         lastCompletions: {
           CurriculumId.mishnayos: yesterday,
           CurriculumId.bavli: now,

@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
@@ -59,8 +58,9 @@ void main() {
         ),
       );
 
-      final configs =
-          await database.pointConfigDao.getConfigsByCurriculum('bavli');
+      final configs = await database.pointConfigDao.getConfigsByCurriculum(
+        'bavli',
+      );
       expect(configs, hasLength(3));
       expect(configs[0].stageOrder, 1);
       expect(configs[1].stageOrder, 2);
@@ -83,8 +83,9 @@ void main() {
         ),
       );
 
-      final configs =
-          await database.pointConfigDao.getConfigsByCurriculum('bavli');
+      final configs = await database.pointConfigDao.getConfigsByCurriculum(
+        'bavli',
+      );
       expect(configs, hasLength(1));
       expect(configs.first.curriculumId, 'bavli');
     });
@@ -124,46 +125,52 @@ void main() {
       expect(config!.points, 20);
     });
 
-    test('deleteAllForCurriculum removes only that curriculum configs',
-        () async {
-      await database.pointConfigDao.insertConfig(
-        PointConfigsCompanion.insert(
-          curriculumId: 'bavli',
-          stageOrder: 1,
-          points: 10,
-        ),
-      );
-      await database.pointConfigDao.insertConfig(
-        PointConfigsCompanion.insert(
-          curriculumId: 'mishnayos',
-          stageOrder: 1,
-          points: 8,
-        ),
-      );
+    test(
+      'deleteAllForCurriculum removes only that curriculum configs',
+      () async {
+        await database.pointConfigDao.insertConfig(
+          PointConfigsCompanion.insert(
+            curriculumId: 'bavli',
+            stageOrder: 1,
+            points: 10,
+          ),
+        );
+        await database.pointConfigDao.insertConfig(
+          PointConfigsCompanion.insert(
+            curriculumId: 'mishnayos',
+            stageOrder: 1,
+            points: 8,
+          ),
+        );
 
-      final deleted =
-          await database.pointConfigDao.deleteAllForCurriculum('bavli');
-      expect(deleted, 1);
+        final deleted = await database.pointConfigDao.deleteAllForCurriculum(
+          'bavli',
+        );
+        expect(deleted, 1);
 
-      final bavliConfigs =
-          await database.pointConfigDao.getConfigsByCurriculum('bavli');
-      expect(bavliConfigs, isEmpty);
+        final bavliConfigs = await database.pointConfigDao
+            .getConfigsByCurriculum('bavli');
+        expect(bavliConfigs, isEmpty);
 
-      final mishnayosConfigs =
-          await database.pointConfigDao.getConfigsByCurriculum('mishnayos');
-      expect(mishnayosConfigs, hasLength(1));
-    });
+        final mishnayosConfigs = await database.pointConfigDao
+            .getConfigsByCurriculum('mishnayos');
+        expect(mishnayosConfigs, hasLength(1));
+      },
+    );
 
-    test('seedDefaults creates fallback configs when no stages exist',
-        () async {
-      await database.pointConfigDao.seedDefaults('bavli');
+    test(
+      'seedDefaults creates fallback configs when no stages exist',
+      () async {
+        await database.pointConfigDao.seedDefaults('bavli');
 
-      final configs =
-          await database.pointConfigDao.getConfigsByCurriculum('bavli');
-      expect(configs, hasLength(3));
-      expect(configs[0].points, 10);
-      expect(configs[1].points, 5);
-      expect(configs[2].points, 3);
-    });
+        final configs = await database.pointConfigDao.getConfigsByCurriculum(
+          'bavli',
+        );
+        expect(configs, hasLength(3));
+        expect(configs[0].points, 10);
+        expect(configs[1].points, 5);
+        expect(configs[2].points, 3);
+      },
+    );
   });
 }

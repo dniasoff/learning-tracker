@@ -18,7 +18,9 @@ void main() {
 
   group('TrackDao', () {
     test('getActiveTracks returns empty list initially', () async {
-      final tracks = await database.trackDao.getActiveTracks(CurriculumId.bavli);
+      final tracks = await database.trackDao.getActiveTracks(
+        CurriculumId.bavli,
+      );
       expect(tracks, isEmpty);
     });
 
@@ -28,7 +30,9 @@ void main() {
         TrackType.personal,
       );
 
-      final tracks = await database.trackDao.getActiveTracks(CurriculumId.bavli);
+      final tracks = await database.trackDao.getActiveTracks(
+        CurriculumId.bavli,
+      );
       expect(tracks, hasLength(1));
       expect(tracks.first.trackType, TrackType.personal.storageKey);
       expect(tracks.first.isActive, isTrue);
@@ -66,7 +70,9 @@ void main() {
       expect(isActive, isFalse);
 
       // Track record still exists
-      final allTracks = await database.trackDao.getAllTracks(CurriculumId.bavli);
+      final allTracks = await database.trackDao.getAllTracks(
+        CurriculumId.bavli,
+      );
       expect(allTracks, hasLength(1));
     });
 
@@ -139,18 +145,23 @@ void main() {
         TrackType.school,
       );
 
-      final allTracks = await database.trackDao.getAllTracks(CurriculumId.bavli);
+      final allTracks = await database.trackDao.getAllTracks(
+        CurriculumId.bavli,
+      );
       expect(allTracks, hasLength(2));
 
-      final activeTracks =
-          await database.trackDao.getActiveTracks(CurriculumId.bavli);
+      final activeTracks = await database.trackDao.getActiveTracks(
+        CurriculumId.bavli,
+      );
       expect(activeTracks, hasLength(1));
     });
 
     test('initializeDefaultTracks creates personal track', () async {
       await database.trackDao.initializeDefaultTracks(CurriculumId.bavli);
 
-      final tracks = await database.trackDao.getActiveTracks(CurriculumId.bavli);
+      final tracks = await database.trackDao.getActiveTracks(
+        CurriculumId.bavli,
+      );
       expect(tracks, hasLength(1));
       expect(tracks.first.trackType, TrackType.personal.storageKey);
     });
@@ -173,10 +184,12 @@ void main() {
         TrackType.personal,
       );
 
-      final bavliTracks =
-          await database.trackDao.getActiveTracks(CurriculumId.bavli);
-      final mishnayosTracks =
-          await database.trackDao.getActiveTracks(CurriculumId.mishnayos);
+      final bavliTracks = await database.trackDao.getActiveTracks(
+        CurriculumId.bavli,
+      );
+      final mishnayosTracks = await database.trackDao.getActiveTracks(
+        CurriculumId.mishnayos,
+      );
 
       expect(bavliTracks, hasLength(1));
       expect(mishnayosTracks, hasLength(1));

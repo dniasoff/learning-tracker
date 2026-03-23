@@ -46,25 +46,28 @@ class ParentModeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SafeArea(top: false, child: dashboardAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48),
-              const SizedBox(height: 16),
-              Text('Error loading dashboard: $error'),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => ref.invalidate(parentDashboardDataProvider),
-                child: const Text('Retry'),
-              ),
-            ],
+      body: SafeArea(
+        top: false,
+        child: dashboardAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48),
+                const SizedBox(height: 16),
+                Text('Error loading dashboard: $error'),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => ref.invalidate(parentDashboardDataProvider),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
+          data: (data) => _DashboardBody(data: data),
         ),
-        data: (data) => _DashboardBody(data: data),
-      )),
+      ),
     );
   }
 }
@@ -143,9 +146,7 @@ class _ViewChildJourneyTile extends ConsumerWidget {
         subtitle: const Text('See lifetime achievements'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          context.router.push(
-            LearningJourneyRoute(profileId: activeProfileId),
-          );
+          context.router.push(LearningJourneyRoute(profileId: activeProfileId));
         },
       ),
     );

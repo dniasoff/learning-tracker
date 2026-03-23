@@ -32,8 +32,9 @@ void main() {
     });
 
     test('setProfileProgram upserts on duplicate', () async {
-      final programs = await db.learningProgramDao
-          .getProgramsByCurriculumType('bavli');
+      final programs = await db.learningProgramDao.getProgramsByCurriculumType(
+        'bavli',
+      );
       expect(programs.length, greaterThanOrEqualTo(2));
 
       await db.profileProgramDao.setProfileProgram(
@@ -79,8 +80,9 @@ void main() {
     });
 
     test('different profiles can have different programs', () async {
-      final programs = await db.learningProgramDao
-          .getProgramsByCurriculumType('bavli');
+      final programs = await db.learningProgramDao.getProgramsByCurriculumType(
+        'bavli',
+      );
 
       await db.profileProgramDao.setProfileProgram(
         profileId: 1,
@@ -93,10 +95,14 @@ void main() {
         programId: programs[1].id,
       );
 
-      final p1 = await db.profileProgramDao
-          .getProgramForProfileAndCurriculum(1, 'bavli');
-      final p2 = await db.profileProgramDao
-          .getProgramForProfileAndCurriculum(2, 'bavli');
+      final p1 = await db.profileProgramDao.getProgramForProfileAndCurriculum(
+        1,
+        'bavli',
+      );
+      final p2 = await db.profileProgramDao.getProgramForProfileAndCurriculum(
+        2,
+        'bavli',
+      );
       expect(p1!.programId, programs[0].id);
       expect(p2!.programId, programs[1].id);
     });

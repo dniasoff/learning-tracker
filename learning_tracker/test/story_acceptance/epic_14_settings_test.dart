@@ -21,12 +21,15 @@ class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockFirebaseFirestore extends Mock implements FirebaseFirestore {}
 
+// ignore: subtype_of_sealed_class
 class MockCollectionReference extends Mock
     implements CollectionReference<Map<String, dynamic>> {}
 
+// ignore: subtype_of_sealed_class
 class MockDocumentReference extends Mock
     implements DocumentReference<Map<String, dynamic>> {}
 
+// ignore: subtype_of_sealed_class
 class MockQuerySnapshot extends Mock
     implements QuerySnapshot<Map<String, dynamic>> {}
 
@@ -382,17 +385,17 @@ void main() {
 
         // Missing formatVersion
         final missingVersion = json.encode({
-          'completions': [],
-          'goals': [],
-          'stageDefinitions': [],
-          'rewards': [],
-          'streaks': [],
-          'pointConfigs': [],
-          'bookmarks': [],
-          'learningOrder': [],
-          'activeCurricula': [],
-          'curriculumTracks': [],
-          'userProfiles': [],
+          'completions': <dynamic>[],
+          'goals': <dynamic>[],
+          'stageDefinitions': <dynamic>[],
+          'rewards': <dynamic>[],
+          'streaks': <dynamic>[],
+          'pointConfigs': <dynamic>[],
+          'bookmarks': <dynamic>[],
+          'learningOrder': <dynamic>[],
+          'activeCurricula': <dynamic>[],
+          'curriculumTracks': <dynamic>[],
+          'userProfiles': <dynamic>[],
         });
         expect(
           () => service.validateAndPreview(missingVersion),
@@ -403,16 +406,16 @@ void main() {
         final badSection = json.encode({
           'formatVersion': '1',
           'completions': 'not a list',
-          'goals': [],
-          'stageDefinitions': [],
-          'rewards': [],
-          'streaks': [],
-          'pointConfigs': [],
-          'bookmarks': [],
-          'learningOrder': [],
-          'activeCurricula': [],
-          'curriculumTracks': [],
-          'userProfiles': [],
+          'goals': <dynamic>[],
+          'stageDefinitions': <dynamic>[],
+          'rewards': <dynamic>[],
+          'streaks': <dynamic>[],
+          'pointConfigs': <dynamic>[],
+          'bookmarks': <dynamic>[],
+          'learningOrder': <dynamic>[],
+          'activeCurricula': <dynamic>[],
+          'curriculumTracks': <dynamic>[],
+          'userProfiles': <dynamic>[],
         });
         expect(
           () => service.validateAndPreview(badSection),
@@ -524,11 +527,11 @@ void main() {
             'points': 10,
           },
         ],
-        'goals': [],
-        'stageDefinitions': [],
-        'rewards': [],
-        'streaks': [],
-        'pointConfigs': [],
+        'goals': <dynamic>[],
+        'stageDefinitions': <dynamic>[],
+        'rewards': <dynamic>[],
+        'streaks': <dynamic>[],
+        'pointConfigs': <dynamic>[],
         'bookmarks': [
           {
             'curriculumId': 'mishna',
@@ -544,14 +547,14 @@ void main() {
             'updatedAt': DateTime(2026, 1, 2).toIso8601String(),
           },
         ],
-        'learningOrder': [],
+        'learningOrder': <dynamic>[],
         'activeCurricula': [
           {'curriculumId': 'mishna'},
           // Duplicate PK
           {'curriculumId': 'mishna'},
         ],
-        'curriculumTracks': [],
-        'userProfiles': [],
+        'curriculumTracks': <dynamic>[],
+        'userProfiles': <dynamic>[],
       });
 
       // Should fail due to duplicate active curricula PKs

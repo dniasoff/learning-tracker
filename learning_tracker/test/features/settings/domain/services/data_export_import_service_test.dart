@@ -82,53 +82,59 @@ void main() {
     test('throws FormatException for invalid JSON', () {
       expect(
         () => service.validateAndPreview('not json'),
-        throwsA(isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          'Invalid JSON format',
-        )),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'Invalid JSON format',
+          ),
+        ),
       );
     });
 
     test('throws FormatException when formatVersion is missing', () {
       final jsonStr = json.encode({
-        'completions': [],
-        'goals': [],
-        'stageDefinitions': [],
-        'rewards': [],
-        'streaks': [],
-        'pointConfigs': [],
-        'bookmarks': [],
-        'learningOrder': [],
-        'activeCurricula': [],
-        'curriculumTracks': [],
-        'userProfiles': [],
+        'completions': <dynamic>[],
+        'goals': <dynamic>[],
+        'stageDefinitions': <dynamic>[],
+        'rewards': <dynamic>[],
+        'streaks': <dynamic>[],
+        'pointConfigs': <dynamic>[],
+        'bookmarks': <dynamic>[],
+        'learningOrder': <dynamic>[],
+        'activeCurricula': <dynamic>[],
+        'curriculumTracks': <dynamic>[],
+        'userProfiles': <dynamic>[],
       });
 
       expect(
         () => service.validateAndPreview(jsonStr),
-        throwsA(isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          'Missing formatVersion field',
-        )),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'Missing formatVersion field',
+          ),
+        ),
       );
     });
 
     test('throws FormatException when a required section is missing', () {
       final data = {
         'formatVersion': '1',
-        'completions': [],
+        'completions': <dynamic>[],
         // missing 'goals' and others
       };
 
       expect(
         () => service.validateAndPreview(json.encode(data)),
-        throwsA(isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          contains('Missing required section'),
-        )),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('Missing required section'),
+          ),
+        ),
       );
     });
 
@@ -136,25 +142,27 @@ void main() {
       final data = {
         'formatVersion': '1',
         'completions': 'not a list',
-        'goals': [],
-        'stageDefinitions': [],
-        'rewards': [],
-        'streaks': [],
-        'pointConfigs': [],
-        'bookmarks': [],
-        'learningOrder': [],
-        'activeCurricula': [],
-        'curriculumTracks': [],
-        'userProfiles': [],
+        'goals': <dynamic>[],
+        'stageDefinitions': <dynamic>[],
+        'rewards': <dynamic>[],
+        'streaks': <dynamic>[],
+        'pointConfigs': <dynamic>[],
+        'bookmarks': <dynamic>[],
+        'learningOrder': <dynamic>[],
+        'activeCurricula': <dynamic>[],
+        'curriculumTracks': <dynamic>[],
+        'userProfiles': <dynamic>[],
       };
 
       expect(
         () => service.validateAndPreview(json.encode(data)),
-        throwsA(isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          contains('must be a list'),
-        )),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('must be a list'),
+          ),
+        ),
       );
     });
 

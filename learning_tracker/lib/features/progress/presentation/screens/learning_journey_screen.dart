@@ -24,7 +24,9 @@ class LearningJourneyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final effectiveProfileId = profileId ?? activeProfileId;
-    final journeyAsync = ref.watch(journeyViewModelProvider(effectiveProfileId));
+    final journeyAsync = ref.watch(
+      journeyViewModelProvider(effectiveProfileId),
+    );
     final sortMode = ref.watch(journeySortModeProvider);
 
     // Get profile name for AppBar when viewing another profile
@@ -39,67 +41,67 @@ class LearningJourneyScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: title)),
-      body: SafeArea(top: false, child: journeyAsync.when(
-        loading: () => const LoadingIndicator(
-          message: 'Loading your journey...',
-        ),
-        error: (error, _) => ErrorDisplay(
-          message: 'Failed to load journey: $error',
-          onRetry: () => ref.invalidate(
-            journeyViewModelProvider(effectiveProfileId),
+      body: SafeArea(
+        top: false,
+        child: journeyAsync.when(
+          loading: () =>
+              const LoadingIndicator(message: 'Loading your journey...'),
+          error: (error, _) => ErrorDisplay(
+            message: 'Failed to load journey: $error',
+            onRetry: () =>
+                ref.invalidate(journeyViewModelProvider(effectiveProfileId)),
           ),
-        ),
-        data: (viewModel) {
-          if (_isEmpty(viewModel)) {
-            return _EmptyState(
-              onStartLearning: () => context.router.push(
-                const DashboardRoute(),
+          data: (viewModel) {
+            if (_isEmpty(viewModel)) {
+              return _EmptyState(
+                onStartLearning: () =>
+                    context.router.push(const DashboardRoute()),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(journeyViewModelProvider(effectiveProfileId));
+              },
+              child: Column(
+                children: [
+                  // View toggle
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: SegmentedButton<JourneySortModeValue>(
+                      segments: const [
+                        ButtonSegment(
+                          value: JourneySortModeValue.grouped,
+                          label: Text('By Curriculum'),
+                          icon: Icon(Icons.grid_view),
+                        ),
+                        ButtonSegment(
+                          value: JourneySortModeValue.chronological,
+                          label: Text('Timeline'),
+                          icon: Icon(Icons.timeline),
+                        ),
+                      ],
+                      selected: {sortMode},
+                      onSelectionChanged: (selected) {
+                        ref
+                            .read(journeySortModeProvider.notifier)
+                            .setMode(selected.first);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Content
+                  Expanded(
+                    child: sortMode == JourneySortModeValue.grouped
+                        ? JourneyGroupedView(viewModel: viewModel)
+                        : JourneyTimelineView(viewModel: viewModel),
+                  ),
+                ],
               ),
             );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(journeyViewModelProvider(effectiveProfileId));
-            },
-            child: Column(
-              children: [
-                // View toggle
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: SegmentedButton<JourneySortModeValue>(
-                    segments: const [
-                      ButtonSegment(
-                        value: JourneySortModeValue.grouped,
-                        label: Text('By Curriculum'),
-                        icon: Icon(Icons.grid_view),
-                      ),
-                      ButtonSegment(
-                        value: JourneySortModeValue.chronological,
-                        label: Text('Timeline'),
-                        icon: Icon(Icons.timeline),
-                      ),
-                    ],
-                    selected: {sortMode},
-                    onSelectionChanged: (selected) {
-                      ref
-                          .read(journeySortModeProvider.notifier)
-                          .setMode(selected.first);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Content
-                Expanded(
-                  child: sortMode == JourneySortModeValue.grouped
-                      ? JourneyGroupedView(viewModel: viewModel)
-                      : JourneyTimelineView(viewModel: viewModel),
-                ),
-              ],
-            ),
-          );
-        },
-      )),
+          },
+        ),
+      ),
     );
   }
 
@@ -124,7 +126,9 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.auto_stories,
               size: 80,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 24),
             Text(
@@ -143,9 +147,7 @@ class _EmptyState extends StatelessWidget {
               onPressed: onStartLearning,
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start Learning'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(200, 48),
-              ),
+              style: FilledButton.styleFrom(minimumSize: const Size(200, 48)),
             ),
           ],
         ),

@@ -22,19 +22,22 @@ class ParentTrackManagementScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Manage Tracks')),
-      body: SafeArea(top: false, child: activeCurriculaAsync.when(
-        data: (curricula) => curricula.isEmpty
-            ? const Center(child: Text('No active curricula'))
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: curricula.length,
-                itemBuilder: (context, index) =>
-                    _CurriculumTrackCard(curriculum: curricula[index]),
-              ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) =>
-            Center(child: Text('Error loading curricula: $error')),
-      )),
+      body: SafeArea(
+        top: false,
+        child: activeCurriculaAsync.when(
+          data: (curricula) => curricula.isEmpty
+              ? const Center(child: Text('No active curricula'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: curricula.length,
+                  itemBuilder: (context, index) =>
+                      _CurriculumTrackCard(curriculum: curricula[index]),
+                ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) =>
+              Center(child: Text('Error loading curricula: $error')),
+        ),
+      ),
     );
   }
 }
@@ -131,9 +134,9 @@ class _TrackRow extends ConsumerWidget {
       ref.invalidate(activeTracksProvider(curriculum));
     } on Exception catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to activate track: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to activate track: $e')));
     }
   }
 
@@ -168,9 +171,9 @@ class _TrackRow extends ConsumerWidget {
         ref.invalidate(activeTracksProvider(curriculum));
       } on Exception catch (e) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove track: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to remove track: $e')));
       }
     }
   }

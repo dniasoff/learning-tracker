@@ -6,9 +6,7 @@ import 'package:learning_tracker/features/auth/presentation/screens/sign_in_scre
 void main() {
   group('SignInScreen', () {
     Widget buildTestWidget() {
-      return const ProviderScope(
-        child: MaterialApp(home: SignInScreen()),
-      );
+      return const ProviderScope(child: MaterialApp(home: SignInScreen()));
     }
 
     testWidgets('renders without error', (tester) async {
@@ -26,8 +24,9 @@ void main() {
       expect(find.text('Password'), findsOneWidget);
     });
 
-    testWidgets('shows Sign In button and Google sign-in option',
-        (tester) async {
+    testWidgets('shows Sign In button and Google sign-in option', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 

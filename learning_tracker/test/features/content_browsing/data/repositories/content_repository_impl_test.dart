@@ -41,127 +41,130 @@ void main() {
   // These tests verify that the bundled JSON files can be correctly
   // parsed using the same logic as ContentRepositoryImpl.
 
-  group('ContentRepositoryImpl JSON parsing contract',
-      skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
-    /// Parses a JSON file the same way ContentRepositoryImpl does.
-    /// Returns (config, items) tuple.
-    (CurriculumHierarchyConfig, List<ContentItem>) parseJsonFile(
-      String filename,
-    ) {
-      final file = File('assets/content/$filename');
-      final jsonString = file.readAsStringSync();
-      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+  group(
+    'ContentRepositoryImpl JSON parsing contract',
+    skip: 'Bundled JSON removed — content now fetched from cloud storage',
+    () {
+      /// Parses a JSON file the same way ContentRepositoryImpl does.
+      /// Returns (config, items) tuple.
+      (CurriculumHierarchyConfig, List<ContentItem>) parseJsonFile(
+        String filename,
+      ) {
+        final file = File('assets/content/$filename');
+        final jsonString = file.readAsStringSync();
+        final json = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
-      final config = CurriculumHierarchyConfig(
-        curriculumId: configJson['curriculumId'] as String,
-        levelLabels: (configJson['levelLabels'] as List)
-            .map((e) => e as String)
-            .toList(),
-        totalItems: configJson['totalItems'] as int,
-      );
-
-      final itemsJson = json['items'] as List;
-      final items = itemsJson.map((itemJson) {
-        final item = itemJson as Map<String, dynamic>;
-        return ContentItem(
-          curriculumId: item['curriculumId'] as String,
-          level1: item['level1'] as String,
-          level2: item['level2'] as String?,
-          level3: item['level3'] as String?,
-          level4: item['level4'] as String?,
-          displayNameHe: item['displayNameHe'] as String,
-          displayNameEn: item['displayNameEn'] as String,
-          sefariaRef: item['sefariaRef'] as String,
-          sortOrder: item['sortOrder'] as int,
-          isLeaf: item['isLeaf'] as bool,
+        final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
+        final config = CurriculumHierarchyConfig(
+          curriculumId: configJson['curriculumId'] as String,
+          levelLabels: (configJson['levelLabels'] as List)
+              .map((e) => e as String)
+              .toList(),
+          totalItems: configJson['totalItems'] as int,
         );
-      }).toList();
 
-      return (config, items);
-    }
-
-    for (final curriculum in CurriculumId.values) {
-      final filename = '${curriculum.storageKey}.json';
-
-      group(curriculum.displayNameEn, () {
-        test('parses without error', () {
-          expect(() => parseJsonFile(filename), returnsNormally);
-        });
-
-        test('hierarchyConfig has correct curriculumId', () {
-          final (config, _) = parseJsonFile(filename);
-          expect(config.curriculumId, equals(curriculum.storageKey));
-        });
-
-        test('hierarchyConfig has valid level labels', () {
-          final (config, _) = parseJsonFile(filename);
-          expect(config.levelLabels, isNotEmpty);
-          expect(config.depth, greaterThan(0));
-        });
-
-        test('hierarchyConfig totalItems > 0', () {
-          final (config, _) = parseJsonFile(filename);
-          expect(config.totalItems, greaterThan(0));
-        });
-
-        test('items list is non-empty', () {
-          final (_, items) = parseJsonFile(filename);
-          expect(items, isNotEmpty);
-        });
-
-        test('all items have matching curriculumId', () {
-          final (_, items) = parseJsonFile(filename);
-          for (final item in items) {
-            expect(
-              item.curriculumId,
-              equals(curriculum.storageKey),
-              reason: 'Item ${item.sefariaRef} has wrong curriculumId',
-            );
-          }
-        });
-
-        test('leaf items have non-empty sefariaRef', () {
-          final (_, items) = parseJsonFile(filename);
-          final leafItems = items.where((i) => i.isLeaf);
-          expect(
-            leafItems,
-            isNotEmpty,
-            reason: 'Must have at least one leaf item',
+        final itemsJson = json['items'] as List;
+        final items = itemsJson.map((itemJson) {
+          final item = itemJson as Map<String, dynamic>;
+          return ContentItem(
+            curriculumId: item['curriculumId'] as String,
+            level1: item['level1'] as String,
+            level2: item['level2'] as String?,
+            level3: item['level3'] as String?,
+            level4: item['level4'] as String?,
+            displayNameHe: item['displayNameHe'] as String,
+            displayNameEn: item['displayNameEn'] as String,
+            sefariaRef: item['sefariaRef'] as String,
+            sortOrder: item['sortOrder'] as int,
+            isLeaf: item['isLeaf'] as bool,
           );
-          for (final item in leafItems) {
+        }).toList();
+
+        return (config, items);
+      }
+
+      for (final curriculum in CurriculumId.values) {
+        final filename = '${curriculum.storageKey}.json';
+
+        group(curriculum.displayNameEn, () {
+          test('parses without error', () {
+            expect(() => parseJsonFile(filename), returnsNormally);
+          });
+
+          test('hierarchyConfig has correct curriculumId', () {
+            final (config, _) = parseJsonFile(filename);
+            expect(config.curriculumId, equals(curriculum.storageKey));
+          });
+
+          test('hierarchyConfig has valid level labels', () {
+            final (config, _) = parseJsonFile(filename);
+            expect(config.levelLabels, isNotEmpty);
+            expect(config.depth, greaterThan(0));
+          });
+
+          test('hierarchyConfig totalItems > 0', () {
+            final (config, _) = parseJsonFile(filename);
+            expect(config.totalItems, greaterThan(0));
+          });
+
+          test('items list is non-empty', () {
+            final (_, items) = parseJsonFile(filename);
+            expect(items, isNotEmpty);
+          });
+
+          test('all items have matching curriculumId', () {
+            final (_, items) = parseJsonFile(filename);
+            for (final item in items) {
+              expect(
+                item.curriculumId,
+                equals(curriculum.storageKey),
+                reason: 'Item ${item.sefariaRef} has wrong curriculumId',
+              );
+            }
+          });
+
+          test('leaf items have non-empty sefariaRef', () {
+            final (_, items) = parseJsonFile(filename);
+            final leafItems = items.where((i) => i.isLeaf);
             expect(
-              item.sefariaRef,
+              leafItems,
               isNotEmpty,
-              reason: 'Leaf item must have sefariaRef',
+              reason: 'Must have at least one leaf item',
             );
-          }
-        });
+            for (final item in leafItems) {
+              expect(
+                item.sefariaRef,
+                isNotEmpty,
+                reason: 'Leaf item must have sefariaRef',
+              );
+            }
+          });
 
-        test('leaf count matches totalItems in config', () {
-          final (config, items) = parseJsonFile(filename);
-          final leafCount = items.where((i) => i.isLeaf).length;
-          expect(
-            leafCount,
-            equals(config.totalItems),
-            reason:
-                'Leaf count ($leafCount) must match totalItems (${config.totalItems})',
-          );
-        });
-
-        test('sort orders are non-negative', () {
-          final (_, items) = parseJsonFile(filename);
-          for (final item in items) {
+          test('leaf count matches totalItems in config', () {
+            final (config, items) = parseJsonFile(filename);
+            final leafCount = items.where((i) => i.isLeaf).length;
             expect(
-              item.sortOrder,
-              greaterThanOrEqualTo(0),
-              reason: 'Item ${item.sefariaRef} has negative sortOrder',
+              leafCount,
+              equals(config.totalItems),
+              reason:
+                  'Leaf count ($leafCount) must match totalItems (${config.totalItems})',
             );
-          }
+          });
+
+          test('sort orders are non-negative', () {
+            final (_, items) = parseJsonFile(filename);
+            for (final item in items) {
+              expect(
+                item.sortOrder,
+                greaterThanOrEqualTo(0),
+                reason: 'Item ${item.sefariaRef} has negative sortOrder',
+              );
+            }
+          });
         });
-      });
-    }
-  });
+      }
+    },
+  );
 
   // ── In-memory operation tests ───────────────────────────────
   // These tests verify filter, search, and getByRef logic using

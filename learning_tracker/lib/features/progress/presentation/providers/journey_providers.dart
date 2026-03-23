@@ -31,23 +31,25 @@ class JourneySortModeNotifier extends _$JourneySortModeNotifier {
 }
 
 /// Looks up a profile by ID, used when viewing another user's journey.
-final profileByIdProvider =
-    FutureProvider.autoDispose.family<ProfileModel?, int>((ref, profileId) async {
-  final repo = ref.watch(profileRepositoryProvider);
-  return repo.getProfileById(profileId);
-});
+final profileByIdProvider = FutureProvider.autoDispose
+    .family<ProfileModel?, int>((ref, profileId) async {
+      final repo = ref.watch(profileRepositoryProvider);
+      return repo.getProfileById(profileId);
+    });
 
 /// Provider for learning ledger entries for a given profile.
 final learningLedgerProvider = FutureProvider.autoDispose
     .family<List<LearningLedgerData>, int>((ref, profileId) async {
-  final database = ref.watch(appDatabaseProvider);
-  return database.learningLedgerDao.getEntriesByProfile(profileId);
-});
+      final database = ref.watch(appDatabaseProvider);
+      return database.learningLedgerDao.getEntriesByProfile(profileId);
+    });
 
 /// Computes the full JourneyViewModel for a given profile.
 @riverpod
 Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
-  final ledgerEntries = await ref.watch(learningLedgerProvider(profileId).future);
+  final ledgerEntries = await ref.watch(
+    learningLedgerProvider(profileId).future,
+  );
   final activeCurricula = await ref.watch(activeCurriculaProvider.future);
 
   final curricula = <CurriculumJourney>[];
@@ -66,16 +68,20 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
     final totalUnits = _countTotalUnits(content, curriculum);
 
     // Build completions list
-    final completions = entriesForCurriculum.map((e) => UnitCompletion(
-      unitIdentifier: e.unitIdentifier,
-      unitType: e.unitType,
-      displayNameHe: e.unitDisplayNameHe,
-      displayNameEn: e.unitDisplayNameEn,
-      trackType: TrackType.fromStorageKey(e.trackType),
-      completedAt: e.completedAt,
-      completionNumber: e.completionNumber,
-      isManual: e.isManual,
-    )).toList();
+    final completions = entriesForCurriculum
+        .map(
+          (e) => UnitCompletion(
+            unitIdentifier: e.unitIdentifier,
+            unitType: e.unitType,
+            displayNameHe: e.unitDisplayNameHe,
+            displayNameEn: e.unitDisplayNameEn,
+            trackType: TrackType.fromStorageKey(e.trackType),
+            completedAt: e.completedAt,
+            completionNumber: e.completionNumber,
+            isManual: e.isManual,
+          ),
+        )
+        .toList();
 
     // Count unique units
     final uniqueUnits = entriesForCurriculum
@@ -93,13 +99,15 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
     allUniqueUnits.addAll(uniqueUnits);
 
     if (completions.isNotEmpty || totalUnits > 0) {
-      curricula.add(CurriculumJourney(
-        curriculumId: curriculum,
-        completions: completions,
-        uniqueUnitsCompleted: uniqueUnits.length,
-        totalUnitsAvailable: totalUnits,
-        milestones: milestones,
-      ));
+      curricula.add(
+        CurriculumJourney(
+          curriculumId: curriculum,
+          completions: completions,
+          uniqueUnitsCompleted: uniqueUnits.length,
+          totalUnitsAvailable: totalUnits,
+          milestones: milestones,
+        ),
+      );
     }
   }
 
@@ -147,16 +155,19 @@ List<MilestoneAchievement> _detectMilestones(
     for (final entry in sederGroups.entries) {
       if (entry.value.every((unit) => completedUnits.contains(unit))) {
         // Find the latest completion date for this seder
-        final sederCompletions = entries
-            .where((e) => entry.value.contains(e.unitIdentifier))
-            .toList()
-          ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+        final sederCompletions =
+            entries
+                .where((e) => entry.value.contains(e.unitIdentifier))
+                .toList()
+              ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
         if (sederCompletions.isNotEmpty) {
-          milestones.add(MilestoneAchievement(
-            type: 'seder_complete',
-            displayName: entry.key,
-            achievedAt: sederCompletions.first.completedAt,
-          ));
+          milestones.add(
+            MilestoneAchievement(
+              type: 'seder_complete',
+              displayName: entry.key,
+              achievedAt: sederCompletions.first.completedAt,
+            ),
+          );
         }
       }
     }
@@ -167,11 +178,13 @@ List<MilestoneAchievement> _detectMilestones(
   if (completedUnits.length >= totalUnits && totalUnits > 0) {
     final allEntries = [...entries]
       ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
-    milestones.add(MilestoneAchievement(
-      type: 'curriculum_complete',
-      displayName: curriculum.displayNameEn,
-      achievedAt: allEntries.first.completedAt,
-    ));
+    milestones.add(
+      MilestoneAchievement(
+        type: 'curriculum_complete',
+        displayName: curriculum.displayNameEn,
+        achievedAt: allEntries.first.completedAt,
+      ),
+    );
   }
 
   return milestones;

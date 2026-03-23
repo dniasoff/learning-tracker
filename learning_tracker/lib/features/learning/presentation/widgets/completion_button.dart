@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
@@ -13,7 +14,6 @@ import 'package:learning_tracker/features/learning/presentation/widgets/completi
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/reward_milestone_providers.dart';
 
 /// Button widget for marking a content item as completed.

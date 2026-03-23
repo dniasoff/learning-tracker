@@ -26,8 +26,7 @@ void main() {
     db = createTestDatabase();
     mockSyncEngine = _MockSyncEngine();
     mockContentRepo = _MockContentRepository();
-    when(() => mockSyncEngine.pushLedgerEntry(any()))
-        .thenAnswer((_) async {});
+    when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -95,56 +94,59 @@ void main() {
   }
 
   group('CompletionDetectionService', () {
-    test('creates ledger entry when all leaves complete for masechta', () async {
-      final leaves = createLeafItems('Zeraim', 'Berakhot', 2);
+    test(
+      'creates ledger entry when all leaves complete for masechta',
+      () async {
+        final leaves = createLeafItems('Zeraim', 'Berakhot', 2);
 
-      when(
-        () => mockContentRepo.getContentByRef(
-          curriculumId: CurriculumId.mishnayos,
-          sefariaRef: any(named: 'sefariaRef'),
-        ),
-      ).thenAnswer((_) async => leaves.first);
+        when(
+          () => mockContentRepo.getContentByRef(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => leaves.first);
 
-      when(
-        () => mockContentRepo.filterByLevel(
-          curriculumId: CurriculumId.mishnayos,
-          level1: 'Zeraim',
-          level2: 'Berakhot',
-        ),
-      ).thenAnswer((_) async => leaves);
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Zeraim',
+            level2: 'Berakhot',
+          ),
+        ).thenAnswer((_) async => leaves);
 
-      when(
-        () => mockContentRepo.filterByLevel(
-          curriculumId: CurriculumId.mishnayos,
-          level1: 'Zeraim',
-          level2: null,
-        ),
-      ).thenAnswer((_) async => leaves);
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Zeraim',
+            level2: null,
+          ),
+        ).thenAnswer((_) async => leaves);
 
-      await insertStage(1);
+        await insertStage(1);
 
-      for (final leaf in leaves) {
-        await insertCompletion(leaf.sefariaRef, 1);
-      }
+        for (final leaf in leaves) {
+          await insertCompletion(leaf.sefariaRef, 1);
+        }
 
-      final service = createService();
-      await service.checkAndRecordCompletions(
-        curriculumId: _currId,
-        sefariaRef: leaves.first.sefariaRef,
-        trackType: 'personal',
-        profileId: 1,
-        markedBy: 1,
-      );
+        final service = createService();
+        await service.checkAndRecordCompletions(
+          curriculumId: _currId,
+          sefariaRef: leaves.first.sefariaRef,
+          trackType: 'personal',
+          profileId: 1,
+          markedBy: 1,
+        );
 
-      final entries = await db.learningLedgerDao.getEntriesByProfile(1);
-      expect(entries.length, greaterThanOrEqualTo(1));
-      expect(
-        entries.any(
-          (e) => e.unitType == 'masechta' && e.unitIdentifier == 'Berakhot',
-        ),
-        isTrue,
-      );
-    });
+        final entries = await db.learningLedgerDao.getEntriesByProfile(1);
+        expect(entries.length, greaterThanOrEqualTo(1));
+        expect(
+          entries.any(
+            (e) => e.unitType == 'masechta' && e.unitIdentifier == 'Berakhot',
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('does NOT create entry when some leaves are incomplete', () async {
       final leaves = createLeafItems('Zeraim', 'Berakhot', 3);

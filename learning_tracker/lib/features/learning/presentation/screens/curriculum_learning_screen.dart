@@ -15,7 +15,10 @@ class CurriculumLearningScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: 'Learn - $curriculumId')),
-      body: SafeArea(top: false, child: Center(child: Text('Curriculum Learning: $curriculumId'))),
+      body: SafeArea(
+        top: false,
+        child: Center(child: Text('Curriculum Learning: $curriculumId')),
+      ),
     );
   }
 }

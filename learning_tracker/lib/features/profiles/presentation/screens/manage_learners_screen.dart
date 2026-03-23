@@ -15,11 +15,11 @@ class ManageLearnersScreen extends ConsumerWidget {
     final profilesAsync = ref.watch(profileListStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const AppBarTitle(text: 'Manage Learners'),
-      ),
+      appBar: AppBar(title: const AppBarTitle(text: 'Manage Learners')),
       floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewPadding.bottom,
+        ),
         child: FloatingActionButton(
           onPressed: () => _showAddProfileDialog(context, ref),
           child: const Icon(Icons.add),
@@ -30,7 +30,9 @@ class ManageLearnersScreen extends ConsumerWidget {
         error: (e, s) => Center(child: Text('Error: $e')),
         data: (profiles) {
           if (profiles.isEmpty) {
-            return const Center(child: Text('No profiles yet. Tap + to add one.'));
+            return const Center(
+              child: Text('No profiles yet. Tap + to add one.'),
+            );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -45,7 +47,10 @@ class ManageLearnersScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAddProfileDialog(BuildContext context, WidgetRef ref) async {
+  Future<void> _showAddProfileDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final result = await showDialog<({String name, String mode, int avatar})>(
       context: context,
       builder: (ctx) => const _ProfileFormDialog(title: 'Add Learner'),
@@ -258,9 +263,9 @@ class _ProfileFormDialogState extends State<_ProfileFormDialog> {
           onPressed: () {
             final name = _nameController.text.trim();
             if (name.isEmpty) return;
-            Navigator.of(context).pop(
-              (name: name, mode: _mode, avatar: _avatarIndex),
-            );
+            Navigator.of(
+              context,
+            ).pop((name: name, mode: _mode, avatar: _avatarIndex));
           },
           child: const Text('Save'),
         ),

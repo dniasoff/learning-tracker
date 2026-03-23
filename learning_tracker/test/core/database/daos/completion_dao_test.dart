@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
@@ -50,10 +49,14 @@ void main() {
     test('getCompletionsByCurriculum filters by curriculum', () async {
       await insertTestCompletion(curriculumId: 'bavli');
       await insertTestCompletion(curriculumId: 'yerushalmi');
-      await insertTestCompletion(curriculumId: 'bavli', sefariaRef: 'Shabbat.2a');
+      await insertTestCompletion(
+        curriculumId: 'bavli',
+        sefariaRef: 'Shabbat.2a',
+      );
 
-      final results =
-          await database.completionDao.getCompletionsByCurriculum('bavli');
+      final results = await database.completionDao.getCompletionsByCurriculum(
+        'bavli',
+      );
       expect(results, hasLength(2));
     });
 
@@ -62,8 +65,9 @@ void main() {
       await insertTestCompletion(sefariaRef: 'Berakhot.2a', stageId: 2);
       await insertTestCompletion(sefariaRef: 'Shabbat.2a');
 
-      final results =
-          await database.completionDao.getCompletionsForContent('Berakhot.2a');
+      final results = await database.completionDao.getCompletionsForContent(
+        'Berakhot.2a',
+      );
       expect(results, hasLength(2));
     });
 
@@ -85,25 +89,29 @@ void main() {
       expect(results, hasLength(2));
     });
 
-    test('hasCompletionsInDateRange returns true when completions exist',
-        () async {
-      await insertTestCompletion(completedAt: DateTime(2024, 6, 15));
+    test(
+      'hasCompletionsInDateRange returns true when completions exist',
+      () async {
+        await insertTestCompletion(completedAt: DateTime(2024, 6, 15));
 
-      final has = await database.completionDao.hasCompletionsInDateRange(
-        DateTime(2024, 6, 1),
-        DateTime(2024, 6, 30),
-      );
-      expect(has, isTrue);
-    });
+        final has = await database.completionDao.hasCompletionsInDateRange(
+          DateTime(2024, 6, 1),
+          DateTime(2024, 6, 30),
+        );
+        expect(has, isTrue);
+      },
+    );
 
-    test('hasCompletionsInDateRange returns false when no completions',
-        () async {
-      final has = await database.completionDao.hasCompletionsInDateRange(
-        DateTime(2024, 6, 1),
-        DateTime(2024, 6, 30),
-      );
-      expect(has, isFalse);
-    });
+    test(
+      'hasCompletionsInDateRange returns false when no completions',
+      () async {
+        final has = await database.completionDao.hasCompletionsInDateRange(
+          DateTime(2024, 6, 1),
+          DateTime(2024, 6, 30),
+        );
+        expect(has, isFalse);
+      },
+    );
 
     test('completionExists returns true for matching composite key', () async {
       final completedAt = DateTime(2024, 6, 15);
@@ -137,8 +145,7 @@ void main() {
       await insertTestCompletion(trackType: 'amud', sefariaRef: 'Shabbat.2a');
       await insertTestCompletion(trackType: 'daf', sefariaRef: 'Eruvin.2a');
 
-      final breakdown =
-          await database.completionDao.getTrackBreakdown('bavli');
+      final breakdown = await database.completionDao.getTrackBreakdown('bavli');
       expect(breakdown['amud'], 2);
       expect(breakdown['daf'], 1);
     });
@@ -156,23 +163,28 @@ void main() {
     });
 
     test('getAggregateCount returns 0 for unknown curriculum', () async {
-      final count =
-          await database.completionDao.getAggregateCount('nonexistent');
+      final count = await database.completionDao.getAggregateCount(
+        'nonexistent',
+      );
       expect(count, 0);
     });
 
-    test('hasCompletionsForStage returns true when stage has completions',
-        () async {
-      await insertTestCompletion(stageId: 5);
+    test(
+      'hasCompletionsForStage returns true when stage has completions',
+      () async {
+        await insertTestCompletion(stageId: 5);
 
-      final has = await database.completionDao.hasCompletionsForStage(5);
-      expect(has, isTrue);
-    });
+        final has = await database.completionDao.hasCompletionsForStage(5);
+        expect(has, isTrue);
+      },
+    );
 
-    test('hasCompletionsForStage returns false when stage has no completions',
-        () async {
-      final has = await database.completionDao.hasCompletionsForStage(99);
-      expect(has, isFalse);
-    });
+    test(
+      'hasCompletionsForStage returns false when stage has no completions',
+      () async {
+        final has = await database.completionDao.hasCompletionsForStage(99);
+        expect(has, isFalse);
+      },
+    );
   });
 }

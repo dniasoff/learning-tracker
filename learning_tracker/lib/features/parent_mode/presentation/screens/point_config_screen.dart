@@ -69,17 +69,20 @@ class PointConfigScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Point Configuration')),
-      body: SafeArea(top: false, child: dataAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
-        data: (data) => data.isEmpty
-            ? const Center(child: Text('No active curricula'))
-            : ListView.builder(
-                itemCount: data.length,
-                itemBuilder: (context, index) =>
-                    _CurriculumExpansionTile(data: data[index]),
-              ),
-      )),
+      body: SafeArea(
+        top: false,
+        child: dataAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(child: Text('Error: $error')),
+          data: (data) => data.isEmpty
+              ? const Center(child: Text('No active curricula'))
+              : ListView.builder(
+                  itemCount: data.length,
+                  itemBuilder: (context, index) =>
+                      _CurriculumExpansionTile(data: data[index]),
+                ),
+        ),
+      ),
     );
   }
 }

@@ -14,10 +14,7 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 /// Supports multi-select at a single hierarchy level.
 /// Push this screen from Settings or Onboarding.
 class ScopeSelectionScreen extends ConsumerStatefulWidget {
-  const ScopeSelectionScreen({
-    super.key,
-    required this.curriculumId,
-  });
+  const ScopeSelectionScreen({super.key, required this.curriculumId});
 
   final CurriculumId curriculumId;
 
@@ -94,18 +91,16 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
         title: AppBarTitle(
           text: 'Learning Scope — ${widget.curriculumId.displayNameEn}',
         ),
-        actions: [
-          TextButton(
-            onPressed: _save,
-            child: const Text('Save'),
-          ),
-        ],
+        actions: [TextButton(onPressed: _save, child: const Text('Save'))],
       ),
-      body: SafeArea(top: false, child: contentAsync.when(
-        data: (items) => _buildBody(items),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-      )),
+      body: SafeArea(
+        top: false,
+        child: contentAsync.when(
+          data: (items) => _buildBody(items),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+        ),
+      ),
     );
   }
 
@@ -144,9 +139,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
               subtitle: Text('Choose which hierarchy level to filter by'),
             ),
             // Only show levels that make sense for scoping (not leaf level)
-            for (var level = 1;
-                level < _hierarchyConfig.maxLevels;
-                level++)
+            for (var level = 1; level < _hierarchyConfig.maxLevels; level++)
               ListTile(
                 title: Text(_labelForLevel(level)),
                 subtitle: Text(
@@ -167,9 +160,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
                 'Select ${_labelForLevel(_selectedLevel!)}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: Text(
-                '${_selectedValues.length} selected',
-              ),
+              subtitle: Text('${_selectedValues.length} selected'),
               trailing: TextButton(
                 onPressed: () {
                   setState(() {
@@ -193,9 +184,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
               'Summary',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text(
-              _selectedValues.join(', '),
-            ),
+            subtitle: Text(_selectedValues.join(', ')),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -231,10 +220,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     }).toList();
   }
 
-  List<String> _getDistinctValuesAtLevel(
-    List<ContentItem> items,
-    int level,
-  ) {
+  List<String> _getDistinctValuesAtLevel(List<ContentItem> items, int level) {
     final seen = <String>{};
     final result = <String>[];
     for (final item in items) {
@@ -275,8 +261,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     return allItems
         .where(
           (item) =>
-              item.isLeaf &&
-              _getItemLevelValue(item, _selectedLevel!) == value,
+              item.isLeaf && _getItemLevelValue(item, _selectedLevel!) == value,
         )
         .length;
   }
@@ -286,10 +271,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     final profileId = ref.read(activeProfileIdProvider);
 
     if (_selectAll) {
-      await db.curriculumScopeDao.clearScopes(
-        profileId,
-        widget.curriculumId,
-      );
+      await db.curriculumScopeDao.clearScopes(profileId, widget.curriculumId);
     } else if (_selectedLevel != null && _selectedValues.isNotEmpty) {
       await db.curriculumScopeDao.setScopes(
         profileId,

@@ -1,122 +1,29 @@
-import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/features/content_browsing/data/services/cloud_content_service.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
-class MockContentRepository extends Mock implements ContentRepository {}
-
 class MockCurriculumActivationService extends Mock
     implements CurriculumActivationService {}
 
-class MockCloudContentService extends Mock implements CloudContentService {}
-
-class MockContentDownloadStatusDao extends Mock
-    implements ContentDownloadStatusDao {}
-
 void main() {
   late MockCurriculumActivationService mockActivationService;
-  late MockCloudContentService mockCloudContentService;
-  late MockContentDownloadStatusDao mockContentDownloadStatusDao;
   late CurriculumImportService service;
 
   setUp(() {
     mockActivationService = MockCurriculumActivationService();
-    mockCloudContentService = MockCloudContentService();
-    mockContentDownloadStatusDao = MockContentDownloadStatusDao();
-    service = CurriculumImportService(
-      activationService: mockActivationService,
-      cloudContentService: mockCloudContentService,
-      contentDownloadStatusDao: mockContentDownloadStatusDao,
-    );
+    service = CurriculumImportService(activationService: mockActivationService);
   });
 
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  ContentItem fakeItem(CurriculumId id) => ContentItem(
-    curriculumId: id.storageKey,
-    level1: 'L1',
-    displayNameHe: 'test',
-    displayNameEn: 'test',
-    sefariaRef: 'test',
-    sortOrder: 0,
-    isLeaf: true,
-  );
-
-  void stubCloudDownload(CurriculumId curriculum) {
-    when(
-      () => mockCloudContentService.downloadContent(
-        curriculum: curriculum,
-        languageCode: any(named: 'languageCode'),
-      ),
-    ).thenAnswer(
-      (_) => Stream.fromIterable([
-        const ContentDownloadProgress(
-          state: ContentDownloadState.completed,
-        ),
-      ]),
-    );
-
-    when(
-      () => mockCloudContentService.parseContent(
-        curriculum: curriculum,
-        languageCode: any(named: 'languageCode'),
-      ),
-    ).thenAnswer(
-      (_) async => (
-        items: [fakeItem(curriculum)],
-        config: CurriculumHierarchyConfig(
-          curriculumId: curriculum.storageKey,
-          levelLabels: ['Level1'],
-          totalItems: 1,
-        ),
-      ),
-    );
-
-    when(
-      () => mockCloudContentService.getContentVersion(curriculum),
-    ).thenAnswer((_) async => null);
-
-    when(
-      () => mockContentDownloadStatusDao.markDownloaded(
-        curriculumId: any(named: 'curriculumId'),
-        languageCode: any(named: 'languageCode'),
-        contentVersion: any(named: 'contentVersion'),
-        itemCount: any(named: 'itemCount'),
-      ),
-    ).thenAnswer((_) async {});
-  }
-
-  void stubCloudDownloadFailure(CurriculumId curriculum) {
-    when(
-      () => mockCloudContentService.downloadContent(
-        curriculum: curriculum,
-        languageCode: any(named: 'languageCode'),
-      ),
-    ).thenAnswer(
-      (_) => Stream.fromIterable([
-        const ContentDownloadProgress(
-          state: ContentDownloadState.failed,
-          error: 'test error',
-        ),
-      ]),
-    );
-  }
-
   group('CurriculumImportService', () {
     test('importAll yields progress for each curriculum', () async {
       final curricula = [CurriculumId.mishnayos, CurriculumId.bavli];
 
-      for (final c in curricula) {
-        stubCloudDownload(c);
-      }
       when(
         () => mockActivationService.activate(any()),
       ).thenAnswer((_) async {});
@@ -135,10 +42,11 @@ void main() {
     test('importAll reports failures without stopping', () async {
       final curricula = [CurriculumId.mishnayos, CurriculumId.bavli];
 
-      stubCloudDownloadFailure(CurriculumId.mishnayos);
-      stubCloudDownload(CurriculumId.bavli);
       when(
-        () => mockActivationService.activate(any()),
+        () => mockActivationService.activate(CurriculumId.mishnayos),
+      ).thenThrow(Exception('activation error'));
+      when(
+        () => mockActivationService.activate(CurriculumId.bavli),
       ).thenAnswer((_) async {});
 
       final progressList = await service.importAll(curricula).toList();
@@ -150,8 +58,7 @@ void main() {
       expect(progressList[1].failures[0].curriculumId, CurriculumId.mishnayos);
     });
 
-    test('importSingle returns success with item count', () async {
-      stubCloudDownload(CurriculumId.chumash);
+    test('importSingle returns success', () async {
       when(
         () => mockActivationService.activate(CurriculumId.chumash),
       ).thenAnswer((_) async {});
@@ -159,12 +66,13 @@ void main() {
       final result = await service.importSingle(CurriculumId.chumash);
 
       expect(result.success, isTrue);
-      expect(result.itemCount, 1);
       expect(result.curriculumId, CurriculumId.chumash);
     });
 
     test('importSingle returns failure on error', () async {
-      stubCloudDownloadFailure(CurriculumId.chumash);
+      when(
+        () => mockActivationService.activate(CurriculumId.chumash),
+      ).thenThrow(Exception('activation error'));
 
       final result = await service.importSingle(CurriculumId.chumash);
 
@@ -174,9 +82,6 @@ void main() {
     test('importAll activates each curriculum in database', () async {
       final curricula = [CurriculumId.mishnayos, CurriculumId.bavli];
 
-      for (final c in curricula) {
-        stubCloudDownload(c);
-      }
       when(
         () => mockActivationService.activate(any()),
       ).thenAnswer((_) async {});

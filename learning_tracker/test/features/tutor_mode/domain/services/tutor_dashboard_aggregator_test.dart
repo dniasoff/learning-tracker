@@ -36,7 +36,7 @@ void main() {
             ),
           },
           dailyTasks: [
-            DailyTask(
+            const DailyTask(
               curriculumId: CurriculumId.mishnayos,
               contentItemSefariaRef: 'ref_1',
               stageOrder: 1,
@@ -46,7 +46,7 @@ void main() {
               reason: 'New',
               stageName: 'Learn',
             ),
-            DailyTask(
+            const DailyTask(
               curriculumId: CurriculumId.bavli,
               contentItemSefariaRef: 'ref_2',
               stageOrder: 1,
@@ -69,18 +69,21 @@ void main() {
         );
         expect(filtered.paceInfo, hasLength(1));
         expect(filtered.dailyTasks, hasLength(1));
-        expect(
-          filtered.dailyTasks.first.curriculumId,
-          CurriculumId.mishnayos,
-        );
+        expect(filtered.dailyTasks.first.curriculumId, CurriculumId.mishnayos);
       });
     });
   });
 
   group('ChazaraQueueItem', () {
     test('urgency enum ordering: overdue < dueToday < upcoming', () {
-      expect(ChazaraUrgency.overdue.index, lessThan(ChazaraUrgency.dueToday.index));
-      expect(ChazaraUrgency.dueToday.index, lessThan(ChazaraUrgency.upcoming.index));
+      expect(
+        ChazaraUrgency.overdue.index,
+        lessThan(ChazaraUrgency.dueToday.index),
+      );
+      expect(
+        ChazaraUrgency.dueToday.index,
+        lessThan(ChazaraUrgency.upcoming.index),
+      );
     });
   });
 }

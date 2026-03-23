@@ -166,10 +166,7 @@ class _UnitCompletionTile extends StatelessWidget {
           TrackTypeBadge(trackType: latestCompletion.trackType),
         ],
       ),
-      subtitle: Text(
-        unitNameHe,
-        style: const TextStyle(fontSize: 12),
-      ),
+      subtitle: Text(unitNameHe, style: const TextStyle(fontSize: 12)),
     );
   }
 }

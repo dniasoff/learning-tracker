@@ -27,8 +27,7 @@ class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
   Future<List<Reward>> getEarnedRewardsByProfile(int profileId) =>
       (select(rewards)
             ..where(
-              (t) =>
-                  t.profileId.equals(profileId) & t.isEarned.equals(true),
+              (t) => t.profileId.equals(profileId) & t.isEarned.equals(true),
             )
             ..orderBy([(t) => OrderingTerm.desc(t.earnedAt)]))
           .get();

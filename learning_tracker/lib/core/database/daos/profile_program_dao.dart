@@ -9,20 +9,19 @@ class ProfileProgramDao extends DatabaseAccessor<AppDatabase>
     with _$ProfileProgramDaoMixin {
   ProfileProgramDao(super.db);
 
-  Future<List<ProfileProgram>> getProgramsForProfile(int profileId) =>
-      (select(profilePrograms)..where((t) => t.profileId.equals(profileId)))
-          .get();
+  Future<List<ProfileProgram>> getProgramsForProfile(int profileId) => (select(
+    profilePrograms,
+  )..where((t) => t.profileId.equals(profileId))).get();
 
   Future<ProfileProgram?> getProgramForProfileAndCurriculum(
     int profileId,
     String curriculumType,
   ) =>
-      (select(profilePrograms)
-            ..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.curriculumType.equals(curriculumType),
-            ))
+      (select(profilePrograms)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumType.equals(curriculumType),
+          ))
           .getSingleOrNull();
 
   Future<int> insertProfileProgram(ProfileProgramsCompanion entry) =>
@@ -34,8 +33,10 @@ class ProfileProgramDao extends DatabaseAccessor<AppDatabase>
     required String curriculumType,
     required int programId,
   }) async {
-    final existing =
-        await getProgramForProfileAndCurriculum(profileId, curriculumType);
+    final existing = await getProgramForProfileAndCurriculum(
+      profileId,
+      curriculumType,
+    );
     if (existing != null) {
       await (update(profilePrograms)..where((t) => t.id.equals(existing.id)))
           .write(ProfileProgramsCompanion(programId: Value(programId)));
@@ -50,7 +51,7 @@ class ProfileProgramDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
-  Future<int> deleteForProfile(int profileId) =>
-      (delete(profilePrograms)..where((t) => t.profileId.equals(profileId)))
-          .go();
+  Future<int> deleteForProfile(int profileId) => (delete(
+    profilePrograms,
+  )..where((t) => t.profileId.equals(profileId))).go();
 }

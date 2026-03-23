@@ -12,8 +12,7 @@ class StageDefinitions extends Table {
   TextColumn get stageName => text()();
   IntColumn get delayDays => integer()();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
-  TextColumn get scheduleType =>
-      text().withDefault(const Constant('delay'))();
+  TextColumn get scheduleType => text().withDefault(const Constant('delay'))();
   TextColumn get daysOfWeek => text().nullable()();
   IntColumn get rollingWindowSize => integer().nullable()();
 

@@ -107,7 +107,8 @@ class LearningProcessWizardService {
     );
 
     // Parse stages_config JSON and create stage definitions.
-    final stages = (jsonDecode(program.stagesConfig) as List).cast<Map<String, dynamic>>();
+    final stages = (jsonDecode(program.stagesConfig) as List)
+        .cast<Map<String, dynamic>>();
     for (var i = 0; i < stages.length; i++) {
       final stage = stages[i];
       final scheduleType = _parseScheduleType(stage);
@@ -194,8 +195,6 @@ class LearningProcessWizardService {
       'saturday': 6,
       'sunday': 7,
     };
-    return days
-        .map((d) => dayMap[(d as String).toLowerCase()] ?? 1)
-        .toList();
+    return days.map((d) => dayMap[(d as String).toLowerCase()] ?? 1).toList();
   }
 }

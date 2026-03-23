@@ -48,8 +48,9 @@ void main() {
   group('ChartDataService', () {
     group('getDailyCompletions', () {
       test('returns zero-filled entries for empty range', () async {
-        when(() => mockCompletionDao.getAllCompletions())
-            .thenAnswer((_) async => []);
+        when(
+          () => mockCompletionDao.getAllCompletions(),
+        ).thenAnswer((_) async => []);
 
         final start = DateTime(2026, 3, 1);
         final end = DateTime(2026, 3, 3);
@@ -83,13 +84,16 @@ void main() {
       });
 
       test('filters by curriculumId when provided', () async {
-        when(() => mockCompletionDao.getCompletionsByCurriculum('bavli'))
-            .thenAnswer((_) async => [
-                  makeCompletion(
-                    completedAt: DateTime(2026, 3, 1, 10),
-                    curriculumId: 'bavli',
-                  ),
-                ]);
+        when(
+          () => mockCompletionDao.getCompletionsByCurriculum('bavli'),
+        ).thenAnswer(
+          (_) async => [
+            makeCompletion(
+              completedAt: DateTime(2026, 3, 1, 10),
+              curriculumId: 'bavli',
+            ),
+          ],
+        );
 
         final result = await service.getDailyCompletions(
           startDate: DateTime(2026, 3, 1),
@@ -156,14 +160,8 @@ void main() {
       test('returns points per day for child mode', () async {
         when(() => mockCompletionDao.getAllCompletions()).thenAnswer(
           (_) async => [
-            makeCompletion(
-              completedAt: DateTime(2026, 3, 1, 10),
-              points: 5,
-            ),
-            makeCompletion(
-              completedAt: DateTime(2026, 3, 1, 14),
-              points: 3,
-            ),
+            makeCompletion(completedAt: DateTime(2026, 3, 1, 10), points: 5),
+            makeCompletion(completedAt: DateTime(2026, 3, 1, 14), points: 3),
           ],
         );
 

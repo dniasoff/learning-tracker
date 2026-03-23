@@ -146,7 +146,8 @@ class BulkPriorCompletionService {
     required CurriculumId curriculumId,
     required Set<String> completedRefs,
   }) async {
-    final allItems = (_cachedCurriculumId == curriculumId && _cachedAllItems != null)
+    final allItems =
+        (_cachedCurriculumId == curriculumId && _cachedAllItems != null)
         ? _cachedAllItems!
         : await _contentRepository.getContentForCurriculum(curriculumId);
     final leafItems = allItems.where((item) => item.isLeaf).toList()

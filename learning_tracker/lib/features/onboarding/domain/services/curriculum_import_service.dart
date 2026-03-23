@@ -62,10 +62,7 @@ class CurriculumImportService {
         'CurriculumImportService: activated ${curriculum.displayNameEn}',
       );
 
-      return CurriculumImportResult(
-        curriculumId: curriculum,
-        success: true,
-      );
+      return CurriculumImportResult(curriculumId: curriculum, success: true);
     } catch (e) {
       AppLogger.instance.error(
         'CurriculumImportService: failed to activate ${curriculum.displayNameEn}',

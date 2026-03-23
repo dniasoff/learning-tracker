@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -38,10 +39,17 @@ AppRouter _createAuthenticatedRouter() {
   final restoreGuard = RestoreGuard(database: createTestDatabase());
   restoreGuard.markRestoreComplete();
 
+  final testDb = createTestDatabase();
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
     restoreGuard: restoreGuard,
-    childModeGuard: ChildModeGuard(database: createTestDatabase()),
+    profileGuard: ProfileGuard(
+      database: testDb,
+      getSelectedProfileId: () => 1,
+      setSelectedProfileId: (_) {},
+      getAccountId: () => 1,
+    ),
+    childModeGuard: ChildModeGuard(database: testDb),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,
@@ -64,10 +72,17 @@ AppRouter _createUnauthenticatedRouter() {
   final restoreGuard = RestoreGuard(database: createTestDatabase());
   restoreGuard.markRestoreComplete();
 
+  final testDb = createTestDatabase();
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: mockAuth),
     restoreGuard: restoreGuard,
-    childModeGuard: ChildModeGuard(database: createTestDatabase()),
+    profileGuard: ProfileGuard(
+      database: testDb,
+      getSelectedProfileId: () => 1,
+      setSelectedProfileId: (_) {},
+      getAccountId: () => 1,
+    ),
+    childModeGuard: ChildModeGuard(database: testDb),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,

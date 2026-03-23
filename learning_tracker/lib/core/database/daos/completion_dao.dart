@@ -39,12 +39,11 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
     String curriculumId,
     int profileId,
   ) =>
-      (select(completions)
-            ..where(
-              (t) =>
-                  t.curriculumId.equals(curriculumId) &
-                  t.profileId.equals(profileId),
-            ))
+      (select(completions)..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.profileId.equals(profileId),
+          ))
           .get();
 
   /// Get completions for a content item scoped to a specific profile.
@@ -52,12 +51,10 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
     String sefariaRef,
     int profileId,
   ) =>
-      (select(completions)
-            ..where(
-              (t) =>
-                  t.sefariaRef.equals(sefariaRef) &
-                  t.profileId.equals(profileId),
-            ))
+      (select(completions)..where(
+            (t) =>
+                t.sefariaRef.equals(sefariaRef) & t.profileId.equals(profileId),
+          ))
           .get();
 
   /// Get completion count for a curriculum scoped to a specific profile.

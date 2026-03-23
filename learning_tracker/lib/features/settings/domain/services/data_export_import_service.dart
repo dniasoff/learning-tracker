@@ -86,7 +86,8 @@ class DataExportImportService {
     final bookmarks = await _database.bookmarkDao.getAllBookmarks();
     final learningOrders = await _database.learningOrderDao
         .getAllLearningOrders();
-    final activeCurricula = await _database.select(_database.activeCurricula)
+    final activeCurricula = await _database
+        .select(_database.activeCurricula)
         .get();
     final curriculumTracks = await _database
         .select(_database.curriculumTracks)

@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
-import 'package:learning_tracker/core/database/daos/curriculum_scope_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/daos/learning_ledger_dao.dart';
 import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
+import 'package:learning_tracker/core/database/daos/curriculum_scope_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
+import 'package:learning_tracker/core/database/daos/learning_ledger_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
@@ -24,13 +24,13 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
-import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
-import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 import 'package:learning_tracker/core/database/tables/content_download_statuses.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
+import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
 import 'package:learning_tracker/core/database/tables/learning_programs.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
@@ -299,18 +299,16 @@ class AppDatabase extends _$AppDatabase {
     final seeds = generateTestDateSeeds();
     for (final seed in seeds) {
       // Look up program ID by name
-      final program = await (select($LearningProgramsTable(attachedDatabase))
-            ..where(
-              (t) => t.name.equals(seed['program_name']! as String),
-            ))
-          .getSingleOrNull();
+      final program =
+          await (select($LearningProgramsTable(attachedDatabase))
+                ..where((t) => t.name.equals(seed['program_name']! as String)))
+              .getSingleOrNull();
       if (program != null) {
         await into($TestDatesTable(attachedDatabase)).insert(
           TestDatesCompanion.insert(
             programId: program.id,
             testDate: seed['test_date']! as DateTime,
-            materialDescription:
-                Value(seed['material_description']! as String),
+            materialDescription: Value(seed['material_description']! as String),
           ),
         );
       }

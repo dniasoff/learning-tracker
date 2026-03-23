@@ -135,8 +135,9 @@ class ContentRepositoryImpl implements ContentRepository {
     final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
     _configCache[key] = CurriculumHierarchyConfig(
       curriculumId: configJson['curriculumId'] as String,
-      levelLabels:
-          (configJson['levelLabels'] as List).map((e) => e as String).toList(),
+      levelLabels: (configJson['levelLabels'] as List)
+          .map((e) => e as String)
+          .toList(),
       totalItems: configJson['totalItems'] as int,
     );
 

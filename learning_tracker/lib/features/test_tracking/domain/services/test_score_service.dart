@@ -24,14 +24,14 @@ class TestScoreService {
   ///
   /// Requires at least 2 scores for meaningful analysis.
   ScoreTrendResult analyzeTrend(List<TestScore> recentScores) {
-    final scores =
-        recentScores.map((s) => s.scorePercentage).toList().reversed.toList();
+    final scores = recentScores
+        .map((s) => s.scorePercentage)
+        .toList()
+        .reversed
+        .toList();
 
     if (scores.length < 2) {
-      return ScoreTrendResult(
-        trend: ScoreTrend.insufficient,
-        scores: scores,
-      );
+      return ScoreTrendResult(trend: ScoreTrend.insufficient, scores: scores);
     }
 
     // Check if consistently improving
@@ -47,7 +47,8 @@ class TestScoreService {
       return ScoreTrendResult(
         trend: ScoreTrend.improving,
         scores: scores,
-        message: "Your last ${scores.length} scores: $scoreStr — you're on fire!",
+        message:
+            "Your last ${scores.length} scores: $scoreStr — you're on fire!",
       );
     }
 
@@ -61,10 +62,7 @@ class TestScoreService {
       );
     }
 
-    return ScoreTrendResult(
-      trend: ScoreTrend.stable,
-      scores: scores,
-    );
+    return ScoreTrendResult(trend: ScoreTrend.stable, scores: scores);
   }
 
   /// Validates a score percentage is in range [0, 100].

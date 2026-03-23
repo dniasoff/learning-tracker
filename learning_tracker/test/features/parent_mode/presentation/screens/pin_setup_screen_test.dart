@@ -7,9 +7,7 @@ void main() {
   group('PinSetupScreen', () {
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: PinSetupScreen()),
-        ),
+        const ProviderScope(child: MaterialApp(home: PinSetupScreen())),
       );
       await tester.pump();
 

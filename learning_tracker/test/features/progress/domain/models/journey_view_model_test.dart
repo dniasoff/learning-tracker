@@ -134,7 +134,7 @@ void main() {
 
   group('CurriculumJourney', () {
     test('progress calculation', () {
-      final journey = CurriculumJourney(
+      const journey = CurriculumJourney(
         curriculumId: CurriculumId.bavli,
         completions: [],
         uniqueUnitsCompleted: 10,
@@ -142,7 +142,8 @@ void main() {
         milestones: [],
       );
 
-      final progress = journey.uniqueUnitsCompleted / journey.totalUnitsAvailable;
+      final progress =
+          journey.uniqueUnitsCompleted / journey.totalUnitsAvailable;
       expect(progress, closeTo(0.27, 0.01));
     });
 

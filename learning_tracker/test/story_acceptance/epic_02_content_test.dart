@@ -471,108 +471,118 @@ void main() {
   group('Story 2.5 -- Bundled content assets', tags: ['story_2_5'], () {
     // ── AC: assets/content/ directory contains JSON files for all 7 curricula
 
-    test('assets/content/ directory contains JSON for all curricula',
-        skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
-      final contentDir = Directory('assets/content');
-      expect(
-        contentDir.existsSync(),
-        isTrue,
-        reason: 'assets/content/ directory must exist',
-      );
-
-      final expectedFiles = [
-        'mishnayos.json',
-        'bavli.json',
-        'yerushalmi.json',
-        'chumash.json',
-        'mishna_berurah.json',
-      ];
-
-      for (final filename in expectedFiles) {
-        final file = File('${contentDir.path}/$filename');
+    test(
+      'assets/content/ directory contains JSON for all curricula',
+      skip: 'Bundled JSON removed — content now fetched from cloud storage',
+      () {
+        final contentDir = Directory('assets/content');
         expect(
-          file.existsSync(),
+          contentDir.existsSync(),
           isTrue,
-          reason: '$filename must exist in assets/content/',
+          reason: 'assets/content/ directory must exist',
         );
-        expect(
-          file.lengthSync(),
-          greaterThan(0),
-          reason: '$filename must not be empty',
-        );
-      }
-    });
+
+        final expectedFiles = [
+          'mishnayos.json',
+          'bavli.json',
+          'yerushalmi.json',
+          'chumash.json',
+          'mishna_berurah.json',
+        ];
+
+        for (final filename in expectedFiles) {
+          final file = File('${contentDir.path}/$filename');
+          expect(
+            file.existsSync(),
+            isTrue,
+            reason: '$filename must exist in assets/content/',
+          );
+          expect(
+            file.lengthSync(),
+            greaterThan(0),
+            reason: '$filename must not be empty',
+          );
+        }
+      },
+    );
 
     // ── AC: JSON output matches expected schema
 
-    test('each bundled JSON file matches expected schema',
-        skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
-      final contentDir = Directory('assets/content');
-      final files = contentDir.listSync().whereType<File>().where(
-        (f) => f.path.endsWith('.json'),
-      );
-
-      for (final file in files) {
-        final jsonString = file.readAsStringSync();
-        final json = jsonDecode(jsonString) as Map<String, dynamic>;
-        final filename = file.path.split('/').last;
-
-        // Validate hierarchyConfig
-        expect(
-          json.containsKey('hierarchyConfig'),
-          isTrue,
-          reason: '$filename must have hierarchyConfig',
-        );
-        final config = json['hierarchyConfig'] as Map<String, dynamic>;
-        expect(
-          config.containsKey('curriculumId'),
-          isTrue,
-          reason: '$filename hierarchyConfig must have curriculumId',
-        );
-        expect(
-          config.containsKey('levelLabels'),
-          isTrue,
-          reason: '$filename hierarchyConfig must have levelLabels',
-        );
-        expect(
-          config.containsKey('maxLevels'),
-          isTrue,
-          reason: '$filename hierarchyConfig must have maxLevels',
-        );
-        expect(
-          config.containsKey('totalItems'),
-          isTrue,
-          reason: '$filename hierarchyConfig must have totalItems',
+    test(
+      'each bundled JSON file matches expected schema',
+      skip: 'Bundled JSON removed — content now fetched from cloud storage',
+      () {
+        final contentDir = Directory('assets/content');
+        final files = contentDir.listSync().whereType<File>().where(
+          (f) => f.path.endsWith('.json'),
         );
 
-        // Validate items array
-        expect(
-          json.containsKey('items'),
-          isTrue,
-          reason: '$filename must have items array',
-        );
-        final items = json['items'] as List;
-        expect(items, isNotEmpty, reason: '$filename items must not be empty');
+        for (final file in files) {
+          final jsonString = file.readAsStringSync();
+          final json = jsonDecode(jsonString) as Map<String, dynamic>;
+          final filename = file.path.split('/').last;
 
-        // Validate first item structure
-        final firstItem = items.first as Map<String, dynamic>;
-        for (final field in [
-          'curriculumId',
-          'level1',
-          'displayNameHe',
-          'displayNameEn',
-          'sefariaRef',
-          'sortOrder',
-          'isLeaf',
-        ]) {
+          // Validate hierarchyConfig
           expect(
-            firstItem.containsKey(field),
+            json.containsKey('hierarchyConfig'),
             isTrue,
-            reason: '$filename item must have $field',
+            reason: '$filename must have hierarchyConfig',
           );
+          final config = json['hierarchyConfig'] as Map<String, dynamic>;
+          expect(
+            config.containsKey('curriculumId'),
+            isTrue,
+            reason: '$filename hierarchyConfig must have curriculumId',
+          );
+          expect(
+            config.containsKey('levelLabels'),
+            isTrue,
+            reason: '$filename hierarchyConfig must have levelLabels',
+          );
+          expect(
+            config.containsKey('maxLevels'),
+            isTrue,
+            reason: '$filename hierarchyConfig must have maxLevels',
+          );
+          expect(
+            config.containsKey('totalItems'),
+            isTrue,
+            reason: '$filename hierarchyConfig must have totalItems',
+          );
+
+          // Validate items array
+          expect(
+            json.containsKey('items'),
+            isTrue,
+            reason: '$filename must have items array',
+          );
+          final items = json['items'] as List;
+          expect(
+            items,
+            isNotEmpty,
+            reason: '$filename items must not be empty',
+          );
+
+          // Validate first item structure
+          final firstItem = items.first as Map<String, dynamic>;
+          for (final field in [
+            'curriculumId',
+            'level1',
+            'displayNameHe',
+            'displayNameEn',
+            'sefariaRef',
+            'sortOrder',
+            'isLeaf',
+          ]) {
+            expect(
+              firstItem.containsKey(field),
+              isTrue,
+              reason: '$filename item must have $field',
+            );
+          }
         }
-      }
-    });
+      },
+    );
 
     // ── AC: seed_content.dart script exists
 
@@ -732,13 +742,16 @@ void main() {
 
     // ── AC: assets/content/ is listed in pubspec.yaml flutter assets
 
-    test('pubspec.yaml includes assets/content/ in flutter assets',
-        skip: 'Bundled JSON removed — content now fetched from cloud storage', () {
-      final pubspec = File('pubspec.yaml');
-      expect(pubspec.existsSync(), isTrue);
-      final content = pubspec.readAsStringSync();
-      expect(content, contains('assets/content/'));
-    });
+    test(
+      'pubspec.yaml includes assets/content/ in flutter assets',
+      skip: 'Bundled JSON removed — content now fetched from cloud storage',
+      () {
+        final pubspec = File('pubspec.yaml');
+        expect(pubspec.existsSync(), isTrue);
+        final content = pubspec.readAsStringSync();
+        expect(content, contains('assets/content/'));
+      },
+    );
 
     // ── AC: CurriculumImportService removed from production code
 

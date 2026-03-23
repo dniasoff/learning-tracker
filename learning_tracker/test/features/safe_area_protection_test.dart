@@ -10,14 +10,12 @@ void main() {
   group('SafeArea Protection', () {
     group('HIGH-risk screen: SignInScreen', () {
       Widget buildWithSystemInsets() {
-        return MediaQuery(
-          data: const MediaQueryData(
+        return const MediaQuery(
+          data: MediaQueryData(
             padding: EdgeInsets.only(bottom: 48), // Simulate 3-button nav bar
             viewPadding: EdgeInsets.only(bottom: 48),
           ),
-          child: const ProviderScope(
-            child: MaterialApp(home: SignInScreen()),
-          ),
+          child: ProviderScope(child: MaterialApp(home: SignInScreen())),
         );
       }
 
@@ -29,19 +27,23 @@ void main() {
         expect(find.byType(SafeArea), findsWidgets);
       });
 
-      testWidgets('SafeArea has top: false to avoid double padding with AppBar',
-          (tester) async {
-        await tester.pumpWidget(buildWithSystemInsets());
-        await tester.pumpAndSettle();
+      testWidgets(
+        'SafeArea has top: false to avoid double padding with AppBar',
+        (tester) async {
+          await tester.pumpWidget(buildWithSystemInsets());
+          await tester.pumpAndSettle();
 
-        final safeAreas =
-            tester.widgetList<SafeArea>(find.byType(SafeArea)).toList();
-        // At least one SafeArea should have top: false (our added one)
-        expect(safeAreas.any((sa) => sa.top == false), isTrue);
-      });
+          final safeAreas = tester
+              .widgetList<SafeArea>(find.byType(SafeArea))
+              .toList();
+          // At least one SafeArea should have top: false (our added one)
+          expect(safeAreas.any((sa) => !sa.top), isTrue);
+        },
+      );
 
-      testWidgets('bottom content is not obscured by system nav bar',
-          (tester) async {
+      testWidgets('bottom content is not obscured by system nav bar', (
+        tester,
+      ) async {
         await tester.pumpWidget(buildWithSystemInsets());
         await tester.pumpAndSettle();
 
@@ -52,22 +54,19 @@ void main() {
         expect(createAccountButton, findsOneWidget);
 
         // Verify the button is within the visible area (not behind nav bar)
-        final buttonBox =
-            tester.renderObject(createAccountButton).paintBounds;
+        final buttonBox = tester.renderObject(createAccountButton).paintBounds;
         expect(buttonBox.bottom, greaterThan(0));
       });
     });
 
     group('MEDIUM-risk screen: GamificationScreen', () {
       Widget buildWithSystemInsets() {
-        return MediaQuery(
-          data: const MediaQueryData(
+        return const MediaQuery(
+          data: MediaQueryData(
             padding: EdgeInsets.only(bottom: 48),
             viewPadding: EdgeInsets.only(bottom: 48),
           ),
-          child: const ProviderScope(
-            child: MaterialApp(home: GamificationScreen()),
-          ),
+          child: ProviderScope(child: MaterialApp(home: GamificationScreen())),
         );
       }
 
@@ -83,25 +82,25 @@ void main() {
         await tester.pumpAndSettle();
 
         // Find the SafeArea that's a direct child of Scaffold's body
-        final safeAreas =
-            tester.widgetList<SafeArea>(find.byType(SafeArea)).toList();
+        final safeAreas = tester
+            .widgetList<SafeArea>(find.byType(SafeArea))
+            .toList();
         // At least one SafeArea should exist
         expect(safeAreas, isNotEmpty);
       });
     });
 
     group('Gesture navigation (thin bar) - no excessive padding', () {
-      testWidgets('SignInScreen renders correctly with minimal padding',
-          (tester) async {
+      testWidgets('SignInScreen renders correctly with minimal padding', (
+        tester,
+      ) async {
         // Simulate gesture navigation with thin bar (small bottom inset)
-        final widget = MediaQuery(
-          data: const MediaQueryData(
+        const widget = MediaQuery(
+          data: MediaQueryData(
             padding: EdgeInsets.only(bottom: 8),
             viewPadding: EdgeInsets.only(bottom: 8),
           ),
-          child: const ProviderScope(
-            child: MaterialApp(home: SignInScreen()),
-          ),
+          child: ProviderScope(child: MaterialApp(home: SignInScreen())),
         );
 
         await tester.pumpWidget(widget);

@@ -70,9 +70,18 @@ class MussarFetcher extends SefariaFetcherBase {
   }
 
   static const _mussarSefarim = [
-    _MussarSefer('Mesillat Yesharim', '\u05DE\u05E1\u05D9\u05DC\u05EA \u05D9\u05E9\u05E8\u05D9\u05DD'),
-    _MussarSefer('Orchot Tzaddikim', '\u05D0\u05D5\u05E8\u05D7\u05D5\u05EA \u05E6\u05D3\u05D9\u05E7\u05D9\u05DD'),
-    _MussarSefer('Chovot HaLevavot', '\u05D7\u05D5\u05D1\u05D5\u05EA \u05D4\u05DC\u05D1\u05D1\u05D5\u05EA'),
+    _MussarSefer(
+      'Mesillat Yesharim',
+      '\u05DE\u05E1\u05D9\u05DC\u05EA \u05D9\u05E9\u05E8\u05D9\u05DD',
+    ),
+    _MussarSefer(
+      'Orchot Tzaddikim',
+      '\u05D0\u05D5\u05E8\u05D7\u05D5\u05EA \u05E6\u05D3\u05D9\u05E7\u05D9\u05DD',
+    ),
+    _MussarSefer(
+      'Chovot HaLevavot',
+      '\u05D7\u05D5\u05D1\u05D5\u05EA \u05D4\u05DC\u05D1\u05D1\u05D5\u05EA',
+    ),
   ];
 }
 

@@ -13,6 +13,7 @@ class LearningPrograms extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   TextColumn get stagesConfig => text()(); // JSON
   BoolColumn get hasTests => boolean().withDefault(const Constant(false))();
-  TextColumn get testConfig => text().withDefault(const Constant('{}'))(); // JSON
+  TextColumn get testConfig =>
+      text().withDefault(const Constant('{}'))(); // JSON
   DateTimeColumn get createdAt => dateTime()();
 }

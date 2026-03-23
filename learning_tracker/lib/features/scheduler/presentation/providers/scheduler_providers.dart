@@ -2,7 +2,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_content_repository_impl.dart';
@@ -147,11 +146,8 @@ Future<PaceStatus?> paceStatus(
   final profileId = ref.watch(activeProfileIdProvider);
 
   // Get personal-track completions only
-  final allCompletions =
-      await db.completionDao.getCompletionsByCurriculumAndProfile(
-    curriculumId.storageKey,
-    profileId,
-  );
+  final allCompletions = await db.completionDao
+      .getCompletionsByCurriculumAndProfile(curriculumId.storageKey, profileId);
   final personalCompletions = allCompletions
       .where((c) => c.trackType == TrackType.personal.storageKey)
       .toList();
@@ -191,8 +187,9 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   );
 
   final profileId = ref.watch(activeProfileIdProvider);
-  final activeKeys =
-      await db.activeCurriculumDao.getActiveCurriculaByProfile(profileId);
+  final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
+    profileId,
+  );
   final activeCurricula = activeKeys
       .map((key) => CurriculumId.values.where((c) => c.storageKey == key).first)
       .toList();

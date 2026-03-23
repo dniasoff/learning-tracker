@@ -16,10 +16,12 @@ class JourneyTimelineView extends StatelessWidget {
     final allEntries = <_TimelineEntry>[];
     for (final curriculum in viewModel.curricula) {
       for (final completion in curriculum.completions) {
-        allEntries.add(_TimelineEntry(
-          completion: completion,
-          curriculumId: curriculum.curriculumId,
-        ));
+        allEntries.add(
+          _TimelineEntry(
+            completion: completion,
+            curriculumId: curriculum.curriculumId,
+          ),
+        );
       }
     }
 
@@ -30,7 +32,10 @@ class JourneyTimelineView extends StatelessWidget {
 
     if (allEntries.isEmpty) {
       return const Center(
-        child: Text('No completions to show', style: TextStyle(color: Colors.grey)),
+        child: Text(
+          'No completions to show',
+          style: TextStyle(color: Colors.grey),
+        ),
       );
     }
 
@@ -72,18 +77,26 @@ class JourneyTimelineView extends StatelessWidget {
 
   String _monthKey(DateTime date) {
     const months = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[date.month]} ${date.year}';
   }
 }
 
 class _TimelineEntry {
-  const _TimelineEntry({
-    required this.completion,
-    required this.curriculumId,
-  });
+  const _TimelineEntry({required this.completion, required this.curriculumId});
 
   final UnitCompletion completion;
   final CurriculumId curriculumId;

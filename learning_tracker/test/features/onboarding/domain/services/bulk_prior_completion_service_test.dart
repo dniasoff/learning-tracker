@@ -110,8 +110,18 @@ void main() {
     test('returns leaf items matching level2 selection', () async {
       when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
         (_) async => [
-          _leaf(ref: 'z_b_1', sortOrder: 1, level1: 'Zeraim', level2: 'Berachos'),
-          _leaf(ref: 'z_b_2', sortOrder: 2, level1: 'Zeraim', level2: 'Berachos'),
+          _leaf(
+            ref: 'z_b_1',
+            sortOrder: 1,
+            level1: 'Zeraim',
+            level2: 'Berachos',
+          ),
+          _leaf(
+            ref: 'z_b_2',
+            sortOrder: 2,
+            level1: 'Zeraim',
+            level2: 'Berachos',
+          ),
           _leaf(ref: 'z_p_1', sortOrder: 3, level1: 'Zeraim', level2: 'Peah'),
         ],
       );
@@ -130,7 +140,12 @@ void main() {
     test('deduplicates across overlapping selections', () async {
       when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
         (_) async => [
-          _leaf(ref: 'z_b_1', sortOrder: 1, level1: 'Zeraim', level2: 'Berachos'),
+          _leaf(
+            ref: 'z_b_1',
+            sortOrder: 1,
+            level1: 'Zeraim',
+            level2: 'Berachos',
+          ),
           _leaf(ref: 'z_p_1', sortOrder: 2, level1: 'Zeraim', level2: 'Peah'),
         ],
       );
@@ -178,14 +193,12 @@ void main() {
           _fakeCompletion('ref_1'),
         ],
       );
-      when(() => completionRepo.getCompletionsByCurriculum(any()))
-          .thenAnswer((_) async => []);
-      when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
-        (_) async => [
-          ...items,
-          _leaf(ref: 'ref_2', sortOrder: 2),
-        ],
-      );
+      when(
+        () => completionRepo.getCompletionsByCurriculum(any()),
+      ).thenAnswer((_) async => []);
+      when(
+        () => contentRepo.getContentForCurriculum(curriculum),
+      ).thenAnswer((_) async => [...items, _leaf(ref: 'ref_2', sortOrder: 2)]);
       when(
         () => bookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
@@ -209,8 +222,9 @@ void main() {
       when(() => completionRepo.bulkMarkComplete(any())).thenAnswer(
         (_) async => [_fakeCompletion('ref_0'), _fakeCompletion('ref_1')],
       );
-      when(() => completionRepo.getCompletionsByCurriculum(any()))
-          .thenAnswer((_) async => []);
+      when(
+        () => completionRepo.getCompletionsByCurriculum(any()),
+      ).thenAnswer((_) async => []);
       when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
         (_) async => [
           ...items,
@@ -247,12 +261,13 @@ void main() {
       when(() => completionRepo.bulkMarkComplete(any())).thenAnswer(
         (_) async => [_fakeCompletion('ref_0'), _fakeCompletion('ref_1')],
       );
-      when(() => completionRepo.getCompletionsByCurriculum(any()))
-          .thenAnswer((_) async => []);
+      when(
+        () => completionRepo.getCompletionsByCurriculum(any()),
+      ).thenAnswer((_) async => []);
       // Only the items we're completing exist
-      when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
-        (_) async => items,
-      );
+      when(
+        () => contentRepo.getContentForCurriculum(curriculum),
+      ).thenAnswer((_) async => items);
 
       final result = await service.execute(
         curriculumId: curriculum,

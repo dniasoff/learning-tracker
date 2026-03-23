@@ -25,9 +25,7 @@ class NachFetcher extends SefariaFetcherBase {
 
     // Filter out Torah books — Nach is everything else in Tanakh.
     final nachBooks = shapeData
-        .where(
-          (book) => !_torahTitles.contains(book['title'] as String? ?? ''),
-        )
+        .where((book) => !_torahTitles.contains(book['title'] as String? ?? ''))
         .toList();
 
     for (final book in nachBooks) {

@@ -8,67 +8,75 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 /// Get a scope summary string for display (e.g., "Seder Zeraim, Seder Moed" or "All").
 final curriculumScopeSummaryProvider =
     FutureProvider.family<String, CurriculumId>((ref, curriculumId) async {
-  final db = ref.watch(appDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final values = await db.curriculumScopeDao.getScopeValues(
-    profileId,
-    curriculumId,
-  );
-  if (values.isEmpty) return 'All';
-  return values.join(', ');
-});
+      final db = ref.watch(appDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      final values = await db.curriculumScopeDao.getScopeValues(
+        profileId,
+        curriculumId,
+      );
+      if (values.isEmpty) return 'All';
+      return values.join(', ');
+    });
 
 /// Get scoped content items for a curriculum (respects scope filters).
 /// Returns all items if no scopes are set.
 final scopedCurriculumContentProvider =
     FutureProvider.family<List<ContentItem>, CurriculumId>((
-  ref,
-  curriculumId,
-) async {
-  final db = ref.watch(appDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final repository = ref.watch(contentRepositoryProvider);
+      ref,
+      curriculumId,
+    ) async {
+      final db = ref.watch(appDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      final repository = ref.watch(contentRepositoryProvider);
 
-  final scopes = await db.curriculumScopeDao.getScopes(
-    profileId,
-    curriculumId,
-  );
-  if (scopes.isEmpty) {
-    return repository.getContentForCurriculum(curriculumId);
-  }
+      final scopes = await db.curriculumScopeDao.getScopes(
+        profileId,
+        curriculumId,
+      );
+      if (scopes.isEmpty) {
+        return repository.getContentForCurriculum(curriculumId);
+      }
 
-  final scopeLevel = scopes.first.scopeLevel;
-  final scopeValues = scopes.map((s) => s.scopeValue).toList();
-  return repository.getScopedContent(
-    curriculumId: curriculumId,
-    scopeLevel: scopeLevel,
-    scopeValues: scopeValues,
-  );
-});
+      final scopeLevel = scopes.first.scopeLevel;
+      final scopeValues = scopes.map((s) => s.scopeValue).toList();
+      return repository.getScopedContent(
+        curriculumId: curriculumId,
+        scopeLevel: scopeLevel,
+        scopeValues: scopeValues,
+      );
+    });
 
 /// Scope-aware filtered content provider.
 /// First applies scope filters, then applies hierarchy level filters.
 final scopedFilteredContentProvider = FutureProvider.family
-    .autoDispose<List<ContentItem>, ({CurriculumId curriculumId, String? level1, String? level2, String? level3, String? level4})>((
-  ref,
-  params,
-) async {
-  final items = await ref.watch(
-    scopedCurriculumContentProvider(params.curriculumId).future,
-  );
+    .autoDispose<
+      List<ContentItem>,
+      ({
+        CurriculumId curriculumId,
+        String? level1,
+        String? level2,
+        String? level3,
+        String? level4,
+      })
+    >((ref, params) async {
+      final items = await ref.watch(
+        scopedCurriculumContentProvider(params.curriculumId).future,
+      );
 
-  return items.where((item) {
-    if (params.level1 != null && item.level1 != params.level1) return false;
-    if (params.level2 != null && item.level2 != params.level2) return false;
-    if (params.level3 != null && item.level3 != params.level3) return false;
-    if (params.level4 != null && item.level4 != params.level4) return false;
-    return true;
-  }).toList();
-});
+      return items.where((item) {
+        if (params.level1 != null && item.level1 != params.level1) return false;
+        if (params.level2 != null && item.level2 != params.level2) return false;
+        if (params.level3 != null && item.level3 != params.level3) return false;
+        if (params.level4 != null && item.level4 != params.level4) return false;
+        return true;
+      }).toList();
+    });
 
 /// Count of leaf items in scoped content.
-final scopedItemCountProvider =
-    FutureProvider.family<int, CurriculumId>((ref, curriculumId) async {
+final scopedItemCountProvider = FutureProvider.family<int, CurriculumId>((
+  ref,
+  curriculumId,
+) async {
   final items = await ref.watch(
     scopedCurriculumContentProvider(curriculumId).future,
   );

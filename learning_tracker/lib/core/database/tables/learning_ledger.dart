@@ -20,6 +20,5 @@ class LearningLedger extends Table {
   IntColumn get markedBy => integer()(); // profile_id of who marked it
   BoolColumn get isManual =>
       boolean().withDefault(const Constant(false))(); // auto vs siyum override
-  DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
