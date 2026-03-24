@@ -17,5 +17,8 @@ abstract class ScheduleConfig with _$ScheduleConfig {
 
     /// Default number of new items per day when no deadline is set.
     @Default(5) int defaultNewItemsPerDay,
+
+    /// Items per day for pace-based goals. Null means use deadline or default.
+    double? pacePerDay,
   }) = _ScheduleConfig;
 }

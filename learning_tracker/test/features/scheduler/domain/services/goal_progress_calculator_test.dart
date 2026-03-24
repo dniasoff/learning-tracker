@@ -55,5 +55,64 @@ void main() {
         },
       );
     });
+
+    group('pace-based goal mode', () {
+      test('pace mode calculates daysRemaining from pace', () {
+        final result = GoalProgressCalculator.calculate(
+          targetPercent: 100.0,
+          targetDate: null,
+          currentDate: DateTime.utc(2026, 3, 24),
+          totalItems: 500,
+          completedItems: 100,
+          pacePerDay: 2.0,
+        );
+        expect(result.remainingItems, 400);
+        expect(result.daysRemaining, 200);
+        expect(result.itemsPerDay, 2.0);
+      });
+
+      test('pace mode with all items completed returns 0 daysRemaining', () {
+        final result = GoalProgressCalculator.calculate(
+          targetPercent: 100.0,
+          targetDate: null,
+          currentDate: DateTime.utc(2026, 3, 24),
+          totalItems: 500,
+          completedItems: 500,
+          pacePerDay: 2.0,
+        );
+        expect(result.remainingItems, 0);
+        expect(result.daysRemaining, 0);
+        expect(result.itemsPerDay, 2.0);
+      });
+
+      test('pace mode with partial target percent', () {
+        final result = GoalProgressCalculator.calculate(
+          targetPercent: 50.0,
+          targetDate: null,
+          currentDate: DateTime.utc(2026, 3, 24),
+          totalItems: 500,
+          completedItems: 100,
+          pacePerDay: 1.0,
+        );
+        // target = 250 items, remaining = 150
+        expect(result.remainingItems, 150);
+        expect(result.daysRemaining, 150);
+        expect(result.itemsPerDay, 1.0);
+      });
+
+      test('pace mode takes priority over targetDate when both provided', () {
+        final result = GoalProgressCalculator.calculate(
+          targetPercent: 100.0,
+          targetDate: DateTime.utc(2026, 6, 24), // 92 days away
+          currentDate: DateTime.utc(2026, 3, 24),
+          totalItems: 500,
+          completedItems: 100,
+          pacePerDay: 2.0,
+        );
+        // pacePerDay should be used, not deadline
+        expect(result.itemsPerDay, 2.0);
+        expect(result.daysRemaining, 200); // 400/2, not 92
+      });
+    });
   });
 }

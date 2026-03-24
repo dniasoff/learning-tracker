@@ -13,6 +13,9 @@ abstract class GoalRepository {
     DateTime? targetDate,
     String description,
     String dateType,
+    String goalType,
+    int? paceValue,
+    String? paceUnit,
   });
 
   /// Get all goals for a curriculum, sorted by target date.
@@ -25,6 +28,10 @@ abstract class GoalRepository {
     DateTime? targetDate,
     bool clearTargetDate,
     String? description,
+    String? goalType,
+    int? paceValue,
+    String? paceUnit,
+    bool clearPace,
   });
 
   /// Delete a goal.

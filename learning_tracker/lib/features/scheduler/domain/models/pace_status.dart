@@ -12,8 +12,10 @@ abstract class PaceStatus with _$PaceStatus {
     /// Whether the user is ahead, on-pace, or behind.
     required PaceStatusType status,
 
-    /// Number of days ahead (positive) or behind (negative).
-    /// Zero for on-pace.
+    /// For deadline goals: number of days ahead (+) or behind (−) schedule.
+    /// For pace goals: weekly item surplus (+) or deficit (−), i.e.
+    /// `((rollingAverage − targetPacePerDay) * 7).round()`.
+    /// Zero when on-pace.
     required int daysDelta,
 
     /// Projected completion date based on rolling 7-day average.

@@ -22,6 +22,15 @@ abstract class GoalEntity with _$GoalEntity {
     /// Whether the goal deadline uses Hebrew or Gregorian calendar.
     /// Values: 'hebrew' or 'gregorian' (default).
     @Default('gregorian') String dateType,
+
+    /// Goal mode: 'deadline' (default) or 'pace'.
+    @Default('deadline') String goalType,
+
+    /// Pace value (e.g., 1, 5). Only used when goalType == 'pace'.
+    int? paceValue,
+
+    /// Pace unit: 'per_day' or 'per_week'. Only used when goalType == 'pace'.
+    String? paceUnit,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _GoalEntity;
@@ -46,6 +55,9 @@ abstract class GoalEntity with _$GoalEntity {
       'targetDate': targetDate?.toIso8601String(),
       'description': description,
       'dateType': dateType,
+      'goalType': goalType,
+      'paceValue': paceValue,
+      'paceUnit': paceUnit,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -66,6 +78,9 @@ abstract class GoalEntity with _$GoalEntity {
           : null,
       description: data['description'] as String? ?? '',
       dateType: data['dateType'] as String? ?? 'gregorian',
+      goalType: data['goalType'] as String? ?? 'deadline',
+      paceValue: data['paceValue'] as int?,
+      paceUnit: data['paceUnit'] as String?,
       createdAt: DateTime.parse(data['createdAt'] as String).toUtc(),
       updatedAt: DateTime.parse(data['updatedAt'] as String).toUtc(),
     );

@@ -3612,6 +3612,40 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     requiredDuringInsert: false,
     defaultValue: const Constant('gregorian'),
   );
+  static const VerificationMeta _goalTypeMeta = const VerificationMeta(
+    'goalType',
+  );
+  @override
+  late final GeneratedColumn<String> goalType = GeneratedColumn<String>(
+    'goal_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('deadline'),
+  );
+  static const VerificationMeta _paceValueMeta = const VerificationMeta(
+    'paceValue',
+  );
+  @override
+  late final GeneratedColumn<int> paceValue = GeneratedColumn<int>(
+    'pace_value',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _paceUnitMeta = const VerificationMeta(
+    'paceUnit',
+  );
+  @override
+  late final GeneratedColumn<String> paceUnit = GeneratedColumn<String>(
+    'pace_unit',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3643,6 +3677,9 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     targetDate,
     description,
     dateType,
+    goalType,
+    paceValue,
+    paceUnit,
     createdAt,
     updatedAt,
   ];
@@ -3708,6 +3745,24 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         dateType.isAcceptableOrUnknown(data['date_type']!, _dateTypeMeta),
       );
     }
+    if (data.containsKey('goal_type')) {
+      context.handle(
+        _goalTypeMeta,
+        goalType.isAcceptableOrUnknown(data['goal_type']!, _goalTypeMeta),
+      );
+    }
+    if (data.containsKey('pace_value')) {
+      context.handle(
+        _paceValueMeta,
+        paceValue.isAcceptableOrUnknown(data['pace_value']!, _paceValueMeta),
+      );
+    }
+    if (data.containsKey('pace_unit')) {
+      context.handle(
+        _paceUnitMeta,
+        paceUnit.isAcceptableOrUnknown(data['pace_unit']!, _paceUnitMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3761,6 +3816,18 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.string,
         data['${effectivePrefix}date_type'],
       )!,
+      goalType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}goal_type'],
+      )!,
+      paceValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pace_value'],
+      ),
+      paceUnit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pace_unit'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3786,6 +3853,9 @@ class Goal extends DataClass implements Insertable<Goal> {
   final DateTime? targetDate;
   final String description;
   final String dateType;
+  final String goalType;
+  final int? paceValue;
+  final String? paceUnit;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Goal({
@@ -3796,6 +3866,9 @@ class Goal extends DataClass implements Insertable<Goal> {
     this.targetDate,
     required this.description,
     required this.dateType,
+    required this.goalType,
+    this.paceValue,
+    this.paceUnit,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -3811,6 +3884,13 @@ class Goal extends DataClass implements Insertable<Goal> {
     }
     map['description'] = Variable<String>(description);
     map['date_type'] = Variable<String>(dateType);
+    map['goal_type'] = Variable<String>(goalType);
+    if (!nullToAbsent || paceValue != null) {
+      map['pace_value'] = Variable<int>(paceValue);
+    }
+    if (!nullToAbsent || paceUnit != null) {
+      map['pace_unit'] = Variable<String>(paceUnit);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -3827,6 +3907,13 @@ class Goal extends DataClass implements Insertable<Goal> {
           : Value(targetDate),
       description: Value(description),
       dateType: Value(dateType),
+      goalType: Value(goalType),
+      paceValue: paceValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paceValue),
+      paceUnit: paceUnit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paceUnit),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -3845,6 +3932,9 @@ class Goal extends DataClass implements Insertable<Goal> {
       targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
       description: serializer.fromJson<String>(json['description']),
       dateType: serializer.fromJson<String>(json['dateType']),
+      goalType: serializer.fromJson<String>(json['goalType']),
+      paceValue: serializer.fromJson<int?>(json['paceValue']),
+      paceUnit: serializer.fromJson<String?>(json['paceUnit']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -3860,6 +3950,9 @@ class Goal extends DataClass implements Insertable<Goal> {
       'targetDate': serializer.toJson<DateTime?>(targetDate),
       'description': serializer.toJson<String>(description),
       'dateType': serializer.toJson<String>(dateType),
+      'goalType': serializer.toJson<String>(goalType),
+      'paceValue': serializer.toJson<int?>(paceValue),
+      'paceUnit': serializer.toJson<String?>(paceUnit),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -3873,6 +3966,9 @@ class Goal extends DataClass implements Insertable<Goal> {
     Value<DateTime?> targetDate = const Value.absent(),
     String? description,
     String? dateType,
+    String? goalType,
+    Value<int?> paceValue = const Value.absent(),
+    Value<String?> paceUnit = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Goal(
@@ -3883,6 +3979,9 @@ class Goal extends DataClass implements Insertable<Goal> {
     targetDate: targetDate.present ? targetDate.value : this.targetDate,
     description: description ?? this.description,
     dateType: dateType ?? this.dateType,
+    goalType: goalType ?? this.goalType,
+    paceValue: paceValue.present ? paceValue.value : this.paceValue,
+    paceUnit: paceUnit.present ? paceUnit.value : this.paceUnit,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -3903,6 +4002,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           ? data.description.value
           : this.description,
       dateType: data.dateType.present ? data.dateType.value : this.dateType,
+      goalType: data.goalType.present ? data.goalType.value : this.goalType,
+      paceValue: data.paceValue.present ? data.paceValue.value : this.paceValue,
+      paceUnit: data.paceUnit.present ? data.paceUnit.value : this.paceUnit,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -3918,6 +4020,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('targetDate: $targetDate, ')
           ..write('description: $description, ')
           ..write('dateType: $dateType, ')
+          ..write('goalType: $goalType, ')
+          ..write('paceValue: $paceValue, ')
+          ..write('paceUnit: $paceUnit, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3933,6 +4038,9 @@ class Goal extends DataClass implements Insertable<Goal> {
     targetDate,
     description,
     dateType,
+    goalType,
+    paceValue,
+    paceUnit,
     createdAt,
     updatedAt,
   );
@@ -3947,6 +4055,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.targetDate == this.targetDate &&
           other.description == this.description &&
           other.dateType == this.dateType &&
+          other.goalType == this.goalType &&
+          other.paceValue == this.paceValue &&
+          other.paceUnit == this.paceUnit &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3959,6 +4070,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<DateTime?> targetDate;
   final Value<String> description;
   final Value<String> dateType;
+  final Value<String> goalType;
+  final Value<int?> paceValue;
+  final Value<String?> paceUnit;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const GoalsCompanion({
@@ -3969,6 +4083,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.targetDate = const Value.absent(),
     this.description = const Value.absent(),
     this.dateType = const Value.absent(),
+    this.goalType = const Value.absent(),
+    this.paceValue = const Value.absent(),
+    this.paceUnit = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -3980,6 +4097,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.targetDate = const Value.absent(),
     this.description = const Value.absent(),
     this.dateType = const Value.absent(),
+    this.goalType = const Value.absent(),
+    this.paceValue = const Value.absent(),
+    this.paceUnit = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : curriculumId = Value(curriculumId),
@@ -3993,6 +4113,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<DateTime>? targetDate,
     Expression<String>? description,
     Expression<String>? dateType,
+    Expression<String>? goalType,
+    Expression<int>? paceValue,
+    Expression<String>? paceUnit,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -4004,6 +4127,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (targetDate != null) 'target_date': targetDate,
       if (description != null) 'description': description,
       if (dateType != null) 'date_type': dateType,
+      if (goalType != null) 'goal_type': goalType,
+      if (paceValue != null) 'pace_value': paceValue,
+      if (paceUnit != null) 'pace_unit': paceUnit,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -4017,6 +4143,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Value<DateTime?>? targetDate,
     Value<String>? description,
     Value<String>? dateType,
+    Value<String>? goalType,
+    Value<int?>? paceValue,
+    Value<String?>? paceUnit,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -4028,6 +4157,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       targetDate: targetDate ?? this.targetDate,
       description: description ?? this.description,
       dateType: dateType ?? this.dateType,
+      goalType: goalType ?? this.goalType,
+      paceValue: paceValue ?? this.paceValue,
+      paceUnit: paceUnit ?? this.paceUnit,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -4057,6 +4189,15 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (dateType.present) {
       map['date_type'] = Variable<String>(dateType.value);
     }
+    if (goalType.present) {
+      map['goal_type'] = Variable<String>(goalType.value);
+    }
+    if (paceValue.present) {
+      map['pace_value'] = Variable<int>(paceValue.value);
+    }
+    if (paceUnit.present) {
+      map['pace_unit'] = Variable<String>(paceUnit.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4076,6 +4217,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('targetDate: $targetDate, ')
           ..write('description: $description, ')
           ..write('dateType: $dateType, ')
+          ..write('goalType: $goalType, ')
+          ..write('paceValue: $paceValue, ')
+          ..write('paceUnit: $paceUnit, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -11874,6 +12018,9 @@ typedef $$GoalsTableCreateCompanionBuilder =
       Value<DateTime?> targetDate,
       Value<String> description,
       Value<String> dateType,
+      Value<String> goalType,
+      Value<int?> paceValue,
+      Value<String?> paceUnit,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
@@ -11886,6 +12033,9 @@ typedef $$GoalsTableUpdateCompanionBuilder =
       Value<DateTime?> targetDate,
       Value<String> description,
       Value<String> dateType,
+      Value<String> goalType,
+      Value<int?> paceValue,
+      Value<String?> paceUnit,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -11930,6 +12080,21 @@ class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
 
   ColumnFilters<String> get dateType => $composableBuilder(
     column: $table.dateType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get goalType => $composableBuilder(
+    column: $table.goalType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get paceValue => $composableBuilder(
+    column: $table.paceValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paceUnit => $composableBuilder(
+    column: $table.paceUnit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11988,6 +12153,21 @@ class $$GoalsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get goalType => $composableBuilder(
+    column: $table.goalType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get paceValue => $composableBuilder(
+    column: $table.paceValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paceUnit => $composableBuilder(
+    column: $table.paceUnit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -12037,6 +12217,15 @@ class $$GoalsTableAnnotationComposer
   GeneratedColumn<String> get dateType =>
       $composableBuilder(column: $table.dateType, builder: (column) => column);
 
+  GeneratedColumn<String> get goalType =>
+      $composableBuilder(column: $table.goalType, builder: (column) => column);
+
+  GeneratedColumn<int> get paceValue =>
+      $composableBuilder(column: $table.paceValue, builder: (column) => column);
+
+  GeneratedColumn<String> get paceUnit =>
+      $composableBuilder(column: $table.paceUnit, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -12079,6 +12268,9 @@ class $$GoalsTableTableManager
                 Value<DateTime?> targetDate = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<String> dateType = const Value.absent(),
+                Value<String> goalType = const Value.absent(),
+                Value<int?> paceValue = const Value.absent(),
+                Value<String?> paceUnit = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => GoalsCompanion(
@@ -12089,6 +12281,9 @@ class $$GoalsTableTableManager
                 targetDate: targetDate,
                 description: description,
                 dateType: dateType,
+                goalType: goalType,
+                paceValue: paceValue,
+                paceUnit: paceUnit,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -12101,6 +12296,9 @@ class $$GoalsTableTableManager
                 Value<DateTime?> targetDate = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<String> dateType = const Value.absent(),
+                Value<String> goalType = const Value.absent(),
+                Value<int?> paceValue = const Value.absent(),
+                Value<String?> paceUnit = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => GoalsCompanion.insert(
@@ -12111,6 +12309,9 @@ class $$GoalsTableTableManager
                 targetDate: targetDate,
                 description: description,
                 dateType: dateType,
+                goalType: goalType,
+                paceValue: paceValue,
+                paceUnit: paceUnit,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),

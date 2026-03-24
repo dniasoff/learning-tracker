@@ -1,5 +1,5 @@
 # generated: 2026-01-05
-# updated: 2026-02-10 (Epic 2 QA review)
+# last_updated: 2026-03-24
 # project: learning-tracker
 # project_key: learning-tracker
 # tracking_system: file-system
@@ -11,6 +11,10 @@
 #   - backlog: Epic not yet started
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
@@ -25,11 +29,13 @@
 #
 # WORKFLOW NOTES:
 # ===============
-# - Mark epic as 'in-progress' when starting work on its first story
-# - SM typically creates next story ONLY after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-01-05
+last_updated: 2026-03-24
 project: learning-tracker
 project_key: learning-tracker
 tracking_system: file-system
@@ -177,3 +183,13 @@ development_status:
   14-3-data-export-and-import: backlog
   14-4-account-management: backlog
   epic-14-retrospective: optional
+
+  # Epic 16: Onboarding-to-Dashboard Perfect Flow (6 stories)
+  epic-16: in-progress
+  16-1-pace-based-goal-mode: done
+  16-2-study-day-configuration: ready-for-dev
+  16-3-dashboard-pace-progress-integration: ready-for-dev
+  16-4-per-item-review-count-display: ready-for-dev
+  16-5-onboarding-goal-study-day-steps: ready-for-dev
+  16-6-dashboard-design-experience-polish: ready-for-dev
+  epic-16-retrospective: optional

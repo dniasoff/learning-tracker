@@ -2,7 +2,7 @@
 # Prevents "unknown tag" warnings when running flutter test --tags.
 
 tags:
-  # Epic tags (14)
+  # Epic tags (15)
   epic_1:
   epic_2:
   epic_3:
@@ -17,6 +17,8 @@ tags:
   epic_12:
   epic_13:
   epic_14:
+  epic_15:
+  epic_16:
 
   # Story tags -- Epic 1 Foundation (12)
   story_1_1:
@@ -107,3 +109,14 @@ tags:
   story_14_2:
   story_14_3:
   story_14_4:
+
+  # Story tags -- Epic 15 Multi-Profile (placeholder)
+  story_15_1:
+
+  # Story tags -- Epic 16 Pace, Study Days & Dashboard (6)
+  story_16_1:
+  story_16_2:
+  story_16_3:
+  story_16_4:
+  story_16_5:
+  story_16_6:

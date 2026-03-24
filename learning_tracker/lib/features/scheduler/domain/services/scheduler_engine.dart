@@ -359,7 +359,10 @@ class SchedulerEngine {
 
     int baseRate;
 
-    if (config.goalDeadline == null) {
+    if (config.pacePerDay != null) {
+      // Pace-based goal: use configured pace directly
+      baseRate = config.pacePerDay!.ceil();
+    } else if (config.goalDeadline == null) {
       baseRate = config.defaultNewItemsPerDay;
     } else {
       final daysRemaining = config.goalDeadline!

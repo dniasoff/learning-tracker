@@ -110,7 +110,7 @@ gen_story_map() {
       etitle=$(echo "$epic_line" | awk -F'|' '{print $2}')
       # Extract short name from title
       local short_name
-      short_name=$(echo "$etitle" | sed 's/^\[Epic [0-9]*\] //')
+      short_name=$(echo "$etitle" | sed 's/^\[Epic[- ][0-9]*\] //')
 
       local ecount=0
       for story_file in "$CACHE_DIR/stories"/*.yaml; do
@@ -133,7 +133,7 @@ gen_story_map() {
       local status_text="Mixed"
       $all_backlog && status_text="All Backlog"
       local epic_num
-      epic_num=$(echo "$etitle" | grep -oP 'Epic \K\d+')
+      epic_num=$(echo "$etitle" | grep -oP 'Epic[- ]\K\d+')
       echo "| Epic $epic_num – $short_name | $ecount | $status_text |"
     done < <(awk '
       /^epics:/ { in_epics=1; next }
@@ -171,8 +171,8 @@ gen_epic_list() {
       local eid etitle epic_num short_name
       eid=$(echo "$epic_line" | awk -F'|' '{print $1}')
       etitle=$(echo "$epic_line" | awk -F'|' '{print $2}')
-      epic_num=$(echo "$etitle" | grep -oP 'Epic \K\d+')
-      short_name=$(echo "$etitle" | sed 's/^\[Epic [0-9]*\] //')
+      epic_num=$(echo "$etitle" | grep -oP 'Epic[- ]\K\d+')
+      short_name=$(echo "$etitle" | sed 's/^\[Epic[- ][0-9]*\] //')
 
       # Read epic summary from companion file
       local summary=""

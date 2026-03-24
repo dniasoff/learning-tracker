@@ -357,6 +357,7 @@ String _$previouslySkippedRefsHash() =>
 ///
 /// Calculates pace using personal-track completions only and a rolling
 /// 7-day average for projected completion.
+/// Supports both deadline-based and pace-based goals.
 
 @ProviderFor(paceStatus)
 final paceStatusProvider = PaceStatusFamily._();
@@ -365,6 +366,7 @@ final paceStatusProvider = PaceStatusFamily._();
 ///
 /// Calculates pace using personal-track completions only and a rolling
 /// 7-day average for projected completion.
+/// Supports both deadline-based and pace-based goals.
 
 final class PaceStatusProvider
     extends
@@ -378,13 +380,16 @@ final class PaceStatusProvider
   ///
   /// Calculates pace using personal-track completions only and a rolling
   /// 7-day average for projected completion.
+  /// Supports both deadline-based and pace-based goals.
   PaceStatusProvider._({
     required PaceStatusFamily super.from,
     required ({
       CurriculumId curriculumId,
       DateTime goalStartDate,
-      DateTime goalDeadline,
+      DateTime? goalDeadline,
       int totalItems,
+      String goalType,
+      double? pacePerDay,
     })
     super.argument,
   }) : super(
@@ -418,8 +423,10 @@ final class PaceStatusProvider
             as ({
               CurriculumId curriculumId,
               DateTime goalStartDate,
-              DateTime goalDeadline,
+              DateTime? goalDeadline,
               int totalItems,
+              String goalType,
+              double? pacePerDay,
             });
     return paceStatus(
       ref,
@@ -427,6 +434,8 @@ final class PaceStatusProvider
       goalStartDate: argument.goalStartDate,
       goalDeadline: argument.goalDeadline,
       totalItems: argument.totalItems,
+      goalType: argument.goalType,
+      pacePerDay: argument.pacePerDay,
     );
   }
 
@@ -441,12 +450,13 @@ final class PaceStatusProvider
   }
 }
 
-String _$paceStatusHash() => r'8ae647bcbb37da0e5cf3b0f2d1b3d6b7ac61c3f2';
+String _$paceStatusHash() => r'5daea9e300083adbaadd137835df48fd09f62d9b';
 
 /// Pace status for a curriculum goal.
 ///
 /// Calculates pace using personal-track completions only and a rolling
 /// 7-day average for projected completion.
+/// Supports both deadline-based and pace-based goals.
 
 final class PaceStatusFamily extends $Family
     with
@@ -455,8 +465,10 @@ final class PaceStatusFamily extends $Family
           ({
             CurriculumId curriculumId,
             DateTime goalStartDate,
-            DateTime goalDeadline,
+            DateTime? goalDeadline,
             int totalItems,
+            String goalType,
+            double? pacePerDay,
           })
         > {
   PaceStatusFamily._()
@@ -472,18 +484,23 @@ final class PaceStatusFamily extends $Family
   ///
   /// Calculates pace using personal-track completions only and a rolling
   /// 7-day average for projected completion.
+  /// Supports both deadline-based and pace-based goals.
 
   PaceStatusProvider call({
     required CurriculumId curriculumId,
     required DateTime goalStartDate,
-    required DateTime goalDeadline,
+    DateTime? goalDeadline,
     required int totalItems,
+    String goalType = 'deadline',
+    double? pacePerDay,
   }) => PaceStatusProvider._(
     argument: (
       curriculumId: curriculumId,
       goalStartDate: goalStartDate,
       goalDeadline: goalDeadline,
       totalItems: totalItems,
+      goalType: goalType,
+      pacePerDay: pacePerDay,
     ),
     from: this,
   );
@@ -543,4 +560,4 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'62eb25d9ef3224440df756ee9fd3d954dfe63e93';
+String _$allDailyTasksHash() => r'f95184dcc10fb090734165803ba02211b1b329b9';

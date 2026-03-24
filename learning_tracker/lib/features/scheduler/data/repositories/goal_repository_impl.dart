@@ -22,6 +22,9 @@ class GoalRepositoryImpl implements GoalRepository {
     DateTime? targetDate,
     String description = '',
     String dateType = 'gregorian',
+    String goalType = 'deadline',
+    int? paceValue,
+    String? paceUnit,
   }) async {
     return await _database.transaction(() async {
       final now = DateTimeFactory.nowUtc();
@@ -33,6 +36,9 @@ class GoalRepositoryImpl implements GoalRepository {
           targetDate: drift.Value(targetDate?.toUtc()),
           description: drift.Value(description),
           dateType: drift.Value(dateType),
+          goalType: drift.Value(goalType),
+          paceValue: drift.Value(paceValue),
+          paceUnit: drift.Value(paceUnit),
           createdAt: now,
           updatedAt: now,
         ),
@@ -67,6 +73,10 @@ class GoalRepositoryImpl implements GoalRepository {
     DateTime? targetDate,
     bool clearTargetDate = false,
     String? description,
+    String? goalType,
+    int? paceValue,
+    String? paceUnit,
+    bool clearPace = false,
   }) async {
     return await _database.transaction(() async {
       final existing = await _database.goalDao.getGoalById(goalId);
@@ -85,6 +95,13 @@ class GoalRepositoryImpl implements GoalRepository {
               ? const drift.Value(null)
               : drift.Value(targetDate?.toUtc() ?? existing.targetDate),
           description: drift.Value(description ?? existing.description),
+          goalType: drift.Value(goalType ?? existing.goalType),
+          paceValue: clearPace
+              ? const drift.Value(null)
+              : drift.Value(paceValue ?? existing.paceValue),
+          paceUnit: clearPace
+              ? const drift.Value(null)
+              : drift.Value(paceUnit ?? existing.paceUnit),
           createdAt: drift.Value(existing.createdAt),
           updatedAt: drift.Value(now),
         ),
@@ -125,6 +142,9 @@ class GoalRepositoryImpl implements GoalRepository {
       targetDate: goal.targetDate?.toUtc(),
       description: goal.description,
       dateType: goal.dateType,
+      goalType: goal.goalType,
+      paceValue: goal.paceValue,
+      paceUnit: goal.paceUnit,
       createdAt: goal.createdAt.toUtc(),
       updatedAt: goal.updatedAt.toUtc(),
     );

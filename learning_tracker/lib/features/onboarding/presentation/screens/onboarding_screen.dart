@@ -412,6 +412,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         targetDate: result.targetDate,
         description: result.description,
         dateType: result.dateType,
+        goalType: result.goalType,
+        paceValue: result.paceValue,
+        paceUnit: result.paceUnit,
       );
       ref.invalidate(allDailyTasksProvider);
     }

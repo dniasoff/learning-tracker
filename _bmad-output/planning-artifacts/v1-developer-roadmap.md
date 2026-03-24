@@ -142,7 +142,14 @@ Two paths, presented clearly:
 - Choose scope: specific masechtos, sefarim, or all of a curriculum
 - Start from beginning, work through to end
 - Choose review plan / stages
-- Self-paced — no external calendar
+- Set goal — two modes:
+  - **Deadline mode:** Pick a target completion date (English or Hebrew calendar). Scheduler calculates daily load automatically.
+  - **Pace mode:** User defines their own pace (e.g., 1 daf/day, 1 amud/day, 5 amudim/week). Scheduler follows the user-specified pace exactly. App calculates projected completion date from the pace.
+- Configure study days:
+  - Choose which days are for **new learning** (e.g., Sunday–Thursday)
+  - Choose which days are for **review/chazara only** (e.g., Friday & Shabbos)
+  - New learning tasks only appear on study days; chazara tasks appear on review days
+  - Fully configurable — user picks any combination of days
 - Done — learning appears
 
 **Key UX principles:**
@@ -159,12 +166,14 @@ Two paths, presented clearly:
 - Handle "where am I in the cycle" logic for mid-cycle joins
 - Consider: `kosher_dart` package for Hebrew date display
 
-### 1.4 Sefaria Content Integration
-- Integrate Sefaria Text API (`/api/texts/{ref}`) to display actual learning content in-app
+### 1.4 Bundled Content
+- All curriculum content (hierarchy, text in all available languages) is **bundled with the app** at build time
+- Content is pre-packaged from Sefaria into the app bundle — **no runtime downloading or importing**
+- Users never wait for content to download; everything is available immediately on first launch
 - Support bilingual display: Hebrew + one translation language (English, French, Spanish, etc. — user's choice)
 - Content should open within the app, not redirect to browser
-- Cache fetched texts for offline access
 - Handle Hebrew RTL rendering alongside LTR translation
+- Content updates (corrections, new translations) ship with app updates
 
 ### 1.5 Multi-Lingual UI
 - Implement Flutter localization (intl / arb files)

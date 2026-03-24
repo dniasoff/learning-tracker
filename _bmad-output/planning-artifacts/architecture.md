@@ -244,7 +244,7 @@ Critical NFRs from v1 that carry forward with increased scope:
 
 **9. Hebrew Calendar & Internationalization (unchanged)**
 - Hebrew date display, RTL layout, bidirectional text
-- Per-curriculum deadlines may use Hebrew or Gregorian dates
+- Per-curriculum deadlines may use Hebrew or English dates
 
 **10. Sefaria API Expansion (evolved from v1)**
 - Multiple API endpoints for different text types
@@ -534,29 +534,26 @@ Users can customize per curriculum (add stages, change timing, rename).
 **Affects:** Onboarding flow, gamification system, parent mode availability, UI presentation.
 **Provided by Starter:** No.
 
-### D6: Sefaria API — Per-Curriculum Adapters with Common Interface
+### D6: Bundled Content — Pre-Packaged at Build Time
 
-**Decision:** Option B — Adapter pattern with `CurriculumContentFetcher` interface and per-curriculum implementations.
+**Decision:** All curriculum content (hierarchy and text in all available languages) is bundled with the app at build time. No runtime downloading or API fetching for content.
 
-**Rationale:** Each curriculum's Sefaria response format is different enough to warrant dedicated parsing logic. Mishnayos returns nested seder→masechta→perek→mishna structure. Bavli returns masechta→daf→amud. Mishna Berurah returns siman→seif→seif katan. A common interface ensures the rest of the app doesn't care which curriculum is being fetched.
+**Rationale:** Eliminates first-launch download delays, removes network dependency for content, and ensures offline-first works from the very first app open. Content is pre-processed from Sefaria during the build pipeline and shipped as bundled JSON assets. Content updates (corrections, new translations) ship with app updates.
 
-**Interface:**
-```dart
-abstract class CurriculumContentFetcher {
-  Future<List<ContentItem>> fetchAllContent();
-  Future<String> fetchText(String sefariaRef, {String lang = 'he'});
-  String get curriculumId;
-}
-```
+**Build-Time Pipeline:**
+- Sefaria content is fetched and processed during build/CI into bundled JSON assets per curriculum
+- Each curriculum's hierarchy and text are stored as structured JSON in `assets/content/`
+- On first launch, bundled JSON is loaded into SQLite for efficient querying
 
-**Implementations:**
-- `MishnaFetcher` — Sefaria Mishnah API
-- `BavliFetcher` — Sefaria Bavli API
-- `YerushalmiFetcher` — Sefaria Yerushalmi API
-- `MishnaBerurahFetcher` — Sefaria Mishna Berurah API
-- `ChumashFetcher` — Sefaria Torah API
+**Bundled Curricula:**
+- Mishnayos — seder → masechta → perek → mishna
+- Bavli — masechta → daf → amud
+- Yerushalmi — masechta → daf → halacha
+- Mishna Berurah — siman → seif → seif katan
+- Chumash — sefer → parsha → perek → pasuk
+- (And any additional curricula added to V1 scope)
 
-**Affects:** Content import, text display, offline caching, API error handling.
+**Affects:** First-launch experience (instant, no waiting), app bundle size, content update strategy, offline capability.
 **Provided by Starter:** No.
 
 ### D7: Learning Order — Separate Table

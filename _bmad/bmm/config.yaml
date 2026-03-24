@@ -14,3 +14,8 @@ user_name: Daniel
 communication_language: English
 document_output_language: English
 output_folder: "{project-root}/_bmad-output"
+
+# Linear Integration
+team_key: DNI
+linear_tenant: dniasoff
+linear_project: learning-tracker

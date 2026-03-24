@@ -132,13 +132,16 @@ Future<Set<String>> previouslySkippedRefs(Ref ref) async {
 ///
 /// Calculates pace using personal-track completions only and a rolling
 /// 7-day average for projected completion.
+/// Supports both deadline-based and pace-based goals.
 @riverpod
 Future<PaceStatus?> paceStatus(
   Ref ref, {
   required CurriculumId curriculumId,
   required DateTime goalStartDate,
-  required DateTime goalDeadline,
+  DateTime? goalDeadline,
   required int totalItems,
+  String goalType = 'deadline',
+  double? pacePerDay,
 }) async {
   final db = ref.watch(appDatabaseProvider);
   final now = ref.watch(clockProvider);
@@ -162,6 +165,18 @@ Future<PaceStatus?> paceStatus(
     );
     dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
   }
+
+  if (goalType == 'pace' && pacePerDay != null) {
+    return PaceCalculator.calculateForPaceGoal(
+      targetPacePerDay: pacePerDay,
+      totalItems: totalItems,
+      completedItems: personalCompletions.length,
+      dailyCompletionCounts: dailyCounts,
+      today: now,
+    );
+  }
+
+  if (goalDeadline == null) return null;
 
   return PaceCalculator.calculate(
     goalStartDate: goalStartDate,
@@ -194,15 +209,28 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
       .map((key) => CurriculumId.values.where((c) => c.storageKey == key).first)
       .toList();
 
-  // Look up earliest goal deadline per curriculum for pacing.
+  // Look up earliest goal deadline and pace settings per curriculum.
   final goalDeadlines = <CurriculumId, DateTime>{};
+  final pacePerDayMap = <CurriculumId, double>{};
   for (final curriculum in activeCurricula) {
     final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
       curriculum.storageKey,
       profileId,
     );
     for (final goal in goals) {
-      if (goal.targetDate != null) {
+      if (goal.goalType == 'pace' &&
+          goal.paceValue != null &&
+          goal.paceUnit != null) {
+        // Pace-based goal: convert to daily rate
+        final dailyRate = PaceCalculator.paceToDaily(
+          goal.paceValue!,
+          goal.paceUnit!,
+        );
+        final existing = pacePerDayMap[curriculum];
+        if (existing == null || dailyRate > existing) {
+          pacePerDayMap[curriculum] = dailyRate;
+        }
+      } else if (goal.targetDate != null) {
         final existing = goalDeadlines[curriculum];
         if (existing == null || goal.targetDate!.isBefore(existing)) {
           goalDeadlines[curriculum] = goal.targetDate!;
@@ -216,6 +244,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     ref.watch(clockProvider),
     skippedRefs: skipped,
     goalDeadlines: goalDeadlines,
+    pacePerDayMap: pacePerDayMap,
   );
 
   // Priority boost: previously-skipped tasks get overdueChazara priority

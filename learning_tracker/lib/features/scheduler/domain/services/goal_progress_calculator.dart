@@ -37,12 +37,15 @@ class GoalProgressCalculator {
   /// [currentDate] — current date (UTC)
   /// [totalItems] — total items in the curriculum
   /// [completedItems] — number of unique items completed
+  /// [pacePerDay] — for pace-based goals, the target items per day.
+  /// When provided, overrides deadline-based calculations.
   static GoalProgress calculate({
     required double targetPercent,
     required DateTime? targetDate,
     required DateTime currentDate,
     required int totalItems,
     required int completedItems,
+    double? pacePerDay,
   }) {
     if (totalItems == 0) {
       return GoalProgress(
@@ -62,7 +65,13 @@ class GoalProgressCalculator {
     int? daysRemaining;
     double? itemsPerDay;
 
-    if (targetDate != null) {
+    if (pacePerDay != null && pacePerDay > 0) {
+      // Pace-based goal: calculate from pace
+      itemsPerDay = pacePerDay;
+      daysRemaining = remainingItems > 0
+          ? (remainingItems / pacePerDay).ceil()
+          : 0;
+    } else if (targetDate != null) {
       daysRemaining = targetDate.difference(currentDate).inDays;
       if (daysRemaining > 0 && remainingItems > 0) {
         itemsPerDay = remainingItems / daysRemaining;
@@ -73,7 +82,7 @@ class GoalProgressCalculator {
         itemsPerDay = 0;
       }
     }
-    // No deadline → daysRemaining and itemsPerDay stay null
+    // No deadline and no pace → daysRemaining and itemsPerDay stay null
 
     return GoalProgress(
       percentComplete: percentComplete,

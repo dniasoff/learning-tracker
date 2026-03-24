@@ -117,6 +117,64 @@ class PaceCalculator {
     return result;
   }
 
+  /// Calculate pace status for a pace-based goal (no deadline).
+  ///
+  /// [targetPacePerDay] — target items per day (already converted from per_week)
+  /// [totalItems] — total items to complete for the goal
+  /// [completedItems] — items completed so far
+  /// [dailyCompletionCounts] — map of date → count for recent days
+  /// [today] — current date (UTC)
+  static PaceStatus calculateForPaceGoal({
+    required double targetPacePerDay,
+    required int totalItems,
+    required int completedItems,
+    required Map<DateTime, int> dailyCompletionCounts,
+    required DateTime today,
+  }) {
+    final rollingAvg = _rolling7DayAverage(dailyCompletionCounts, today);
+    final remainingItems = (totalItems - completedItems).clamp(0, totalItems);
+
+    // Determine status by comparing rolling average to target pace
+    PaceStatusType status;
+    if ((rollingAvg - targetPacePerDay).abs() <= 0.1) {
+      status = PaceStatusType.onPace;
+    } else if (rollingAvg > targetPacePerDay) {
+      status = PaceStatusType.ahead;
+    } else {
+      status = PaceStatusType.behind;
+    }
+
+    // Weekly item surplus/deficit (not calendar days — see PaceStatus.daysDelta)
+    final daysDelta = ((rollingAvg - targetPacePerDay) * 7).round();
+
+    // Projected completion date using target pace
+    DateTime? projectedDate;
+    if (targetPacePerDay > 0 && remainingItems > 0) {
+      final daysNeeded = (remainingItems / targetPacePerDay).ceil();
+      projectedDate = today.add(Duration(days: daysNeeded));
+    } else if (remainingItems <= 0) {
+      projectedDate = today;
+    }
+
+    return PaceStatus(
+      status: status,
+      daysDelta: daysDelta,
+      projectedCompletionDate: projectedDate,
+      rollingAverage: rollingAvg,
+    );
+  }
+
+  /// Convert a pace value and unit to a daily rate.
+  ///
+  /// For 'per_day', returns the value directly.
+  /// For 'per_week', divides by 7.
+  static double paceToDaily(int paceValue, String paceUnit) {
+    if (paceUnit == 'per_week') {
+      return paceValue / 7.0;
+    }
+    return paceValue.toDouble();
+  }
+
   /// Compute the rolling 7-day average of daily completions.
   ///
   /// Looks at the 7 days ending yesterday (today's work is in progress).

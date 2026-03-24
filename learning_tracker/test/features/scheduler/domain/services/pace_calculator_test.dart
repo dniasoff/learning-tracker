@@ -201,4 +201,105 @@ void main() {
       expect(result.status, PaceStatusType.behind);
     });
   });
+
+  group('PaceCalculator.calculateForPaceGoal', () {
+    final today = DateTime.utc(2026, 3, 24);
+
+    Map<DateTime, int> buildCounts(int perDay) {
+      final counts = <DateTime, int>{};
+      for (var i = 1; i <= 7; i++) {
+        counts[DateTime.utc(2026, 3, 24 - i)] = perDay;
+      }
+      return counts;
+    }
+
+    test('on-pace when rolling average matches target', () {
+      final result = PaceCalculator.calculateForPaceGoal(
+        targetPacePerDay: 1.0,
+        completedItems: 100,
+        totalItems: 500,
+        dailyCompletionCounts: buildCounts(1),
+        today: today,
+      );
+      expect(result.status, PaceStatusType.onPace);
+      expect(result.projectedCompletionDate, isNotNull);
+      expect(result.rollingAverage, 1.0);
+    });
+
+    test('behind when rolling average below target', () {
+      final result = PaceCalculator.calculateForPaceGoal(
+        targetPacePerDay: 2.0,
+        completedItems: 100,
+        totalItems: 500,
+        dailyCompletionCounts: buildCounts(1),
+        today: today,
+      );
+      expect(result.status, PaceStatusType.behind);
+      expect(result.daysDelta, lessThan(0));
+    });
+
+    test('ahead when rolling average exceeds target', () {
+      final result = PaceCalculator.calculateForPaceGoal(
+        targetPacePerDay: 1.0,
+        completedItems: 100,
+        totalItems: 500,
+        dailyCompletionCounts: buildCounts(3),
+        today: today,
+      );
+      expect(result.status, PaceStatusType.ahead);
+      expect(result.daysDelta, greaterThan(0));
+    });
+
+    test('projected completion uses remaining / targetPace', () {
+      final result = PaceCalculator.calculateForPaceGoal(
+        targetPacePerDay: 1.0,
+        completedItems: 100,
+        totalItems: 500,
+        dailyCompletionCounts: buildCounts(1),
+        today: today,
+      );
+      // 400 remaining / 1 per day = 400 days
+      expect(
+        result.projectedCompletionDate,
+        today.add(const Duration(days: 400)),
+      );
+    });
+
+    test('already completed returns today as projected date', () {
+      final result = PaceCalculator.calculateForPaceGoal(
+        targetPacePerDay: 1.0,
+        completedItems: 500,
+        totalItems: 500,
+        dailyCompletionCounts: buildCounts(1),
+        today: today,
+      );
+      expect(result.projectedCompletionDate, today);
+    });
+
+    test('zero target pace returns null projection', () {
+      final result = PaceCalculator.calculateForPaceGoal(
+        targetPacePerDay: 0.0,
+        completedItems: 100,
+        totalItems: 500,
+        dailyCompletionCounts: buildCounts(1),
+        today: today,
+      );
+      expect(result.projectedCompletionDate, isNull);
+    });
+  });
+
+  group('PaceCalculator.paceToDaily', () {
+    test('per_day returns value as-is', () {
+      expect(PaceCalculator.paceToDaily(3, 'per_day'), 3.0);
+    });
+
+    test('per_week divides by 7', () {
+      expect(PaceCalculator.paceToDaily(7, 'per_week'), 1.0);
+      expect(PaceCalculator.paceToDaily(5, 'per_week'), closeTo(0.714, 0.001));
+    });
+
+    test('per_day with value 1 returns 1.0', () {
+      expect(PaceCalculator.paceToDaily(1, 'per_day'), 1.0);
+    });
+  });
 }

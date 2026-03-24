@@ -84,6 +84,11 @@ epics:
     linear_identifier: "DNI-18"
     title: "[Epic-14] Settings"
     retrospective_done: false
+  epic-16:
+    linear_issue_id: "DNI-128"
+    linear_identifier: "DNI-128"
+    title: "[Epic 16] Onboarding-to-Dashboard Perfect Flow"
+    retrospective_done: false
 
 stories:
   # Epic 1: Foundation & Infrastructure (12 stories)
@@ -418,3 +423,35 @@ stories:
     linear_identifier: "DNI-78"
     parent_epic: "epic-14"
     title: "14.4: Account Management"
+
+  # Epic 16: Onboarding-to-Dashboard Perfect Flow (6 stories)
+  16.1:
+    linear_issue_id: "DNI-129"
+    linear_identifier: "DNI-129"
+    parent_epic: "epic-16"
+    title: "16.1: Pace-Based Goal Mode"
+  16.2:
+    linear_issue_id: "DNI-130"
+    linear_identifier: "DNI-130"
+    parent_epic: "epic-16"
+    title: "16.2: Study Day Configuration"
+  16.3:
+    linear_issue_id: "DNI-131"
+    linear_identifier: "DNI-131"
+    parent_epic: "epic-16"
+    title: "16.3: Dashboard Pace & Progress Integration"
+  16.4:
+    linear_issue_id: "DNI-132"
+    linear_identifier: "DNI-132"
+    parent_epic: "epic-16"
+    title: "16.4: Per-Item Review Count Display"
+  16.5:
+    linear_issue_id: "DNI-133"
+    linear_identifier: "DNI-133"
+    parent_epic: "epic-16"
+    title: "16.5: Onboarding Goal & Study Day Steps"
+  16.6:
+    linear_issue_id: "DNI-134"
+    linear_identifier: "DNI-134"
+    parent_epic: "epic-16"
+    title: "16.6: Dashboard Design & Experience Polish"

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 
 /// Screen for creating or editing a learning goal.
 ///
 /// Renders a form with a target percentage slider (default 100%),
-/// Gregorian date picker, and Hebrew date picker toggle.
-class GoalSetupScreen extends StatefulWidget {
+/// mode toggle (deadline vs pace), and appropriate inputs for each mode.
+class GoalSetupScreen extends ConsumerStatefulWidget {
   final CurriculumId curriculumId;
   final GoalEntity? existingGoal;
   final int? totalItems;
@@ -21,14 +24,19 @@ class GoalSetupScreen extends StatefulWidget {
   });
 
   @override
-  State<GoalSetupScreen> createState() => _GoalSetupScreenState();
+  ConsumerState<GoalSetupScreen> createState() => _GoalSetupScreenState();
 }
 
-class _GoalSetupScreenState extends State<GoalSetupScreen> {
+class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
   late double _targetPercent;
   DateTime? _targetDate;
   bool _useHebrewDate = false;
   late TextEditingController _descriptionController;
+
+  // Pace mode fields
+  late String _goalType;
+  late int _paceValue;
+  String _paceUnit = 'per_day';
 
   @override
   void initState() {
@@ -39,6 +47,10 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
     _descriptionController = TextEditingController(
       text: widget.existingGoal?.description ?? '',
     );
+    _goalType = widget.existingGoal?.goalType ?? 'deadline';
+    _paceValue = widget.existingGoal?.paceValue ??
+        (CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1);
+    _paceUnit = widget.existingGoal?.paceUnit ?? 'per_day';
   }
 
   @override
@@ -47,11 +59,23 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
     super.dispose();
   }
 
+  String _getUnitLabel(CurriculumId id) {
+    final config = CurriculumDefaults.hierarchyConfigs[id];
+    if (config == null) return 'items';
+    return config.level4Label ??
+        config.level3Label ??
+        config.level2Label ??
+        config.level1Label;
+  }
+
+  DateTime _now() => ref.read(clockProvider);
+
   Future<void> _pickGregorianDate() async {
+    final now = _now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _targetDate ?? DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime.now(),
+      initialDate: _targetDate ?? now.add(const Duration(days: 30)),
+      firstDate: now,
       lastDate: DateTime(2100),
     );
     if (picked != null) {
@@ -73,10 +97,179 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
     Navigator.of(context).pop(
       GoalFormResult(
         targetPercent: _targetPercent,
-        targetDate: _targetDate,
+        targetDate: _goalType == 'deadline' ? _targetDate : null,
         description: _descriptionController.text,
         dateType: _useHebrewDate ? 'hebrew' : 'gregorian',
+        goalType: _goalType,
+        paceValue: _goalType == 'pace' ? _paceValue : null,
+        paceUnit: _goalType == 'pace' ? _paceUnit : null,
       ),
+    );
+  }
+
+  Widget _buildDeadlineSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Date picker toggle
+        SwitchListTile(
+          title: const Text('Use Hebrew date'),
+          value: _useHebrewDate,
+          onChanged: (v) => setState(() => _useHebrewDate = v),
+        ),
+        const SizedBox(height: 8),
+        // Date selection
+        ListTile(
+          title: Text(
+            _targetDate != null
+                ? 'Target: ${_targetDate!.year}-${_targetDate!.month.toString().padLeft(2, '0')}-${_targetDate!.day.toString().padLeft(2, '0')}'
+                : 'No deadline (learn at your own pace)',
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed:
+                    _useHebrewDate ? _pickHebrewDate : _pickGregorianDate,
+              ),
+              if (_targetDate != null)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => setState(() => _targetDate = null),
+                ),
+            ],
+          ),
+        ),
+        // Daily pace summary (deadline mode)
+        if (_targetDate != null && widget.totalItems != null) ...[
+          const SizedBox(height: 16),
+          Builder(
+            builder: (context) {
+              final daysRemaining =
+                  _targetDate!.difference(_now()).inDays;
+              if (daysRemaining <= 0) {
+                return Text(
+                  'Deadline has passed',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              }
+              final remainingItems =
+                  (widget.totalItems! * _targetPercent / 100).ceil();
+              final pace = (remainingItems / daysRemaining).ceil();
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        '~$pace items per day',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$remainingItems items in $daysRemaining days',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPaceSection() {
+    final unitLabel = _getUnitLabel(widget.curriculumId);
+    final perLabel = _paceUnit == 'per_day' ? 'per day' : 'per week';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Pace value input
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: _paceValue.toString(),
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: '$unitLabel $perLabel',
+                  helperText: 'How many per ${_paceUnit == 'per_day' ? 'day' : 'week'}?',
+                ),
+                onChanged: (v) {
+                  final parsed = int.tryParse(v);
+                  if (parsed != null && parsed > 0) {
+                    setState(() => _paceValue = parsed);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Per day / per week selector
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'per_day', label: Text('Per day')),
+                ButtonSegment(value: 'per_week', label: Text('Per week')),
+              ],
+              selected: {_paceUnit},
+              onSelectionChanged: (selected) {
+                setState(() => _paceUnit = selected.first);
+              },
+            ),
+          ],
+        ),
+        // Projected completion card
+        if (widget.totalItems != null) ...[
+          const SizedBox(height: 16),
+          Builder(
+            builder: (context) {
+              final remainingItems =
+                  (widget.totalItems! * _targetPercent / 100).ceil();
+              final dailyRate = _paceUnit == 'per_day'
+                  ? _paceValue.toDouble()
+                  : _paceValue / 7.0;
+              if (dailyRate <= 0) {
+                return const SizedBox.shrink();
+              }
+              final daysToComplete = (remainingItems / dailyRate).ceil();
+              final projectedDate =
+                  _now().add(Duration(days: daysToComplete));
+              final formattedDate =
+                  '${projectedDate.year}-${projectedDate.month.toString().padLeft(2, '0')}-${projectedDate.day.toString().padLeft(2, '0')}';
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Projected completion: $formattedDate',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$remainingItems $unitLabel in ~$daysToComplete days',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ],
     );
   }
 
@@ -95,106 +288,64 @@ class _GoalSetupScreenState extends State<GoalSetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Description
-              TextField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  hintText: 'e.g., Finish all Mishnayos by bar mitzvah',
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Target percentage slider
-              Text(
-                'Target: ${_targetPercent.round()}%',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              Slider(
-                value: _targetPercent,
-                min: 1,
-                max: 100,
-                divisions: 99,
-                label: '${_targetPercent.round()}%',
-                onChanged: (v) => setState(() => _targetPercent = v),
-              ),
-              const SizedBox(height: 24),
-              // Date picker toggle
-              SwitchListTile(
-                title: const Text('Use Hebrew date'),
-                value: _useHebrewDate,
-                onChanged: (v) => setState(() => _useHebrewDate = v),
-              ),
-              const SizedBox(height: 8),
-              // Date selection
-              ListTile(
-                title: Text(
-                  _targetDate != null
-                      ? 'Target: ${_targetDate!.year}-${_targetDate!.month.toString().padLeft(2, '0')}-${_targetDate!.day.toString().padLeft(2, '0')}'
-                      : 'No deadline (learn at your own pace)',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: _useHebrewDate
-                          ? _pickHebrewDate
-                          : _pickGregorianDate,
-                    ),
-                    if (_targetDate != null)
-                      IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() => _targetDate = null),
-                      ),
-                  ],
-                ),
-              ),
-              // Daily pace summary
-              if (_targetDate != null && widget.totalItems != null) ...[
-                const SizedBox(height: 16),
-                Builder(
-                  builder: (context) {
-                    final daysRemaining = _targetDate!
-                        .difference(DateTime.now())
-                        .inDays;
-                    if (daysRemaining <= 0) {
-                      return Text(
-                        'Deadline has passed',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      );
-                    }
-                    final remainingItems =
-                        (widget.totalItems! * _targetPercent / 100).ceil();
-                    final pace = (remainingItems / daysRemaining).ceil();
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Text(
-                              '~$pace items per day',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$remainingItems items in $daysRemaining days',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Description
+                      TextField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description (optional)',
+                          hintText: 'e.g., Finish all Mishnayos by bar mitzvah',
                         ),
                       ),
-                    );
-                  },
+                      const SizedBox(height: 24),
+                      // Target percentage slider
+                      Text(
+                        'Target: ${_targetPercent.round()}%',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Slider(
+                        value: _targetPercent,
+                        min: 1,
+                        max: 100,
+                        divisions: 99,
+                        label: '${_targetPercent.round()}%',
+                        onChanged: (v) => setState(() => _targetPercent = v),
+                      ),
+                      const SizedBox(height: 24),
+                      // Goal type toggle
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
+                            value: 'deadline',
+                            label: Text('Set a deadline'),
+                            icon: Icon(Icons.calendar_today),
+                          ),
+                          ButtonSegment(
+                            value: 'pace',
+                            label: Text('Set a pace'),
+                            icon: Icon(Icons.speed),
+                          ),
+                        ],
+                        selected: {_goalType},
+                        onSelectionChanged: (selected) {
+                          setState(() {
+                            _goalType = selected.first;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // Mode-specific content
+                      if (_goalType == 'deadline') _buildDeadlineSection(),
+                      if (_goalType == 'pace') _buildPaceSection(),
+                    ],
+                  ),
                 ),
-              ],
-              const Spacer(),
+              ),
+              const SizedBox(height: 16),
               FilledButton(
                 onPressed: _submit,
                 child: Text(
@@ -215,11 +366,17 @@ class GoalFormResult {
   final DateTime? targetDate;
   final String description;
   final String dateType;
+  final String goalType;
+  final int? paceValue;
+  final String? paceUnit;
 
   const GoalFormResult({
     required this.targetPercent,
     this.targetDate,
     this.description = '',
     this.dateType = 'gregorian',
+    this.goalType = 'deadline',
+    this.paceValue,
+    this.paceUnit,
   });
 }

@@ -29,7 +29,7 @@ previousVersion: v1 (2026-01-04)
 
 **Learning Tracker** (formerly Learning Tracker) is a multi-curriculum Android app for tracking Torah learning with configurable review cycles, intelligent scheduling, and balanced motivation. The app supports both children and adults, serving any Torah learner who needs structured tracking across one or more curricula.
 
-The app tracks a configurable N-stage learning cycle (learn + multiple chazara stages with user-defined timing) across five Sefaria-sourced curricula: Mishnayos, Gemara Bavli, Gemara Yerushalmi, Mishna Berurah, and Chumash. It provides adaptive scheduling per curriculum, drag-and-drop learning order customization, per-curriculum goals with Hebrew or Gregorian deadlines, and account-based multi-device sync.
+The app tracks a configurable N-stage learning cycle (learn + multiple chazara stages with user-defined timing) across five Sefaria-sourced curricula: Mishnayos, Gemara Bavli, Gemara Yerushalmi, Mishna Berurah, and Chumash. It provides adaptive scheduling per curriculum, drag-and-drop learning order customization, per-curriculum goals with Hebrew or English deadlines, and account-based multi-device sync.
 
 **Target Users:**
 
@@ -248,7 +248,7 @@ All features are required for v1.0 release. This is not a phased rollout.
 
 - Parametric scheduler engine per curriculum
 - Daily task generation and display
-- Per-curriculum goal management with Gregorian/Hebrew deadlines
+- Per-curriculum goal management with English/Hebrew deadlines
 - Pace tracking (ahead/on-pace/behind)
 - Cross-curriculum daily schedule composer
 
@@ -530,7 +530,7 @@ During the session, the tutor uses progress data to focus on items due for revie
 - FR3: Users view content text in Hebrew and English from Sefaria
 - FR4: System attributes content to Sefaria API source
 - FR5: Users activate and deactivate curricula at any time without losing progress data
-- FR6: System imports curriculum content from Sefaria with progress indicators and error recovery
+- FR6: All curriculum content (hierarchy and text in all available languages) is bundled with the app at build time — no runtime downloading or importing. Content updates ship with app updates.
 - FR7: System populates curriculum hierarchy configuration (level labels and depth) per curriculum
 
 ### Multi-Track Learning Management
@@ -546,6 +546,7 @@ During the session, the tutor uses progress data to focus on items due for revie
 - FR13: Users mark a content item as completed for a specific stage within a specific track
 - FR14: System enforces stage progression (must complete stage N before stage N+1 for same item)
 - FR15: System enforces immutability (completed stages cannot be unmarked, append-only log)
+- FR15b: System permanently tracks the total number of times each content item has been learned and reviewed. Every completion (initial learning and every subsequent chazara round) is recorded in the append-only log. Users can see the full review count per item (e.g., "Shabbos Daf 5a — learned 1x, reviewed 10x"). This count persists forever and survives track deletion, scope changes, and curriculum deactivation.
 - FR16: System awards configurable points per stage per curriculum on completion
 - FR17: System advances bookmark to next item in learning order on first-stage completion
 - FR18: System syncs completions to Firestore via push-on-write
@@ -580,12 +581,19 @@ During the session, the tutor uses progress data to focus on items due for revie
 
 ### Goal Management
 
-- FR38: Users set per-curriculum completion goals with target dates
-- FR39: Users set target dates using Gregorian or Hebrew calendar
+- FR38: Users set per-curriculum completion goals using one of two modes:
+  - **Deadline mode:** Target completion date (English or Hebrew calendar). Scheduler calculates daily load automatically.
+  - **Pace mode:** User-defined pace (e.g., 1 daf/day, 1 amud/day, 5 amudim/week). Scheduler follows the specified pace. App calculates and displays projected completion date.
+- FR39: Users set target dates using English or Hebrew calendar (deadline mode)
 - FR40: Users set multiple goals per curriculum (e.g., section-level deadlines)
 - FR41: Users modify or remove goals at any time
 - FR42: System tracks pace per goal (ahead/on-pace/behind with projected completion date)
 - FR43: Users learn without deadlines (no-deadline mode with chazara-only recommendations)
+- FR43b: Users configure study day schedules per curriculum:
+  - Designate which days of the week are for **new learning** (e.g., Sunday–Thursday)
+  - Designate which days are for **review/chazara only** (e.g., Friday & Shabbos)
+  - Scheduler only assigns new learning tasks on study days and chazara tasks on review days
+  - Fully configurable — any combination of days allowed
 
 ### Progress Tracking & Visualization
 
@@ -595,6 +603,7 @@ During the session, the tutor uses progress data to focus on items due for revie
 - FR47: Users view pace status per curriculum (days ahead/on-pace/behind)
 - FR48: Users view projected completion date based on current pace
 - FR49: Users view completion history over time with filters (curriculum, track, stage, date range)
+- FR49b: Users view per-item review counts showing how many times each content item has been learned and reviewed (e.g., "learned 1x, reviewed 10x"). This is a permanent, lifetime count derived from the append-only completion log.
 - FR50: Users view completions-over-time charts and cumulative progress
 - FR51: Users view streak calendar highlighting days with learning activity
 
@@ -679,7 +688,7 @@ During the session, the tutor uses progress data to focus on items due for revie
 ### Calendar & Date Management
 
 - FR106: System calculates Hebrew calendar dates using kosher_dart
-- FR107: System supports Gregorian and Hebrew date pickers for goal deadlines
+- FR107: System supports English and Hebrew date pickers for goal deadlines
 - FR108: System stores all dates/times as UTC, converts in presentation layer only
 - FR109: System uses local timezone for streak day boundary
 

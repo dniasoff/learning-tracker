@@ -102,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration {
@@ -289,6 +289,18 @@ class AppDatabase extends _$AppDatabase {
         if (from < 15) {
           // Migration from schema v14 to v15: Add learning_ledger table
           await m.createTable($LearningLedgerTable(attachedDatabase));
+        }
+        if (from < 16) {
+          // Migration from schema v15 to v16: Add pace goal columns to goals
+          await customStatement(
+            "ALTER TABLE goals ADD COLUMN goal_type TEXT NOT NULL DEFAULT 'deadline'",
+          );
+          await customStatement(
+            'ALTER TABLE goals ADD COLUMN pace_value INTEGER',
+          );
+          await customStatement(
+            'ALTER TABLE goals ADD COLUMN pace_unit TEXT',
+          );
         }
       },
     );

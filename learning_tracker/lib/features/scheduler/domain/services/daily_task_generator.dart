@@ -18,12 +18,14 @@ class DailyTaskGenerator {
     CurriculumId curriculumId,
     DateTime date, {
     DateTime? goalDeadline,
+    double? pacePerDay,
     Set<String> skippedRefs = const {},
   }) async {
     final config = ScheduleConfig(
       curriculumId: curriculumId,
       currentDate: date,
       goalDeadline: goalDeadline,
+      pacePerDay: pacePerDay,
     );
     final tasks = await _engine.generateDailyTasks(config);
 
@@ -43,6 +45,7 @@ class DailyTaskGenerator {
     DateTime date, {
     Set<String> skippedRefs = const {},
     Map<CurriculumId, DateTime> goalDeadlines = const {},
+    Map<CurriculumId, double> pacePerDayMap = const {},
   }) async {
     final allTasks = <DailyTask>[];
 
@@ -51,6 +54,7 @@ class DailyTaskGenerator {
         curriculum,
         date,
         goalDeadline: goalDeadlines[curriculum],
+        pacePerDay: pacePerDayMap[curriculum],
         skippedRefs: skippedRefs,
       );
       allTasks.addAll(tasks);

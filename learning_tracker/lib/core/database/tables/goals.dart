@@ -12,6 +12,10 @@ class Goals extends Table {
   DateTimeColumn get targetDate => dateTime().nullable()();
   TextColumn get description => text().withDefault(const Constant(''))();
   TextColumn get dateType => text().withDefault(const Constant('gregorian'))();
+  TextColumn get goalType =>
+      text().withDefault(const Constant('deadline'))();
+  IntColumn get paceValue => integer().nullable()();
+  TextColumn get paceUnit => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }
