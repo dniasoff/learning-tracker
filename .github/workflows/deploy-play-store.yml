@@ -37,7 +37,7 @@ jobs:
           elif [ "${{ github.ref_name }}" = "main" ]; then
             TRACK="production"
           else
-            TRACK="alpha"
+            TRACK="internal"
           fi
           echo "track=$TRACK" >> "$GITHUB_OUTPUT"
           echo "Deploying to track: $TRACK (branch: ${{ github.ref_name }})"

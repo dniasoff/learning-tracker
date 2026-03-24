@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +17,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 
 /// Load real fonts so text renders in golden screenshots instead of Ahem boxes.
 Future<void> loadFonts() async {
-  final fontDir =
+  const fontDir =
       '/home/daniel/fvm/versions/stable/bin/cache/artifacts/material_fonts';
 
   // Load Roboto variants (Flutter's default Material font)
@@ -48,7 +46,7 @@ Future<void> loadFonts() async {
   }
 
   // Load MaterialIcons
-  final iconsPath = '$fontDir/MaterialIcons-Regular.otf';
+  const iconsPath = '$fontDir/MaterialIcons-Regular.otf';
   if (File(iconsPath).existsSync()) {
     final loader = FontLoader('MaterialIcons');
     final bytes = File(iconsPath).readAsBytesSync();
@@ -58,9 +56,7 @@ Future<void> loadFonts() async {
 }
 
 /// Wraps content in a phone-sized Material app with the real theme.
-Widget phoneApp({
-  required Widget child,
-}) {
+Widget phoneApp({required Widget child}) {
   return ProviderScope(
     child: MediaQuery(
       data: const MediaQueryData(
@@ -184,10 +180,7 @@ void main() {
                     padding: EdgeInsets.only(bottom: 12),
                     child: PointsSummaryWidget(totalPoints: 1247),
                   ),
-                  TodaysTasksWidget(
-                    taskCount: 5,
-                    onQuickStart: () {},
-                  ),
+                  TodaysTasksWidget(taskCount: 5, onQuickStart: () {}),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: () {},
@@ -279,11 +272,7 @@ void main() {
                     onTap: () {},
                     child: Row(
                       children: [
-                        Container(
-                          width: 6,
-                          height: 80,
-                          color: color,
-                        ),
+                        Container(width: 6, height: 80, color: color),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -300,8 +289,8 @@ void main() {
                                         name,
                                         style: theme.textTheme.titleMedium
                                             ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ),
                                     if (completed)
@@ -315,9 +304,9 @@ void main() {
                                         '${(progress * 100).round()}%',
                                         style: theme.textTheme.bodySmall
                                             ?.copyWith(
-                                          color: color,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                              color: color,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                   ],
                                 ),
@@ -333,9 +322,11 @@ void main() {
                                   LinearProgressIndicator(
                                     value: progress,
                                     backgroundColor: theme
-                                        .colorScheme.surfaceContainerHighest,
-                                    valueColor:
-                                        const AlwaysStoppedAnimation(color),
+                                        .colorScheme
+                                        .surfaceContainerHighest,
+                                    valueColor: const AlwaysStoppedAnimation(
+                                      color,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -376,20 +367,30 @@ void main() {
       await tester.pumpWidget(
         phoneApp(
           child: Scaffold(
-            appBar: AppBar(
-              title: const AppBarTitle(text: 'Progress'),
-            ),
+            appBar: AppBar(title: const AppBarTitle(text: 'Progress')),
             body: ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 // Stats row
                 Row(
                   children: [
-                    _StatCard('Total Learned', '2,847', AppTheme.lightTheme.colorScheme.tertiary),
+                    _StatCard(
+                      'Total Learned',
+                      '2,847',
+                      AppTheme.lightTheme.colorScheme.tertiary,
+                    ),
                     const SizedBox(width: 8),
-                    _StatCard('This Week', '142', AppTheme.lightTheme.colorScheme.secondary),
+                    _StatCard(
+                      'This Week',
+                      '142',
+                      AppTheme.lightTheme.colorScheme.secondary,
+                    ),
                     const SizedBox(width: 8),
-                    _StatCard('Avg/Day', '23', AppTheme.lightTheme.colorScheme.primary),
+                    _StatCard(
+                      'Avg/Day',
+                      '23',
+                      AppTheme.lightTheme.colorScheme.primary,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -409,10 +410,7 @@ void main() {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        SizedBox(
-                          height: 200,
-                          child: _WeeklyChart(),
-                        ),
+                        SizedBox(height: 200, child: _WeeklyChart()),
                       ],
                     ),
                   ),
@@ -420,26 +418,50 @@ void main() {
                 const SizedBox(height: 16),
 
                 // Curriculum breakdown
-                Card(
+                const Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Curriculum Breakdown',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        _CurriculumProgress('Mishnayos', 0.42, AppTheme.curriculumMishna),
-                        _CurriculumProgress('Talmud Bavli', 0.18, AppTheme.curriculumBavli),
-                        _CurriculumProgress('Chumash', 0.65, AppTheme.curriculumChumash),
-                        _CurriculumProgress('Mishna Berurah', 0.33, AppTheme.curriculumMishnaBerurah),
-                        _CurriculumProgress('Nach', 0.28, AppTheme.curriculumNach),
-                        _CurriculumProgress('Mussar', 0.12, AppTheme.curriculumMussar),
+                        SizedBox(height: 16),
+                        _CurriculumProgress(
+                          'Mishnayos',
+                          0.42,
+                          AppTheme.curriculumMishna,
+                        ),
+                        _CurriculumProgress(
+                          'Talmud Bavli',
+                          0.18,
+                          AppTheme.curriculumBavli,
+                        ),
+                        _CurriculumProgress(
+                          'Chumash',
+                          0.65,
+                          AppTheme.curriculumChumash,
+                        ),
+                        _CurriculumProgress(
+                          'Mishna Berurah',
+                          0.33,
+                          AppTheme.curriculumMishnaBerurah,
+                        ),
+                        _CurriculumProgress(
+                          'Nach',
+                          0.28,
+                          AppTheme.curriculumNach,
+                        ),
+                        _CurriculumProgress(
+                          'Mussar',
+                          0.12,
+                          AppTheme.curriculumMussar,
+                        ),
                       ],
                     ),
                   ),
@@ -447,20 +469,20 @@ void main() {
                 const SizedBox(height: 16),
 
                 // Milestones
-                Card(
+                const Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Recent Milestones',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _MilestoneItem(
                           'Completed Masechet Berachot',
                           'Mishnayos • 2 days ago',
@@ -471,7 +493,7 @@ void main() {
                           '1000 Units Learned',
                           'Lifetime achievement',
                           Icons.star,
-                          const Color(0xFF6B9080),
+                          Color(0xFF6B9080),
                         ),
                         _MilestoneItem(
                           '14-Day Streak',
@@ -508,9 +530,7 @@ void main() {
       await tester.pumpWidget(
         phoneApp(
           child: Scaffold(
-            appBar: AppBar(
-              title: const AppBarTitle(text: 'Today\'s Schedule'),
-            ),
+            appBar: AppBar(title: const AppBarTitle(text: 'Today\'s Schedule')),
             body: ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -524,7 +544,10 @@ void main() {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.flag, color: AppTheme.lightTheme.colorScheme.primary),
+                            Icon(
+                              Icons.flag,
+                              color: AppTheme.lightTheme.colorScheme.primary,
+                            ),
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
@@ -543,11 +566,16 @@ void main() {
                                   style: TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.lightTheme.colorScheme.secondary,
+                                    color: AppTheme
+                                        .lightTheme
+                                        .colorScheme
+                                        .secondary,
                                   ),
                                 ),
-                                const Text('days left',
-                                    style: TextStyle(fontSize: 12)),
+                                const Text(
+                                  'days left',
+                                  style: TextStyle(fontSize: 12),
+                                ),
                               ],
                             ),
                           ],
@@ -556,13 +584,17 @@ void main() {
                         LinearProgressIndicator(
                           value: 0.42,
                           backgroundColor: AppTheme
-                              .lightTheme.colorScheme.surfaceContainerHighest,
+                              .lightTheme
+                              .colorScheme
+                              .surfaceContainerHighest,
                           minHeight: 8,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         const SizedBox(height: 4),
-                        const Text('42% complete',
-                            style: TextStyle(fontSize: 12)),
+                        const Text(
+                          '42% complete',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ],
                     ),
                   ),
@@ -575,35 +607,35 @@ void main() {
                 ),
                 const SizedBox(height: 8),
 
-                _TaskItem(
+                const _TaskItem(
                   'Mishnayos',
                   'Berachot 3:5–3:8',
                   '~15 min',
                   AppTheme.curriculumMishna,
                   done: true,
                 ),
-                _TaskItem(
+                const _TaskItem(
                   'Talmud Bavli',
                   'Brachot 24a',
                   '~30 min',
                   AppTheme.curriculumBavli,
                   done: true,
                 ),
-                _TaskItem(
+                const _TaskItem(
                   'Chumash',
                   'Bereishit 12:1–12:10',
                   '~10 min',
                   AppTheme.curriculumChumash,
                   done: false,
                 ),
-                _TaskItem(
+                const _TaskItem(
                   'Mishna Berurah',
                   'Siman 91:1–91:3',
                   '~20 min',
                   AppTheme.curriculumMishnaBerurah,
                   done: false,
                 ),
-                _TaskItem(
+                const _TaskItem(
                   'Nach',
                   'Yehoshua 5:1–5:12',
                   '~10 min',
@@ -614,17 +646,17 @@ void main() {
                 const SizedBox(height: 16),
 
                 // Summary
-                Card(
+                const Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: Column(
                       children: [
                         _SummaryRow('Daily target', '~85 min'),
-                        const Divider(),
+                        Divider(),
                         _SummaryRow('Completed', '2 of 5'),
-                        const Divider(),
+                        Divider(),
                         _SummaryRow('Pace', 'On track ✓'),
-                        const Divider(),
+                        Divider(),
                         _SummaryRow('Tracks', 'Personal, School'),
                       ],
                     ),
@@ -655,9 +687,7 @@ void main() {
       await tester.pumpWidget(
         phoneApp(
           child: Scaffold(
-            appBar: AppBar(
-              title: const AppBarTitle(text: 'Achievements'),
-            ),
+            appBar: AppBar(title: const AppBarTitle(text: 'Achievements')),
             body: ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -709,16 +739,24 @@ void main() {
                                         ? const Color(0xFFF4A261)
                                         : Colors.grey[300],
                                     child: done
-                                        ? const Icon(Icons.check, size: 14, color: Colors.white)
-                                        : Text(day,
+                                        ? const Icon(
+                                            Icons.check,
+                                            size: 14,
+                                            color: Colors.white,
+                                          )
+                                        : Text(
+                                            day,
                                             style: TextStyle(
                                               fontSize: 10,
                                               color: Colors.grey[600],
-                                            )),
+                                            ),
+                                          ),
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(day,
-                                      style: const TextStyle(fontSize: 10)),
+                                  Text(
+                                    day,
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
                                 ],
                               ),
                           ],
@@ -736,7 +774,11 @@ void main() {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        const Icon(Icons.star, color: Color(0xFF6B9080), size: 28),
+                        const Icon(
+                          Icons.star,
+                          color: Color(0xFF6B9080),
+                          size: 28,
+                        ),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
@@ -767,13 +809,55 @@ void main() {
                 ),
                 const SizedBox(height: 8),
 
-                _AchievementTile('First Steps', 'Complete your first lesson', Icons.spa, Colors.green, true),
-                _AchievementTile('Week Warrior', '7-day streak', Icons.shield, Colors.blue, true),
-                _AchievementTile('Seder Master', 'Complete a full Seder', Icons.menu_book, Colors.purple, true),
-                _AchievementTile('Torah Scholar', 'Learn 1000 units', Icons.school, const Color(0xFFF4A261), true),
-                _AchievementTile('Consistency King', '30-day streak', Icons.diamond, Colors.amber, false),
-                _AchievementTile('Shas Journey', 'Start Talmud Bavli', Icons.account_balance, Colors.indigo, true),
-                _AchievementTile('Full Review', 'Complete all chazara stages', Icons.replay, Colors.teal, false),
+                const _AchievementTile(
+                  'First Steps',
+                  'Complete your first lesson',
+                  Icons.spa,
+                  Colors.green,
+                  true,
+                ),
+                const _AchievementTile(
+                  'Week Warrior',
+                  '7-day streak',
+                  Icons.shield,
+                  Colors.blue,
+                  true,
+                ),
+                const _AchievementTile(
+                  'Seder Master',
+                  'Complete a full Seder',
+                  Icons.menu_book,
+                  Colors.purple,
+                  true,
+                ),
+                const _AchievementTile(
+                  'Torah Scholar',
+                  'Learn 1000 units',
+                  Icons.school,
+                  Color(0xFFF4A261),
+                  true,
+                ),
+                const _AchievementTile(
+                  'Consistency King',
+                  '30-day streak',
+                  Icons.diamond,
+                  Colors.amber,
+                  false,
+                ),
+                const _AchievementTile(
+                  'Shas Journey',
+                  'Start Talmud Bavli',
+                  Icons.account_balance,
+                  Colors.indigo,
+                  true,
+                ),
+                const _AchievementTile(
+                  'Full Review',
+                  'Complete all chazara stages',
+                  Icons.replay,
+                  Colors.teal,
+                  false,
+                ),
               ],
             ),
           ),
@@ -808,8 +892,10 @@ class _StatCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
               const SizedBox(height: 4),
               Text(
                 value,
@@ -832,7 +918,7 @@ class _WeeklyChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shab'];
     final values = [18, 25, 22, 30, 28, 15, 35];
-    final maxVal = 35;
+    const maxVal = 35;
     final theme = Theme.of(context);
 
     return Row(
@@ -846,7 +932,10 @@ class _WeeklyChart extends StatelessWidget {
               children: [
                 Text(
                   '${values[i]}',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Container(
@@ -987,7 +1076,10 @@ class _TaskItem extends StatelessWidget {
             color: done ? Colors.grey : null,
           ),
         ),
-        trailing: Text(duration, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+        trailing: Text(
+          duration,
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
       ),
     );
   }
@@ -1035,8 +1127,9 @@ class _AchievementTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor:
-              unlocked ? color.withValues(alpha: 0.2) : Colors.grey[200],
+          backgroundColor: unlocked
+              ? color.withValues(alpha: 0.2)
+              : Colors.grey[200],
           child: Icon(
             unlocked ? icon : Icons.lock,
             color: unlocked ? color : Colors.grey,
