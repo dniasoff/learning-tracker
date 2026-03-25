@@ -249,6 +249,93 @@ class CompletionDao extends DatabaseAccessor<AppDatabase>
     return result.read(completions.id.count()) ?? 0;
   }
 
+  // ========== Review Count Queries (Story 16.4) ==========
+
+  /// Get total review count per item for a curriculum and profile.
+  /// Returns Map<sefariaRef, totalCount> via GROUP BY. (AC-2, AC-3)
+  Future<Map<String, int>> getReviewCountsByItem(
+    String curriculumId,
+    int profileId,
+  ) async {
+    final query = selectOnly(completions)
+      ..addColumns([completions.sefariaRef, completions.id.count()])
+      ..where(
+        completions.curriculumId.equals(curriculumId) &
+            completions.profileId.equals(profileId),
+      )
+      ..groupBy([completions.sefariaRef]);
+
+    final results = await query.get();
+    final counts = <String, int>{};
+    for (final row in results) {
+      final ref = row.read(completions.sefariaRef);
+      final count = row.read(completions.id.count());
+      if (ref != null && count != null) {
+        counts[ref] = count;
+      }
+    }
+    return counts;
+  }
+
+  /// Get per-stage breakdown for a single item. (AC-1)
+  /// Returns Map<stageId, count> via GROUP BY.
+  Future<Map<int, int>> getStageBreakdownByItem(
+    String curriculumId,
+    String sefariaRef,
+    int profileId,
+  ) async {
+    final query = selectOnly(completions)
+      ..addColumns([completions.stageId, completions.id.count()])
+      ..where(
+        completions.curriculumId.equals(curriculumId) &
+            completions.sefariaRef.equals(sefariaRef) &
+            completions.profileId.equals(profileId),
+      )
+      ..groupBy([completions.stageId]);
+
+    final results = await query.get();
+    final breakdown = <int, int>{};
+    for (final row in results) {
+      final stageId = row.read(completions.stageId);
+      final count = row.read(completions.id.count());
+      if (stageId != null && count != null) {
+        breakdown[stageId] = count;
+      }
+    }
+    return breakdown;
+  }
+
+  /// Get per-item stage breakdown for all items in a curriculum. (AC-1, AC-3)
+  /// Returns Map<sefariaRef, Map<stageId, count>> via GROUP BY.
+  Future<Map<String, Map<int, int>>> getReviewCountsWithStageBreakdown(
+    String curriculumId,
+    int profileId,
+  ) async {
+    final query = selectOnly(completions)
+      ..addColumns([
+        completions.sefariaRef,
+        completions.stageId,
+        completions.id.count(),
+      ])
+      ..where(
+        completions.curriculumId.equals(curriculumId) &
+            completions.profileId.equals(profileId),
+      )
+      ..groupBy([completions.sefariaRef, completions.stageId]);
+
+    final results = await query.get();
+    final nested = <String, Map<int, int>>{};
+    for (final row in results) {
+      final ref = row.read(completions.sefariaRef);
+      final stageId = row.read(completions.stageId);
+      final count = row.read(completions.id.count());
+      if (ref != null && stageId != null && count != null) {
+        nested.putIfAbsent(ref, () => {})[stageId] = count;
+      }
+    }
+    return nested;
+  }
+
   /// Returns true if any completions reference the given stage ID.
   Future<bool> hasCompletionsForStage(int stageId) async {
     final result =

@@ -1,39 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 
 /// Displays a single content item in the hierarchy browser.
 ///
 /// Shows Hebrew and English names, with completion status indicators.
+/// Leaf items show a review count badge (AC-4) that updates reactively (AC-7).
 class ContentItemTile extends ConsumerWidget {
   const ContentItemTile({
     super.key,
     required this.item,
     required this.curriculum,
     required this.onTap,
+    this.reviewCount,
   });
 
   final ContentItem item;
   final CurriculumId curriculum;
   final VoidCallback onTap;
 
+  /// Pre-loaded review count from batch provider. Falls back to per-item
+  /// provider if null.
+  final int? reviewCount;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    // Watch completion count for this item.
-    final completionsAsync = ref.watch(
-      completionCountProvider(
-        curriculumId: curriculum.storageKey,
-        sefariaRef: item.sefariaRef,
-      ),
-    );
-    final completionCount = completionsAsync.value ?? 0;
+    // Use batch-loaded count if available, otherwise watch per-item provider.
+    final count =
+        reviewCount ??
+        ref
+            .watch(
+              completionCountProvider(
+                curriculumId: curriculum.storageKey,
+                sefariaRef: item.sefariaRef,
+              ),
+            )
+            .value ??
+        0;
 
     return ListTile(
-      leading: _buildLeadingIcon(theme, completionCount),
+      leading: _buildLeadingIcon(theme, count),
       title: Text(
         item.displayNameHe,
         style: theme.textTheme.titleMedium?.copyWith(
@@ -48,14 +62,31 @@ class ContentItemTile extends ConsumerWidget {
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
-      trailing: _buildTrailing(theme, completionCount),
+      trailing: _buildTrailing(theme, count),
       onTap: onTap,
+      onLongPress: item.isLeaf && count > 0
+          ? () => _showStageBreakdown(context, ref)
+          : null,
+    );
+  }
+
+  void _showStageBreakdown(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _StageBreakdownSheet(
+        curriculumId: curriculum.storageKey,
+        sefariaRef: item.sefariaRef,
+        displayName: item.displayNameEn,
+      ),
     );
   }
 
   Widget _buildLeadingIcon(ThemeData theme, int completionCount) {
     if (item.isLeaf) {
-      // Leaf items show completion status icon based on actual completion data.
       final isCompleted = completionCount > 0;
       return Icon(
         isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -64,22 +95,15 @@ class ContentItemTile extends ConsumerWidget {
             : theme.colorScheme.outline,
       );
     } else {
-      // Container items show folder icon.
       return Icon(Icons.folder, color: theme.colorScheme.primary);
     }
   }
 
   Widget? _buildTrailing(ThemeData theme, int completionCount) {
     if (item.isLeaf) {
-      // Show completion count badge if item has been completed at least once.
-      if (completionCount > 0) {
-        return StageCompletionIndicators(
-          stages: {for (var i = 0; i < completionCount; i++) i: true},
-        );
-      }
-      return null;
+      // AC-4: Show review count badge; AC-6: hidden when 0.
+      return ReviewCountBadge(count: completionCount);
     } else {
-      // Container items show chevron for drill-down.
       return Icon(
         Icons.chevron_right,
         color: theme.colorScheme.onSurfaceVariant,
@@ -89,12 +113,9 @@ class ContentItemTile extends ConsumerWidget {
 }
 
 /// Widget showing per-stage completion status for a leaf item.
-///
-/// Example: [✓ Learn] [○ Review] [○ Chazara]
 class StageCompletionIndicators extends StatelessWidget {
   const StageCompletionIndicators({super.key, required this.stages});
 
-  /// Map of stage ID to completion status.
   final Map<int, bool> stages;
 
   @override
@@ -121,8 +142,6 @@ class StageCompletionIndicators extends StatelessWidget {
 }
 
 /// Widget showing aggregate completion percentage for a container.
-///
-/// Example: "30%" with progress indicator
 class AggregateCompletionIndicator extends StatelessWidget {
   const AggregateCompletionIndicator({super.key, required this.percentage});
 
@@ -154,5 +173,100 @@ class AggregateCompletionIndicator extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Bottom sheet showing per-stage breakdown for a content item (AC-5).
+class _StageBreakdownSheet extends ConsumerWidget {
+  const _StageBreakdownSheet({
+    required this.curriculumId,
+    required this.sefariaRef,
+    required this.displayName,
+  });
+
+  final String curriculumId;
+  final String sefariaRef;
+  final String displayName;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final breakdownAsync = ref.watch(
+      itemStageBreakdownProvider((
+        curriculumId: curriculumId,
+        sefariaRef: sefariaRef,
+      )),
+    );
+    final db = ref.watch(appDatabaseProvider);
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            displayName,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Review History',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 16),
+          breakdownAsync.when(
+            data: (breakdown) {
+              if (breakdown.isEmpty) {
+                return Text(
+                  'No completions yet.',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+                );
+              }
+              return FutureBuilder<Map<int, String>>(
+                future: _resolveStageNames(db, curriculumId),
+                builder: (context, snapshot) {
+                  final names = snapshot.data ?? {};
+                  return ItemReviewBreakdown(
+                    stageBreakdown: breakdown,
+                    stageNames: names,
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('Error: $e'),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<int, String>> _resolveStageNames(
+    AppDatabase db,
+    String curriculumId,
+  ) async {
+    final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+      curriculumId,
+    );
+    return {for (final s in stages) s.id: s.stageName};
   }
 }

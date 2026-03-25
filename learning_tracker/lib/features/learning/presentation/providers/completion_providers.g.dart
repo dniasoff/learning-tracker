@@ -263,3 +263,185 @@ final class CompletionCountFamily extends $Family
   @override
   String toString() => r'completionCountProvider';
 }
+
+/// Batch review counts for all items in a curriculum (AC-3, AC-7).
+/// Single GROUP BY query — avoids N+1 per-item watches.
+
+@ProviderFor(reviewCountsForCurriculum)
+final reviewCountsForCurriculumProvider = ReviewCountsForCurriculumFamily._();
+
+/// Batch review counts for all items in a curriculum (AC-3, AC-7).
+/// Single GROUP BY query — avoids N+1 per-item watches.
+
+final class ReviewCountsForCurriculumProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, int>>,
+          Map<String, int>,
+          FutureOr<Map<String, int>>
+        >
+    with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
+  /// Batch review counts for all items in a curriculum (AC-3, AC-7).
+  /// Single GROUP BY query — avoids N+1 per-item watches.
+  ReviewCountsForCurriculumProvider._({
+    required ReviewCountsForCurriculumFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'reviewCountsForCurriculumProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$reviewCountsForCurriculumHash();
+
+  @override
+  String toString() {
+    return r'reviewCountsForCurriculumProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, int>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, int>> create(Ref ref) {
+    final argument = this.argument as String;
+    return reviewCountsForCurriculum(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ReviewCountsForCurriculumProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$reviewCountsForCurriculumHash() =>
+    r'6b66870b60c9a716ba3edf1909be820d47fd812b';
+
+/// Batch review counts for all items in a curriculum (AC-3, AC-7).
+/// Single GROUP BY query — avoids N+1 per-item watches.
+
+final class ReviewCountsForCurriculumFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<Map<String, int>>, String> {
+  ReviewCountsForCurriculumFamily._()
+    : super(
+        retry: null,
+        name: r'reviewCountsForCurriculumProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Batch review counts for all items in a curriculum (AC-3, AC-7).
+  /// Single GROUP BY query — avoids N+1 per-item watches.
+
+  ReviewCountsForCurriculumProvider call(String curriculumId) =>
+      ReviewCountsForCurriculumProvider._(argument: curriculumId, from: this);
+
+  @override
+  String toString() => r'reviewCountsForCurriculumProvider';
+}
+
+/// Per-stage breakdown for a single item (AC-1, AC-5).
+
+@ProviderFor(itemStageBreakdown)
+final itemStageBreakdownProvider = ItemStageBreakdownFamily._();
+
+/// Per-stage breakdown for a single item (AC-1, AC-5).
+
+final class ItemStageBreakdownProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, int>>,
+          Map<int, int>,
+          FutureOr<Map<int, int>>
+        >
+    with $FutureModifier<Map<int, int>>, $FutureProvider<Map<int, int>> {
+  /// Per-stage breakdown for a single item (AC-1, AC-5).
+  ItemStageBreakdownProvider._({
+    required ItemStageBreakdownFamily super.from,
+    required ({String curriculumId, String sefariaRef}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'itemStageBreakdownProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$itemStageBreakdownHash();
+
+  @override
+  String toString() {
+    return r'itemStageBreakdownProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<int, int>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<int, int>> create(Ref ref) {
+    final argument =
+        this.argument as ({String curriculumId, String sefariaRef});
+    return itemStageBreakdown(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ItemStageBreakdownProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$itemStageBreakdownHash() =>
+    r'1fe87c28d61900a0b235e44b36ed6c2ada313389';
+
+/// Per-stage breakdown for a single item (AC-1, AC-5).
+
+final class ItemStageBreakdownFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Map<int, int>>,
+          ({String curriculumId, String sefariaRef})
+        > {
+  ItemStageBreakdownFamily._()
+    : super(
+        retry: null,
+        name: r'itemStageBreakdownProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Per-stage breakdown for a single item (AC-1, AC-5).
+
+  ItemStageBreakdownProvider call(
+    ({String curriculumId, String sefariaRef}) params,
+  ) => ItemStageBreakdownProvider._(argument: params, from: this);
+
+  @override
+  String toString() => r'itemStageBreakdownProvider';
+}

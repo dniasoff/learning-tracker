@@ -87,3 +87,30 @@ Future<int> completionCount(
       .getCompletionsForContentAndProfile(sefariaRef, profileId);
   return completions.where((c) => c.curriculumId == curriculumId).length;
 }
+
+/// Batch review counts for all items in a curriculum (AC-3, AC-7).
+/// Single GROUP BY query — avoids N+1 per-item watches.
+@riverpod
+Future<Map<String, int>> reviewCountsForCurriculum(
+  Ref ref,
+  String curriculumId,
+) async {
+  final database = ref.watch(appDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return database.completionDao.getReviewCountsByItem(curriculumId, profileId);
+}
+
+/// Per-stage breakdown for a single item (AC-1, AC-5).
+@riverpod
+Future<Map<int, int>> itemStageBreakdown(
+  Ref ref,
+  ({String curriculumId, String sefariaRef}) params,
+) async {
+  final database = ref.watch(appDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return database.completionDao.getStageBreakdownByItem(
+    params.curriculumId,
+    params.sefariaRef,
+    profileId,
+  );
+}
