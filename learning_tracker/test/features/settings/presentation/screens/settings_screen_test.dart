@@ -62,128 +62,98 @@ void main() {
     );
   }
 
+  /// Pump the widget and wait for async providers to settle.
+  Future<void> pumpUntilSettled(WidgetTester tester) async {
+    // First pump resolves the FutureBuilder
+    await tester.pump(const Duration(milliseconds: 100));
+    // Second pump allows the StreamProvider to emit
+    await tester.pump(const Duration(milliseconds: 100));
+    // Third pump for any remaining microtasks
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+
   group('SettingsScreen Widget Tests', () {
-    testWidgets('renders all curricula with toggle switches', (tester) async {
+    testWidgets('renders top section headers', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilSettled(tester);
 
-      // Verify all curricula are displayed
-      expect(find.text('Mishnayos'), findsOneWidget);
-      expect(find.text('Talmud Bavli'), findsOneWidget);
-      expect(find.text('Talmud Yerushalmi'), findsOneWidget);
-      expect(find.text('Mishna Berurah'), findsOneWidget);
-      expect(find.text('Chumash'), findsOneWidget);
-
-      // Verify all have switches
-      expect(
-        find.byType(SwitchListTile),
-        findsNWidgets(CurriculumId.values.length),
-      );
+      expect(find.text('LEARNING'), findsOneWidget);
+      expect(find.text('APPEARANCE'), findsOneWidget);
     });
 
-    testWidgets('shows active curricula with green status', (tester) async {
+    testWidgets('renders Curricula tile with active count', (tester) async {
       await tester.pumpWidget(
         createTestWidget(
           initialActive: [CurriculumId.mishnayos, CurriculumId.bavli],
         ),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilSettled(tester);
 
-      // Find active status texts
-      final activeTexts = find.text('Active');
-      expect(activeTexts, findsNWidgets(2)); // Mishnayos and Bavli
+      expect(find.text('Curricula'), findsOneWidget);
+      expect(find.text('Manage your learning path'), findsOneWidget);
+      expect(find.text('2 active'), findsOneWidget);
     });
 
-    testWidgets('shows inactive curricula with grey status', (tester) async {
+    testWidgets('renders learning section tiles', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilSettled(tester);
 
-      // Find inactive status texts
-      final inactiveTexts = find.text('Inactive');
-      expect(
-        inactiveTexts,
-        findsNWidgets(CurriculumId.values.length - 1),
-      ); // All but Mishnayos are inactive
+      expect(find.text('Curricula'), findsOneWidget);
+      expect(find.text('Goals'), findsOneWidget);
+      expect(find.text('Daily Reminder'), findsOneWidget);
     });
 
-    testWidgets('toggles on an inactive curriculum', (tester) async {
+    testWidgets('shows active count of 1 for single curriculum',
+        (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilSettled(tester);
 
-      // Find and tap Bavli switch
-      final bavliSwitch = find.ancestor(
-        of: find.text('Talmud Bavli'),
-        matching: find.byType(SwitchListTile),
-      );
-      await tester.tap(bavliSwitch);
-      await tester.pumpAndSettle();
-
-      // Verify Bavli is now active in database
-      final isActive = await database.activeCurriculumDao.isActive(
-        CurriculumId.bavli,
-      );
-      expect(isActive, isTrue);
+      expect(find.text('1 active'), findsOneWidget);
     });
 
-    testWidgets('toggles off an active curriculum (when not last)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createTestWidget(
-          initialActive: [CurriculumId.mishnayos, CurriculumId.bavli],
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Find and tap Bavli switch to deactivate
-      final bavliSwitch = find.ancestor(
-        of: find.text('Talmud Bavli'),
-        matching: find.byType(SwitchListTile),
-      );
-      await tester.tap(bavliSwitch);
-      await tester.pumpAndSettle();
-
-      // Verify Bavli is now inactive in database
-      final isActive = await database.activeCurriculumDao.isActive(
-        CurriculumId.bavli,
-      );
-      expect(isActive, isFalse);
-    });
-
-    testWidgets('disables toggle for last active curriculum', (tester) async {
+    testWidgets('renders Daily Reminder Switch', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilSettled(tester);
 
-      // Find Mishnayos switch
-      final mishnayosSwitch = find.ancestor(
-        of: find.text('Mishnayos'),
-        matching: find.byType(SwitchListTile),
-      );
-
-      final switchWidget = tester.widget<SwitchListTile>(mishnayosSwitch);
-      expect(switchWidget.value, isTrue); // It's active
-      expect(switchWidget.onChanged, isNull); // But disabled
+      // Daily Reminder has a Switch in the LEARNING section
+      expect(find.byType(Switch), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('section header displays correctly', (tester) async {
+    testWidgets('renders lower sections when scrolled', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilSettled(tester);
 
-      expect(find.text('Active Curricula'), findsOneWidget);
-      expect(
-        find.text('Choose which curricula to display in the app'),
-        findsOneWidget,
+      // Scroll down to reveal more content
+      await tester.drag(find.byType(ListView), const Offset(0, -800));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('ACCOUNT'), findsOneWidget);
+      expect(find.text('Sign Out'), findsOneWidget);
+      expect(find.text('Delete Account'), findsOneWidget);
+    });
+
+    testWidgets('displays app version when scrolled to bottom',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
+      await pumpUntilSettled(tester);
+
+      // Scroll to the very bottom
+      await tester.drag(find.byType(ListView), const Offset(0, -1000));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Torah Tracker v1.0.0'), findsOneWidget);
     });
   });
 }

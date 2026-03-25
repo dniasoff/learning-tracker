@@ -56,28 +56,46 @@ void main() {
   }
 
   group('ModeSelectionScreen Widget Tests', () {
-    testWidgets('displays two mode options', (tester) async {
+    testWidgets('displays three mode options', (tester) async {
       await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
 
-      expect(find.text('Child'), findsOneWidget);
-      expect(find.text('Adult'), findsOneWidget);
+      expect(find.text('Self-Learner'), findsOneWidget);
+      expect(find.text('Parent'), findsOneWidget);
+      expect(find.text('Tutor / Rebbi'), findsOneWidget);
     });
 
-    testWidgets('displays child mode description', (tester) async {
+    testWidgets('displays self-learner mode description', (tester) async {
       await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
 
       expect(
-        find.text('Full gamification, mystery rewards, parent oversight'),
+        find.text(
+          'Personal progress tracking, Siyum reminders, and daily goals.',
+        ),
         findsOneWidget,
       );
     });
 
-    testWidgets('displays adult mode description', (tester) async {
+    testWidgets('displays parent mode description', (tester) async {
       await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
 
       expect(
         find.text(
-          'Streamlined tracking, self-directed, optional engagement features',
+          'Reward management for children, progress reports, and family leaderboards.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('displays tutor mode description', (tester) async {
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
+
+      expect(
+        find.text(
+          'Student management, class-wide assignments, and individual tracking.',
         ),
         findsOneWidget,
       );
@@ -87,37 +105,46 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
 
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(button.onPressed, isNull);
+      // The continue button is an InkWell inside an AnimatedContainer.
+      // When disabled, its onTap is null.
+      final inkWell = tester.widget<InkWell>(find.byType(InkWell));
+      expect(inkWell.onTap, isNull);
     });
 
     testWidgets('Continue button enabled after selecting a mode', (
       tester,
     ) async {
       await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
 
-      // Tap child mode
-      await tester.tap(find.text('Child'));
-      await tester.pumpAndSettle();
+      // Tap Self-Learner mode
+      await tester.tap(find.text('Self-Learner'));
+      await tester.pump(const Duration(milliseconds: 500));
 
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(button.onPressed, isNotNull);
+      final inkWell = tester.widget<InkWell>(find.byType(InkWell));
+      expect(inkWell.onTap, isNotNull);
     });
 
-    testWidgets('shows change later message', (tester) async {
+    testWidgets('shows terms text', (tester) async {
       await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
 
       expect(
-        find.text('You can change this later in Settings.'),
+        find.textContaining('By continuing, you agree to our terms'),
         findsOneWidget,
       );
     });
 
     testWidgets('shows question prompt', (tester) async {
       await tester.pumpWidget(createTestWidget());
+      await tester.pump(const Duration(milliseconds: 1500));
 
-      expect(find.text('How would you like to use the app?'), findsOneWidget);
+      expect(
+        find.textContaining('Who are you'),
+        findsOneWidget,
+      );
     });
   });
 }

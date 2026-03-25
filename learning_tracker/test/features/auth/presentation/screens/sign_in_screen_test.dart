@@ -11,16 +11,16 @@ void main() {
 
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
     testWidgets('shows email and password fields', (tester) async {
       await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
-      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('Email Address'), findsOneWidget);
       expect(find.text('Password'), findsOneWidget);
     });
 
@@ -28,18 +28,18 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
-      expect(find.text('Sign In'), findsWidgets); // AppBar title + button
+      expect(find.text('Sign In'), findsOneWidget);
       expect(find.text('Sign in with Google'), findsOneWidget);
-      expect(find.text('OR'), findsOneWidget);
+      expect(find.text('OR CONTINUE WITH'), findsOneWidget);
     });
 
     testWidgets('shows password visibility toggle', (tester) async {
       await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
-      expect(find.byIcon(Icons.visibility_off), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
     });
   });
 }

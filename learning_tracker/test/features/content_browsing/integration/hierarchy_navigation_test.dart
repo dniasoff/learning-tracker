@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -21,7 +22,13 @@ void main() {
 
   Widget createTestApp({required Widget home}) {
     return ProviderScope(
-      overrides: [contentRepositoryProvider.overrideWithValue(mockRepo)],
+      overrides: [
+        contentRepositoryProvider.overrideWithValue(mockRepo),
+        // Override the completion percentage provider to avoid DB dependency
+        dashboardCompletionPercentageProvider.overrideWith(
+          (ref, curriculum) async => 0.0,
+        ),
+      ],
       child: MaterialApp(home: home),
     );
   }
@@ -151,9 +158,11 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Verify curriculum list shows Mishnayos
+        // Verify curriculum list shows Mishnayos (English display name)
+        // 'Mishnayos' appears once as the English name in the curriculum card
         expect(find.text('Mishnayos'), findsOneWidget);
-        expect(find.textContaining('items'), findsWidgets);
+        // Should show leaf count label (e.g. "1 Mishnayos")
+        expect(find.textContaining('Masechos'), findsOneWidget);
 
         // Step 2: Tap Mishnayos → navigate to hierarchy screen
         await tester.tap(find.text('Mishnayos'));

@@ -86,9 +86,9 @@ void main() {
     testWidgets('displays email and password fields', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
-      expect(find.text('Email'), findsOneWidget);
-      expect(find.text('Password'), findsOneWidget);
-      expect(find.text('Display Name'), findsOneWidget);
+      expect(find.text('Email Address'), findsOneWidget);
+      expect(find.text('Create Password'), findsOneWidget);
+      expect(find.text('Full Name'), findsOneWidget);
     });
 
     testWidgets('displays Create Account button', (tester) async {
@@ -109,7 +109,11 @@ void main() {
     testWidgets('shows validation errors for empty fields', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
+      // Scroll down to make Create Account button visible
+      final button = find.widgetWithText(FilledButton, 'Create Account');
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
       await tester.pumpAndSettle();
 
       expect(find.text('Email is required'), findsOneWidget);
@@ -121,18 +125,22 @@ void main() {
       await tester.pumpWidget(createTestWidget());
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Display Name'),
+        find.widgetWithText(TextFormField, 'Enter your full name'),
         'Test',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'name@example.com'),
         'invalid-email',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Password'),
+        find.widgetWithText(TextFormField, 'Min. 8 characters'),
         '123456',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
+      final invalidEmailButton =
+          find.widgetWithText(FilledButton, 'Create Account');
+      await tester.ensureVisible(invalidEmailButton);
+      await tester.pumpAndSettle();
+      await tester.tap(invalidEmailButton);
       await tester.pumpAndSettle();
 
       expect(find.text('Please enter a valid email address'), findsOneWidget);
@@ -142,18 +150,22 @@ void main() {
       await tester.pumpWidget(createTestWidget());
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Display Name'),
+        find.widgetWithText(TextFormField, 'Enter your full name'),
         'Test',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'name@example.com'),
         'test@example.com',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Password'),
+        find.widgetWithText(TextFormField, 'Min. 8 characters'),
         '12345',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
+      final shortPwButton =
+          find.widgetWithText(FilledButton, 'Create Account');
+      await tester.ensureVisible(shortPwButton);
+      await tester.pumpAndSettle();
+      await tester.tap(shortPwButton);
       await tester.pumpAndSettle();
 
       expect(
@@ -167,7 +179,7 @@ void main() {
     ) async {
       await tester.pumpWidget(createTestWidget());
 
-      expect(find.text('OR'), findsOneWidget);
+      expect(find.text('OR SIGN UP WITH'), findsOneWidget);
     });
 
     testWidgets('email sign-up success navigates to ModeSelectionRoute', (
@@ -181,18 +193,36 @@ void main() {
       await tester.pumpWidget(createTestWidget());
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Display Name'),
+        find.widgetWithText(TextFormField, 'Enter your full name'),
         'Test User',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'name@example.com'),
         'test@example.com',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Password'),
+        find.widgetWithText(TextFormField, 'Min. 8 characters'),
         'password123',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
+      // Scroll to make confirm password field visible
+      final confirmPwField =
+          find.widgetWithText(TextFormField, 'Repeat password');
+      await tester.ensureVisible(confirmPwField);
+      await tester.pumpAndSettle();
+      await tester.enterText(confirmPwField, 'password123');
+
+      // Agree to terms
+      final checkbox = find.byType(Checkbox);
+      await tester.ensureVisible(checkbox);
+      await tester.pumpAndSettle();
+      await tester.tap(checkbox);
+      await tester.pumpAndSettle();
+
+      final signUpButton =
+          find.widgetWithText(FilledButton, 'Create Account');
+      await tester.ensureVisible(signUpButton);
+      await tester.pumpAndSettle();
+      await tester.tap(signUpButton);
       await tester.pumpAndSettle();
 
       verify(
@@ -223,7 +253,10 @@ void main() {
           ),
         );
 
-        await tester.tap(find.text('Sign up with Google'));
+        final googleButton = find.text('Sign up with Google');
+        await tester.ensureVisible(googleButton);
+        await tester.pumpAndSettle();
+        await tester.tap(googleButton);
         await tester.pumpAndSettle();
 
         verify(

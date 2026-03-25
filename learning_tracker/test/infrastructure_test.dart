@@ -121,7 +121,7 @@ void main() {
         final db = createTestDatabase();
 
         expect(db, isNotNull);
-        expect(db.schemaVersion, 16);
+        expect(db.schemaVersion, 17);
 
         db.close();
       });

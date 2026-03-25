@@ -110,6 +110,7 @@ void main() {
         expect(find.text('Text content not yet downloaded'), findsOneWidget);
         expect(find.byIcon(Icons.download), findsWidgets);
         expect(find.text('Go to Downloads'), findsOneWidget);
+        // The screen uses ElevatedButton.icon which is an ElevatedButton
         expect(
           find.byWidgetPredicate((w) => w is ElevatedButton),
           findsOneWidget,
@@ -130,7 +131,7 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
-    testWidgets('displays Sefaria attribution', (tester) async {
+    testWidgets('displays Sefaria integration card', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
         return TextContent(
@@ -143,11 +144,11 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Content from Sefaria'), findsOneWidget);
+      expect(find.text('Sefaria Integration'), findsOneWidget);
       expect(find.byIcon(Icons.menu_book), findsOneWidget);
     });
 
-    testWidgets('displays mark completion buttons', (tester) async {
+    testWidgets('displays mark completion section', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
         return TextContent(
@@ -160,19 +161,18 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      // Scroll to bottom to ensure buttons are visible
+      // Scroll to bottom to ensure completion section is visible
       await tester.drag(
         find.byType(SingleChildScrollView),
         const Offset(0, -500),
       );
       await tester.pumpAndSettle();
 
-      // Verify button texts are present
-      expect(find.text('Mark as Reviewed'), findsOneWidget);
-      expect(find.text('Mark Complete'), findsOneWidget);
+      // Verify mark completion text is present
+      expect(find.text('Mark as Complete'), findsOneWidget);
     });
 
-    testWidgets('font size selector opens popup menu', (tester) async {
+    testWidgets('options sheet shows font size choices', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
         return TextContent(
@@ -185,11 +185,11 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      // Tap font size icon
-      await tester.tap(find.byIcon(Icons.format_size));
+      // Tap the more_vert icon to open the options bottom sheet
+      await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
 
-      // Should show all font size options
+      // Should show all font size options as ChoiceChips
       expect(find.text('Small'), findsOneWidget);
       expect(find.text('Medium'), findsOneWidget);
       expect(find.text('Large'), findsOneWidget);
@@ -212,10 +212,14 @@ void main() {
       final initialHebrew = tester.widget<Text>(find.text('hebrew'));
       final initialSize = initialHebrew.style!.fontSize!;
 
-      // Open menu and select Large
-      await tester.tap(find.byIcon(Icons.format_size));
+      // Open options sheet and select Large
+      await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Large'));
+      await tester.pumpAndSettle();
+
+      // Close the bottom sheet
+      await tester.tapAt(Offset.zero);
       await tester.pumpAndSettle();
 
       // Font size should increase
@@ -240,7 +244,7 @@ void main() {
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
     });
 
-    testWidgets('shows nikud toggle button in app bar', (tester) async {
+    testWidgets('shows nikud toggle in options sheet', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
         return TextContent(
@@ -253,12 +257,13 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      // Default is nikud ON, so toggle shows format_clear icon
-      expect(find.byIcon(Icons.format_clear), findsOneWidget);
+      // Open options bottom sheet
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
 
-      // When nikud is ON (default), the font size button uses format_size
-      // and the nikud toggle uses format_clear, so they are now distinct
-      expect(find.byIcon(Icons.format_size), findsOneWidget);
+      // Should show nikud toggle label and a Switch
+      expect(find.text('Show Nikud (diacritics)'), findsOneWidget);
+      expect(find.byType(Switch), findsOneWidget);
     });
 
     testWidgets('nikud toggle strips vowel marks from Hebrew text', (
@@ -283,8 +288,14 @@ void main() {
       // Default: nikud is ON, text shown with vowel marks
       expect(find.text(hebrewWithNikud), findsOneWidget);
 
-      // Tap the nikud toggle (format_clear when nikud is ON)
-      await tester.tap(find.byIcon(Icons.format_clear));
+      // Open options sheet and toggle nikud off via the Switch
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      // Close the bottom sheet
+      await tester.tapAt(Offset.zero);
       await tester.pumpAndSettle();
 
       // After toggle: nikud stripped, showing text without vowel marks

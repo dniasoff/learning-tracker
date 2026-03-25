@@ -483,7 +483,7 @@ void main() {
         ),
       );
 
-      expect(find.text('250 points'), findsOneWidget);
+      expect(find.text('250 pts'), findsOneWidget);
       expect(find.byIcon(Icons.star), findsOneWidget);
     });
 

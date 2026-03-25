@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -13,16 +14,22 @@ class MockContentRepository extends Mock implements ContentRepository {}
 void main() {
   Widget createTestWidget({required ContentRepository repository}) {
     return ProviderScope(
-      overrides: [contentRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        contentRepositoryProvider.overrideWithValue(repository),
+        // Override the completion percentage provider to avoid DB dependency
+        dashboardCompletionPercentageProvider.overrideWith(
+          (ref, curriculum) async => 0.0,
+        ),
+      ],
       child: const MaterialApp(home: CurriculumListScreen()),
     );
   }
 
   group('CurriculumListScreen', () {
-    testWidgets('displays all 7 curricula', (tester) async {
+    testWidgets('displays all curricula', (tester) async {
       final mockRepo = MockContentRepository();
 
-      // Mock all 7 curricula returning empty lists (just need the calls to succeed)
+      // Mock all curricula returning empty lists (just need the calls to succeed)
       for (final curriculum in CurriculumId.values) {
         when(
           () => mockRepo.getContentForCurriculum(curriculum),
@@ -32,7 +39,7 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      // Should show all 5 curriculum names
+      // Should show curriculum English names
       expect(find.text('Mishnayos'), findsOneWidget);
       expect(find.text('Talmud Bavli'), findsOneWidget);
       expect(find.text('Talmud Yerushalmi'), findsOneWidget);
@@ -73,8 +80,8 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      // Should show count for Mishnayos
-      expect(find.textContaining('10 items'), findsOneWidget);
+      // Should show count for Mishnayos (screen shows "10 Mishnayos" not "10 items")
+      expect(find.textContaining('10 Mishnayos'), findsOneWidget);
     });
 
     testWidgets('navigates to content hierarchy when curriculum tapped', (
@@ -91,7 +98,7 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      // Tap on Mishnayos curriculum
+      // Tap on Mishnayos curriculum (use the English display name)
       await tester.tap(find.text('Mishnayos'));
       await tester.pump();
 

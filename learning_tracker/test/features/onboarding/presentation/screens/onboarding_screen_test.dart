@@ -98,11 +98,11 @@ void main() {
       });
     });
 
-    testWidgets('displays all 7 curricula with names', (tester) async {
+    testWidgets('displays curricula with names', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      // First 4 should be visible
+      // First few should be visible via their English display names
       expect(find.text('Mishnayos'), findsOneWidget);
       expect(find.text('Talmud Bavli'), findsOneWidget);
       expect(find.text('Talmud Yerushalmi'), findsOneWidget);
@@ -128,27 +128,30 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.text('Choose which curricula to track'), findsOneWidget);
+      expect(
+        find.textContaining('Choose Your'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('checkmark toggles on tap', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      // Initially no check_circle icons (only circle_outlined)
-      expect(find.byIcon(Icons.check_circle), findsNothing);
+      // Initially no check icons (unselected state shows empty containers)
+      expect(find.byIcon(Icons.check), findsNothing);
 
       // Tap first curriculum
       await tester.tap(find.text('Mishnayos'));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.check), findsOneWidget);
 
       // Tap again to deselect
       await tester.tap(find.text('Mishnayos'));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.check_circle), findsNothing);
+      expect(find.byIcon(Icons.check), findsNothing);
     });
 
     testWidgets('Continue button disabled when no curriculum selected', (
@@ -157,8 +160,17 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(button.onPressed, isNull);
+      // The Continue button is an InkWell inside an AnimatedContainer.
+      // When no curriculum is selected, onTap is null.
+      final continueText = find.text('Continue');
+      expect(continueText, findsOneWidget);
+
+      final inkWell = find.ancestor(
+        of: continueText,
+        matching: find.byType(InkWell),
+      );
+      final widget = tester.widget<InkWell>(inkWell.first);
+      expect(widget.onTap, isNull);
     });
 
     testWidgets('Continue button enabled after selecting a curriculum', (
@@ -170,17 +182,25 @@ void main() {
       await tester.tap(find.text('Mishnayos'));
       await tester.pumpAndSettle();
 
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(button.onPressed, isNotNull);
+      final continueText = find.text('Continue');
+      final inkWell = find.ancestor(
+        of: continueText,
+        matching: find.byType(InkWell),
+      );
+      final widget = tester.widget<InkWell>(inkWell.first);
+      expect(widget.onTap, isNotNull);
     });
 
     testWidgets('shows instruction text', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.text('Choose which curricula to track'), findsOneWidget);
       expect(
-        find.text('You can add more later from Settings.'),
+        find.textContaining('Choose Your'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('You can add or remove curricula anytime.'),
         findsOneWidget,
       );
     });
@@ -194,7 +214,7 @@ void main() {
       await tester.tap(find.text('Talmud Bavli'));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.check_circle), findsNWidgets(2));
+      expect(find.byIcon(Icons.check), findsNWidgets(2));
     });
 
     testWidgets('shows LinearProgressIndicator during import phase', (
@@ -207,7 +227,14 @@ void main() {
       // Select a curriculum and tap Continue
       await tester.tap(find.text('Mishnayos'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+
+      // Find the Continue text and tap its InkWell ancestor
+      final continueText = find.text('Continue');
+      final inkWell = find.ancestor(
+        of: continueText,
+        matching: find.byType(InkWell),
+      );
+      await tester.tap(inkWell.first);
       await tester.pump();
 
       // Should show importing phase with progress indicator
@@ -223,7 +250,14 @@ void main() {
       // Select a curriculum and tap Continue
       await tester.tap(find.text('Mishnayos'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+
+      // Find the Continue text and tap its InkWell ancestor
+      final continueText = find.text('Continue');
+      final inkWell = find.ancestor(
+        of: continueText,
+        matching: find.byType(InkWell),
+      );
+      await tester.tap(inkWell.first);
       await tester.pumpAndSettle();
 
       // Should show error phase with Retry Failed button
