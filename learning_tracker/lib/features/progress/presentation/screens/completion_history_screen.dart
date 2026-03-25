@@ -151,15 +151,16 @@ class _CompletionHistoryScreenState
 
   Widget _buildCompletionsList(List<Completion> completions) {
     if (completions.isEmpty) {
-      return const Center(
+      final theme = Theme.of(context);
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            Icon(Icons.history, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 16),
             Text(
               'No completions yet',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+              style: TextStyle(fontSize: 18, color: theme.colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -206,7 +207,7 @@ class _CompletionHistoryScreenState
             const SizedBox(height: 2),
             Text(
               formattedDate,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),

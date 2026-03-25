@@ -83,7 +83,8 @@ class LearningTrackerApp extends ConsumerWidget {
     return SyncLifecycleObserver(
       child: MaterialApp.router(
         title: 'Torah Learning Tracker',
-        theme: AppTheme.lightTheme,
+        theme: AppTheme.darkTheme,
+        debugShowCheckedModeBanner: false,
         routerConfig: appRouter.config(),
       ),
     );

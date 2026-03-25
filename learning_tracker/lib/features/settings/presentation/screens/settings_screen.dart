@@ -2,27 +2,18 @@ import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/link_provider_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
-import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 
 // TODO(DNI-105): Replace with dynamic version from package_info_plus
 // once the dependency is added to pubspec.yaml.
@@ -36,195 +27,336 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeCurriculaAsync = ref.watch(activeCurriculaStreamProvider);
     final user = ref.watch(firebaseAuthProvider).currentUser;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Settings')),
+      appBar: AppBar(
+        title: const AppBarTitle(text: 'Settings'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.router.maybePop(),
+        ),
+      ),
       body: SafeArea(
         top: false,
         child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           children: [
             // User Profile Section
             _UserProfileSection(user: user),
-            const Divider(),
+            const SizedBox(height: 24),
 
-            // User Mode Section
-            _UserModeSection(user: user),
-            const Divider(),
-
-            // Content Language Section
-            const _ContentLanguageSection(),
-            const Divider(),
-
-            // Active Curricula Section
-            const ListTile(
-              title: Text(
-                'Active Curricula',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              subtitle: Text('Choose which curricula to display in the app'),
-            ),
-            const Divider(),
-
-            activeCurriculaAsync.when(
-              data: (activeCurricula) {
-                return Column(
-                  children: CurriculumId.values.expand((curriculum) {
-                    final isActive = activeCurricula.contains(curriculum);
-                    return [
-                      _CurriculumToggleTile(
-                        curriculum: curriculum,
-                        isActive: isActive,
-                        activeCurriculaCount: activeCurricula.length,
+            // LEARNING section
+            const _SectionHeader(title: 'LEARNING'),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.menu_book,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Curricula'),
+                    subtitle: const Text('Manage your learning path'),
+                    trailing: activeCurriculaAsync.when(
+                      data: (curricula) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${curricula.length} active',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right),
+                        ],
                       ),
-                      if (isActive)
-                        _CurriculumScopeTile(curriculum: curriculum),
-                    ];
-                  }).toList(),
-                );
-              },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text('Error loading curricula: $error'),
-                ),
-              ),
-            ),
-
-            // Task 5: Add new curriculum (shown if not all are active)
-            activeCurriculaAsync.when(
-              data: (activeCurricula) {
-                if (activeCurricula.length >= CurriculumId.values.length) {
-                  return const SizedBox.shrink();
-                }
-                return _AddCurriculumTile(activeCurricula: activeCurricula);
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
-
-            const Divider(height: 32),
-
-            // Settings Navigation Links
-            const ListTile(
-              title: Text(
-                'More Settings',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.auto_stories),
-              title: const Text('My Learning Journey'),
-              subtitle: const Text('View your lifetime learning achievements'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.pushRoute(LearningJourneyRoute()),
-            ),
-            ListTile(
-              leading: const Icon(Icons.notifications_outlined),
-              title: const Text('Notifications'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.pushRoute(const NotificationsRoute()),
-            ),
-            ListTile(
-              leading: const Icon(Icons.sync_outlined),
-              title: const Text('Data & Sync'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.pushRoute(const SyncRoute()),
-            ),
-            ListTile(
-              leading: const Icon(Icons.checklist_outlined),
-              title: const Text('Mark Prior Completions'),
-              subtitle: const Text('Bulk mark content as already learned'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _showBulkMarkCurriculumPicker(context, ref),
-            ),
-
-            const Divider(height: 32),
-
-            // Data Export & Import Section
-            const ListTile(
-              title: Text(
-                'Data',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      loading: () => const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (_, __) => const Icon(Icons.chevron_right),
+                    ),
+                    onTap: () =>
+                        context.pushRoute(const CurriculumListRoute()),
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.flag_outlined,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Goals'),
+                    subtitle: const Text('Set and track learning milestones'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.pushRoute(const SchedulerRoute()),
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.notifications_active_outlined,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Daily Reminder'),
+                    subtitle: const Text('Receive daily study prompts'),
+                    trailing: Switch(
+                      value: true,
+                      onChanged: (value) {
+                        context.pushRoute(const NotificationsRoute());
+                      },
+                      activeTrackColor: theme.colorScheme.primary,
+                    ),
+                    onTap: () =>
+                        context.pushRoute(const NotificationsRoute()),
+                  ),
+                ],
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.file_upload_outlined),
-              title: const Text('Export Data'),
-              subtitle: const Text('Save all progress to a JSON file'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _handleExportData(context, ref),
-            ),
-            ListTile(
-              leading: const Icon(Icons.file_download_outlined),
-              title: const Text('Import Data'),
-              subtitle: const Text('Restore progress from a JSON file'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _handleImportData(context, ref),
-            ),
+            const SizedBox(height: 24),
 
-            const Divider(height: 32),
-
-            // Account Management Section
-            const ListTile(
-              title: Text(
-                'Account',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            // APPEARANCE section
+            const _SectionHeader(title: 'APPEARANCE'),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.dark_mode_outlined,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Theme'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Dark',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                    onTap: () {},
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.color_lens_outlined,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Accent Color'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                    onTap: () {},
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 24),
 
-            if (user != null &&
-                user.providerData.any((info) => info.providerId == 'password'))
-              ListTile(
-                leading: const Icon(Icons.lock_outline),
-                title: const Text('Change Password'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showChangePasswordFlow(context, ref, user),
+            // NOTIFICATIONS section
+            const _SectionHeader(title: 'NOTIFICATIONS'),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.notifications_outlined,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Notification Settings'),
+                    subtitle: const Text('Push, email and sound'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        context.pushRoute(const NotificationsRoute()),
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.local_fire_department,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Streak Alerts'),
+                    subtitle:
+                        const Text('Never lose your learning streak'),
+                    trailing: Switch(
+                      value: true,
+                      onChanged: (value) {},
+                      activeTrackColor: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
               ),
-
-            if (user != null)
-              ListTile(
-                leading: const Icon(Icons.link),
-                title: const Text('Link Account'),
-                subtitle: const Text('Add another sign-in method'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showLinkProviderDialog(context, ref),
-              ),
-
-            const Divider(),
-
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Sign Out'),
-              onTap: () => _showSignOutConfirmation(context, ref),
             ),
+            const SizedBox(height: 24),
 
-            ListTile(
-              leading: const Icon(Icons.delete_forever, color: Colors.red),
-              title: const Text(
-                'Delete Account',
-                style: TextStyle(color: Colors.red),
+            // DATA & PRIVACY section
+            const _SectionHeader(title: 'DATA & PRIVACY'),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.cloud_outlined,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Cloud Sync'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle,
+                            color: theme.colorScheme.primary, size: 18),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Synced',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                    onTap: () => context.pushRoute(const SyncRoute()),
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.file_upload_outlined,
+                        color: theme.colorScheme.primary),
+                    title: const Text('Export Data'),
+                    subtitle: const Text('JSON or CSV format'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _handleExportData(context, ref),
+                  ),
+                ],
               ),
-              onTap: () => _showDeleteAccountFlow(context, ref, user),
             ),
+            const SizedBox(height: 24),
 
-            const Divider(height: 32),
+            // ACCOUNT section
+            const _SectionHeader(title: 'ACCOUNT'),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  // User Mode
+                  _UserModeSection(user: user),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  if (user != null &&
+                      user.providerData
+                          .any((info) => info.providerId == 'password'))
+                    Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.lock_outline),
+                          title: const Text('Change Password'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () =>
+                              _showChangePasswordFlow(context, ref, user),
+                        ),
+                        Divider(
+                          height: 1,
+                          indent: 56,
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ],
+                    ),
+                  if (user != null)
+                    Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.link),
+                          title: const Text('Link Account'),
+                          subtitle:
+                              const Text('Add another sign-in method'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () =>
+                              _showLinkProviderDialog(context, ref),
+                        ),
+                        Divider(
+                          height: 1,
+                          indent: 56,
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ],
+                    ),
+                  ListTile(
+                    leading: Icon(Icons.logout,
+                        color: theme.colorScheme.primary),
+                    title: Text(
+                      'Sign Out',
+                      style: TextStyle(color: theme.colorScheme.primary),
+                    ),
+                    onTap: () => _showSignOutConfirmation(context, ref),
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.delete_forever,
+                        color: theme.colorScheme.error),
+                    title: Text(
+                      'Delete Account',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                    onTap: () =>
+                        _showDeleteAccountFlow(context, ref, user),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
 
             // App Version
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(
-                child: Text(
-                  'Version $_appVersion',
-                  style: TextStyle(color: Colors.grey),
+            Center(
+              child: Text(
+                'Torah Tracker v$_appVersion',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
+            const SizedBox(height: 4),
+            Center(
+              child: Text(
+                'Handcrafted with care',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -232,7 +364,30 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Displays user profile info: display name, email, and auth provider.
+/// Section header with uppercase label matching the mockup design.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.5),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// Displays user profile info with avatar, name, email, and badge.
 class _UserProfileSection extends StatelessWidget {
   const _UserProfileSection({required this.user});
 
@@ -240,38 +395,93 @@ class _UserProfileSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (user == null) {
-      return const ListTile(
-        leading: Icon(Icons.person_outline),
-        title: Text('Not signed in'),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          children: [
+            Icon(Icons.person_outline, size: 48),
+            SizedBox(width: 16),
+            Text('Not signed in'),
+          ],
+        ),
       );
     }
 
-    final providerIds = user!.providerData.map((p) => p.providerId).toList();
-    final providerLabel = providerIds
-        .map((id) {
-          switch (id) {
-            case 'google.com':
-              return 'Google';
-            case 'password':
-              return 'Email/Password';
-            default:
-              return id;
-          }
-        })
-        .join(', ');
+    final displayName =
+        user!.displayName ?? user!.email?.split('@').first ?? 'User';
+    final initials = displayName.isNotEmpty
+        ? displayName
+            .split(' ')
+            .take(2)
+            .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+            .join()
+        : '?';
 
-    return ListTile(
-      leading: const Icon(Icons.person),
-      title: Text(user!.displayName ?? user!.email?.split('@').first ?? 'User'),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
         children: [
-          if (user!.email != null) Text(user!.email!),
-          Text('Signed in with $providerLabel'),
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+            child: Text(
+              initials,
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (user!.email != null)
+                  Text(
+                    user!.email!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'SELF-LEARNER',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.edit_outlined,
+                color: theme.colorScheme.onSurfaceVariant),
+            onPressed: () {},
+          ),
         ],
       ),
-      isThreeLine: user!.email != null,
     );
   }
 }
@@ -404,55 +614,6 @@ class _UserModeSectionState extends ConsumerState<_UserModeSection> {
   }
 }
 
-Future<void> _showBulkMarkCurriculumPicker(
-  BuildContext context,
-  WidgetRef ref,
-) async {
-  final activeCurricula = ref.read(activeCurriculaStreamProvider).value;
-  if (activeCurricula == null || activeCurricula.isEmpty) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No active curricula found.')),
-      );
-    }
-    return;
-  }
-
-  if (activeCurricula.length == 1) {
-    // Skip picker, go directly to bulk mark
-    if (!context.mounted) return;
-    await Navigator.of(context).push<BulkMarkResult>(
-      MaterialPageRoute<BulkMarkResult>(
-        builder: (_) => BulkMarkScreen(curriculumId: activeCurricula.first),
-      ),
-    );
-    return;
-  }
-
-  final selected = await showDialog<CurriculumId>(
-    context: context,
-    builder: (context) => SimpleDialog(
-      title: const Text('Select Curriculum'),
-      children: activeCurricula
-          .map<Widget>(
-            (CurriculumId c) => SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, c),
-              child: Text(c.displayNameEn),
-            ),
-          )
-          .toList(),
-    ),
-  );
-
-  if (selected == null || !context.mounted) return;
-
-  await Navigator.of(context).push<BulkMarkResult>(
-    MaterialPageRoute<BulkMarkResult>(
-      builder: (_) => BulkMarkScreen(curriculumId: selected),
-    ),
-  );
-}
-
 Future<void> _handleExportData(BuildContext context, WidgetRef ref) async {
   try {
     final service = ref.read(dataExportImportServiceProvider);
@@ -487,18 +648,6 @@ Future<void> _handleExportData(BuildContext context, WidgetRef ref) async {
       );
     }
   }
-}
-
-Future<void> _handleImportData(BuildContext context, WidgetRef ref) async {
-  // In a real implementation, this would use file_picker to select a file.
-  // For now, we show the import flow structure.
-  if (!context.mounted) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Import: Select a JSON file to restore data.'),
-    ),
-  );
 }
 
 /// Shows import preview and confirmation dialog.
@@ -736,238 +885,4 @@ Future<void> _showLinkProviderDialog(
 ) async {
   final service = ref.read(accountManagementServiceProvider);
   await showLinkProviderDialog(context: context, service: service);
-}
-
-class _CurriculumScopeTile extends ConsumerWidget {
-  const _CurriculumScopeTile({required this.curriculum});
-
-  final CurriculumId curriculum;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final summaryAsync = ref.watch(curriculumScopeSummaryProvider(curriculum));
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 32),
-      child: ListTile(
-        leading: const Icon(Icons.filter_list, size: 20),
-        title: const Text('Learning Scope'),
-        subtitle: Text(
-          summaryAsync.when(
-            data: (s) => s,
-            loading: () => 'Loading...',
-            error: (_, __) => 'Error',
-          ),
-          style: const TextStyle(fontSize: 12),
-        ),
-        trailing: const Icon(Icons.chevron_right, size: 20),
-        dense: true,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => ScopeSelectionScreen(curriculumId: curriculum),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _CurriculumToggleTile extends ConsumerWidget {
-  const _CurriculumToggleTile({
-    required this.curriculum,
-    required this.isActive,
-    required this.activeCurriculaCount,
-  });
-
-  final CurriculumId curriculum;
-  final bool isActive;
-  final int activeCurriculaCount;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final service = ref.read(curriculumActivationServiceProvider);
-    final isLastActive = isActive && activeCurriculaCount <= 1;
-
-    return SwitchListTile(
-      title: Text(curriculum.displayNameEn),
-      subtitle: Text(
-        isActive ? 'Active' : 'Inactive',
-        style: TextStyle(color: isActive ? Colors.green : Colors.grey),
-      ),
-      value: isActive,
-      onChanged: isLastActive
-          ? null
-          : (newValue) async {
-              try {
-                final wasActive = isActive;
-                await service.toggle(curriculum);
-                ref.invalidate(isCurriculumActiveProvider(curriculum));
-                ref.invalidate(activeTracksProvider(curriculum));
-                ref.invalidate(curriculumContentProvider(curriculum));
-                // Offer bulk mark when activating a new curriculum
-                if (!wasActive && context.mounted) {
-                  final shouldBulkMark = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(
-                        'Mark prior completions for ${curriculum.displayNameEn}?',
-                      ),
-                      content: const Text(
-                        'Would you like to mark content you\'ve already completed?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Skip'),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Mark Now'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if ((shouldBulkMark ?? false) && context.mounted) {
-                    await Navigator.of(context).push<BulkMarkResult>(
-                      MaterialPageRoute<BulkMarkResult>(
-                        builder: (_) =>
-                            BulkMarkScreen(curriculumId: curriculum),
-                      ),
-                    );
-                  }
-                }
-              } on StateError catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(e.message),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-    );
-  }
-}
-
-/// Tile that lets users add a new curriculum post-onboarding.
-///
-/// Shows a picker excluding already-active curricula, then runs the full
-/// activation + wizard + bulk mark flow.
-class _AddCurriculumTile extends ConsumerWidget {
-  const _AddCurriculumTile({required this.activeCurricula});
-
-  final List<CurriculumId> activeCurricula;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: const Icon(Icons.add_circle_outline),
-      title: const Text('Add a curriculum'),
-      subtitle: const Text('Start tracking a new subject'),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => _onAdd(context, ref),
-    );
-  }
-
-  Future<void> _onAdd(BuildContext context, WidgetRef ref) async {
-    final inactive = CurriculumId.values
-        .where((c) => !activeCurricula.contains(c))
-        .toList();
-
-    final selected = await showDialog<CurriculumId>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Select Curriculum'),
-        children: inactive
-            .map<Widget>(
-              (c) => SimpleDialogOption(
-                onPressed: () => Navigator.pop(context, c),
-                child: Text(c.displayNameEn),
-              ),
-            )
-            .toList(),
-      ),
-    );
-
-    if (selected == null || !context.mounted) return;
-
-    // Activate the curriculum.
-    final activationService = ref.read(curriculumActivationServiceProvider);
-    await activationService.activate(selected);
-    ref.invalidate(activeCurriculaProvider);
-    ref.invalidate(isCurriculumActiveProvider(selected));
-
-    if (!context.mounted) return;
-
-    // Launch wizard for the new curriculum.
-    final wizardService = ref.read(learningProcessWizardServiceProvider);
-    final presets = await wizardService.getPresetsForCurriculum(selected);
-
-    if (!context.mounted) return;
-
-    final wizardResult = await Navigator.of(context)
-        .push<LearningProcessWizardResult>(
-          MaterialPageRoute(
-            builder: (_) => LearningProcessWizardScreen(
-              curriculumId: selected,
-              presets: presets,
-              isChildMode: false,
-            ),
-          ),
-        );
-
-    if (wizardResult != null) {
-      final profileId = ref.read(activeProfileIdProvider);
-      await wizardService.applyWizardResult(
-        wizardResult.wizardResult,
-        profileId: profileId,
-      );
-      ref.invalidate(stageListProvider(selected));
-    }
-
-    if (!context.mounted) return;
-
-    // Launch bulk mark.
-    await Navigator.of(context).push<BulkMarkResult>(
-      MaterialPageRoute(builder: (_) => BulkMarkScreen(curriculumId: selected)),
-    );
-  }
-}
-
-class _ContentLanguageSection extends StatelessWidget {
-  const _ContentLanguageSection();
-
-  @override
-  Widget build(BuildContext context) {
-    // Language preference is stored but not yet wired to content loading.
-    // All languages are bundled — future: load language-specific assets.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const ListTile(
-          title: Text(
-            'Content Language',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          subtitle: Text('Language for curriculum content'),
-        ),
-        ListTile(
-          title: const Text('עברית (Hebrew with nikud)'),
-          subtitle: const Text('More languages coming soon'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Additional languages coming in a future update'),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
 }

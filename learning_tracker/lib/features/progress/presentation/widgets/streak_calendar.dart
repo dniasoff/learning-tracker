@@ -86,7 +86,7 @@ class _DayLabel extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 10,
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -114,7 +114,7 @@ class _DayCell extends StatelessWidget {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: isActive ? primaryColor : Colors.grey[200],
+        color: isActive ? primaryColor : Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
         border: isToday ? Border.all(color: primaryColor, width: 2) : null,
       ),
@@ -123,7 +123,7 @@ class _DayCell extends StatelessWidget {
           '${date.day}',
           style: TextStyle(
             fontSize: 10,
-            color: isActive ? Colors.white : Colors.grey[500],
+            color: isActive ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),

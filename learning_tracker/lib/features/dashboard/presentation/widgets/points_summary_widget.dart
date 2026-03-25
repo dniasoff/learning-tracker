@@ -13,24 +13,42 @@ class PointsSummaryWidget extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      color: theme.colorScheme.tertiaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.star,
-              color: theme.colorScheme.onTertiaryContainer,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$totalPoints points',
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.onTertiaryContainer,
-                fontWeight: FontWeight.bold,
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: const Icon(Icons.star, color: Colors.amber, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$totalPoints pts',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Current Balance',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Icon(
+              Icons.stars,
+              color: Colors.amber.withValues(alpha: 0.5),
+              size: 32,
             ),
           ],
         ),

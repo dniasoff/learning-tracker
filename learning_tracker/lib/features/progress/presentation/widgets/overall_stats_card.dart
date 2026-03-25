@@ -34,7 +34,7 @@ class OverallStatsCard extends StatelessWidget {
             _StatRow(
               label: 'Not started',
               value: stats.notStarted,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ],
         ),

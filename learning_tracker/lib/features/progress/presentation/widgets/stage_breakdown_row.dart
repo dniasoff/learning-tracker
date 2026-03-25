@@ -21,7 +21,7 @@ class StageBreakdownRow extends StatelessWidget {
           '${entry.stageName}: ${entry.count}',
           style: Theme.of(
             context,
-          ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+          ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         );
       }).toList(),
     );

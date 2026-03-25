@@ -70,7 +70,7 @@ class _CurriculumSection extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${journey.uniqueUnitsCompleted} of ${journey.totalUnitsAvailable} units completed',
-                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
@@ -115,7 +115,7 @@ class _CurriculumSection extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Text(
                 'No completions yet',
-                style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
               ),
             ),
         ],

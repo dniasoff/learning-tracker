@@ -9,7 +9,6 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
@@ -518,21 +517,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final showAppBar = _phase != _ScreenPhase.selection;
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation => 'Add a Learner',
       _ScreenPhase.languageSelection => 'Choose Language',
-      _ScreenPhase.selection => childAwareText(
-        'Select Curricula',
-        'What is {name} learning?',
-        _profileName,
-        isChildMode: _isChildMode,
-      ),
       _ScreenPhase.handoff => 'Setup Complete!',
       _ => 'Onboarding',
     };
 
     return Scaffold(
-      appBar: AppBar(title: AppBarTitle(text: appBarTitle)),
+      appBar: showAppBar ? AppBar(title: AppBarTitle(text: appBarTitle)) : null,
       body: SafeArea(
         child: switch (_phase) {
           _ScreenPhase.profileCreation => _buildProfileCreation(theme),
@@ -699,38 +693,114 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildSelection(ThemeData theme) {
-    final header = childAwareText(
-      'Choose which curricula to track',
-      'What is {name} learning?',
-      _profileName,
-      isChildMode: _isChildMode,
-    );
+    const green = Color(0xFF4ADE80);
+    final isEnabled = _selected.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text(
-            header,
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Back button and step indicator
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.06),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: () => setState(
+                        () => _phase = _ScreenPhase.languageSelection,
+                      ),
+                      icon: const Icon(Icons.arrow_back_ios_new, size: 14),
+                      style:
+                          IconButton.styleFrom(foregroundColor: Colors.white),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Step 2 of 3',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.45),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Fancy progress bar with glow
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: 2 / 3,
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF22C55E),
+                              green,
+                              Color(0xFF86EFAC),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: green.withValues(alpha: 0.6),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                'Choose Your\nLearning Path',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Select the areas of Torah you wish to track.\nYou can select multiple options.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'You can add more later from Settings.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             itemCount: CurriculumId.values.length,
             itemBuilder: (context, index) {
               final curriculum = CurriculumId.values[index];
@@ -751,10 +821,58 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(24),
-          child: FilledButton(
-            onPressed: _selected.isNotEmpty ? _startImport : null,
-            child: const Text('Continue'),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Text(
+            'You can add or remove curricula anytime.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.35),
+              fontSize: 12,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: isEnabled
+                  ? const LinearGradient(
+                      colors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
+                    )
+                  : null,
+              color: isEnabled ? null : Colors.white.withValues(alpha: 0.08),
+              boxShadow: isEnabled
+                  ? [
+                      BoxShadow(
+                        color: green.withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: isEnabled ? _startImport : null,
+                borderRadius: BorderRadius.circular(28),
+                child: Center(
+                  child: Text(
+                    'Continue',
+                    style: TextStyle(
+                      color: isEnabled
+                          ? Colors.black
+                          : Colors.white.withValues(alpha: 0.3),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -1021,67 +1139,352 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       data: (items) => items.where((i) => i.isLeaf).length,
     );
 
-    final headerText = childAwareText(
-      'Set a goal for ${curriculum.displayNameEn}',
-      'Set a learning goal for {name} in ${curriculum.displayNameEn}',
-      _profileName,
-      isChildMode: _isChildMode,
-    );
+    const green = Color(0xFF4ADE80);
 
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              headerText,
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_goalSetupIndex + 1} of ${_goalSetupQueue.length}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (totalItems != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                '$totalItems items',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back button row
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.06),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: IconButton(
+                        onPressed: () {},
+                        icon:
+                            const Icon(Icons.arrow_back_ios_new, size: 14),
+                        style: IconButton.styleFrom(
+                          foregroundColor: Colors.white,
+                        ),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Step counter badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: green.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        '${_goalSetupIndex + 1} of ${_goalSetupQueue.length}',
+                        style: const TextStyle(
+                          color: green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            const Spacer(),
-            FilledButton(
-              onPressed: () async {
-                final result = await Navigator.of(context).push<GoalFormResult>(
-                  MaterialPageRoute<GoalFormResult>(
-                    builder: (_) => GoalSetupScreen(
-                      curriculumId: curriculum,
-                      totalItems: totalItems,
+                const SizedBox(height: 12),
+                // Progress bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Stack(
+                    children: [
+                      Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: 1.0, // Step 3 of 3
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4),
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFF22C55E),
+                                green,
+                                Color(0xFF86EFAC),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: green.withValues(alpha: 0.6),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'Set Your\nLearning Goal',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  childAwareText(
+                    'How much do you want to learn?',
+                    'How much should {name} learn?',
+                    _profileName,
+                    isChildMode: _isChildMode,
+                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Goal setup card
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  // Daily Page Goal card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.07),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: green.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.auto_stories,
+                                color: green,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Daily Page Goal',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Fix a set amount to learn every day.',
+                                    style: TextStyle(
+                                      color: Colors.white
+                                          .withValues(alpha: 0.4),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF22C55E),
+                                    green,
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: green.withValues(alpha: 0.4),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.black,
+                                size: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                );
-                if (mounted) {
-                  await _onGoalResult(result);
-                }
-              },
-              child: const Text('Set Goal'),
+                  const SizedBox(height: 16),
+
+                  // Curriculum info badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: green.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: green.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: green.withValues(alpha: 0.7),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            totalItems != null
+                                ? 'Setting goal for ${curriculum.displayNameEn} ($totalItems items)'
+                                : 'Setting goal for ${curriculum.displayNameEn}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => _onGoalResult(null),
-              child: const Text('Skip'),
+          ),
+
+          // Bottom buttons
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Set Goal button
+                Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: green.withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () async {
+                        final result = await Navigator.of(context)
+                            .push<GoalFormResult>(
+                          MaterialPageRoute<GoalFormResult>(
+                            builder: (_) => GoalSetupScreen(
+                              curriculumId: curriculum,
+                              totalItems: totalItems,
+                            ),
+                          ),
+                        );
+                        if (mounted) {
+                          await _onGoalResult(result);
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(28),
+                      child: const Center(
+                        child: Text(
+                          'Set Goal',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Skip button
+                Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _onGoalResult(null),
+                      borderRadius: BorderRadius.circular(28),
+                      child: Center(
+                        child: Text(
+                          'Skip',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1241,59 +1644,142 @@ class _CurriculumCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
+  String get _description => switch (curriculum) {
+    CurriculumId.mishnayos => 'Six orders of the oral law.',
+    CurriculumId.bavli => 'The Babylonian Talmud.',
+    CurriculumId.yerushalmi => 'The Jerusalem Talmud.',
+    CurriculumId.mishnaBerurah => 'Halachic commentary on Orach Chayim.',
+    CurriculumId.chumash => 'The Five Books of Moses.',
+    CurriculumId.torah => 'The Written Torah.',
+    CurriculumId.tanach => 'Torah, Prophets, and Writings.',
+    CurriculumId.nach => 'Prophets and Writings.',
+    CurriculumId.mussar => 'Ethical and moral teachings.',
+  };
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = AppTheme.getCurriculumColor(curriculum);
+    const green = Color(0xFF4ADE80);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Card(
-        elevation: isSelected ? 4 : 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
             color: isSelected
-                ? color
-                : theme.colorScheme.outline.withValues(alpha: 0.3),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.menu_book, color: color),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    curriculum.displayNameEn,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? color : null,
-                    ),
-                  ),
-                ),
-                if (isSelected)
-                  Icon(Icons.check_circle, color: color)
-                else
-                  Icon(
-                    Icons.circle_outlined,
-                    color: theme.colorScheme.outline.withValues(alpha: 0.5),
-                  ),
-              ],
+                ? green.withValues(alpha: 0.06)
+                : const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(14),
+            border: Border(
+              left: BorderSide(
+                color: isSelected
+                    ? green
+                    : Colors.white.withValues(alpha: 0.08),
+                width: isSelected ? 3.5 : 3,
+              ),
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: green.withValues(alpha: 0.12),
+                      blurRadius: 16,
+                      spreadRadius: -2,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      curriculum.displayNameHe,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.9),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'NotoSansHebrew',
+                      ),
+                    ),
+                    Text(
+                      curriculum.displayNameEn,
+                      style: TextStyle(
+                        color: isSelected
+                            ? green
+                            : Colors.white.withValues(alpha: 0.7),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _description,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.38),
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, animation) =>
+                    ScaleTransition(scale: animation, child: child),
+                child: isSelected
+                    ? Container(
+                        key: const ValueKey('checked'),
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF22C55E), green],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: green.withValues(alpha: 0.5),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: Colors.black,
+                          size: 16,
+                        ),
+                      )
+                    : Container(
+                        key: const ValueKey('unchecked'),
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+              ),
+            ],
           ),
         ),
       ),

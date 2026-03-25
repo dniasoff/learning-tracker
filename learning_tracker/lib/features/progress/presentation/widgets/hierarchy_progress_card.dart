@@ -119,7 +119,7 @@ class _LevelContent extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: level.completionPercentage,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: color.withValues(alpha: 0.15),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 6,
           ),
@@ -164,7 +164,7 @@ class _ProgressCircle extends StatelessWidget {
         children: [
           CircularProgressIndicator(
             value: percentage,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: color.withValues(alpha: 0.15),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             strokeWidth: 3,
           ),

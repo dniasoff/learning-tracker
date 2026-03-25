@@ -31,10 +31,10 @@ class JourneyTimelineView extends StatelessWidget {
     );
 
     if (allEntries.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No completions to show',
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       );
     }
@@ -63,7 +63,7 @@ class JourneyTimelineView extends StatelessWidget {
               child: Text(
                 month,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -134,7 +134,7 @@ class _TimelineCard extends StatelessWidget {
           children: [
             Text(
               '${entry.curriculumId.displayNameEn} · $ordinal completion · $formattedDate',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
@@ -33,13 +34,11 @@ class ContentHierarchyScreen extends ConsumerStatefulWidget {
 
 class _ContentHierarchyScreenState
     extends ConsumerState<ContentHierarchyScreen> {
-  // Navigation stack to track drill-down path
   List<String> _navigationStack = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize navigation stack from route parameters
     _navigationStack = [
       if (widget.level1 != null) widget.level1!,
       if (widget.level2 != null) widget.level2!,
@@ -48,8 +47,6 @@ class _ContentHierarchyScreenState
     ];
   }
 
-  /// Returns the [CurriculumId] matching the route parameter, or null if
-  /// the parameter does not correspond to any known curriculum.
   CurriculumId? get _curriculumOrNull {
     final matches = CurriculumId.values.where(
       (c) => c.storageKey == widget.curriculumId,
@@ -89,6 +86,7 @@ class _ContentHierarchyScreenState
       );
     }
 
+    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final configAsync = ref.watch(
       curriculumHierarchyConfigProvider(curriculum),
     );
@@ -104,13 +102,13 @@ class _ContentHierarchyScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(text: curriculum.displayNameEn),
-        leading: _navigationStack.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _navigateUp,
-              )
-            : null,
+        title: const AppBarTitle(text: 'Browse Content'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _navigationStack.isNotEmpty
+              ? _navigateUp
+              : () => context.router.maybePop(),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -119,35 +117,94 @@ class _ContentHierarchyScreenState
               ContentSearchRoute(curriculumId: curriculum.storageKey),
             ),
           ),
+          IconButton(
+            icon: const Icon(Icons.grid_view),
+            tooltip: 'View options',
+            onPressed: () {},
+          ),
         ],
       ),
       body: Column(
         children: [
-          // Breadcrumb navigation
-          if (_navigationStack.isNotEmpty)
-            configAsync.when(
-              data: (config) => BreadcrumbNavigation(
-                curriculum: curriculum,
-                levelLabels: config.levelLabels,
-                navigationStack: _navigationStack,
-                onBreadcrumbTap: _navigateToLevel,
-              ),
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+          // Breadcrumb / curriculum chip
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: curriculumColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    curriculum.displayNameEn,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: curriculumColor,
+                    ),
+                  ),
+                ),
+                if (_navigationStack.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  Expanded(
+                    child: configAsync.when(
+                      data: (config) => BreadcrumbNavigation(
+                        curriculum: curriculum,
+                        levelLabels: config.levelLabels,
+                        navigationStack: _navigationStack,
+                        onBreadcrumbTap: _navigateToLevel,
+                      ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ],
+              ],
             ),
+          ),
 
           // Content list
           Expanded(
             child: itemsAsync.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return const Center(child: Text('No content available'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 48,
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No content available',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
-                // Group items by the next level in hierarchy
                 final groupedItems = _groupItemsByNextLevel(items);
 
                 return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: groupedItems.length,
                   itemBuilder: (context, index) {
                     final item = groupedItems[index];
@@ -177,34 +234,22 @@ class _ContentHierarchyScreenState
     );
   }
 
-  /// Group items by the next level in the hierarchy to show unique containers.
   List<ContentItem> _groupItemsByNextLevel(List<ContentItem> items) {
-    // Determine current depth
     final currentDepth = _navigationStack.length;
 
     if (currentDepth >= 4) {
-      // At max depth, show all leaf items
       return items;
     }
 
-    // If all items at this depth are leaves, show them directly without grouping.
     if (items.isNotEmpty && items.every((i) => i.isLeaf)) {
       return items;
     }
 
-    // Group by the next level value, creating a representative container item
-    // for each group whose display name is the group key (e.g. "Seder Zeraim"),
-    // not the name of an arbitrary leaf inside it.
     final uniqueItems = <String, ContentItem>{};
 
     for (final item in items) {
       final nextLevelValue = _getNextLevelValue(item, currentDepth);
       if (nextLevelValue != null && !uniqueItems.containsKey(nextLevelValue)) {
-        // Prefer container items (non-leaf) as representatives because they
-        // already have the correct display names for the group (e.g., the
-        // seder name). Leaf items have their own sub-level names and must not
-        // be used directly — in that case we create a synthetic container item
-        // using the group key as the display name.
         if (!item.isLeaf) {
           uniqueItems[nextLevelValue] = item;
         } else {
@@ -224,7 +269,6 @@ class _ContentHierarchyScreenState
       }
     }
 
-    // Sort by sortOrder of the first representative item encountered.
     final result = uniqueItems.values.toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
@@ -243,10 +287,8 @@ class _ContentHierarchyScreenState
 
   void _handleItemTap(ContentItem item) {
     if (item.isLeaf) {
-      // Navigate to text display screen
       context.router.push(TextDisplayRoute(sefariaRef: item.sefariaRef));
     } else {
-      // Drill down into container
       _drillDown(item);
     }
   }

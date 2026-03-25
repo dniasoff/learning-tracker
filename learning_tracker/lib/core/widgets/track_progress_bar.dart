@@ -51,13 +51,13 @@ class TrackProgressBar extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Colors.grey[300],
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(height / 2),
       ),
       child: const Center(
         child: Text(
           'No completions yet',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12),
         ),
       ),
     );

@@ -240,7 +240,7 @@ class _PaceCard extends StatelessWidget {
             PaceStatusType.onPace => Colors.blue,
             PaceStatusType.behind => Colors.orange,
           }
-        : Colors.grey;
+        : theme.colorScheme.onSurfaceVariant;
     final statusLabel = paceStatus != null
         ? switch (paceStatus.status) {
             PaceStatusType.ahead => 'Ahead',
@@ -500,7 +500,7 @@ class _CompletionHistorySection extends StatelessWidget {
               'Showing ${completions.length} of $totalCount completions',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
       ],
@@ -549,9 +549,9 @@ class _EmptySection extends StatelessWidget {
       child: Center(
         child: Column(
           children: [
-            Icon(icon, size: 40, color: Colors.grey),
+            Icon(icon, size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 8),
-            Text(message, style: const TextStyle(color: Colors.grey)),
+            Text(message, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       ),

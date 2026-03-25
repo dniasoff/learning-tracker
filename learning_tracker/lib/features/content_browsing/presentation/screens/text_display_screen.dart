@@ -29,11 +29,15 @@ class TextDisplayScreen extends ConsumerWidget {
         title: AppBarTitle(text: sefariaRef),
         actions: [
           IconButton(
-            icon: Icon(showNikud ? Icons.format_clear : Icons.text_fields),
-            tooltip: showNikud ? 'Hide Nikud' : 'Show Nikud',
-            onPressed: () => ref.read(showNikudProvider.notifier).toggle(),
+            icon: const Icon(Icons.share_outlined, size: 20),
+            tooltip: 'Share',
+            onPressed: () {},
           ),
-          _FontSizeSelector(currentSize: fontSize),
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'More options',
+            onPressed: () => _showOptionsSheet(context, ref, showNikud, fontSize),
+          ),
         ],
       ),
       body: SafeArea(
@@ -47,10 +51,86 @@ class TextDisplayScreen extends ConsumerWidget {
               textContent: textContent,
               fontSize: fontSize,
               showNikud: showNikud,
+              sefariaRef: sefariaRef,
             );
           },
           loading: () => const _LoadingView(),
           error: (error, stack) => _ErrorView(error: error),
+        ),
+      ),
+    );
+  }
+
+  void _showOptionsSheet(
+    BuildContext context,
+    WidgetRef ref,
+    bool showNikud,
+    FontSize fontSize,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Display Settings',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Nikud toggle
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Show Nikud (diacritics)', style: TextStyle(fontSize: 15)),
+                Switch(
+                  value: showNikud,
+                  onChanged: (_) => ref.read(showNikudProvider.notifier).toggle(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Font size
+            const Text('Font Size', style: TextStyle(fontSize: 15)),
+            const SizedBox(height: 8),
+            Row(
+              children: FontSize.values.map((size) {
+                final isSelected = size == fontSize;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(size.label),
+                    selected: isSelected,
+                    onSelected: (_) {
+                      ref.read(fontSizeProvider.notifier).setFontSize(size);
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
@@ -82,24 +162,27 @@ class _OfflineMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.download, size: 64, color: Colors.grey[400]),
+            Icon(Icons.download, size: 64,
+                color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               'Text content not yet downloaded',
               style: AppTextStyles.titleMedium.copyWith(
-                color: Colors.grey[600],
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Download this curriculum\'s text from the settings to read offline.',
-              style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[500]),
+              style: AppTextStyles.bodySmall.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -123,20 +206,24 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+          Icon(Icons.error_outline, size: 64,
+              color: theme.colorScheme.error.withValues(alpha: 0.7)),
           const SizedBox(height: 16),
           Text(
             'Failed to load text',
-            style: AppTextStyles.titleMedium.copyWith(color: Colors.red[700]),
+            style: AppTextStyles.titleMedium.copyWith(
+                color: theme.colorScheme.error),
           ),
           const SizedBox(height: 8),
           Text(
             error.toString(),
-            style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+            style: AppTextStyles.bodySmall.copyWith(
+                color: theme.colorScheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
         ],
@@ -145,139 +232,185 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-/// Font size selector popup menu.
-class _FontSizeSelector extends ConsumerWidget {
-  const _FontSizeSelector({required this.currentSize});
-
-  final FontSize currentSize;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<FontSize>(
-      icon: const Icon(Icons.format_size),
-      tooltip: 'Font Size',
-      onSelected: (size) {
-        ref.read(fontSizeProvider.notifier).setFontSize(size);
-      },
-      itemBuilder: (context) => FontSize.values.map((size) {
-        return PopupMenuItem<FontSize>(
-          value: size,
-          child: Row(
-            children: [
-              if (size == currentSize)
-                const Icon(Icons.check, size: 20)
-              else
-                const SizedBox(width: 20),
-              const SizedBox(width: 8),
-              Text(size.label),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-/// Main text content view with Hebrew and English text.
+/// Main text content view redesigned as a learning reader.
 class _TextContentView extends StatelessWidget {
   const _TextContentView({
     required this.textContent,
     required this.fontSize,
     required this.showNikud,
+    required this.sefariaRef,
   });
 
   final TextContent textContent;
   final FontSize fontSize;
   final bool showNikud;
+  final String sefariaRef;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final displayHebrew = showNikud
         ? textContent.hebrewText
         : HebrewUtils.stripNikud(textContent.hebrewText);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Hebrew text (RTL)
-          if (textContent.hebrewText.isNotEmpty) ...[
-            Text(
-              'Hebrew',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              displayHebrew,
-              textDirection: TextDirection.rtl,
-              textAlign: TextAlign.right,
-              style: AppTextStyles.hebrewBodyLarge.copyWith(
-                fontSize: 18 * fontSize.multiplier,
-                height: 1.8,
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
-
-          // English text (LTR)
-          if (textContent.englishText.isNotEmpty) ...[
-            Text(
-              'English',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              textContent.englishText,
-              style: AppTextStyles.bodyLarge.copyWith(
-                fontSize: 16 * fontSize.multiplier,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
-
-          // Mark completion buttons (visible, not wired)
-          const _CompletionButtons(),
-
-          const SizedBox(height: 32),
-
-          // Sefaria attribution
-          const _SefariaAttribution(),
-        ],
-      ),
-    );
-  }
-}
-
-/// Mark completion buttons (Epic 3 will wire these).
-class _CompletionButtons extends StatelessWidget {
-  const _CompletionButtons();
-
-  @override
-  Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ElevatedButton.icon(
-          onPressed: null, // Not wired yet (Epic 3)
-          icon: const Icon(Icons.check_circle_outline),
-          label: const Text('Mark as Reviewed'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+        // Progress bar at top
+        ClipRRect(
+          child: LinearProgressIndicator(
+            value: 0.15,
+            minHeight: 3,
+            backgroundColor: Colors.white.withValues(alpha: 0.05),
+            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
           ),
         ),
-        const SizedBox(height: 12),
-        ElevatedButton.icon(
-          onPressed: null, // Not wired yet (Epic 3)
-          icon: const Icon(Icons.check_circle),
-          label: const Text('Mark Complete'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+
+        // Scrollable content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Hebrew text (RTL)
+                if (textContent.hebrewText.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.06),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Hebrew Text',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withValues(alpha: 0.4),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          displayHebrew,
+                          textDirection: TextDirection.rtl,
+                          textAlign: TextAlign.right,
+                          style: AppTextStyles.hebrewBodyLarge.copyWith(
+                            fontSize: 18 * fontSize.multiplier,
+                            height: 1.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Sefaria Integration card
+                _SefariaIntegrationCard(sefariaRef: sefariaRef),
+                const SizedBox(height: 16),
+
+                // English text (LTR)
+                if (textContent.englishText.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.06),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'English Translation',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: 0.4),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          textContent.englishText,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            fontSize: 16 * fontSize.multiplier,
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Learning Notes section
+                const _LearningNotesSection(),
+                const SizedBox(height: 16),
+
+                // Study Resources section
+                const _StudyResourcesSection(),
+                const SizedBox(height: 16),
+
+                // Mark completion
+                const _CompletionSection(),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+
+        // Bottom navigation bar
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF141414),
+            border: Border(
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: null,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Previous'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: null,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Next Daf'),
+                      SizedBox(width: 4),
+                      Icon(Icons.arrow_forward, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -285,27 +418,208 @@ class _CompletionButtons extends StatelessWidget {
   }
 }
 
-/// Sefaria attribution footer.
-class _SefariaAttribution extends StatelessWidget {
-  const _SefariaAttribution();
+/// Sefaria Integration card.
+class _SefariaIntegrationCard extends StatelessWidget {
+  const _SefariaIntegrationCard({required this.sefariaRef});
+
+  final String sefariaRef;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8C519).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.menu_book, size: 20, color: Color(0xFFE8C519)),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sefaria Integration',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Access the full original text and translations directly.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: const Text('Read This Daf'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Learning Notes section.
+class _LearningNotesSection extends StatelessWidget {
+  const _LearningNotesSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Learning Notes',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Capture your insights or questions here...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8C519),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.edit, size: 16, color: Colors.black),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Study Resources expandable section.
+class _StudyResourcesSection extends StatelessWidget {
+  const _StudyResourcesSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        leading: const Icon(Icons.library_books_outlined, size: 20),
+        title: const Text(
+          'Study Resources',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        children: [
+          _buildResourceItem('Rashi Commentary', Icons.format_quote),
+          const SizedBox(height: 8),
+          _buildResourceItem('Tosafot', Icons.format_quote),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResourceItem(String title, IconData icon) {
+    return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          Icon(Icons.menu_book, size: 20, color: Colors.grey[700]),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Content from Sefaria',
-              style: AppTextStyles.labelSmall.copyWith(color: Colors.grey[700]),
-            ),
+          Icon(icon, size: 16, color: const Color(0xFF8A8A8A)),
+          const SizedBox(width: 10),
+          Text(title, style: const TextStyle(fontSize: 14)),
+          const Spacer(),
+          Icon(Icons.chevron_right, size: 18, color: Colors.white.withValues(alpha: 0.3)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mark completion section with radio button.
+class _CompletionSection extends StatelessWidget {
+  const _CompletionSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.radio_button_unchecked, color: Color(0xFF8A8A8A), size: 22),
+          SizedBox(width: 12),
+          Text(
+            'Mark as Complete',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
           ),
         ],
       ),

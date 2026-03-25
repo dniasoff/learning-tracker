@@ -19,32 +19,60 @@ class EngagementCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Days Active', style: theme.textTheme.bodySmall),
-                  const SizedBox(height: 4),
                   Text(
                     '${engagement.daysActiveThisWeek}/7',
-                    style: theme.textTheme.titleLarge?.copyWith(
+                    style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text('this week', style: theme.textTheme.bodySmall),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Days Active',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    'this week',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                  ),
                 ],
               ),
             ),
+            Container(
+              width: 1,
+              height: 48,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Daily Average', style: theme.textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  Text(
-                    engagement.averageDailyCompletions.toStringAsFixed(1),
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      engagement.averageDailyCompletions.toStringAsFixed(1),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text('completions/day', style: theme.textTheme.bodySmall),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      'Daily Average',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      'completions/day',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

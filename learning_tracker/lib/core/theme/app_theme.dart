@@ -5,18 +5,17 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 /// AppTheme provides Material Design 3 theme for the Torah learning app.
 ///
 /// Design philosophy:
-/// - Calm, focused colors appropriate for religious study
+/// - Dark mode with yellow/gold accent for focused study
 /// - High contrast for readability
 /// - RTL-friendly layout
-/// - No dark mode in v1.0 (light theme only)
 class AppTheme {
   AppTheme._();
 
-  /// Primary color: Deep blue-purple, evoking tradition and depth of study
-  static const Color _primaryColor = Color(0xFF2E4057);
+  /// Primary color: Yellow/gold accent
+  static const Color _primaryColor = Color(0xFFE8C519);
 
-  /// Secondary color: Warm amber, representing the light of Torah
-  static const Color _secondaryColor = Color(0xFFF4A261);
+  /// Secondary color: Bright green for success states
+  static const Color _secondaryColor = Color(0xFF4ADE80);
 
   /// Tertiary color: Soft green, representing growth and learning
   static const Color _tertiaryColor = Color(0xFF6B9080);
@@ -24,16 +23,17 @@ class AppTheme {
   /// Error color: Warm red (not harsh)
   static const Color _errorColor = Color(0xFFD64045);
 
-  /// Surface and background colors
-  static const Color _surfaceColor = Color(0xFFFAFAFA);
-  static const Color _backgroundColor = Color(0xFFF5F5F5);
+  /// Dark surface and background colors
+  static const Color _surfaceColor = Color(0xFF141414);
+  static const Color _backgroundColor = Color(0xFF0A0A0A);
+  static const Color _cardColor = Color(0xFF1A1A1A);
 
-  /// Curriculum colors - distinct colors for the 5 curricula
-  static const Color curriculumMishna = Color(0xFF4A90E2); // Blue
-  static const Color curriculumBavli = Color(0xFF8B4789); // Purple
-  static const Color curriculumYerushalmi = Color(0xFF2ECC71); // Green
+  /// Curriculum colors - distinct, rich colors for each curriculum
+  static const Color curriculumMishna = Color(0xFF2D8C46); // Green
+  static const Color curriculumBavli = Color(0xFF1B6B5A); // Teal
+  static const Color curriculumYerushalmi = Color(0xFF2980B9); // Blue
   static const Color curriculumMishnaBerurah = Color(0xFFE67E22); // Orange
-  static const Color curriculumChumash = Color(0xFFE74C3C); // Red
+  static const Color curriculumChumash = Color(0xFF5A7A2E); // Olive green
   static const Color curriculumNach = Color(0xFF1ABC9C); // Teal
   static const Color curriculumMussar = Color(0xFF9B59B6); // Violet
 
@@ -88,95 +88,132 @@ class AppTheme {
     }
   }
 
-  /// Light theme (only theme in v1.0)
-  static ThemeData get lightTheme {
+  /// Dark theme
+  static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.light(
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.dark(
         primary: _primaryColor,
-        onPrimary: Colors.white,
-        primaryContainer: _primaryColor.withValues(alpha: 0.2),
+        onPrimary: Colors.black,
+        primaryContainer: _primaryColor.withValues(alpha: 0.15),
         onPrimaryContainer: _primaryColor,
         secondary: _secondaryColor,
-        onSecondary: Colors.white,
-        secondaryContainer: _secondaryColor.withValues(alpha: 0.2),
-        onSecondaryContainer: _secondaryColor.withValues(alpha: 0.8),
+        onSecondary: Colors.black,
+        secondaryContainer: _secondaryColor.withValues(alpha: 0.15),
+        onSecondaryContainer: _secondaryColor,
         tertiary: _tertiaryColor,
-        onTertiary: Colors.white,
-        tertiaryContainer: _tertiaryColor.withValues(alpha: 0.2),
+        onTertiary: Colors.black,
+        tertiaryContainer: _tertiaryColor.withValues(alpha: 0.15),
         onTertiaryContainer: _tertiaryColor,
         error: _errorColor,
         onError: Colors.white,
         surface: _surfaceColor,
-        onSurface: const Color(0xFF1A1A1A),
-        onSurfaceVariant: const Color(0xFF49454F),
-        outline: const Color(0xFF79747E),
-        shadow: Colors.black.withValues(alpha: 0.1),
+        onSurface: Colors.white,
+        onSurfaceVariant: const Color(0xFF8A8A8A),
+        outline: const Color(0xFF2A2A2A),
+        shadow: Colors.black.withValues(alpha: 0.4),
       ),
       scaffoldBackgroundColor: _backgroundColor,
       appBarTheme: const AppBarTheme(
-        backgroundColor: _primaryColor,
+        backgroundColor: _backgroundColor,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),
       cardTheme: CardThemeData(
-        color: _surfaceColor,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: _cardColor,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: EdgeInsets.zero,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 2,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          elevation: 0,
+          backgroundColor: _primaryColor,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: _primaryColor,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
+          foregroundColor: _primaryColor,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: _cardColor,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _errorColor),
         ),
+        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 12,
+          vertical: 16,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: _surfaceColor,
         selectedItemColor: _primaryColor,
-        unselectedItemColor: Color(0xFF79747E),
+        unselectedItemColor: Color(0xFF5A5A5A),
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: _surfaceColor,
-        indicatorColor: _primaryColor.withValues(alpha: 0.15),
+        indicatorColor: _primaryColor.withValues(alpha: 0.12),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: _primaryColor);
           }
-          return const IconThemeData(color: Color(0xFF79747E));
+          return const IconThemeData(color: Color(0xFF5A5A5A));
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -187,13 +224,72 @@ class AppTheme {
             );
           }
           return const TextStyle(
-            color: Color(0xFF79747E),
+            color: Color(0xFF5A5A5A),
             fontWeight: FontWeight.normal,
             fontSize: 12,
           );
         }),
-        elevation: 8,
+        elevation: 0,
+      ),
+      dividerColor: Colors.white.withValues(alpha: 0.06),
+      chipTheme: ChipThemeData(
+        backgroundColor: _primaryColor.withValues(alpha: 0.15),
+        selectedColor: _primaryColor,
+        labelStyle: const TextStyle(color: Colors.white, fontSize: 13),
+        secondaryLabelStyle: const TextStyle(color: Colors.black, fontSize: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        side: BorderSide.none,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return _primaryColor;
+            }
+            return _cardColor;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.black;
+            }
+            return Colors.white.withValues(alpha: 0.7);
+          }),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return _primaryColor;
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(Colors.black),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return _primaryColor;
+          return Colors.white.withValues(alpha: 0.3);
+        }),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return _primaryColor;
+          return Colors.white.withValues(alpha: 0.5);
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return _primaryColor.withValues(alpha: 0.3);
+          }
+          return Colors.white.withValues(alpha: 0.1);
+        }),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: _primaryColor,
+        linearTrackColor: Color(0xFF2A2A2A),
       ),
     );
   }
+
+  /// Light theme (kept for reference)
+  static ThemeData get lightTheme => darkTheme;
 }

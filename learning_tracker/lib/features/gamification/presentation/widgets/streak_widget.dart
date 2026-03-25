@@ -99,14 +99,21 @@ class _AnimatedStreakDisplayState extends State<_AnimatedStreakDisplay>
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: const Icon(
-                Icons.local_fire_department,
-                color: Colors.orange,
-                size: 32,
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: const Icon(
+                  Icons.local_fire_department,
+                  color: Colors.orange,
+                  size: 28,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -120,9 +127,12 @@ class _AnimatedStreakDisplayState extends State<_AnimatedStreakDisplay>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   'Best: ${widget.maxStreak} days',
-                  style: theme.textTheme.bodySmall,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -146,17 +156,22 @@ class _SubtleStreakDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.local_fire_department,
-            color: theme.colorScheme.primary,
+            color: Colors.orange.withValues(alpha: 0.8),
             size: 18,
           ),
           const SizedBox(width: 4),
-          Text('$currentStreak', style: theme.textTheme.bodyMedium),
+          Text(
+            '$currentStreak',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(width: 8),
           Text(
             '(best: $maxStreak)',

@@ -93,7 +93,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
           const SizedBox(height: 12),
           Text(
             '${widget.sefariaRefs.length} items will be marked',
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
