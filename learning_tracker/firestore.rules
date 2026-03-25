@@ -16,31 +16,13 @@ service cloud.firestore {
         return request.auth != null && request.auth.uid == uid;
       }
 
-      // Profile document
-      match /profile {
+      // Account-level profile document
+      match /profile/{docId} {
         allow read, write: if isOwner();
       }
 
-      // Completions subcollection (append-only log)
-      match /completions/{completionId} {
-        allow read: if isOwner();
-        allow create: if isOwner();
-        // Completions are immutable: no updates or deletes
-        allow update, delete: if false;
-      }
-
-      // Bookmarks subcollection
-      match /bookmarks/{bookmarkId} {
-        allow read, write: if isOwner();
-      }
-
-      // Settings subcollection
-      match /settings/{settingsId} {
-        allow read, write: if isOwner();
-      }
-
-      // Streak document
-      match /streak {
+      // Profile-scoped data under users/{uid}/profiles/{profileId}/
+      match /profiles/{profileId}/{document=**} {
         allow read, write: if isOwner();
       }
     }
