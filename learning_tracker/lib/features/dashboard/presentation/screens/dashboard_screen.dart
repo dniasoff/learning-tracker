@@ -5,9 +5,14 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_date_header.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/day_type_indicator.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/satisfaction_cue_widget.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_milestone_overlay.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -170,6 +175,20 @@ class _DashboardBody extends ConsumerWidget {
         ),
 
         const SizedBox(height: 20),
+
+        // AC-3: Streak milestone celebration
+        if (isMilestone(currentStreak))
+          StreakMilestoneOverlay(
+            streak: currentStreak,
+            userMode: userMode,
+            onDismiss: () {},
+          ),
+
+        // AC-5: Adult mode satisfaction cue
+        if (userMode == UserMode.adult)
+          SatisfactionCueWidget(currentStreak: currentStreak),
+
+        const SizedBox(height: 12),
 
         // Stats row
         Row(
@@ -443,14 +462,14 @@ class _TodaysLearningSection extends ConsumerWidget {
   }
 }
 
-/// AC-5: Individual task card with sefaria ref, stage, curriculum color, priority.
-class _TaskItemCard extends StatelessWidget {
+/// AC-1: Individual task card with quick-complete button.
+class _TaskItemCard extends ConsumerWidget {
   const _TaskItemCard({required this.task});
 
   final DailyTask task;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
 
@@ -463,7 +482,7 @@ class _TaskItemCard extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
               Container(
@@ -498,31 +517,112 @@ class _TaskItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
+              // AC-1: Priority badge
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: task.isOverdue
                       ? Colors.orange.withValues(alpha: 0.15)
                       : curriculumColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   task.isOverdue ? 'Overdue' : task.stageName,
                   style: TextStyle(
                     color: task.isOverdue ? Colors.orange : curriculumColor,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
+              const SizedBox(width: 4),
+              // AC-1: Quick-complete button
+              _QuickCompleteButton(task: task),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// AC-1: Quick-complete icon button that marks a task done from the dashboard.
+class _QuickCompleteButton extends ConsumerStatefulWidget {
+  const _QuickCompleteButton({required this.task});
+  final DailyTask task;
+
+  @override
+  ConsumerState<_QuickCompleteButton> createState() =>
+      _QuickCompleteButtonState();
+}
+
+class _QuickCompleteButtonState extends ConsumerState<_QuickCompleteButton>
+    with SingleTickerProviderStateMixin {
+  bool _completing = false;
+  late final AnimationController _scaleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onQuickComplete() async {
+    if (_completing) return;
+    setState(() => _completing = true);
+
+    try {
+      final useCase = ref.read(markCompletionUseCaseProvider);
+      await useCase(
+        CompletionRequest(
+          curriculumId: widget.task.curriculumId.storageKey,
+          sefariaRef: widget.task.contentItemSefariaRef,
+          stageId: widget.task.stageDefinitionId,
+          trackType: 'personal',
+        ),
+      );
+      ref.invalidate(allDailyTasksProvider);
+      await _scaleController.forward();
+    } catch (_) {
+      if (mounted) setState(() => _completing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (_completing) {
+      return ScaleTransition(
+        scale: CurvedAnimation(parent: _scaleController, curve: Curves.easeOut),
+        child: Icon(
+          Icons.check_circle,
+          color: theme.colorScheme.primary,
+          size: 28,
+        ),
+      );
+    }
+
+    return IconButton(
+      onPressed: _onQuickComplete,
+      icon: Icon(
+        Icons.check_circle_outline,
+        color: Colors.white.withValues(alpha: 0.4),
+        size: 24,
+      ),
+      tooltip: 'Mark complete',
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
     );
   }
 }
@@ -652,15 +752,14 @@ class _CurriculumCard extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                // Progress bar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: LinearProgressIndicator(
-                    value: percentage,
-                    minHeight: 4,
-                    backgroundColor: curriculumColor.withValues(alpha: 0.15),
-                    valueColor: AlwaysStoppedAnimation<Color>(curriculumColor),
-                  ),
+                // AC-2: Animated progress bar
+                AnimatedProgressBar(
+                  value: percentage,
+                  color: curriculumColor,
+                  backgroundColor: curriculumColor.withValues(alpha: 0.15),
+                  height: 4,
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOut,
                 ),
                 const SizedBox(height: 6),
                 Row(

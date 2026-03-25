@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// A summary card for one curriculum on the dashboard.
@@ -56,14 +57,12 @@ class CurriculumSummaryCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: summary.completionPercentage,
-                  minHeight: 6,
-                  backgroundColor: curriculumColor.withValues(alpha: 0.15),
-                  valueColor: AlwaysStoppedAnimation<Color>(curriculumColor),
-                ),
+              AnimatedProgressBar(
+                value: summary.completionPercentage,
+                color: curriculumColor,
+                backgroundColor: curriculumColor.withValues(alpha: 0.15),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOut,
               ),
               const SizedBox(height: 8),
               Row(
