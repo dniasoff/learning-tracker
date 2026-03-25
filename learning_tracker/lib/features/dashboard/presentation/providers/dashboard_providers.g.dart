@@ -454,3 +454,103 @@ final class DashboardGlobalPointsProvider
 
 String _$dashboardGlobalPointsHash() =>
     r'7b414255ea50c70ee6ed1f4a80cada3871859e54';
+
+/// Per-curriculum pace status for the dashboard.
+///
+/// Fetches goal data and computes pace internally so the dashboard
+/// doesn't need to know goal details.
+
+@ProviderFor(dashboardPaceStatus)
+final dashboardPaceStatusProvider = DashboardPaceStatusFamily._();
+
+/// Per-curriculum pace status for the dashboard.
+///
+/// Fetches goal data and computes pace internally so the dashboard
+/// doesn't need to know goal details.
+
+final class DashboardPaceStatusProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<PaceStatus?>,
+          PaceStatus?,
+          FutureOr<PaceStatus?>
+        >
+    with $FutureModifier<PaceStatus?>, $FutureProvider<PaceStatus?> {
+  /// Per-curriculum pace status for the dashboard.
+  ///
+  /// Fetches goal data and computes pace internally so the dashboard
+  /// doesn't need to know goal details.
+  DashboardPaceStatusProvider._({
+    required DashboardPaceStatusFamily super.from,
+    required CurriculumId super.argument,
+  }) : super(
+         retry: null,
+         name: r'dashboardPaceStatusProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$dashboardPaceStatusHash();
+
+  @override
+  String toString() {
+    return r'dashboardPaceStatusProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<PaceStatus?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<PaceStatus?> create(Ref ref) {
+    final argument = this.argument as CurriculumId;
+    return dashboardPaceStatus(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DashboardPaceStatusProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$dashboardPaceStatusHash() =>
+    r'aa03e0f915505782275bee73f6db45c39d072536';
+
+/// Per-curriculum pace status for the dashboard.
+///
+/// Fetches goal data and computes pace internally so the dashboard
+/// doesn't need to know goal details.
+
+final class DashboardPaceStatusFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<PaceStatus?>, CurriculumId> {
+  DashboardPaceStatusFamily._()
+    : super(
+        retry: null,
+        name: r'dashboardPaceStatusProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Per-curriculum pace status for the dashboard.
+  ///
+  /// Fetches goal data and computes pace internally so the dashboard
+  /// doesn't need to know goal details.
+
+  DashboardPaceStatusProvider call(CurriculumId curriculum) =>
+      DashboardPaceStatusProvider._(argument: curriculum, from: this);
+
+  @override
+  String toString() => r'dashboardPaceStatusProvider';
+}

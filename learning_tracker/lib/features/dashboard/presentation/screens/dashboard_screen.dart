@@ -6,9 +6,12 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_date_header.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/day_type_indicator.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 @RoutePage()
@@ -72,6 +75,7 @@ class DashboardScreen extends ConsumerWidget {
                 for (final c in activeCurricula) {
                   ref.invalidate(dashboardCompletionPercentageProvider(c));
                   ref.invalidate(dashboardLastCompletionProvider(c));
+                  ref.invalidate(dashboardPaceStatusProvider(c));
                 }
               },
               child: _DashboardBody(
@@ -115,22 +119,6 @@ class _DashboardBody extends ConsumerWidget {
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
     final name = profileName ?? 'Learner';
     final now = DateTime.now();
-    final months = [
-      '',
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    final dateStr = '${months[now.month]} ${now.day}, ${now.year}';
 
     // Compute overall completion percentage
     var totalCompletion = 0.0;
@@ -168,12 +156,19 @@ class _DashboardBody extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          dateStr,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.5),
-          ),
+
+        // AC-3: English + Hebrew date header
+        DashboardDateHeader(date: now),
+
+        const SizedBox(height: 8),
+
+        // AC-4: Day type indicator
+        dailyTasksAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (tasks) => DayTypeIndicator(tasks: tasks),
         ),
+
         const SizedBox(height: 20),
 
         // Stats row
@@ -207,7 +202,7 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
 
-        // Today's Learning section
+        // AC-5: Today's Learning section (actual task items)
         _TodaysLearningSection(
           dailyTasksAsync: dailyTasksAsync,
           onViewAll: () => context.router.push(const SchedulerRoute()),
@@ -229,7 +224,7 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
 
-        // Active Curricula
+        // AC-1, 2, 6: Active Curricula with pace data
         if (activeCurricula.isNotEmpty) ...[
           Text(
             'Active Curricula',
@@ -239,13 +234,16 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 180,
+            height: 200,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: activeCurricula.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
-                return _CurriculumCard(curriculum: activeCurricula[index]);
+                return _CurriculumCard(
+                  curriculum: activeCurricula[index],
+                  allTasks: dailyTasksAsync.asData?.value ?? [],
+                );
               },
             ),
           ),
@@ -377,11 +375,9 @@ class _TodaysLearningSection extends ConsumerWidget {
               child: CircularProgressIndicator(),
             ),
           ),
-          error: (e, _) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Error loading tasks: $e'),
-            ),
+          error: (e, _) => _ErrorRetry(
+            message: 'Error loading tasks: $e',
+            onRetry: () => ref.invalidate(allDailyTasksProvider),
           ),
           data: (tasks) {
             if (tasks.isEmpty) {
@@ -420,13 +416,14 @@ class _TodaysLearningSection extends ConsumerWidget {
               );
             }
 
+            // AC-5: Show actual task items
             final previewTasks = tasks.take(5).toList();
             return Column(
               children: [
                 ...previewTasks.map(
                   (task) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: _TaskItemCard(task: task, ref: ref),
+                    child: _TaskItemCard(task: task),
                   ),
                 ),
                 if (tasks.length > 5)
@@ -446,11 +443,11 @@ class _TodaysLearningSection extends ConsumerWidget {
   }
 }
 
+/// AC-5: Individual task card with sefaria ref, stage, curriculum color, priority.
 class _TaskItemCard extends StatelessWidget {
-  const _TaskItemCard({required this.task, required this.ref});
+  const _TaskItemCard({required this.task});
 
   final DailyTask task;
-  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -458,61 +455,72 @@ class _TaskItemCard extends StatelessWidget {
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 40,
-              decoration: BoxDecoration(
-                color: curriculumColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${task.curriculumId.displayNameEn}: ${task.contentItemSefariaRef}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    task.stageName,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: task.isOverdue
-                    ? Colors.orange.withValues(alpha: 0.15)
-                    : curriculumColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                task.isOverdue ? 'Overdue' : task.stageName,
-                style: TextStyle(
-                  color: task.isOverdue ? Colors.orange : curriculumColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          context.router.push(
+            TextDisplayRoute(sefariaRef: task.contentItemSefariaRef),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: curriculumColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${task.curriculumId.displayNameEn}: ${task.contentItemSefariaRef}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      task.stageName,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: task.isOverdue
+                      ? Colors.orange.withValues(alpha: 0.15)
+                      : curriculumColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  task.isOverdue ? 'Overdue' : task.stageName,
+                  style: TextStyle(
+                    color: task.isOverdue ? Colors.orange : curriculumColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -575,10 +583,12 @@ class _DailyProgressBar extends StatelessWidget {
   }
 }
 
+/// AC-1, 2, 6: Curriculum card with pace badge and real task data.
 class _CurriculumCard extends ConsumerWidget {
   final CurriculumId curriculum;
+  final List<DailyTask> allTasks;
 
-  const _CurriculumCard({required this.curriculum});
+  const _CurriculumCard({required this.curriculum, required this.allTasks});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -587,11 +597,23 @@ class _CurriculumCard extends ConsumerWidget {
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
     );
+    final paceAsync = ref.watch(dashboardPaceStatusProvider(curriculum));
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = (percentage * 100).round();
 
+    // AC-6: Compute per-curriculum task count and next due item
+    final curriculumTasks = allTasks
+        .where((t) => t.curriculumId == curriculum)
+        .toList();
+    final nextDue = curriculumTasks.isNotEmpty
+        ? curriculumTasks.first.stageName
+        : null;
+
+    // AC-1: Get pace status
+    final paceStatus = paceAsync.asData?.value;
+
     return SizedBox(
-      width: 200,
+      width: 220,
       child: Card(
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -607,44 +629,87 @@ class _CurriculumCard extends ConsumerWidget {
               children: [
                 Row(
                   children: [
+                    Expanded(
+                      child: Text(
+                        curriculum.displayNameEn,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    // AC-7: Show shimmer while loading, nothing if no goal
+                    if (paceAsync.isLoading)
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: curriculumColor.withValues(alpha: 0.5),
+                        ),
+                      )
+                    else
+                      _MiniPaceBadge(paceStatus: paceStatus),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Progress bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: percentage,
+                    minHeight: 4,
+                    backgroundColor: curriculumColor.withValues(alpha: 0.15),
+                    valueColor: AlwaysStoppedAnimation<Color>(curriculumColor),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
                     Text(
-                      curriculum.displayNameEn,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      '$pctDisplay%',
+                      style: TextStyle(
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
+                        color: curriculumColor,
                       ),
                     ),
                     const Spacer(),
-                    // Mini circular progress
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            value: percentage,
-                            strokeWidth: 3,
-                            backgroundColor: curriculumColor.withValues(
-                              alpha: 0.15,
-                            ),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              curriculumColor,
-                            ),
-                          ),
-                          Text(
-                            '$pctDisplay%',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: curriculumColor,
-                            ),
-                          ),
-                        ],
+                    // AC-2: Projected completion date
+                    if (paceStatus?.projectedCompletionDate != null)
+                      Text(
+                        _formatProjectedDate(
+                          paceStatus!.projectedCompletionDate!,
+                        ),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white.withValues(alpha: 0.4),
+                        ),
+                      )
+                    else if (paceStatus != null)
+                      Text(
+                        'No projection',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white.withValues(alpha: 0.3),
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const Spacer(),
+                // AC-6: Task count
+                if (curriculumTasks.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '${curriculumTasks.length} task${curriculumTasks.length == 1 ? '' : 's'} today${nextDue != null ? ' · $nextDue' : ''}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 FilledButton(
                   onPressed: () {
                     context.router.push(
@@ -663,6 +728,95 @@ class _CurriculumCard extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  static const _months = [
+    '',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  String _formatProjectedDate(DateTime date) =>
+      '${_months[date.month]} ${date.day}';
+}
+
+/// Compact pace badge for the curriculum card header.
+class _MiniPaceBadge extends StatelessWidget {
+  const _MiniPaceBadge({required this.paceStatus});
+
+  final PaceStatus? paceStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    if (paceStatus == null) return const SizedBox.shrink();
+
+    final (label, color, icon) = switch (paceStatus!.status) {
+      PaceStatusType.ahead => (
+        '${paceStatus!.daysDelta}d',
+        Colors.green,
+        Icons.trending_up,
+      ),
+      PaceStatusType.behind => (
+        '${paceStatus!.daysDelta.abs()}d',
+        Colors.orange,
+        Icons.trending_down,
+      ),
+      PaceStatusType.onPace => ('OK', Colors.blue, Icons.trending_flat),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// AC-7: Error state with retry button.
+class _ErrorRetry extends StatelessWidget {
+  const _ErrorRetry({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(message),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
         ),
       ),
     );

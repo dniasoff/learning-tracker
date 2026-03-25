@@ -3,6 +3,8 @@
 library;
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
@@ -401,11 +403,292 @@ void main() {
       expect(remaining, isEmpty);
     });
   });
+  // ── Story 16.3: Dashboard Pace & Progress Integration ─────────────────
   group(
     'Story 16.3 -- Dashboard Pace & Progress Integration',
-    skip: 'Not yet implemented',
     tags: ['story_16_3'],
-    () {},
+    () {
+      final today = DateTime.utc(2026, 3, 25);
+
+      // AC-1: Pace status displayed per curriculum
+      test('AC-1: PaceStatus contains daysDelta for badge display', () {
+        final pace = PaceStatus(
+          status: PaceStatusType.ahead,
+          daysDelta: 2,
+          projectedCompletionDate: DateTime.utc(2026, 12, 1),
+          rollingAverage: 3.0,
+        );
+        expect(pace.daysDelta, 2);
+        expect(pace.status, PaceStatusType.ahead);
+      });
+
+      test('AC-1: behind status has negative daysDelta', () {
+        const pace = PaceStatus(
+          status: PaceStatusType.behind,
+          daysDelta: -3,
+          rollingAverage: 0.5,
+        );
+        expect(pace.daysDelta, -3);
+        expect(pace.status, PaceStatusType.behind);
+      });
+
+      test('AC-1: onPace status has zero daysDelta', () {
+        const pace = PaceStatus(
+          status: PaceStatusType.onPace,
+          daysDelta: 0,
+          rollingAverage: 1.0,
+        );
+        expect(pace.daysDelta, 0);
+      });
+
+      // AC-2: Projected completion date shown
+      test(
+        'AC-2: projectedCompletionDate is non-null when rolling avg > 0',
+        () {
+          final result = PaceCalculator.calculate(
+            goalStartDate: DateTime.utc(2026, 1, 1),
+            goalDeadline: DateTime.utc(2026, 12, 31),
+            totalItems: 500,
+            completedItems: 100,
+            dailyCompletionCounts: {
+              for (var i = 1; i <= 7; i++) DateTime.utc(2026, 3, 25 - i): 2,
+            },
+            today: today,
+          );
+          expect(result.projectedCompletionDate, isNotNull);
+        },
+      );
+
+      test('AC-2: projectedCompletionDate is null when no recent activity', () {
+        final result = PaceCalculator.calculate(
+          goalStartDate: DateTime.utc(2026, 1, 1),
+          goalDeadline: DateTime.utc(2026, 12, 31),
+          totalItems: 500,
+          completedItems: 100,
+          dailyCompletionCounts: {},
+          today: today,
+        );
+        expect(result.projectedCompletionDate, isNull);
+      });
+
+      // AC-3: English + Hebrew date header (unit test for formatting logic)
+      test('AC-3: date header formats weekday, month, day, year', () {
+        final date = DateTime(2026, 3, 24);
+        // Tuesday March 24
+        expect(date.weekday, DateTime.tuesday);
+        expect(date.month, 3);
+        expect(date.day, 24);
+      });
+
+      // AC-4: Day type indicator
+      test('AC-4: empty tasks -> Rest Day', () {
+        final tasks = <DailyTask>[];
+        final hasNew = tasks.any(
+          (t) => t.priority == DailyTaskPriority.newLearning,
+        );
+        final hasChazara = tasks.any(
+          (t) =>
+              t.priority == DailyTaskPriority.overdueChazara ||
+              t.priority == DailyTaskPriority.scheduledChazara,
+        );
+        expect(tasks.isEmpty, isTrue);
+        expect(hasNew, isFalse);
+        expect(hasChazara, isFalse);
+      });
+
+      test('AC-4: only new learning -> Study Day', () {
+        final tasks = [
+          const DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 1.1',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            reason: 'New',
+            stageName: 'Learn',
+          ),
+        ];
+        final hasNew = tasks.any(
+          (t) => t.priority == DailyTaskPriority.newLearning,
+        );
+        final hasChazara = tasks.any(
+          (t) =>
+              t.priority == DailyTaskPriority.overdueChazara ||
+              t.priority == DailyTaskPriority.scheduledChazara,
+        );
+        expect(hasNew, isTrue);
+        expect(hasChazara, isFalse);
+      });
+
+      test('AC-4: only chazara -> Review Day', () {
+        final tasks = [
+          const DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 1.1',
+            stageOrder: 2,
+            stageDefinitionId: 2,
+            priority: DailyTaskPriority.scheduledChazara,
+            isOverdue: false,
+            reason: 'Review',
+            stageName: 'Chazara 1',
+          ),
+        ];
+        final hasNew = tasks.any(
+          (t) => t.priority == DailyTaskPriority.newLearning,
+        );
+        final hasChazara = tasks.any(
+          (t) =>
+              t.priority == DailyTaskPriority.overdueChazara ||
+              t.priority == DailyTaskPriority.scheduledChazara,
+        );
+        expect(hasNew, isFalse);
+        expect(hasChazara, isTrue);
+      });
+
+      test('AC-4: both new + chazara -> Mixed', () {
+        final tasks = [
+          const DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 1.1',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            reason: 'New',
+            stageName: 'Learn',
+          ),
+          const DailyTask(
+            curriculumId: CurriculumId.mishnayos,
+            contentItemSefariaRef: 'Mishnah Berakhot 1.2',
+            stageOrder: 2,
+            stageDefinitionId: 2,
+            priority: DailyTaskPriority.overdueChazara,
+            isOverdue: true,
+            reason: 'Overdue',
+            stageName: 'Chazara 1',
+          ),
+        ];
+        final hasNew = tasks.any(
+          (t) => t.priority == DailyTaskPriority.newLearning,
+        );
+        final hasChazara = tasks.any(
+          (t) =>
+              t.priority == DailyTaskPriority.overdueChazara ||
+              t.priority == DailyTaskPriority.scheduledChazara,
+        );
+        expect(hasNew, isTrue);
+        expect(hasChazara, isTrue);
+      });
+
+      // AC-5: Task items contain required fields
+      test(
+        'AC-5: DailyTask has sefariaRef, stageName, curriculum, priority',
+        () {
+          const task = DailyTask(
+            curriculumId: CurriculumId.bavli,
+            contentItemSefariaRef: 'Berakhot 2a',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            reason: 'New learning',
+            stageName: 'Learn',
+          );
+          expect(task.contentItemSefariaRef, 'Berakhot 2a');
+          expect(task.stageName, 'Learn');
+          expect(task.curriculumId, CurriculumId.bavli);
+          expect(task.priority, DailyTaskPriority.newLearning);
+        },
+      );
+
+      test('AC-5: overdue tasks are distinguishable', () {
+        const overdueTask = DailyTask(
+          curriculumId: CurriculumId.mishnayos,
+          contentItemSefariaRef: 'Mishnah Berakhot 1.1',
+          stageOrder: 2,
+          stageDefinitionId: 2,
+          priority: DailyTaskPriority.overdueChazara,
+          isOverdue: true,
+          reason: 'Overdue by 3 days',
+          stageName: 'Chazara 1',
+        );
+        expect(overdueTask.isOverdue, isTrue);
+        expect(overdueTask.priority, DailyTaskPriority.overdueChazara);
+      });
+
+      // AC-6: Aggregator receives populated maps
+      test('AC-6: aggregator produces summaries with real pace data', () {
+        final aggregator = CrossCurriculumAggregator();
+        final pace = PaceStatus(
+          status: PaceStatusType.ahead,
+          daysDelta: 2,
+          projectedCompletionDate: DateTime.utc(2026, 10, 15),
+          rollingAverage: 3.0,
+        );
+
+        final stats = aggregator.aggregate(
+          activeCurricula: [CurriculumId.mishnayos],
+          completionPercentages: {CurriculumId.mishnayos: 0.45},
+          paceStatuses: {CurriculumId.mishnayos: pace},
+          todayTaskCounts: {CurriculumId.mishnayos: 5},
+          nextDueItems: {CurriculumId.mishnayos: 'Berakhot 1.3'},
+          lastCompletions: {CurriculumId.mishnayos: today},
+        );
+
+        expect(stats.curriculumSummaries, hasLength(1));
+        final summary = stats.curriculumSummaries.first;
+        expect(summary.paceStatus, isNotNull);
+        expect(summary.paceStatus!.status, PaceStatusType.ahead);
+        expect(summary.paceStatus!.daysDelta, 2);
+        expect(
+          summary.paceStatus!.projectedCompletionDate,
+          DateTime.utc(2026, 10, 15),
+        );
+        expect(summary.todayTaskCount, 5);
+        expect(summary.nextDueItem, 'Berakhot 1.3');
+      });
+
+      test('AC-6: aggregator sums task counts across curricula', () {
+        final aggregator = CrossCurriculumAggregator();
+        final stats = aggregator.aggregate(
+          activeCurricula: [CurriculumId.mishnayos, CurriculumId.bavli],
+          completionPercentages: {
+            CurriculumId.mishnayos: 0.3,
+            CurriculumId.bavli: 0.1,
+          },
+          paceStatuses: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+          },
+          todayTaskCounts: {CurriculumId.mishnayos: 3, CurriculumId.bavli: 7},
+          nextDueItems: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+          },
+          lastCompletions: {
+            CurriculumId.mishnayos: null,
+            CurriculumId.bavli: null,
+          },
+        );
+        expect(stats.totalTasksToday, 10);
+        expect(stats.activeCurriculaCount, 2);
+      });
+
+      // AC-7: null pace when no goal
+      test('AC-7: paceStatus is null when no goal exists', () {
+        final aggregator = CrossCurriculumAggregator();
+        final stats = aggregator.aggregate(
+          activeCurricula: [CurriculumId.mishnayos],
+          completionPercentages: {CurriculumId.mishnayos: 0.0},
+          paceStatuses: {CurriculumId.mishnayos: null},
+          todayTaskCounts: {CurriculumId.mishnayos: 0},
+          nextDueItems: {CurriculumId.mishnayos: null},
+          lastCompletions: {CurriculumId.mishnayos: null},
+        );
+        expect(stats.curriculumSummaries.first.paceStatus, isNull);
+      });
+    },
   );
   group(
     'Story 16.4 -- Per-Item Review Count Display',

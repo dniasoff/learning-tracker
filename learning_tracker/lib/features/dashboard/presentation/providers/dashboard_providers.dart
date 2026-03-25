@@ -1,8 +1,12 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
@@ -138,4 +142,76 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao.getCompletionsByProfile(profileId);
   return completions.fold<int>(0, (sum, c) => sum + c.points);
+}
+
+/// Per-curriculum pace status for the dashboard.
+///
+/// Fetches goal data and computes pace internally so the dashboard
+/// doesn't need to know goal details.
+@riverpod
+Future<PaceStatus?> dashboardPaceStatus(
+  Ref ref,
+  CurriculumId curriculum,
+) async {
+  final db = ref.watch(appDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final now = ref.watch(clockProvider);
+
+  final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
+    curriculum.storageKey,
+    profileId,
+  );
+  if (goals.isEmpty) return null;
+
+  final goal = goals.first;
+
+  // Get personal-track completions for daily counts
+  final allCompletions = await db.completionDao
+      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
+  final personalCompletions = allCompletions
+      .where((c) => c.trackType == TrackType.personal.storageKey)
+      .toList();
+
+  final dailyCounts = <DateTime, int>{};
+  for (final c in personalCompletions) {
+    final date = DateTime.utc(
+      c.completedAt.year,
+      c.completedAt.month,
+      c.completedAt.day,
+    );
+    dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
+  }
+
+  // Pace-based goal
+  if (goal.goalType == 'pace' &&
+      goal.paceValue != null &&
+      goal.paceUnit != null) {
+    final dailyRate = PaceCalculator.paceToDaily(
+      goal.paceValue!,
+      goal.paceUnit!,
+    );
+    // We need totalItems — approximate from completions touched
+    final totalItems = personalCompletions.length + 100; // rough estimate
+    return PaceCalculator.calculateForPaceGoal(
+      targetPacePerDay: dailyRate,
+      totalItems: totalItems,
+      completedItems: personalCompletions.length,
+      dailyCompletionCounts: dailyCounts,
+      today: now,
+    );
+  }
+
+  // Deadline-based goal
+  if (goal.targetDate == null) return null;
+
+  // Approximate totalItems from completions count (rough)
+  final totalItems = personalCompletions.length + 100;
+  return PaceCalculator.calculate(
+    goalStartDate: goal.createdAt,
+    goalDeadline: goal.targetDate!,
+    totalItems: totalItems,
+    completedItems: personalCompletions.length,
+    dailyCompletionCounts: dailyCounts,
+    today: now,
+  );
 }

@@ -66,11 +66,30 @@ class CurriculumSummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                '$percentage% complete',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+              Row(
+                children: [
+                  Text(
+                    '$percentage% complete',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (summary.paceStatus?.projectedCompletionDate != null) ...[
+                    const Spacer(),
+                    _ProjectedDate(
+                      date: summary.paceStatus!.projectedCompletionDate!,
+                    ),
+                  ] else if (summary.paceStatus != null) ...[
+                    const Spacer(),
+                    Text(
+                      'No projection',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               if (summary.nextDueItem != null) ...[
                 const SizedBox(height: 8),
@@ -100,27 +119,88 @@ class _PaceBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (paceStatus == null) return const SizedBox.shrink();
 
-    final (label, color) = switch (paceStatus!.status) {
-      PaceStatusType.ahead => ('Ahead', Colors.green),
-      PaceStatusType.behind => ('Behind', Colors.orange),
-      PaceStatusType.onPace => ('On Pace', Colors.blue),
+    final (label, color, icon) = switch (paceStatus!.status) {
+      PaceStatusType.ahead => (
+        '${paceStatus!.daysDelta}d ahead',
+        Colors.green,
+        Icons.trending_up,
+      ),
+      PaceStatusType.behind => (
+        '${paceStatus!.daysDelta.abs()}d behind',
+        Colors.orange,
+        Icons.trending_down,
+      ),
+      PaceStatusType.onPace => ('On pace', Colors.blue, Icons.trending_flat),
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _ProjectedDate extends StatelessWidget {
+  const _ProjectedDate({required this.date});
+
+  final DateTime date;
+
+  static const _months = [
+    '',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = '${_months[date.month]} ${date.day}, ${date.year}';
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.flag_outlined,
+          size: 12,
+          color: Colors.white.withValues(alpha: 0.4),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: Colors.white.withValues(alpha: 0.4),
+          ),
+        ),
+      ],
     );
   }
 }
