@@ -85,5 +85,92 @@ void main() {
       final goals = await repo.getGoals(CurriculumId.mishnayos);
       expect(goals, isEmpty);
     });
+
+    group('pace goal fields', () {
+      test('createGoal with pace fields persists correctly', () async {
+        final goal = await repo.createGoal(
+          curriculumId: CurriculumId.bavli,
+          targetPercent: 100.0,
+          goalType: 'pace',
+          paceValue: 1,
+          paceUnit: 'per_day',
+        );
+
+        expect(goal.goalType, 'pace');
+        expect(goal.paceValue, 1);
+        expect(goal.paceUnit, 'per_day');
+        expect(goal.targetDate, isNull);
+      });
+
+      test('createGoal defaults to deadline goalType', () async {
+        final goal = await repo.createGoal(
+          curriculumId: CurriculumId.bavli,
+          targetPercent: 100.0,
+        );
+
+        expect(goal.goalType, 'deadline');
+        expect(goal.paceValue, isNull);
+        expect(goal.paceUnit, isNull);
+      });
+
+      test('updateGoal changes pace fields', () async {
+        final goal = await repo.createGoal(
+          curriculumId: CurriculumId.bavli,
+          targetPercent: 100.0,
+          goalType: 'pace',
+          paceValue: 1,
+          paceUnit: 'per_day',
+        );
+
+        final updated = await repo.updateGoal(
+          goalId: goal.id!,
+          paceValue: 5,
+          paceUnit: 'per_week',
+        );
+
+        expect(updated.paceValue, 5);
+        expect(updated.paceUnit, 'per_week');
+      });
+
+      test('updateGoal with clearPace nulls out pace fields', () async {
+        final goal = await repo.createGoal(
+          curriculumId: CurriculumId.bavli,
+          targetPercent: 100.0,
+          goalType: 'pace',
+          paceValue: 1,
+          paceUnit: 'per_day',
+        );
+
+        final updated = await repo.updateGoal(
+          goalId: goal.id!,
+          goalType: 'deadline',
+          clearPace: true,
+        );
+
+        expect(updated.goalType, 'deadline');
+        expect(updated.paceValue, isNull);
+        expect(updated.paceUnit, isNull);
+      });
+
+      test('updateGoal preserves pace fields when not clearing', () async {
+        final goal = await repo.createGoal(
+          curriculumId: CurriculumId.bavli,
+          targetPercent: 100.0,
+          goalType: 'pace',
+          paceValue: 3,
+          paceUnit: 'per_week',
+        );
+
+        final updated = await repo.updateGoal(
+          goalId: goal.id!,
+          description: 'Updated description',
+        );
+
+        expect(updated.goalType, 'pace');
+        expect(updated.paceValue, 3);
+        expect(updated.paceUnit, 'per_week');
+        expect(updated.description, 'Updated description');
+      });
+    });
   });
 }
