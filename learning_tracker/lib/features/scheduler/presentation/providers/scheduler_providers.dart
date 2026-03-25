@@ -239,12 +239,31 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     }
   }
 
+  // Look up study day config per curriculum
+  final now = ref.watch(clockProvider);
+  final isStudyDayMap = <CurriculumId, bool>{};
+  final studyDaysPerWeekMap = <CurriculumId, int>{};
+  for (final curriculum in activeCurricula) {
+    isStudyDayMap[curriculum] = await db.studyDayConfigDao.isStudyDay(
+      profileId: profileId,
+      curriculumId: curriculum.storageKey,
+      dayOfWeek: now.weekday,
+    );
+    studyDaysPerWeekMap[curriculum] = await db.studyDayConfigDao
+        .getStudyDaysPerWeek(
+          profileId: profileId,
+          curriculumId: curriculum.storageKey,
+        );
+  }
+
   final tasks = await generator.generateAll(
     activeCurricula,
-    ref.watch(clockProvider),
+    now,
     skippedRefs: skipped,
     goalDeadlines: goalDeadlines,
     pacePerDayMap: pacePerDayMap,
+    isStudyDayMap: isStudyDayMap,
+    studyDaysPerWeekMap: studyDaysPerWeekMap,
   );
 
   // Priority boost: previously-skipped tasks get overdueChazara priority

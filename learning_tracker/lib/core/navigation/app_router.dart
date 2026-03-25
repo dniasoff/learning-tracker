@@ -39,6 +39,7 @@ import 'package:learning_tracker/features/progress/presentation/screens/learning
 import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
+import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/track_management_screen.dart';
@@ -237,6 +238,11 @@ class AppRouter extends RootStackRouter {
       path: '/tutor-mode/dashboard',
       page: TutorDashboardRoute.page,
       guards: [authGuard, tutorPinGuard],
+    ),
+    AutoRoute(
+      path: '/study-days/:curriculumId',
+      page: StudyDayConfigRoute.page,
+      guards: [authGuard],
     ),
     AutoRoute(path: '/sync', page: SyncRoute.page, guards: [authGuard]),
     AutoRoute(

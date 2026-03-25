@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/reward_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
+import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/daos/test_date_dao.dart';
 import 'package:learning_tracker/core/database/daos/test_score_dao.dart';
@@ -39,6 +40,7 @@ import 'package:learning_tracker/core/database/tables/profiles.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
+import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/tables/test_dates.dart';
 import 'package:learning_tracker/core/database/tables/test_scores.dart';
@@ -72,6 +74,7 @@ part 'app_database.g.dart';
     ProfilePrograms,
     TestDates,
     TestScores,
+    StudyDayConfigs,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -96,13 +99,14 @@ part 'app_database.g.dart';
     ProfileProgramDao,
     TestDateDao,
     TestScoreDao,
+    StudyDayConfigDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration {
@@ -299,6 +303,10 @@ class AppDatabase extends _$AppDatabase {
             'ALTER TABLE goals ADD COLUMN pace_value INTEGER',
           );
           await customStatement('ALTER TABLE goals ADD COLUMN pace_unit TEXT');
+        }
+        if (from < 17) {
+          // Migration from schema v16 to v17: Add study_day_configs table
+          await m.createTable($StudyDayConfigsTable(attachedDatabase));
         }
       },
     );

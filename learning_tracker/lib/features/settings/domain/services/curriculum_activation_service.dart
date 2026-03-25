@@ -37,6 +37,10 @@ class CurriculumActivationService {
     if (activeCurricula.isEmpty) {
       await _database.activeCurriculumDao.activate(CurriculumId.mishnayos);
       await _trackRepository.initializeDefaultTracks(CurriculumId.mishnayos);
+      await _database.studyDayConfigDao.seedDefaults(
+        profileId: 0,
+        curriculumId: CurriculumId.mishnayos.storageKey,
+      );
       await _syncToFirestore();
     }
   }
@@ -48,6 +52,10 @@ class CurriculumActivationService {
     guardTutorModeWriteFromBool(isTutorMode);
     await _database.activeCurriculumDao.activate(curriculum);
     await _trackRepository.initializeDefaultTracks(curriculum);
+    await _database.studyDayConfigDao.seedDefaults(
+      profileId: 0,
+      curriculumId: curriculum.storageKey,
+    );
     await _syncToFirestore();
   }
 

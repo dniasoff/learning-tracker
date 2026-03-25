@@ -20,5 +20,11 @@ abstract class ScheduleConfig with _$ScheduleConfig {
 
     /// Items per day for pace-based goals. Null means use deadline or default.
     double? pacePerDay,
+
+    /// Whether today is a study day. False suppresses new learning tasks.
+    @Default(true) bool isStudyDay,
+
+    /// Number of study days per week (1-7). Used by pace calculation.
+    @Default(7) int studyDaysPerWeek,
   }) = _ScheduleConfig;
 }

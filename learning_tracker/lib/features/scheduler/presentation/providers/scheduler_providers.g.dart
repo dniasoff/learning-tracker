@@ -560,4 +560,4 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'f95184dcc10fb090734165803ba02211b1b329b9';
+String _$allDailyTasksHash() => r'5d853b6d51457fd4239c54a0eb7799906d423247';

@@ -3,11 +3,15 @@
 library;
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/goal_progress_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:test/test.dart';
+
+import '../helpers/test_database.dart';
 
 void main() {
   // ── Story 16.1: Pace-Based Goal Mode ────────────────────────────────
@@ -178,12 +182,225 @@ void main() {
   });
 
   // Placeholder groups for future stories in Epic 16
-  group(
-    'Story 16.2 -- Study Day Configuration',
-    skip: 'Not yet implemented',
-    tags: ['story_16_2'],
-    () {},
-  );
+  // ── Story 16.2: Study Day Configuration ──────────────────────────────
+  group('Story 16.2 -- Study Day Configuration', tags: ['story_16_2'], () {
+    // AC-1: Database table stores study day configuration
+    test('AC-1: StudyDayConfigDao CRUD operations', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+
+      // Seed defaults — all 7 days as study
+      await db.studyDayConfigDao.seedDefaults(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+
+      final configs = await db.studyDayConfigDao
+          .getConfigsByCurriculumAndProfile('mishnayos', 1);
+      expect(configs.length, 7);
+      expect(configs.every((c) => c.dayType == 'study'), isTrue);
+
+      // Upsert a day to review
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        dayOfWeek: 6, // Saturday
+        dayType: 'review',
+      );
+
+      final updated = await db.studyDayConfigDao
+          .getConfigsByCurriculumAndProfile('mishnayos', 1);
+      final saturday = updated.firstWhere((c) => c.dayOfWeek == 6);
+      expect(saturday.dayType, 'review');
+    });
+
+    // AC-2: Default configuration seeds all days as study days
+    test('AC-2: defaults to study when no config exists', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+
+      // No config seeded — isStudyDay should default to true
+      final result = await db.studyDayConfigDao.isStudyDay(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        dayOfWeek: 1,
+      );
+      expect(result, isTrue);
+
+      // getStudyDaysPerWeek defaults to 7
+      final count = await db.studyDayConfigDao.getStudyDaysPerWeek(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+      expect(count, 7);
+    });
+
+    // AC-3: Scheduler suppresses new learning on review-only days
+    test('AC-3: ScheduleConfig.isStudyDay=false suppresses new learning', () {
+      final config = ScheduleConfig(
+        curriculumId: CurriculumId.mishnayos,
+        currentDate: DateTime.utc(2026, 3, 25),
+        isStudyDay: false,
+      );
+      expect(config.isStudyDay, isFalse);
+    });
+
+    // AC-4: Scheduler allows new learning on study days
+    test('AC-4: ScheduleConfig.isStudyDay defaults to true', () {
+      final config = ScheduleConfig(
+        curriculumId: CurriculumId.mishnayos,
+        currentDate: DateTime.utc(2026, 3, 25),
+      );
+      expect(config.isStudyDay, isTrue);
+    });
+
+    // AC-5: Study day configuration screen toggles day types
+    test('AC-5: upsertDayConfig toggles between study and review', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+
+      await db.studyDayConfigDao.seedDefaults(
+        profileId: 1,
+        curriculumId: 'bavli',
+      );
+
+      // Toggle Friday (day 5) to review
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: 1,
+        curriculumId: 'bavli',
+        dayOfWeek: 5,
+        dayType: 'review',
+      );
+
+      final isFridayStudy = await db.studyDayConfigDao.isStudyDay(
+        profileId: 1,
+        curriculumId: 'bavli',
+        dayOfWeek: 5,
+      );
+      expect(isFridayStudy, isFalse);
+
+      // Toggle back to study
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: 1,
+        curriculumId: 'bavli',
+        dayOfWeek: 5,
+        dayType: 'study',
+      );
+
+      final isFridayStudyAgain = await db.studyDayConfigDao.isStudyDay(
+        profileId: 1,
+        curriculumId: 'bavli',
+        dayOfWeek: 5,
+      );
+      expect(isFridayStudyAgain, isTrue);
+    });
+
+    // AC-8: Pace calculator accounts for study days
+    test('AC-8: studyDaysPerWeek correctly counts study days', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+
+      await db.studyDayConfigDao.seedDefaults(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+
+      // Set Fri and Sat to review (5 study days)
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        dayOfWeek: 5,
+        dayType: 'review',
+      );
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        dayOfWeek: 6,
+        dayType: 'review',
+      );
+
+      final count = await db.studyDayConfigDao.getStudyDaysPerWeek(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+      expect(count, 5);
+    });
+
+    test('AC-8: ScheduleConfig carries studyDaysPerWeek', () {
+      final config = ScheduleConfig(
+        curriculumId: CurriculumId.mishnayos,
+        currentDate: DateTime.utc(2026, 3, 25),
+        studyDaysPerWeek: 5,
+        goalDeadline: DateTime.utc(2026, 12, 31),
+      );
+      expect(config.studyDaysPerWeek, 5);
+    });
+
+    // AC-1 continued: profile isolation
+    test('AC-1: configs are scoped to profile', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+
+      await db.studyDayConfigDao.seedDefaults(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+      await db.studyDayConfigDao.seedDefaults(
+        profileId: 2,
+        curriculumId: 'mishnayos',
+      );
+
+      // Modify profile 1 only
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        dayOfWeek: 7,
+        dayType: 'review',
+      );
+
+      // Profile 2 should still have Sunday as study
+      final p2Sunday = await db.studyDayConfigDao.isStudyDay(
+        profileId: 2,
+        curriculumId: 'mishnayos',
+        dayOfWeek: 7,
+      );
+      expect(p2Sunday, isTrue);
+
+      // Profile 1 should have Sunday as review
+      final p1Sunday = await db.studyDayConfigDao.isStudyDay(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        dayOfWeek: 7,
+      );
+      expect(p1Sunday, isFalse);
+    });
+
+    // DayType enum
+    test('DayType enum serialization round-trips', () {
+      expect(DayType.fromStorageKey('study'), DayType.study);
+      expect(DayType.fromStorageKey('review'), DayType.review);
+      expect(DayType.study.storageKey, 'study');
+      expect(DayType.review.storageKey, 'review');
+    });
+
+    // Delete
+    test('deleteConfigsByCurriculumAndProfile removes all configs', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+
+      await db.studyDayConfigDao.seedDefaults(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+      final deleted = await db.studyDayConfigDao
+          .deleteConfigsByCurriculumAndProfile('mishnayos', 1);
+      expect(deleted, 7);
+
+      final remaining = await db.studyDayConfigDao
+          .getConfigsByCurriculumAndProfile('mishnayos', 1);
+      expect(remaining, isEmpty);
+    });
+  });
   group(
     'Story 16.3 -- Dashboard Pace & Progress Integration',
     skip: 'Not yet implemented',

@@ -10112,6 +10112,375 @@ class TestScoresCompanion extends UpdateCompanion<TestScore> {
   }
 }
 
+class $StudyDayConfigsTable extends StudyDayConfigs
+    with TableInfo<$StudyDayConfigsTable, StudyDayConfig> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StudyDayConfigsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
+    'curriculumId',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dayOfWeekMeta = const VerificationMeta(
+    'dayOfWeek',
+  );
+  @override
+  late final GeneratedColumn<int> dayOfWeek = GeneratedColumn<int>(
+    'day_of_week',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dayTypeMeta = const VerificationMeta(
+    'dayType',
+  );
+  @override
+  late final GeneratedColumn<String> dayType = GeneratedColumn<String>(
+    'day_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('study'),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileId,
+    curriculumId,
+    dayOfWeek,
+    dayType,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'study_day_configs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StudyDayConfig> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
+    if (data.containsKey('curriculum_id')) {
+      context.handle(
+        _curriculumIdMeta,
+        curriculumId.isAcceptableOrUnknown(
+          data['curriculum_id']!,
+          _curriculumIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumIdMeta);
+    }
+    if (data.containsKey('day_of_week')) {
+      context.handle(
+        _dayOfWeekMeta,
+        dayOfWeek.isAcceptableOrUnknown(data['day_of_week']!, _dayOfWeekMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dayOfWeekMeta);
+    }
+    if (data.containsKey('day_type')) {
+      context.handle(
+        _dayTypeMeta,
+        dayType.isAcceptableOrUnknown(data['day_type']!, _dayTypeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileId, curriculumId, dayOfWeek};
+  @override
+  StudyDayConfig map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StudyDayConfig(
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      dayOfWeek: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}day_of_week'],
+      )!,
+      dayType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}day_type'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StudyDayConfigsTable createAlias(String alias) {
+    return $StudyDayConfigsTable(attachedDatabase, alias);
+  }
+}
+
+class StudyDayConfig extends DataClass implements Insertable<StudyDayConfig> {
+  final int profileId;
+  final String curriculumId;
+  final int dayOfWeek;
+  final String dayType;
+  final DateTime updatedAt;
+  const StudyDayConfig({
+    required this.profileId,
+    required this.curriculumId,
+    required this.dayOfWeek,
+    required this.dayType,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_id'] = Variable<int>(profileId);
+    map['curriculum_id'] = Variable<String>(curriculumId);
+    map['day_of_week'] = Variable<int>(dayOfWeek);
+    map['day_type'] = Variable<String>(dayType);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  StudyDayConfigsCompanion toCompanion(bool nullToAbsent) {
+    return StudyDayConfigsCompanion(
+      profileId: Value(profileId),
+      curriculumId: Value(curriculumId),
+      dayOfWeek: Value(dayOfWeek),
+      dayType: Value(dayType),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory StudyDayConfig.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StudyDayConfig(
+      profileId: serializer.fromJson<int>(json['profileId']),
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      dayOfWeek: serializer.fromJson<int>(json['dayOfWeek']),
+      dayType: serializer.fromJson<String>(json['dayType']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profileId': serializer.toJson<int>(profileId),
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'dayOfWeek': serializer.toJson<int>(dayOfWeek),
+      'dayType': serializer.toJson<String>(dayType),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  StudyDayConfig copyWith({
+    int? profileId,
+    String? curriculumId,
+    int? dayOfWeek,
+    String? dayType,
+    DateTime? updatedAt,
+  }) => StudyDayConfig(
+    profileId: profileId ?? this.profileId,
+    curriculumId: curriculumId ?? this.curriculumId,
+    dayOfWeek: dayOfWeek ?? this.dayOfWeek,
+    dayType: dayType ?? this.dayType,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  StudyDayConfig copyWithCompanion(StudyDayConfigsCompanion data) {
+    return StudyDayConfig(
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      curriculumId: data.curriculumId.present
+          ? data.curriculumId.value
+          : this.curriculumId,
+      dayOfWeek: data.dayOfWeek.present ? data.dayOfWeek.value : this.dayOfWeek,
+      dayType: data.dayType.present ? data.dayType.value : this.dayType,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyDayConfig(')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('dayOfWeek: $dayOfWeek, ')
+          ..write('dayType: $dayType, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(profileId, curriculumId, dayOfWeek, dayType, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StudyDayConfig &&
+          other.profileId == this.profileId &&
+          other.curriculumId == this.curriculumId &&
+          other.dayOfWeek == this.dayOfWeek &&
+          other.dayType == this.dayType &&
+          other.updatedAt == this.updatedAt);
+}
+
+class StudyDayConfigsCompanion extends UpdateCompanion<StudyDayConfig> {
+  final Value<int> profileId;
+  final Value<String> curriculumId;
+  final Value<int> dayOfWeek;
+  final Value<String> dayType;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const StudyDayConfigsCompanion({
+    this.profileId = const Value.absent(),
+    this.curriculumId = const Value.absent(),
+    this.dayOfWeek = const Value.absent(),
+    this.dayType = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StudyDayConfigsCompanion.insert({
+    this.profileId = const Value.absent(),
+    required String curriculumId,
+    required int dayOfWeek,
+    this.dayType = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : curriculumId = Value(curriculumId),
+       dayOfWeek = Value(dayOfWeek),
+       updatedAt = Value(updatedAt);
+  static Insertable<StudyDayConfig> custom({
+    Expression<int>? profileId,
+    Expression<String>? curriculumId,
+    Expression<int>? dayOfWeek,
+    Expression<String>? dayType,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileId != null) 'profile_id': profileId,
+      if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (dayOfWeek != null) 'day_of_week': dayOfWeek,
+      if (dayType != null) 'day_type': dayType,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StudyDayConfigsCompanion copyWith({
+    Value<int>? profileId,
+    Value<String>? curriculumId,
+    Value<int>? dayOfWeek,
+    Value<String>? dayType,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return StudyDayConfigsCompanion(
+      profileId: profileId ?? this.profileId,
+      curriculumId: curriculumId ?? this.curriculumId,
+      dayOfWeek: dayOfWeek ?? this.dayOfWeek,
+      dayType: dayType ?? this.dayType,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (curriculumId.present) {
+      map['curriculum_id'] = Variable<String>(curriculumId.value);
+    }
+    if (dayOfWeek.present) {
+      map['day_of_week'] = Variable<int>(dayOfWeek.value);
+    }
+    if (dayType.present) {
+      map['day_type'] = Variable<String>(dayType.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyDayConfigsCompanion(')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('dayOfWeek: $dayOfWeek, ')
+          ..write('dayType: $dayType, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -10151,6 +10520,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $TestDatesTable testDates = $TestDatesTable(this);
   late final $TestScoresTable testScores = $TestScoresTable(this);
+  late final $StudyDayConfigsTable studyDayConfigs = $StudyDayConfigsTable(
+    this,
+  );
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
     this as AppDatabase,
   );
@@ -10191,6 +10563,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final TestDateDao testDateDao = TestDateDao(this as AppDatabase);
   late final TestScoreDao testScoreDao = TestScoreDao(this as AppDatabase);
+  late final StudyDayConfigDao studyDayConfigDao = StudyDayConfigDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10218,6 +10593,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     profilePrograms,
     testDates,
     testScores,
+    studyDayConfigs,
   ];
 }
 
@@ -15435,6 +15811,214 @@ typedef $$TestScoresTableProcessedTableManager =
       TestScore,
       PrefetchHooks Function()
     >;
+typedef $$StudyDayConfigsTableCreateCompanionBuilder =
+    StudyDayConfigsCompanion Function({
+      Value<int> profileId,
+      required String curriculumId,
+      required int dayOfWeek,
+      Value<String> dayType,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$StudyDayConfigsTableUpdateCompanionBuilder =
+    StudyDayConfigsCompanion Function({
+      Value<int> profileId,
+      Value<String> curriculumId,
+      Value<int> dayOfWeek,
+      Value<String> dayType,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$StudyDayConfigsTableFilterComposer
+    extends Composer<_$AppDatabase, $StudyDayConfigsTable> {
+  $$StudyDayConfigsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dayOfWeek => $composableBuilder(
+    column: $table.dayOfWeek,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dayType => $composableBuilder(
+    column: $table.dayType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$StudyDayConfigsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StudyDayConfigsTable> {
+  $$StudyDayConfigsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dayOfWeek => $composableBuilder(
+    column: $table.dayOfWeek,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dayType => $composableBuilder(
+    column: $table.dayType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$StudyDayConfigsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StudyDayConfigsTable> {
+  $$StudyDayConfigsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dayOfWeek =>
+      $composableBuilder(column: $table.dayOfWeek, builder: (column) => column);
+
+  GeneratedColumn<String> get dayType =>
+      $composableBuilder(column: $table.dayType, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$StudyDayConfigsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StudyDayConfigsTable,
+          StudyDayConfig,
+          $$StudyDayConfigsTableFilterComposer,
+          $$StudyDayConfigsTableOrderingComposer,
+          $$StudyDayConfigsTableAnnotationComposer,
+          $$StudyDayConfigsTableCreateCompanionBuilder,
+          $$StudyDayConfigsTableUpdateCompanionBuilder,
+          (
+            StudyDayConfig,
+            BaseReferences<
+              _$AppDatabase,
+              $StudyDayConfigsTable,
+              StudyDayConfig
+            >,
+          ),
+          StudyDayConfig,
+          PrefetchHooks Function()
+        > {
+  $$StudyDayConfigsTableTableManager(
+    _$AppDatabase db,
+    $StudyDayConfigsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StudyDayConfigsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StudyDayConfigsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StudyDayConfigsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> profileId = const Value.absent(),
+                Value<String> curriculumId = const Value.absent(),
+                Value<int> dayOfWeek = const Value.absent(),
+                Value<String> dayType = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StudyDayConfigsCompanion(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                dayOfWeek: dayOfWeek,
+                dayType: dayType,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> profileId = const Value.absent(),
+                required String curriculumId,
+                required int dayOfWeek,
+                Value<String> dayType = const Value.absent(),
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => StudyDayConfigsCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                dayOfWeek: dayOfWeek,
+                dayType: dayType,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$StudyDayConfigsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StudyDayConfigsTable,
+      StudyDayConfig,
+      $$StudyDayConfigsTableFilterComposer,
+      $$StudyDayConfigsTableOrderingComposer,
+      $$StudyDayConfigsTableAnnotationComposer,
+      $$StudyDayConfigsTableCreateCompanionBuilder,
+      $$StudyDayConfigsTableUpdateCompanionBuilder,
+      (
+        StudyDayConfig,
+        BaseReferences<_$AppDatabase, $StudyDayConfigsTable, StudyDayConfig>,
+      ),
+      StudyDayConfig,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15486,4 +16070,6 @@ class $AppDatabaseManager {
       $$TestDatesTableTableManager(_db, _db.testDates);
   $$TestScoresTableTableManager get testScores =>
       $$TestScoresTableTableManager(_db, _db.testScores);
+  $$StudyDayConfigsTableTableManager get studyDayConfigs =>
+      $$StudyDayConfigsTableTableManager(_db, _db.studyDayConfigs);
 }

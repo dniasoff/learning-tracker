@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -20,7 +21,9 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/learni
 import 'package:learning_tracker/features/onboarding/presentation/screens/rewards_setup_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,6 +59,7 @@ enum _ScreenPhase {
   learningProcessWizard,
   bulkMark,
   goalSetup,
+  studyDayConfig,
   rewardsSetup,
   handoff,
   done,
@@ -129,6 +133,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   late List<CurriculumId> _goalSetupQueue;
   int _goalSetupIndex = 0;
 
+  // Study day config state
+  late List<CurriculumId> _studyDayQueue;
+  int _studyDayIndex = 0;
+
   bool get _isChildMode => _profileMode == 'child';
 
   @override
@@ -177,7 +185,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (resumedPhase == _ScreenPhase.scopeSelection ||
           resumedPhase == _ScreenPhase.learningProcessWizard ||
           resumedPhase == _ScreenPhase.bulkMark ||
-          resumedPhase == _ScreenPhase.goalSetup) {
+          resumedPhase == _ScreenPhase.goalSetup ||
+          resumedPhase == _ScreenPhase.studyDayConfig) {
         _scopeQueue = selectedList;
         _scopeIndex = 0;
         _wizardQueue = selectedList;
@@ -186,6 +195,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _bulkMarkIndex = 0;
         _goalSetupQueue = selectedList;
         _goalSetupIndex = 0;
+        _studyDayQueue = selectedList;
+        _studyDayIndex = 0;
       }
 
       setState(() => _phase = resumedPhase);
@@ -426,6 +437,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _afterGoalSetup() {
+    _startStudyDayConfig();
+  }
+
+  void _startStudyDayConfig() {
+    _studyDayQueue = _selected.toList();
+    _studyDayIndex = 0;
+    if (_studyDayQueue.isEmpty) {
+      _afterStudyDayConfig();
+      return;
+    }
+    setState(() => _phase = _ScreenPhase.studyDayConfig);
+    _saveState();
+  }
+
+  void _onStudyDayConfigDone() {
+    _studyDayIndex++;
+    if (_studyDayIndex >= _studyDayQueue.length) {
+      _afterStudyDayConfig();
+    } else {
+      setState(() {});
+    }
+  }
+
+  void _afterStudyDayConfig() {
     if (_isChildMode) {
       unawaited(
         _startRewardsSetup().catchError((Object e) {
@@ -433,7 +468,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         }),
       );
     } else {
-      // Adult mode: skip rewards and handoff, go straight to done
       _finishOnboarding();
     }
   }
@@ -539,6 +573,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           _ScreenPhase.bulkMark => _buildBulkMark(theme),
           _ScreenPhase.goalSetup => _buildGoalSetup(theme),
+          _ScreenPhase.studyDayConfig => _buildStudyDayConfig(theme),
           _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
           _ScreenPhase.handoff => _buildHandoff(theme),
           _ScreenPhase.done => _buildDone(theme),
@@ -1482,6 +1517,154 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  Widget _buildStudyDayConfig(ThemeData theme) {
+    final curriculum = _studyDayQueue[_studyDayIndex];
+    final configAsync = ref.watch(studyDayConfigsProvider(curriculum));
+    final db = ref.read(appDatabaseProvider);
+    final profileId = ref.read(activeProfileIdProvider);
+
+    const green = Color(0xFF4ADE80);
+    const displayOrder = [7, 1, 2, 3, 4, 5, 6]; // Sun first
+    const dayLabels = {
+      1: 'Mon',
+      2: 'Tue',
+      3: 'Wed',
+      4: 'Thu',
+      5: 'Fri',
+      6: 'Sat',
+      7: 'Sun',
+    };
+
+    return SafeArea(
+      top: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.06),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 14),
+                        style: IconButton.styleFrom(
+                          foregroundColor: Colors.white,
+                        ),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: green.withValues(alpha: 0.2)),
+                      ),
+                      child: Text(
+                        '${_studyDayIndex + 1} of ${_studyDayQueue.length}',
+                        style: const TextStyle(
+                          color: green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  childAwareText(
+                    'Study Days',
+                    '{name}\'s Study Days',
+                    _profileName,
+                    isChildMode: _isChildMode,
+                  ),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Set which days include new ${curriculum.displayNameEn} learning and which are review only.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: configAsync.when(
+              data: (configs) {
+                final dayTypeMap = <int, DayType>{};
+                for (final config in configs) {
+                  dayTypeMap[config.dayOfWeek] = config.dayType;
+                }
+
+                return ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  children: [
+                    for (final dow in displayOrder) ...[
+                      _StudyDayToggle(
+                        dayLabel: dayLabels[dow]!,
+                        isStudy:
+                            (dayTypeMap[dow] ?? DayType.study) == DayType.study,
+                        onToggle: () {
+                          final current = dayTypeMap[dow] ?? DayType.study;
+                          final newType = current == DayType.study
+                              ? DayType.review
+                              : DayType.study;
+                          db.studyDayConfigDao.upsertDayConfig(
+                            profileId: profileId,
+                            curriculumId: curriculum.storageKey,
+                            dayOfWeek: dow,
+                            dayType: newType.storageKey,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: FilledButton(
+              onPressed: _onStudyDayConfigDone,
+              child: Text(
+                _studyDayIndex < _studyDayQueue.length - 1
+                    ? 'Next Curriculum'
+                    : 'Continue',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRewardsSetup(ThemeData theme) {
     final thresholds = _computeSuggestedThresholds();
     return SafeArea(
@@ -1771,6 +1954,79 @@ class _CurriculumCard extends StatelessWidget {
                           ),
                         ),
                       ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudyDayToggle extends StatelessWidget {
+  const _StudyDayToggle({
+    required this.dayLabel,
+    required this.isStudy,
+    required this.onToggle,
+  });
+
+  final String dayLabel;
+  final bool isStudy;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: isStudy
+          ? theme.colorScheme.primary.withValues(alpha: 0.1)
+          : theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onToggle,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                isStudy ? Icons.menu_book : Icons.refresh,
+                color: isStudy
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  dayLabel,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: isStudy
+                      ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                      : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  isStudy ? 'Study' : 'Review',
+                  style: TextStyle(
+                    color: isStudy
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),

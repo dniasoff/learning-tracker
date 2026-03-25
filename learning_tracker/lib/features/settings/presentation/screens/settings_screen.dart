@@ -102,6 +102,44 @@ class SettingsScreen extends ConsumerWidget {
                     indent: 56,
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
+                  // Study Day Configuration
+                  activeCurriculaAsync.when(
+                    data: (curricula) {
+                      if (curricula.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        children: [
+                          ListTile(
+                            leading: Icon(
+                              Icons.calendar_today_outlined,
+                              color: theme.colorScheme.primary,
+                            ),
+                            title: const Text('Study Days'),
+                            subtitle: const Text(
+                              'Configure study vs review days',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              final first = curricula.isNotEmpty
+                                  ? curricula.first
+                                  : null;
+                              if (first != null) {
+                                context.pushRoute(
+                                  StudyDayConfigRoute(curriculumId: first),
+                                );
+                              }
+                            },
+                          ),
+                          Divider(
+                            height: 1,
+                            indent: 56,
+                            color: Colors.white.withValues(alpha: 0.1),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                   ListTile(
                     leading: Icon(
                       Icons.notifications_active_outlined,

@@ -373,6 +373,20 @@ class SyncEngine {
     }
   }
 
+  /// Push study day config to Firestore as part of settings document.
+  Future<void> pushStudyDayConfig({
+    required String curriculumId,
+    required Map<String, String> dayConfig,
+  }) async {
+    final payload = <String, dynamic>{
+      'curriculum_id': curriculumId,
+      'study_day_config': dayConfig,
+      'study_day_config_updated_at': DateTime.now().toUtc().toIso8601String(),
+    };
+
+    await pushSettings(payload);
+  }
+
   /// Push streak data to Firestore after local write.
   Future<void> pushStreak(Map<String, dynamic> streak) async {
     if (!_isOnline) {
@@ -687,9 +701,53 @@ class SyncEngine {
         if (remoteUpdatedAt != null) {
           await _setSettingsTimestamp(curriculumId, remoteUpdatedAt);
         }
+
+        // Merge study day config if present
+        await _mergeStudyDayConfig(remote, curriculumId);
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge settings: $e');
+      }
+    }
+  }
+
+  /// Merge study day config from a remote settings document.
+  Future<void> _mergeStudyDayConfig(
+    Map<String, dynamic> remote,
+    String curriculumId,
+  ) async {
+    final studyDayConfig = remote['study_day_config'] as Map<String, dynamic>?;
+    if (studyDayConfig == null) return;
+
+    final remoteTs = _parseTimestamp(remote['study_day_config_updated_at']);
+    final profileId = _firestoreDataSource.profileId;
+
+    // LWW check against local
+    if (remoteTs != null) {
+      final localTs = await _database.studyDayConfigDao.getLatestUpdatedAt(
+        profileId: profileId,
+        curriculumId: curriculumId,
+      );
+      if (localTs != null && !remoteTs.isAfter(localTs)) {
+        _logger.debug(
+          'Skipping study day config for $curriculumId: local is newer',
+        );
+        return;
+      }
+    }
+
+    for (final entry in studyDayConfig.entries) {
+      final dayOfWeek = int.tryParse(entry.key);
+      final dayType = entry.value as String?;
+      if (dayOfWeek != null &&
+          dayType != null &&
+          (dayType == 'study' || dayType == 'review')) {
+        await _database.studyDayConfigDao.upsertDayConfig(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          dayOfWeek: dayOfWeek,
+          dayType: dayType,
+        );
       }
     }
   }

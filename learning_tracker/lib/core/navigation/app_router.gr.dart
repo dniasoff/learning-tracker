@@ -903,6 +903,56 @@ class SignInRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [StudyDayConfigScreen]
+class StudyDayConfigRoute extends PageRouteInfo<StudyDayConfigRouteArgs> {
+  StudyDayConfigRoute({
+    Key? key,
+    required CurriculumId curriculumId,
+    List<PageRouteInfo>? children,
+  }) : super(
+         StudyDayConfigRoute.name,
+         args: StudyDayConfigRouteArgs(key: key, curriculumId: curriculumId),
+         initialChildren: children,
+       );
+
+  static const String name = 'StudyDayConfigRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<StudyDayConfigRouteArgs>();
+      return StudyDayConfigScreen(
+        key: args.key,
+        curriculumId: args.curriculumId,
+      );
+    },
+  );
+}
+
+class StudyDayConfigRouteArgs {
+  const StudyDayConfigRouteArgs({this.key, required this.curriculumId});
+
+  final Key? key;
+
+  final CurriculumId curriculumId;
+
+  @override
+  String toString() {
+    return 'StudyDayConfigRouteArgs{key: $key, curriculumId: $curriculumId}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! StudyDayConfigRouteArgs) return false;
+    return key == other.key && curriculumId == other.curriculumId;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ curriculumId.hashCode;
+}
+
+/// generated route for
 /// [SyncScreen]
 class SyncRoute extends PageRouteInfo<void> {
   const SyncRoute({List<PageRouteInfo>? children})

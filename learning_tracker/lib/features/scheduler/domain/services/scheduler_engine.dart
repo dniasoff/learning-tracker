@@ -162,6 +162,11 @@ class SchedulerEngine {
       );
     }).toList();
 
+    // Review-only day: suppress new learning tasks
+    if (!config.isStudyDay) {
+      return [...overdueTasks, ...scheduledTasks];
+    }
+
     // Combine with priority ordering
     return [...overdueTasks, ...scheduledTasks, ...newTasks];
   }
@@ -373,8 +378,14 @@ class SchedulerEngine {
         // Past deadline — push harder
         baseRate = (remainingNewItems * 0.1).ceil();
       } else {
-        // Spread remaining items evenly across remaining days
-        baseRate = (remainingNewItems / daysRemaining).ceil();
+        // Spread remaining items across study days only
+        final studyDaysRemaining = (daysRemaining * config.studyDaysPerWeek / 7)
+            .ceil();
+        if (studyDaysRemaining <= 0) {
+          baseRate = (remainingNewItems * 0.1).ceil();
+        } else {
+          baseRate = (remainingNewItems / studyDaysRemaining).ceil();
+        }
       }
     }
 
