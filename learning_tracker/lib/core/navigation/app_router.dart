@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/learning/presentation/screens/learning
 import 'package:learning_tracker/features/learning_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/account_creation_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/mode_selection_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
@@ -75,6 +76,7 @@ class AppRouter extends RootStackRouter {
   @override
   List<AutoRoute> get routes => [
     // Unauthenticated routes
+    AutoRoute(path: '/intro', page: AppIntroRoute.page),
     AutoRoute(path: '/sign-in', page: SignInRoute.page),
     AutoRoute(path: '/welcome', page: WelcomeRoute.page),
     AutoRoute(path: '/create-account', page: AccountCreationRoute.page),

@@ -776,7 +776,7 @@ Future<void> _showSignOutConfirmation(
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
     if (context.mounted) {
-      await context.router.replaceAll([const WelcomeRoute()]);
+      await context.router.replaceAll([const AppIntroRoute()]);
     }
   } catch (e) {
     if (context.mounted) {
@@ -840,7 +840,7 @@ Future<void> _showDeleteAccountFlow(
   try {
     await service.deleteAccount(user.uid);
     if (context.mounted) {
-      await context.router.replaceAll([const WelcomeRoute()]);
+      await context.router.replaceAll([const AppIntroRoute()]);
     }
   } catch (e) {
     if (context.mounted) {

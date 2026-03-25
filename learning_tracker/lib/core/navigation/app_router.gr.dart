@@ -27,6 +27,22 @@ class AccountCreationRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [AppIntroScreen]
+class AppIntroRoute extends PageRouteInfo<void> {
+  const AppIntroRoute({List<PageRouteInfo>? children})
+    : super(AppIntroRoute.name, initialChildren: children);
+
+  static const String name = 'AppIntroRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const AppIntroScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [AppShellScreen]
 class AppShellRoute extends PageRouteInfo<void> {
   const AppShellRoute({List<PageRouteInfo>? children})
