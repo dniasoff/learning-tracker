@@ -55,11 +55,11 @@ enum _ScreenPhase {
   languageSelection,
   selection,
   importing,
-  scopeSelection,
   learningProcessWizard,
+  studyDays,
+  scopeSelection,
   bulkMark,
   goalSetup,
-  studyDayConfig,
   rewardsSetup,
   handoff,
   done,
@@ -186,7 +186,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           resumedPhase == _ScreenPhase.learningProcessWizard ||
           resumedPhase == _ScreenPhase.bulkMark ||
           resumedPhase == _ScreenPhase.goalSetup ||
-          resumedPhase == _ScreenPhase.studyDayConfig) {
+          resumedPhase == _ScreenPhase.studyDays) {
         _scopeQueue = selectedList;
         _scopeIndex = 0;
         _wizardQueue = selectedList;
@@ -338,7 +338,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _wizardQueue = _selected.toList();
     _wizardIndex = 0;
     if (_wizardQueue.isEmpty) {
-      _startScopeSelection();
+      _startStudyDays();
       return;
     }
     setState(() => _phase = _ScreenPhase.learningProcessWizard);
@@ -355,7 +355,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     _wizardIndex++;
     if (_wizardIndex >= _wizardQueue.length) {
-      _startScopeSelection();
+      _startStudyDays();
     } else {
       _wizardLaunched = false;
       setState(() {});
@@ -437,30 +437,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _afterGoalSetup() {
-    _startStudyDayConfig();
-  }
-
-  void _startStudyDayConfig() {
-    _studyDayQueue = _selected.toList();
-    _studyDayIndex = 0;
-    if (_studyDayQueue.isEmpty) {
-      _afterStudyDayConfig();
-      return;
-    }
-    setState(() => _phase = _ScreenPhase.studyDayConfig);
-    _saveState();
-  }
-
-  void _onStudyDayConfigDone() {
-    _studyDayIndex++;
-    if (_studyDayIndex >= _studyDayQueue.length) {
-      _afterStudyDayConfig();
-    } else {
-      setState(() {});
-    }
-  }
-
-  void _afterStudyDayConfig() {
     if (_isChildMode) {
       unawaited(
         _startRewardsSetup().catchError((Object e) {
@@ -469,6 +445,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       );
     } else {
       _finishOnboarding();
+    }
+  }
+
+  // ========== Study Days Phase (after wizard, before scope) ==========
+
+  void _startStudyDays() {
+    _studyDayQueue = _selected.toList();
+    _studyDayIndex = 0;
+    if (_studyDayQueue.isEmpty) {
+      _startScopeSelection();
+      return;
+    }
+    setState(() => _phase = _ScreenPhase.studyDays);
+    _saveState();
+  }
+
+  void _onStudyDaysDone() {
+    _studyDayIndex++;
+    if (_studyDayIndex >= _studyDayQueue.length) {
+      _startScopeSelection();
+    } else {
+      setState(() {});
+    }
+  }
+
+  void _skipStudyDays() {
+    // Skip without saving — defaults (all days = study) apply
+    _studyDayIndex++;
+    if (_studyDayIndex >= _studyDayQueue.length) {
+      _startScopeSelection();
+    } else {
+      setState(() {});
     }
   }
 
@@ -573,7 +581,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           _ScreenPhase.bulkMark => _buildBulkMark(theme),
           _ScreenPhase.goalSetup => _buildGoalSetup(theme),
-          _ScreenPhase.studyDayConfig => _buildStudyDayConfig(theme),
+          _ScreenPhase.studyDays => _buildStudyDays(theme),
           _ScreenPhase.rewardsSetup => _buildRewardsSetup(theme),
           _ScreenPhase.handoff => _buildHandoff(theme),
           _ScreenPhase.done => _buildDone(theme),
@@ -1517,7 +1525,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Widget _buildStudyDayConfig(ThemeData theme) {
+  Widget _buildStudyDays(ThemeData theme) {
     final curriculum = _studyDayQueue[_studyDayIndex];
     final configAsync = ref.watch(studyDayConfigsProvider(curriculum));
     final db = ref.read(appDatabaseProvider);
@@ -1650,14 +1658,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(24),
-            child: FilledButton(
-              onPressed: _onStudyDayConfigDone,
-              child: Text(
-                _studyDayIndex < _studyDayQueue.length - 1
-                    ? 'Next Curriculum'
-                    : 'Continue',
-              ),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton(
+                  onPressed: _onStudyDaysDone,
+                  child: Text(
+                    _studyDayIndex < _studyDayQueue.length - 1
+                        ? 'Next Curriculum'
+                        : 'Continue',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _skipStudyDays,
+                  child: const Text('Skip (Use Defaults)'),
+                ),
+              ],
             ),
           ),
         ],

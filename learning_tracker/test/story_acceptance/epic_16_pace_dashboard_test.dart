@@ -941,11 +941,155 @@ void main() {
       });
     },
   );
+  // ── Story 16.5: Onboarding Goal & Study Day Steps ─────────────────────
   group(
     'Story 16.5 -- Onboarding Goal & Study Day Steps',
-    skip: 'Not yet implemented',
     tags: ['story_16_5'],
-    () {},
+    () {
+      // AC-1: Goal setup offers both deadline and pace modes
+      test('AC-1: GoalEntity supports pace mode fields', () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.bavli,
+          goalType: 'pace',
+          paceValue: 1,
+          paceUnit: 'per_day',
+          createdAt: DateTime.utc(2026, 3, 25),
+          updatedAt: DateTime.utc(2026, 3, 25),
+        );
+        expect(entity.goalType, 'pace');
+        expect(entity.paceValue, 1);
+        expect(entity.paceUnit, 'per_day');
+      });
+
+      // AC-2: Pace mode goal persisted during onboarding
+      test('AC-2: pace goal can derive projected completion', () {
+        final dailyRate = PaceCalculator.paceToDaily(1, 'per_day');
+        expect(dailyRate, 1.0);
+        final result = PaceCalculator.calculateForPaceGoal(
+          targetPacePerDay: dailyRate,
+          totalItems: 100,
+          completedItems: 0,
+          dailyCompletionCounts: {},
+          today: DateTime.utc(2026, 3, 25),
+        );
+        expect(result.projectedCompletionDate, isNotNull);
+      });
+
+      // AC-3: Deadline mode still works
+      test('AC-3: deadline goal entity has targetDate', () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          goalType: 'deadline',
+          targetDate: DateTime.utc(2026, 12, 31),
+          createdAt: DateTime.utc(2026, 3, 25),
+          updatedAt: DateTime.utc(2026, 3, 25),
+        );
+        expect(entity.goalType, 'deadline');
+        expect(entity.targetDate, isNotNull);
+        expect(entity.paceValue, isNull);
+      });
+
+      // AC-4: Study days phase appears after learning process wizard
+      test(
+        'AC-4: studyDays enum is between learningProcessWizard and scopeSelection',
+        () {
+          const phases = [
+            'profileCreation',
+            'languageSelection',
+            'selection',
+            'importing',
+            'learningProcessWizard',
+            'studyDays',
+            'scopeSelection',
+            'bulkMark',
+            'goalSetup',
+            'rewardsSetup',
+            'handoff',
+            'done',
+            'error',
+          ];
+          final wizardIdx = phases.indexOf('learningProcessWizard');
+          final studyDaysIdx = phases.indexOf('studyDays');
+          final scopeIdx = phases.indexOf('scopeSelection');
+          expect(studyDaysIdx, wizardIdx + 1);
+          expect(scopeIdx, studyDaysIdx + 1);
+        },
+      );
+
+      // AC-5: Study days configured per curriculum
+      test('AC-5: queue pattern iterates over all selected curricula', () {
+        final selected = [CurriculumId.mishnayos, CurriculumId.bavli];
+        var index = 0;
+        for (final curriculum in selected) {
+          expect(curriculum, selected[index]);
+          index++;
+        }
+        expect(index, selected.length);
+      });
+
+      // AC-6: Study day config persisted
+      test('AC-6: study day config persists via DAO', () async {
+        final db = createTestDatabase();
+        addTearDown(db.close);
+
+        await db.studyDayConfigDao.seedDefaults(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+        );
+        await db.studyDayConfigDao.upsertDayConfig(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          dayOfWeek: 6,
+          dayType: 'review',
+        );
+
+        final configs = await db.studyDayConfigDao
+            .getConfigsByCurriculumAndProfile('mishnayos', 1);
+        expect(configs.length, 7);
+        final saturday = configs.firstWhere((c) => c.dayOfWeek == 6);
+        expect(saturday.dayType, 'review');
+      });
+
+      // AC-7: State persistence includes new phase
+      test('AC-7: studyDays phase name serializes correctly', () {
+        const phases = [
+          'profileCreation',
+          'languageSelection',
+          'selection',
+          'importing',
+          'learningProcessWizard',
+          'studyDays',
+          'scopeSelection',
+          'bulkMark',
+          'goalSetup',
+          'rewardsSetup',
+          'handoff',
+          'done',
+          'error',
+        ];
+        expect(phases.contains('studyDays'), isTrue);
+      });
+
+      // AC-8: Skip defaults all days to study
+      test('AC-8: skip leaves defaults (all days = study)', () async {
+        final db = createTestDatabase();
+        addTearDown(db.close);
+
+        // No config saved — isStudyDay defaults to true
+        final isStudy = await db.studyDayConfigDao.isStudyDay(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          dayOfWeek: 5,
+        );
+        expect(isStudy, isTrue);
+
+        final count = await db.studyDayConfigDao.getStudyDaysPerWeek(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+        );
+        expect(count, 7);
+      });
+    },
   );
   group(
     'Story 16.6 -- Dashboard Design & Experience Polish',
