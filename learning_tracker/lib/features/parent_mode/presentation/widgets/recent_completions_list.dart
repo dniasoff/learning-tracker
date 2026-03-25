@@ -22,8 +22,7 @@ class RecentCompletionsList extends StatelessWidget {
             final curriculum = CurriculumId.values
                 .where((cid) => cid.storageKey == c.curriculumId)
                 .firstOrNull;
-            final curriculumName =
-                curriculum?.displayNameEn ?? c.curriculumId;
+            final curriculumName = curriculum?.displayNameEn ?? c.curriculumId;
             final curriculumColor = curriculum != null
                 ? AppTheme.getCurriculumColor(curriculum)
                 : theme.colorScheme.primary;
@@ -60,7 +59,9 @@ class RecentCompletionsList extends StatelessWidget {
               trailing: c.points > 0
                   ? Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),

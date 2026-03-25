@@ -38,8 +38,7 @@ class ParentModeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             tooltip: 'Notifications',
-            onPressed: () =>
-                context.router.push(const NotificationsRoute()),
+            onPressed: () => context.router.push(const NotificationsRoute()),
           ),
         ],
       ),
@@ -51,14 +50,16 @@ class ParentModeScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline, size: 48,
-                    color: theme.colorScheme.error),
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: theme.colorScheme.error,
+                ),
                 const SizedBox(height: 16),
                 Text('Error loading dashboard: $error'),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: () =>
-                      ref.invalidate(parentDashboardDataProvider),
+                  onPressed: () => ref.invalidate(parentDashboardDataProvider),
                   child: const Text('Retry'),
                 ),
               ],
@@ -120,9 +121,12 @@ class _DashboardBody extends StatelessWidget {
 
           // Progress Overview
           if (data.curricula.isNotEmpty) ...[
-            Text('Progress Overview',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              'Progress Overview',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 12),
             ...data.curricula.map(
               (summary) => Padding(
@@ -182,8 +186,7 @@ class _DashboardBody extends StatelessWidget {
                 child: _ActionTile(
                   icon: Icons.card_giftcard,
                   label: 'Rewards',
-                  onTap: () =>
-                      context.router.push(const RewardCatalogRoute()),
+                  onTap: () => context.router.push(const RewardCatalogRoute()),
                 ),
               ),
               const SizedBox(width: 8),
@@ -191,8 +194,7 @@ class _DashboardBody extends StatelessWidget {
                 child: _ActionTile(
                   icon: Icons.tune,
                   label: 'Point Config',
-                  onTap: () =>
-                      context.router.push(const PointConfigRoute()),
+                  onTap: () => context.router.push(const PointConfigRoute()),
                 ),
               ),
               const SizedBox(width: 8),
@@ -200,8 +202,7 @@ class _DashboardBody extends StatelessWidget {
                 child: _ActionTile(
                   icon: Icons.lock_outline,
                   label: 'Change PIN',
-                  onTap: () =>
-                      context.router.push(const PinChangeRoute()),
+                  onTap: () => context.router.push(const PinChangeRoute()),
                 ),
               ),
             ],
@@ -216,8 +217,9 @@ class _DashboardBody extends StatelessWidget {
           if (data.recentCompletions.isNotEmpty) ...[
             Text(
               'Recent Activity',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             RecentCompletionsList(completions: data.recentCompletions),
@@ -359,10 +361,8 @@ class _ParentCurriculumCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final curriculumColor =
-        _getCurriculumColor(summary.curriculum);
-    final pctDisplay =
-        (summary.completionPercentage * 100).round();
+    final curriculumColor = _getCurriculumColor(summary.curriculum);
+    final pctDisplay = (summary.completionPercentage * 100).round();
 
     return Card(
       child: Padding(
@@ -379,10 +379,8 @@ class _ParentCurriculumCard extends StatelessWidget {
                   CircularProgressIndicator(
                     value: summary.completionPercentage,
                     strokeWidth: 4,
-                    backgroundColor:
-                        curriculumColor.withValues(alpha: 0.15),
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(curriculumColor),
+                    backgroundColor: curriculumColor.withValues(alpha: 0.15),
+                    valueColor: AlwaysStoppedAnimation<Color>(curriculumColor),
                   ),
                   Text(
                     '$pctDisplay%',
@@ -520,15 +518,17 @@ class _ViewChildJourneyTile extends ConsumerWidget {
             color: Colors.deepPurple.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.auto_stories, color: Colors.deepPurple,
-              size: 24),
+          child: const Icon(
+            Icons.auto_stories,
+            color: Colors.deepPurple,
+            size: 24,
+          ),
         ),
         title: const Text("View Child's Learning Journey"),
         subtitle: const Text('See lifetime achievements'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          context.router
-              .push(LearningJourneyRoute(profileId: activeProfileId));
+          context.router.push(LearningJourneyRoute(profileId: activeProfileId));
         },
       ),
     );

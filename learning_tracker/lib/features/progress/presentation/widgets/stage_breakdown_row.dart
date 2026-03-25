@@ -19,9 +19,9 @@ class StageBreakdownRow extends StatelessWidget {
       children: stageBreakdown.map((entry) {
         return Text(
           '${entry.stageName}: ${entry.count}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         );
       }).toList(),
     );

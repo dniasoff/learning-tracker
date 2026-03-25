@@ -43,7 +43,8 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar> {
   @override
   Widget build(BuildContext context) {
     final barColor = widget.color ?? Theme.of(context).colorScheme.primary;
-    final bgColor = widget.backgroundColor ?? Colors.white.withValues(alpha: 0.1);
+    final bgColor =
+        widget.backgroundColor ?? Colors.white.withValues(alpha: 0.1);
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(

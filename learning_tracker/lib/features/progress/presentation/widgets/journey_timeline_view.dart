@@ -34,7 +34,9 @@ class JourneyTimelineView extends StatelessWidget {
       return Center(
         child: Text(
           'No completions to show',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -134,7 +136,10 @@ class _TimelineCard extends StatelessWidget {
           children: [
             Text(
               '${entry.curriculumId.displayNameEn} · $ordinal completion · $formattedDate',
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

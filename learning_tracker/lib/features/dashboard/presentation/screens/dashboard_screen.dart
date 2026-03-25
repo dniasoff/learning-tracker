@@ -11,7 +11,6 @@ import 'package:learning_tracker/features/profiles/presentation/widgets/profile_
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
-
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -117,8 +116,19 @@ class _DashboardBody extends ConsumerWidget {
     final name = profileName ?? 'Learner';
     final now = DateTime.now();
     final months = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     final dateStr = '${months[now.month]} ${now.day}, ${now.year}';
 
@@ -126,15 +136,17 @@ class _DashboardBody extends ConsumerWidget {
     var totalCompletion = 0.0;
     var loadedCount = 0;
     for (final curriculum in activeCurricula) {
-      final pctAsync =
-          ref.watch(dashboardCompletionPercentageProvider(curriculum));
+      final pctAsync = ref.watch(
+        dashboardCompletionPercentageProvider(curriculum),
+      );
       if (pctAsync.asData != null) {
         totalCompletion += pctAsync.asData!.value;
         loadedCount++;
       }
     }
-    final avgCompletion =
-        loadedCount > 0 ? (totalCompletion / loadedCount * 100).round() : 0;
+    final avgCompletion = loadedCount > 0
+        ? (totalCompletion / loadedCount * 100).round()
+        : 0;
 
     final totalPoints = globalPointsAsync.asData?.value ?? 0;
 
@@ -219,9 +231,12 @@ class _DashboardBody extends ConsumerWidget {
 
         // Active Curricula
         if (activeCurricula.isNotEmpty) ...[
-          Text('Active Curricula',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            'Active Curricula',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 12),
           SizedBox(
             height: 180,
@@ -230,9 +245,7 @@ class _DashboardBody extends ConsumerWidget {
               itemCount: activeCurricula.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
-                return _CurriculumCard(
-                  curriculum: activeCurricula[index],
-                );
+                return _CurriculumCard(curriculum: activeCurricula[index]);
               },
             ),
           ),
@@ -324,16 +337,21 @@ class _TodaysLearningSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Today's Learning",
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              "Today's Learning",
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             dailyTasksAsync.when(
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
               data: (tasks) {
                 return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -382,8 +400,10 @@ class _TodaysLearningSection extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('All caught up!',
-                                style: theme.textTheme.titleSmall),
+                            Text(
+                              'All caught up!',
+                              style: theme.textTheme.titleSmall,
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               'No tasks remaining for today.',
@@ -545,8 +565,9 @@ class _DailyProgressBar extends StatelessWidget {
             value: progress,
             minHeight: 8,
             backgroundColor: Colors.white.withValues(alpha: 0.1),
-            valueColor:
-                AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.colorScheme.primary,
+            ),
           ),
         ),
       ],
@@ -563,8 +584,9 @@ class _CurriculumCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
-    final completionAsync =
-        ref.watch(dashboardCompletionPercentageProvider(curriculum));
+    final completionAsync = ref.watch(
+      dashboardCompletionPercentageProvider(curriculum),
+    );
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = (percentage * 100).round();
 
@@ -602,10 +624,12 @@ class _CurriculumCard extends ConsumerWidget {
                           CircularProgressIndicator(
                             value: percentage,
                             strokeWidth: 3,
-                            backgroundColor:
-                                curriculumColor.withValues(alpha: 0.15),
+                            backgroundColor: curriculumColor.withValues(
+                              alpha: 0.15,
+                            ),
                             valueColor: AlwaysStoppedAnimation<Color>(
-                                curriculumColor),
+                              curriculumColor,
+                            ),
                           ),
                           Text(
                             '$pctDisplay%',
@@ -659,15 +683,21 @@ class _RecentActivitySection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Recent Activity',
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w600)),
+        Text(
+          'Recent Activity',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 12),
         Card(
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.auto_stories, color: Colors.deepPurple),
+                leading: const Icon(
+                  Icons.auto_stories,
+                  color: Colors.deepPurple,
+                ),
                 title: const Text('My Learning Journey'),
                 subtitle: const Text('See your lifetime achievements'),
                 trailing: const Icon(Icons.chevron_right),

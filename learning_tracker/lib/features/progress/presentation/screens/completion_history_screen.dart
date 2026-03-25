@@ -156,11 +156,18 @@ class _CompletionHistoryScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.history,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 16),
             Text(
               'No completions yet',
-              style: TextStyle(fontSize: 18, color: theme.colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -207,7 +214,10 @@ class _CompletionHistoryScreenState
             const SizedBox(height: 2),
             Text(
               formattedDate,
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

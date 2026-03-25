@@ -55,10 +55,7 @@ class TrackProgressBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(height / 2),
       ),
       child: const Center(
-        child: Text(
-          'No completions yet',
-          style: TextStyle(fontSize: 12),
-        ),
+        child: Text('No completions yet', style: TextStyle(fontSize: 12)),
       ),
     );
   }

@@ -139,7 +139,10 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Complete your first masechta to see it recorded forever.',
-              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),

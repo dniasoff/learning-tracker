@@ -104,6 +104,11 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(onPressed: _retry, child: const Text('Retry')),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _navigateToApp,
+                  child: const Text('Skip & continue'),
+                ),
               ],
             ),
           ),

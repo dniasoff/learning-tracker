@@ -298,9 +298,7 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE goals ADD COLUMN pace_value INTEGER',
           );
-          await customStatement(
-            'ALTER TABLE goals ADD COLUMN pace_unit TEXT',
-          );
+          await customStatement('ALTER TABLE goals ADD COLUMN pace_unit TEXT');
         }
       },
     );

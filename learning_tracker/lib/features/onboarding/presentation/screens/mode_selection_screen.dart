@@ -8,11 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 
-enum _LearningMode {
-  selfLearner,
-  parent,
-  tutor,
-}
+enum _LearningMode { selfLearner, parent, tutor }
 
 @RoutePage()
 class ModeSelectionScreen extends ConsumerStatefulWidget {
@@ -136,8 +132,7 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
       final profileService = ref.read(userProfileServiceProvider);
       await profileService.setUserMode(
         firebaseUid: user.uid,
-        displayName:
-            user.displayName ?? user.email?.split('@').first ?? 'User',
+        displayName: user.displayName ?? user.email?.split('@').first ?? 'User',
         mode: _toUserMode(_selectedMode!),
       );
 
@@ -172,132 +167,157 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
             _progressController,
           ]),
           builder: (context, _) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 16),
-                  // Animated progress bar
-                  AnimatedBuilder(
-                    animation: _progressAnim,
-                    builder: (context, _) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Stack(
-                          children: [
-                            Container(
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 16),
+                          // Animated progress bar
+                          AnimatedBuilder(
+                            animation: _progressAnim,
+                            builder: (context, _) {
+                              return ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            FractionallySizedBox(
-                              widthFactor: (1 / 3) * _progressAnim.value,
-                              child: Container(
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF22C55E),
-                                      green,
-                                      Color(0xFF86EFAC),
-                                    ],
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: green.withValues(alpha: 0.6),
-                                      blurRadius: 8,
-                                      spreadRadius: 1,
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    FractionallySizedBox(
+                                      widthFactor:
+                                          (1 / 3) * _progressAnim.value,
+                                      child: Container(
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFF22C55E),
+                                              green,
+                                              Color(0xFF86EFAC),
+                                            ],
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: green.withValues(
+                                                alpha: 0.6,
+                                              ),
+                                              blurRadius: 8,
+                                              spreadRadius: 1,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Step label + header with slide animation
+                          Transform.translate(
+                            offset: Offset(0, _headerSlide.value),
+                            child: Opacity(
+                              opacity: _headerFade.value,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ShaderMask(
+                                    shaderCallback: (bounds) =>
+                                        const LinearGradient(
+                                          colors: [
+                                            Color(0xFF22C55E),
+                                            Color(0xFF86EFAC),
+                                          ],
+                                        ).createShader(bounds),
+                                    child: const Text(
+                                      'STEP 1 OF 3',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 2.0,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Who are you\nlearning for?',
+                                    style: theme.textTheme.headlineMedium
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.2,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Choose your learning mode to customize your experience.',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.55,
+                                      ),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 20),
+                          ),
+                          const SizedBox(height: 36),
 
-                  // Step label + header with slide animation
-                  Transform.translate(
-                    offset: Offset(0, _headerSlide.value),
-                    child: Opacity(
-                      opacity: _headerFade.value,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFF22C55E), Color(0xFF86EFAC)],
-                            ).createShader(bounds),
-                            child: const Text(
-                              'STEP 1 OF 3',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 2.0,
+                          // Mode cards with staggered entrance
+                          ..._buildModeCards(green),
+
+                          const Spacer(),
+
+                          // Terms text
+                          FadeTransition(
+                            opacity: _buttonFade,
+                            child: Center(
+                              child: Text(
+                                'By continuing, you agree to our terms of service\nand spiritual growth commitment.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                  fontSize: 12,
+                                  height: 1.5,
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Text(
-                            'Who are you\nlearning for?',
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                            ),
+
+                          // Continue button
+                          FadeTransition(
+                            opacity: _buttonFade,
+                            child: _buildContinueButton(green),
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Choose your learning mode to customize your experience.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.55),
-                              height: 1.4,
-                            ),
-                          ),
+                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 36),
-
-                  // Mode cards with staggered entrance
-                  ..._buildModeCards(green),
-
-                  const Spacer(),
-
-                  // Terms text
-                  FadeTransition(
-                    opacity: _buttonFade,
-                    child: Center(
-                      child: Text(
-                        'By continuing, you agree to our terms of service\nand spiritual growth commitment.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          fontSize: 12,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Continue button
-                  FadeTransition(
-                    opacity: _buttonFade,
-                    child: _buildContinueButton(green),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                );
+              },
             );
           },
         ),
@@ -579,10 +599,7 @@ class _FancyModeCardState extends State<_FancyModeCard>
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     transitionBuilder: (child, animation) {
-                      return ScaleTransition(
-                        scale: animation,
-                        child: child,
-                      );
+                      return ScaleTransition(scale: animation, child: child);
                     },
                     child: widget.isSelected
                         ? Container(
@@ -594,10 +611,7 @@ class _FancyModeCardState extends State<_FancyModeCard>
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF22C55E),
-                                  Color(0xFF4ADE80),
-                                ],
+                                colors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
                               ),
                               boxShadow: [
                                 BoxShadow(

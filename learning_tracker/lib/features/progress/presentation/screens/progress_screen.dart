@@ -41,8 +41,7 @@ class ProgressScreen extends ConsumerWidget {
               );
             }
 
-            final userMode =
-                userModeAsync.asData?.value ?? UserMode.adult;
+            final userMode = userModeAsync.asData?.value ?? UserMode.adult;
             final streakData = streakAsync.asData?.value;
             final currentStreak = streakData?.currentStreak ?? 0;
             final maxStreak = streakData?.maxStreak ?? 0;
@@ -82,9 +81,7 @@ class ProgressScreen extends ConsumerWidget {
                         context.router.push(CompletionHistoryRoute()),
                   ),
                   const SizedBox(height: 20),
-                  _CurriculaProgressSection(
-                    activeCurricula: activeCurricula,
-                  ),
+                  _CurriculaProgressSection(activeCurricula: activeCurricula),
                 ],
               ),
             );
@@ -124,8 +121,9 @@ class _OverviewStatsRow extends StatelessWidget {
           children: [
             Text(
               'Overview',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -198,8 +196,9 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: theme.textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         Text(
           label,
@@ -236,21 +235,15 @@ class _QuickAccessSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Detailed Views',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Detailed Views', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Card(
           child: Column(
             children: [
               ListTile(
-                leading:
-                    const Icon(Icons.bar_chart, color: Colors.indigo),
+                leading: const Icon(Icons.bar_chart, color: Colors.indigo),
                 title: const Text('Progress Charts'),
-                subtitle: const Text(
-                  'Completions, trends, streak calendar',
-                ),
+                subtitle: const Text('Completions, trends, streak calendar'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: onCharts,
               ),
@@ -296,8 +289,7 @@ class _CurriculaProgressSection extends ConsumerWidget {
         Text('By Curriculum', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         ...activeCurricula.map(
-          (curriculum) =>
-              _CurriculumProgressTile(curriculum: curriculum),
+          (curriculum) => _CurriculumProgressTile(curriculum: curriculum),
         ),
       ],
     );
@@ -313,11 +305,13 @@ class _CurriculumProgressTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
-    final completionAsync =
-        ref.watch(dashboardCompletionPercentageProvider(curriculum));
+    final completionAsync = ref.watch(
+      dashboardCompletionPercentageProvider(curriculum),
+    );
     final percentage = completionAsync.asData?.value ?? 0.0;
-    final aggregateCountAsync =
-        ref.watch(aggregateCountProvider(curriculum.storageKey));
+    final aggregateCountAsync = ref.watch(
+      aggregateCountProvider(curriculum.storageKey),
+    );
     final count = aggregateCountAsync.asData?.value ?? 0;
 
     return Card(
@@ -356,10 +350,12 @@ class _CurriculumProgressTile extends ConsumerWidget {
                       child: LinearProgressIndicator(
                         value: percentage,
                         minHeight: 6,
-                        backgroundColor:
-                            curriculumColor.withValues(alpha: 0.15),
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(curriculumColor),
+                        backgroundColor: curriculumColor.withValues(
+                          alpha: 0.15,
+                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          curriculumColor,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),

@@ -498,9 +498,9 @@ class _CompletionHistorySection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               'Showing ${completions.length} of $totalCount completions',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
       ],
@@ -549,9 +549,18 @@ class _EmptySection extends StatelessWidget {
       child: Center(
         child: Column(
           children: [
-            Icon(icon, size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Icon(
+              icon,
+              size: 40,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 8),
-            Text(message, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),

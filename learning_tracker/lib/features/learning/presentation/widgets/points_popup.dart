@@ -71,7 +71,9 @@ class _PointsPopupState extends State<PointsPopup>
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color ?? const Color(0xFF1E1E1E),
+                color:
+                    Theme.of(context).cardTheme.color ??
+                    const Color(0xFF1E1E1E),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -90,7 +92,10 @@ class _PointsPopupState extends State<PointsPopup>
                   const SizedBox(height: 8),
                   Text(
                     'Great job!',
-                    style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

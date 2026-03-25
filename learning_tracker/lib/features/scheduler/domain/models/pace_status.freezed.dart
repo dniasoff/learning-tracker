@@ -15,8 +15,10 @@ T _$identity<T>(T value) => value;
 mixin _$PaceStatus {
 
 /// Whether the user is ahead, on-pace, or behind.
- PaceStatusType get status;/// Number of days ahead (positive) or behind (negative).
-/// Zero for on-pace.
+ PaceStatusType get status;/// For deadline goals: number of days ahead (+) or behind (−) schedule.
+/// For pace goals: weekly item surplus (+) or deficit (−), i.e.
+/// `((rollingAverage − targetPacePerDay) * 7).round()`.
+/// Zero when on-pace.
  int get daysDelta;/// Projected completion date based on rolling 7-day average.
 /// Null if no completions in the last 7 days (cannot project).
  DateTime? get projectedCompletionDate;/// Rolling 7-day average of daily completions.
@@ -220,8 +222,10 @@ class _PaceStatus implements PaceStatus {
 
 /// Whether the user is ahead, on-pace, or behind.
 @override final  PaceStatusType status;
-/// Number of days ahead (positive) or behind (negative).
-/// Zero for on-pace.
+/// For deadline goals: number of days ahead (+) or behind (−) schedule.
+/// For pace goals: weekly item surplus (+) or deficit (−), i.e.
+/// `((rollingAverage − targetPacePerDay) * 7).round()`.
+/// Zero when on-pace.
 @override final  int daysDelta;
 /// Projected completion date based on rolling 7-day average.
 /// Null if no completions in the last 7 days (cannot project).

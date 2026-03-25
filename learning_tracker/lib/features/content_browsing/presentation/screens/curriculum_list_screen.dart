@@ -38,7 +38,11 @@ class CurriculumListScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.search, color: Colors.white.withValues(alpha: 0.3), size: 20),
+                Icon(
+                  Icons.search,
+                  color: Colors.white.withValues(alpha: 0.3),
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Search curricula...',
@@ -100,7 +104,9 @@ class _CurriculumCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contentAsync = ref.watch(curriculumContentProvider(curriculum));
-    final completionAsync = ref.watch(dashboardCompletionPercentageProvider(curriculum));
+    final completionAsync = ref.watch(
+      dashboardCompletionPercentageProvider(curriculum),
+    );
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = (percentage * 100).round();
@@ -162,9 +168,7 @@ class _CurriculumCard extends ConsumerWidget {
             ],
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: curriculumColor.withValues(alpha: 0.2),
-          ),
+          border: Border.all(color: curriculumColor.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,7 +204,10 @@ class _CurriculumCard extends ConsumerWidget {
                 ),
                 if (pctDisplay > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
@@ -208,7 +215,11 @@ class _CurriculumCard extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, size: 14, color: curriculumColor),
+                        Icon(
+                          Icons.check_circle,
+                          size: 14,
+                          color: curriculumColor,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '$pctDisplay% Done',
@@ -229,7 +240,10 @@ class _CurriculumCard extends ConsumerWidget {
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8C519).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -330,7 +344,11 @@ class _RecentActivityPlaceholder extends StatelessWidget {
               color: const Color(0xFFE8C519).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.history, color: Color(0xFFE8C519), size: 20),
+            child: const Icon(
+              Icons.history,
+              color: Color(0xFFE8C519),
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

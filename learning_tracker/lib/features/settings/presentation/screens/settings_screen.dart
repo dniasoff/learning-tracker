@@ -53,8 +53,10 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.menu_book,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.menu_book,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Curricula'),
                     subtitle: const Text('Manage your learning path'),
                     trailing: activeCurriculaAsync.when(
@@ -78,8 +80,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       error: (_, __) => const Icon(Icons.chevron_right),
                     ),
-                    onTap: () =>
-                        context.pushRoute(const CurriculumListRoute()),
+                    onTap: () => context.pushRoute(const CurriculumListRoute()),
                   ),
                   Divider(
                     height: 1,
@@ -87,8 +88,10 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
                   ListTile(
-                    leading: Icon(Icons.flag_outlined,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.flag_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Goals'),
                     subtitle: const Text('Set and track learning milestones'),
                     trailing: const Icon(Icons.chevron_right),
@@ -100,8 +103,10 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
                   ListTile(
-                    leading: Icon(Icons.notifications_active_outlined,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.notifications_active_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Daily Reminder'),
                     subtitle: const Text('Receive daily study prompts'),
                     trailing: Switch(
@@ -111,8 +116,7 @@ class SettingsScreen extends ConsumerWidget {
                       },
                       activeTrackColor: theme.colorScheme.primary,
                     ),
-                    onTap: () =>
-                        context.pushRoute(const NotificationsRoute()),
+                    onTap: () => context.pushRoute(const NotificationsRoute()),
                   ),
                 ],
               ),
@@ -126,8 +130,10 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.dark_mode_outlined,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.dark_mode_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Theme'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -150,8 +156,10 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
                   ListTile(
-                    leading: Icon(Icons.color_lens_outlined,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.color_lens_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Accent Color'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -182,13 +190,14 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.notifications_outlined,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.notifications_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Notification Settings'),
                     subtitle: const Text('Push, email and sound'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () =>
-                        context.pushRoute(const NotificationsRoute()),
+                    onTap: () => context.pushRoute(const NotificationsRoute()),
                   ),
                   Divider(
                     height: 1,
@@ -196,11 +205,12 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
                   ListTile(
-                    leading: Icon(Icons.local_fire_department,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.local_fire_department,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Streak Alerts'),
-                    subtitle:
-                        const Text('Never lose your learning streak'),
+                    subtitle: const Text('Never lose your learning streak'),
                     trailing: Switch(
                       value: true,
                       onChanged: (value) {},
@@ -219,14 +229,19 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.cloud_outlined,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.cloud_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Cloud Sync'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle,
-                            color: theme.colorScheme.primary, size: 18),
+                        Icon(
+                          Icons.check_circle,
+                          color: theme.colorScheme.primary,
+                          size: 18,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Synced',
@@ -246,8 +261,10 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
                   ListTile(
-                    leading: Icon(Icons.file_upload_outlined,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.file_upload_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: const Text('Export Data'),
                     subtitle: const Text('JSON or CSV format'),
                     trailing: const Icon(Icons.chevron_right),
@@ -272,8 +289,9 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
                   if (user != null &&
-                      user.providerData
-                          .any((info) => info.providerId == 'password'))
+                      user.providerData.any(
+                        (info) => info.providerId == 'password',
+                      ))
                     Column(
                       children: [
                         ListTile(
@@ -296,11 +314,9 @@ class SettingsScreen extends ConsumerWidget {
                         ListTile(
                           leading: const Icon(Icons.link),
                           title: const Text('Link Account'),
-                          subtitle:
-                              const Text('Add another sign-in method'),
+                          subtitle: const Text('Add another sign-in method'),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () =>
-                              _showLinkProviderDialog(context, ref),
+                          onTap: () => _showLinkProviderDialog(context, ref),
                         ),
                         Divider(
                           height: 1,
@@ -310,8 +326,10 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                     ),
                   ListTile(
-                    leading: Icon(Icons.logout,
-                        color: theme.colorScheme.primary),
+                    leading: Icon(
+                      Icons.logout,
+                      color: theme.colorScheme.primary,
+                    ),
                     title: Text(
                       'Sign Out',
                       style: TextStyle(color: theme.colorScheme.primary),
@@ -324,14 +342,15 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.1),
                   ),
                   ListTile(
-                    leading: Icon(Icons.delete_forever,
-                        color: theme.colorScheme.error),
+                    leading: Icon(
+                      Icons.delete_forever,
+                      color: theme.colorScheme.error,
+                    ),
                     title: Text(
                       'Delete Account',
                       style: TextStyle(color: theme.colorScheme.error),
                     ),
-                    onTap: () =>
-                        _showDeleteAccountFlow(context, ref, user),
+                    onTap: () => _showDeleteAccountFlow(context, ref, user),
                   ),
                 ],
               ),
@@ -414,10 +433,10 @@ class _UserProfileSection extends StatelessWidget {
         user!.displayName ?? user!.email?.split('@').first ?? 'User';
     final initials = displayName.isNotEmpty
         ? displayName
-            .split(' ')
-            .take(2)
-            .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
-            .join()
+              .split(' ')
+              .take(2)
+              .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+              .join()
         : '?';
 
     return Padding(
@@ -456,8 +475,10 @@ class _UserProfileSection extends StatelessWidget {
                   ),
                 const SizedBox(height: 4),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -476,8 +497,10 @@ class _UserProfileSection extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.edit_outlined,
-                color: theme.colorScheme.onSurfaceVariant),
+            icon: Icon(
+              Icons.edit_outlined,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             onPressed: () {},
           ),
         ],

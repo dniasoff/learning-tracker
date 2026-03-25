@@ -340,8 +340,8 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                         color: Colors.white.withValues(alpha: 0.5),
                       ),
                       onPressed: () => setState(
-                        () => _obscureConfirmPassword =
-                            !_obscureConfirmPassword,
+                        () =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword,
                       ),
                     ),
                   ),
@@ -366,7 +366,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                         onChanged: _isLoading
                             ? null
                             : (v) =>
-                                setState(() => _agreedToTerms = v ?? false),
+                                  setState(() => _agreedToTerms = v ?? false),
                       ),
                     ),
                     const SizedBox(width: 8),

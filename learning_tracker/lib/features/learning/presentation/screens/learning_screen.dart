@@ -55,8 +55,7 @@ class LearningScreen extends ConsumerWidget {
               );
             }
 
-            final userMode =
-                userModeAsync.asData?.value ?? UserMode.adult;
+            final userMode = userModeAsync.asData?.value ?? UserMode.adult;
             final streakData = streakAsync.asData?.value;
             final currentStreak = streakData?.currentStreak ?? 0;
             final maxStreak = streakData?.maxStreak ?? 0;
@@ -113,10 +112,7 @@ class _DailyTasksSection extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text("Today's Tasks", style: theme.textTheme.titleMedium),
-            TextButton(
-              onPressed: onViewAll,
-              child: const Text('View All'),
-            ),
+            TextButton(onPressed: onViewAll, child: const Text('View All')),
           ],
         ),
         const SizedBox(height: 8),
@@ -196,9 +192,7 @@ class _DailyTasksSection extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 8),
                     child: TextButton(
                       onPressed: onViewAll,
-                      child: Text(
-                        '${tasks.length - 5} more tasks...',
-                      ),
+                      child: Text('${tasks.length - 5} more tasks...'),
                     ),
                   ),
               ],
@@ -241,8 +235,9 @@ class _CurriculumTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
-    final completionAsync =
-        ref.watch(dashboardCompletionPercentageProvider(curriculum));
+    final completionAsync = ref.watch(
+      dashboardCompletionPercentageProvider(curriculum),
+    );
     final percentage = completionAsync.asData?.value ?? 0.0;
 
     return Card(
@@ -281,10 +276,12 @@ class _CurriculumTile extends ConsumerWidget {
                       child: LinearProgressIndicator(
                         value: percentage,
                         minHeight: 6,
-                        backgroundColor:
-                            curriculumColor.withValues(alpha: 0.15),
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(curriculumColor),
+                        backgroundColor: curriculumColor.withValues(
+                          alpha: 0.15,
+                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          curriculumColor,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),

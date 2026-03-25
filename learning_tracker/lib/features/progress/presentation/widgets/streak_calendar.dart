@@ -123,7 +123,9 @@ class _DayCell extends StatelessWidget {
           '${date.day}',
           style: TextStyle(
             fontSize: 10,
-            color: isActive ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+            color: isActive
+                ? Colors.white
+                : Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),

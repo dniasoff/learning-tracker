@@ -48,7 +48,8 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
       text: widget.existingGoal?.description ?? '',
     );
     _goalType = widget.existingGoal?.goalType ?? 'deadline';
-    _paceValue = widget.existingGoal?.paceValue ??
+    _paceValue =
+        widget.existingGoal?.paceValue ??
         (CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1);
     _paceUnit = widget.existingGoal?.paceUnit ?? 'per_day';
   }
@@ -130,8 +131,9 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.calendar_today),
-                onPressed:
-                    _useHebrewDate ? _pickHebrewDate : _pickGregorianDate,
+                onPressed: _useHebrewDate
+                    ? _pickHebrewDate
+                    : _pickGregorianDate,
               ),
               if (_targetDate != null)
                 IconButton(
@@ -146,8 +148,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
           const SizedBox(height: 16),
           Builder(
             builder: (context) {
-              final daysRemaining =
-                  _targetDate!.difference(_now()).inDays;
+              final daysRemaining = _targetDate!.difference(_now()).inDays;
               if (daysRemaining <= 0) {
                 return Text(
                   'Deadline has passed',
@@ -156,8 +157,8 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                   ),
                 );
               }
-              final remainingItems =
-                  (widget.totalItems! * _targetPercent / 100).ceil();
+              final remainingItems = (widget.totalItems! * _targetPercent / 100)
+                  .ceil();
               final pace = (remainingItems / daysRemaining).ceil();
               return Card(
                 child: Padding(
@@ -172,8 +173,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                       Text(
                         '$remainingItems items in $daysRemaining days',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -203,7 +203,8 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: '$unitLabel $perLabel',
-                  helperText: 'How many per ${_paceUnit == 'per_day' ? 'day' : 'week'}?',
+                  helperText:
+                      'How many per ${_paceUnit == 'per_day' ? 'day' : 'week'}?',
                 ),
                 onChanged: (v) {
                   final parsed = int.tryParse(v);
@@ -232,8 +233,8 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
           const SizedBox(height: 16),
           Builder(
             builder: (context) {
-              final remainingItems =
-                  (widget.totalItems! * _targetPercent / 100).ceil();
+              final remainingItems = (widget.totalItems! * _targetPercent / 100)
+                  .ceil();
               final dailyRate = _paceUnit == 'per_day'
                   ? _paceValue.toDouble()
                   : _paceValue / 7.0;
@@ -241,8 +242,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                 return const SizedBox.shrink();
               }
               final daysToComplete = (remainingItems / dailyRate).ceil();
-              final projectedDate =
-                  _now().add(Duration(days: daysToComplete));
+              final projectedDate = _now().add(Duration(days: daysToComplete));
               final formattedDate =
                   '${projectedDate.year}-${projectedDate.month.toString().padLeft(2, '0')}-${projectedDate.day.toString().padLeft(2, '0')}';
               return Card(
@@ -258,8 +258,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                       Text(
                         '$remainingItems $unitLabel in ~$daysToComplete days',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

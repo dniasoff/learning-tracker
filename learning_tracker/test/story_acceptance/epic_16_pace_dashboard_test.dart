@@ -23,20 +23,23 @@ void main() {
     }
 
     // AC-1: Pace goal creation
-    test('AC-1: GoalEntity supports pace goalType with paceValue and paceUnit', () {
-      final entity = GoalEntity(
-        curriculumId: CurriculumId.bavli,
-        goalType: 'pace',
-        paceValue: 1,
-        paceUnit: 'per_day',
-        createdAt: today,
-        updatedAt: today,
-      );
-      expect(entity.goalType, 'pace');
-      expect(entity.paceValue, 1);
-      expect(entity.paceUnit, 'per_day');
-      expect(entity.targetDate, isNull);
-    });
+    test(
+      'AC-1: GoalEntity supports pace goalType with paceValue and paceUnit',
+      () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.bavli,
+          goalType: 'pace',
+          paceValue: 1,
+          paceUnit: 'per_day',
+          createdAt: today,
+          updatedAt: today,
+        );
+        expect(entity.goalType, 'pace');
+        expect(entity.paceValue, 1);
+        expect(entity.paceUnit, 'per_day');
+        expect(entity.targetDate, isNull);
+      },
+    );
 
     // AC-3: Projected completion date
     test('AC-3: projected completion = today + ceil(remaining / pace)', () {
@@ -175,9 +178,34 @@ void main() {
   });
 
   // Placeholder groups for future stories in Epic 16
-  group('Story 16.2 -- Study Day Configuration', skip: 'Not yet implemented', tags: ['story_16_2'], () {});
-  group('Story 16.3 -- Dashboard Pace & Progress Integration', skip: 'Not yet implemented', tags: ['story_16_3'], () {});
-  group('Story 16.4 -- Per-Item Review Count Display', skip: 'Not yet implemented', tags: ['story_16_4'], () {});
-  group('Story 16.5 -- Onboarding Goal & Study Day Steps', skip: 'Not yet implemented', tags: ['story_16_5'], () {});
-  group('Story 16.6 -- Dashboard Design & Experience Polish', skip: 'Not yet implemented', tags: ['story_16_6'], () {});
+  group(
+    'Story 16.2 -- Study Day Configuration',
+    skip: 'Not yet implemented',
+    tags: ['story_16_2'],
+    () {},
+  );
+  group(
+    'Story 16.3 -- Dashboard Pace & Progress Integration',
+    skip: 'Not yet implemented',
+    tags: ['story_16_3'],
+    () {},
+  );
+  group(
+    'Story 16.4 -- Per-Item Review Count Display',
+    skip: 'Not yet implemented',
+    tags: ['story_16_4'],
+    () {},
+  );
+  group(
+    'Story 16.5 -- Onboarding Goal & Study Day Steps',
+    skip: 'Not yet implemented',
+    tags: ['story_16_5'],
+    () {},
+  );
+  group(
+    'Story 16.6 -- Dashboard Design & Experience Polish',
+    skip: 'Not yet implemented',
+    tags: ['story_16_6'],
+    () {},
+  );
 }

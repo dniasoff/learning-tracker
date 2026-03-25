@@ -722,8 +722,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         () => _phase = _ScreenPhase.languageSelection,
                       ),
                       icon: const Icon(Icons.arrow_back_ios_new, size: 14),
-                      style:
-                          IconButton.styleFrom(foregroundColor: Colors.white),
+                      style: IconButton.styleFrom(
+                        foregroundColor: Colors.white,
+                      ),
                       padding: EdgeInsets.zero,
                     ),
                   ),
@@ -1166,8 +1167,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                       child: IconButton(
                         onPressed: () {},
-                        icon:
-                            const Icon(Icons.arrow_back_ios_new, size: 14),
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 14),
                         style: IconButton.styleFrom(
                           foregroundColor: Colors.white,
                         ),
@@ -1184,9 +1184,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       decoration: BoxDecoration(
                         color: green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: green.withValues(alpha: 0.2),
-                        ),
+                        border: Border.all(color: green.withValues(alpha: 0.2)),
                       ),
                       child: Text(
                         '${_goalSetupIndex + 1} of ${_goalSetupQueue.length}',
@@ -1307,8 +1305,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
                                     'Daily Page Goal',
@@ -1321,8 +1318,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                   Text(
                                     'Fix a set amount to learn every day.',
                                     style: TextStyle(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.4),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.4,
+                                      ),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -1335,10 +1333,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF22C55E),
-                                    green,
-                                  ],
+                                  colors: [Color(0xFF22C55E), green],
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -1369,9 +1364,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     decoration: BoxDecoration(
                       color: green.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: green.withValues(alpha: 0.15),
-                      ),
+                      border: Border.all(color: green.withValues(alpha: 0.15)),
                     ),
                     child: Row(
                       children: [
@@ -1428,13 +1421,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       onTap: () async {
                         final result = await Navigator.of(context)
                             .push<GoalFormResult>(
-                          MaterialPageRoute<GoalFormResult>(
-                            builder: (_) => GoalSetupScreen(
-                              curriculumId: curriculum,
-                              totalItems: totalItems,
-                            ),
-                          ),
-                        );
+                              MaterialPageRoute<GoalFormResult>(
+                                builder: (_) => GoalSetupScreen(
+                                  curriculumId: curriculum,
+                                  totalItems: totalItems,
+                                ),
+                              ),
+                            );
                         if (mounted) {
                           await _onGoalResult(result);
                         }

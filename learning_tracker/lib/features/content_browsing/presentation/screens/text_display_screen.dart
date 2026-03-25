@@ -36,7 +36,8 @@ class TextDisplayScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.more_vert),
             tooltip: 'More options',
-            onPressed: () => _showOptionsSheet(context, ref, showNikud, fontSize),
+            onPressed: () =>
+                _showOptionsSheet(context, ref, showNikud, fontSize),
           ),
         ],
       ),
@@ -103,10 +104,14 @@ class TextDisplayScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Show Nikud (diacritics)', style: TextStyle(fontSize: 15)),
+                const Text(
+                  'Show Nikud (diacritics)',
+                  style: TextStyle(fontSize: 15),
+                ),
                 Switch(
                   value: showNikud,
-                  onChanged: (_) => ref.read(showNikudProvider.notifier).toggle(),
+                  onChanged: (_) =>
+                      ref.read(showNikudProvider.notifier).toggle(),
                 ),
               ],
             ),
@@ -169,8 +174,11 @@ class _OfflineMessage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.download, size: 64,
-                color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.download,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 16),
             Text(
               'Text content not yet downloaded',
@@ -182,7 +190,8 @@ class _OfflineMessage extends StatelessWidget {
             Text(
               'Download this curriculum\'s text from the settings to read offline.',
               style: AppTextStyles.bodySmall.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant),
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -211,19 +220,24 @@ class _ErrorView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64,
-              color: theme.colorScheme.error.withValues(alpha: 0.7)),
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: theme.colorScheme.error.withValues(alpha: 0.7),
+          ),
           const SizedBox(height: 16),
           Text(
             'Failed to load text',
             style: AppTextStyles.titleMedium.copyWith(
-                color: theme.colorScheme.error),
+              color: theme.colorScheme.error,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             error.toString(),
             style: AppTextStyles.bodySmall.copyWith(
-                color: theme.colorScheme.onSurfaceVariant),
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -261,7 +275,9 @@ class _TextContentView extends StatelessWidget {
             value: 0.15,
             minHeight: 3,
             backgroundColor: Colors.white.withValues(alpha: 0.05),
-            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.colorScheme.primary,
+            ),
           ),
         ),
 
@@ -444,7 +460,11 @@ class _SefariaIntegrationCard extends StatelessWidget {
                   color: const Color(0xFFE8C519).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.menu_book, size: 20, color: Color(0xFFE8C519)),
+                child: const Icon(
+                  Icons.menu_book,
+                  size: 20,
+                  color: Color(0xFFE8C519),
+                ),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -554,7 +574,7 @@ class _StudyResourcesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(16),
@@ -566,10 +586,7 @@ class _StudyResourcesSection extends StatelessWidget {
         leading: const Icon(Icons.library_books_outlined, size: 20),
         title: const Text(
           'Study Resources',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
         children: [
           _buildResourceItem('Rashi Commentary', Icons.format_quote),
@@ -593,7 +610,11 @@ class _StudyResourcesSection extends StatelessWidget {
           const SizedBox(width: 10),
           Text(title, style: const TextStyle(fontSize: 14)),
           const Spacer(),
-          Icon(Icons.chevron_right, size: 18, color: Colors.white.withValues(alpha: 0.3)),
+          Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: Colors.white.withValues(alpha: 0.3),
+          ),
         ],
       ),
     );
@@ -615,7 +636,11 @@ class _CompletionSection extends StatelessWidget {
       ),
       child: const Row(
         children: [
-          Icon(Icons.radio_button_unchecked, color: Color(0xFF8A8A8A), size: 22),
+          Icon(
+            Icons.radio_button_unchecked,
+            color: Color(0xFF8A8A8A),
+            size: 22,
+          ),
           SizedBox(width: 12),
           Text(
             'Mark as Complete',
