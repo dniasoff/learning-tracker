@@ -406,13 +406,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Queue completion for Firestore sync.
   Future<void> _syncCompletion(Completion completion) async {
-    // Convert to Firestore document format
+    // Convert to Firestore document format (snake_case to match merge logic)
     final completionData = {
-      'curriculumId': completion.curriculumId,
-      'sefariaRef': completion.sefariaRef,
-      'stageId': completion.stageId,
-      'trackType': completion.trackType,
-      'completedAt': completion.completedAt.toIso8601String(),
+      'curriculum_id': completion.curriculumId,
+      'content_item_id': completion.sefariaRef,
+      'stage_id': completion.stageId,
+      'track_type': completion.trackType,
+      'completed_at': completion.completedAt.toIso8601String(),
       'points': completion.points,
     };
 

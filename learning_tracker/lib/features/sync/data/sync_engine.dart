@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
+import 'package:cloud_firestore/cloud_firestore.dart'
+    show FirebaseException, Timestamp;
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -64,6 +65,11 @@ class SyncEngine {
 
   /// Whether listeners have been disabled due to quota exhaustion.
   bool _quotaDegraded = false;
+
+  /// Consecutive PERMISSION_DENIED errors on push. After threshold,
+  /// pushes are silently queued to avoid log spam and wasted requests.
+  int _consecutivePushPermissionErrors = 0;
+  static const int _pushPermissionErrorThreshold = 3;
 
   /// Whether listeners are degraded due to Firebase quota issues.
   bool get isQuotaDegraded => _quotaDegraded;
@@ -275,23 +281,49 @@ class SyncEngine {
 
   // ========== Push-on-Write ==========
 
+  /// Whether pushes are suppressed due to repeated PERMISSION_DENIED errors.
+  bool get _pushSuppressed =>
+      _consecutivePushPermissionErrors >= _pushPermissionErrorThreshold;
+
+  /// Check if an error is a Firestore PERMISSION_DENIED and track it.
+  /// Returns true if the error is permission-denied.
+  bool _trackPushError(Object e) {
+    if (e is FirebaseException && e.code == 'permission-denied') {
+      _consecutivePushPermissionErrors++;
+      if (_pushSuppressed) {
+        _logger.warning(
+          'Push suppressed after $_consecutivePushPermissionErrors '
+          'consecutive permission-denied errors — queuing silently',
+        );
+      }
+      return true;
+    }
+    // Non-permission error resets the counter
+    _consecutivePushPermissionErrors = 0;
+    return false;
+  }
+
   /// Push a completion to Firestore after local write.
   Future<void> pushCompletion(Map<String, dynamic> completion) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueCompletion(completion);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushCompletion(completion);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed completion to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push completion, queuing for later', e);
       await _offlineQueue.enqueueCompletion(completion);
       await _emitPendingStatus();
@@ -300,21 +332,25 @@ class SyncEngine {
 
   /// Push a ledger entry to Firestore after local write.
   Future<void> pushLedgerEntry(Map<String, dynamic> entry) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueLedgerEntry(entry);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushLedgerEntry(entry);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed ledger entry to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push ledger entry, queuing for later', e);
       await _offlineQueue.enqueueLedgerEntry(entry);
       await _emitPendingStatus();
@@ -329,21 +365,25 @@ class SyncEngine {
 
   /// Push a bookmark to Firestore after local write.
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueBookmark(bookmark);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushBookmark(bookmark);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed bookmark to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push bookmark, queuing for later', e);
       await _offlineQueue.enqueueBookmark(bookmark);
       await _emitPendingStatus();
@@ -352,21 +392,25 @@ class SyncEngine {
 
   /// Push settings to Firestore after local write.
   Future<void> pushSettings(Map<String, dynamic> settings) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueSettings(settings);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushSettings(settings);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed settings to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push settings, queuing for later', e);
       await _offlineQueue.enqueueSettings(settings);
       await _emitPendingStatus();
@@ -389,21 +433,25 @@ class SyncEngine {
 
   /// Push streak data to Firestore after local write.
   Future<void> pushStreak(Map<String, dynamic> streak) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueStreak(streak);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushStreak(streak);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed streak to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push streak, queuing for later', e);
       await _offlineQueue.enqueueStreak(streak);
       await _emitPendingStatus();
@@ -412,21 +460,25 @@ class SyncEngine {
 
   /// Push profile to Firestore after local write.
   Future<void> pushProfile(Map<String, dynamic> profile) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueProfile(profile);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushProfile(profile);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed profile to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push profile, queuing for later', e);
       await _offlineQueue.enqueueProfile(profile);
       await _emitPendingStatus();
@@ -435,21 +487,25 @@ class SyncEngine {
 
   /// Push a goal to Firestore after local write.
   Future<void> pushGoal(Map<String, dynamic> goal) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueGoal(goal);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushGoal(goal);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed goal to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push goal, queuing for later', e);
       await _offlineQueue.enqueueGoal(goal);
       await _emitPendingStatus();
@@ -458,21 +514,25 @@ class SyncEngine {
 
   /// Push a reward to Firestore after local write.
   Future<void> pushReward(Map<String, dynamic> reward) async {
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueReward(reward);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushReward(reward);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed reward to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning('Failed to push reward, queuing for later', e);
       await _offlineQueue.enqueueReward(reward);
       await _emitPendingStatus();
@@ -1060,6 +1120,7 @@ class SyncEngine {
     // Reset quota degradation on reconnect — give listeners another chance
     _consecutiveListenerErrors = 0;
     _quotaDegraded = false;
+    _consecutivePushPermissionErrors = 0;
 
     _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
 
@@ -1109,23 +1170,27 @@ class SyncEngine {
       'imported_at': importedAt.toIso8601String(),
     };
 
-    if (!_isOnline) {
+    if (!_isOnline || _pushSuppressed) {
       await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
-      _updateStatus(
-        SyncStatus.offline(
-          pendingChanges: await _offlineQueue.getPendingCount(),
-        ),
-      );
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
       return;
     }
 
     try {
       await _firestoreDataSource.pushCurriculumImportMetadata(metadata);
+      _consecutivePushPermissionErrors = 0;
       _logger.debug(
         'Pushed curriculum import metadata to Firestore: $curriculumId',
       );
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
       _logger.warning(
         'Failed to push curriculum import metadata, queuing for later',
         e,

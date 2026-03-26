@@ -249,10 +249,10 @@ void main() {
         // Remote at ref2 — just now
         final remoteTime = DateTime.now().toUtc();
         await repository.mergeRemoteBookmark({
-          'curriculumId': CurriculumId.mishnayos.storageKey,
-          'trackType': TrackType.personal.storageKey,
-          'sefariaRef': _ref2,
-          'updatedAt': remoteTime.toIso8601String(),
+          'curriculum_id': CurriculumId.mishnayos.storageKey,
+          'track_type': TrackType.personal.storageKey,
+          'content_item_id': _ref2,
+          'updated_at': remoteTime.toIso8601String(),
         });
 
         final result = await repository.getBookmark(
@@ -278,10 +278,10 @@ void main() {
           const Duration(hours: 1),
         );
         await repository.mergeRemoteBookmark({
-          'curriculumId': CurriculumId.mishnayos.storageKey,
-          'trackType': TrackType.personal.storageKey,
-          'sefariaRef': _ref3,
-          'updatedAt': olderRemoteTime.toIso8601String(),
+          'curriculum_id': CurriculumId.mishnayos.storageKey,
+          'track_type': TrackType.personal.storageKey,
+          'content_item_id': _ref3,
+          'updated_at': olderRemoteTime.toIso8601String(),
         });
 
         final result = await repository.getBookmark(

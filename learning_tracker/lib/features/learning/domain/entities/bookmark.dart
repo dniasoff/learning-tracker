@@ -35,10 +35,10 @@ class BookmarkEntity {
   /// Convert to Firestore document map.
   Map<String, dynamic> toFirestore() {
     return {
-      'curriculumId': curriculumId.storageKey,
-      'trackType': trackType.storageKey,
-      'sefariaRef': sefariaRef,
-      'updatedAt': updatedAt.toIso8601String(),
+      'curriculum_id': curriculumId.storageKey,
+      'track_type': trackType.storageKey,
+      'content_item_id': sefariaRef,
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
@@ -46,14 +46,14 @@ class BookmarkEntity {
   static BookmarkEntity fromFirestore(Map<String, dynamic> data) {
     return BookmarkEntity(
       curriculumId: CurriculumId.values.firstWhere(
-        (c) => c.storageKey == data['curriculumId'] as String,
+        (c) => c.storageKey == data['curriculum_id'] as String,
         orElse: () => throw ArgumentError(
-          'Unknown curriculumId: ${data['curriculumId']}',
+          'Unknown curriculumId: ${data['curriculum_id']}',
         ),
       ),
-      trackType: TrackType.fromStorageKey(data['trackType'] as String),
-      sefariaRef: data['sefariaRef'] as String,
-      updatedAt: DateTime.parse(data['updatedAt'] as String),
+      trackType: TrackType.fromStorageKey(data['track_type'] as String),
+      sefariaRef: data['content_item_id'] as String,
+      updatedAt: DateTime.parse(data['updated_at'] as String),
     );
   }
 }
