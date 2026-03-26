@@ -107,8 +107,9 @@ void main() {
       expect(find.text('Daily Reminder'), findsOneWidget);
     });
 
-    testWidgets('shows active count of 1 for single curriculum',
-        (tester) async {
+    testWidgets('shows active count of 1 for single curriculum', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
@@ -142,8 +143,7 @@ void main() {
       expect(find.text('Delete Account'), findsOneWidget);
     });
 
-    testWidgets('displays app version when scrolled to bottom',
-        (tester) async {
+    testWidgets('displays app version when scrolled to bottom', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );

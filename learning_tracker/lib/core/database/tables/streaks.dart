@@ -10,4 +10,6 @@ class Streaks extends Table {
   IntColumn get currentStreak => integer().withDefault(const Constant(0))();
   IntColumn get maxStreak => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastCompletionDate => dateTime().nullable()();
+  DateTimeColumn get graceUsedDate => dateTime().nullable()();
+  IntColumn get gracePeriodDays => integer().withDefault(const Constant(1))();
 }

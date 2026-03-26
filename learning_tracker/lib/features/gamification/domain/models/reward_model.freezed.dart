@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RewardModel {
 
- int get id; String get title; String get description; int get pointsThreshold; bool get isEarned; bool get isRevealed; DateTime? get earnedAt; DateTime get createdAt;
+ int get id; String get title; String get description; int get pointsThreshold; bool get isEarned; bool get isRevealed; DateTime? get earnedAt; DateTime get createdAt; String get rewardMode; String get milestoneType; bool get isVisible; int? get poolId; int? get repeatInterval;
 /// Create a copy of RewardModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $RewardModelCopyWith<RewardModel> get copyWith => _$RewardModelCopyWithImpl<Rewa
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RewardModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.pointsThreshold, pointsThreshold) || other.pointsThreshold == pointsThreshold)&&(identical(other.isEarned, isEarned) || other.isEarned == isEarned)&&(identical(other.isRevealed, isRevealed) || other.isRevealed == isRevealed)&&(identical(other.earnedAt, earnedAt) || other.earnedAt == earnedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RewardModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.pointsThreshold, pointsThreshold) || other.pointsThreshold == pointsThreshold)&&(identical(other.isEarned, isEarned) || other.isEarned == isEarned)&&(identical(other.isRevealed, isRevealed) || other.isRevealed == isRevealed)&&(identical(other.earnedAt, earnedAt) || other.earnedAt == earnedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.rewardMode, rewardMode) || other.rewardMode == rewardMode)&&(identical(other.milestoneType, milestoneType) || other.milestoneType == milestoneType)&&(identical(other.isVisible, isVisible) || other.isVisible == isVisible)&&(identical(other.poolId, poolId) || other.poolId == poolId)&&(identical(other.repeatInterval, repeatInterval) || other.repeatInterval == repeatInterval));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,description,pointsThreshold,isEarned,isRevealed,earnedAt,createdAt);
+int get hashCode => Object.hash(runtimeType,id,title,description,pointsThreshold,isEarned,isRevealed,earnedAt,createdAt,rewardMode,milestoneType,isVisible,poolId,repeatInterval);
 
 @override
 String toString() {
-  return 'RewardModel(id: $id, title: $title, description: $description, pointsThreshold: $pointsThreshold, isEarned: $isEarned, isRevealed: $isRevealed, earnedAt: $earnedAt, createdAt: $createdAt)';
+  return 'RewardModel(id: $id, title: $title, description: $description, pointsThreshold: $pointsThreshold, isEarned: $isEarned, isRevealed: $isRevealed, earnedAt: $earnedAt, createdAt: $createdAt, rewardMode: $rewardMode, milestoneType: $milestoneType, isVisible: $isVisible, poolId: $poolId, repeatInterval: $repeatInterval)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $RewardModelCopyWith<$Res>  {
   factory $RewardModelCopyWith(RewardModel value, $Res Function(RewardModel) _then) = _$RewardModelCopyWithImpl;
 @useResult
 $Res call({
- int id, String title, String description, int pointsThreshold, bool isEarned, bool isRevealed, DateTime? earnedAt, DateTime createdAt
+ int id, String title, String description, int pointsThreshold, bool isEarned, bool isRevealed, DateTime? earnedAt, DateTime createdAt, String rewardMode, String milestoneType, bool isVisible, int? poolId, int? repeatInterval
 });
 
 
@@ -62,7 +62,7 @@ class _$RewardModelCopyWithImpl<$Res>
 
 /// Create a copy of RewardModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? pointsThreshold = null,Object? isEarned = null,Object? isRevealed = null,Object? earnedAt = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? pointsThreshold = null,Object? isEarned = null,Object? isRevealed = null,Object? earnedAt = freezed,Object? createdAt = null,Object? rewardMode = null,Object? milestoneType = null,Object? isVisible = null,Object? poolId = freezed,Object? repeatInterval = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -72,7 +72,12 @@ as int,isEarned: null == isEarned ? _self.isEarned : isEarned // ignore: cast_nu
 as bool,isRevealed: null == isRevealed ? _self.isRevealed : isRevealed // ignore: cast_nullable_to_non_nullable
 as bool,earnedAt: freezed == earnedAt ? _self.earnedAt : earnedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,rewardMode: null == rewardMode ? _self.rewardMode : rewardMode // ignore: cast_nullable_to_non_nullable
+as String,milestoneType: null == milestoneType ? _self.milestoneType : milestoneType // ignore: cast_nullable_to_non_nullable
+as String,isVisible: null == isVisible ? _self.isVisible : isVisible // ignore: cast_nullable_to_non_nullable
+as bool,poolId: freezed == poolId ? _self.poolId : poolId // ignore: cast_nullable_to_non_nullable
+as int?,repeatInterval: freezed == repeatInterval ? _self.repeatInterval : repeatInterval // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -157,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String description,  int pointsThreshold,  bool isEarned,  bool isRevealed,  DateTime? earnedAt,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String description,  int pointsThreshold,  bool isEarned,  bool isRevealed,  DateTime? earnedAt,  DateTime createdAt,  String rewardMode,  String milestoneType,  bool isVisible,  int? poolId,  int? repeatInterval)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RewardModel() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_that.isEarned,_that.isRevealed,_that.earnedAt,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_that.isEarned,_that.isRevealed,_that.earnedAt,_that.createdAt,_that.rewardMode,_that.milestoneType,_that.isVisible,_that.poolId,_that.repeatInterval);case _:
   return orElse();
 
 }
@@ -178,10 +183,10 @@ return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String description,  int pointsThreshold,  bool isEarned,  bool isRevealed,  DateTime? earnedAt,  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String description,  int pointsThreshold,  bool isEarned,  bool isRevealed,  DateTime? earnedAt,  DateTime createdAt,  String rewardMode,  String milestoneType,  bool isVisible,  int? poolId,  int? repeatInterval)  $default,) {final _that = this;
 switch (_that) {
 case _RewardModel():
-return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_that.isEarned,_that.isRevealed,_that.earnedAt,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_that.isEarned,_that.isRevealed,_that.earnedAt,_that.createdAt,_that.rewardMode,_that.milestoneType,_that.isVisible,_that.poolId,_that.repeatInterval);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +203,10 @@ return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String description,  int pointsThreshold,  bool isEarned,  bool isRevealed,  DateTime? earnedAt,  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String description,  int pointsThreshold,  bool isEarned,  bool isRevealed,  DateTime? earnedAt,  DateTime createdAt,  String rewardMode,  String milestoneType,  bool isVisible,  int? poolId,  int? repeatInterval)?  $default,) {final _that = this;
 switch (_that) {
 case _RewardModel() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_that.isEarned,_that.isRevealed,_that.earnedAt,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_that.isEarned,_that.isRevealed,_that.earnedAt,_that.createdAt,_that.rewardMode,_that.milestoneType,_that.isVisible,_that.poolId,_that.repeatInterval);case _:
   return null;
 
 }
@@ -213,7 +218,7 @@ return $default(_that.id,_that.title,_that.description,_that.pointsThreshold,_th
 
 
 class _RewardModel implements RewardModel {
-  const _RewardModel({required this.id, required this.title, required this.description, required this.pointsThreshold, required this.isEarned, required this.isRevealed, this.earnedAt, required this.createdAt});
+  const _RewardModel({required this.id, required this.title, required this.description, required this.pointsThreshold, required this.isEarned, required this.isRevealed, this.earnedAt, required this.createdAt, this.rewardMode = 'specific', this.milestoneType = 'points', this.isVisible = true, this.poolId, this.repeatInterval});
   
 
 @override final  int id;
@@ -224,6 +229,11 @@ class _RewardModel implements RewardModel {
 @override final  bool isRevealed;
 @override final  DateTime? earnedAt;
 @override final  DateTime createdAt;
+@override@JsonKey() final  String rewardMode;
+@override@JsonKey() final  String milestoneType;
+@override@JsonKey() final  bool isVisible;
+@override final  int? poolId;
+@override final  int? repeatInterval;
 
 /// Create a copy of RewardModel
 /// with the given fields replaced by the non-null parameter values.
@@ -235,16 +245,16 @@ _$RewardModelCopyWith<_RewardModel> get copyWith => __$RewardModelCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RewardModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.pointsThreshold, pointsThreshold) || other.pointsThreshold == pointsThreshold)&&(identical(other.isEarned, isEarned) || other.isEarned == isEarned)&&(identical(other.isRevealed, isRevealed) || other.isRevealed == isRevealed)&&(identical(other.earnedAt, earnedAt) || other.earnedAt == earnedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RewardModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.pointsThreshold, pointsThreshold) || other.pointsThreshold == pointsThreshold)&&(identical(other.isEarned, isEarned) || other.isEarned == isEarned)&&(identical(other.isRevealed, isRevealed) || other.isRevealed == isRevealed)&&(identical(other.earnedAt, earnedAt) || other.earnedAt == earnedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.rewardMode, rewardMode) || other.rewardMode == rewardMode)&&(identical(other.milestoneType, milestoneType) || other.milestoneType == milestoneType)&&(identical(other.isVisible, isVisible) || other.isVisible == isVisible)&&(identical(other.poolId, poolId) || other.poolId == poolId)&&(identical(other.repeatInterval, repeatInterval) || other.repeatInterval == repeatInterval));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,description,pointsThreshold,isEarned,isRevealed,earnedAt,createdAt);
+int get hashCode => Object.hash(runtimeType,id,title,description,pointsThreshold,isEarned,isRevealed,earnedAt,createdAt,rewardMode,milestoneType,isVisible,poolId,repeatInterval);
 
 @override
 String toString() {
-  return 'RewardModel(id: $id, title: $title, description: $description, pointsThreshold: $pointsThreshold, isEarned: $isEarned, isRevealed: $isRevealed, earnedAt: $earnedAt, createdAt: $createdAt)';
+  return 'RewardModel(id: $id, title: $title, description: $description, pointsThreshold: $pointsThreshold, isEarned: $isEarned, isRevealed: $isRevealed, earnedAt: $earnedAt, createdAt: $createdAt, rewardMode: $rewardMode, milestoneType: $milestoneType, isVisible: $isVisible, poolId: $poolId, repeatInterval: $repeatInterval)';
 }
 
 
@@ -255,7 +265,7 @@ abstract mixin class _$RewardModelCopyWith<$Res> implements $RewardModelCopyWith
   factory _$RewardModelCopyWith(_RewardModel value, $Res Function(_RewardModel) _then) = __$RewardModelCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String title, String description, int pointsThreshold, bool isEarned, bool isRevealed, DateTime? earnedAt, DateTime createdAt
+ int id, String title, String description, int pointsThreshold, bool isEarned, bool isRevealed, DateTime? earnedAt, DateTime createdAt, String rewardMode, String milestoneType, bool isVisible, int? poolId, int? repeatInterval
 });
 
 
@@ -272,7 +282,7 @@ class __$RewardModelCopyWithImpl<$Res>
 
 /// Create a copy of RewardModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = null,Object? pointsThreshold = null,Object? isEarned = null,Object? isRevealed = null,Object? earnedAt = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = null,Object? pointsThreshold = null,Object? isEarned = null,Object? isRevealed = null,Object? earnedAt = freezed,Object? createdAt = null,Object? rewardMode = null,Object? milestoneType = null,Object? isVisible = null,Object? poolId = freezed,Object? repeatInterval = freezed,}) {
   return _then(_RewardModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -282,7 +292,12 @@ as int,isEarned: null == isEarned ? _self.isEarned : isEarned // ignore: cast_nu
 as bool,isRevealed: null == isRevealed ? _self.isRevealed : isRevealed // ignore: cast_nullable_to_non_nullable
 as bool,earnedAt: freezed == earnedAt ? _self.earnedAt : earnedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,rewardMode: null == rewardMode ? _self.rewardMode : rewardMode // ignore: cast_nullable_to_non_nullable
+as String,milestoneType: null == milestoneType ? _self.milestoneType : milestoneType // ignore: cast_nullable_to_non_nullable
+as String,isVisible: null == isVisible ? _self.isVisible : isVisible // ignore: cast_nullable_to_non_nullable
+as bool,poolId: freezed == poolId ? _self.poolId : poolId // ignore: cast_nullable_to_non_nullable
+as int?,repeatInterval: freezed == repeatInterval ? _self.repeatInterval : repeatInterval // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

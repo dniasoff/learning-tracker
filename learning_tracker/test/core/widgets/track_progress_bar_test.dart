@@ -19,7 +19,7 @@ void main() {
         // Act
         await tester.pumpWidget(
           MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.lightTheme(),
             home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
           ),
         );
@@ -47,7 +47,7 @@ void main() {
       // Test light theme
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
         ),
       );
@@ -70,7 +70,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
         ),
       );
@@ -91,7 +91,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(
             body: TrackProgressBar(
               trackCounts: trackCounts,
@@ -126,7 +126,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(
             body: TrackProgressBar(trackCounts: trackCounts, showLabels: false),
           ),
@@ -149,7 +149,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
         ),
       );
@@ -172,7 +172,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
         ),
       );

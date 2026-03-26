@@ -16,4 +16,14 @@ class LearningPrograms extends Table {
   TextColumn get testConfig =>
       text().withDefault(const Constant('{}'))(); // JSON
   DateTimeColumn get createdAt => dateTime()();
+
+  /// API source for calendar programs: 'sefaria', 'hebcal', or null (custom)
+  TextColumn get apiSource => text().nullable()();
+
+  /// Key identifying this program in the API response
+  TextColumn get apiProgramKey => text().nullable()();
+
+  /// Whether this is a calendar-linked program (vs custom/local)
+  BoolColumn get isCalendarProgram =>
+      boolean().withDefault(const Constant(false))();
 }

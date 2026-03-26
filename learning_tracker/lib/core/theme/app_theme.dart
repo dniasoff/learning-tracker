@@ -11,8 +11,20 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 class AppTheme {
   AppTheme._();
 
-  /// Primary color: Yellow/gold accent
-  static const Color _primaryColor = Color(0xFFE8C519);
+  /// Default primary color: Yellow/gold accent
+  static const Color defaultAccentColor = Color(0xFFE8C519);
+
+  /// Available accent color options.
+  static const List<AccentColorOption> accentColors = [
+    AccentColorOption('Gold', Color(0xFFE8C519)),
+    AccentColorOption('Blue', Color(0xFF4A90E2)),
+    AccentColorOption('Teal', Color(0xFF1ABC9C)),
+    AccentColorOption('Green', Color(0xFF2ECC71)),
+    AccentColorOption('Orange', Color(0xFFE67E22)),
+    AccentColorOption('Purple', Color(0xFF9B59B6)),
+    AccentColorOption('Red', Color(0xFFE74C3C)),
+    AccentColorOption('Pink', Color(0xFFE91E8B)),
+  ];
 
   /// Secondary color: Bright green for success states
   static const Color _secondaryColor = Color(0xFF4ADE80);
@@ -68,7 +80,9 @@ class AppTheme {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == storageKey)
         .firstOrNull;
-    return curriculum != null ? getCurriculumColor(curriculum) : _primaryColor;
+    return curriculum != null
+        ? getCurriculumColor(curriculum)
+        : defaultAccentColor;
   }
 
   /// Track colors - distinct colors for the 3 track types
@@ -89,15 +103,15 @@ class AppTheme {
   }
 
   /// Dark theme
-  static ThemeData get darkTheme {
+  static ThemeData darkTheme([Color accent = defaultAccentColor]) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.dark(
-        primary: _primaryColor,
+        primary: accent,
         onPrimary: Colors.black,
-        primaryContainer: _primaryColor.withValues(alpha: 0.15),
-        onPrimaryContainer: _primaryColor,
+        primaryContainer: accent.withValues(alpha: 0.15),
+        onPrimaryContainer: accent,
         secondary: _secondaryColor,
         onSecondary: Colors.black,
         secondaryContainer: _secondaryColor.withValues(alpha: 0.15),
@@ -130,7 +144,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: _primaryColor,
+          backgroundColor: accent,
           foregroundColor: Colors.black,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -141,7 +155,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: _primaryColor,
+          backgroundColor: accent,
           foregroundColor: Colors.black,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -152,7 +166,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: _primaryColor,
+          foregroundColor: accent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
@@ -180,7 +194,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _primaryColor, width: 2),
+          borderSide: BorderSide(color: accent, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -193,26 +207,26 @@ class AppTheme {
           vertical: 16,
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: _surfaceColor,
-        selectedItemColor: _primaryColor,
-        unselectedItemColor: Color(0xFF5A5A5A),
+        selectedItemColor: accent,
+        unselectedItemColor: const Color(0xFF5A5A5A),
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: _surfaceColor,
-        indicatorColor: _primaryColor.withValues(alpha: 0.12),
+        indicatorColor: accent.withValues(alpha: 0.12),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: _primaryColor);
+            return IconThemeData(color: accent);
           }
           return const IconThemeData(color: Color(0xFF5A5A5A));
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              color: _primaryColor,
+            return TextStyle(
+              color: accent,
               fontWeight: FontWeight.w600,
               fontSize: 12,
             );
@@ -227,8 +241,8 @@ class AppTheme {
       ),
       dividerColor: Colors.white.withValues(alpha: 0.06),
       chipTheme: ChipThemeData(
-        backgroundColor: _primaryColor.withValues(alpha: 0.15),
-        selectedColor: _primaryColor,
+        backgroundColor: accent.withValues(alpha: 0.15),
+        selectedColor: accent,
         labelStyle: const TextStyle(color: Colors.white, fontSize: 13),
         secondaryLabelStyle: const TextStyle(color: Colors.black, fontSize: 13),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -238,7 +252,7 @@ class AppTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return _primaryColor;
+              return accent;
             }
             return _cardColor;
           }),
@@ -252,7 +266,7 @@ class AppTheme {
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return _primaryColor;
+          if (states.contains(WidgetState.selected)) return accent;
           return Colors.transparent;
         }),
         checkColor: WidgetStateProperty.all(Colors.black),
@@ -261,29 +275,245 @@ class AppTheme {
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return _primaryColor;
+          if (states.contains(WidgetState.selected)) return accent;
           return Colors.white.withValues(alpha: 0.3);
         }),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return _primaryColor;
+          if (states.contains(WidgetState.selected)) return accent;
           return Colors.white.withValues(alpha: 0.5);
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return _primaryColor.withValues(alpha: 0.3);
+            return accent.withValues(alpha: 0.3);
           }
           return Colors.white.withValues(alpha: 0.1);
         }),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: _primaryColor,
-        linearTrackColor: Color(0xFF2A2A2A),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: accent,
+        linearTrackColor: const Color(0xFF2A2A2A),
       ),
     );
   }
 
-  /// Light theme (kept for reference)
-  static ThemeData get lightTheme => darkTheme;
+  /// Light theme colors
+  static const Color _lightSurfaceColor = Color(0xFFF5F5F0);
+  static const Color _lightBackgroundColor = Color(0xFFFAFAF7);
+  static const Color _lightCardColor = Colors.white;
+
+  /// Light theme
+  static ThemeData lightTheme([Color accent = defaultAccentColor]) {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: ColorScheme.light(
+        primary: accent,
+        onPrimary: Colors.black,
+        primaryContainer: accent.withValues(alpha: 0.15),
+        onPrimaryContainer: const Color(0xFF5A4A00),
+        secondary: _secondaryColor,
+        onSecondary: Colors.black,
+        secondaryContainer: _secondaryColor.withValues(alpha: 0.15),
+        onSecondaryContainer: const Color(0xFF005A1E),
+        tertiary: _tertiaryColor,
+        onTertiary: Colors.white,
+        tertiaryContainer: _tertiaryColor.withValues(alpha: 0.15),
+        onTertiaryContainer: const Color(0xFF2A4A3A),
+        error: _errorColor,
+        onError: Colors.white,
+        surface: _lightSurfaceColor,
+        onSurface: const Color(0xFF1A1A1A),
+        onSurfaceVariant: const Color(0xFF6A6A6A),
+        outline: const Color(0xFFD0D0D0),
+        shadow: Colors.black.withValues(alpha: 0.08),
+      ),
+      scaffoldBackgroundColor: _lightBackgroundColor,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: _lightBackgroundColor,
+        foregroundColor: Color(0xFF1A1A1A),
+        elevation: 0,
+        centerTitle: true,
+      ),
+      cardTheme: CardThemeData(
+        color: _lightCardColor,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: EdgeInsets.zero,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: accent,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFF5A4A00),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF1A1A1A),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          side: BorderSide(
+            color: const Color(0xFF1A1A1A).withValues(alpha: 0.2),
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: _lightCardColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: const Color(0xFF1A1A1A).withValues(alpha: 0.12),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: const Color(0xFF1A1A1A).withValues(alpha: 0.12),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: accent, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _errorColor),
+        ),
+        labelStyle: TextStyle(
+          color: const Color(0xFF1A1A1A).withValues(alpha: 0.6),
+        ),
+        hintStyle: TextStyle(
+          color: const Color(0xFF1A1A1A).withValues(alpha: 0.4),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: _lightCardColor,
+        selectedItemColor: accent,
+        unselectedItemColor: const Color(0xFF9A9A9A),
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: _lightCardColor,
+        indicatorColor: accent.withValues(alpha: 0.15),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: accent);
+          }
+          return const IconThemeData(color: Color(0xFF9A9A9A));
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            );
+          }
+          return const TextStyle(
+            color: Color(0xFF9A9A9A),
+            fontWeight: FontWeight.normal,
+            fontSize: 12,
+          );
+        }),
+        elevation: 0,
+      ),
+      dividerColor: const Color(0xFF1A1A1A).withValues(alpha: 0.08),
+      chipTheme: ChipThemeData(
+        backgroundColor: accent.withValues(alpha: 0.12),
+        selectedColor: accent,
+        labelStyle: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 13),
+        secondaryLabelStyle: const TextStyle(color: Colors.black, fontSize: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        side: BorderSide.none,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return accent;
+            }
+            return _lightCardColor;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.black;
+            }
+            return const Color(0xFF1A1A1A).withValues(alpha: 0.7);
+          }),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(Colors.black),
+        side: BorderSide(color: const Color(0xFF1A1A1A).withValues(alpha: 0.3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return const Color(0xFF1A1A1A).withValues(alpha: 0.3);
+        }),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return const Color(0xFF1A1A1A).withValues(alpha: 0.4);
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return accent.withValues(alpha: 0.3);
+          }
+          return const Color(0xFF1A1A1A).withValues(alpha: 0.1);
+        }),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: accent,
+        linearTrackColor: const Color(0xFFE0E0E0),
+      ),
+    );
+  }
+}
+
+/// Represents a selectable accent color option.
+class AccentColorOption {
+  const AccentColorOption(this.name, this.color);
+
+  final String name;
+  final Color color;
 }

@@ -3,6 +3,8 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
@@ -142,6 +144,14 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao.getCompletionsByProfile(profileId);
   return completions.fold<int>(0, (sum, c) => sum + c.points);
+}
+
+/// Streak recovery info — whether the streak was just saved by grace period.
+@riverpod
+Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
+  final db = ref.watch(appDatabaseProvider);
+  final streakService = StreakService(db);
+  return streakService.getRecoveryInfo();
 }
 
 /// Per-curriculum pace status for the dashboard.

@@ -176,6 +176,9 @@ class _DashboardBody extends ConsumerWidget {
 
         const SizedBox(height: 20),
 
+        // Streak recovery banner
+        _StreakRecoveryBanner(currentStreak: currentStreak),
+
         // AC-3: Streak milestone celebration
         if (isMilestone(currentStreak))
           StreakMilestoneOverlay(
@@ -918,6 +921,48 @@ class _ErrorRetry extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StreakRecoveryBanner extends ConsumerWidget {
+  final int currentStreak;
+
+  const _StreakRecoveryBanner({required this.currentStreak});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recoveryAsync = ref.watch(dashboardStreakRecoveryProvider);
+    return recoveryAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (info) {
+        if (!info.wasRecovered) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Card(
+            color: Colors.orange.withValues(alpha: 0.15),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(Icons.shield, color: Colors.orange, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'You missed 1 day but your ${info.currentStreak}-day streak is safe!',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

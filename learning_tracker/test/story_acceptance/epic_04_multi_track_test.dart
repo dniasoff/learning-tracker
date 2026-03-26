@@ -591,7 +591,7 @@ void main() {
           // Act
           await tester.pumpWidget(
             MaterialApp(
-              theme: AppTheme.lightTheme,
+              theme: AppTheme.lightTheme(),
               home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
             ),
           );
@@ -634,7 +634,7 @@ void main() {
             ProviderScope(
               overrides: [appDatabaseProvider.overrideWithValue(database)],
               child: MaterialApp(
-                theme: AppTheme.lightTheme,
+                theme: AppTheme.lightTheme(),
                 home: const CompletionHistoryScreen(curriculumId: 'bavli'),
               ),
             ),
@@ -694,7 +694,7 @@ void main() {
                 ),
               ],
               child: MaterialApp(
-                theme: AppTheme.lightTheme,
+                theme: AppTheme.lightTheme(),
                 home: const CurriculumProgressScreen(curriculumId: 'bavli'),
               ),
             ),
@@ -728,7 +728,7 @@ void main() {
           // Test light theme
           await tester.pumpWidget(
             MaterialApp(
-              theme: AppTheme.lightTheme,
+              theme: AppTheme.lightTheme(),
               home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
             ),
           );

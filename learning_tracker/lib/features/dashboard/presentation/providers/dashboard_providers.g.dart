@@ -455,6 +455,53 @@ final class DashboardGlobalPointsProvider
 String _$dashboardGlobalPointsHash() =>
     r'7b414255ea50c70ee6ed1f4a80cada3871859e54';
 
+/// Streak recovery info — whether the streak was just saved by grace period.
+
+@ProviderFor(dashboardStreakRecovery)
+final dashboardStreakRecoveryProvider = DashboardStreakRecoveryProvider._();
+
+/// Streak recovery info — whether the streak was just saved by grace period.
+
+final class DashboardStreakRecoveryProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<StreakRecoveryInfo>,
+          StreakRecoveryInfo,
+          FutureOr<StreakRecoveryInfo>
+        >
+    with
+        $FutureModifier<StreakRecoveryInfo>,
+        $FutureProvider<StreakRecoveryInfo> {
+  /// Streak recovery info — whether the streak was just saved by grace period.
+  DashboardStreakRecoveryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dashboardStreakRecoveryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dashboardStreakRecoveryHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<StreakRecoveryInfo> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<StreakRecoveryInfo> create(Ref ref) {
+    return dashboardStreakRecovery(ref);
+  }
+}
+
+String _$dashboardStreakRecoveryHash() =>
+    r'9f7b13fa1ee1a90f8d860eac8b3c06087a13e8df';
+
 /// Per-curriculum pace status for the dashboard.
 ///
 /// Fetches goal data and computes pace internally so the dashboard

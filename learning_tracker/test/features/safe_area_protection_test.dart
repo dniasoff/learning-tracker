@@ -1,7 +1,12 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
 
 /// Tests that SafeArea protection is applied to screens to prevent
@@ -27,19 +32,18 @@ void main() {
         expect(find.byType(SafeArea), findsWidgets);
       });
 
-      testWidgets(
-        'SafeArea protects content from system insets',
-        (tester) async {
-          await tester.pumpWidget(buildWithSystemInsets());
-          await tester.pump(const Duration(seconds: 2));
+      testWidgets('SafeArea protects content from system insets', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWithSystemInsets());
+        await tester.pump(const Duration(seconds: 2));
 
-          final safeAreas = tester
-              .widgetList<SafeArea>(find.byType(SafeArea))
-              .toList();
-          // At least one SafeArea should exist to protect content
-          expect(safeAreas, isNotEmpty);
-        },
-      );
+        final safeAreas = tester
+            .widgetList<SafeArea>(find.byType(SafeArea))
+            .toList();
+        // At least one SafeArea should exist to protect content
+        expect(safeAreas, isNotEmpty);
+      });
 
       testWidgets('bottom content is not obscured by system nav bar', (
         tester,
@@ -58,13 +62,35 @@ void main() {
     });
 
     group('MEDIUM-risk screen: GamificationScreen', () {
+      late AppDatabase db;
+
+      setUp(() {
+        db = AppDatabase(NativeDatabase.memory());
+      });
+
+      tearDown(() async {
+        await db.close();
+      });
+
       Widget buildWithSystemInsets() {
-        return const MediaQuery(
-          data: MediaQueryData(
+        return MediaQuery(
+          data: const MediaQueryData(
             padding: EdgeInsets.only(bottom: 48),
             viewPadding: EdgeInsets.only(bottom: 48),
           ),
-          child: ProviderScope(child: MaterialApp(home: GamificationScreen())),
+          child: ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWith((_) => db),
+              // Override stream providers to avoid Drift timer leaks in tests
+              allRewardsStreamProvider.overrideWith(
+                (_) => Stream.value(<Reward>[]),
+              ),
+              dashboardStreakProvider.overrideWith(
+                (_) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+            ],
+            child: const MaterialApp(home: GamificationScreen()),
+          ),
         );
       }
 

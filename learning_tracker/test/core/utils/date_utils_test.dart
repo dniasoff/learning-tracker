@@ -94,7 +94,7 @@ void main() {
   group('DateUtils - Same Local Day', () {
     test('isSameLocalDay returns true for same local date', () {
       final utc1 = DateTime.utc(2026, 2, 9, 10, 0, 0);
-      final utc2 = DateTime.utc(2026, 2, 9, 22, 0, 0);
+      final utc2 = DateTime.utc(2026, 2, 9, 14, 0, 0);
 
       expect(DateUtils.isSameLocalDay(utc1, utc2), isTrue);
     });
@@ -191,8 +191,9 @@ void main() {
   group('DateUtils - Streak Day Boundary (P5)', () {
     test('two completions on same local date count as same day', () {
       // Simulate two completions on same local calendar day
+      // Use times well within the same UTC day to avoid timezone boundary issues
       final completion1 = DateTime.utc(2026, 2, 9, 14, 0, 0);
-      final completion2 = DateTime.utc(2026, 2, 9, 22, 0, 0);
+      final completion2 = DateTime.utc(2026, 2, 9, 18, 0, 0);
 
       final localDate1 = DateUtils.extractLocalDate(completion1);
       final localDate2 = DateUtils.extractLocalDate(completion2);

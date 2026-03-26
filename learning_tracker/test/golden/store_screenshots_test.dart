@@ -66,7 +66,7 @@ Widget phoneApp({required Widget child}) {
       ),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
+        theme: AppTheme.lightTheme(),
         home: child,
       ),
     ),
@@ -377,19 +377,19 @@ void main() {
                     _StatCard(
                       'Total Learned',
                       '2,847',
-                      AppTheme.lightTheme.colorScheme.tertiary,
+                      AppTheme.lightTheme().colorScheme.tertiary,
                     ),
                     const SizedBox(width: 8),
                     _StatCard(
                       'This Week',
                       '142',
-                      AppTheme.lightTheme.colorScheme.secondary,
+                      AppTheme.lightTheme().colorScheme.secondary,
                     ),
                     const SizedBox(width: 8),
                     _StatCard(
                       'Avg/Day',
                       '23',
-                      AppTheme.lightTheme.colorScheme.primary,
+                      AppTheme.lightTheme().colorScheme.primary,
                     ),
                   ],
                 ),
@@ -536,7 +536,7 @@ void main() {
               children: [
                 // Goal card
                 Card(
-                  color: AppTheme.lightTheme.colorScheme.primaryContainer,
+                  color: AppTheme.lightTheme().colorScheme.primaryContainer,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -546,7 +546,7 @@ void main() {
                           children: [
                             Icon(
                               Icons.flag,
-                              color: AppTheme.lightTheme.colorScheme.primary,
+                              color: AppTheme.lightTheme().colorScheme.primary,
                             ),
                             const SizedBox(width: 8),
                             const Expanded(
@@ -566,8 +566,7 @@ void main() {
                                   style: TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme
-                                        .lightTheme
+                                    color: AppTheme.lightTheme()
                                         .colorScheme
                                         .secondary,
                                   ),
@@ -583,8 +582,7 @@ void main() {
                         const SizedBox(height: 12),
                         LinearProgressIndicator(
                           value: 0.42,
-                          backgroundColor: AppTheme
-                              .lightTheme
+                          backgroundColor: AppTheme.lightTheme()
                               .colorScheme
                               .surfaceContainerHighest,
                           minHeight: 8,

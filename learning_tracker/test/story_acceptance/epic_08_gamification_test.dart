@@ -137,7 +137,7 @@ void main() {
     });
 
     test('complete items on 3 consecutive days, verify streak=3; '
-        'skip a day, complete again, verify streak=1 and max=3', () async {
+        'skip a day, complete again, verify streak=4 and max=4', () async {
       final day1 = DateTimeFactory.utc(2026, 3, 10, 12);
       final day2 = DateTimeFactory.utc(2026, 3, 11, 14);
       final day3 = DateTimeFactory.utc(2026, 3, 12, 9);
@@ -148,11 +148,12 @@ void main() {
       expect(streak.currentStreak, 3);
       expect(streak.maxStreak, 3);
 
-      // Skip day 4 (March 13), complete on day 5
+      // Skip day 4 (March 13), complete on day 5 (dayGap=2, grace applies)
       final day5 = DateTimeFactory.utc(2026, 3, 14, 12);
       streak = await streakService.recordCompletion(day5);
-      expect(streak.currentStreak, 1);
-      expect(streak.maxStreak, 3);
+      // Grace period preserves the streak and increments it
+      expect(streak.currentStreak, 4);
+      expect(streak.maxStreak, 4);
     });
 
     test('streak does not double-increment on same day', () async {
@@ -228,11 +229,13 @@ void main() {
     Future<void> addReward({
       required String title,
       required int threshold,
+      bool isVisible = true,
     }) async {
       await rewardService.addReward(
         title: title,
         description: 'Reward at $threshold points',
         pointsThreshold: threshold,
+        isVisible: isVisible,
       );
     }
 
@@ -285,7 +288,7 @@ void main() {
     });
 
     test('reveal toggling works (parent reveals)', () async {
-      await addReward(title: 'Bronze', threshold: 10);
+      await addReward(title: 'Bronze', threshold: 10, isVisible: false);
 
       // Earn it in child mode (not auto-revealed)
       await insertCompletion(

@@ -106,9 +106,11 @@ void main() {
       expect(find.text('Mishnayos'), findsOneWidget);
       expect(find.text('Talmud Bavli'), findsOneWidget);
       expect(find.text('Talmud Yerushalmi'), findsOneWidget);
+
+      // Scroll down to see items below the initial viewport
+      await tester.scrollUntilVisible(find.text('Mishna Berurah'), 100);
       expect(find.text('Mishna Berurah'), findsOneWidget);
 
-      // Scroll down to see Chumash
       await tester.scrollUntilVisible(find.text('Chumash'), 100);
       expect(find.text('Chumash'), findsOneWidget);
     });
@@ -128,10 +130,7 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('Choose Your'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Choose Your'), findsOneWidget);
     });
 
     testWidgets('checkmark toggles on tap', (tester) async {
@@ -195,10 +194,7 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('Choose Your'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Choose Your'), findsOneWidget);
       expect(
         find.text('You can add or remove curricula anytime.'),
         findsOneWidget,

@@ -13,7 +13,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 Widget _wrap(Widget child) {
   return ProviderScope(
     child: MaterialApp(
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme(),
       home: Scaffold(body: SingleChildScrollView(child: child)),
     ),
   );

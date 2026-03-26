@@ -32,17 +32,24 @@ class EarnedRewardsWidget extends ConsumerWidget {
             for (final reward in rewards)
               ListTile(
                 leading: Icon(
-                  (userMode == UserMode.adult || reward.isRevealed)
+                  (userMode == UserMode.adult ||
+                          reward.isRevealed ||
+                          reward.isVisible)
                       ? Icons.emoji_events
                       : Icons.help_outline,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 title: Text(
-                  (userMode == UserMode.adult || reward.isRevealed)
+                  (userMode == UserMode.adult ||
+                          reward.isRevealed ||
+                          reward.isVisible)
                       ? reward.title
                       : 'Mystery Reward!',
                 ),
-                subtitle: (userMode == UserMode.adult || reward.isRevealed)
+                subtitle:
+                    (userMode == UserMode.adult ||
+                        reward.isRevealed ||
+                        reward.isVisible)
                     ? Text(reward.description)
                     : null,
               ),

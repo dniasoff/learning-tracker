@@ -152,6 +152,8 @@ class _RewardFormDialogState extends ConsumerState<_RewardFormDialog> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _thresholdController;
+  late String _milestoneType;
+  late bool _isVisible;
 
   bool get isEditing => widget.existingReward != null;
 
@@ -167,6 +169,8 @@ class _RewardFormDialogState extends ConsumerState<_RewardFormDialog> {
     _thresholdController = TextEditingController(
       text: widget.existingReward?.pointsThreshold.toString() ?? '',
     );
+    _milestoneType = widget.existingReward?.milestoneType ?? 'points';
+    _isVisible = widget.existingReward?.isVisible ?? true;
   }
 
   @override
@@ -183,38 +187,77 @@ class _RewardFormDialogState extends ConsumerState<_RewardFormDialog> {
       title: Text(isEditing ? 'Edit Reward' : 'Add Reward'),
       content: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Title is required' : null,
-            ),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Description'),
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Description is required'
-                  : null,
-            ),
-            TextFormField(
-              controller: _thresholdController,
-              decoration: const InputDecoration(labelText: 'Point Threshold'),
-              keyboardType: TextInputType.number,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Threshold is required';
-                }
-                final n = int.tryParse(v.trim());
-                if (n == null || n <= 0) {
-                  return 'Must be a positive number';
-                }
-                return null;
-              },
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Title'),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Title is required'
+                    : null,
+              ),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Description'),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Description is required'
+                    : null,
+              ),
+              TextFormField(
+                controller: _thresholdController,
+                decoration: const InputDecoration(labelText: 'Point Threshold'),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Threshold is required';
+                  }
+                  final n = int.tryParse(v.trim());
+                  if (n == null || n <= 0) {
+                    return 'Must be a positive number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _milestoneType,
+                decoration: const InputDecoration(labelText: 'Milestone Type'),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'points',
+                    child: Text('Points threshold'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'finish_masechta',
+                    child: Text('Finish masechta'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'finish_seder',
+                    child: Text('Finish seder'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'every_n_items',
+                    child: Text('Every N items'),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _milestoneType = v!),
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                title: const Text('Visible to child'),
+                subtitle: Text(
+                  _isVisible
+                      ? 'Child can see this reward'
+                      : 'Hidden until earned (surprise)',
+                ),
+                value: _isVisible,
+                onChanged: (v) => setState(() => _isVisible = v),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -250,6 +293,8 @@ class _RewardFormDialogState extends ConsumerState<_RewardFormDialog> {
         title: title,
         description: description,
         pointsThreshold: threshold,
+        milestoneType: _milestoneType,
+        isVisible: _isVisible,
       );
     }
 

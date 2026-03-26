@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -53,6 +54,10 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 enum _ScreenPhase {
   profileCreation,
   languageSelection,
+  pathSelection,
+  calendarProgramList,
+  calendarProgramConfirm,
+  startTrackingFrom,
   selection,
   importing,
   learningProcessWizard,
@@ -260,9 +265,48 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await _saveState();
   }
 
+  // Path A state
+  String? _selectedCalendarProgramId;
+  String? _selectedCalendarProgramRef;
+  String _trackingStartOption = 'fromToday';
+
   void _onLanguageSelected() {
-    setState(() => _phase = _ScreenPhase.selection);
+    setState(() => _phase = _ScreenPhase.pathSelection);
     _saveState();
+  }
+
+  void _onPathSelected(bool isCalendarPath) {
+    if (isCalendarPath) {
+      setState(() => _phase = _ScreenPhase.calendarProgramList);
+    } else {
+      setState(() => _phase = _ScreenPhase.selection);
+    }
+    _saveState();
+  }
+
+  void _onCalendarProgramSelected(String programId, String todayRef) {
+    _selectedCalendarProgramId = programId;
+    _selectedCalendarProgramRef = todayRef;
+    setState(() => _phase = _ScreenPhase.calendarProgramConfirm);
+    _saveState();
+  }
+
+  void _onCalendarProgramConfirmed() {
+    setState(() => _phase = _ScreenPhase.startTrackingFrom);
+    _saveState();
+  }
+
+  void _onStartTrackingSelected() {
+    // After start tracking selection, go to bulk mark then goals
+    setState(() => _phase = _ScreenPhase.bulkMark);
+    _initBulkMarkQueue();
+    _saveState();
+  }
+
+  void _initBulkMarkQueue() {
+    _bulkMarkQueue = _selected.toList();
+    _bulkMarkIndex = 0;
+    _bulkMarkLaunched = false;
   }
 
   Future<void> _startImport() async {
@@ -563,6 +607,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation => 'Add a Learner',
       _ScreenPhase.languageSelection => 'Choose Language',
+      _ScreenPhase.pathSelection => 'Choose Path',
+      _ScreenPhase.calendarProgramList => 'Calendar Programs',
+      _ScreenPhase.calendarProgramConfirm => 'Confirm Program',
+      _ScreenPhase.startTrackingFrom => 'Start Tracking From',
       _ScreenPhase.handoff => 'Setup Complete!',
       _ => 'Onboarding',
     };
@@ -573,6 +621,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: switch (_phase) {
           _ScreenPhase.profileCreation => _buildProfileCreation(theme),
           _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
+          _ScreenPhase.pathSelection => _buildPathSelection(theme),
+          _ScreenPhase.calendarProgramList => _buildCalendarProgramList(theme),
+          _ScreenPhase.calendarProgramConfirm => _buildCalendarProgramConfirm(
+            theme,
+          ),
+          _ScreenPhase.startTrackingFrom => _buildStartTrackingFrom(theme),
           _ScreenPhase.selection => _buildSelection(theme),
           _ScreenPhase.importing => _buildImporting(theme),
           _ScreenPhase.scopeSelection => _buildScopeSelection(theme),
@@ -1825,6 +1879,226 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ),
     );
   }
+
+  // ==================== Path A Builder Methods ====================
+
+  Widget _buildPathSelection(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            childAwareText(
+              'How would you like to learn?',
+              'How would {name} like to learn?',
+              _profileName,
+              isChildMode: _isChildMode,
+            ),
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          _PathCard(
+            icon: Icons.calendar_today,
+            title: 'Join a Calendar Program',
+            description: 'Follow a daily learning schedule like Daf Yomi',
+            onTap: () => _onPathSelected(true),
+          ),
+          const SizedBox(height: 16),
+          _PathCard(
+            icon: Icons.tune,
+            title: 'Custom Track',
+            description: 'Create your own learning plan at your own pace',
+            onTap: () => _onPathSelected(false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarProgramList(ThemeData theme) {
+    final calendarAsync = ref.watch(todayCalendarProvider);
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Available Programs',
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Select a program to follow',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: calendarAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Error loading programs: $e'),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: () => ref.invalidate(todayCalendarProvider),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+              data: (programs) => ListView.separated(
+                itemCount: programs.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final program = programs[index];
+                  return Card(
+                    child: ListTile(
+                      title: Text(program.displayNameEn),
+                      subtitle: Text(program.todayRef),
+                      trailing: Text(
+                        program.displayNameHe,
+                        style: const TextStyle(
+                          fontFamily: 'Noto Sans Hebrew',
+                          fontSize: 14,
+                        ),
+                      ),
+                      onTap: () => _onCalendarProgramSelected(
+                        program.programId,
+                        program.todayRef,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarProgramConfirm(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            size: 64,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Great choice!',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(
+                    _selectedCalendarProgramId ?? '',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text("Today's assignment:", style: theme.textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    _selectedCalendarProgramRef ?? '',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          FilledButton(
+            onPressed: _onCalendarProgramConfirmed,
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartTrackingFrom(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'When would you like to start tracking?',
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ...[
+            ('fromToday', 'From today', 'Start tracking from today onwards'),
+            (
+              'beginningOfPerek',
+              'Beginning of current perek',
+              'Go back to the start of the current chapter',
+            ),
+            (
+              'beginningOfMasechta',
+              'Beginning of current masechta',
+              'Go back to the start of the current tractate',
+            ),
+            (
+              'specificDaf',
+              'From a specific daf',
+              'Choose exactly where to start',
+            ),
+          ].map(
+            (option) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: RadioGroup<String>(
+                groupValue: _trackingStartOption,
+                onChanged: (v) =>
+                    setState(() => _trackingStartOption = v ?? 'fromToday'),
+                child: RadioListTile<String>(
+                  title: Text(option.$2),
+                  subtitle: Text(option.$3, style: theme.textTheme.bodySmall),
+                  value: option.$1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: _trackingStartOption == option.$1
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Spacer(),
+          FilledButton(
+            onPressed: _onStartTrackingSelected,
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CurriculumCard extends StatelessWidget {
@@ -2045,6 +2319,72 @@ class _StudyDayToggle extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PathCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  const _PathCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: theme.colorScheme.primary),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ],
           ),

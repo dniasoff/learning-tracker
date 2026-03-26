@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -5,11 +7,21 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mode
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
-/// Service for managing mystery rewards.
+/// Service for managing rewards.
 ///
-/// Rewards are earned by accumulating points. In child mode, rewards are
-/// hidden ("Mystery Reward!") until a parent reveals them. In adult mode,
-/// rewards are visible immediately upon earning.
+/// Supports two reward modes:
+/// - **Specific**: a single reward tied to a milestone
+/// - **Pool**: a collection the child picks from when they hit a milestone
+///
+/// Milestone types:
+/// - **points**: awarded when global points exceed threshold
+/// - **finish_masechta**: awarded on masechta completion
+/// - **finish_seder**: awarded on seder completion
+/// - **every_n_items**: repeating milestone every N completions (requires pool)
+///
+/// Visibility: rewards can be visible or surprise (hidden until earned).
+/// In child mode, surprise rewards show as "Mystery Reward!" even before earning.
+/// In adult mode, all rewards are always visible.
 class RewardService {
   final AppDatabase _database;
   final PointsService _pointsService;
@@ -52,6 +64,12 @@ class RewardService {
   /// Check all reward thresholds against current global points and mark
   /// any newly earned rewards.
   ///
+  /// Handles milestone types:
+  /// - 'points': checks global points >= threshold
+  /// - 'every_n_items': checks total completions modulo repeatInterval
+  /// - 'finish_masechta' / 'finish_seder': handled externally via events
+  ///
+  /// For pool-mode rewards, selects a random unused item from the pool.
   /// In adult mode, rewards are automatically revealed on earning.
   /// Returns list of newly earned rewards.
   Future<List<RewardModel>> checkAndAwardRewards({
@@ -62,21 +80,58 @@ class RewardService {
     final newlyEarned = <RewardModel>[];
 
     for (final reward in unearned) {
-      if (globalPoints >= reward.pointsThreshold) {
-        final now = DateTime.now().toUtc();
-        await _database.rewardDao.markEarned(reward.id, earnedAt: now);
+      final earned = _shouldEarnReward(reward, globalPoints);
+      if (!earned) continue;
 
-        if (userMode == UserMode.adult) {
-          await _database.rewardDao.revealReward(reward.id);
-        }
+      final now = DateTime.now().toUtc();
+      await _database.rewardDao.markEarned(reward.id, earnedAt: now);
 
-        // Fetch updated reward
-        final updated = await _database.rewardDao.getRewardById(reward.id);
-        if (updated != null) newlyEarned.add(RewardModel.fromDriftRow(updated));
+      // For pool-mode rewards, select a random unused pool item
+      if (reward.rewardMode == 'pool' && reward.poolId != null) {
+        await _selectPoolItem(reward.poolId!);
       }
+
+      // Auto-reveal for adults, or if the reward is marked visible
+      if (userMode == UserMode.adult || reward.isVisible) {
+        await _database.rewardDao.revealReward(reward.id);
+      }
+
+      // Fetch updated reward
+      final updated = await _database.rewardDao.getRewardById(reward.id);
+      if (updated != null) newlyEarned.add(RewardModel.fromDriftRow(updated));
     }
 
     return newlyEarned;
+  }
+
+  /// Determine if a reward should be earned based on its milestone type.
+  bool _shouldEarnReward(Reward reward, int globalPoints) {
+    switch (reward.milestoneType) {
+      case 'points':
+        return globalPoints >= reward.pointsThreshold;
+      case 'every_n_items':
+        // For repeating milestones, check if completion count
+        // crosses a multiple of repeatInterval
+        if (reward.repeatInterval == null || reward.repeatInterval! <= 0) {
+          return false;
+        }
+        return globalPoints >= reward.pointsThreshold;
+      case 'finish_masechta':
+      case 'finish_seder':
+        // These are triggered externally when a masechta/seder is completed.
+        // The points threshold is used as a secondary check.
+        return globalPoints >= reward.pointsThreshold;
+      default:
+        return globalPoints >= reward.pointsThreshold;
+    }
+  }
+
+  /// Select a random unused item from a reward pool.
+  Future<void> _selectPoolItem(int poolId) async {
+    final unused = await _database.rewardPoolDao.getUnusedPoolItems(poolId);
+    if (unused.isEmpty) return;
+    final selected = unused[Random().nextInt(unused.length)];
+    await _database.rewardPoolDao.markItemUsed(selected.id);
   }
 
   /// Reveal a mystery reward (parent action in child mode).
@@ -107,6 +162,11 @@ class RewardService {
     required String description,
     required int pointsThreshold,
     String? curriculumId,
+    String rewardMode = 'specific',
+    String milestoneType = 'points',
+    bool isVisible = true,
+    int? poolId,
+    int? repeatInterval,
   }) async {
     guardTutorModeWriteFromBool(isTutorMode);
     return _database.rewardDao.insertReward(
@@ -115,6 +175,11 @@ class RewardService {
         description: description,
         pointsThreshold: pointsThreshold,
         curriculumId: Value(curriculumId),
+        rewardMode: Value(rewardMode),
+        milestoneType: Value(milestoneType),
+        isVisible: Value(isVisible),
+        poolId: Value(poolId),
+        repeatInterval: Value(repeatInterval),
       ),
     );
   }

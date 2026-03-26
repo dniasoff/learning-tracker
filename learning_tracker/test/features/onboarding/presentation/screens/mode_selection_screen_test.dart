@@ -141,10 +141,7 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pump(const Duration(milliseconds: 1500));
 
-      expect(
-        find.textContaining('Who are you'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Who are you'), findsOneWidget);
     });
   });
 }

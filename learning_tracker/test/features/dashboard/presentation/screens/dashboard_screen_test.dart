@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 void main() {
@@ -22,6 +23,11 @@ void main() {
           ),
           dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
           allDailyTasksProvider.overrideWith((ref) => Future.value([])),
+          dashboardStreakRecoveryProvider.overrideWith(
+            (ref) => Future.value(
+              const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+            ),
+          ),
         ],
         child: const MaterialApp(home: DashboardScreen()),
       );

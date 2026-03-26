@@ -4,6 +4,7 @@ library;
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/app_database.dart';
@@ -349,10 +350,12 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: GoalSetupScreen(
-            curriculumId: CurriculumId.mishnayos,
-            totalItems: 365,
+        const ProviderScope(
+          child: MaterialApp(
+            home: GoalSetupScreen(
+              curriculumId: CurriculumId.mishnayos,
+              totalItems: 365,
+            ),
           ),
         ),
       );
@@ -365,8 +368,14 @@ void main() {
       );
       expect(switchWidget.value, isFalse);
 
-      // Tap calendar icon to open Gregorian date picker
-      await tester.tap(find.byIcon(Icons.calendar_today));
+      // Tap the calendar IconButton in the date ListTile (not the identical
+      // icon inside the SegmentedButton goal-type selector).
+      await tester.tap(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.byIcon(Icons.calendar_today),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Gregorian date picker dialog should be present
@@ -379,10 +388,12 @@ void main() {
 
     testWidgets('Hebrew date toggle switches picker mode', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: GoalSetupScreen(
-            curriculumId: CurriculumId.mishnayos,
-            totalItems: 365,
+        const ProviderScope(
+          child: MaterialApp(
+            home: GoalSetupScreen(
+              curriculumId: CurriculumId.mishnayos,
+              totalItems: 365,
+            ),
           ),
         ),
       );

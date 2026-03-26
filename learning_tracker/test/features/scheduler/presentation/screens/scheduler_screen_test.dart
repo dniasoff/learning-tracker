@@ -38,7 +38,7 @@ Widget _buildScreen({required List<DailyTask> tasks}) {
       allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
     ],
     child: MaterialApp(
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme(),
       home: const SchedulerScreen(),
     ),
   );
@@ -109,7 +109,7 @@ void main() {
             allDailyTasksProvider.overrideWith((ref) => completer.future),
           ],
           child: MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.lightTheme(),
             home: const SchedulerScreen(),
           ),
         ),
@@ -132,7 +132,7 @@ void main() {
             ),
           ],
           child: MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.lightTheme(),
             home: const SchedulerScreen(),
           ),
         ),
@@ -152,7 +152,7 @@ void main() {
             allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
           ],
           child: MaterialApp(
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.lightTheme(),
             home: const SchedulerScreen(),
           ),
         ),

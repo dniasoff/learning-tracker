@@ -15,6 +15,11 @@ abstract class RewardModel with _$RewardModel {
     required bool isRevealed,
     DateTime? earnedAt,
     required DateTime createdAt,
+    @Default('specific') String rewardMode,
+    @Default('points') String milestoneType,
+    @Default(true) bool isVisible,
+    int? poolId,
+    int? repeatInterval,
   }) = _RewardModel;
 
   /// Converts a Drift [drift.Reward] row into a domain [RewardModel].
@@ -27,5 +32,10 @@ abstract class RewardModel with _$RewardModel {
     isRevealed: row.isRevealed,
     earnedAt: row.earnedAt,
     createdAt: row.createdAt,
+    rewardMode: row.rewardMode,
+    milestoneType: row.milestoneType,
+    isVisible: row.isVisible,
+    poolId: row.poolId,
+    repeatInterval: row.repeatInterval,
   );
 }

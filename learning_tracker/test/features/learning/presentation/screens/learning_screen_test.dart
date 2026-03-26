@@ -20,9 +20,7 @@ void main() {
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
           ),
-          allDailyTasksProvider.overrideWith(
-            (ref) => Future.value([]),
-          ),
+          allDailyTasksProvider.overrideWith((ref) => Future.value([])),
         ],
         child: const MaterialApp(home: LearningScreen()),
       );

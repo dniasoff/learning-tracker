@@ -136,8 +136,10 @@ void main() {
         find.widgetWithText(TextFormField, 'Min. 8 characters'),
         '123456',
       );
-      final invalidEmailButton =
-          find.widgetWithText(FilledButton, 'Create Account');
+      final invalidEmailButton = find.widgetWithText(
+        FilledButton,
+        'Create Account',
+      );
       await tester.ensureVisible(invalidEmailButton);
       await tester.pumpAndSettle();
       await tester.tap(invalidEmailButton);
@@ -161,8 +163,7 @@ void main() {
         find.widgetWithText(TextFormField, 'Min. 8 characters'),
         '12345',
       );
-      final shortPwButton =
-          find.widgetWithText(FilledButton, 'Create Account');
+      final shortPwButton = find.widgetWithText(FilledButton, 'Create Account');
       await tester.ensureVisible(shortPwButton);
       await tester.pumpAndSettle();
       await tester.tap(shortPwButton);
@@ -205,8 +206,10 @@ void main() {
         'password123',
       );
       // Scroll to make confirm password field visible
-      final confirmPwField =
-          find.widgetWithText(TextFormField, 'Repeat password');
+      final confirmPwField = find.widgetWithText(
+        TextFormField,
+        'Repeat password',
+      );
       await tester.ensureVisible(confirmPwField);
       await tester.pumpAndSettle();
       await tester.enterText(confirmPwField, 'password123');
@@ -218,8 +221,7 @@ void main() {
       await tester.tap(checkbox);
       await tester.pumpAndSettle();
 
-      final signUpButton =
-          find.widgetWithText(FilledButton, 'Create Account');
+      final signUpButton = find.widgetWithText(FilledButton, 'Create Account');
       await tester.ensureVisible(signUpButton);
       await tester.pumpAndSettle();
       await tester.tap(signUpButton);

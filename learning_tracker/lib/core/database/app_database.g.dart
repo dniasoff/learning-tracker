@@ -5963,6 +5963,65 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _rewardModeMeta = const VerificationMeta(
+    'rewardMode',
+  );
+  @override
+  late final GeneratedColumn<String> rewardMode = GeneratedColumn<String>(
+    'reward_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('specific'),
+  );
+  static const VerificationMeta _milestoneTypeMeta = const VerificationMeta(
+    'milestoneType',
+  );
+  @override
+  late final GeneratedColumn<String> milestoneType = GeneratedColumn<String>(
+    'milestone_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('points'),
+  );
+  static const VerificationMeta _isVisibleMeta = const VerificationMeta(
+    'isVisible',
+  );
+  @override
+  late final GeneratedColumn<bool> isVisible = GeneratedColumn<bool>(
+    'is_visible',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_visible" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _poolIdMeta = const VerificationMeta('poolId');
+  @override
+  late final GeneratedColumn<int> poolId = GeneratedColumn<int>(
+    'pool_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _repeatIntervalMeta = const VerificationMeta(
+    'repeatInterval',
+  );
+  @override
+  late final GeneratedColumn<int> repeatInterval = GeneratedColumn<int>(
+    'repeat_interval',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5976,6 +6035,11 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
     createdAt,
     updatedAt,
     curriculumId,
+    rewardMode,
+    milestoneType,
+    isVisible,
+    poolId,
+    repeatInterval,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6067,6 +6131,42 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
         ),
       );
     }
+    if (data.containsKey('reward_mode')) {
+      context.handle(
+        _rewardModeMeta,
+        rewardMode.isAcceptableOrUnknown(data['reward_mode']!, _rewardModeMeta),
+      );
+    }
+    if (data.containsKey('milestone_type')) {
+      context.handle(
+        _milestoneTypeMeta,
+        milestoneType.isAcceptableOrUnknown(
+          data['milestone_type']!,
+          _milestoneTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_visible')) {
+      context.handle(
+        _isVisibleMeta,
+        isVisible.isAcceptableOrUnknown(data['is_visible']!, _isVisibleMeta),
+      );
+    }
+    if (data.containsKey('pool_id')) {
+      context.handle(
+        _poolIdMeta,
+        poolId.isAcceptableOrUnknown(data['pool_id']!, _poolIdMeta),
+      );
+    }
+    if (data.containsKey('repeat_interval')) {
+      context.handle(
+        _repeatIntervalMeta,
+        repeatInterval.isAcceptableOrUnknown(
+          data['repeat_interval']!,
+          _repeatIntervalMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -6120,6 +6220,26 @@ class $RewardsTable extends Rewards with TableInfo<$RewardsTable, Reward> {
         DriftSqlType.string,
         data['${effectivePrefix}curriculum_id'],
       ),
+      rewardMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reward_mode'],
+      )!,
+      milestoneType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}milestone_type'],
+      )!,
+      isVisible: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_visible'],
+      )!,
+      poolId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pool_id'],
+      ),
+      repeatInterval: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}repeat_interval'],
+      ),
     );
   }
 
@@ -6141,6 +6261,21 @@ class Reward extends DataClass implements Insertable<Reward> {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? curriculumId;
+
+  /// 'specific' (single reward) or 'pool' (child picks from pool)
+  final String rewardMode;
+
+  /// Milestone trigger: 'points', 'finish_masechta', 'finish_seder', 'every_n_items'
+  final String milestoneType;
+
+  /// Whether the reward is visible to the child (vs surprise)
+  final bool isVisible;
+
+  /// Links to reward_pools.id for pool-mode rewards
+  final int? poolId;
+
+  /// For 'every_n_items' milestone type — triggers every N completions
+  final int? repeatInterval;
   const Reward({
     required this.id,
     required this.profileId,
@@ -6153,6 +6288,11 @@ class Reward extends DataClass implements Insertable<Reward> {
     required this.createdAt,
     required this.updatedAt,
     this.curriculumId,
+    required this.rewardMode,
+    required this.milestoneType,
+    required this.isVisible,
+    this.poolId,
+    this.repeatInterval,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6171,6 +6311,15 @@ class Reward extends DataClass implements Insertable<Reward> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || curriculumId != null) {
       map['curriculum_id'] = Variable<String>(curriculumId);
+    }
+    map['reward_mode'] = Variable<String>(rewardMode);
+    map['milestone_type'] = Variable<String>(milestoneType);
+    map['is_visible'] = Variable<bool>(isVisible);
+    if (!nullToAbsent || poolId != null) {
+      map['pool_id'] = Variable<int>(poolId);
+    }
+    if (!nullToAbsent || repeatInterval != null) {
+      map['repeat_interval'] = Variable<int>(repeatInterval);
     }
     return map;
   }
@@ -6192,6 +6341,15 @@ class Reward extends DataClass implements Insertable<Reward> {
       curriculumId: curriculumId == null && nullToAbsent
           ? const Value.absent()
           : Value(curriculumId),
+      rewardMode: Value(rewardMode),
+      milestoneType: Value(milestoneType),
+      isVisible: Value(isVisible),
+      poolId: poolId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(poolId),
+      repeatInterval: repeatInterval == null && nullToAbsent
+          ? const Value.absent()
+          : Value(repeatInterval),
     );
   }
 
@@ -6212,6 +6370,11 @@ class Reward extends DataClass implements Insertable<Reward> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       curriculumId: serializer.fromJson<String?>(json['curriculumId']),
+      rewardMode: serializer.fromJson<String>(json['rewardMode']),
+      milestoneType: serializer.fromJson<String>(json['milestoneType']),
+      isVisible: serializer.fromJson<bool>(json['isVisible']),
+      poolId: serializer.fromJson<int?>(json['poolId']),
+      repeatInterval: serializer.fromJson<int?>(json['repeatInterval']),
     );
   }
   @override
@@ -6229,6 +6392,11 @@ class Reward extends DataClass implements Insertable<Reward> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'curriculumId': serializer.toJson<String?>(curriculumId),
+      'rewardMode': serializer.toJson<String>(rewardMode),
+      'milestoneType': serializer.toJson<String>(milestoneType),
+      'isVisible': serializer.toJson<bool>(isVisible),
+      'poolId': serializer.toJson<int?>(poolId),
+      'repeatInterval': serializer.toJson<int?>(repeatInterval),
     };
   }
 
@@ -6244,6 +6412,11 @@ class Reward extends DataClass implements Insertable<Reward> {
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<String?> curriculumId = const Value.absent(),
+    String? rewardMode,
+    String? milestoneType,
+    bool? isVisible,
+    Value<int?> poolId = const Value.absent(),
+    Value<int?> repeatInterval = const Value.absent(),
   }) => Reward(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -6256,6 +6429,13 @@ class Reward extends DataClass implements Insertable<Reward> {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     curriculumId: curriculumId.present ? curriculumId.value : this.curriculumId,
+    rewardMode: rewardMode ?? this.rewardMode,
+    milestoneType: milestoneType ?? this.milestoneType,
+    isVisible: isVisible ?? this.isVisible,
+    poolId: poolId.present ? poolId.value : this.poolId,
+    repeatInterval: repeatInterval.present
+        ? repeatInterval.value
+        : this.repeatInterval,
   );
   Reward copyWithCompanion(RewardsCompanion data) {
     return Reward(
@@ -6278,6 +6458,17 @@ class Reward extends DataClass implements Insertable<Reward> {
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
+      rewardMode: data.rewardMode.present
+          ? data.rewardMode.value
+          : this.rewardMode,
+      milestoneType: data.milestoneType.present
+          ? data.milestoneType.value
+          : this.milestoneType,
+      isVisible: data.isVisible.present ? data.isVisible.value : this.isVisible,
+      poolId: data.poolId.present ? data.poolId.value : this.poolId,
+      repeatInterval: data.repeatInterval.present
+          ? data.repeatInterval.value
+          : this.repeatInterval,
     );
   }
 
@@ -6294,7 +6485,12 @@ class Reward extends DataClass implements Insertable<Reward> {
           ..write('earnedAt: $earnedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('curriculumId: $curriculumId')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('rewardMode: $rewardMode, ')
+          ..write('milestoneType: $milestoneType, ')
+          ..write('isVisible: $isVisible, ')
+          ..write('poolId: $poolId, ')
+          ..write('repeatInterval: $repeatInterval')
           ..write(')'))
         .toString();
   }
@@ -6312,6 +6508,11 @@ class Reward extends DataClass implements Insertable<Reward> {
     createdAt,
     updatedAt,
     curriculumId,
+    rewardMode,
+    milestoneType,
+    isVisible,
+    poolId,
+    repeatInterval,
   );
   @override
   bool operator ==(Object other) =>
@@ -6327,7 +6528,12 @@ class Reward extends DataClass implements Insertable<Reward> {
           other.earnedAt == this.earnedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
-          other.curriculumId == this.curriculumId);
+          other.curriculumId == this.curriculumId &&
+          other.rewardMode == this.rewardMode &&
+          other.milestoneType == this.milestoneType &&
+          other.isVisible == this.isVisible &&
+          other.poolId == this.poolId &&
+          other.repeatInterval == this.repeatInterval);
 }
 
 class RewardsCompanion extends UpdateCompanion<Reward> {
@@ -6342,6 +6548,11 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<String?> curriculumId;
+  final Value<String> rewardMode;
+  final Value<String> milestoneType;
+  final Value<bool> isVisible;
+  final Value<int?> poolId;
+  final Value<int?> repeatInterval;
   const RewardsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -6354,6 +6565,11 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.curriculumId = const Value.absent(),
+    this.rewardMode = const Value.absent(),
+    this.milestoneType = const Value.absent(),
+    this.isVisible = const Value.absent(),
+    this.poolId = const Value.absent(),
+    this.repeatInterval = const Value.absent(),
   });
   RewardsCompanion.insert({
     this.id = const Value.absent(),
@@ -6367,6 +6583,11 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.curriculumId = const Value.absent(),
+    this.rewardMode = const Value.absent(),
+    this.milestoneType = const Value.absent(),
+    this.isVisible = const Value.absent(),
+    this.poolId = const Value.absent(),
+    this.repeatInterval = const Value.absent(),
   }) : title = Value(title),
        description = Value(description),
        pointsThreshold = Value(pointsThreshold);
@@ -6382,6 +6603,11 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<String>? curriculumId,
+    Expression<String>? rewardMode,
+    Expression<String>? milestoneType,
+    Expression<bool>? isVisible,
+    Expression<int>? poolId,
+    Expression<int>? repeatInterval,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -6395,6 +6621,11 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (rewardMode != null) 'reward_mode': rewardMode,
+      if (milestoneType != null) 'milestone_type': milestoneType,
+      if (isVisible != null) 'is_visible': isVisible,
+      if (poolId != null) 'pool_id': poolId,
+      if (repeatInterval != null) 'repeat_interval': repeatInterval,
     });
   }
 
@@ -6410,6 +6641,11 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<String?>? curriculumId,
+    Value<String>? rewardMode,
+    Value<String>? milestoneType,
+    Value<bool>? isVisible,
+    Value<int?>? poolId,
+    Value<int?>? repeatInterval,
   }) {
     return RewardsCompanion(
       id: id ?? this.id,
@@ -6423,6 +6659,11 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       curriculumId: curriculumId ?? this.curriculumId,
+      rewardMode: rewardMode ?? this.rewardMode,
+      milestoneType: milestoneType ?? this.milestoneType,
+      isVisible: isVisible ?? this.isVisible,
+      poolId: poolId ?? this.poolId,
+      repeatInterval: repeatInterval ?? this.repeatInterval,
     );
   }
 
@@ -6462,6 +6703,21 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
     }
+    if (rewardMode.present) {
+      map['reward_mode'] = Variable<String>(rewardMode.value);
+    }
+    if (milestoneType.present) {
+      map['milestone_type'] = Variable<String>(milestoneType.value);
+    }
+    if (isVisible.present) {
+      map['is_visible'] = Variable<bool>(isVisible.value);
+    }
+    if (poolId.present) {
+      map['pool_id'] = Variable<int>(poolId.value);
+    }
+    if (repeatInterval.present) {
+      map['repeat_interval'] = Variable<int>(repeatInterval.value);
+    }
     return map;
   }
 
@@ -6478,7 +6734,711 @@ class RewardsCompanion extends UpdateCompanion<Reward> {
           ..write('earnedAt: $earnedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('curriculumId: $curriculumId')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('rewardMode: $rewardMode, ')
+          ..write('milestoneType: $milestoneType, ')
+          ..write('isVisible: $isVisible, ')
+          ..write('poolId: $poolId, ')
+          ..write('repeatInterval: $repeatInterval')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RewardPoolsTable extends RewardPools
+    with TableInfo<$RewardPoolsTable, RewardPool> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RewardPoolsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSharedMeta = const VerificationMeta(
+    'isShared',
+  );
+  @override
+  late final GeneratedColumn<bool> isShared = GeneratedColumn<bool>(
+    'is_shared',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_shared" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    profileId,
+    isShared,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reward_pools';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RewardPool> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('is_shared')) {
+      context.handle(
+        _isSharedMeta,
+        isShared.isAcceptableOrUnknown(data['is_shared']!, _isSharedMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RewardPool map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RewardPool(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      isShared: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_shared'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RewardPoolsTable createAlias(String alias) {
+    return $RewardPoolsTable(attachedDatabase, alias);
+  }
+}
+
+class RewardPool extends DataClass implements Insertable<RewardPool> {
+  final int id;
+  final String name;
+  final int profileId;
+  final bool isShared;
+  final DateTime createdAt;
+  const RewardPool({
+    required this.id,
+    required this.name,
+    required this.profileId,
+    required this.isShared,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['profile_id'] = Variable<int>(profileId);
+    map['is_shared'] = Variable<bool>(isShared);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  RewardPoolsCompanion toCompanion(bool nullToAbsent) {
+    return RewardPoolsCompanion(
+      id: Value(id),
+      name: Value(name),
+      profileId: Value(profileId),
+      isShared: Value(isShared),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory RewardPool.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RewardPool(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      isShared: serializer.fromJson<bool>(json['isShared']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'profileId': serializer.toJson<int>(profileId),
+      'isShared': serializer.toJson<bool>(isShared),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  RewardPool copyWith({
+    int? id,
+    String? name,
+    int? profileId,
+    bool? isShared,
+    DateTime? createdAt,
+  }) => RewardPool(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    profileId: profileId ?? this.profileId,
+    isShared: isShared ?? this.isShared,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  RewardPool copyWithCompanion(RewardPoolsCompanion data) {
+    return RewardPool(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      isShared: data.isShared.present ? data.isShared.value : this.isShared,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewardPool(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('profileId: $profileId, ')
+          ..write('isShared: $isShared, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, profileId, isShared, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RewardPool &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.profileId == this.profileId &&
+          other.isShared == this.isShared &&
+          other.createdAt == this.createdAt);
+}
+
+class RewardPoolsCompanion extends UpdateCompanion<RewardPool> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<int> profileId;
+  final Value<bool> isShared;
+  final Value<DateTime> createdAt;
+  const RewardPoolsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.isShared = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  RewardPoolsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required int profileId,
+    this.isShared = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : name = Value(name),
+       profileId = Value(profileId);
+  static Insertable<RewardPool> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<int>? profileId,
+    Expression<bool>? isShared,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (profileId != null) 'profile_id': profileId,
+      if (isShared != null) 'is_shared': isShared,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  RewardPoolsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<int>? profileId,
+    Value<bool>? isShared,
+    Value<DateTime>? createdAt,
+  }) {
+    return RewardPoolsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      profileId: profileId ?? this.profileId,
+      isShared: isShared ?? this.isShared,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (isShared.present) {
+      map['is_shared'] = Variable<bool>(isShared.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewardPoolsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('profileId: $profileId, ')
+          ..write('isShared: $isShared, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RewardPoolItemsTable extends RewardPoolItems
+    with TableInfo<$RewardPoolItemsTable, RewardPoolItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RewardPoolItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _poolIdMeta = const VerificationMeta('poolId');
+  @override
+  late final GeneratedColumn<int> poolId = GeneratedColumn<int>(
+    'pool_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _isUsedMeta = const VerificationMeta('isUsed');
+  @override
+  late final GeneratedColumn<bool> isUsed = GeneratedColumn<bool>(
+    'is_used',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_used" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    poolId,
+    title,
+    description,
+    isUsed,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reward_pool_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RewardPoolItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('pool_id')) {
+      context.handle(
+        _poolIdMeta,
+        poolId.isAcceptableOrUnknown(data['pool_id']!, _poolIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_poolIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_used')) {
+      context.handle(
+        _isUsedMeta,
+        isUsed.isAcceptableOrUnknown(data['is_used']!, _isUsedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RewardPoolItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RewardPoolItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      poolId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pool_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      isUsed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_used'],
+      )!,
+    );
+  }
+
+  @override
+  $RewardPoolItemsTable createAlias(String alias) {
+    return $RewardPoolItemsTable(attachedDatabase, alias);
+  }
+}
+
+class RewardPoolItem extends DataClass implements Insertable<RewardPoolItem> {
+  final int id;
+  final int poolId;
+  final String title;
+  final String description;
+  final bool isUsed;
+  const RewardPoolItem({
+    required this.id,
+    required this.poolId,
+    required this.title,
+    required this.description,
+    required this.isUsed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['pool_id'] = Variable<int>(poolId);
+    map['title'] = Variable<String>(title);
+    map['description'] = Variable<String>(description);
+    map['is_used'] = Variable<bool>(isUsed);
+    return map;
+  }
+
+  RewardPoolItemsCompanion toCompanion(bool nullToAbsent) {
+    return RewardPoolItemsCompanion(
+      id: Value(id),
+      poolId: Value(poolId),
+      title: Value(title),
+      description: Value(description),
+      isUsed: Value(isUsed),
+    );
+  }
+
+  factory RewardPoolItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RewardPoolItem(
+      id: serializer.fromJson<int>(json['id']),
+      poolId: serializer.fromJson<int>(json['poolId']),
+      title: serializer.fromJson<String>(json['title']),
+      description: serializer.fromJson<String>(json['description']),
+      isUsed: serializer.fromJson<bool>(json['isUsed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'poolId': serializer.toJson<int>(poolId),
+      'title': serializer.toJson<String>(title),
+      'description': serializer.toJson<String>(description),
+      'isUsed': serializer.toJson<bool>(isUsed),
+    };
+  }
+
+  RewardPoolItem copyWith({
+    int? id,
+    int? poolId,
+    String? title,
+    String? description,
+    bool? isUsed,
+  }) => RewardPoolItem(
+    id: id ?? this.id,
+    poolId: poolId ?? this.poolId,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    isUsed: isUsed ?? this.isUsed,
+  );
+  RewardPoolItem copyWithCompanion(RewardPoolItemsCompanion data) {
+    return RewardPoolItem(
+      id: data.id.present ? data.id.value : this.id,
+      poolId: data.poolId.present ? data.poolId.value : this.poolId,
+      title: data.title.present ? data.title.value : this.title,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      isUsed: data.isUsed.present ? data.isUsed.value : this.isUsed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewardPoolItem(')
+          ..write('id: $id, ')
+          ..write('poolId: $poolId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('isUsed: $isUsed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, poolId, title, description, isUsed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RewardPoolItem &&
+          other.id == this.id &&
+          other.poolId == this.poolId &&
+          other.title == this.title &&
+          other.description == this.description &&
+          other.isUsed == this.isUsed);
+}
+
+class RewardPoolItemsCompanion extends UpdateCompanion<RewardPoolItem> {
+  final Value<int> id;
+  final Value<int> poolId;
+  final Value<String> title;
+  final Value<String> description;
+  final Value<bool> isUsed;
+  const RewardPoolItemsCompanion({
+    this.id = const Value.absent(),
+    this.poolId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.description = const Value.absent(),
+    this.isUsed = const Value.absent(),
+  });
+  RewardPoolItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required int poolId,
+    required String title,
+    this.description = const Value.absent(),
+    this.isUsed = const Value.absent(),
+  }) : poolId = Value(poolId),
+       title = Value(title);
+  static Insertable<RewardPoolItem> custom({
+    Expression<int>? id,
+    Expression<int>? poolId,
+    Expression<String>? title,
+    Expression<String>? description,
+    Expression<bool>? isUsed,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (poolId != null) 'pool_id': poolId,
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (isUsed != null) 'is_used': isUsed,
+    });
+  }
+
+  RewardPoolItemsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? poolId,
+    Value<String>? title,
+    Value<String>? description,
+    Value<bool>? isUsed,
+  }) {
+    return RewardPoolItemsCompanion(
+      id: id ?? this.id,
+      poolId: poolId ?? this.poolId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      isUsed: isUsed ?? this.isUsed,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (poolId.present) {
+      map['pool_id'] = Variable<int>(poolId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (isUsed.present) {
+      map['is_used'] = Variable<bool>(isUsed.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewardPoolItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('poolId: $poolId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('isUsed: $isUsed')
           ..write(')'))
         .toString();
   }
@@ -7295,6 +8255,30 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _graceUsedDateMeta = const VerificationMeta(
+    'graceUsedDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> graceUsedDate =
+      GeneratedColumn<DateTime>(
+        'grace_used_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _gracePeriodDaysMeta = const VerificationMeta(
+    'gracePeriodDays',
+  );
+  @override
+  late final GeneratedColumn<int> gracePeriodDays = GeneratedColumn<int>(
+    'grace_period_days',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -7302,6 +8286,8 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
     currentStreak,
     maxStreak,
     lastCompletionDate,
+    graceUsedDate,
+    gracePeriodDays,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7348,6 +8334,24 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
         ),
       );
     }
+    if (data.containsKey('grace_used_date')) {
+      context.handle(
+        _graceUsedDateMeta,
+        graceUsedDate.isAcceptableOrUnknown(
+          data['grace_used_date']!,
+          _graceUsedDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('grace_period_days')) {
+      context.handle(
+        _gracePeriodDaysMeta,
+        gracePeriodDays.isAcceptableOrUnknown(
+          data['grace_period_days']!,
+          _gracePeriodDaysMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -7377,6 +8381,14 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_completion_date'],
       ),
+      graceUsedDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}grace_used_date'],
+      ),
+      gracePeriodDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grace_period_days'],
+      )!,
     );
   }
 
@@ -7392,12 +8404,16 @@ class Streak extends DataClass implements Insertable<Streak> {
   final int currentStreak;
   final int maxStreak;
   final DateTime? lastCompletionDate;
+  final DateTime? graceUsedDate;
+  final int gracePeriodDays;
   const Streak({
     required this.id,
     required this.profileId,
     required this.currentStreak,
     required this.maxStreak,
     this.lastCompletionDate,
+    this.graceUsedDate,
+    required this.gracePeriodDays,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7409,6 +8425,10 @@ class Streak extends DataClass implements Insertable<Streak> {
     if (!nullToAbsent || lastCompletionDate != null) {
       map['last_completion_date'] = Variable<DateTime>(lastCompletionDate);
     }
+    if (!nullToAbsent || graceUsedDate != null) {
+      map['grace_used_date'] = Variable<DateTime>(graceUsedDate);
+    }
+    map['grace_period_days'] = Variable<int>(gracePeriodDays);
     return map;
   }
 
@@ -7421,6 +8441,10 @@ class Streak extends DataClass implements Insertable<Streak> {
       lastCompletionDate: lastCompletionDate == null && nullToAbsent
           ? const Value.absent()
           : Value(lastCompletionDate),
+      graceUsedDate: graceUsedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(graceUsedDate),
+      gracePeriodDays: Value(gracePeriodDays),
     );
   }
 
@@ -7437,6 +8461,8 @@ class Streak extends DataClass implements Insertable<Streak> {
       lastCompletionDate: serializer.fromJson<DateTime?>(
         json['lastCompletionDate'],
       ),
+      graceUsedDate: serializer.fromJson<DateTime?>(json['graceUsedDate']),
+      gracePeriodDays: serializer.fromJson<int>(json['gracePeriodDays']),
     );
   }
   @override
@@ -7448,6 +8474,8 @@ class Streak extends DataClass implements Insertable<Streak> {
       'currentStreak': serializer.toJson<int>(currentStreak),
       'maxStreak': serializer.toJson<int>(maxStreak),
       'lastCompletionDate': serializer.toJson<DateTime?>(lastCompletionDate),
+      'graceUsedDate': serializer.toJson<DateTime?>(graceUsedDate),
+      'gracePeriodDays': serializer.toJson<int>(gracePeriodDays),
     };
   }
 
@@ -7457,6 +8485,8 @@ class Streak extends DataClass implements Insertable<Streak> {
     int? currentStreak,
     int? maxStreak,
     Value<DateTime?> lastCompletionDate = const Value.absent(),
+    Value<DateTime?> graceUsedDate = const Value.absent(),
+    int? gracePeriodDays,
   }) => Streak(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -7465,6 +8495,10 @@ class Streak extends DataClass implements Insertable<Streak> {
     lastCompletionDate: lastCompletionDate.present
         ? lastCompletionDate.value
         : this.lastCompletionDate,
+    graceUsedDate: graceUsedDate.present
+        ? graceUsedDate.value
+        : this.graceUsedDate,
+    gracePeriodDays: gracePeriodDays ?? this.gracePeriodDays,
   );
   Streak copyWithCompanion(StreaksCompanion data) {
     return Streak(
@@ -7477,6 +8511,12 @@ class Streak extends DataClass implements Insertable<Streak> {
       lastCompletionDate: data.lastCompletionDate.present
           ? data.lastCompletionDate.value
           : this.lastCompletionDate,
+      graceUsedDate: data.graceUsedDate.present
+          ? data.graceUsedDate.value
+          : this.graceUsedDate,
+      gracePeriodDays: data.gracePeriodDays.present
+          ? data.gracePeriodDays.value
+          : this.gracePeriodDays,
     );
   }
 
@@ -7487,14 +8527,23 @@ class Streak extends DataClass implements Insertable<Streak> {
           ..write('profileId: $profileId, ')
           ..write('currentStreak: $currentStreak, ')
           ..write('maxStreak: $maxStreak, ')
-          ..write('lastCompletionDate: $lastCompletionDate')
+          ..write('lastCompletionDate: $lastCompletionDate, ')
+          ..write('graceUsedDate: $graceUsedDate, ')
+          ..write('gracePeriodDays: $gracePeriodDays')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, profileId, currentStreak, maxStreak, lastCompletionDate);
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    currentStreak,
+    maxStreak,
+    lastCompletionDate,
+    graceUsedDate,
+    gracePeriodDays,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7503,7 +8552,9 @@ class Streak extends DataClass implements Insertable<Streak> {
           other.profileId == this.profileId &&
           other.currentStreak == this.currentStreak &&
           other.maxStreak == this.maxStreak &&
-          other.lastCompletionDate == this.lastCompletionDate);
+          other.lastCompletionDate == this.lastCompletionDate &&
+          other.graceUsedDate == this.graceUsedDate &&
+          other.gracePeriodDays == this.gracePeriodDays);
 }
 
 class StreaksCompanion extends UpdateCompanion<Streak> {
@@ -7512,12 +8563,16 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
   final Value<int> currentStreak;
   final Value<int> maxStreak;
   final Value<DateTime?> lastCompletionDate;
+  final Value<DateTime?> graceUsedDate;
+  final Value<int> gracePeriodDays;
   const StreaksCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
     this.currentStreak = const Value.absent(),
     this.maxStreak = const Value.absent(),
     this.lastCompletionDate = const Value.absent(),
+    this.graceUsedDate = const Value.absent(),
+    this.gracePeriodDays = const Value.absent(),
   });
   StreaksCompanion.insert({
     this.id = const Value.absent(),
@@ -7525,6 +8580,8 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
     this.currentStreak = const Value.absent(),
     this.maxStreak = const Value.absent(),
     this.lastCompletionDate = const Value.absent(),
+    this.graceUsedDate = const Value.absent(),
+    this.gracePeriodDays = const Value.absent(),
   });
   static Insertable<Streak> custom({
     Expression<int>? id,
@@ -7532,6 +8589,8 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
     Expression<int>? currentStreak,
     Expression<int>? maxStreak,
     Expression<DateTime>? lastCompletionDate,
+    Expression<DateTime>? graceUsedDate,
+    Expression<int>? gracePeriodDays,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -7540,6 +8599,8 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
       if (maxStreak != null) 'max_streak': maxStreak,
       if (lastCompletionDate != null)
         'last_completion_date': lastCompletionDate,
+      if (graceUsedDate != null) 'grace_used_date': graceUsedDate,
+      if (gracePeriodDays != null) 'grace_period_days': gracePeriodDays,
     });
   }
 
@@ -7549,6 +8610,8 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
     Value<int>? currentStreak,
     Value<int>? maxStreak,
     Value<DateTime?>? lastCompletionDate,
+    Value<DateTime?>? graceUsedDate,
+    Value<int>? gracePeriodDays,
   }) {
     return StreaksCompanion(
       id: id ?? this.id,
@@ -7556,6 +8619,8 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
       currentStreak: currentStreak ?? this.currentStreak,
       maxStreak: maxStreak ?? this.maxStreak,
       lastCompletionDate: lastCompletionDate ?? this.lastCompletionDate,
+      graceUsedDate: graceUsedDate ?? this.graceUsedDate,
+      gracePeriodDays: gracePeriodDays ?? this.gracePeriodDays,
     );
   }
 
@@ -7579,6 +8644,12 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
         lastCompletionDate.value,
       );
     }
+    if (graceUsedDate.present) {
+      map['grace_used_date'] = Variable<DateTime>(graceUsedDate.value);
+    }
+    if (gracePeriodDays.present) {
+      map['grace_period_days'] = Variable<int>(gracePeriodDays.value);
+    }
     return map;
   }
 
@@ -7589,7 +8660,9 @@ class StreaksCompanion extends UpdateCompanion<Streak> {
           ..write('profileId: $profileId, ')
           ..write('currentStreak: $currentStreak, ')
           ..write('maxStreak: $maxStreak, ')
-          ..write('lastCompletionDate: $lastCompletionDate')
+          ..write('lastCompletionDate: $lastCompletionDate, ')
+          ..write('graceUsedDate: $graceUsedDate, ')
+          ..write('gracePeriodDays: $gracePeriodDays')
           ..write(')'))
         .toString();
   }
@@ -8536,6 +9609,43 @@ class $LearningProgramsTable extends LearningPrograms
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _apiSourceMeta = const VerificationMeta(
+    'apiSource',
+  );
+  @override
+  late final GeneratedColumn<String> apiSource = GeneratedColumn<String>(
+    'api_source',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _apiProgramKeyMeta = const VerificationMeta(
+    'apiProgramKey',
+  );
+  @override
+  late final GeneratedColumn<String> apiProgramKey = GeneratedColumn<String>(
+    'api_program_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isCalendarProgramMeta = const VerificationMeta(
+    'isCalendarProgram',
+  );
+  @override
+  late final GeneratedColumn<bool> isCalendarProgram = GeneratedColumn<bool>(
+    'is_calendar_program',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_calendar_program" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -8548,6 +9658,9 @@ class $LearningProgramsTable extends LearningPrograms
     hasTests,
     testConfig,
     createdAt,
+    apiSource,
+    apiProgramKey,
+    isCalendarProgram,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8640,6 +9753,30 @@ class $LearningProgramsTable extends LearningPrograms
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('api_source')) {
+      context.handle(
+        _apiSourceMeta,
+        apiSource.isAcceptableOrUnknown(data['api_source']!, _apiSourceMeta),
+      );
+    }
+    if (data.containsKey('api_program_key')) {
+      context.handle(
+        _apiProgramKeyMeta,
+        apiProgramKey.isAcceptableOrUnknown(
+          data['api_program_key']!,
+          _apiProgramKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_calendar_program')) {
+      context.handle(
+        _isCalendarProgramMeta,
+        isCalendarProgram.isAcceptableOrUnknown(
+          data['is_calendar_program']!,
+          _isCalendarProgramMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -8689,6 +9826,18 @@ class $LearningProgramsTable extends LearningPrograms
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      apiSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}api_source'],
+      ),
+      apiProgramKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}api_program_key'],
+      ),
+      isCalendarProgram: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_calendar_program'],
+      )!,
     );
   }
 
@@ -8709,6 +9858,15 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
   final bool hasTests;
   final String testConfig;
   final DateTime createdAt;
+
+  /// API source for calendar programs: 'sefaria', 'hebcal', or null (custom)
+  final String? apiSource;
+
+  /// Key identifying this program in the API response
+  final String? apiProgramKey;
+
+  /// Whether this is a calendar-linked program (vs custom/local)
+  final bool isCalendarProgram;
   const LearningProgram({
     required this.id,
     required this.name,
@@ -8720,6 +9878,9 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
     required this.hasTests,
     required this.testConfig,
     required this.createdAt,
+    this.apiSource,
+    this.apiProgramKey,
+    required this.isCalendarProgram,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -8734,6 +9895,13 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
     map['has_tests'] = Variable<bool>(hasTests);
     map['test_config'] = Variable<String>(testConfig);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || apiSource != null) {
+      map['api_source'] = Variable<String>(apiSource);
+    }
+    if (!nullToAbsent || apiProgramKey != null) {
+      map['api_program_key'] = Variable<String>(apiProgramKey);
+    }
+    map['is_calendar_program'] = Variable<bool>(isCalendarProgram);
     return map;
   }
 
@@ -8749,6 +9917,13 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
       hasTests: Value(hasTests),
       testConfig: Value(testConfig),
       createdAt: Value(createdAt),
+      apiSource: apiSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(apiSource),
+      apiProgramKey: apiProgramKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(apiProgramKey),
+      isCalendarProgram: Value(isCalendarProgram),
     );
   }
 
@@ -8768,6 +9943,9 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
       hasTests: serializer.fromJson<bool>(json['hasTests']),
       testConfig: serializer.fromJson<String>(json['testConfig']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      apiSource: serializer.fromJson<String?>(json['apiSource']),
+      apiProgramKey: serializer.fromJson<String?>(json['apiProgramKey']),
+      isCalendarProgram: serializer.fromJson<bool>(json['isCalendarProgram']),
     );
   }
   @override
@@ -8784,6 +9962,9 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
       'hasTests': serializer.toJson<bool>(hasTests),
       'testConfig': serializer.toJson<String>(testConfig),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'apiSource': serializer.toJson<String?>(apiSource),
+      'apiProgramKey': serializer.toJson<String?>(apiProgramKey),
+      'isCalendarProgram': serializer.toJson<bool>(isCalendarProgram),
     };
   }
 
@@ -8798,6 +9979,9 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
     bool? hasTests,
     String? testConfig,
     DateTime? createdAt,
+    Value<String?> apiSource = const Value.absent(),
+    Value<String?> apiProgramKey = const Value.absent(),
+    bool? isCalendarProgram,
   }) => LearningProgram(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -8809,6 +9993,11 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
     hasTests: hasTests ?? this.hasTests,
     testConfig: testConfig ?? this.testConfig,
     createdAt: createdAt ?? this.createdAt,
+    apiSource: apiSource.present ? apiSource.value : this.apiSource,
+    apiProgramKey: apiProgramKey.present
+        ? apiProgramKey.value
+        : this.apiProgramKey,
+    isCalendarProgram: isCalendarProgram ?? this.isCalendarProgram,
   );
   LearningProgram copyWithCompanion(LearningProgramsCompanion data) {
     return LearningProgram(
@@ -8832,6 +10021,13 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
           ? data.testConfig.value
           : this.testConfig,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      apiSource: data.apiSource.present ? data.apiSource.value : this.apiSource,
+      apiProgramKey: data.apiProgramKey.present
+          ? data.apiProgramKey.value
+          : this.apiProgramKey,
+      isCalendarProgram: data.isCalendarProgram.present
+          ? data.isCalendarProgram.value
+          : this.isCalendarProgram,
     );
   }
 
@@ -8847,7 +10043,10 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
           ..write('stagesConfig: $stagesConfig, ')
           ..write('hasTests: $hasTests, ')
           ..write('testConfig: $testConfig, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('apiSource: $apiSource, ')
+          ..write('apiProgramKey: $apiProgramKey, ')
+          ..write('isCalendarProgram: $isCalendarProgram')
           ..write(')'))
         .toString();
   }
@@ -8864,6 +10063,9 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
     hasTests,
     testConfig,
     createdAt,
+    apiSource,
+    apiProgramKey,
+    isCalendarProgram,
   );
   @override
   bool operator ==(Object other) =>
@@ -8878,7 +10080,10 @@ class LearningProgram extends DataClass implements Insertable<LearningProgram> {
           other.stagesConfig == this.stagesConfig &&
           other.hasTests == this.hasTests &&
           other.testConfig == this.testConfig &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.apiSource == this.apiSource &&
+          other.apiProgramKey == this.apiProgramKey &&
+          other.isCalendarProgram == this.isCalendarProgram);
 }
 
 class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
@@ -8892,6 +10097,9 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
   final Value<bool> hasTests;
   final Value<String> testConfig;
   final Value<DateTime> createdAt;
+  final Value<String?> apiSource;
+  final Value<String?> apiProgramKey;
+  final Value<bool> isCalendarProgram;
   const LearningProgramsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -8903,6 +10111,9 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
     this.hasTests = const Value.absent(),
     this.testConfig = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.apiSource = const Value.absent(),
+    this.apiProgramKey = const Value.absent(),
+    this.isCalendarProgram = const Value.absent(),
   });
   LearningProgramsCompanion.insert({
     this.id = const Value.absent(),
@@ -8915,6 +10126,9 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
     this.hasTests = const Value.absent(),
     this.testConfig = const Value.absent(),
     required DateTime createdAt,
+    this.apiSource = const Value.absent(),
+    this.apiProgramKey = const Value.absent(),
+    this.isCalendarProgram = const Value.absent(),
   }) : name = Value(name),
        displayName = Value(displayName),
        curriculumType = Value(curriculumType),
@@ -8931,6 +10145,9 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
     Expression<bool>? hasTests,
     Expression<String>? testConfig,
     Expression<DateTime>? createdAt,
+    Expression<String>? apiSource,
+    Expression<String>? apiProgramKey,
+    Expression<bool>? isCalendarProgram,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -8943,6 +10160,9 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
       if (hasTests != null) 'has_tests': hasTests,
       if (testConfig != null) 'test_config': testConfig,
       if (createdAt != null) 'created_at': createdAt,
+      if (apiSource != null) 'api_source': apiSource,
+      if (apiProgramKey != null) 'api_program_key': apiProgramKey,
+      if (isCalendarProgram != null) 'is_calendar_program': isCalendarProgram,
     });
   }
 
@@ -8957,6 +10177,9 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
     Value<bool>? hasTests,
     Value<String>? testConfig,
     Value<DateTime>? createdAt,
+    Value<String?>? apiSource,
+    Value<String?>? apiProgramKey,
+    Value<bool>? isCalendarProgram,
   }) {
     return LearningProgramsCompanion(
       id: id ?? this.id,
@@ -8969,6 +10192,9 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
       hasTests: hasTests ?? this.hasTests,
       testConfig: testConfig ?? this.testConfig,
       createdAt: createdAt ?? this.createdAt,
+      apiSource: apiSource ?? this.apiSource,
+      apiProgramKey: apiProgramKey ?? this.apiProgramKey,
+      isCalendarProgram: isCalendarProgram ?? this.isCalendarProgram,
     );
   }
 
@@ -9005,6 +10231,15 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (apiSource.present) {
+      map['api_source'] = Variable<String>(apiSource.value);
+    }
+    if (apiProgramKey.present) {
+      map['api_program_key'] = Variable<String>(apiProgramKey.value);
+    }
+    if (isCalendarProgram.present) {
+      map['is_calendar_program'] = Variable<bool>(isCalendarProgram.value);
+    }
     return map;
   }
 
@@ -9020,7 +10255,10 @@ class LearningProgramsCompanion extends UpdateCompanion<LearningProgram> {
           ..write('stagesConfig: $stagesConfig, ')
           ..write('hasTests: $hasTests, ')
           ..write('testConfig: $testConfig, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('apiSource: $apiSource, ')
+          ..write('apiProgramKey: $apiProgramKey, ')
+          ..write('isCalendarProgram: $isCalendarProgram')
           ..write(')'))
         .toString();
   }
@@ -9078,12 +10316,37 @@ class $ProfileProgramsTable extends ProfilePrograms
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _trackingStartDateMeta = const VerificationMeta(
+    'trackingStartDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> trackingStartDate =
+      GeneratedColumn<DateTime>(
+        'tracking_start_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _trackingStartRefMeta = const VerificationMeta(
+    'trackingStartRef',
+  );
+  @override
+  late final GeneratedColumn<String> trackingStartRef = GeneratedColumn<String>(
+    'tracking_start_ref',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     profileId,
     curriculumType,
     programId,
+    trackingStartDate,
+    trackingStartRef,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9127,6 +10390,24 @@ class $ProfileProgramsTable extends ProfilePrograms
     } else if (isInserting) {
       context.missing(_programIdMeta);
     }
+    if (data.containsKey('tracking_start_date')) {
+      context.handle(
+        _trackingStartDateMeta,
+        trackingStartDate.isAcceptableOrUnknown(
+          data['tracking_start_date']!,
+          _trackingStartDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tracking_start_ref')) {
+      context.handle(
+        _trackingStartRefMeta,
+        trackingStartRef.isAcceptableOrUnknown(
+          data['tracking_start_ref']!,
+          _trackingStartRefMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -9156,6 +10437,14 @@ class $ProfileProgramsTable extends ProfilePrograms
         DriftSqlType.int,
         data['${effectivePrefix}program_id'],
       )!,
+      trackingStartDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}tracking_start_date'],
+      ),
+      trackingStartRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tracking_start_ref'],
+      ),
     );
   }
 
@@ -9170,11 +10459,19 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
   final int profileId;
   final String curriculumType;
   final int programId;
+
+  /// Start date for tracking window (Path A onboarding)
+  final DateTime? trackingStartDate;
+
+  /// Sefaria ref of first item in tracking window
+  final String? trackingStartRef;
   const ProfileProgram({
     required this.id,
     required this.profileId,
     required this.curriculumType,
     required this.programId,
+    this.trackingStartDate,
+    this.trackingStartRef,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -9183,6 +10480,12 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
     map['profile_id'] = Variable<int>(profileId);
     map['curriculum_type'] = Variable<String>(curriculumType);
     map['program_id'] = Variable<int>(programId);
+    if (!nullToAbsent || trackingStartDate != null) {
+      map['tracking_start_date'] = Variable<DateTime>(trackingStartDate);
+    }
+    if (!nullToAbsent || trackingStartRef != null) {
+      map['tracking_start_ref'] = Variable<String>(trackingStartRef);
+    }
     return map;
   }
 
@@ -9192,6 +10495,12 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
       profileId: Value(profileId),
       curriculumType: Value(curriculumType),
       programId: Value(programId),
+      trackingStartDate: trackingStartDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(trackingStartDate),
+      trackingStartRef: trackingStartRef == null && nullToAbsent
+          ? const Value.absent()
+          : Value(trackingStartRef),
     );
   }
 
@@ -9205,6 +10514,10 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
       profileId: serializer.fromJson<int>(json['profileId']),
       curriculumType: serializer.fromJson<String>(json['curriculumType']),
       programId: serializer.fromJson<int>(json['programId']),
+      trackingStartDate: serializer.fromJson<DateTime?>(
+        json['trackingStartDate'],
+      ),
+      trackingStartRef: serializer.fromJson<String?>(json['trackingStartRef']),
     );
   }
   @override
@@ -9215,6 +10528,8 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
       'profileId': serializer.toJson<int>(profileId),
       'curriculumType': serializer.toJson<String>(curriculumType),
       'programId': serializer.toJson<int>(programId),
+      'trackingStartDate': serializer.toJson<DateTime?>(trackingStartDate),
+      'trackingStartRef': serializer.toJson<String?>(trackingStartRef),
     };
   }
 
@@ -9223,11 +10538,19 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
     int? profileId,
     String? curriculumType,
     int? programId,
+    Value<DateTime?> trackingStartDate = const Value.absent(),
+    Value<String?> trackingStartRef = const Value.absent(),
   }) => ProfileProgram(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
     curriculumType: curriculumType ?? this.curriculumType,
     programId: programId ?? this.programId,
+    trackingStartDate: trackingStartDate.present
+        ? trackingStartDate.value
+        : this.trackingStartDate,
+    trackingStartRef: trackingStartRef.present
+        ? trackingStartRef.value
+        : this.trackingStartRef,
   );
   ProfileProgram copyWithCompanion(ProfileProgramsCompanion data) {
     return ProfileProgram(
@@ -9237,6 +10560,12 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
           ? data.curriculumType.value
           : this.curriculumType,
       programId: data.programId.present ? data.programId.value : this.programId,
+      trackingStartDate: data.trackingStartDate.present
+          ? data.trackingStartDate.value
+          : this.trackingStartDate,
+      trackingStartRef: data.trackingStartRef.present
+          ? data.trackingStartRef.value
+          : this.trackingStartRef,
     );
   }
 
@@ -9246,13 +10575,22 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
           ..write('id: $id, ')
           ..write('profileId: $profileId, ')
           ..write('curriculumType: $curriculumType, ')
-          ..write('programId: $programId')
+          ..write('programId: $programId, ')
+          ..write('trackingStartDate: $trackingStartDate, ')
+          ..write('trackingStartRef: $trackingStartRef')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, profileId, curriculumType, programId);
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    curriculumType,
+    programId,
+    trackingStartDate,
+    trackingStartRef,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -9260,7 +10598,9 @@ class ProfileProgram extends DataClass implements Insertable<ProfileProgram> {
           other.id == this.id &&
           other.profileId == this.profileId &&
           other.curriculumType == this.curriculumType &&
-          other.programId == this.programId);
+          other.programId == this.programId &&
+          other.trackingStartDate == this.trackingStartDate &&
+          other.trackingStartRef == this.trackingStartRef);
 }
 
 class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
@@ -9268,17 +10608,23 @@ class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
   final Value<int> profileId;
   final Value<String> curriculumType;
   final Value<int> programId;
+  final Value<DateTime?> trackingStartDate;
+  final Value<String?> trackingStartRef;
   const ProfileProgramsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
     this.curriculumType = const Value.absent(),
     this.programId = const Value.absent(),
+    this.trackingStartDate = const Value.absent(),
+    this.trackingStartRef = const Value.absent(),
   });
   ProfileProgramsCompanion.insert({
     this.id = const Value.absent(),
     required int profileId,
     required String curriculumType,
     required int programId,
+    this.trackingStartDate = const Value.absent(),
+    this.trackingStartRef = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumType = Value(curriculumType),
        programId = Value(programId);
@@ -9287,12 +10633,16 @@ class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
     Expression<int>? profileId,
     Expression<String>? curriculumType,
     Expression<int>? programId,
+    Expression<DateTime>? trackingStartDate,
+    Expression<String>? trackingStartRef,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (profileId != null) 'profile_id': profileId,
       if (curriculumType != null) 'curriculum_type': curriculumType,
       if (programId != null) 'program_id': programId,
+      if (trackingStartDate != null) 'tracking_start_date': trackingStartDate,
+      if (trackingStartRef != null) 'tracking_start_ref': trackingStartRef,
     });
   }
 
@@ -9301,12 +10651,16 @@ class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
     Value<int>? profileId,
     Value<String>? curriculumType,
     Value<int>? programId,
+    Value<DateTime?>? trackingStartDate,
+    Value<String?>? trackingStartRef,
   }) {
     return ProfileProgramsCompanion(
       id: id ?? this.id,
       profileId: profileId ?? this.profileId,
       curriculumType: curriculumType ?? this.curriculumType,
       programId: programId ?? this.programId,
+      trackingStartDate: trackingStartDate ?? this.trackingStartDate,
+      trackingStartRef: trackingStartRef ?? this.trackingStartRef,
     );
   }
 
@@ -9325,6 +10679,12 @@ class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
     if (programId.present) {
       map['program_id'] = Variable<int>(programId.value);
     }
+    if (trackingStartDate.present) {
+      map['tracking_start_date'] = Variable<DateTime>(trackingStartDate.value);
+    }
+    if (trackingStartRef.present) {
+      map['tracking_start_ref'] = Variable<String>(trackingStartRef.value);
+    }
     return map;
   }
 
@@ -9334,7 +10694,9 @@ class ProfileProgramsCompanion extends UpdateCompanion<ProfileProgram> {
           ..write('id: $id, ')
           ..write('profileId: $profileId, ')
           ..write('curriculumType: $curriculumType, ')
-          ..write('programId: $programId')
+          ..write('programId: $programId, ')
+          ..write('trackingStartDate: $trackingStartDate, ')
+          ..write('trackingStartRef: $trackingStartRef')
           ..write(')'))
         .toString();
   }
@@ -10481,6 +11843,374 @@ class StudyDayConfigsCompanion extends UpdateCompanion<StudyDayConfig> {
   }
 }
 
+class $CalendarCacheTable extends CalendarCache
+    with TableInfo<$CalendarCacheTable, CalendarCacheData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CalendarCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateKeyMeta = const VerificationMeta(
+    'dateKey',
+  );
+  @override
+  late final GeneratedColumn<String> dateKey = GeneratedColumn<String>(
+    'date_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _responseJsonMeta = const VerificationMeta(
+    'responseJson',
+  );
+  @override
+  late final GeneratedColumn<String> responseJson = GeneratedColumn<String>(
+    'response_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+    'fetched_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    source,
+    dateKey,
+    responseJson,
+    fetchedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'calendar_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CalendarCacheData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('date_key')) {
+      context.handle(
+        _dateKeyMeta,
+        dateKey.isAcceptableOrUnknown(data['date_key']!, _dateKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateKeyMeta);
+    }
+    if (data.containsKey('response_json')) {
+      context.handle(
+        _responseJsonMeta,
+        responseJson.isAcceptableOrUnknown(
+          data['response_json']!,
+          _responseJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_responseJsonMeta);
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {source, dateKey},
+  ];
+  @override
+  CalendarCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CalendarCacheData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      dateKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date_key'],
+      )!,
+      responseJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}response_json'],
+      )!,
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fetched_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CalendarCacheTable createAlias(String alias) {
+    return $CalendarCacheTable(attachedDatabase, alias);
+  }
+}
+
+class CalendarCacheData extends DataClass
+    implements Insertable<CalendarCacheData> {
+  final int id;
+
+  /// API source: 'sefaria' or 'hebcal'
+  final String source;
+
+  /// Date key in 'YYYY-MM-DD' format
+  final String dateKey;
+
+  /// Full JSON response body
+  final String responseJson;
+
+  /// When the response was cached
+  final DateTime fetchedAt;
+  const CalendarCacheData({
+    required this.id,
+    required this.source,
+    required this.dateKey,
+    required this.responseJson,
+    required this.fetchedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['source'] = Variable<String>(source);
+    map['date_key'] = Variable<String>(dateKey);
+    map['response_json'] = Variable<String>(responseJson);
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    return map;
+  }
+
+  CalendarCacheCompanion toCompanion(bool nullToAbsent) {
+    return CalendarCacheCompanion(
+      id: Value(id),
+      source: Value(source),
+      dateKey: Value(dateKey),
+      responseJson: Value(responseJson),
+      fetchedAt: Value(fetchedAt),
+    );
+  }
+
+  factory CalendarCacheData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CalendarCacheData(
+      id: serializer.fromJson<int>(json['id']),
+      source: serializer.fromJson<String>(json['source']),
+      dateKey: serializer.fromJson<String>(json['dateKey']),
+      responseJson: serializer.fromJson<String>(json['responseJson']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'source': serializer.toJson<String>(source),
+      'dateKey': serializer.toJson<String>(dateKey),
+      'responseJson': serializer.toJson<String>(responseJson),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+    };
+  }
+
+  CalendarCacheData copyWith({
+    int? id,
+    String? source,
+    String? dateKey,
+    String? responseJson,
+    DateTime? fetchedAt,
+  }) => CalendarCacheData(
+    id: id ?? this.id,
+    source: source ?? this.source,
+    dateKey: dateKey ?? this.dateKey,
+    responseJson: responseJson ?? this.responseJson,
+    fetchedAt: fetchedAt ?? this.fetchedAt,
+  );
+  CalendarCacheData copyWithCompanion(CalendarCacheCompanion data) {
+    return CalendarCacheData(
+      id: data.id.present ? data.id.value : this.id,
+      source: data.source.present ? data.source.value : this.source,
+      dateKey: data.dateKey.present ? data.dateKey.value : this.dateKey,
+      responseJson: data.responseJson.present
+          ? data.responseJson.value
+          : this.responseJson,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalendarCacheData(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('dateKey: $dateKey, ')
+          ..write('responseJson: $responseJson, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, source, dateKey, responseJson, fetchedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CalendarCacheData &&
+          other.id == this.id &&
+          other.source == this.source &&
+          other.dateKey == this.dateKey &&
+          other.responseJson == this.responseJson &&
+          other.fetchedAt == this.fetchedAt);
+}
+
+class CalendarCacheCompanion extends UpdateCompanion<CalendarCacheData> {
+  final Value<int> id;
+  final Value<String> source;
+  final Value<String> dateKey;
+  final Value<String> responseJson;
+  final Value<DateTime> fetchedAt;
+  const CalendarCacheCompanion({
+    this.id = const Value.absent(),
+    this.source = const Value.absent(),
+    this.dateKey = const Value.absent(),
+    this.responseJson = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+  });
+  CalendarCacheCompanion.insert({
+    this.id = const Value.absent(),
+    required String source,
+    required String dateKey,
+    required String responseJson,
+    required DateTime fetchedAt,
+  }) : source = Value(source),
+       dateKey = Value(dateKey),
+       responseJson = Value(responseJson),
+       fetchedAt = Value(fetchedAt);
+  static Insertable<CalendarCacheData> custom({
+    Expression<int>? id,
+    Expression<String>? source,
+    Expression<String>? dateKey,
+    Expression<String>? responseJson,
+    Expression<DateTime>? fetchedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (source != null) 'source': source,
+      if (dateKey != null) 'date_key': dateKey,
+      if (responseJson != null) 'response_json': responseJson,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+    });
+  }
+
+  CalendarCacheCompanion copyWith({
+    Value<int>? id,
+    Value<String>? source,
+    Value<String>? dateKey,
+    Value<String>? responseJson,
+    Value<DateTime>? fetchedAt,
+  }) {
+    return CalendarCacheCompanion(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      dateKey: dateKey ?? this.dateKey,
+      responseJson: responseJson ?? this.responseJson,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (dateKey.present) {
+      map['date_key'] = Variable<String>(dateKey.value);
+    }
+    if (responseJson.present) {
+      map['response_json'] = Variable<String>(responseJson.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalendarCacheCompanion(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('dateKey: $dateKey, ')
+          ..write('responseJson: $responseJson, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -10505,6 +12235,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ProfilesTable profiles = $ProfilesTable(this);
   late final $UserProfilesTable userProfiles = $UserProfilesTable(this);
   late final $RewardsTable rewards = $RewardsTable(this);
+  late final $RewardPoolsTable rewardPools = $RewardPoolsTable(this);
+  late final $RewardPoolItemsTable rewardPoolItems = $RewardPoolItemsTable(
+    this,
+  );
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $TextCacheTable textCache = $TextCacheTable(this);
   late final $StreaksTable streaks = $StreaksTable(this);
@@ -10523,6 +12257,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StudyDayConfigsTable studyDayConfigs = $StudyDayConfigsTable(
     this,
   );
+  late final $CalendarCacheTable calendarCache = $CalendarCacheTable(this);
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
     this as AppDatabase,
   );
@@ -10549,6 +12284,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final StreakDao streakDao = StreakDao(this as AppDatabase);
   late final RewardDao rewardDao = RewardDao(this as AppDatabase);
+  late final RewardPoolDao rewardPoolDao = RewardPoolDao(this as AppDatabase);
   late final SyncQueueDao syncQueueDao = SyncQueueDao(this as AppDatabase);
   late final TextCacheDao textCacheDao = TextCacheDao(this as AppDatabase);
   late final TextDownloadStatusDao textDownloadStatusDao =
@@ -10564,6 +12300,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final TestDateDao testDateDao = TestDateDao(this as AppDatabase);
   late final TestScoreDao testScoreDao = TestScoreDao(this as AppDatabase);
   late final StudyDayConfigDao studyDayConfigDao = StudyDayConfigDao(
+    this as AppDatabase,
+  );
+  late final CalendarCacheDao calendarCacheDao = CalendarCacheDao(
     this as AppDatabase,
   );
   @override
@@ -10584,6 +12323,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     profiles,
     userProfiles,
     rewards,
+    rewardPools,
+    rewardPoolItems,
     syncQueue,
     textCache,
     streaks,
@@ -10594,6 +12335,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     testDates,
     testScores,
     studyDayConfigs,
+    calendarCache,
   ];
 }
 
@@ -13575,6 +15317,11 @@ typedef $$RewardsTableCreateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<String?> curriculumId,
+      Value<String> rewardMode,
+      Value<String> milestoneType,
+      Value<bool> isVisible,
+      Value<int?> poolId,
+      Value<int?> repeatInterval,
     });
 typedef $$RewardsTableUpdateCompanionBuilder =
     RewardsCompanion Function({
@@ -13589,6 +15336,11 @@ typedef $$RewardsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<String?> curriculumId,
+      Value<String> rewardMode,
+      Value<String> milestoneType,
+      Value<bool> isVisible,
+      Value<int?> poolId,
+      Value<int?> repeatInterval,
     });
 
 class $$RewardsTableFilterComposer
@@ -13652,6 +15404,31 @@ class $$RewardsTableFilterComposer
 
   ColumnFilters<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rewardMode => $composableBuilder(
+    column: $table.rewardMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get milestoneType => $composableBuilder(
+    column: $table.milestoneType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isVisible => $composableBuilder(
+    column: $table.isVisible,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get poolId => $composableBuilder(
+    column: $table.poolId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get repeatInterval => $composableBuilder(
+    column: $table.repeatInterval,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -13719,6 +15496,31 @@ class $$RewardsTableOrderingComposer
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get rewardMode => $composableBuilder(
+    column: $table.rewardMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get milestoneType => $composableBuilder(
+    column: $table.milestoneType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isVisible => $composableBuilder(
+    column: $table.isVisible,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get poolId => $composableBuilder(
+    column: $table.poolId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get repeatInterval => $composableBuilder(
+    column: $table.repeatInterval,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RewardsTableAnnotationComposer
@@ -13770,6 +15572,27 @@ class $$RewardsTableAnnotationComposer
     column: $table.curriculumId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get rewardMode => $composableBuilder(
+    column: $table.rewardMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get milestoneType => $composableBuilder(
+    column: $table.milestoneType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isVisible =>
+      $composableBuilder(column: $table.isVisible, builder: (column) => column);
+
+  GeneratedColumn<int> get poolId =>
+      $composableBuilder(column: $table.poolId, builder: (column) => column);
+
+  GeneratedColumn<int> get repeatInterval => $composableBuilder(
+    column: $table.repeatInterval,
+    builder: (column) => column,
+  );
 }
 
 class $$RewardsTableTableManager
@@ -13811,6 +15634,11 @@ class $$RewardsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> curriculumId = const Value.absent(),
+                Value<String> rewardMode = const Value.absent(),
+                Value<String> milestoneType = const Value.absent(),
+                Value<bool> isVisible = const Value.absent(),
+                Value<int?> poolId = const Value.absent(),
+                Value<int?> repeatInterval = const Value.absent(),
               }) => RewardsCompanion(
                 id: id,
                 profileId: profileId,
@@ -13823,6 +15651,11 @@ class $$RewardsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 curriculumId: curriculumId,
+                rewardMode: rewardMode,
+                milestoneType: milestoneType,
+                isVisible: isVisible,
+                poolId: poolId,
+                repeatInterval: repeatInterval,
               ),
           createCompanionCallback:
               ({
@@ -13837,6 +15670,11 @@ class $$RewardsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> curriculumId = const Value.absent(),
+                Value<String> rewardMode = const Value.absent(),
+                Value<String> milestoneType = const Value.absent(),
+                Value<bool> isVisible = const Value.absent(),
+                Value<int?> poolId = const Value.absent(),
+                Value<int?> repeatInterval = const Value.absent(),
               }) => RewardsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -13849,6 +15687,11 @@ class $$RewardsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 curriculumId: curriculumId,
+                rewardMode: rewardMode,
+                milestoneType: milestoneType,
+                isVisible: isVisible,
+                poolId: poolId,
+                repeatInterval: repeatInterval,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -13870,6 +15713,402 @@ typedef $$RewardsTableProcessedTableManager =
       $$RewardsTableUpdateCompanionBuilder,
       (Reward, BaseReferences<_$AppDatabase, $RewardsTable, Reward>),
       Reward,
+      PrefetchHooks Function()
+    >;
+typedef $$RewardPoolsTableCreateCompanionBuilder =
+    RewardPoolsCompanion Function({
+      Value<int> id,
+      required String name,
+      required int profileId,
+      Value<bool> isShared,
+      Value<DateTime> createdAt,
+    });
+typedef $$RewardPoolsTableUpdateCompanionBuilder =
+    RewardPoolsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<int> profileId,
+      Value<bool> isShared,
+      Value<DateTime> createdAt,
+    });
+
+class $$RewardPoolsTableFilterComposer
+    extends Composer<_$AppDatabase, $RewardPoolsTable> {
+  $$RewardPoolsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isShared => $composableBuilder(
+    column: $table.isShared,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RewardPoolsTableOrderingComposer
+    extends Composer<_$AppDatabase, $RewardPoolsTable> {
+  $$RewardPoolsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isShared => $composableBuilder(
+    column: $table.isShared,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RewardPoolsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RewardPoolsTable> {
+  $$RewardPoolsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isShared =>
+      $composableBuilder(column: $table.isShared, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$RewardPoolsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RewardPoolsTable,
+          RewardPool,
+          $$RewardPoolsTableFilterComposer,
+          $$RewardPoolsTableOrderingComposer,
+          $$RewardPoolsTableAnnotationComposer,
+          $$RewardPoolsTableCreateCompanionBuilder,
+          $$RewardPoolsTableUpdateCompanionBuilder,
+          (
+            RewardPool,
+            BaseReferences<_$AppDatabase, $RewardPoolsTable, RewardPool>,
+          ),
+          RewardPool,
+          PrefetchHooks Function()
+        > {
+  $$RewardPoolsTableTableManager(_$AppDatabase db, $RewardPoolsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RewardPoolsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RewardPoolsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RewardPoolsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<bool> isShared = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => RewardPoolsCompanion(
+                id: id,
+                name: name,
+                profileId: profileId,
+                isShared: isShared,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required int profileId,
+                Value<bool> isShared = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => RewardPoolsCompanion.insert(
+                id: id,
+                name: name,
+                profileId: profileId,
+                isShared: isShared,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RewardPoolsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RewardPoolsTable,
+      RewardPool,
+      $$RewardPoolsTableFilterComposer,
+      $$RewardPoolsTableOrderingComposer,
+      $$RewardPoolsTableAnnotationComposer,
+      $$RewardPoolsTableCreateCompanionBuilder,
+      $$RewardPoolsTableUpdateCompanionBuilder,
+      (
+        RewardPool,
+        BaseReferences<_$AppDatabase, $RewardPoolsTable, RewardPool>,
+      ),
+      RewardPool,
+      PrefetchHooks Function()
+    >;
+typedef $$RewardPoolItemsTableCreateCompanionBuilder =
+    RewardPoolItemsCompanion Function({
+      Value<int> id,
+      required int poolId,
+      required String title,
+      Value<String> description,
+      Value<bool> isUsed,
+    });
+typedef $$RewardPoolItemsTableUpdateCompanionBuilder =
+    RewardPoolItemsCompanion Function({
+      Value<int> id,
+      Value<int> poolId,
+      Value<String> title,
+      Value<String> description,
+      Value<bool> isUsed,
+    });
+
+class $$RewardPoolItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $RewardPoolItemsTable> {
+  $$RewardPoolItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get poolId => $composableBuilder(
+    column: $table.poolId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isUsed => $composableBuilder(
+    column: $table.isUsed,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RewardPoolItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $RewardPoolItemsTable> {
+  $$RewardPoolItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get poolId => $composableBuilder(
+    column: $table.poolId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isUsed => $composableBuilder(
+    column: $table.isUsed,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RewardPoolItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RewardPoolItemsTable> {
+  $$RewardPoolItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get poolId =>
+      $composableBuilder(column: $table.poolId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isUsed =>
+      $composableBuilder(column: $table.isUsed, builder: (column) => column);
+}
+
+class $$RewardPoolItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RewardPoolItemsTable,
+          RewardPoolItem,
+          $$RewardPoolItemsTableFilterComposer,
+          $$RewardPoolItemsTableOrderingComposer,
+          $$RewardPoolItemsTableAnnotationComposer,
+          $$RewardPoolItemsTableCreateCompanionBuilder,
+          $$RewardPoolItemsTableUpdateCompanionBuilder,
+          (
+            RewardPoolItem,
+            BaseReferences<
+              _$AppDatabase,
+              $RewardPoolItemsTable,
+              RewardPoolItem
+            >,
+          ),
+          RewardPoolItem,
+          PrefetchHooks Function()
+        > {
+  $$RewardPoolItemsTableTableManager(
+    _$AppDatabase db,
+    $RewardPoolItemsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RewardPoolItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RewardPoolItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RewardPoolItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> poolId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<bool> isUsed = const Value.absent(),
+              }) => RewardPoolItemsCompanion(
+                id: id,
+                poolId: poolId,
+                title: title,
+                description: description,
+                isUsed: isUsed,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int poolId,
+                required String title,
+                Value<String> description = const Value.absent(),
+                Value<bool> isUsed = const Value.absent(),
+              }) => RewardPoolItemsCompanion.insert(
+                id: id,
+                poolId: poolId,
+                title: title,
+                description: description,
+                isUsed: isUsed,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RewardPoolItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RewardPoolItemsTable,
+      RewardPoolItem,
+      $$RewardPoolItemsTableFilterComposer,
+      $$RewardPoolItemsTableOrderingComposer,
+      $$RewardPoolItemsTableAnnotationComposer,
+      $$RewardPoolItemsTableCreateCompanionBuilder,
+      $$RewardPoolItemsTableUpdateCompanionBuilder,
+      (
+        RewardPoolItem,
+        BaseReferences<_$AppDatabase, $RewardPoolItemsTable, RewardPoolItem>,
+      ),
+      RewardPoolItem,
       PrefetchHooks Function()
     >;
 typedef $$SyncQueueTableCreateCompanionBuilder =
@@ -14283,6 +16522,8 @@ typedef $$StreaksTableCreateCompanionBuilder =
       Value<int> currentStreak,
       Value<int> maxStreak,
       Value<DateTime?> lastCompletionDate,
+      Value<DateTime?> graceUsedDate,
+      Value<int> gracePeriodDays,
     });
 typedef $$StreaksTableUpdateCompanionBuilder =
     StreaksCompanion Function({
@@ -14291,6 +16532,8 @@ typedef $$StreaksTableUpdateCompanionBuilder =
       Value<int> currentStreak,
       Value<int> maxStreak,
       Value<DateTime?> lastCompletionDate,
+      Value<DateTime?> graceUsedDate,
+      Value<int> gracePeriodDays,
     });
 
 class $$StreaksTableFilterComposer
@@ -14324,6 +16567,16 @@ class $$StreaksTableFilterComposer
 
   ColumnFilters<DateTime> get lastCompletionDate => $composableBuilder(
     column: $table.lastCompletionDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get graceUsedDate => $composableBuilder(
+    column: $table.graceUsedDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get gracePeriodDays => $composableBuilder(
+    column: $table.gracePeriodDays,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -14361,6 +16614,16 @@ class $$StreaksTableOrderingComposer
     column: $table.lastCompletionDate,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get graceUsedDate => $composableBuilder(
+    column: $table.graceUsedDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get gracePeriodDays => $composableBuilder(
+    column: $table.gracePeriodDays,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$StreaksTableAnnotationComposer
@@ -14388,6 +16651,16 @@ class $$StreaksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get lastCompletionDate => $composableBuilder(
     column: $table.lastCompletionDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get graceUsedDate => $composableBuilder(
+    column: $table.graceUsedDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get gracePeriodDays => $composableBuilder(
+    column: $table.gracePeriodDays,
     builder: (column) => column,
   );
 }
@@ -14425,12 +16698,16 @@ class $$StreaksTableTableManager
                 Value<int> currentStreak = const Value.absent(),
                 Value<int> maxStreak = const Value.absent(),
                 Value<DateTime?> lastCompletionDate = const Value.absent(),
+                Value<DateTime?> graceUsedDate = const Value.absent(),
+                Value<int> gracePeriodDays = const Value.absent(),
               }) => StreaksCompanion(
                 id: id,
                 profileId: profileId,
                 currentStreak: currentStreak,
                 maxStreak: maxStreak,
                 lastCompletionDate: lastCompletionDate,
+                graceUsedDate: graceUsedDate,
+                gracePeriodDays: gracePeriodDays,
               ),
           createCompanionCallback:
               ({
@@ -14439,12 +16716,16 @@ class $$StreaksTableTableManager
                 Value<int> currentStreak = const Value.absent(),
                 Value<int> maxStreak = const Value.absent(),
                 Value<DateTime?> lastCompletionDate = const Value.absent(),
+                Value<DateTime?> graceUsedDate = const Value.absent(),
+                Value<int> gracePeriodDays = const Value.absent(),
               }) => StreaksCompanion.insert(
                 id: id,
                 profileId: profileId,
                 currentStreak: currentStreak,
                 maxStreak: maxStreak,
                 lastCompletionDate: lastCompletionDate,
+                graceUsedDate: graceUsedDate,
+                gracePeriodDays: gracePeriodDays,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -14931,6 +17212,9 @@ typedef $$LearningProgramsTableCreateCompanionBuilder =
       Value<bool> hasTests,
       Value<String> testConfig,
       required DateTime createdAt,
+      Value<String?> apiSource,
+      Value<String?> apiProgramKey,
+      Value<bool> isCalendarProgram,
     });
 typedef $$LearningProgramsTableUpdateCompanionBuilder =
     LearningProgramsCompanion Function({
@@ -14944,6 +17228,9 @@ typedef $$LearningProgramsTableUpdateCompanionBuilder =
       Value<bool> hasTests,
       Value<String> testConfig,
       Value<DateTime> createdAt,
+      Value<String?> apiSource,
+      Value<String?> apiProgramKey,
+      Value<bool> isCalendarProgram,
     });
 
 class $$LearningProgramsTableFilterComposer
@@ -15002,6 +17289,21 @@ class $$LearningProgramsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get apiSource => $composableBuilder(
+    column: $table.apiSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get apiProgramKey => $composableBuilder(
+    column: $table.apiProgramKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCalendarProgram => $composableBuilder(
+    column: $table.isCalendarProgram,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -15064,6 +17366,21 @@ class $$LearningProgramsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get apiSource => $composableBuilder(
+    column: $table.apiSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get apiProgramKey => $composableBuilder(
+    column: $table.apiProgramKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCalendarProgram => $composableBuilder(
+    column: $table.isCalendarProgram,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LearningProgramsTableAnnotationComposer
@@ -15114,6 +17431,19 @@ class $$LearningProgramsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get apiSource =>
+      $composableBuilder(column: $table.apiSource, builder: (column) => column);
+
+  GeneratedColumn<String> get apiProgramKey => $composableBuilder(
+    column: $table.apiProgramKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isCalendarProgram => $composableBuilder(
+    column: $table.isCalendarProgram,
+    builder: (column) => column,
+  );
 }
 
 class $$LearningProgramsTableTableManager
@@ -15163,6 +17493,9 @@ class $$LearningProgramsTableTableManager
                 Value<bool> hasTests = const Value.absent(),
                 Value<String> testConfig = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> apiSource = const Value.absent(),
+                Value<String?> apiProgramKey = const Value.absent(),
+                Value<bool> isCalendarProgram = const Value.absent(),
               }) => LearningProgramsCompanion(
                 id: id,
                 name: name,
@@ -15174,6 +17507,9 @@ class $$LearningProgramsTableTableManager
                 hasTests: hasTests,
                 testConfig: testConfig,
                 createdAt: createdAt,
+                apiSource: apiSource,
+                apiProgramKey: apiProgramKey,
+                isCalendarProgram: isCalendarProgram,
               ),
           createCompanionCallback:
               ({
@@ -15187,6 +17523,9 @@ class $$LearningProgramsTableTableManager
                 Value<bool> hasTests = const Value.absent(),
                 Value<String> testConfig = const Value.absent(),
                 required DateTime createdAt,
+                Value<String?> apiSource = const Value.absent(),
+                Value<String?> apiProgramKey = const Value.absent(),
+                Value<bool> isCalendarProgram = const Value.absent(),
               }) => LearningProgramsCompanion.insert(
                 id: id,
                 name: name,
@@ -15198,6 +17537,9 @@ class $$LearningProgramsTableTableManager
                 hasTests: hasTests,
                 testConfig: testConfig,
                 createdAt: createdAt,
+                apiSource: apiSource,
+                apiProgramKey: apiProgramKey,
+                isCalendarProgram: isCalendarProgram,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -15230,6 +17572,8 @@ typedef $$ProfileProgramsTableCreateCompanionBuilder =
       required int profileId,
       required String curriculumType,
       required int programId,
+      Value<DateTime?> trackingStartDate,
+      Value<String?> trackingStartRef,
     });
 typedef $$ProfileProgramsTableUpdateCompanionBuilder =
     ProfileProgramsCompanion Function({
@@ -15237,6 +17581,8 @@ typedef $$ProfileProgramsTableUpdateCompanionBuilder =
       Value<int> profileId,
       Value<String> curriculumType,
       Value<int> programId,
+      Value<DateTime?> trackingStartDate,
+      Value<String?> trackingStartRef,
     });
 
 class $$ProfileProgramsTableFilterComposer
@@ -15265,6 +17611,16 @@ class $$ProfileProgramsTableFilterComposer
 
   ColumnFilters<int> get programId => $composableBuilder(
     column: $table.programId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get trackingStartDate => $composableBuilder(
+    column: $table.trackingStartDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackingStartRef => $composableBuilder(
+    column: $table.trackingStartRef,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -15297,6 +17653,16 @@ class $$ProfileProgramsTableOrderingComposer
     column: $table.programId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get trackingStartDate => $composableBuilder(
+    column: $table.trackingStartDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trackingStartRef => $composableBuilder(
+    column: $table.trackingStartRef,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfileProgramsTableAnnotationComposer
@@ -15321,6 +17687,16 @@ class $$ProfileProgramsTableAnnotationComposer
 
   GeneratedColumn<int> get programId =>
       $composableBuilder(column: $table.programId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get trackingStartDate => $composableBuilder(
+    column: $table.trackingStartDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get trackingStartRef => $composableBuilder(
+    column: $table.trackingStartRef,
+    builder: (column) => column,
+  );
 }
 
 class $$ProfileProgramsTableTableManager
@@ -15364,11 +17740,15 @@ class $$ProfileProgramsTableTableManager
                 Value<int> profileId = const Value.absent(),
                 Value<String> curriculumType = const Value.absent(),
                 Value<int> programId = const Value.absent(),
+                Value<DateTime?> trackingStartDate = const Value.absent(),
+                Value<String?> trackingStartRef = const Value.absent(),
               }) => ProfileProgramsCompanion(
                 id: id,
                 profileId: profileId,
                 curriculumType: curriculumType,
                 programId: programId,
+                trackingStartDate: trackingStartDate,
+                trackingStartRef: trackingStartRef,
               ),
           createCompanionCallback:
               ({
@@ -15376,11 +17756,15 @@ class $$ProfileProgramsTableTableManager
                 required int profileId,
                 required String curriculumType,
                 required int programId,
+                Value<DateTime?> trackingStartDate = const Value.absent(),
+                Value<String?> trackingStartRef = const Value.absent(),
               }) => ProfileProgramsCompanion.insert(
                 id: id,
                 profileId: profileId,
                 curriculumType: curriculumType,
                 programId: programId,
+                trackingStartDate: trackingStartDate,
+                trackingStartRef: trackingStartRef,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -16019,6 +18403,206 @@ typedef $$StudyDayConfigsTableProcessedTableManager =
       StudyDayConfig,
       PrefetchHooks Function()
     >;
+typedef $$CalendarCacheTableCreateCompanionBuilder =
+    CalendarCacheCompanion Function({
+      Value<int> id,
+      required String source,
+      required String dateKey,
+      required String responseJson,
+      required DateTime fetchedAt,
+    });
+typedef $$CalendarCacheTableUpdateCompanionBuilder =
+    CalendarCacheCompanion Function({
+      Value<int> id,
+      Value<String> source,
+      Value<String> dateKey,
+      Value<String> responseJson,
+      Value<DateTime> fetchedAt,
+    });
+
+class $$CalendarCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $CalendarCacheTable> {
+  $$CalendarCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dateKey => $composableBuilder(
+    column: $table.dateKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get responseJson => $composableBuilder(
+    column: $table.responseJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CalendarCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $CalendarCacheTable> {
+  $$CalendarCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dateKey => $composableBuilder(
+    column: $table.dateKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get responseJson => $composableBuilder(
+    column: $table.responseJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CalendarCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CalendarCacheTable> {
+  $$CalendarCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get dateKey =>
+      $composableBuilder(column: $table.dateKey, builder: (column) => column);
+
+  GeneratedColumn<String> get responseJson => $composableBuilder(
+    column: $table.responseJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+}
+
+class $$CalendarCacheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CalendarCacheTable,
+          CalendarCacheData,
+          $$CalendarCacheTableFilterComposer,
+          $$CalendarCacheTableOrderingComposer,
+          $$CalendarCacheTableAnnotationComposer,
+          $$CalendarCacheTableCreateCompanionBuilder,
+          $$CalendarCacheTableUpdateCompanionBuilder,
+          (
+            CalendarCacheData,
+            BaseReferences<
+              _$AppDatabase,
+              $CalendarCacheTable,
+              CalendarCacheData
+            >,
+          ),
+          CalendarCacheData,
+          PrefetchHooks Function()
+        > {
+  $$CalendarCacheTableTableManager(_$AppDatabase db, $CalendarCacheTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CalendarCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CalendarCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CalendarCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> dateKey = const Value.absent(),
+                Value<String> responseJson = const Value.absent(),
+                Value<DateTime> fetchedAt = const Value.absent(),
+              }) => CalendarCacheCompanion(
+                id: id,
+                source: source,
+                dateKey: dateKey,
+                responseJson: responseJson,
+                fetchedAt: fetchedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String source,
+                required String dateKey,
+                required String responseJson,
+                required DateTime fetchedAt,
+              }) => CalendarCacheCompanion.insert(
+                id: id,
+                source: source,
+                dateKey: dateKey,
+                responseJson: responseJson,
+                fetchedAt: fetchedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CalendarCacheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CalendarCacheTable,
+      CalendarCacheData,
+      $$CalendarCacheTableFilterComposer,
+      $$CalendarCacheTableOrderingComposer,
+      $$CalendarCacheTableAnnotationComposer,
+      $$CalendarCacheTableCreateCompanionBuilder,
+      $$CalendarCacheTableUpdateCompanionBuilder,
+      (
+        CalendarCacheData,
+        BaseReferences<_$AppDatabase, $CalendarCacheTable, CalendarCacheData>,
+      ),
+      CalendarCacheData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -16049,6 +18633,10 @@ class $AppDatabaseManager {
       $$UserProfilesTableTableManager(_db, _db.userProfiles);
   $$RewardsTableTableManager get rewards =>
       $$RewardsTableTableManager(_db, _db.rewards);
+  $$RewardPoolsTableTableManager get rewardPools =>
+      $$RewardPoolsTableTableManager(_db, _db.rewardPools);
+  $$RewardPoolItemsTableTableManager get rewardPoolItems =>
+      $$RewardPoolItemsTableTableManager(_db, _db.rewardPoolItems);
   $$SyncQueueTableTableManager get syncQueue =>
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
   $$TextCacheTableTableManager get textCache =>
@@ -16072,4 +18660,6 @@ class $AppDatabaseManager {
       $$TestScoresTableTableManager(_db, _db.testScores);
   $$StudyDayConfigsTableTableManager get studyDayConfigs =>
       $$StudyDayConfigsTableTableManager(_db, _db.studyDayConfigs);
+  $$CalendarCacheTableTableManager get calendarCache =>
+      $$CalendarCacheTableTableManager(_db, _db.calendarCache);
 }

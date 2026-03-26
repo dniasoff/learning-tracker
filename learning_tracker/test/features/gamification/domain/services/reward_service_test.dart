@@ -27,11 +27,13 @@ void main() {
   Future<int> insertReward({
     required String title,
     required int threshold,
+    bool isVisible = true,
   }) async {
     return service.addReward(
       title: title,
       description: 'desc',
       pointsThreshold: threshold,
+      isVisible: isVisible,
     );
   }
 
@@ -133,7 +135,7 @@ void main() {
     });
 
     test('does not auto-reveal in child mode', () async {
-      await insertReward(title: 'R1', threshold: 50);
+      await insertReward(title: 'R1', threshold: 50, isVisible: false);
       when(
         () => mockPointsService.getGlobalTotal(),
       ).thenAnswer((_) async => 100);

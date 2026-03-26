@@ -39,11 +39,18 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      // Should show curriculum English names
+      // Should show curriculum English names; items below the fold require
+      // scrolling because ListView renders children lazily.
       expect(find.text('Mishnayos'), findsOneWidget);
       expect(find.text('Talmud Bavli'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('Talmud Yerushalmi'), 100);
       expect(find.text('Talmud Yerushalmi'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('Mishna Berurah'), 100);
       expect(find.text('Mishna Berurah'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('Chumash'), 100);
       expect(find.text('Chumash'), findsOneWidget);
     });
 

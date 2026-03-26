@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
+import 'package:learning_tracker/core/database/daos/calendar_cache_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/content_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/curriculum_scope_dao.dart';
@@ -12,6 +13,7 @@ import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/reward_dao.dart';
+import 'package:learning_tracker/core/database/daos/reward_pool_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
 import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';
@@ -26,6 +28,7 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
+import 'package:learning_tracker/core/database/tables/calendar_cache.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/tables/content_download_statuses.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
@@ -37,6 +40,8 @@ import 'package:learning_tracker/core/database/tables/learning_programs.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
 import 'package:learning_tracker/core/database/tables/profile_programs.dart';
 import 'package:learning_tracker/core/database/tables/profiles.dart';
+import 'package:learning_tracker/core/database/tables/reward_pool_items.dart';
+import 'package:learning_tracker/core/database/tables/reward_pools.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
@@ -65,6 +70,8 @@ part 'app_database.g.dart';
     Profiles,
     UserProfiles,
     Rewards,
+    RewardPools,
+    RewardPoolItems,
     SyncQueue,
     TextCache,
     Streaks,
@@ -75,6 +82,7 @@ part 'app_database.g.dart';
     TestDates,
     TestScores,
     StudyDayConfigs,
+    CalendarCache,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -91,6 +99,7 @@ part 'app_database.g.dart';
     UserProfileDao,
     StreakDao,
     RewardDao,
+    RewardPoolDao,
     SyncQueueDao,
     TextCacheDao,
     TextDownloadStatusDao,
@@ -100,13 +109,14 @@ part 'app_database.g.dart';
     TestDateDao,
     TestScoreDao,
     StudyDayConfigDao,
+    CalendarCacheDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration {
@@ -307,6 +317,72 @@ class AppDatabase extends _$AppDatabase {
         if (from < 17) {
           // Migration from schema v16 to v17: Add study_day_configs table
           await m.createTable($StudyDayConfigsTable(attachedDatabase));
+        }
+        if (from < 18) {
+          // Migration from schema v17 to v18: Streak recovery grace period
+          await customStatement(
+            'ALTER TABLE streaks ADD COLUMN grace_used_date INTEGER',
+          );
+          await customStatement(
+            'ALTER TABLE streaks ADD COLUMN grace_period_days INTEGER NOT NULL DEFAULT 1',
+          );
+        }
+        if (from < 19) {
+          // Migration from schema v18 to v19: Reward system overhaul
+          // New columns on rewards table
+          await customStatement(
+            "ALTER TABLE rewards ADD COLUMN reward_mode TEXT NOT NULL DEFAULT 'specific'",
+          );
+          await customStatement(
+            "ALTER TABLE rewards ADD COLUMN milestone_type TEXT NOT NULL DEFAULT 'points'",
+          );
+          await customStatement(
+            'ALTER TABLE rewards ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1',
+          );
+          await customStatement(
+            'ALTER TABLE rewards ADD COLUMN pool_id INTEGER',
+          );
+          await customStatement(
+            'ALTER TABLE rewards ADD COLUMN repeat_interval INTEGER',
+          );
+          // New tables
+          await m.createTable($RewardPoolsTable(attachedDatabase));
+          await m.createTable($RewardPoolItemsTable(attachedDatabase));
+        }
+        if (from < 20) {
+          // Migration from schema v19 to v20: Calendar cache table
+          await m.createTable($CalendarCacheTable(attachedDatabase));
+        }
+        if (from < 21) {
+          // Migration from schema v20 to v21: Calendar program registry columns
+          await customStatement(
+            'ALTER TABLE learning_programs ADD COLUMN api_source TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE learning_programs ADD COLUMN api_program_key TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE learning_programs ADD COLUMN is_calendar_program INTEGER NOT NULL DEFAULT 0',
+          );
+          // Update existing seeds with API keys
+          await customStatement(
+            "UPDATE learning_programs SET api_source = 'sefaria', api_program_key = 'Daf Yomi', is_calendar_program = 1 WHERE name = 'daf_yomi'",
+          );
+          await customStatement(
+            "UPDATE learning_programs SET api_source = 'sefaria', api_program_key = 'Mishnah Yomit', is_calendar_program = 1 WHERE name = 'mishnah_yomis'",
+          );
+          await customStatement(
+            "UPDATE learning_programs SET api_source = 'sefaria', api_program_key = 'Nach Yomi', is_calendar_program = 1 WHERE name = 'nach_yomi'",
+          );
+        }
+        if (from < 22) {
+          // Migration from schema v21 to v22: Tracking window for Path A onboarding
+          await customStatement(
+            'ALTER TABLE profile_programs ADD COLUMN tracking_start_date INTEGER',
+          );
+          await customStatement(
+            'ALTER TABLE profile_programs ADD COLUMN tracking_start_ref TEXT',
+          );
         }
       },
     );

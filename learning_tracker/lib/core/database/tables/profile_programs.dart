@@ -9,6 +9,12 @@ class ProfilePrograms extends Table {
   TextColumn get curriculumType => text()();
   IntColumn get programId => integer()();
 
+  /// Start date for tracking window (Path A onboarding)
+  DateTimeColumn get trackingStartDate => dateTime().nullable()();
+
+  /// Sefaria ref of first item in tracking window
+  TextColumn get trackingStartRef => text().nullable()();
+
   @override
   List<Set<Column>> get uniqueKeys => [
     {profileId, curriculumType},

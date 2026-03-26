@@ -513,12 +513,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Key stats visible
-      expect(find.text('3'), findsOneWidget); // current streak
-      expect(find.text('Best: 7'), findsOneWidget); // max streak
-      expect(find.text('30'), findsOneWidget); // points (2 * 15)
-      expect(find.text('Streak'), findsOneWidget);
-      expect(find.text('Points'), findsOneWidget);
+      // Key stats visible — values shown as raw numbers, labels as 'Day Streak'
+      // and 'Total Points'. maxStreak is not separately displayed.
+      expect(find.text('3'), findsOneWidget); // current streak value
+      expect(find.text('30'), findsOneWidget); // points value (2 * 15)
+      expect(find.text('Day Streak'), findsOneWidget);
+      expect(find.text('Total Points'), findsOneWidget);
     });
 
     // ── Widget: per-curriculum cards show on-track status ──
@@ -572,13 +572,13 @@ void main() {
 
       // Scroll down to reveal lazily-built Recent Activity section
       await tester.scrollUntilVisible(
-        find.text('Recent Activity (Last 7 Days)'),
+        find.text('Recent Activity'),
         200,
         scrollable: find.byType(Scrollable),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Recent Activity (Last 7 Days)'), findsOneWidget);
+      expect(find.text('Recent Activity'), findsOneWidget);
       expect(find.text('ref-mishnayos-0'), findsOneWidget);
       expect(find.text('ref-mishnayos-1'), findsOneWidget);
       expect(find.text('+10'), findsAtLeastNWidgets(1));
@@ -639,19 +639,19 @@ void main() {
 
         // Verify key stats are displayed in the UI
         expect(find.text('50'), findsOneWidget); // 5 * 10 points
-        expect(find.text('2'), findsOneWidget); // current streak
-        expect(find.text('Best: 2'), findsOneWidget); // max streak
+        expect(find.text('2'), findsOneWidget); // current streak value
+        // maxStreak is not separately displayed in the parent dashboard UI
 
         // Scroll down to reveal lazily-built Recent Activity section
         await tester.scrollUntilVisible(
-          find.text('Recent Activity (Last 7 Days)'),
+          find.text('Recent Activity'),
           200,
           scrollable: find.byType(Scrollable),
         );
         await tester.pumpAndSettle();
 
         // Verify recent completions are shown
-        expect(find.text('Recent Activity (Last 7 Days)'), findsOneWidget);
+        expect(find.text('Recent Activity'), findsOneWidget);
         expect(find.text('day1-ref-0'), findsOneWidget);
         expect(find.text('day2-ref-0'), findsOneWidget);
       },

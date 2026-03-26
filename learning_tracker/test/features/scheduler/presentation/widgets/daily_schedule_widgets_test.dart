@@ -35,7 +35,7 @@ ComposedDailySchedule _schedule(List<DailyTask> tasks, String summary) {
 Widget _wrap(Widget child) {
   return ProviderScope(
     child: MaterialApp(
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme(),
       home: Scaffold(body: child),
     ),
   );

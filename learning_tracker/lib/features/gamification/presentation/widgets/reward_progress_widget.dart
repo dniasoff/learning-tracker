@@ -53,7 +53,10 @@ class RewardProgressWidget extends ConsumerWidget {
     required RewardModel reward,
     required double progress,
   }) {
-    final title = userMode == UserMode.child ? 'Mystery Reward!' : reward.title;
+    // Show title if: adult mode, or reward is visible, or reward is revealed
+    final showTitle =
+        userMode == UserMode.adult || reward.isVisible || reward.isRevealed;
+    final title = showTitle ? reward.title : 'Mystery Reward!';
 
     return Card(
       child: Padding(

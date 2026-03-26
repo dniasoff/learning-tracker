@@ -82,7 +82,7 @@ void main() {
     });
 
     test('schema version is 7', () {
-      expect(db.schemaVersion, equals(17));
+      expect(db.schemaVersion, equals(22));
     });
 
     test('all 12 DAOs are accessible', () {
@@ -180,7 +180,7 @@ void main() {
 
   group('Story 1.6 -- Theme & design tokens', tags: ['story_1_6'], () {
     test('AppTheme provides a Material 3 light theme', () {
-      final theme = AppTheme.lightTheme;
+      final theme = AppTheme.lightTheme();
       expect(theme, isA<ThemeData>());
       expect(theme.useMaterial3, isTrue);
     });

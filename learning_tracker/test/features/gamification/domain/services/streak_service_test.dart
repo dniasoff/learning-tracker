@@ -57,15 +57,43 @@ void main() {
       },
     );
 
-    test('resets streak to 1 when completion after a gap day', () async {
+    test(
+      'preserves streak via grace period when completion after a 1-day gap',
+      () async {
+        final day1 = DateTimeFactory.utc(2026, 3, 15, 12);
+        final day2 = DateTimeFactory.utc(2026, 3, 16, 12);
+        final day4 = DateTimeFactory.utc(
+          2026,
+          3,
+          18,
+          12,
+        ); // skipped day 3 (dayGap=2)
+
+        await service.recordCompletion(day1);
+        await service.recordCompletion(day2);
+        final streak = await service.recordCompletion(day4);
+
+        // Grace period applies (dayGap==2 and no recent grace use): streak continues
+        expect(streak.currentStreak, 3);
+        expect(streak.maxStreak, 3);
+      },
+    );
+
+    test('resets streak to 1 when completion after a 2+ day gap', () async {
       final day1 = DateTimeFactory.utc(2026, 3, 15, 12);
       final day2 = DateTimeFactory.utc(2026, 3, 16, 12);
-      final day4 = DateTimeFactory.utc(2026, 3, 18, 12); // skipped day 3
+      final day5 = DateTimeFactory.utc(
+        2026,
+        3,
+        19,
+        12,
+      ); // skipped days 3 & 4 (dayGap=3)
 
       await service.recordCompletion(day1);
       await service.recordCompletion(day2);
-      final streak = await service.recordCompletion(day4);
+      final streak = await service.recordCompletion(day5);
 
+      // dayGap==3: beyond grace period, streak resets
       expect(streak.currentStreak, 1);
       expect(streak.maxStreak, 2);
     });
@@ -87,18 +115,18 @@ void main() {
     test(
       'updates max streak when current streak exceeds previous max',
       () async {
-        // Build streak of 2, then gap, then build streak of 3
+        // Build streak of 2, then 3-day gap (resets), then build streak of 3
         await service.recordCompletion(DateTimeFactory.utc(2026, 3, 10, 12));
         await service.recordCompletion(DateTimeFactory.utc(2026, 3, 11, 12));
-        // Gap on March 12
-        await service.recordCompletion(DateTimeFactory.utc(2026, 3, 13, 12));
+        // Gap of 3 days (dayGap=3 > 2, beyond grace period — resets)
+        await service.recordCompletion(DateTimeFactory.utc(2026, 3, 14, 12));
 
         var streak = await service.getStreak();
         expect(streak!.maxStreak, 2);
         expect(streak.currentStreak, 1);
 
-        await service.recordCompletion(DateTimeFactory.utc(2026, 3, 14, 12));
         await service.recordCompletion(DateTimeFactory.utc(2026, 3, 15, 12));
+        await service.recordCompletion(DateTimeFactory.utc(2026, 3, 16, 12));
 
         streak = await service.getStreak();
         expect(streak!.currentStreak, 3);

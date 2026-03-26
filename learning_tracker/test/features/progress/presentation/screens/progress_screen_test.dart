@@ -19,9 +19,7 @@ void main() {
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
           ),
-          dashboardGlobalPointsProvider.overrideWith(
-            (ref) => Future.value(0),
-          ),
+          dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
         ],
         child: const MaterialApp(home: ProgressScreen()),
       );

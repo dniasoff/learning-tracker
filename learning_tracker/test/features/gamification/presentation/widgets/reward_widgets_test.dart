@@ -14,6 +14,7 @@ RewardModel _makeReward({
   int pointsThreshold = 50,
   bool isRevealed = false,
   bool isEarned = false,
+  bool isVisible = true,
   DateTime? earnedAt,
 }) => RewardModel(
   id: id,
@@ -22,6 +23,7 @@ RewardModel _makeReward({
   pointsThreshold: pointsThreshold,
   isRevealed: isRevealed,
   isEarned: isEarned,
+  isVisible: isVisible,
   earnedAt: earnedAt,
   createdAt: DateTime(2026),
 );
@@ -61,7 +63,11 @@ void main() {
         ProviderScope(
           overrides: [
             nextRewardProvider.overrideWith(
-              (_) async => _makeReward(title: 'Bronze', pointsThreshold: 100),
+              (_) async => _makeReward(
+                title: 'Bronze',
+                pointsThreshold: 100,
+                isVisible: false,
+              ),
             ),
             rewardProgressProvider.overrideWith((_) async => 0.5),
           ],
@@ -178,6 +184,7 @@ void main() {
                   title: 'Silver',
                   isEarned: true,
                   isRevealed: false,
+                  isVisible: false,
                 ),
               ],
             ),

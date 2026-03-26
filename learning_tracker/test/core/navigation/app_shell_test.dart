@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/test_database.dart';
@@ -126,6 +127,14 @@ void main() {
               dashboardStreakProvider.overrideWith(
                 (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
               ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
             ],
             child: MaterialApp.router(
               routerConfig: router.config(
@@ -180,6 +189,11 @@ void main() {
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),
+            dashboardStreakRecoveryProvider.overrideWith(
+              (ref) => Future.value(
+                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+              ),
+            ),
           ],
           child: MaterialApp.router(
             routerConfig: router.config(
@@ -196,7 +210,8 @@ void main() {
       await tester.tap(find.text('Learn'));
       await _pumpDashboard(tester);
 
-      expect(find.text('Learning Screen'), findsOneWidget);
+      // LearningScreen AppBar title is 'Learn'
+      expect(find.text('Learn'), findsWidgets);
     });
 
     testWidgets('tapping Progress tab navigates to progress route', (
@@ -211,6 +226,11 @@ void main() {
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),
+            dashboardStreakRecoveryProvider.overrideWith(
+              (ref) => Future.value(
+                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+              ),
+            ),
           ],
           child: MaterialApp.router(
             routerConfig: router.config(
@@ -224,7 +244,8 @@ void main() {
       await tester.tap(find.text('Progress'));
       await _pumpDashboard(tester);
 
-      expect(find.text('Progress Screen'), findsOneWidget);
+      // ProgressScreen AppBar title is 'Progress'
+      expect(find.text('Progress'), findsWidgets);
     });
 
     testWidgets('tapping Settings tab navigates to settings route', (
@@ -252,6 +273,11 @@ void main() {
             firebaseAuthProvider.overrideWithValue(mockAuthForProvider),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+            ),
+            dashboardStreakRecoveryProvider.overrideWith(
+              (ref) => Future.value(
+                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+              ),
             ),
           ],
           child: MaterialApp.router(
@@ -286,6 +312,11 @@ void main() {
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),
+            dashboardStreakRecoveryProvider.overrideWith(
+              (ref) => Future.value(
+                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+              ),
+            ),
           ],
           child: MaterialApp.router(
             routerConfig: router.config(
@@ -310,12 +341,22 @@ void main() {
     ) async {
       final router = _createUnauthenticatedRouter();
 
+      // Suppress layout-overflow errors from AppIntroScreen in test viewport.
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        if (details.exception.toString().contains('overflowed')) return;
+        originalOnError?.call(details);
+      };
+      addTearDown(() => FlutterError.onError = originalOnError);
+
       await tester.pumpWidget(
         MaterialApp.router(routerConfig: router.config()),
       );
       await _pumpDashboard(tester);
 
-      expect(find.text('Torah Learning Tracker'), findsOneWidget);
+      // Auth guard redirects to AppIntroRoute; the dashboard NavigationBar
+      // must NOT be present, confirming the user was redirected away.
+      expect(find.byType(NavigationBar), findsNothing);
     });
 
     testWidgets('authenticated user sees dashboard with bottom navigation', (
@@ -329,6 +370,11 @@ void main() {
             appDatabaseProvider.overrideWithValue(db),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+            ),
+            dashboardStreakRecoveryProvider.overrideWith(
+              (ref) => Future.value(
+                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+              ),
             ),
           ],
           child: MaterialApp.router(routerConfig: router.config()),

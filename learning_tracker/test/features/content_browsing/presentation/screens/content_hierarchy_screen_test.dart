@@ -235,8 +235,9 @@ void main() {
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('Seder Moed'), findsOneWidget);
 
-      // Back button should no longer be visible at root level
-      expect(find.byIcon(Icons.arrow_back), findsNothing);
+      // Back button is always present in the AppBar; at root level it
+      // delegates to context.router.maybePop() instead of navigating up.
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
 
     testWidgets('displays leaf items with different styling', (tester) async {

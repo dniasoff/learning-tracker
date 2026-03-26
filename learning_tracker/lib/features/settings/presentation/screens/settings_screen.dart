@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/theme_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/link_provider_dialog.dart';
@@ -82,11 +84,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () => context.pushRoute(const CurriculumListRoute()),
                   ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
                     leading: Icon(
                       Icons.flag_outlined,
@@ -97,11 +95,7 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.pushRoute(const SchedulerRoute()),
                   ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   // Study Day Configuration
                   activeCurriculaAsync.when(
                     data: (curricula) {
@@ -132,7 +126,7 @@ class SettingsScreen extends ConsumerWidget {
                           Divider(
                             height: 1,
                             indent: 56,
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: theme.dividerColor,
                           ),
                         ],
                       );
@@ -167,55 +161,9 @@ class SettingsScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  ListTile(
-                    leading: Icon(
-                      Icons.dark_mode_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Theme'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Dark',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ),
-                    onTap: () {},
-                  ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.color_lens_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Accent Color'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ),
-                    onTap: () {},
-                  ),
+                  _ThemeTile(theme: theme),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
+                  _AccentColorTile(theme: theme),
                 ],
               ),
             ),
@@ -237,11 +185,7 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.pushRoute(const NotificationsRoute()),
                   ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
                     leading: Icon(
                       Icons.local_fire_department,
@@ -293,11 +237,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () => context.pushRoute(const SyncRoute()),
                   ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
                     leading: Icon(
                       Icons.file_upload_outlined,
@@ -321,11 +261,7 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   // User Mode
                   _UserModeSection(user: user),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   if (user != null &&
                       user.providerData.any(
                         (info) => info.providerId == 'password',
@@ -342,7 +278,7 @@ class SettingsScreen extends ConsumerWidget {
                         Divider(
                           height: 1,
                           indent: 56,
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: theme.dividerColor,
                         ),
                       ],
                     ),
@@ -359,7 +295,7 @@ class SettingsScreen extends ConsumerWidget {
                         Divider(
                           height: 1,
                           indent: 56,
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: theme.dividerColor,
                         ),
                       ],
                     ),
@@ -374,11 +310,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () => _showSignOutConfirmation(context, ref),
                   ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
                     leading: Icon(
                       Icons.delete_forever,
@@ -434,7 +366,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.5),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.2,
@@ -946,4 +878,201 @@ Future<void> _showLinkProviderDialog(
 ) async {
   final service = ref.read(accountManagementServiceProvider);
   await showLinkProviderDialog(context: context, service: service);
+}
+
+class _ThemeTile extends ConsumerWidget {
+  const _ThemeTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
+    String label;
+    IconData icon;
+    switch (themeMode) {
+      case ThemeMode.dark:
+        label = 'Dark';
+        icon = Icons.dark_mode_outlined;
+      case ThemeMode.light:
+        label = 'Light';
+        icon = Icons.light_mode_outlined;
+      case ThemeMode.system:
+        label = 'System';
+        icon = Icons.brightness_auto_outlined;
+    }
+
+    return ListTile(
+      leading: Icon(icon, color: theme.colorScheme.primary),
+      title: const Text('Theme'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () => _showThemePicker(context, ref, themeMode),
+    );
+  }
+
+  void _showThemePicker(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode current,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              'Choose Theme',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            for (final option in [
+              (ThemeMode.light, 'Light', Icons.light_mode_outlined),
+              (ThemeMode.dark, 'Dark', Icons.dark_mode_outlined),
+              (ThemeMode.system, 'System', Icons.brightness_auto_outlined),
+            ])
+              ListTile(
+                leading: Icon(option.$3),
+                title: Text(option.$2),
+                trailing: current == option.$1
+                    ? Icon(
+                        Icons.check,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
+                    : null,
+                onTap: () {
+                  ref.read(themeModeProvider.notifier).setThemeMode(option.$1);
+                  Navigator.pop(context);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccentColorTile extends ConsumerWidget {
+  const _AccentColorTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accentColor = ref.watch(accentColorProvider);
+
+    return ListTile(
+      leading: Icon(
+        Icons.color_lens_outlined,
+        color: theme.colorScheme.primary,
+      ),
+      title: const Text('Accent Color'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: accentColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () => _showAccentColorPicker(context, ref, accentColor),
+    );
+  }
+
+  void _showAccentColorPicker(
+    BuildContext context,
+    WidgetRef ref,
+    Color current,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              'Choose Accent Color',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  for (final option in AppTheme.accentColors)
+                    GestureDetector(
+                      onTap: () {
+                        ref
+                            .read(accentColorProvider.notifier)
+                            .setAccentColor(option.color);
+                        Navigator.pop(context);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: option.color,
+                              shape: BoxShape.circle,
+                              border: current == option.color
+                                  ? Border.all(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
+                                      width: 3,
+                                    )
+                                  : null,
+                            ),
+                            child: current == option.color
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 24,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            option.name,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
 }
