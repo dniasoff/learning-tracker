@@ -143,6 +143,10 @@ class _DashboardBody extends ConsumerWidget {
 
     final totalPoints = globalPointsAsync.asData?.value ?? 0;
 
+    if (activeCurricula.isEmpty) {
+      return _EmptyDashboard(name: name, greeting: _greeting());
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -1005,6 +1009,122 @@ class _RecentActivitySection extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EmptyDashboard extends StatelessWidget {
+  final String name;
+  final String greeting;
+
+  const _EmptyDashboard({required this.name, required this.greeting});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const green = Color(0xFF4ADE80);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$greeting,',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
+            ),
+            Text(
+              name,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 48),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    green.withValues(alpha: 0.2),
+                    green.withValues(alpha: 0.05),
+                  ],
+                ),
+                border: Border.all(
+                  color: green.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Icon(
+                Icons.menu_book_rounded,
+                color: green,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Ready to start learning?',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Set up your first learning program to begin tracking your progress.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.6),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: green.withValues(alpha: 0.4),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () =>
+                        context.router.push(const OnboardingRoute()),
+                    borderRadius: BorderRadius.circular(26),
+                    child: const Center(
+                      child: Text(
+                        'Set Up Your Learning',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
