@@ -1,8 +1,10 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
-status: 'complete'
+status: 'evolved'
 completedAt: '2026-02-08'
+evolvedAt: '2026-03-27'
+evolution: 'offline-first'
 inputDocuments:
   - '_bmad-output/planning-artifacts/product-brief-learning-tracker-2026-01-03.md'
   - '_bmad-output/planning-artifacts/prd.md'
