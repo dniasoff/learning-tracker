@@ -43,22 +43,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-/android/app/google-services.json
-/lib/firebase_options.dart
-
-/android/app/google-services.json
-/lib/firebase_options.dart
 
 # Firebase configuration with API keys
-lib/firebase_options.dart
-android/app/google-services.json
-
-# Firebase configuration with API keys
-lib/firebase_options.dart
-android/app/google-services.json
+/android/app/google-services.json
+/lib/firebase_options.dart
 
 # Generated files (build_runner)
 *.g.dart
 *.freezed.dart
 *.gr.dart
+
+# Test artifacts
+test/golden/failures/
+
+# Other
 node_modules/
