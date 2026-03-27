@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 
-enum _LearningMode { selfLearner, parent, tutor }
+enum _LearningMode { addMyself, addChild }
 
 @RoutePage()
 class ModeSelectionScreen extends ConsumerStatefulWidget {
@@ -70,8 +70,8 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
       curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
     );
 
-    _cardSlides = List.generate(3, (i) {
-      final start = 0.15 + i * 0.12;
+    _cardSlides = List.generate(2, (i) {
+      final start = 0.15 + i * 0.15;
       final end = (start + 0.35).clamp(0.0, 1.0);
       return Tween<double>(begin: 60, end: 0).animate(
         CurvedAnimation(
@@ -80,8 +80,8 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
         ),
       );
     });
-    _cardFades = List.generate(3, (i) {
-      final start = 0.15 + i * 0.12;
+    _cardFades = List.generate(2, (i) {
+      final start = 0.15 + i * 0.15;
       final end = (start + 0.3).clamp(0.0, 1.0);
       return CurvedAnimation(
         parent: _entranceController,
@@ -108,11 +108,46 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
 
   UserMode _toUserMode(_LearningMode mode) {
     switch (mode) {
-      case _LearningMode.selfLearner:
-      case _LearningMode.tutor:
+      case _LearningMode.addMyself:
         return UserMode.adult;
-      case _LearningMode.parent:
+      case _LearningMode.addChild:
         return UserMode.child;
+    }
+  }
+
+  Future<void> _skipOnboarding() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = ref.read(firebaseAuthProvider).currentUser;
+      if (user == null) {
+        if (mounted) {
+          unawaited(context.router.replaceAll([const SignInRoute()]));
+        }
+        return;
+      }
+
+      final profileService = ref.read(userProfileServiceProvider);
+      await profileService.setUserMode(
+        firebaseUid: user.uid,
+        displayName:
+            user.displayName ?? user.email?.split('@').first ?? 'User',
+        mode: UserMode.adult,
+      );
+
+      if (mounted) {
+        unawaited(context.router.replaceAll([const AppShellRoute()]));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -260,7 +295,7 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Who are you\nlearning for?',
+                                    "Let's get\nstarted",
                                     style: theme.textTheme.headlineMedium
                                         ?.copyWith(
                                           color: Colors.white,
@@ -270,7 +305,7 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    'Choose your learning mode to customize your experience.',
+                                    'Who would you like to set up learning for?',
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       color: Colors.white.withValues(
                                         alpha: 0.55,
@@ -311,7 +346,26 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
                             opacity: _buttonFade,
                             child: _buildContinueButton(green),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 12),
+
+                          // Skip button
+                          FadeTransition(
+                            opacity: _buttonFade,
+                            child: Center(
+                              child: TextButton(
+                                onPressed: _isLoading ? null : _skipOnboarding,
+                                child: Text(
+                                  'Skip for now',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                         ],
                       ),
                     ),
@@ -328,32 +382,25 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
   List<Widget> _buildModeCards(Color green) {
     final modes = [
       (
-        mode: _LearningMode.selfLearner,
-        title: 'Self-Learner',
+        mode: _LearningMode.addMyself,
+        title: 'Add myself as a learner',
         description:
-            'Personal progress tracking, Siyum reminders, and daily goals.',
+            'Track your personal learning, set goals, and celebrate milestones.',
         icon: Icons.person,
       ),
       (
-        mode: _LearningMode.parent,
-        title: 'Parent',
+        mode: _LearningMode.addChild,
+        title: 'Add a child',
         description:
-            'Reward management for children, progress reports, and family leaderboards.',
-        icon: Icons.people_outline,
-      ),
-      (
-        mode: _LearningMode.tutor,
-        title: 'Tutor / Rebbi',
-        description:
-            'Student management, class-wide assignments, and individual tracking.',
-        icon: Icons.school_outlined,
+            'Set up learning for your child with rewards, progress tracking, and parental controls.',
+        icon: Icons.child_care,
       ),
     ];
 
     return List.generate(modes.length, (i) {
       final m = modes[i];
       return Padding(
-        padding: EdgeInsets.only(bottom: i < 2 ? 14 : 0),
+        padding: EdgeInsets.only(bottom: i < modes.length - 1 ? 14 : 0),
         child: Transform.translate(
           offset: Offset(0, _cardSlides[i].value),
           child: Opacity(
