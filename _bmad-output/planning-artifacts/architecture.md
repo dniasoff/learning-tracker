@@ -1257,3 +1257,246 @@ flutter create \
 ```
 
 **Note:** v1 Story 1.1 is obsolete. A new Story 1.1 must be written for Learning Tracker covering project initialization with v2 architecture, updated dependencies (especially auto_route 11.x, drift_flutter), new org name (`com.jcom.torah`), and expanded 15-feature module structure.
+
+---
+
+## Offline-First Architecture Evolution (2026-03-27)
+
+### Context
+
+This section evolves the V1 architecture to support users who never connect to the internet after initial APK installation. Local-first is the default mode. Cloud sync is a transparent, optional layer that activates only when the user has a Firebase account.
+
+### Driving Requirements
+
+| ID | Requirement |
+|---|---|
+| NFR22-v2 | All features work without network, including first launch |
+| NFR23-v2 | Identical UX online/offline for ALL features |
+| FR-NEW-1 | System creates local profile on first launch without authentication |
+| FR-NEW-2 | System hydrates text cache from bundled assets in background |
+| FR-NEW-3 | System computes daily calendar program assignments locally |
+| FR-NEW-4 | User can optionally create account to enable cloud sync |
+| FR-NEW-5 | System transparently activates sync when Firebase account exists |
+
+### Decision Evolutions
+
+#### D2-v2: Local-First Auth with Cached Firebase
+
+**Supersedes:** D2 (Firebase Auth mandatory)
+
+**Decision:** Auth abstraction layer with local-first default and optional Firebase.
+
+**Architecture:**
+- `AuthStateService` interface with two implementations:
+  - `LocalAuthState`: generates stable UUID, persists in SharedPreferences, always returns "authenticated"
+  - `FirebaseAuthState`: existing Firebase behavior, caches auth state locally
+- `AuthGuard` checks `AuthStateService`, never `FirebaseAuth` directly
+- First launch online → Firebase Auth, cache locally
+- First launch offline → Local UUID, full app access immediately
+- No migration path: account creation is greenfield (sync starts fresh)
+
+**Sync Activation Rule:**
+- Firebase-backed user (cached): SyncEngine always active — queues when offline, flushes when connected. Existing D4 behavior unchanged.
+- Local UUID user: SyncEngine dormant — no queuing, no push, no pull.
+- Trigger is "does this user have a Firebase account, ever" — not current connectivity state.
+
+**Affects:** Auth feature module, route guards, sync engine, startup sequence, onboarding flow.
+
+#### D4-v2: Conditional Sync
+
+**Supersedes:** D4 (Hybrid push/pull always active)
+
+**Decision:** Sync layer activates conditionally based on account type, not connectivity.
+
+**Rules:**
+- `SyncEngine.isActive` = `AuthStateService.isFirebaseUser`
+- Firebase users: full D4 behavior (push-on-write, pull-on-launch, foreground listeners, offline queue)
+- Local users: SyncEngine is a no-op — all method calls return immediately
+- Account creation: sync starts fresh from that moment forward
+- `SyncLifecycleObserver`: checks `isActive` before attaching/detaching listeners
+
+**Affects:** SyncEngine, SyncLifecycleObserver, OfflineQueue, FirestoreDataSource.
+
+#### D6-v2: Fully Bundled Content with Background Hydration
+
+**Supersedes:** D6 (Bundled hierarchy only, text downloaded at runtime)
+
+**Decision:** Bundle ALL content — hierarchy JSON and text JSON — in the APK. Text hydrates into SQLite in background.
+
+**Bundle Contents:**
+
+| Asset | Format | Est. Size |
+|---|---|---|
+| Hierarchy (7 curricula) | JSON | ~4 MB |
+| Text — Bavli (5,471 items) | gzipped JSON | ~15-20 MB |
+| Text — Mishnayos (4,192) | gzipped JSON | ~3-5 MB |
+| Text — Yerushalmi (2,211) | gzipped JSON | ~8-10 MB |
+| Text — Chumash (5,846) | gzipped JSON | ~2-3 MB |
+| Text — Mishna Berurah (17,397) | gzipped JSON | ~10-15 MB |
+| Text — Nach (17,360) | gzipped JSON | ~5-8 MB |
+| Text — Mussar (51) | gzipped JSON | <1 MB |
+| Calendar cycles (12 programs) | JSON | <1 MB |
+| **Total APK increase** | | **~45-60 MB** |
+
+**Hydration Strategy:**
+- First launch: app immediately usable (hierarchy in memory)
+- Background isolate decompresses text into TextCache SQLite table
+- Batch inserts: 500 items/batch with checkpoint after each (resumable)
+- If user reads text before hydration reaches it: load from bundled asset directly as fallback
+- `TextDownloadStatuses` marks each curriculum hydrated on completion
+- Subsequent launches: skip (already done)
+- Fully transparent — no UI indication needed
+
+**Affects:** APK size, pubspec.yaml assets, TextDownloadService, TextCacheRepository (fallback path), build pipeline.
+
+### New Decisions
+
+#### D9: Local Calendar Engine — Precomputed Lookup Tables
+
+**Decision:** All 12 calendar programs computed locally from bundled cycle data. No API dependency.
+
+**Architecture:**
+- Bundle JSON per program: `assets/content/calendars/{program}_cycle.json`
+- Format: `{ "epoch": "YYYY-MM-DD", "refs": ["ref1", "ref2", ...] }`
+- `LocalCalendarEngine` service: `dayIndex = daysSince(epoch) % refs.length` → direct array lookup
+- `CalendarProgramService` uses `LocalCalendarEngine` as primary source
+- Online validation: when connected, optionally check API and log discrepancies (never override local result)
+
+**Programs:**
+1. Daf Yomi
+2. Mishna Yomit
+3. Nach Yomi
+4. Yerushalmi Yomi
+5. Daf a Week
+6. Rambam 1 Chapter
+7. Rambam 3 Chapters
+8. Halakhah Yomit
+9. Tanakh Yomi
+10. Arukh HaShulchan Yomi
+11. Chofetz Chaim Daily
+12. Kitzur Shulchan Aruch Yomi
+
+**Cycle Transitions:**
+- Each cycle JSON includes `nextCycleStart` metadata
+- App warns user to update if approaching end of bundled cycle data
+
+**Build Tool:** `tool/seed_calendar_cycles.dart`
+- Queries Sefaria/Hebcal APIs day-by-day across full cycle
+- Rate limited: 1-2 requests/second
+- Output: JSON cycle files
+- One-time build step, re-run only at cycle boundaries
+
+**Affects:** CalendarProgramService, calendar providers, build pipeline, pubspec.yaml assets.
+
+#### D10: Lazy Firebase Initialization
+
+**Decision:** Firebase SDK initializes only when user explicitly creates an account or signs in. Zero Firebase code runs for local-only users.
+
+**Startup Sequence:**
+```
+main() →
+  WidgetsFlutterBinding.ensureInitialized()
+  NotificationInitializer.initialize()        [local, safe]
+  Check SharedPreferences for profile state
+    → Local profile exists      → runApp() immediately
+    → Firebase profile cached   → Firebase.initializeApp() then runApp()
+    → No profile                → runApp() → onboarding (no Firebase)
+  Background: start text hydration if not complete
+```
+
+**Firebase Guard Rule:**
+- All Firebase call sites check `AuthStateService.isFirebaseUser`
+- `GoogleSignIn.initialize()` deferred to sign-in screen
+- `ConnectivityService`: platform check first (instant), DNS only if platform reports connected, 2-second timeout (down from 5)
+
+**Affects:** main.dart, all Firebase providers, ConnectivityService, GoogleSignIn initialization.
+
+### New Patterns
+
+#### P7: Auth Abstraction — AuthStateService Interface
+
+**Pattern:** All auth checks go through `AuthStateService`, never `FirebaseAuth` directly. This applies to guards, providers, and services.
+
+**Interface:**
+```dart
+abstract class AuthStateService {
+  bool get isAuthenticated;    // true for both local and Firebase users
+  bool get isFirebaseUser;     // true only for Firebase-backed users
+  String get uid;              // local UUID or Firebase UID
+  Future<void> signOut();
+  Stream<bool> authStateChanges();
+}
+```
+
+**Rules:**
+- `AuthGuard` calls `authStateService.isAuthenticated`
+- `SyncEngine` checks `authStateService.isFirebaseUser`
+- No code outside `auth/data/` should import `firebase_auth` directly
+- Providers expose `AuthStateService`, not `FirebaseAuth`
+
+**Anti-Pattern:** Never check `FirebaseAuth.instance.currentUser` outside the auth data layer. Never assume a user has a Firebase account.
+
+#### P8: Sync Activation Gate
+
+**Pattern:** SyncEngine exposes an `isActive` property driven by account type. All sync operations early-return when inactive.
+
+**Rules:**
+```dart
+class SyncEngine {
+  bool get isActive => _authStateService.isFirebaseUser;
+
+  Future<void> pushCompletion(Completion c) async {
+    if (!isActive) return;  // no-op for local users
+    // existing push logic...
+  }
+}
+```
+
+- Every public SyncEngine method checks `isActive` first
+- OfflineQueue disabled when `!isActive` (no writes to sync_queue)
+- SyncLifecycleObserver skips listener attach/detach when `!isActive`
+- When user creates Firebase account: `isActive` flips to true, SyncEngine begins fresh sync from that moment
+
+**Anti-Pattern:** Never queue sync operations for local-only users. Never check connectivity as a proxy for sync activation.
+
+### Updated Structural Changes
+
+**New files:**
+- `lib/core/services/local_calendar_engine.dart`
+- `lib/features/auth/domain/services/auth_state_service.dart`
+- `lib/features/auth/data/services/local_auth_state.dart`
+- `lib/features/auth/data/services/firebase_auth_state.dart`
+- `assets/content/text/*.json.gz` (7 files)
+- `assets/content/calendars/*.json` (12 files)
+- `tool/seed_calendar_cycles.dart`
+
+**Modified files:**
+- `main.dart` — new startup sequence
+- `lib/core/navigation/guards/auth_guard.dart` — use AuthStateService
+- `lib/features/sync/data/sync_engine.dart` — activation gate
+- `lib/features/sync/data/offline_queue.dart` — conditional activation
+- `lib/core/network/connectivity_service.dart` — faster timeout
+- `lib/core/providers/firebase_providers.dart` — lazy init
+- `lib/features/content_browsing/data/services/text_download_service.dart` — hydration-from-assets path
+- `lib/core/services/calendar_program_service.dart` — local engine primary
+- `pubspec.yaml` — new assets
+
+### Implementation Sequence
+
+1. **Auth abstraction** (D2-v2, D10, P7) — unblocks everything
+2. **Bundled text + hydration** (D6-v2) — parallel with #3
+3. **Local calendar engine** (D9) — parallel with #2
+4. **Sync conditionalization** (D4-v2, P8) — after #1
+5. **Integration testing** — airplane mode: install → onboard → full use
+
+### Success Criteria
+
+- [ ] Fresh install on airplane-mode device → complete onboarding → full app use
+- [ ] All 7 curricula: browse hierarchy + read Hebrew/English text — no network
+- [ ] All 12 calendar programs show correct "today's learning" — no network
+- [ ] User creates account weeks later → sync begins fresh from that point
+- [ ] Second device signs in → pulls data from Firestore
+- [ ] Network drops mid-session → zero UX disruption
+- [ ] App never shows loading spinners waiting for network in core flows
+- [ ] Firebase-backed users: existing sync behavior unchanged
+- [ ] Local-only users: zero Firebase SDK activity
