@@ -125,6 +125,76 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
     }
   }
 
+  /// Watch all active (non-archived) tracks for a profile.
+  Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {
+    return (select(curriculumTracks)
+          ..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.isActive.equals(true) &
+                t.archivedAt.isNull(),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
+        .watch();
+  }
+
+  /// Watch all archived tracks for a profile.
+  Stream<List<CurriculumTrack>> watchArchivedTracksForProfile(int profileId) {
+    return (select(curriculumTracks)
+          ..where(
+            (t) => t.profileId.equals(profileId) & t.archivedAt.isNotNull(),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
+        .watch();
+  }
+
+  /// Archive a track — hides from dashboard/scheduler but preserves data.
+  Future<void> archiveTrack(
+    int profileId,
+    CurriculumId curriculumId,
+    TrackType trackType,
+  ) async {
+    await (update(curriculumTracks)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculumId.storageKey) &
+              t.trackType.equals(trackType.storageKey),
+        ))
+        .write(
+          CurriculumTracksCompanion(
+            archivedAt: Value(DateTimeFactory.nowUtc()),
+          ),
+        );
+  }
+
+  /// Unarchive a track — makes it active again.
+  Future<void> unarchiveTrack(
+    int profileId,
+    CurriculumId curriculumId,
+    TrackType trackType,
+  ) async {
+    await (update(curriculumTracks)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculumId.storageKey) &
+              t.trackType.equals(trackType.storageKey),
+        ))
+        .write(const CurriculumTracksCompanion(archivedAt: Value(null)));
+  }
+
+  /// Count active (non-archived) tracks for a profile.
+  Future<int> countActiveTracksForProfile(int profileId) async {
+    final tracks =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.isActive.equals(true) &
+                  t.archivedAt.isNull(),
+            ))
+            .get();
+    return tracks.length;
+  }
+
   /// Initialize default tracks for a curriculum.
   ///
   /// Creates only the personal track (active by default).

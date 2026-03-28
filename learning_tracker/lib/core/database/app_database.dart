@@ -116,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration {
@@ -382,6 +382,12 @@ class AppDatabase extends _$AppDatabase {
           );
           await customStatement(
             'ALTER TABLE profile_programs ADD COLUMN tracking_start_ref TEXT',
+          );
+        }
+        if (from < 23) {
+          // Migration from schema v22 to v23: Archive support for tracks
+          await customStatement(
+            'ALTER TABLE curriculum_tracks ADD COLUMN archived_at INTEGER',
           );
         }
       },

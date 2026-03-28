@@ -87,6 +87,18 @@ class SettingsScreen extends ConsumerWidget {
                   Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
                     leading: Icon(
+                      Icons.route,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: const Text('Manage Tracks'),
+                    subtitle: const Text('Add, edit, or archive tracks'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        context.pushRoute(const TrackManagementHubRoute()),
+                  ),
+                  Divider(height: 1, indent: 56, color: theme.dividerColor),
+                  ListTile(
+                    leading: Icon(
                       Icons.flag_outlined,
                       color: theme.colorScheme.primary,
                     ),

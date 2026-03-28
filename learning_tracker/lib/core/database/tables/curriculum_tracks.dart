@@ -23,6 +23,10 @@ class CurriculumTracks extends Table {
   /// When this track was last deactivated (null if currently active)
   DateTimeColumn get deactivatedAt => dateTime().nullable()();
 
+  /// When this track was archived (null if not archived).
+  /// Archived tracks are hidden from dashboard/scheduler but data is preserved.
+  DateTimeColumn get archivedAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {profileId, curriculumId, trackType};
 }
