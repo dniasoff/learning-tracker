@@ -1,5 +1,5 @@
 # generated: 2026-01-05
-# last_updated: 2026-03-26
+# last_updated: 2026-03-28
 # project: learning-tracker
 # project_key: learning-tracker
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-01-05
-last_updated: 2026-03-26
+last_updated: 2026-03-28
 project: learning-tracker
 project_key: learning-tracker
 tracking_system: file-system
@@ -193,3 +193,15 @@ development_status:
   16-5-onboarding-goal-study-day-steps: done
   16-6-dashboard-design-experience-polish: done
   epic-16-retrospective: optional
+
+  # Epic 18: Onboarding & Track Management Overhaul (8 stories)
+  epic-18: in-progress
+  18-1-extract-reusable-add-track-flow: in-progress
+  18-2-slim-global-onboarding: ready-for-dev
+  18-3-track-management-hub: ready-for-dev
+  18-4-hebrew-terms-chazara-curriculum-names: ready-for-dev
+  18-5-track-editing-from-settings: ready-for-dev
+  18-6-child-mode-onboarding-post-setup-rewards: ready-for-dev
+  18-7-navigation-state-cleanup: ready-for-dev
+  18-8-instant-mark-complete: ready-for-dev
+  epic-18-retrospective: optional
