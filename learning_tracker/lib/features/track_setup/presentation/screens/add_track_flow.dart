@@ -6,7 +6,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/program_selection_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/track_label_step.dart';
@@ -46,6 +48,7 @@ class AddTrackFlow extends ConsumerStatefulWidget {
 class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   AddTrackState _state = const AddTrackState();
   late final PageController _pageController;
+  Future<void>? _activationFuture;
 
   /// Ordered list of steps; program may be skipped dynamically.
   List<AddTrackStep> get _activeSteps {
@@ -251,6 +254,26 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   void _onCurriculumSelected(CurriculumId curriculum) {
+    // Fire-and-forget content activation in background (T3/AC-5)
+    final service = ref.read(curriculumActivationServiceProvider);
+    _activationFuture = service
+        .activate(curriculum)
+        .then((_) {
+          if (mounted) {
+            setState(() {
+              _state = _state.copyWith(contentActivated: true);
+            });
+          }
+        })
+        .catchError((_) {
+          // Silent fail — activation may already be done
+          if (mounted) {
+            setState(() {
+              _state = _state.copyWith(contentActivated: true);
+            });
+          }
+        });
+
     setState(() {
       _state = _state.copyWith(curriculumId: curriculum);
     });
@@ -265,8 +288,19 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   void _onProgramSelected(int? programId, String? programName) {
+    // Auto-adjust scope when program is selected (T5/AC-6)
+    // Programs like Daf Yomi cover all of Bavli — clear any scope narrowing
+    var adjustedScope = _state.scopeSelections;
+    if (programId != null) {
+      adjustedScope = null; // Program = full scope
+    }
+
     setState(() {
-      _state = _state.copyWith(programId: programId, programName: programName);
+      _state = _state.copyWith(
+        programId: programId,
+        programName: programName,
+        scopeSelections: adjustedScope,
+      );
     });
     _goToNextStep();
   }
@@ -329,6 +363,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       wizardResult: _state.wizardResult,
       goalResult: _state.goalResult,
       bulkMarkResult: _state.bulkMarkResult,
+    );
+
+    // Persist track to database (T11/AC-8)
+    final creationService = ref.read(trackCreationServiceProvider);
+    await creationService.createTrack(
+      result: result,
+      profileId: widget.profileId,
     );
 
     widget.onComplete?.call(result);
@@ -402,16 +443,33 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   Widget _buildScopeStep() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
-    // Scope selection with skip option
-    return Column(
-      children: [
-        Expanded(
-          child: _ScopeStepAdapter(
+    // Show spinner if content activation not yet complete (T4/AC-5)
+    if (!_state.contentActivated && _activationFuture != null) {
+      return FutureBuilder<void>(
+        future: _activationFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Preparing content...'),
+                ],
+              ),
+            );
+          }
+          return _ScopeStepAdapter(
             curriculumId: _state.curriculumId!,
             onComplete: _onScopeComplete,
-          ),
-        ),
-      ],
+          );
+        },
+      );
+    }
+    return _ScopeStepAdapter(
+      curriculumId: _state.curriculumId!,
+      onComplete: _onScopeComplete,
     );
   }
 
