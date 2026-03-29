@@ -419,6 +419,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   Widget _buildStep(AddTrackStep step) {
+    // Guard: steps after curriculum require curriculumId to be set.
+    // PageView pre-builds all pages, so we show a placeholder until
+    // the user selects a curriculum on step 1.
+    if (step != AddTrackStep.curriculum && _state.curriculumId == null) {
+      return const SizedBox.shrink();
+    }
+
     return switch (step) {
       AddTrackStep.curriculum => CurriculumPickerStep(
         onSelected: _onCurriculumSelected,
