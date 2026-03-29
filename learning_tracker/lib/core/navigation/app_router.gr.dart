@@ -647,22 +647,6 @@ class ManageLearnersRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [ModeSelectionScreen]
-class ModeSelectionRoute extends PageRouteInfo<void> {
-  const ModeSelectionRoute({List<PageRouteInfo>? children})
-    : super(ModeSelectionRoute.name, initialChildren: children);
-
-  static const String name = 'ModeSelectionRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const ModeSelectionScreen();
-    },
-  );
-}
-
-/// generated route for
 /// [NotificationsScreen]
 class NotificationsRoute extends PageRouteInfo<void> {
   const NotificationsRoute({List<PageRouteInfo>? children})

@@ -192,7 +192,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         unawaited(context.router.replace(const OnboardingRoute()));
       }
     } else {
-      unawaited(context.router.push(const ModeSelectionRoute()));
+      unawaited(context.router.push(const OnboardingRoute()));
     }
   }
 

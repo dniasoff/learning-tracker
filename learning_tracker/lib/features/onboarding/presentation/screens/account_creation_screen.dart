@@ -100,7 +100,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
         _nameController.text.trim(),
       );
       if (mounted) {
-        unawaited(context.router.push(const ModeSelectionRoute()));
+        unawaited(context.router.push(const OnboardingRoute()));
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -134,7 +134,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                 unawaited(context.router.replace(const OnboardingRoute()));
               }
             } else {
-              unawaited(context.router.push(const ModeSelectionRoute()));
+              unawaited(context.router.push(const OnboardingRoute()));
             }
           }
         }

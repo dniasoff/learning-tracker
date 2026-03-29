@@ -28,7 +28,7 @@ void main() {
   late MockStackRouter mockRouter;
 
   setUpAll(() {
-    registerFallbackValue(const ModeSelectionRoute());
+    registerFallbackValue(const OnboardingRoute());
     registerFallbackValue(const OnboardingRoute());
   });
 
@@ -183,7 +183,7 @@ void main() {
       expect(find.text('OR SIGN UP WITH'), findsOneWidget);
     });
 
-    testWidgets('email sign-up success navigates to ModeSelectionRoute', (
+    testWidgets('email sign-up success navigates to OnboardingRoute', (
       tester,
     ) async {
       final mockCredential = MockUserCredential();
@@ -228,12 +228,12 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockRouter.push(any(that: isA<ModeSelectionRoute>())),
+        () => mockRouter.push(any(that: isA<OnboardingRoute>())),
       ).called(1);
     });
 
     testWidgets(
-      'Google sign-in success navigates to ModeSelectionRoute for new user',
+      'Google sign-in success navigates to OnboardingRoute for new user',
       (tester) async {
         final mockCredential = MockUserCredential();
         final mockAuth = MockFirebaseAuth();
@@ -262,7 +262,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => mockRouter.push(any(that: isA<ModeSelectionRoute>())),
+          () => mockRouter.push(any(that: isA<OnboardingRoute>())),
         ).called(1);
       },
     );
