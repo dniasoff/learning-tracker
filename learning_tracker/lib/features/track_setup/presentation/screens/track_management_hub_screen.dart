@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart';
@@ -36,7 +38,8 @@ class _TrackManagementHubScreenState
         body: AddTrackFlow(
           profileId: ref.watch(activeProfileIdProvider),
           isOnboarding: false,
-          isChildMode: false, // TODO(18.6): derive from active profile mode
+          isChildMode:
+              ref.watch(dashboardUserModeProvider).value == UserMode.child,
           onComplete: _onAddTrackComplete,
           onCancel: () => setState(() => _addingTrack = false),
         ),

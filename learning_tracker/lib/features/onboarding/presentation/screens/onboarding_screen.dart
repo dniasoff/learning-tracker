@@ -505,6 +505,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
               const SizedBox(height: 12),
               OutlinedButton(
+                onPressed: _onAddAnotherTrack,
+                child: const Text('Add Another Track'),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
                 onPressed: _addAnotherLearner,
                 child: const Text('Add Another Learner'),
               ),
