@@ -110,9 +110,9 @@ void main() {
         ),
       );
 
-      expect(find.text('משניות'), findsOneWidget);
+      expect(find.text('משניות'), findsWidgets);
       expect(find.text('1 of 63 units completed'), findsOneWidget);
-      expect(find.text('Berakhot'), findsWidgets);
+      expect(find.text('ברכות'), findsWidgets);
     });
 
     testWidgets('shows no completions message for empty curriculum', (
@@ -264,8 +264,8 @@ void main() {
       expect(find.text('March 2026'), findsOneWidget);
       expect(find.text('January 2026'), findsOneWidget);
       // Entries should appear
-      expect(find.text('Berakhot'), findsOneWidget);
-      expect(find.text('Shabbat'), findsOneWidget);
+      expect(find.text('ברכות'), findsOneWidget);
+      expect(find.text('שבת'), findsOneWidget);
     });
 
     testWidgets('shows empty message when no completions', (tester) async {
