@@ -320,6 +320,12 @@ void main() {
         });
 
         test('delete profile', () async {
+          // Need 2 profiles — can't delete the last one
+          await profileRepo.createProfile(
+            accountId: 1,
+            displayName: 'Keeper',
+            mode: 'adult',
+          );
           final profile = await profileRepo.createProfile(
             accountId: 1,
             displayName: 'ToDelete',
@@ -337,6 +343,12 @@ void main() {
         test(
           'cascade deletes completions, bookmarks, goals, rewards',
           () async {
+            // Need 2 profiles — can't delete the last one
+            await profileRepo.createProfile(
+              accountId: 1,
+              displayName: 'Keeper',
+              mode: 'adult',
+            );
             final profile = await profileRepo.createProfile(
               accountId: 1,
               displayName: 'CascadeTest',
@@ -982,6 +994,12 @@ void main() {
 
       group('AC: Can delete profile with confirmation', () {
         test('delete removes profile and cascades data', () async {
+          // Need 2 profiles — can't delete the last one
+          await profileRepo.createProfile(
+            accountId: 1,
+            displayName: 'Keeper',
+            mode: 'adult',
+          );
           final profile = await profileRepo.createProfile(
             accountId: 1,
             displayName: 'ToDelete',

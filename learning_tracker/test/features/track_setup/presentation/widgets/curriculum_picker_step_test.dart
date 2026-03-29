@@ -12,14 +12,14 @@ void main() {
         ),
       );
 
-      // First few should be visible; scroll to find the rest
+      // Each curriculum appears with Hebrew name (may appear twice — title + subtitle)
       for (final curriculum in CurriculumId.values) {
         await tester.scrollUntilVisible(
-          find.text(curriculum.displayNameEn),
+          find.text(curriculum.displayNameHe).first,
           50,
           scrollable: find.byType(Scrollable).last,
         );
-        expect(find.text(curriculum.displayNameEn), findsOneWidget);
+        expect(find.text(curriculum.displayNameHe), findsWidgets);
       }
     });
 
@@ -59,7 +59,8 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text(CurriculumId.bavli.displayNameEn));
+      // Tap the first occurrence of the Hebrew name
+      await tester.tap(find.text(CurriculumId.bavli.displayNameHe).first);
       expect(selected, CurriculumId.bavli);
     });
   });

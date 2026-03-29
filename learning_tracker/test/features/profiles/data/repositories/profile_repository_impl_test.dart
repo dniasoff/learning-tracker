@@ -91,6 +91,12 @@ void main() {
     });
 
     test('deleteProfile removes profile and cascaded data', () async {
+      // Need 2 profiles — can't delete the last one
+      await repo.createProfile(
+        accountId: 1,
+        displayName: 'Keeper',
+        mode: 'adult',
+      );
       final profile = await repo.createProfile(
         accountId: 1,
         displayName: 'To Delete',
@@ -249,6 +255,12 @@ void main() {
     });
 
     test('AT-8: deleted profile name is reusable', () async {
+      // Need 2 profiles — can't delete the last one
+      await repo.createProfile(
+        accountId: 1,
+        displayName: 'Keeper',
+        mode: 'adult',
+      );
       final profile = await repo.createProfile(
         accountId: 1,
         displayName: 'Daniel',
