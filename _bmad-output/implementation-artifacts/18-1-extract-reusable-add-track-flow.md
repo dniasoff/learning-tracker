@@ -1,6 +1,6 @@
 # Story 18.1: Extract Reusable Add Track Flow (הוספת מסלול)
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -287,8 +287,19 @@ _None — clean implementation_
 - T12 (widget tests): 12 widget tests added — CurriculumPickerStep (4), TrackLabelStep (4), ProgramSelectionStep (4). All passing.
 - Total: 28 tests passing (16 unit + 12 widget), 0 analyzer issues, 1810 full suite tests passing with 0 regressions.
 
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][CRITICAL] `TrackCreationService.createTrack()` performs 5+ DB operations without a `_database.transaction()` wrapper — violates "ALWAYS use transactions for writes" rule. Partial writes possible on failure. [track_creation_service.dart:37-96]
+- [ ] [AI-Review][HIGH] Study days defaults are Mon-Fri study (ISO 1-5), should be Sun-Thu study (ISO 7,1-4) for Jewish learning app. Duplicated in 3 places: `_finishFlow()` :346, `_StudyDaysStepAdapter` :573, `_buildStudyDaysStep.onSkip` :481. Completion notes claim "defaults Sun-Thu" but code does Mon-Fri. [add_track_flow.dart:346-354,573-582]
+- [ ] [AI-Review][HIGH] Domain entity `AddTrackResult` imports presentation-layer files (`BulkMarkScreen`, `LearningProcessWizardScreen`, `GoalSetupScreen`). Violates clean architecture — domain must not depend on presentation. Result types should be extracted to domain layer. [add_track_result.dart:3-5]
+- [ ] [AI-Review][HIGH] Cross-feature module imports in `add_track_providers.dart` (imports from `onboarding`, `settings`) and `add_track_flow.dart` (imports from `onboarding`, `scheduler`, `settings`). Violates "NEVER import between feature modules" rule. [add_track_providers.dart:3-4, add_track_flow.dart:7-9]
+- [ ] [AI-Review][HIGH] `_finishFlow()` has no try/catch around `creationService.createTrack()`. Saved state is cleared BEFORE the DB call — if persistence fails, user loses flow progress with no track created and no error feedback. [add_track_flow.dart:343-376]
+- [ ] [AI-Review][LOW] Default study days map duplicated in 3 places — extract to a shared constant. [add_track_flow.dart:346,481,573]
+- [ ] [AI-Review][LOW] Remove `add_track_result.freezed.dart` from File List — generated files should not be listed.
+
 ### Change Log
 
+- 2026-03-29: Code review — 1 critical, 4 high, 2 low issues identified.
 - 2026-03-28: Initial implementation — all 12 tasks complete. 8-step wizard, 3 custom widgets, 5 adapter widgets, TrackCreationService, 28 tests.
 
 ### File List

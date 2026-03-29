@@ -1,5 +1,5 @@
 # generated: 2026-01-05
-# last_updated: 2026-03-28
+# last_updated: 2026-03-29
 # project: learning-tracker
 # project_key: learning-tracker
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-01-05
-last_updated: 2026-03-28
+last_updated: 2026-03-29
 project: learning-tracker
 project_key: learning-tracker
 tracking_system: file-system
@@ -56,133 +56,108 @@ development_status:
   1-10-cicd-pipeline: done
   1-11-secure-storage-and-pin-infrastructure: done
   1-12-hebrew-date-utilities-kosher-dart: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # Epic 2: Content Import & Browsing (5 stories)
-  # QA Review: 2026-02-10 — ~35% complete overall
-  epic-2: in-progress
-  2-1-sefaria-content-import-pipeline: review
-  # ^ QA: Fetchers + import service complete and tested (22 tests).
-  #   Fixed: UTC dates, stage mismatch, typed cancellation, batch insert,
-  #   one-time seed guard.
-  #   ARCH ISSUE: Current design runs import at runtime in-app. Should be a
-  #   build-time dev script that produces a seed DB bundled in assets/.
-  #   See 2-5 for the fix.
-  2-2-hierarchical-content-browser: backlog
-  # ^ QA: STUB ONLY — placeholder screen with Center(child: Text(...)).
-  #   All feature dirs contain only .gitkeep. Data layer ready, feature not built.
-  2-3-content-text-display: backlog
-  # ^ QA: NOT STARTED on main. Linear ticket (DNI-33) was re-scoped from
-  #   "Content Search & Filtering" to "Content Text Display" (Hebrew/English
-  #   text rendering with caching). An agent branch exists with implementation
-  #   but it hasn't been merged or reviewed.
-  2-4-curriculum-activation-and-management: in-progress
-  # ^ QA: PARTIAL — Track-level activation (personal/school/tutor) is well-implemented
-  #   with 30 tests. Curriculum-level activation (toggle Mishnayos vs Bavli) missing.
-  #   Bugs fixed: TrackManagementRoute now registered in router,
-  #   getCurriculumColor key fixed ('mishnayos' not 'mishna').
-  2-5-bundled-content-json-and-dev-seed-script: backlog
-  # DNI-79: Replaces runtime import with bundled JSON content files.
-  #   - Dev script (tool/seed_content.dart) fetches from Sefaria → JSON per curriculum
-  #   - Bundle in assets/content/*.json, load in-memory via rootBundle
-  #   - Remove content_items + curriculum_hierarchy_config tables from DB
-  #   - Migrate completions/bookmarks/learning_order FK from autoincrement id → sefariaRef
-  #   - Remove runtime import UI + CurriculumImportService + dio dependency
-  #   - Impacts: DNI-31 (fetchers become dev-only), DNI-32 (in-memory browse),
-  #     DNI-33 (in-memory search), DNI-34 (activation simplified).
-  epic-2-retrospective: optional
+  epic-2: done
+  2-1-sefaria-content-import-pipeline: done
+  2-2-hierarchical-content-browser: done
+  2-3-content-text-display: done
+  2-4-curriculum-activation-and-management: done
+  2-5-bundled-content-json-and-dev-seed-script: done
+  epic-2-retrospective: done
 
   # Epic 3: Core Learning Cycle (3 stories)
-  epic-3: backlog
-  3-1-mark-completion-single-item: backlog
-  3-2-completion-history-and-stage-progression: backlog
-  3-3-bookmark-management: backlog
-  epic-3-retrospective: optional
+  epic-3: done
+  3-1-mark-completion-single-item: done
+  3-2-completion-history-and-stage-progression: done
+  3-3-bookmark-management: done
+  epic-3-retrospective: done
 
   # Epic 4: Multi-Track Learning (3 stories)
-  epic-4: backlog
-  4-1-track-management: backlog
-  4-2-track-assignment-and-duplicate-prevention: backlog
-  4-3-track-specific-progress-views: backlog
-  epic-4-retrospective: optional
+  epic-4: done
+  4-1-track-management: done
+  4-2-track-assignment-and-duplicate-prevention: done
+  4-3-track-specific-progress-views: done
+  epic-4-retrospective: done
 
   # Epic 5: Configurable Stages & Learning Order (2 stories)
-  epic-5: backlog
-  5-1-stage-definition-configuration: backlog
-  5-2-drag-and-drop-learning-order: backlog
-  epic-5-retrospective: optional
+  epic-5: done
+  5-1-stage-definition-configuration: done
+  5-2-drag-and-drop-learning-order: done
+  epic-5-retrospective: done
 
   # Epic 6: Smart Scheduler (5 stories)
-  epic-6: backlog
-  6-1-parametric-scheduler-engine: backlog
-  6-2-daily-task-generation-and-display: backlog
-  6-3-goal-management-per-curriculum-deadlines: backlog
-  6-4-pace-tracking: backlog
-  6-5-cross-curriculum-daily-schedule-composer: backlog
-  epic-6-retrospective: optional
+  epic-6: done
+  6-1-parametric-scheduler-engine: done
+  6-2-daily-task-generation-and-display: done
+  6-3-goal-management-per-curriculum-deadlines: done
+  6-4-pace-tracking: done
+  6-5-cross-curriculum-daily-schedule-composer: done
+  epic-6-retrospective: done
 
   # Epic 7: Dashboard & Progress (3 stories)
-  epic-7: backlog
-  7-1-cross-curriculum-dashboard: backlog
-  7-2-per-curriculum-progress-views: backlog
-  7-3-progress-charts-and-statistics: backlog
-  epic-7-retrospective: optional
+  epic-7: done
+  7-1-cross-curriculum-dashboard: done
+  7-2-per-curriculum-progress-views: done
+  7-3-progress-charts-and-statistics: done
+  epic-7-retrospective: done
 
   # Epic 8: Gamification & Engagement (3 stories)
-  epic-8: backlog
-  8-1-points-system: backlog
-  8-2-streak-tracking: backlog
-  8-3-mystery-rewards-system: backlog
-  epic-8-retrospective: optional
+  epic-8: done
+  8-1-points-system: done
+  8-2-streak-tracking: done
+  8-3-mystery-rewards-system: done
+  epic-8-retrospective: done
 
   # Epic 9: Onboarding Flow (5 stories)
-  epic-9: backlog
-  9-1-welcome-and-user-mode-selection: backlog
-  9-2-curriculum-selection: backlog
-  9-3-per-curriculum-goal-setup: backlog
-  9-4-bulk-mark-prior-completions: backlog
-  9-5-initial-rewards-setup-child-mode: backlog
-  epic-9-retrospective: optional
+  epic-9: done
+  9-1-welcome-and-user-mode-selection: done
+  9-2-curriculum-selection: done
+  9-3-per-curriculum-goal-setup: done
+  9-4-bulk-mark-prior-completions: done
+  9-5-initial-rewards-setup-child-mode: done
+  epic-9-retrospective: done
 
   # Epic 10: Parent Mode (6 stories)
-  epic-10: backlog
-  10-1-parent-pin-setup-and-authentication: backlog
-  10-2-parent-dashboard: backlog
-  10-3-reward-management-crud: backlog
-  10-4-point-value-configuration: backlog
-  10-5-track-management-parent: backlog
-  10-6-parent-analytics-and-progress-views: backlog
-  epic-10-retrospective: optional
+  epic-10: done
+  10-1-parent-pin-setup-and-authentication: done
+  10-2-parent-dashboard: done
+  10-3-reward-management-crud: done
+  10-4-point-value-configuration: done
+  10-5-track-management-parent: done
+  10-6-parent-analytics-and-progress-views: done
+  epic-10-retrospective: done
 
   # Epic 11: Tutor Mode (4 stories)
-  epic-11: backlog
-  11-1-tutor-pin-setup-and-authentication: backlog
-  11-2-tutor-dashboard: backlog
-  11-3-completion-history-views-tutor: backlog
-  11-4-chazara-due-and-progress-views-tutor: backlog
-  epic-11-retrospective: optional
+  epic-11: done
+  11-1-tutor-pin-setup-and-authentication: done
+  11-2-tutor-dashboard: done
+  11-3-completion-history-views-tutor: done
+  11-4-chazara-due-and-progress-views-tutor: done
+  epic-11-retrospective: done
 
   # Epic 12: Notifications (3 stories)
-  epic-12: backlog
-  12-1-daily-learning-reminders: backlog
-  12-2-streak-protection-alerts: backlog
-  12-3-reward-milestone-notifications: backlog
-  epic-12-retrospective: optional
+  epic-12: done
+  12-1-daily-learning-reminders: done
+  12-2-streak-protection-alerts: done
+  12-3-reward-milestone-notifications: done
+  epic-12-retrospective: done
 
   # Epic 13: Cloud Sync (3 stories)
-  epic-13: backlog
-  13-1-push-on-write-sync: backlog
-  13-2-pull-on-launch-sync: backlog
-  13-3-foreground-real-time-listeners: backlog
-  epic-13-retrospective: optional
+  epic-13: done
+  13-1-push-on-write-sync: done
+  13-2-pull-on-launch-sync: done
+  13-3-foreground-real-time-listeners: done
+  epic-13-retrospective: done
 
   # Epic 14: Settings (4 stories)
-  epic-14: backlog
-  14-1-general-settings: backlog
-  14-2-notification-preferences: backlog
-  14-3-data-export-and-import: backlog
-  14-4-account-management: backlog
-  epic-14-retrospective: optional
+  epic-14: done
+  14-1-general-settings: done
+  14-2-notification-preferences: done
+  14-3-data-export-and-import: done
+  14-4-account-management: done
+  epic-14-retrospective: done
 
   # Epic 16: Onboarding-to-Dashboard Perfect Flow (6 stories)
   epic-16: done
@@ -192,16 +167,31 @@ development_status:
   16-4-per-item-review-count-display: done
   16-5-onboarding-goal-study-day-steps: done
   16-6-dashboard-design-experience-polish: done
-  epic-16-retrospective: optional
+  epic-16-retrospective: done
 
   # Epic 18: Onboarding & Track Management Overhaul (8 stories)
   epic-18: in-progress
-  18-1-extract-reusable-add-track-flow: review
-  18-2-slim-global-onboarding: review
-  18-3-track-management-hub: review
-  18-4-hebrew-terms-chazara-curriculum-names: ready-for-dev
-  18-5-track-editing-from-settings: ready-for-dev
-  18-6-child-mode-onboarding-post-setup-rewards: ready-for-dev
-  18-7-navigation-state-cleanup: ready-for-dev
-  18-8-instant-mark-complete: ready-for-dev
+  18-1-extract-reusable-add-track-flow: backlog
+  18-2-slim-global-onboarding: backlog
+  18-3-track-management-hub: backlog
+  18-4-hebrew-terms-chazara-curriculum-names: backlog
+  18-5-track-editing-from-settings: backlog
+  18-6-child-mode-onboarding-post-setup-rewards: backlog
+  18-7-navigation-state-cleanup: backlog
+  18-8-instant-mark-complete: backlog
   epic-18-retrospective: optional
+
+  # Epic 19: Offline-First Architecture & Local-First Overhaul (11 stories)
+  epic-19: backlog
+  19-1-fix-calendar-registry-bugs: backlog
+  19-2-two-database-split: backlog
+  19-3-seed-database-build-tool: backlog
+  19-4-local-calendar-engine: backlog
+  19-5-local-first-auth-abstraction: backlog
+  19-6-startup-sequence-hardening: backlog
+  19-7-optional-account-creation-settings: backlog
+  19-8-syncengine-conditional-activation: backlog
+  19-9-multi-device-sync: backlog
+  19-10-navigation-state-cleanup: backlog
+  19-11-e2e-offline-integration-testing: backlog
+  epic-19-retrospective: optional

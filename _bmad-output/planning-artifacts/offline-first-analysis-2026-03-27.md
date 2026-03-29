@@ -54,40 +54,174 @@ Learning Tracker must support users who **never connect to the internet** after 
 
 ## 3. Target Architecture
 
-### 3.1 Architecture Principle: Local-First, Sync-Optional
+### 3.1 Architecture Principle: Local-First, Sync-Optional, Two-Database Split
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   App Layer                       │
-│  (All features work identically regardless of    │
-│   network state or account existence)            │
-├─────────────────────────────────────────────────┤
-│               Local Data Layer                    │
-│  ┌───────────┐ ┌──────────┐ ┌────────────────┐  │
-│  │  SQLite   │ │  Text    │ │  Calendar      │  │
-│  │  (Drift)  │ │  Cache   │ │  Engine        │  │
-│  │  Source   │ │  Bundled │ │  Local Compute │  │
-│  │  of Truth │ │  + Cache │ │                │  │
-│  └───────────┘ └──────────┘ └────────────────┘  │
-├─────────────────────────────────────────────────┤
-│          Transparent Sync Layer (Optional)        │
-│  ┌──────────────────────────────────────────┐    │
-│  │  SyncEngine (activates when online +     │    │
-│  │  user has account — otherwise dormant)   │    │
-│  │  • Push-on-write (queued)                │    │
-│  │  • Pull-on-launch (if available)         │    │
-│  │  • Foreground listeners (if available)   │    │
-│  └──────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────┤
-│           Optional Account Layer                  │
-│  ┌──────────────────────────────────────────┐    │
-│  │  Firebase Auth (user opts in when ready) │    │
-│  │  • Enables multi-device sync             │    │
-│  │  • Enables cloud backup                  │    │
-│  │  • Can be created at any time            │    │
-│  └──────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                        App Layer                              │
+│   (All features work identically regardless of               │
+│    network state or account existence)                       │
+├──────────────────────────────────────────────────────────────┤
+│                    Local Data Layer                            │
+│                                                               │
+│  ┌─────────────────────────┐  ┌────────────────────────────┐ │
+│  │   Content DB (read-only) │  │   User DB (read-write)     │ │
+│  │   content.db             │  │   learning_tracker.db      │ │
+│  │                          │  │                            │ │
+│  │  • TextCache (52K items) │  │  • Profiles, UserProfiles  │ │
+│  │  • CalendarCycles (30K)  │  │  • Completions (append)    │ │
+│  │  • LearningPrograms (9)  │  │  • LearningLedger (append) │ │
+│  │  • SeedMetadata          │  │  • Bookmarks, Goals        │ │
+│  │                          │  │  • Rewards, Streaks        │ │
+│  │                          │  │  • Tracks, Scopes          │ │
+│  │  Ships as seed.db.gz     │  │  • StageDefinitions        │ │
+│  │  Replaced on app update  │  │  • PointConfigs            │ │
+│  │  ZERO user data          │  │  • StudyDayConfigs         │ │
+│  │                          │  │  • SyncQueue               │ │
+│  │  Schema: v1              │  │                            │ │
+│  │  No migrations needed —  │  │  Schema: v1                │ │
+│  │  just replace the file   │  │  Drift migrations as usual │ │
+│  └─────────────────────────┘  └────────────────────────────┘ │
+│                                                               │
+│  Cross-reference: User DB references Content DB via string   │
+│  identifiers (sefariaRef, curriculumId, programId) — no      │
+│  hard foreign keys, no cross-DB queries needed               │
+├──────────────────────────────────────────────────────────────┤
+│            Transparent Sync Layer (Optional)                  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  SyncEngine (activates when online + user has account) │  │
+│  │  • Syncs User DB data only — Content DB never synced   │  │
+│  │  • Push-on-write (queued)                              │  │
+│  │  • Pull-on-launch (if available)                       │  │
+│  │  • Foreground listeners (if available)                 │  │
+│  └────────────────────────────────────────────────────────┘  │
+├──────────────────────────────────────────────────────────────┤
+│             Optional Account Layer                            │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Firebase Auth (user opts in when ready)               │  │
+│  │  • Enables multi-device sync of User DB               │  │
+│  │  • Enables cloud backup                               │  │
+│  │  • Can be created at any time                         │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+### 3.2 Two-Database Split — Detailed Design
+
+#### Why Two Databases?
+
+| Concern | Single DB | Two DBs |
+|---------|-----------|---------|
+| Content update on app upgrade | Complex upsert/merge, risk of data loss | Delete & replace content.db — zero risk |
+| Schema migration for content | Must migrate content tables alongside user tables | No migrations — just ship a new file |
+| User data safety | Content + user data co-located, replace = danger | Content DB has ZERO user data, always safe to replace |
+| Read performance | Mixed read-write workload | Content DB opened read-only — faster, no WAL overhead |
+| Build pipeline | Must carefully merge seed data into existing DB | Seed tool outputs a standalone .db file, CI validates schema |
+
+#### Content DB — `ContentDatabase` (Drift class)
+
+**File:** `content.db` — opened **read-only**
+**Schema version:** v1 (no migration infrastructure needed — file replacement is the upgrade path)
+**Source:** Pre-built by `tool/seed_content_db.dart`, shipped compressed as `assets/seed.db.gz`
+
+| Table | Rows (est.) | Purpose |
+|-------|-------------|---------|
+| **TextCache** | ~52,528 | All Sefaria text content (Hebrew + English), keyed by `sefariaRef` |
+| **CalendarCycles** | ~30,684 | Date-keyed: `(program_id, date) → sefaria_ref` for 2024-2030 |
+| **LearningPrograms** | 9 | Program presets (Daf Yomi, Mishnah Yomit, etc.) with stage/test config |
+| **SeedMetadata** | 1 | Seed DB version, build date, content hash — for upgrade version comparison |
+
+**Tables removed vs current architecture:**
+- `ContentDownloadStatuses` — **eliminated**. All content is bundled; no download tracking needed.
+- `TextDownloadStatuses` — **eliminated**. Same reason.
+- `CalendarCache` — **replaced** by `CalendarCycles` table with pre-computed date-keyed data.
+- `TestDates` — **not included in Content DB**. Dirshu test reminders are a separate feature; should be scoped in its own ticket if/when needed.
+
+#### User DB — `UserDatabase` (Drift class)
+
+**File:** `learning_tracker.db` — read-write
+**Schema version:** v1 (fresh start — app not yet deployed)
+**Migrations:** Standard Drift `onUpgrade` for future schema changes
+
+| Table | Purpose |
+|-------|---------|
+| **Profiles** | Learner profiles (multi-profile per account) |
+| **UserProfiles** | Account-level user info, Firebase UID |
+| **Completions** | Append-only completion log |
+| **LearningLedger** | Append-only lifetime learning record |
+| **Bookmarks** | Current position per curriculum/track |
+| **Goals** | Learning goals with deadlines |
+| **LearningOrder** | Custom item ordering |
+| **Rewards** | Gamification milestones |
+| **RewardPools** | Reward pool collections |
+| **RewardPoolItems** | Items within reward pools |
+| **Streaks** | Learning streak tracking |
+| **TestScores** | Logged test scores |
+| **TestDates** | Dirshu test schedule (future feature — kept in User DB for now) |
+| **ActiveCurricula** | Which curricula are active per profile |
+| **CurriculumTracks** | Track activation (personal/school/tutor) |
+| **CurriculumScopes** | Scope filters for curricula |
+| **ProfilePrograms** | Profile ↔ program associations |
+| **StageDefinitions** | Stage config per curriculum (user-customizable) |
+| **PointConfigs** | Points per stage (user-customizable) |
+| **StudyDayConfigs** | Day-of-week study schedule (user-customizable) |
+| **SyncQueue** | Offline sync queue |
+
+**Note on "mixed" tables:** `StageDefinitions`, `PointConfigs`, and `StudyDayConfigs` are seeded with defaults during onboarding (from hardcoded Dart constants, not from Content DB) but are user-customizable per profile. They live in User DB because user modifications must survive content updates.
+
+#### Cross-Database References
+
+User DB references Content DB via **string identifiers only** — no hard foreign keys, no JOINs:
+
+| User DB Table | References | Content DB Lookup |
+|---------------|-----------|-------------------|
+| Completions | `sefariaRef` | → TextCache.sefariaRef |
+| Bookmarks | `sefariaRef` | → TextCache.sefariaRef |
+| LearningOrder | `sefariaRef` | → TextCache.sefariaRef |
+| ProfilePrograms | `programId` | → LearningPrograms.id |
+| ActiveCurricula | `curriculumId` | → hierarchy JSON (in-memory, unchanged) |
+
+All lookups are **application-level** — query User DB, then separately query Content DB by ID. No SQL JOINs across databases. This is already the existing pattern.
+
+#### Upgrade Flow
+
+```
+App update installed (new APK with new seed.db.gz)
+  │
+  ├─ Content DB upgrade:
+  │   ├─ Read SeedMetadata.version from existing content.db
+  │   ├─ Read bundled seed version from assets manifest
+  │   ├─ If bundled > installed (or no content.db exists):
+  │   │   ├─ Close existing content.db connection
+  │   │   ├─ Delete old content.db file
+  │   │   ├─ Decompress seed.db.gz → content.db (2-5 sec)
+  │   │   └─ Open new content.db read-only
+  │   └─ If same version: skip, use existing content.db
+  │
+  └─ User DB upgrade:
+      ├─ Drift checks schemaVersion (v1 initially)
+      ├─ If newer schema: run onUpgrade migrations
+      └─ User data fully intact — Content DB change is invisible
+```
+
+**Key guarantee:** Deleting content.db can never lose user data. The two databases share no file, no tables, no state.
+
+#### Riverpod Provider Setup
+
+```
+// Two database providers, both keepAlive
+@Riverpod(keepAlive: true)
+ContentDatabase contentDatabase(Ref ref) {
+  // Opens read-only, from app's DB directory (copied from assets on first launch/upgrade)
+}
+
+@Riverpod(keepAlive: true)
+UserDatabase userDatabase(Ref ref) {
+  // Opens read-write, standard Drift lifecycle
+}
+```
+
+DAOs and repositories depend on whichever database they need. Most features only touch one database. The few that need both (e.g., displaying text content with user progress) do two separate queries and combine results in the repository/service layer.
 
 ### 3.2 User Journey — Never-Online User
 
@@ -163,47 +297,52 @@ Uses app locally for days/weeks/months
 
 **Problem:** ~52,528 text items across 7 curricula downloaded at runtime from GitHub Releases. Zero text available to never-online users.
 
-**Solution:**
+**Solution: Pre-Built SQLite Database**
 
-1. **Bundle Text Assets**
-   - Add gzipped text JSON files to `assets/content/text/`
-   - One file per curriculum (same format as GitHub Releases downloads):
-     - `bavli_text.json.gz` (~15-20 MB)
-     - `mishnayos_text.json.gz` (~3-5 MB)
-     - `yerushalmi_text.json.gz` (~8-10 MB)
-     - `chumash_text.json.gz` (~2-3 MB)
-     - `mishna_berurah_text.json.gz` (~10-15 MB)
-     - `nach_text.json.gz` (~5-8 MB)
-     - `mussar_text.json.gz` (<1 MB)
-   - **Total estimated APK increase: ~45-60 MB**
+Instead of bundling JSON and hydrating into SQLite at runtime, we **ship a pre-built SQLite database** in the APK. This eliminates the 30-90 second first-launch hydration entirely.
 
-2. **First-Launch Hydration**
-   - On first launch, decompress and load bundled text into `TextCache` table
-   - Use existing batch insert logic (500 items/batch with checkpoints)
-   - Mark all curricula as "downloaded" in `TextDownloadStatuses`
-   - Show progress indicator during hydration ("Preparing your library...")
-   - Hydration is one-time — subsequent launches skip this step
+1. **Pre-Built Seed Database**
+   - Build tool generates a complete SQLite `.db` file with the exact Drift schema
+   - Contains all text content pre-inserted into `TextCache` table (~52,528 rows)
+   - Contains all 12 calendar program cycle data (see Stream 3)
+   - All `TextDownloadStatuses` rows pre-marked as "downloaded"
+   - Database is compressed (gzip) in `assets/` — **estimated ~45-60 MB compressed**
+   - Uncompressed on device: **~260-340 MB**
 
-3. **Hydration Performance Estimate**
-   - ~52,528 items at 500/batch = ~105 batches
-   - Each batch: decompress + parse + insert transaction
-   - Estimated time: 30-90 seconds on mid-range device
-   - Must be interruptible and resumable (checkpoint after each batch)
+2. **First-Launch: File Copy (Not Hydration)**
+   - On first launch, check if local database exists
+   - If not: decompress and copy bundled `.db` to app's database directory
+   - **Estimated time: 2-5 seconds** (file copy, not row-by-row insertion)
+   - No progress screen needed — fast enough to feel seamless
+   - Subsequent launches: database already in place, no action needed
 
-4. **Build Pipeline Update**
-   - `tool/seed_text_content.dart` output copied to `assets/content/text/`
-   - CI/CD includes text content in APK build
-   - Version tracking for future content updates
+3. **Build Pipeline**
+   - `tool/seed_content_db.dart` — New build tool that:
+     - Creates SQLite database matching Drift schema
+     - Runs existing `seed_text_content.dart` logic to populate text tables
+     - Runs `seed_calendar_cycles.dart` logic to populate calendar tables
+     - Outputs `assets/seed.db.gz` (compressed)
+   - CI/CD builds seed DB as part of release pipeline
+   - Version tracking: seed DB version stored in metadata table, compared on app update
+
+4. **App Update Handling**
+   - Content DB is a **separate file** from User DB (see Section 3.2)
+   - On app update: compare bundled seed version with installed content.db version
+   - If newer: delete old content.db, decompress new seed.db.gz. No merge logic needed.
+   - User data is in a completely separate database file — never at risk.
 
 **Affected Files:**
-- `assets/content/text/` — New directory with gzipped text JSON
-- `lib/features/content_browsing/data/services/text_download_service.dart` — Add hydration-from-assets path
-- `lib/core/database/daos/text_cache_dao.dart` — Batch insert (existing)
-- `pubspec.yaml` — Declare new assets
+- `assets/seed.db.gz` — Pre-built compressed Content DB
+- `tool/seed_content_db.dart` — Build tool generating Content DB (replaces separate text/calendar seed tools)
+- `lib/core/database/content_database.dart` — New Drift `ContentDatabase` class (read-only)
+- `lib/core/database/user_database.dart` — Renamed/refactored from current `AppDatabase` (user data only)
+- `lib/core/database/seed_manager.dart` — Handles seed DB decompression and version checking
+- `lib/core/providers/database_provider.dart` — Two providers: `contentDatabase` + `userDatabase`
+- `pubspec.yaml` — Declare seed DB asset
 
 **Risks:**
-- First-launch time — 30-90 second hydration could feel slow. Mitigation: show engaging progress UI, allow partial use during hydration.
-- Storage — ~200-400 MB uncompressed in SQLite. Acceptable for modern devices.
+- **Schema coupling:** Pre-built Content DB must match `ContentDatabase` Drift class. Mitigation: build tool imports Drift schema definitions directly; CI validates schema match.
+- Storage — ~260-340 MB uncompressed in SQLite. Acceptable for modern devices.
 
 ---
 
@@ -221,8 +360,8 @@ Uses app locally for days/weeks/months
 2. **Cycle Data — Reverse Engineering Approach**
    - Build a tool that queries Sefaria/Hebcal APIs for a full cycle of each program
    - Record the ordered sequence of refs for the complete cycle
-   - Store as bundled JSON asset: `assets/content/calendars/{program}_cycle.json`
-   - Each file contains: `{ epoch: "YYYY-MM-DD", refs: ["ref1", "ref2", ...] }`
+   - Store in the **pre-built seed database** (see Stream 2) — `calendar_cycles` table
+   - Each row contains: program ID, epoch date, day index, ref string
 
 3. **12 Programs to Reverse-Engineer**
 
@@ -242,10 +381,10 @@ Uses app locally for days/weeks/months
    | Kitzur SA Yomi | Hebcal | ~221 simanim | Query Hebcal for full cycle |
 
 4. **Reverse-Engineering Tool**
-   - New build tool: `tool/seed_calendar_cycles.dart`
+   - Part of unified `tool/seed_content_db.dart` (see Stream 2)
    - For Sefaria programs: iterate day-by-day through `/calendars?year=Y&month=M&day=D` for full cycle
    - For Hebcal programs: iterate through `/hebcal?start=DATE&end=DATE` for full cycle
-   - Output: JSON cycle files with epoch + ordered ref sequence
+   - Output: rows in `calendar_cycles` table within the pre-built seed database
    - Rate limiting: 1-2 requests/second to respect API limits
    - One-time build step — cycles only change every several years
 
@@ -269,9 +408,7 @@ Uses app locally for days/weeks/months
 - `lib/core/services/local_calendar_engine.dart` — New service
 - `lib/core/services/calendar_program_service.dart` — Use local engine as primary source
 - `lib/core/providers/calendar_providers.dart` — Wire in local engine
-- `assets/content/calendars/` — New directory with cycle JSON files
-- `tool/seed_calendar_cycles.dart` — New build tool
-- `pubspec.yaml` — Declare calendar assets
+- `tool/seed_content_db.dart` — Calendar cycle seeding integrated into unified seed tool (see Stream 2)
 
 **Risks:**
 - Some programs may have irregular cycles or mid-cycle adjustments. Mitigation: reverse-engineering a full cycle from the API will capture any irregularities.
@@ -323,48 +460,57 @@ Uses app locally for days/weeks/months
 
 ## 5. Content Size Estimates
 
-| Content Type | Items | Compressed | Uncompressed (SQLite) |
-|-------------|-------|------------|----------------------|
-| Hierarchy JSON (existing) | ~61,858 | ~4 MB | In-memory |
-| Text - Bavli | 5,471 | ~15-20 MB | ~80-100 MB |
-| Text - Mishnayos | 4,192 | ~3-5 MB | ~20-30 MB |
-| Text - Yerushalmi | 2,211 | ~8-10 MB | ~40-50 MB |
-| Text - Chumash | 5,846 | ~2-3 MB | ~15-20 MB |
-| Text - Mishna Berurah | 17,397 | ~10-15 MB | ~60-80 MB |
-| Text - Nach | 17,360 | ~5-8 MB | ~40-50 MB |
-| Text - Mussar | 51 | <1 MB | <1 MB |
-| Calendar cycles (12) | ~12,000 refs | <1 MB | <1 MB |
-| **Total APK increase** | | **~45-60 MB** | |
-| **Total device storage** | | | **~260-340 MB** |
+| Content Type | Items | Notes |
+|-------------|-------|-------|
+| Hierarchy JSON (existing) | ~61,858 | Already bundled, loaded in-memory (~4 MB) |
+| Text - Bavli | 5,471 | Pre-built in seed DB |
+| Text - Mishnayos | 4,192 | Pre-built in seed DB |
+| Text - Yerushalmi | 2,211 | Pre-built in seed DB |
+| Text - Chumash | 5,846 | Pre-built in seed DB |
+| Text - Mishna Berurah | 17,397 | Pre-built in seed DB |
+| Text - Nach | 17,360 | Pre-built in seed DB |
+| Text - Mussar | 51 | Pre-built in seed DB |
+| Calendar cycles (12) | ~12,000 refs | Pre-built in seed DB |
+| **Seed DB (compressed, in APK)** | | **~45-60 MB estimated** |
+| **Seed DB (uncompressed, on device)** | | **~260-340 MB estimated** |
 
 ---
 
 ## 6. Implementation Sequence
 
 ```
-Phase 1: Foundation (Streams 1 + 4 startup)
+Phase 1: Two-Database Split (Foundation)
+  ├─ Split current AppDatabase into ContentDatabase + UserDatabase
+  │   ├─ ContentDatabase: TextCache, CalendarCycles, LearningPrograms, SeedMetadata
+  │   ├─ UserDatabase: all user/progress/sync tables (20 tables)
+  │   ├─ Both start at schema v1 (clean slate, app not yet deployed)
+  │   └─ Two Riverpod providers: contentDatabase + userDatabase
+  ├─ SeedManager: decompress seed.db.gz → content.db on first launch/upgrade
+  ├─ Update all DAOs and repositories to use correct database reference
+  └─ Update all existing tests for two-database setup
+
+Phase 2: Seed Database Build Tool + Content
+  ├─ Build `tool/seed_content_db.dart`
+  │   ├─ Creates ContentDatabase matching Drift schema
+  │   ├─ Populates TextCache (~52,528 rows from Sefaria)
+  │   ├─ Populates CalendarCycles (reverse-engineer 12 programs, date-keyed 2024-2030)
+  │   ├─ Populates LearningPrograms (from existing seed data)
+  │   └─ Outputs compressed `assets/seed.db.gz`
+  ├─ CI step: validate seed DB schema matches ContentDatabase class
+  ├─ LocalCalendarEngine service (reads CalendarCycles from Content DB)
+  └─ Wire into CalendarProgramService as primary source
+
+Phase 3: Local-First Auth & Startup (Streams 1 + 4)
   ├─ Local profile system + auth abstraction
   ├─ Remove sign-in wall
   ├─ Startup sequence hardening
-  └─ SyncEngine conditional activation
-
-Phase 2: Content (Stream 2) — can parallel with Phase 1 tooling
-  ├─ Verify text seed tooling produces correct output
-  ├─ Bundle text assets in APK
-  ├─ First-launch hydration service
-  └─ Progress UI for hydration
-
-Phase 3: Calendar (Stream 3) — can parallel with Phase 2
-  ├─ Build reverse-engineering tool
-  ├─ Run tool to capture all 12 program cycles
-  ├─ Validate cycle data for accuracy
-  ├─ LocalCalendarEngine service
-  └─ Wire into CalendarProgramService as primary source
+  └─ SyncEngine conditional activation (syncs User DB only)
 
 Phase 4: Integration & Polish
   ├─ End-to-end testing: fresh install → full use → no network
+  ├─ App upgrade testing: new seed.db.gz → content replaced, user data intact
   ├─ Optional account creation flow in Settings
-  ├─ UID migration (local → Firebase) atomic transaction
+  ├─ UID migration (local → Firebase) in User DB
   ├─ Sync activation/deactivation UX
   └─ Offline indicator (subtle, non-intrusive)
 ```
@@ -402,26 +548,125 @@ Phase 4: Integration & Polish
 | Decision | Current | Proposed Update |
 |----------|---------|----------------|
 | D2 (Auth) | Email/password + Google Sign-In required | **Local-first auth default. Firebase Auth optional for sync.** |
-| D4 (Sync) | Hybrid push/pull with foreground listeners | **Sync layer is conditional — dormant without account, activates transparently when account + network exist** |
+| D4 (Sync) | Hybrid push/pull with foreground listeners | **Sync layer is conditional — dormant without account, activates transparently when account + network exist. Syncs User DB only.** |
 | NEW | — | **D-OFFLINE: All content (text, hierarchy, calendar cycles) bundled in APK. No runtime content fetching required.** |
+| NEW | — | **D-TWODB: Application uses two separate SQLite databases. Content DB (read-only, pre-built, replaced on upgrade) and User DB (read-write, Drift-managed migrations). No hard foreign keys between databases — string identifiers only. Guarantees content updates can never cause user data loss.** |
 
 ---
 
-## 8. Open Items for Further Investigation
+## 8. Deep-Dive Research Findings (2026-03-29)
 
-| # | Item | Owner | Notes |
-|---|------|-------|-------|
-| 1 | Exact compressed size of each curriculum's text content | Dev | Run `seed_text_content.dart` and measure output |
-| 2 | First-launch hydration time on low-end Android device | Dev | Benchmark with API 21 target device |
-| 3 | Firebase SDK network behavior when auth unused | Dev | Does SDK phone home even without sign-in? May need build flavor or lazy init |
-| 4 | Irregular calendar cycles (Halakhah Yomit, Arukh HaShulchan) | Analyst | Reverse-engineer and verify for edge cases |
-| 5 | UID migration transaction scope | Dev | Audit all tables with profileId/uid foreign keys |
-| 6 | Play Store APK size limits | Dev | Current limit ~150 MB for APK, unlimited for AAB with asset packs |
-| 7 | Cycle transition dates for all 12 programs | Analyst | Document when each current cycle ends |
+Comprehensive research was conducted across all streams. Detailed analysis documents are linked below. This section captures the key findings, resolved decisions, and remaining risks.
+
+### Reference Documents
+
+| Document | Location |
+|----------|----------|
+| Calendar Cycle Computation Analysis | `_bmad-output/planning-artifacts/calendar-cycle-computation-analysis.md` |
+| Seed Database Build Tool Design | `_bmad-output/implementation-artifacts/seed-database-build-tool-design.md` |
+| Local-First Auth Abstraction Layer | `_bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md` |
+| Two-Database Drift Architecture | `_bmad-output/planning-artifacts/two-database-drift-architecture.md` |
+
+### 8.1 Critical Bugs Found in Current Calendar Registry
+
+**Only 6 of 12 calendar programs work today.** The following bugs exist in `CalendarProgramRegistry` and `HebcalApiClient`:
+
+| Bug | Impact | Fix |
+|-----|--------|-----|
+| `nach_yomi` configured as `apiSource: 'sefaria'` | Nach Yomi not available from Sefaria — never returns data | Change to `apiSource: 'hebcal'` with flag `nyomi=on` |
+| `mishna_yomit` apiKey = `"Mishnah Yomit"` | Sefaria returns `"Daily Mishnah"` — key mismatch, no match | Change apiKey to `"Daily Mishnah"` |
+| `rambam_1_chapter` apiKey = `"Daily Rambam 1 Chapter"` | Sefaria returns `"Daily Rambam"` — key mismatch | Change apiKey to `"Daily Rambam"` |
+| `rambam_3_chapters` apiKey = `"Daily Rambam 3 Chapters"` | Sefaria returns `"Daily Rambam (3 Chapters)"` — key mismatch | Change apiKey to `"Daily Rambam (3 Chapters)"` |
+| HebcalApiClient missing `dcc=on` flag | Chofetz Chaim Daily never fetched from Hebcal | Add `dcc=on` to query params |
+| HebcalApiClient missing `dksa=on` flag | Kitzur SA Yomi never fetched from Hebcal | Add `dksa=on` to query params |
+| Hebcal matching uses `item.title` instead of `item.category` | Wrong field for program identification | Match on `item.category` |
+
+**Action:** Fix these bugs as a prerequisite story before Epic 19 calendar work.
+
+### 8.2 Calendar Cycle Computation — Resolved
+
+All 12 programs are deterministic and can be pre-computed, but **not all via simple modular arithmetic**:
+
+| Complexity | Programs | Approach |
+|-----------|----------|----------|
+| Simple fixed cycle | Daf Yomi, Daf a Week, Nach Yomi | `daysSince(epoch) % cycleLength` works |
+| Fixed but irregular | Mishna Yomit, Yerushalmi Yomi, Rambam 1/3, Tanakh Yomi | Some segments vary in length — capture full sequence |
+| Hebrew calendar dependent | Chofetz Chaim, Kitzur SA | Cycle length varies by Hebrew year (leap years) |
+| Variable segments | Halakhah Yomit, Arukh HaShulchan Yomi | Segment sizes vary — must capture exact sequence |
+
+**Decision: Date-keyed flat table.** Instead of storing cycle offsets, store `(program_id, date) → sefaria_ref` for a date range (2024-2030). This handles ALL programs uniformly — no special-case math at query time. ~30,684 rows covering 7 years. Trivial query: `SELECT ref FROM calendar_cycles WHERE program_id = ? AND date = ?`.
+
+**Seed tool runtime:** ~22 minutes (Sefaria: ~2,557 day-by-day requests at 2/sec; Hebcal: ~84 monthly batch requests).
+
+**Cycle transition risk:** Daf Yomi Cycle 14 ends 2027-06-07 — highest risk boundary. Yerushalmi Yomi (first cycle ever) may end ~2027 with unknown Cycle 2 details. Both within the 2024-2030 seeding window.
+
+### 8.3 Two-Database Architecture — Resolved
+
+**Content DB tables (4 tables):**
+
+| Table | Rows | Notes |
+|-------|------|-------|
+| TextCache | ~52,528 | All Sefaria text (Hebrew + English) |
+| CalendarCycles | ~30,684 | Date-keyed: (program_id, date) → ref, covering 2024-2030 |
+| LearningPrograms | 9 | Program presets with stage/test config |
+| SeedMetadata | 1 | Version, build date, content hash |
+
+**Note:** `TestDates` removed from Content DB — Dirshu test reminders are a separate feature that should be scoped in its own ticket if needed. `ContentDownloadStatuses` and `TextDownloadStatuses` eliminated entirely (not needed with bundled content). `CalendarCache` replaced by `CalendarCycles`.
+
+**User DB tables (20 tables):** All user/progress/sync tables. Both databases start at schema v1.
+
+**Drift code generation:** Works out of the box with two `@DriftDatabase` classes, no special configuration needed. ~94 files affected in the split, estimated ~13 hours implementation.
+
+### 8.4 Auth Abstraction — Resolved
+
+**Key decisions:**
+- `UserProfiles.firebaseUid` becomes nullable; new `localUid` column (v4 UUID) added
+- Sealed `AppAuthState` type (`LocalAuthState` / `CloudAuthState`) via Riverpod notifier
+- `AuthGuard` replaced with `LocalAuthGuard` — reads local state synchronously, never hangs
+- `Firebase.initializeApp()` deferred to background after `runApp()` — startup in ~140ms
+- `GoogleSignIn.initialize()` fully deferred to first Google sign-in tap
+- UID migration is simple: only `UserProfiles` has `firebaseUid` — all other tables chain through integer PKs
+
+### 8.5 Sync & Onboarding — Resolved
+
+**Key decisions:**
+- SyncEngine takes `UserDatabase` (not `AppDatabase`) — Content DB never synced
+- `syncEngineProvider` returns `null` for local-only users; callers guard with `?.`
+- Offline queue **disabled** for local-only users; new `pushAllLocalData()` on account creation
+- Onboarding removes `AccountCreationScreen` and `ModeSelectionScreen` from mandatory flow
+- `AddTrackFlow` already works 100% offline — zero Firebase dependencies
+- `RestoreGuard` skips entirely for unauthenticated users
+
+### 8.6 Text Content Bundling — Resolved
+
+**Key findings:**
+- Existing `seed_text_content.dart` missing `nach` and `mussar` curricula — must be added
+- Estimated seed DB: ~85-95 MB raw SQLite, **~22-30 MB gzipped** in APK
+- Well within Play Store 150 MB APK limit
+- Hebrew text stored with nikud; stripping done at display time (no change needed)
+- `TextDownloadService` repurposed as optional `TextUpdateService` for delta updates (future)
+
+### 8.7 Content Freshness Strategy
+
+**Decision: App-store-only updates for initial release.** Re-run seed tool before each release. Future enhancement: optional delta updates using an overlay pattern (updates written to User DB TextCache, which takes precedence over Content DB on lookup).
 
 ---
 
-## 9. Success Criteria
+## 9. Remaining Open Items
+
+| # | Item | Owner | Priority | Notes |
+|---|------|-------|----------|-------|
+| 1 | Fix 7 calendar registry bugs | Dev | **Pre-Epic 19** | Blocks calendar seed tool validation |
+| 2 | Exact compressed size of seed DB | Dev | During build | Run `seed_content_db.dart` and measure |
+| 3 | Seed DB decompression time on low-end device | Dev | During integration | Benchmark on API 21 target |
+| 4 | Firebase SDK lazy init behavior | Dev | During auth stream | Does SDK phone home even without sign-in? |
+| 5 | Yerushalmi Yomi Cycle 2 details | Analyst | Before 2027 | First cycle ever — may need research when approaching end |
+| 6 | Seed DB schema validation in CI | Dev | During build tool | `--validate-only` mode for PR checks |
+| 7 | `ProfilePrograms.programId` cross-DB FK | Dev | During DB split | Consider adding `programName` text column as stable cross-DB key |
+
+---
+
+## 10. Success Criteria
 
 - [ ] Fresh install on airplane-mode device → complete onboarding → full app use
 - [ ] All 7 curricula: browse hierarchy + read Hebrew/English text — no network
