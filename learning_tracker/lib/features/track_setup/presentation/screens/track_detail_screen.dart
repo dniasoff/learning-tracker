@@ -201,7 +201,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             textDirection: TextDirection.rtl,
           ),
           Text(
-            curriculum?.displayNameEn ?? '',
+            curriculum?.displayNameHe ?? '',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

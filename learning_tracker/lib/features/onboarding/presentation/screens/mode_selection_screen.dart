@@ -129,8 +129,7 @@ class _ModeSelectionScreenState extends ConsumerState<ModeSelectionScreen>
       final profileService = ref.read(userProfileServiceProvider);
       await profileService.setUserMode(
         firebaseUid: user.uid,
-        displayName:
-            user.displayName ?? user.email?.split('@').first ?? 'User',
+        displayName: user.displayName ?? user.email?.split('@').first ?? 'User',
         mode: UserMode.adult,
       );
 

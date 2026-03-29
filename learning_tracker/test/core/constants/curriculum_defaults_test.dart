@@ -8,24 +8,24 @@ void main() {
       expect(CurriculumDefaults.defaultStages.length, 3);
     });
 
-    test('stage 0 is learn with 0 delay days', () {
+    test('stage 0 is לימוד with 0 delay days', () {
       final learn = CurriculumDefaults.defaultStages[0];
       expect(learn.stageOrder, 0);
-      expect(learn.stageName, 'learn');
+      expect(learn.stageName, 'לימוד');
       expect(learn.delayDays, 0);
     });
 
-    test('stage 1 is chazara1 with 1 delay day', () {
+    test('stage 1 is חזרה א׳ with 1 delay day', () {
       final chazara1 = CurriculumDefaults.defaultStages[1];
       expect(chazara1.stageOrder, 1);
-      expect(chazara1.stageName, 'chazara1');
+      expect(chazara1.stageName, 'חזרה א׳');
       expect(chazara1.delayDays, 1);
     });
 
-    test('stage 2 is chazara2 with 7 delay days', () {
+    test('stage 2 is חזרה ב׳ with 7 delay days', () {
       final chazara2 = CurriculumDefaults.defaultStages[2];
       expect(chazara2.stageOrder, 2);
-      expect(chazara2.stageName, 'chazara2');
+      expect(chazara2.stageName, 'חזרה ב׳');
       expect(chazara2.delayDays, 7);
     });
 

@@ -141,7 +141,7 @@ class _ContentHierarchyScreenState
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    curriculum.displayNameEn,
+                    curriculum.displayNameHe,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,

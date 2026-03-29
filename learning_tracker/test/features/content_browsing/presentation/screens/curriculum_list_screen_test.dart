@@ -41,17 +41,17 @@ void main() {
 
       // Should show curriculum English names; items below the fold require
       // scrolling because ListView renders children lazily.
-      expect(find.text('Mishnayos'), findsOneWidget);
-      expect(find.text('Talmud Bavli'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
+      expect(find.text('תלמוד בבלי'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text('Talmud Yerushalmi'), 100);
-      expect(find.text('Talmud Yerushalmi'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('תלמוד ירושלמי'), 100);
+      expect(find.text('תלמוד ירושלמי'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text('Mishna Berurah'), 100);
-      expect(find.text('Mishna Berurah'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('משנה ברורה'), 100);
+      expect(find.text('משנה ברורה'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text('Chumash'), 100);
-      expect(find.text('Chumash'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('חומש'), 100);
+      expect(find.text('חומש'), findsOneWidget);
     });
 
     testWidgets('displays item counts for each curriculum', (tester) async {
@@ -106,7 +106,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap on Mishnayos curriculum (use the English display name)
-      await tester.tap(find.text('Mishnayos'));
+      await tester.tap(find.text('משניות'));
       await tester.pump();
 
       // The tap triggers context.router.push() which throws because

@@ -41,10 +41,10 @@ class StageFixtures {
   static const int chazara1StageId = 2;
   static const int chazara2StageId = 3;
 
-  /// Default stage names
-  static const String learnStageName = 'Learn';
-  static const String chazara1StageName = 'Chazara 1';
-  static const String chazara2StageName = 'Chazara 2';
+  /// Default stage names (Hebrew)
+  static const String learnStageName = 'לימוד';
+  static const String chazara1StageName = 'חזרה א׳';
+  static const String chazara2StageName = 'חזרה ב׳';
 
   /// Default delay days
   static const int learnDelayDays = 0;

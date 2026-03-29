@@ -267,7 +267,7 @@ class _CurriculumTile extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      curriculum.displayNameEn,
+                      curriculum.displayNameHe,
                       style: theme.textTheme.titleSmall,
                     ),
                     const SizedBox(height: 6),

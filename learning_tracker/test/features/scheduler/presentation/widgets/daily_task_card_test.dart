@@ -50,7 +50,7 @@ void main() {
       // Content ref displayed (underscores replaced with spaces)
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
       // Curriculum badge
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       // Stage label: stageOrder 1 shows 'Learn'
       expect(find.text('Learn'), findsOneWidget);
     });

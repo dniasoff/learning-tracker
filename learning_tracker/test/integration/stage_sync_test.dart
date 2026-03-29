@@ -117,9 +117,9 @@ void main() {
       final stages = await repository.getStagesForCurriculum(curriculum);
       expect(stages, hasLength(3));
       expect(stages.map((s) => s.stageName).toList(), [
-        'Learn',
-        'Chazara 1',
-        'Chazara 2',
+        'לימוד',
+        'חזרה א׳',
+        'חזרה ב׳',
       ]);
       expect(pushedSettings, hasLength(1));
     });

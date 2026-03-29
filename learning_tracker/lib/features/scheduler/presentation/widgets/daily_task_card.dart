@@ -80,7 +80,7 @@ class _DailyTaskCardState extends ConsumerState<DailyTaskCard> {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
 
-    final stageLabel = task.stageOrder == 1 ? 'Learn' : task.stageName;
+    final stageLabel = task.stageName;
 
     return Dismissible(
       key: ValueKey(
@@ -159,7 +159,7 @@ class _DailyTaskCardState extends ConsumerState<DailyTaskCard> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            task.curriculumId.displayNameEn,
+                            task.curriculumId.displayNameHe,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: curriculumColor,
                             ),

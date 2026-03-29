@@ -46,7 +46,7 @@ class _CurriculumSettingsScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(text: 'Settings - ${_curriculum.displayNameEn}'),
+        title: AppBarTitle(text: 'Settings - ${_curriculum.displayNameHe}'),
       ),
       body: SafeArea(
         top: false,

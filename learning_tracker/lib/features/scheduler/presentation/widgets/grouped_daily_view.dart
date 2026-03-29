@@ -39,7 +39,7 @@ class GroupedDailyView extends StatelessWidget {
           key: ValueKey('group_${curriculum.storageKey}'),
           initiallyExpanded: true,
           leading: CircleAvatar(backgroundColor: color, radius: 8),
-          title: Text('${curriculum.displayNameEn} (${tasks.length})'),
+          title: Text('${curriculum.displayNameHe} (${tasks.length})'),
           children: List.generate(tasks.length, (i) {
             final task = tasks[i];
             return DailyTaskCard(

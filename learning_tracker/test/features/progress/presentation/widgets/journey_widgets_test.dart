@@ -110,7 +110,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('1 of 63 units completed'), findsOneWidget);
       expect(find.text('Berakhot'), findsWidgets);
     });

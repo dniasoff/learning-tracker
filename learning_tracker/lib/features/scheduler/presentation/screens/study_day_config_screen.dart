@@ -34,7 +34,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(text: '${curriculumId.displayNameEn} Study Days'),
+        title: AppBarTitle(text: '${curriculumId.displayNameHe} Study Days'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.router.maybePop(),

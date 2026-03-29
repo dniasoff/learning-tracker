@@ -192,7 +192,7 @@ class _CurriculumCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        curriculum.displayNameEn,
+                        curriculum.displayNameHe,
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,

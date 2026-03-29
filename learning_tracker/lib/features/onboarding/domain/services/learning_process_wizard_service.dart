@@ -132,12 +132,12 @@ class LearningProcessWizardService {
   }
 
   Future<void> _applyCustom(WizardResult result) async {
-    // Always create Learn as stage 1.
+    // Always create לימוד as stage 1.
     await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         curriculumId: result.curriculumId.storageKey,
         stageOrder: 1,
-        stageName: 'Learn',
+        stageName: 'לימוד',
         delayDays: 0,
         isDefault: const Value(false),
       ),
@@ -168,7 +168,7 @@ class LearningProcessWizardService {
       db.StageDefinitionsCompanion.insert(
         curriculumId: result.curriculumId.storageKey,
         stageOrder: 1,
-        stageName: 'Learn',
+        stageName: 'לימוד',
         delayDays: 0,
         isDefault: const Value(false),
       ),

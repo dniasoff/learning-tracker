@@ -78,14 +78,14 @@ void main() {
 
       final reordered = await repository.getStagesForCurriculum(curriculum);
       expect(reordered[0].stageOrder, 1);
-      expect(reordered[0].stageName, 'Chazara 2');
-      expect(reordered[2].stageName, 'Learn');
+      expect(reordered[0].stageName, 'חזרה ב׳');
+      expect(reordered[2].stageName, 'לימוד');
     });
 
     test('user can adjust delay days for a stage', () async {
       await repository.initializeDefaults(curriculum);
       final stages = await repository.getStagesForCurriculum(curriculum);
-      final chazara1 = stages.firstWhere((s) => s.stageName == 'Chazara 1');
+      final chazara1 = stages.firstWhere((s) => s.stageName == 'חזרה א׳');
 
       await repository.updateStage(chazara1.id, delayDays: 3);
 

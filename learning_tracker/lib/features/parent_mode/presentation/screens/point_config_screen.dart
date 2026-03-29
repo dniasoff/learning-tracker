@@ -95,7 +95,7 @@ class _CurriculumExpansionTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ExpansionTile(
-      title: Text(data.curriculum.displayNameEn),
+      title: Text(data.curriculum.displayNameHe),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -124,7 +124,7 @@ class _CurriculumExpansionTile extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Reset to Defaults'),
         content: Text(
-          'Reset all point values for ${data.curriculum.displayNameEn} to defaults?',
+          'Reset all point values for ${data.curriculum.displayNameHe} to defaults?',
         ),
         actions: [
           TextButton(

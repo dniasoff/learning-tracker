@@ -89,7 +89,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text: 'Learning Scope — ${widget.curriculumId.displayNameEn}',
+          text: 'Learning Scope — ${widget.curriculumId.displayNameHe}',
         ),
         actions: [TextButton(onPressed: _save, child: const Text('Save'))],
       ),

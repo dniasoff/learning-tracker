@@ -65,8 +65,8 @@ void main() {
       expect(find.text('Mishnah Berakhot 1.0'), findsOneWidget);
       expect(find.text('Bavli Berakhot 2a'), findsOneWidget);
       // Curriculum badges
-      expect(find.text('Mishnayos'), findsOneWidget);
-      expect(find.text('Talmud Bavli'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
+      expect(find.text('תלמוד בבלי'), findsOneWidget);
     });
 
     testWidgets('shows empty message for no tasks', (tester) async {
@@ -107,8 +107,8 @@ void main() {
         );
 
         // Curriculum group headers with counts
-        expect(find.text('Talmud Bavli (2)'), findsOneWidget);
-        expect(find.text('Mishnayos (1)'), findsOneWidget);
+        expect(find.text('תלמוד בבלי (2)'), findsOneWidget);
+        expect(find.text('משניות (1)'), findsOneWidget);
       },
     );
   });

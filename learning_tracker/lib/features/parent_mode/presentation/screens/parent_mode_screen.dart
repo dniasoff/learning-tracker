@@ -399,7 +399,7 @@ class _ParentCurriculumCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    summary.curriculum.displayNameEn,
+                    summary.curriculum.displayNameHe,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),

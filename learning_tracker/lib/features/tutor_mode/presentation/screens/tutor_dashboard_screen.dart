@@ -212,7 +212,7 @@ class _CurriculumFilter extends StatelessWidget {
             (c) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
-                label: Text(c.displayNameEn),
+                label: Text(c.displayNameHe),
                 selected: selected == c,
                 onSelected: (_) => onChanged(selected == c ? null : c),
               ),
@@ -259,7 +259,7 @@ class _PaceCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    curriculum.displayNameEn,
+                    curriculum.displayNameHe,
                     style: theme.textTheme.titleSmall,
                   ),
                 ),
@@ -385,7 +385,7 @@ class _ChazaraGroup extends StatelessWidget {
               title: Text(item.sefariaRef),
               subtitle: Text(
                 '${item.stageName}'
-                '${item.curriculumId.displayNameEn != '' ? ' \u2022 ${item.curriculumId.displayNameEn}' : ''}'
+                '${item.curriculumId.displayNameHe != '' ? ' \u2022 ${item.curriculumId.displayNameHe}' : ''}'
                 '${item.daysOverdue > 0 ? ' \u2022 ${item.daysOverdue}d overdue' : ''}',
               ),
             ),
@@ -430,7 +430,7 @@ class _DailyTasksSection extends StatelessWidget {
             ),
             title: Text(task.contentItemSefariaRef),
             subtitle: Text(
-              '${task.stageName} \u2022 ${task.curriculumId.displayNameEn}'
+              '${task.stageName} \u2022 ${task.curriculumId.displayNameHe}'
               ' \u2022 ~${task.estimatedEffortMinutes}min',
             ),
             trailing: Container(

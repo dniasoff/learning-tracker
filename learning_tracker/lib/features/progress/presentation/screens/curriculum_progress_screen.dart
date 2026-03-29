@@ -85,6 +85,6 @@ class CurriculumProgressScreen extends ConsumerWidget {
     final matches = CurriculumId.values.where(
       (c) => c.storageKey == curriculumId,
     );
-    return matches.isNotEmpty ? matches.first.displayNameEn : curriculumId;
+    return matches.isNotEmpty ? matches.first.displayNameHe : curriculumId;
   }
 }

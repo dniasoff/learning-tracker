@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/app_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -121,7 +122,7 @@ class _LearningProcessWizardScreenState
       final r = _rounds[i];
       rounds.add(
         CustomRound(
-          label: 'Chazara ${i + 1}',
+          label: HebrewTerms.getChazaraStageName(i + 1),
           scheduleType: r.useWeekly ? ScheduleType.weekly : ScheduleType.delay,
           delayDays: r.useWeekly ? null : r.delayDays,
           daysOfWeek: r.useWeekly ? r.selectedDays.toList() : null,
@@ -145,7 +146,7 @@ class _LearningProcessWizardScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.curriculumId.displayNameEn),
+        title: Text(widget.curriculumId.displayNameHe),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -186,7 +187,7 @@ class _LearningProcessWizardScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              widget.curriculumId.displayNameEn,
+              widget.curriculumId.displayNameHe,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -365,7 +366,10 @@ class _LearningProcessWizardScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Learn', style: theme.textTheme.titleMedium),
+                    Text(
+                      HebrewTerms.stageLearn,
+                      style: theme.textTheme.titleMedium,
+                    ),
                     Text(
                       'Daily new material',
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -375,7 +379,7 @@ class _LearningProcessWizardScreenState
                     const Divider(),
                     for (var i = 0; i < _rounds.length; i++) ...[
                       Text(
-                        'Chazara ${i + 1}',
+                        HebrewTerms.getChazaraStageName(i + 1),
                         style: theme.textTheme.titleMedium,
                       ),
                       Text(
@@ -568,7 +572,7 @@ class _RoundTimingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Chazara ${roundIndex + 1}',
+              HebrewTerms.getChazaraStageName(roundIndex + 1),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),

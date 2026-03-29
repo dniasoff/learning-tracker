@@ -26,7 +26,7 @@ void main() {
         createTestWidget(navigationStack: [], onBreadcrumbTap: (_) {}),
       );
 
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
     });
 
     testWidgets('displays navigation stack with separators', (tester) async {
@@ -37,7 +37,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('Berachos'), findsOneWidget);
 
@@ -89,7 +89,7 @@ void main() {
       );
 
       // Should only show curriculum name
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.byIcon(Icons.chevron_right), findsNothing);
     });
 
@@ -102,7 +102,7 @@ void main() {
       );
 
       // Should show all 4 levels plus curriculum
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('Berachos'), findsOneWidget);
       expect(find.text('Perek 1'), findsOneWidget);

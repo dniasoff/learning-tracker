@@ -12,10 +12,10 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': false,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily"},'
-        '{"stage":"next_day_review","label":"Next-Day Review","delay_days":1},'
-        '{"stage":"weekly_review","label":"Weekly Review","frequency":"weekly","days":["friday","shabbos"]},'
-        '{"stage":"rolling_back_20","label":"Rolling Back-20","type":"rolling","window":20}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily"},'
+        '{"stage":"next_day_review","label":"חזרה יומית","delay_days":1},'
+        '{"stage":"weekly_review","label":"חזרה שבועית","frequency":"weekly","days":["friday","shabbos"]},'
+        '{"stage":"rolling_back_20","label":"חזרה מחזורית","type":"rolling","window":20}'
         ']',
     'test_config': '{}',
   },
@@ -29,10 +29,10 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': true,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily"},'
-        '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
-        '{"stage":"chazara_2","label":"Chazara 2","delay_days":7},'
-        '{"stage":"chazara_3","label":"Chazara 3","delay_days":21}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily"},'
+        '{"stage":"chazara_1","label":"חזרה א׳","delay_days":1},'
+        '{"stage":"chazara_2","label":"חזרה ב׳","delay_days":7},'
+        '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
   },
@@ -45,10 +45,10 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': true,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily","pace":"half_daf"},'
-        '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
-        '{"stage":"chazara_2","label":"Chazara 2","delay_days":7},'
-        '{"stage":"chazara_3","label":"Chazara 3","delay_days":21}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"half_daf"},'
+        '{"stage":"chazara_1","label":"חזרה א׳","delay_days":1},'
+        '{"stage":"chazara_2","label":"חזרה ב׳","delay_days":7},'
+        '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
   },
@@ -61,10 +61,10 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': true,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily"},'
-        '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
-        '{"stage":"chazara_2","label":"Chazara 2","delay_days":7},'
-        '{"stage":"chazara_3","label":"Chazara 3","delay_days":21}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily"},'
+        '{"stage":"chazara_1","label":"חזרה א׳","delay_days":1},'
+        '{"stage":"chazara_2","label":"חזרה ב׳","delay_days":7},'
+        '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
   },
@@ -77,8 +77,8 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': true,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily"},'
-        '{"stage":"review","label":"Review","delay_days":7}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily"},'
+        '{"stage":"review","label":"חזרה","delay_days":7}'
         ']',
     'test_config': '{"frequency":"bimonthly","type":"written"}',
   },
@@ -91,9 +91,9 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': false,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily"},'
-        '{"stage":"chazara_1","label":"Chazara 1","delay_days":1},'
-        '{"stage":"chazara_2","label":"Chazara 2","delay_days":7}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily"},'
+        '{"stage":"chazara_1","label":"חזרה א׳","delay_days":1},'
+        '{"stage":"chazara_2","label":"חזרה ב׳","delay_days":7}'
         ']',
     'test_config': '{}',
   },
@@ -106,7 +106,7 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': false,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily","pace":"one_daf"}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_daf"}'
         ']',
     'test_config': '{}',
   },
@@ -119,7 +119,7 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': false,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily","pace":"two_mishnayos"}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"two_mishnayos"}'
         ']',
     'test_config': '{}',
   },
@@ -132,7 +132,7 @@ const List<Map<String, Object>> learningProgramSeeds = [
     'has_tests': false,
     'stages_config':
         '['
-        '{"stage":"learn","label":"Learn","frequency":"daily","pace":"one_chapter"}'
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_chapter"}'
         ']',
     'test_config': '{}',
   },

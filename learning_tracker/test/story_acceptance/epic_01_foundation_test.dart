@@ -82,7 +82,7 @@ void main() {
     });
 
     test('schema version is 7', () {
-      expect(db.schemaVersion, equals(23));
+      expect(db.schemaVersion, equals(24));
     });
 
     test('all 12 DAOs are accessible', () {

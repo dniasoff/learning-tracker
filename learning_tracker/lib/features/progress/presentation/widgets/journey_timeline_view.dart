@@ -129,13 +129,13 @@ class _TimelineCard extends StatelessWidget {
           ),
         ),
         title: Text(
-          completion.displayNameEn,
+          completion.displayNameHe,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         subtitle: Row(
           children: [
             Text(
-              '${entry.curriculumId.displayNameEn} · $ordinal completion · $formattedDate',
+              '${entry.curriculumId.displayNameHe} · $ordinal completion · $formattedDate',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,

@@ -85,7 +85,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
           controller: _searchController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Search ${curriculum.displayNameEn}…',
+            hintText: 'Search ${curriculum.displayNameHe}…',
             border: InputBorder.none,
             hintStyle: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withAlpha(128),

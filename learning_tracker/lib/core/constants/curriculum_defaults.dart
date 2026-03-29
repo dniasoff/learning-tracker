@@ -11,9 +11,9 @@ class CurriculumDefaults {
   /// Default stage definitions applied to all curricula.
   /// Stage order is 0-indexed; stage names are lowercase identifiers.
   static const List<DefaultStageDefinition> defaultStages = [
-    DefaultStageDefinition(stageOrder: 0, stageName: 'learn', delayDays: 0),
-    DefaultStageDefinition(stageOrder: 1, stageName: 'chazara1', delayDays: 1),
-    DefaultStageDefinition(stageOrder: 2, stageName: 'chazara2', delayDays: 7),
+    DefaultStageDefinition(stageOrder: 0, stageName: 'לימוד', delayDays: 0),
+    DefaultStageDefinition(stageOrder: 1, stageName: 'חזרה א׳', delayDays: 1),
+    DefaultStageDefinition(stageOrder: 2, stageName: 'חזרה ב׳', delayDays: 7),
   ];
 
   /// Points awarded per stage completion (keyed by stageOrder).

@@ -160,12 +160,12 @@ void main() {
 
         // Verify curriculum list shows Mishnayos (English display name)
         // 'Mishnayos' appears once as the English name in the curriculum card
-        expect(find.text('Mishnayos'), findsOneWidget);
+        expect(find.text('משניות'), findsOneWidget);
         // Should show leaf count label (e.g. "1 Mishnayos")
         expect(find.textContaining('Masechos'), findsOneWidget);
 
         // Step 2: Tap Mishnayos → navigate to hierarchy screen
-        await tester.tap(find.text('Mishnayos'));
+        await tester.tap(find.text('משניות'));
         await tester.pump();
 
         // The tap triggers context.router.push() which throws because
@@ -231,7 +231,7 @@ void main() {
 
       // Should show breadcrumb with all levels
       // 'Mishnayos' appears both in the AppBar title and in the breadcrumb
-      expect(find.text('Mishnayos'), findsNWidgets(2));
+      expect(find.text('משניות'), findsNWidgets(2));
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('Berachos'), findsOneWidget);
       expect(find.text('Perek 1'), findsOneWidget);

@@ -106,7 +106,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
             (c) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
-                label: Text(c.displayNameEn),
+                label: Text(c.displayNameHe),
                 selected: _curriculum == c,
                 onSelected: (_) =>
                     setState(() => _curriculum = _curriculum == c ? null : c),

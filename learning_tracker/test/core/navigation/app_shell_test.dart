@@ -331,7 +331,7 @@ void main() {
       // ContentBrowsingScreen is now a ConsumerStatefulWidget that
       // renders the curriculum display name and a loading indicator
       // while content loads from the (bundled JSON) asset provider.
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
     });
   });
 

@@ -36,7 +36,7 @@ class BreadcrumbNavigation extends StatelessWidget {
           children: [
             // Curriculum name (root level)
             _BreadcrumbItem(
-              label: curriculum.displayNameEn,
+              label: curriculum.displayNameHe,
               isLast: navigationStack.isEmpty,
               onTap: () => onBreadcrumbTap(-1),
             ),

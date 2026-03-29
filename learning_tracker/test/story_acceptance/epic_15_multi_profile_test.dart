@@ -2375,14 +2375,14 @@ void main() {
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
           'bavli',
         );
-        // Oraysa has 4 stages: Learn, Next-Day Review, Weekly Review, Rolling Back-20
+        // Oraysa has 4 stages: לימוד, חזרה יומית, חזרה שבועית, חזרה מחזורית
         expect(stages.length, 4);
-        expect(stages[0].stageName, 'Learn');
-        expect(stages[1].stageName, 'Next-Day Review');
+        expect(stages[0].stageName, 'לימוד');
+        expect(stages[1].stageName, 'חזרה יומית');
         expect(stages[1].delayDays, 1);
-        expect(stages[2].stageName, 'Weekly Review');
+        expect(stages[2].stageName, 'חזרה שבועית');
         expect(stages[2].scheduleType, 'weekly');
-        expect(stages[3].stageName, 'Rolling Back-20');
+        expect(stages[3].stageName, 'חזרה מחזורית');
         expect(stages[3].scheduleType, 'rolling');
         expect(stages[3].rollingWindowSize, 20);
       });
@@ -2434,8 +2434,8 @@ void main() {
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
           'mishnayos',
         );
-        expect(stages.length, 3); // Learn + 2 custom
-        expect(stages[0].stageName, 'Learn');
+        expect(stages.length, 3); // לימוד + 2 custom
+        expect(stages[0].stageName, 'לימוד');
         expect(stages[0].delayDays, 0);
         expect(stages[1].stageName, 'Chazara 1');
         expect(stages[1].delayDays, 1);
@@ -2463,7 +2463,7 @@ void main() {
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
           'mishnayos',
         );
-        expect(stages.length, 2); // Learn + 1 weekly
+        expect(stages.length, 2); // לימוד + 1 weekly
         expect(stages[1].stageName, 'Chazara 1');
         expect(stages[1].scheduleType, 'weekly');
         final days = jsonDecode(stages[1].daysOfWeek!) as List;
@@ -2485,7 +2485,7 @@ void main() {
           'bavli',
         );
         expect(stages.length, 1);
-        expect(stages[0].stageName, 'Learn');
+        expect(stages[0].stageName, 'לימוד');
         expect(stages[0].stageOrder, 1);
         expect(stages[0].delayDays, 0);
       });
@@ -3055,7 +3055,7 @@ void main() {
           'mishnayos',
         );
         expect(stages.length, 1);
-        expect(stages.first.stageName, 'Learn');
+        expect(stages.first.stageName, 'לימוד');
       });
     });
   });

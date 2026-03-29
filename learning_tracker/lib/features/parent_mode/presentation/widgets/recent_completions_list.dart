@@ -22,7 +22,7 @@ class RecentCompletionsList extends StatelessWidget {
             final curriculum = CurriculumId.values
                 .where((cid) => cid.storageKey == c.curriculumId)
                 .firstOrNull;
-            final curriculumName = curriculum?.displayNameEn ?? c.curriculumId;
+            final curriculumName = curriculum?.displayNameHe ?? c.curriculumId;
             final curriculumColor = curriculum != null
                 ? AppTheme.getCurriculumColor(curriculum)
                 : theme.colorScheme.primary;

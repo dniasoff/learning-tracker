@@ -506,7 +506,7 @@ class _TaskItemCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${task.curriculumId.displayNameEn}: ${task.contentItemSefariaRef}',
+                      '${task.curriculumId.displayNameHe}: ${task.contentItemSefariaRef}',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
@@ -738,7 +738,7 @@ class _CurriculumCard extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        curriculum.displayNameEn,
+                        curriculum.displayNameHe,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

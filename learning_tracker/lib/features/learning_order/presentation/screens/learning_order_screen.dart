@@ -39,7 +39,7 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(text: '${widget.curriculumId.displayNameEn} Order'),
+        title: AppBarTitle(text: '${widget.curriculumId.displayNameHe} Order'),
         actions: [
           if (!isRestricted)
             IconButton(

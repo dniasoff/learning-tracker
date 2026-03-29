@@ -55,7 +55,7 @@ class BookmarkCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Begin your ${curriculumId.displayNameEn} journey',
+                      'Begin your ${curriculumId.displayNameHe} journey',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],

@@ -181,7 +181,7 @@ List<MilestoneAchievement> _detectMilestones(
     milestones.add(
       MilestoneAchievement(
         type: 'curriculum_complete',
-        displayName: curriculum.displayNameEn,
+        displayName: curriculum.displayNameHe,
         achievedAt: allEntries.first.completedAt,
       ),
     );

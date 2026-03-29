@@ -59,7 +59,7 @@ class _CurriculumTrackCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              curriculum.displayNameEn,
+              curriculum.displayNameHe,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),

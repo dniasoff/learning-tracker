@@ -29,8 +29,8 @@ void main() {
 
       expect(find.text('25'), findsOneWidget);
       expect(find.text('Total Points'), findsOneWidget);
-      expect(find.text('Mishnayos: 15'), findsOneWidget);
-      expect(find.text('Talmud Bavli: 10'), findsOneWidget);
+      expect(find.text('משניות: 15'), findsOneWidget);
+      expect(find.text('תלמוד בבלי: 10'), findsOneWidget);
     });
 
     testWidgets('is hidden in adult mode', (tester) async {

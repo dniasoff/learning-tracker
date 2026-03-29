@@ -695,7 +695,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Progress & Pace'), findsOneWidget);
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('Behind'), findsOneWidget);
       expect(find.text('3 days behind'), findsOneWidget);
     });

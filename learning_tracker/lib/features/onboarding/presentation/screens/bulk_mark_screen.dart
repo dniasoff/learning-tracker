@@ -228,7 +228,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               )
             : AppBarTitle(
                 text:
-                    'Mark Prior Completions — ${widget.curriculumId.displayNameEn}',
+                    'Mark Prior Completions — ${widget.curriculumId.displayNameHe}',
               ),
         leading: _phase == _Phase.selection && _navigationStack.isNotEmpty
             ? IconButton(

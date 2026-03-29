@@ -40,7 +40,7 @@ class PointsDisplayWidget extends ConsumerWidget {
               children: map.entries
                   .map(
                     (e) =>
-                        Chip(label: Text('${e.key.displayNameEn}: ${e.value}')),
+                        Chip(label: Text('${e.key.displayNameHe}: ${e.value}')),
                   )
                   .toList(),
             ),

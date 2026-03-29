@@ -47,7 +47,7 @@ class CurriculumSummaryCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      summary.curriculumId.displayNameEn,
+                      summary.curriculumId.displayNameHe,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

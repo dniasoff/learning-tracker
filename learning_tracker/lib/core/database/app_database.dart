@@ -116,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration {
@@ -389,6 +389,29 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'ALTER TABLE curriculum_tracks ADD COLUMN archived_at INTEGER',
           );
+        }
+        if (from < 24) {
+          // Migration from schema v23 to v24: Hebrew stage names
+          // Convert known English default stage names to Hebrew equivalents.
+          // User-customized names (not matching known defaults) are untouched.
+          const englishToHebrew = {
+            'Learn': 'לימוד',
+            'Chazara 1': 'חזרה א׳',
+            'Chazara 2': 'חזרה ב׳',
+            'Chazara 3': 'חזרה ג׳',
+            'Review': 'חזרה',
+            'Review 1': 'חזרה א׳',
+            'Review 2': 'חזרה ב׳',
+            'Next-Day Review': 'חזרה יומית',
+            'Weekly Review': 'חזרה שבועית',
+            'Rolling Back-20': 'חזרה מחזורית',
+          };
+          for (final entry in englishToHebrew.entries) {
+            await customStatement(
+              "UPDATE stage_definitions SET stage_name = '${entry.value}' "
+              "WHERE stage_name = '${entry.key}'",
+            );
+          }
         }
       },
     );

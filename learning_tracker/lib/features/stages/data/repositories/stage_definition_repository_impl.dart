@@ -14,11 +14,11 @@ import 'package:learning_tracker/features/stages/domain/repositories/stage_defin
 /// Maximum number of stages allowed per curriculum.
 const _maxStages = 10;
 
-/// Default stage definitions (Learn, Chazara 1, Chazara 2).
+/// Default stage definitions (לימוד, חזרה א׳, חזרה ב׳).
 const _defaults = [
-  (stageOrder: 1, stageName: 'Learn', delayDays: 0),
-  (stageOrder: 2, stageName: 'Chazara 1', delayDays: 1),
-  (stageOrder: 3, stageName: 'Chazara 2', delayDays: 7),
+  (stageOrder: 1, stageName: 'לימוד', delayDays: 0),
+  (stageOrder: 2, stageName: 'חזרה א׳', delayDays: 1),
+  (stageOrder: 3, stageName: 'חזרה ב׳', delayDays: 7),
 ];
 
 /// Concrete implementation of [StageDefinitionRepository].

@@ -2,15 +2,22 @@
 @Tags(['epic_18'])
 library;
 
+import 'dart:convert';
+
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -296,6 +303,282 @@ void main() {
             );
           },
         );
+      });
+    },
+  );
+
+  // ── Story 18.4: Hebrew Terms for Chazara & Curriculum Names ──────────────
+
+  group(
+    'Story 18.4 -- Hebrew Terms for Chazara & Curriculum Names',
+    tags: ['story_18_4'],
+    () {
+      // ── AC-1: Default stage names use Hebrew ──
+
+      group('AC-1: Default stage names use Hebrew', () {
+        test('CurriculumDefaults.defaultStages has Hebrew names', () {
+          const stages = CurriculumDefaults.defaultStages;
+          expect(stages[0].stageName, 'לימוד');
+          expect(stages[1].stageName, 'חזרה א׳');
+          expect(stages[2].stageName, 'חזרה ב׳');
+        });
+
+        test(
+          'StageDefinitionRepositoryImpl.initializeDefaults creates Hebrew stages',
+          () async {
+            final db = AppDatabase(NativeDatabase.memory());
+            addTearDown(db.close);
+
+            final repo = StageDefinitionRepositoryImpl(
+              stageDao: db.stageDao,
+              completionDao: db.completionDao,
+              pushSettings: (_) async {},
+            );
+
+            await repo.initializeDefaults(CurriculumId.mishnayos);
+            final stages = await repo.getStagesForCurriculum(
+              CurriculumId.mishnayos,
+            );
+
+            expect(stages[0].stageName, 'לימוד');
+            expect(stages[1].stageName, 'חזרה א׳');
+            expect(stages[2].stageName, 'חזרה ב׳');
+          },
+        );
+
+        test(
+          'LearningProcessWizardService._applyCustom creates לימוד stage',
+          () async {
+            final db = AppDatabase(NativeDatabase.memory());
+            addTearDown(db.close);
+
+            final service = LearningProcessWizardService(
+              stageDao: db.stageDao,
+              learningProgramDao: db.learningProgramDao,
+              profileProgramDao: db.profileProgramDao,
+            );
+
+            await service.applyWizardResult(
+              const WizardResult(
+                curriculumId: CurriculumId.bavli,
+                choice: WizardChoice.custom,
+                customRounds: [],
+              ),
+              profileId: 1,
+            );
+
+            final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+              'bavli',
+            );
+            expect(stages, hasLength(1));
+            expect(stages.first.stageName, 'לימוד');
+          },
+        );
+
+        test(
+          'LearningProcessWizardService._applyNoReview creates לימוד stage',
+          () async {
+            final db = AppDatabase(NativeDatabase.memory());
+            addTearDown(db.close);
+
+            final service = LearningProcessWizardService(
+              stageDao: db.stageDao,
+              learningProgramDao: db.learningProgramDao,
+              profileProgramDao: db.profileProgramDao,
+            );
+
+            await service.applyWizardResult(
+              const WizardResult(
+                curriculumId: CurriculumId.bavli,
+                choice: WizardChoice.noReview,
+              ),
+              profileId: 1,
+            );
+
+            final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+              'bavli',
+            );
+            expect(stages, hasLength(1));
+            expect(stages.first.stageName, 'לימוד');
+          },
+        );
+      });
+
+      // ── AC-2: Curriculum names display in Hebrew ──
+
+      group('AC-2: Curriculum names display in Hebrew', () {
+        test('every CurriculumId has a non-empty displayNameHe', () {
+          for (final id in CurriculumId.values) {
+            expect(
+              id.displayNameHe,
+              isNotEmpty,
+              reason: '${id.name} should have Hebrew display name',
+            );
+          }
+        });
+
+        test(
+          'HebrewTerms.getCurriculumDisplayName delegates to displayNameHe',
+          () {
+            for (final id in CurriculumId.values) {
+              expect(
+                HebrewTerms.getCurriculumDisplayName(id),
+                id.displayNameHe,
+              );
+            }
+          },
+        );
+      });
+
+      // ── AC-4: Learning process wizard presets use Hebrew ──
+
+      group('AC-4: Seed data labels are Hebrew', () {
+        test('all learning_program_seeds have Hebrew labels', () {
+          for (final seed in learningProgramSeeds) {
+            final stagesJson = seed['stages_config']! as String;
+            final stages = (jsonDecode(stagesJson) as List)
+                .cast<Map<String, dynamic>>();
+            for (final stage in stages) {
+              final label = stage['label'] as String;
+              // Should NOT be English defaults
+              expect(label, isNot('Learn'), reason: 'seed ${seed['name']}');
+              expect(
+                label,
+                isNot(matches(RegExp(r'^Chazara \d+$'))),
+                reason: 'seed ${seed['name']}',
+              );
+              expect(
+                label,
+                isNot('Next-Day Review'),
+                reason: 'seed ${seed['name']}',
+              );
+              expect(
+                label,
+                isNot('Weekly Review'),
+                reason: 'seed ${seed['name']}',
+              );
+              expect(
+                label,
+                isNot('Rolling Back-20'),
+                reason: 'seed ${seed['name']}',
+              );
+            }
+          }
+        });
+      });
+
+      // ── AC-5: Existing data migrated ──
+
+      group('AC-5: Data migration v23→v24', () {
+        test('migration converts English defaults to Hebrew', () async {
+          final db = AppDatabase(NativeDatabase.memory());
+          addTearDown(db.close);
+
+          // Insert English defaults
+          await db.stageDao.insertStageDefinition(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'bavli',
+              stageOrder: 1,
+              stageName: 'Learn',
+              delayDays: 0,
+              isDefault: const Value(true),
+            ),
+          );
+          await db.stageDao.insertStageDefinition(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'bavli',
+              stageOrder: 2,
+              stageName: 'Chazara 1',
+              delayDays: 1,
+            ),
+          );
+
+          // Run migration SQL
+          for (final entry in HebrewTerms.stageNameMap.entries) {
+            await db.customStatement(
+              "UPDATE stage_definitions SET stage_name = '${entry.value}' "
+              "WHERE stage_name = '${entry.key}'",
+            );
+          }
+
+          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+            'bavli',
+          );
+          expect(stages[0].stageName, 'לימוד');
+          expect(stages[1].stageName, 'חזרה א׳');
+        });
+
+        test('migration does not touch user-customized names', () async {
+          final db = AppDatabase(NativeDatabase.memory());
+          addTearDown(db.close);
+
+          await db.stageDao.insertStageDefinition(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              stageOrder: 1,
+              stageName: 'My Custom Stage',
+              delayDays: 0,
+            ),
+          );
+
+          for (final entry in HebrewTerms.stageNameMap.entries) {
+            await db.customStatement(
+              "UPDATE stage_definitions SET stage_name = '${entry.value}' "
+              "WHERE stage_name = '${entry.key}'",
+            );
+          }
+
+          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+            'mishnayos',
+          );
+          expect(stages.first.stageName, 'My Custom Stage');
+        });
+
+        test('migration is idempotent', () async {
+          final db = AppDatabase(NativeDatabase.memory());
+          addTearDown(db.close);
+
+          await db.stageDao.insertStageDefinition(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'bavli',
+              stageOrder: 1,
+              stageName: 'Learn',
+              delayDays: 0,
+            ),
+          );
+
+          // Run twice
+          for (var i = 0; i < 2; i++) {
+            for (final entry in HebrewTerms.stageNameMap.entries) {
+              await db.customStatement(
+                "UPDATE stage_definitions SET stage_name = '${entry.value}' "
+                "WHERE stage_name = '${entry.key}'",
+              );
+            }
+          }
+
+          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+            'bavli',
+          );
+          expect(stages.first.stageName, 'לימוד');
+        });
+      });
+
+      // ── HebrewTerms helpers ──
+
+      group('HebrewTerms helpers', () {
+        test('getDefaultStageName returns correct Hebrew names', () {
+          expect(HebrewTerms.getDefaultStageName(0), 'לימוד');
+          expect(HebrewTerms.getDefaultStageName(1), 'חזרה א׳');
+          expect(HebrewTerms.getDefaultStageName(2), 'חזרה ב׳');
+          expect(HebrewTerms.getDefaultStageName(3), 'חזרה ג׳');
+        });
+
+        test('toHebrew converts known English defaults', () {
+          expect(HebrewTerms.toHebrew('Learn'), 'לימוד');
+          expect(HebrewTerms.toHebrew('Chazara 1'), 'חזרה א׳');
+          expect(HebrewTerms.toHebrew('My Custom'), isNull);
+        });
       });
     },
   );

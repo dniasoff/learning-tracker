@@ -543,7 +543,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should show curriculum name and pace badge
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('On Pace'), findsOneWidget);
     });
 
@@ -1168,11 +1168,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Both curricula visible
-      expect(find.text('Mishnayos'), findsOneWidget);
-      expect(find.text('Talmud Bavli'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
+      expect(find.text('תלמוד בבלי'), findsOneWidget);
 
       // Tap to expand Mishnayos
-      await tester.tap(find.text('Mishnayos'));
+      await tester.tap(find.text('משניות'));
       await tester.pumpAndSettle();
 
       // Stage names visible
@@ -1194,7 +1194,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Expand Mishnayos
-      await tester.tap(find.text('Mishnayos'));
+      await tester.tap(find.text('משניות'));
       await tester.pumpAndSettle();
 
       // Should see point values as text (default: 10, 5, 3)
@@ -1226,7 +1226,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Expand Mishnayos
-      await tester.tap(find.text('Mishnayos'));
+      await tester.tap(find.text('משניות'));
       await tester.pumpAndSettle();
 
       // Find and tap reset button
@@ -1261,7 +1261,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Expand Mishnayos
-      await tester.tap(find.text('Mishnayos'));
+      await tester.tap(find.text('משניות'));
       await tester.pumpAndSettle();
 
       // Tap edit on the first stage (Learn = 10)
@@ -1433,7 +1433,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('Personal'), findsOneWidget);
       expect(find.text('School'), findsOneWidget);
       expect(find.text('Tutor'), findsOneWidget);

@@ -60,7 +60,7 @@ class _CurriculumSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  journey.curriculumId.displayNameEn,
+                  journey.curriculumId.displayNameHe,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -106,7 +106,7 @@ class _CurriculumSection extends StatelessWidget {
           if (groupedByUnit.isNotEmpty)
             ...groupedByUnit.entries.map(
               (entry) => _UnitCompletionTile(
-                unitName: entry.value.first.displayNameEn,
+                unitName: entry.value.first.displayNameHe,
                 unitNameHe: entry.value.first.displayNameHe,
                 completions: entry.value,
                 curriculumColor: color,

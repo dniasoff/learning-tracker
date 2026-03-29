@@ -29,12 +29,12 @@ void main() {
     });
 
     test('creates with all optional fields', () {
-      final result = AddTrackResult(
+      const result = AddTrackResult(
         curriculumId: CurriculumId.bavli,
         label: 'דף היומי',
         programId: 1,
         programName: 'דף היומי',
-        scopeSelections: const [ScopeEntry(level: 1, value: 'Berachos')],
+        scopeSelections: [ScopeEntry(level: 1, value: 'Berachos')],
         studyDays: {1: 'study', 2: 'study'},
       );
 
@@ -44,7 +44,7 @@ void main() {
     });
 
     test('copyWith preserves unchanged fields', () {
-      final original = AddTrackResult(
+      const original = AddTrackResult(
         curriculumId: CurriculumId.bavli,
         label: 'Test',
         studyDays: {1: 'study'},
