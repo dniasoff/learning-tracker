@@ -363,6 +363,40 @@ class _UserProfileSection extends StatelessWidget {
 
   final User? user;
 
+  Future<void> _showEditNameDialog(BuildContext context, User user) async {
+    final controller = TextEditingController(text: user.displayName ?? '');
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Name'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Display Name',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (newName != null && newName.isNotEmpty && context.mounted) {
+      await user.updateDisplayName(newName);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -452,7 +486,7 @@ class _UserProfileSection extends StatelessWidget {
               Icons.edit_outlined,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            onPressed: () {},
+            onPressed: () => _showEditNameDialog(context, user!),
           ),
         ],
       ),
@@ -814,7 +848,7 @@ Future<void> _showDeleteAccountFlow(
   try {
     await service.deleteAccount(user.uid);
     if (context.mounted) {
-      await context.router.replaceAll([const AppIntroRoute()]);
+      await context.router.replaceAll([const WelcomeRoute()]);
     }
   } catch (e) {
     if (context.mounted) {
