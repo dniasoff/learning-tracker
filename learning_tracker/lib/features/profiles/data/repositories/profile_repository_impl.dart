@@ -115,6 +115,12 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<void> deleteProfile(int id) async {
+    // Guard: cannot delete the last profile
+    final count = await countProfilesForAccount(1);
+    if (count <= 1) {
+      throw const LastProfileException();
+    }
+
     await _db.transaction(() async {
       // Cascade delete all associated data
       await (_db.delete(
@@ -144,6 +150,24 @@ class ProfileRepositoryImpl implements ProfileRepository {
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
         _db.curriculumTracks,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.curriculumScopes,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.learningLedger,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.studyDayConfigs,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.profilePrograms,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.rewardPools,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.testScores,
       )..where((t) => t.profileId.equals(id))).go();
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);

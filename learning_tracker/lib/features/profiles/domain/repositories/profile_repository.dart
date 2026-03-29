@@ -44,6 +44,15 @@ class MaxProfilesExceededException implements Exception {
 
 /// Thrown when a profile with the same name (case-insensitive) already exists
 /// for the account.
+/// Thrown when attempting to delete the last remaining profile.
+class LastProfileException implements Exception {
+  const LastProfileException();
+
+  @override
+  String toString() =>
+      'LastProfileException: Cannot delete the last profile — at least one must exist';
+}
+
 class DuplicateProfileNameException implements Exception {
   final String displayName;
   const DuplicateProfileNameException(this.displayName);
