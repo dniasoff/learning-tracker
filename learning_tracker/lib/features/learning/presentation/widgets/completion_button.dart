@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
@@ -54,6 +55,14 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
     super.dispose();
   }
 
+  /// Default points when we don't have DB config yet (used for optimistic UI).
+  int _optimisticPoints(int stageId) => switch (stageId) {
+    1 => 10, // Learn
+    2 => 5, // Chazara 1
+    3 => 3, // Chazara 2
+    _ => 1, // Additional stages
+  };
+
   Future<void> _handleMarkComplete() async {
     if (_isLoading) return;
 
@@ -61,12 +70,58 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       _isLoading = true;
     });
 
-    try {
-      // Capture streak before completion (already cached, instant)
-      final streakData = ref.read(dashboardStreakProvider).value;
-      final streakBefore = streakData?.currentStreak ?? 0;
+    // Build the optimistic key for this completion
+    final optKey = optimisticKey(
+      sefariaRef: widget.sefariaRef,
+      stageId: widget.stageId,
+      trackType: widget.trackType,
+    );
 
-      // Mark the completion — this is the only thing the user is waiting for
+    // Capture streak before completion (already cached, instant)
+    final streakData = ref.read(dashboardStreakProvider).value;
+    final streakBefore = streakData?.currentStreak ?? 0;
+
+    // --- Optimistic UI update (synchronous, < 1ms) ---
+    ref.read(optimisticCompletionStateProvider.notifier).add(optKey);
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    // Start feedback immediately with optimistic point values
+    final optimisticPts = _optimisticPoints(widget.stageId);
+    _feedbackController.start(
+      CompletionFeedbackData(
+        pointsAwarded: optimisticPts,
+        progressBefore: 0,
+        progressAfter: 0,
+        streakBefore: streakBefore,
+        streakAfter: streakBefore + 1,
+        userMode: widget.userMode,
+      ),
+    );
+
+    // Show points popup non-blocking (child mode only)
+    if (widget.userMode == UserMode.child && mounted) {
+      unawaited(
+        showPointsPopup(
+          context: context,
+          points: optimisticPts,
+          userMode: widget.userMode,
+        ),
+      );
+    }
+
+    widget.onCompleted?.call();
+
+    // --- Background persistence (fire-and-forget with error rollback) ---
+    unawaited(_persistCompletion(optKey, streakBefore));
+  }
+
+  /// Persists the completion to DB in the background.
+  /// On failure, rolls back the optimistic state and shows a retry snackbar.
+  Future<void> _persistCompletion(String optKey, int streakBefore) async {
+    try {
       final useCase = ref.read(markCompletionUseCaseProvider);
       final request = CompletionRequest(
         curriculumId: widget.curriculumId,
@@ -77,28 +132,10 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
       final completion = await useCase(request);
 
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Start feedback immediately with optimistic values
-      _feedbackController.start(
-        CompletionFeedbackData(
-          pointsAwarded: completion.points,
-          progressBefore: 0,
-          progressAfter: 0,
-          streakBefore: streakBefore,
-          streakAfter: streakBefore + 1,
-          userMode: widget.userMode,
-        ),
-      );
-
-      // --- Everything below is fire-and-forget background work ---
+      // --- Lazy provider invalidation (non-blocking) ---
       final curriculumEnum = CurriculumId.values.where(
         (c) => c.storageKey == widget.curriculumId,
       );
-
-      // Invalidate providers so dashboard updates lazily
       if (curriculumEnum.isNotEmpty) {
         ref.invalidate(
           dashboardCompletionPercentageProvider(curriculumEnum.first),
@@ -108,35 +145,31 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
       // Background: streak alert, rewards
       unawaited(_postCompletionWork(completion));
-
-      // Show points popup non-blocking (child mode only)
-      if (widget.userMode == UserMode.child) {
-        if (mounted) {
-          unawaited(
-            showPointsPopup(
-              context: context,
-              points: completion.points,
-              userMode: widget.userMode,
-            ),
-          );
-        }
-      }
-      // Adult mode: overlay checkmark animation handles feedback (no snackbar)
-
-      widget.onCompleted?.call();
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      // --- Rollback optimistic state ---
+      ref.read(optimisticCompletionStateProvider.notifier).remove(optKey);
 
+      // Reset button to tappable state
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _feedbackController.cancel();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to mark complete: $e'),
+            content: const Text("Couldn't save — tap to retry"),
             backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _handleMarkComplete,
+            ),
           ),
         );
       }
+
+      AppLogger.instance.error('Completion persistence failed', e);
     }
   }
 

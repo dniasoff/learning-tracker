@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_co
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
@@ -16,11 +17,22 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'completion_providers.g.dart';
 
 /// Provider family to check whether a specific stage is already completed.
+///
+/// Checks optimistic state first (instant), then falls back to DB query.
 final isStageCompletedProvider = FutureProvider.autoDispose
     .family<bool, ({String sefariaRef, int stageId, String trackType})>((
       ref,
       params,
     ) async {
+      // Check optimistic state first — instant, no DB query needed
+      final optimistic = ref.watch(optimisticCompletionStateProvider);
+      final key = optimisticKey(
+        sefariaRef: params.sefariaRef,
+        stageId: params.stageId,
+        trackType: params.trackType,
+      );
+      if (optimistic.contains(key)) return true;
+
       final repository = ref.watch(completionRepositoryProvider);
       return repository.isStageCompleted(
         sefariaRef: params.sefariaRef,
