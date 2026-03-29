@@ -83,7 +83,7 @@ void main() {
       expect(find.text('APPEARANCE'), findsOneWidget);
     });
 
-    testWidgets('renders Curricula tile with active count', (tester) async {
+    testWidgets('renders Manage Tracks tile', (tester) async {
       await tester.pumpWidget(
         createTestWidget(
           initialActive: [CurriculumId.mishnayos, CurriculumId.bavli],
@@ -91,9 +91,8 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      expect(find.text('Curricula'), findsOneWidget);
-      expect(find.text('Manage your learning path'), findsOneWidget);
-      expect(find.text('2 active'), findsOneWidget);
+      expect(find.text('Manage Tracks'), findsOneWidget);
+      expect(find.text('Add, edit, or archive tracks'), findsOneWidget);
     });
 
     testWidgets('renders learning section tiles', (tester) async {
@@ -102,20 +101,9 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      expect(find.text('Curricula'), findsOneWidget);
+      expect(find.text('Manage Tracks'), findsOneWidget);
       expect(find.text('Goals'), findsOneWidget);
       expect(find.text('Daily Reminder'), findsOneWidget);
-    });
-
-    testWidgets('shows active count of 1 for single curriculum', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createTestWidget(initialActive: [CurriculumId.mishnayos]),
-      );
-      await pumpUntilSettled(tester);
-
-      expect(find.text('1 active'), findsOneWidget);
     });
 
     testWidgets('renders Daily Reminder Switch', (tester) async {

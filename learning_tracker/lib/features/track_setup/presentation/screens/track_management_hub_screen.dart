@@ -36,7 +36,7 @@ class _TrackManagementHubScreenState
         body: AddTrackFlow(
           profileId: ref.watch(activeProfileIdProvider),
           isOnboarding: false,
-          isChildMode: false,
+          isChildMode: false, // TODO(18.6): derive from active profile mode
           onComplete: _onAddTrackComplete,
           onCancel: () => setState(() => _addingTrack = false),
         ),

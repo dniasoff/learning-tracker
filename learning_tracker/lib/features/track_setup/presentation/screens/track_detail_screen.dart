@@ -23,7 +23,7 @@ import 'package:learning_tracker/features/track_setup/presentation/providers/tra
 ///
 /// Displays label, curriculum (Hebrew), program, scope summary,
 /// chazara stages, goal, and study days for a single track.
-@RoutePage()
+// @RoutePage() — disabled until Story 18.5 adds the route to app_router.dart
 class TrackDetailScreen extends ConsumerStatefulWidget {
   const TrackDetailScreen({
     super.key,

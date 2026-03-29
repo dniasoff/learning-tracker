@@ -56,37 +56,6 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: Icon(
-                      Icons.menu_book,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Curricula'),
-                    subtitle: const Text('Manage your learning path'),
-                    trailing: activeCurriculaAsync.when(
-                      data: (curricula) => Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${curricula.length} active',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right),
-                        ],
-                      ),
-                      loading: () => const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      error: (_, __) => const Icon(Icons.chevron_right),
-                    ),
-                    onTap: () => context.pushRoute(const CurriculumListRoute()),
-                  ),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  ListTile(
-                    leading: Icon(
                       Icons.route,
                       color: theme.colorScheme.primary,
                     ),

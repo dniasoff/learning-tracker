@@ -30,7 +30,7 @@ class LearningScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            tooltip: 'Browse curricula',
+            tooltip: 'Search content',
             onPressed: () => context.router.push(const CurriculumListRoute()),
           ),
         ],
@@ -43,14 +43,14 @@ class LearningScreen extends ConsumerWidget {
           data: (activeCurricula) {
             if (activeCurricula.isEmpty) {
               return EmptyState(
-                message: 'No active curricula',
-                subtitle: 'Add a curriculum to start learning.',
+                message: 'No active tracks',
+                subtitle: 'Add a track to start learning.',
                 icon: Icons.menu_book_outlined,
                 action: FilledButton.icon(
                   onPressed: () =>
-                      context.router.push(const CurriculumListRoute()),
+                      context.router.push(const TrackManagementHubRoute()),
                   icon: const Icon(Icons.add),
-                  label: const Text('Browse Curricula'),
+                  label: const Text('Add Track'),
                 ),
               );
             }

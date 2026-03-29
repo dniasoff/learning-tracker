@@ -39,7 +39,7 @@ void main() {
 
       expect(find.text('Learn'), findsOneWidget);
       // With no active curricula, the empty state is shown
-      expect(find.text('No active curricula'), findsOneWidget);
+      expect(find.text('No active tracks'), findsOneWidget);
     });
   });
 }

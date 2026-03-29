@@ -784,6 +784,17 @@ class $CurriculumTracksTable extends CurriculumTracks
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _archivedAtMeta = const VerificationMeta(
+    'archivedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> archivedAt = GeneratedColumn<DateTime>(
+    'archived_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     profileId,
@@ -792,6 +803,7 @@ class $CurriculumTracksTable extends CurriculumTracks
     isActive,
     activatedAt,
     deactivatedAt,
+    archivedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -856,6 +868,12 @@ class $CurriculumTracksTable extends CurriculumTracks
         ),
       );
     }
+    if (data.containsKey('archived_at')) {
+      context.handle(
+        _archivedAtMeta,
+        archivedAt.isAcceptableOrUnknown(data['archived_at']!, _archivedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -889,6 +907,10 @@ class $CurriculumTracksTable extends CurriculumTracks
         DriftSqlType.dateTime,
         data['${effectivePrefix}deactivated_at'],
       ),
+      archivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}archived_at'],
+      ),
     );
   }
 
@@ -915,6 +937,10 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
 
   /// When this track was last deactivated (null if currently active)
   final DateTime? deactivatedAt;
+
+  /// When this track was archived (null if not archived).
+  /// Archived tracks are hidden from dashboard/scheduler but data is preserved.
+  final DateTime? archivedAt;
   const CurriculumTrack({
     required this.profileId,
     required this.curriculumId,
@@ -922,6 +948,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     required this.isActive,
     required this.activatedAt,
     this.deactivatedAt,
+    this.archivedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -933,6 +960,9 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     map['activated_at'] = Variable<DateTime>(activatedAt);
     if (!nullToAbsent || deactivatedAt != null) {
       map['deactivated_at'] = Variable<DateTime>(deactivatedAt);
+    }
+    if (!nullToAbsent || archivedAt != null) {
+      map['archived_at'] = Variable<DateTime>(archivedAt);
     }
     return map;
   }
@@ -947,6 +977,9 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       deactivatedAt: deactivatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deactivatedAt),
+      archivedAt: archivedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(archivedAt),
     );
   }
 
@@ -962,6 +995,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       isActive: serializer.fromJson<bool>(json['isActive']),
       activatedAt: serializer.fromJson<DateTime>(json['activatedAt']),
       deactivatedAt: serializer.fromJson<DateTime?>(json['deactivatedAt']),
+      archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
     );
   }
   @override
@@ -974,6 +1008,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       'isActive': serializer.toJson<bool>(isActive),
       'activatedAt': serializer.toJson<DateTime>(activatedAt),
       'deactivatedAt': serializer.toJson<DateTime?>(deactivatedAt),
+      'archivedAt': serializer.toJson<DateTime?>(archivedAt),
     };
   }
 
@@ -984,6 +1019,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     bool? isActive,
     DateTime? activatedAt,
     Value<DateTime?> deactivatedAt = const Value.absent(),
+    Value<DateTime?> archivedAt = const Value.absent(),
   }) => CurriculumTrack(
     profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
@@ -993,6 +1029,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     deactivatedAt: deactivatedAt.present
         ? deactivatedAt.value
         : this.deactivatedAt,
+    archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
   );
   CurriculumTrack copyWithCompanion(CurriculumTracksCompanion data) {
     return CurriculumTrack(
@@ -1008,6 +1045,9 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       deactivatedAt: data.deactivatedAt.present
           ? data.deactivatedAt.value
           : this.deactivatedAt,
+      archivedAt: data.archivedAt.present
+          ? data.archivedAt.value
+          : this.archivedAt,
     );
   }
 
@@ -1019,7 +1059,8 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
           ..write('trackType: $trackType, ')
           ..write('isActive: $isActive, ')
           ..write('activatedAt: $activatedAt, ')
-          ..write('deactivatedAt: $deactivatedAt')
+          ..write('deactivatedAt: $deactivatedAt, ')
+          ..write('archivedAt: $archivedAt')
           ..write(')'))
         .toString();
   }
@@ -1032,6 +1073,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     isActive,
     activatedAt,
     deactivatedAt,
+    archivedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1042,7 +1084,8 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
           other.trackType == this.trackType &&
           other.isActive == this.isActive &&
           other.activatedAt == this.activatedAt &&
-          other.deactivatedAt == this.deactivatedAt);
+          other.deactivatedAt == this.deactivatedAt &&
+          other.archivedAt == this.archivedAt);
 }
 
 class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
@@ -1052,6 +1095,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
   final Value<bool> isActive;
   final Value<DateTime> activatedAt;
   final Value<DateTime?> deactivatedAt;
+  final Value<DateTime?> archivedAt;
   final Value<int> rowid;
   const CurriculumTracksCompanion({
     this.profileId = const Value.absent(),
@@ -1060,6 +1104,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     this.isActive = const Value.absent(),
     this.activatedAt = const Value.absent(),
     this.deactivatedAt = const Value.absent(),
+    this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CurriculumTracksCompanion.insert({
@@ -1069,6 +1114,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     this.isActive = const Value.absent(),
     required DateTime activatedAt,
     this.deactivatedAt = const Value.absent(),
+    this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : curriculumId = Value(curriculumId),
        trackType = Value(trackType),
@@ -1080,6 +1126,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     Expression<bool>? isActive,
     Expression<DateTime>? activatedAt,
     Expression<DateTime>? deactivatedAt,
+    Expression<DateTime>? archivedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1089,6 +1136,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
       if (isActive != null) 'is_active': isActive,
       if (activatedAt != null) 'activated_at': activatedAt,
       if (deactivatedAt != null) 'deactivated_at': deactivatedAt,
+      if (archivedAt != null) 'archived_at': archivedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1100,6 +1148,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     Value<bool>? isActive,
     Value<DateTime>? activatedAt,
     Value<DateTime?>? deactivatedAt,
+    Value<DateTime?>? archivedAt,
     Value<int>? rowid,
   }) {
     return CurriculumTracksCompanion(
@@ -1109,6 +1158,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
       isActive: isActive ?? this.isActive,
       activatedAt: activatedAt ?? this.activatedAt,
       deactivatedAt: deactivatedAt ?? this.deactivatedAt,
+      archivedAt: archivedAt ?? this.archivedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1134,6 +1184,9 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     if (deactivatedAt.present) {
       map['deactivated_at'] = Variable<DateTime>(deactivatedAt.value);
     }
+    if (archivedAt.present) {
+      map['archived_at'] = Variable<DateTime>(archivedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1149,6 +1202,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
           ..write('isActive: $isActive, ')
           ..write('activatedAt: $activatedAt, ')
           ..write('deactivatedAt: $deactivatedAt, ')
+          ..write('archivedAt: $archivedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -12748,6 +12802,7 @@ typedef $$CurriculumTracksTableCreateCompanionBuilder =
       Value<bool> isActive,
       required DateTime activatedAt,
       Value<DateTime?> deactivatedAt,
+      Value<DateTime?> archivedAt,
       Value<int> rowid,
     });
 typedef $$CurriculumTracksTableUpdateCompanionBuilder =
@@ -12758,6 +12813,7 @@ typedef $$CurriculumTracksTableUpdateCompanionBuilder =
       Value<bool> isActive,
       Value<DateTime> activatedAt,
       Value<DateTime?> deactivatedAt,
+      Value<DateTime?> archivedAt,
       Value<int> rowid,
     });
 
@@ -12797,6 +12853,11 @@ class $$CurriculumTracksTableFilterComposer
 
   ColumnFilters<DateTime> get deactivatedAt => $composableBuilder(
     column: $table.deactivatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12839,6 +12900,11 @@ class $$CurriculumTracksTableOrderingComposer
     column: $table.deactivatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CurriculumTracksTableAnnotationComposer
@@ -12871,6 +12937,11 @@ class $$CurriculumTracksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get deactivatedAt => $composableBuilder(
     column: $table.deactivatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
     builder: (column) => column,
   );
 }
@@ -12918,6 +12989,7 @@ class $$CurriculumTracksTableTableManager
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> activatedAt = const Value.absent(),
                 Value<DateTime?> deactivatedAt = const Value.absent(),
+                Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CurriculumTracksCompanion(
                 profileId: profileId,
@@ -12926,6 +12998,7 @@ class $$CurriculumTracksTableTableManager
                 isActive: isActive,
                 activatedAt: activatedAt,
                 deactivatedAt: deactivatedAt,
+                archivedAt: archivedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12936,6 +13009,7 @@ class $$CurriculumTracksTableTableManager
                 Value<bool> isActive = const Value.absent(),
                 required DateTime activatedAt,
                 Value<DateTime?> deactivatedAt = const Value.absent(),
+                Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CurriculumTracksCompanion.insert(
                 profileId: profileId,
@@ -12944,6 +13018,7 @@ class $$CurriculumTracksTableTableManager
                 isActive: isActive,
                 activatedAt: activatedAt,
                 deactivatedAt: deactivatedAt,
+                archivedAt: archivedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

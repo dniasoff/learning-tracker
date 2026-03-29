@@ -22,7 +22,7 @@ import 'package:learning_tracker/features/progress/data/repositories/progress_re
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
-import 'package:learning_tracker/features/settings/presentation/screens/track_management_screen.dart';
+import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
 
 void main() {
   group('Epic 4.1: Track Management - Story Acceptance Tests', () {
@@ -278,12 +278,11 @@ void main() {
 
     group('AC6: Track management accessible from settings', () {
       test(
-        'ACCEPTANCE: TrackManagementScreen exists and can be instantiated',
+        'ACCEPTANCE: TrackManagementHubScreen exists and can be instantiated',
         () {
-          // Verify the track management screen can be created
-          // Detailed widget behavior is tested in widget test suite
-          const screen = TrackManagementScreen(curriculumId: 'mishnayos');
-          expect(screen.curriculumId, 'mishnayos');
+          // Verify the new track management hub can be created
+          const screen = TrackManagementHubScreen();
+          expect(screen, isA<TrackManagementHubScreen>());
         },
       );
     });

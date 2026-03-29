@@ -1057,9 +1057,7 @@ class _EmptyDashboard extends StatelessWidget {
                     green.withValues(alpha: 0.05),
                   ],
                 ),
-                border: Border.all(
-                  color: green.withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: green.withValues(alpha: 0.3)),
               ),
               child: const Icon(
                 Icons.menu_book_rounded,
@@ -1106,11 +1104,11 @@ class _EmptyDashboard extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () =>
-                        context.router.push(const OnboardingRoute()),
+                        context.router.push(const TrackManagementHubRoute()),
                     borderRadius: BorderRadius.circular(26),
                     child: const Center(
                       child: Text(
-                        'Set Up Your Learning',
+                        'Add Track',
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 16,
