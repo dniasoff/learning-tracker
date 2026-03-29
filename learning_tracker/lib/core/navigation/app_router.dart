@@ -44,6 +44,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/curricul
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/device_restore_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
+import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_dashboard_screen.dart';
 import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_mode_screen.dart';
@@ -248,6 +249,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/settings/tracks',
       page: TrackManagementHubRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/settings/tracks/:curriculumId/:trackType',
+      page: TrackDetailRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(
