@@ -169,16 +169,20 @@ development_status:
   16-6-dashboard-design-experience-polish: done
   epic-16-retrospective: done
 
-  # Epic 18: Onboarding & Track Management Overhaul (8 stories)
+  # Epic 18: Onboarding & Track Management Overhaul (12 stories)
   epic-18: in-progress
   18-1-extract-reusable-add-track-flow: review
-  18-2-slim-global-onboarding: backlog
-  18-3-track-management-hub: backlog
-  18-4-hebrew-terms-chazara-curriculum-names: backlog
-  18-5-track-editing-from-settings: backlog
-  18-6-child-mode-onboarding-post-setup-rewards: backlog
-  18-7-navigation-state-cleanup: backlog
-  18-8-instant-mark-complete: backlog
+  18-2-slim-global-onboarding: review
+  18-3-track-management-hub: review
+  18-4-hebrew-terms-chazara-curriculum-names: review
+  18-5-track-editing-from-settings: review
+  18-6-child-mode-onboarding-post-setup-rewards: review
+  18-7-navigation-state-cleanup: review
+  18-8-instant-mark-complete: review
+  18-9-prevent-duplicate-profile-names: review
+  18-10-add-delete-profile-from-profile-picker: review
+  18-11-fix-edit-profile-button-settings: review
+  18-12-delete-account-redirects-to-welcome: review
   epic-18-retrospective: optional
 
   # Epic 19: Offline-First Architecture & Local-First Overhaul (11 stories)

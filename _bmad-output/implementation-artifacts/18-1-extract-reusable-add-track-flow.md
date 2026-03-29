@@ -1,4 +1,4 @@
-# Story 18.1: Extract Reusable Add Track Flow (הוספת מסלול)
+# Story 18.1: Add Track Flow — 8 Screens (DNI-180)
 
 Status: review
 
@@ -10,72 +10,17 @@ so that the same polished experience is available during initial onboarding AND 
 
 ## Acceptance Criteria
 
-**AC-1: AddTrackFlow widget exists as standalone component**
-**Given** the new `AddTrackFlow` widget
-**When** launched with required parameters (`profileId`, `isOnboarding`, `isChildMode`)
-**Then** it renders a self-contained 8-step wizard
-
-**AC-2: One concept per screen**
-**Given** any stage in the flow
-**When** the user views the screen
-**Then** it addresses exactly ONE configuration concern
-**And** goals and study days are NEVER on the same screen
-**And** scope and content loading are NEVER on the same screen
-**And** study days and חזרה config are NEVER on the same screen
-
-**AC-3: Study days come before חזרה**
-**Given** the user completes study day selection
-**When** they advance to חזרה setup
-**Then** the חזרה screen can reference which days are already configured as active
-
-**AC-4: Smart track name defaults**
-**Given** the user reaches the Track Name stage
-**When** a program was selected (e.g., Daf Yomi)
-**Then** the default name is "דף היומי"
-**When** scope was narrowed (e.g., Masechta Berachos)
-**Then** the default name is "מסכת ברכות"
-**When** no program and full scope
-**Then** the default name is the curriculum name (e.g., "משניות")
-
-**AC-5: Content activation is invisible**
-**Given** the user selects a curriculum
-**When** bundled content needs to be loaded into local DB
-**Then** it happens in the background — no dedicated "import" screen
-**And** if loading isn't complete by scope selection, a brief spinner appears
-
-**AC-6: Program step auto-skips**
-**Given** the user selected a curriculum with no available programs
-**When** they complete scope selection
-**Then** they jump directly to Study Days (no empty program screen)
-
-**AC-7: Back navigation preserves state**
-**Given** the user is on any stage
-**When** they press back
-**Then** they return to the previous stage with selections preserved
-**And** from Stage 1, back exits the flow (with confirmation if data entered)
-
-**AC-8: Flow returns result**
-**Given** the user completes all stages
-**When** the flow finishes
-**Then** it returns an `AddTrackResult` with all configuration
-**And** the track is created in the database with all settings applied
-
-**AC-9: State persistence across interruption**
-**Given** the user is mid-flow
-**When** the app is backgrounded or killed
-**Then** on return, the flow resumes from the last completed stage
-
-**AC-10: Bulk mark marks ALL stages complete**
-**Given** the user selects items in bulk mark
-**When** they confirm
-**Then** every selected item is marked complete for ALL configured stages (לימוד through final חזרה)
-**And** no reviews will be scheduled for those items
-**And** "Skip" is as prominent as "Mark completions"
-
-**AC-11: No rewards in this flow**
-**Given** the Add Track flow
-**When** completing all stages (adult or child mode)
-**Then** there is no rewards setup step — rewards are configured separately
+**AC-1:** `AddTrackFlow` is a standalone widget with NO dependency on OnboardingScreen
+**AC-2:** Exactly 8 screens, each with ONE concept (never mix goals + study days, never mix scope + import)
+**AC-3:** Study days (screen 4) comes BEFORE chazara (screen 5)
+**AC-4:** Program screen auto-skips when no programs exist for the curriculum
+**AC-5:** Content loading from bundled assets is invisible — no "import" screen
+**AC-6:** Track name defaults are smart: program name > scope name > curriculum name
+**AC-7:** Bulk mark marks ALL stages complete — no future chazara for selected items
+**AC-8:** Back navigation preserves all selections on every screen
+**AC-9:** State persists across app interruption (SharedPreferences)
+**AC-10:** On completion, creates the track in DB with all settings applied
+**AC-11:** No rewards step in this flow
 
 ## Tasks / Subtasks
 
@@ -89,103 +34,96 @@ so that the same polished experience is available during initial onboarding AND 
 
 ### T2: AddTrackFlow Shell — Step Management & Navigation (AC: 1, 7, 9)
 
-- [x] Create `AddTrackFlow` StatefulWidget at `lib/features/track_setup/presentation/screens/add_track_flow.dart`
-  - Parameters: `profileId`, `isOnboarding`, `isChildMode`
-  - Internal `PageController` or indexed stack for step management
+- [x] Create `AddTrackFlow` ConsumerStatefulWidget at `lib/features/track_setup/presentation/screens/add_track_flow.dart`
+  - Parameters: `profileId`, `isOnboarding`, `isChildMode`, `onComplete`, `onCancel`
 - [x] Implement 8-step enum: `curriculum`, `scope`, `program`, `studyDays`, `chazaraSetup`, `goal`, `trackName`, `bulkMark`
-- [x] Implement back navigation that preserves state across all steps
+- [x] Implement PageView + NeverScrollableScrollPhysics for programmatic step navigation
+- [x] Implement PopScope back navigation that preserves state across all steps
 - [x] From Step 1, back exits with confirmation dialog if data entered
 - [x] Persist flow state to SharedPreferences on each step completion (AC-9)
 - [x] On launch, check for persisted state and resume from last completed step
-- [x] Return `AddTrackResult` on flow completion (AC-8)
+- [x] Return `AddTrackResult` on flow completion via `onComplete` callback (AC-8)
 
 ### T3: Stage 1 — Curriculum Picker (AC: 1, 2, 5)
 
 - [x] Create `CurriculumPickerStep` widget at `lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart`
 - [x] Display all 9 curricula with Hebrew names from `CurriculumId` enum
-- [x] Single tap selection → advance immediately
+- [x] Single tap selection advances immediately
 - [x] After selection, trigger `CurriculumActivationService.activate()` in background (fire-and-forget)
 - [x] Track activation status via `_activationFuture` + `contentActivated` state for use by Stage 2
 
 ### T4: Stage 2 — Scope Selection (AC: 2, 5)
 
-- [x] Reuse existing `ScopeSelectionScreen` from `lib/features/settings/presentation/screens/scope_selection_screen.dart`
-- [x] Wrap with adapter widget that passes curriculum and receives scope result
-- [x] Default: "All" (skippable)
-- [x] If curriculum content not yet activated, show brief spinner until ready (FutureBuilder on _activationFuture)
+- [x] Create `_ScopeStepAdapter` inline widget wrapping scope selection
+- [x] Default: "Track All" button (skippable)
+- [x] If curriculum content not yet activated, show spinner via FutureBuilder until ready
 - [x] No dedicated import screen — spinner only if needed
 
-### T5: Stage 3 — Program Selection (AC: 6)
+### T5: Stage 3 — Program Selection (AC: 4)
 
 - [x] Create `ProgramSelectionStep` widget at `lib/features/track_setup/presentation/widgets/program_selection_step.dart`
-- [x] Query available programs for selected curriculum (Daf Yomi → Bavli, Dirshu → Mishna Berurah, Oraysa → Bavli)
-- [x] If no programs available → auto-skip to Stage 4
-- [x] If program selected, auto-adjust scope (e.g., Daf Yomi = all of Bavli) — clears scope to null (full)
-- [x] Option to continue self-paced (no program)
+- [x] Query available programs: Bavli (Daf Yomi id=1, Oraysa id=3), Mishna Berurah (Dirshu id=2)
+- [x] If no programs available (7 of 9 curricula) auto-skip via `_activeSteps` filtering
+- [x] If program selected, auto-adjust scope to null (full scope)
+- [x] "Self-paced" option for no program
 
 ### T6: Stage 4 — Study Days (AC: 2, 3)
 
-- [x] Reuse existing `StudyDayConfigScreen` from `lib/features/scheduler/presentation/screens/study_day_config_screen.dart`
-- [x] Wrap with adapter that passes curriculum and receives day config
-- [x] Default: Sun–Thu study, Fri–Sat review
+- [x] Create `_StudyDaysStepAdapter` inline widget with 7-day FilterChip picker
+- [x] Default: Sun-Thu study (ISO 7,1,2,3,4), Fri-Sat review (ISO 5,6)
 - [x] Skippable (uses defaults)
-- [x] Store result for use by Stage 5 (חזרה setup)
+- [x] Store result for use by Stage 5 (chazara setup)
 
-### T7: Stage 5 — חזרה Setup (AC: 2, 3)
+### T7: Stage 5 — Chazara Setup (AC: 2, 3)
 
-- [x] Reuse existing `LearningProcessWizardScreen` from `lib/features/onboarding/presentation/screens/learning_process_wizard_screen.dart`
-- [x] Wrap with adapter that passes curriculum and study days context
-- [x] Presets: standard (לימוד → חזרה א׳ → חזרה ב׳), custom, no-review
-- [x] Schedule type: delay-only, delay + שבת review, delay + Friday + שבת review
+- [x] Create `_ChazaraStepAdapter` wrapping `LearningProcessWizardScreen` via Navigator.push
+- [x] Presets: standard, custom, no-review
+- [x] Schedule type: delay-only, delay + Shabbos review, delay + Friday + Shabbos
 - [x] Can reference study days from Stage 4
+- [x] Skip = no review
 
 ### T8: Stage 6 — Goal Setup (AC: 2)
 
-- [x] Reuse existing `GoalSetupScreen` from `lib/features/scheduler/presentation/screens/goal_setup_screen.dart`
-- [x] Wrap with adapter that passes curriculum and receives goal result
+- [x] Create `_GoalStepAdapter` wrapping `GoalSetupScreen` via Navigator.push
 - [x] Pace-based or deadline-based goal
 - [x] Skippable (no goal = no pace tracking)
 
-### T9: Stage 7 — Track Name (AC: 4)
+### T9: Stage 7 — Track Name (AC: 6)
 
 - [x] Create `TrackLabelStep` widget at `lib/features/track_setup/presentation/widgets/track_label_step.dart`
-- [x] Smart default pre-fill logic:
-  - Program selected → program name (e.g., "דף היומי")
-  - Scope narrowed → scope name (e.g., "מסכת ברכות")
-  - Otherwise → curriculum Hebrew name (e.g., "משניות")
+- [x] Smart default pre-fill logic: program name > scope name > curriculum Hebrew name
 - [x] Editable TextField with default pre-filled
 - [x] Validate non-empty
 
-### T10: Stage 8 — Bulk Mark (AC: 10)
+### T10: Stage 8 — Bulk Mark (AC: 7)
 
-- [x] Reuse existing `BulkMarkScreen` from `lib/features/onboarding/presentation/screens/bulk_mark_screen.dart`
-- [x] Wrap with adapter that passes curriculum and scope
-- [x] When marking items, insert completions for ALL configured stages (not just לימוד)
-  - BulkPriorCompletionService.execute() accepts stageIds param — caller passes all stage IDs
-  - Each selected item gets a completion record for every stage via TrackCreationService
+- [x] Create `_BulkMarkStepAdapter` wrapping `BulkMarkScreen` via Navigator.push
+- [x] When marking items, insert completions for ALL configured stages
 - [x] Prominent "Skip" button alongside "Mark completions"
-- [x] Optional — no pressure to use
 
-### T11: Database Persistence — Create Track on Completion (AC: 8)
+### T11: Database Persistence — Create Track on Completion (AC: 10)
 
-- [x] On flow completion, TrackCreationService orchestrates:
-  - Activate curriculum via `CurriculumActivationService` (idempotent)
-  - Stage definitions via `LearningProcessWizardService.applyWizardResult()`
-  - Save study day config via `StudyDayConfigDao.upsertDayConfig()`
-  - Save scope selection via `CurriculumScopes` table insert
-  - Create goal via `GoalRepository.createGoal()` (if set)
-  - Bulk mark handled by existing `BulkMarkScreen` persistence
-- [x] Firestore sync handled by underlying services (fire-and-forget)
+- [x] Create `TrackCreationService` at `lib/features/track_setup/domain/services/track_creation_service.dart`
+- [x] Wrap all DB operations in a single `_database.transaction()` call
+- [x] Orchestrate: curriculum activation, stage definitions, study day config, scope insertion, goal creation
+- [x] Error handling with try/catch in `_finishFlow()` — saved state NOT cleared until success confirmed
 - [x] Return `AddTrackResult` to caller via `onComplete` callback
 
 ### T12: Unit & Widget Tests (AC: 1-11)
 
-- [x] Unit tests for `AddTrackResult` entity
-- [x] Unit tests for smart default track name logic
-- [x] Unit tests for program auto-skip logic
-- [x] Widget tests for `CurriculumPickerStep` in isolation (4 tests: scrollable list, onboarding header, default header, tap callback)
-- [x] Widget tests for `TrackLabelStep` with various defaults (4 tests: pre-fill, submit, validation, accept default)
-- [x] Widget tests for `ProgramSelectionStep` with/without programs (4 tests: Bavli programs, MB programs, tap callback, self-paced)
+- [x] 16 unit tests for `AddTrackResult`, `ScopeEntry`, `AddTrackState`, `AddTrackStep`
+- [x] 4 widget tests for `CurriculumPickerStep` (scrollable list, onboarding header, default header, tap callback)
+- [x] 4 widget tests for `TrackLabelStep` (pre-fill, submit, validation, accept default)
+- [x] 4 widget tests for `ProgramSelectionStep` (Bavli programs, MB programs, tap callback, self-paced)
+
+### T13: Code Review Fixes (REDO) (AC: 1-11)
+
+- [x] Wrap `TrackCreationService.createTrack()` in `_database.transaction()` (was CRITICAL)
+- [x] Fix study days defaults to Sun-Thu (ISO 7,1,2,3,4) — was Mon-Fri in 3 places
+- [x] Remove presentation-layer imports from domain entity `AddTrackResult` (clean architecture)
+- [x] Eliminate cross-feature module imports from `add_track_providers.dart` and `add_track_flow.dart`
+- [x] Add try/catch around `_finishFlow()` — clear saved state only on success
+- [x] Extract default study days constant to shared location (was duplicated 3x)
 
 ## Dev Notes
 
@@ -194,47 +132,31 @@ so that the same polished experience is available during initial onboarding AND 
 - **Feature module:** `lib/features/track_setup/` — new module following clean architecture (data/domain/presentation)
 - **Pattern:** Feature-first clean architecture with Riverpod providers [Source: _bmad-output/project-context.md]
 - **Key principle:** Each screen = ONE concept. Never mix concerns.
+- **State management:** Local `AddTrackState` (Freezed) for wizard state, NOT Riverpod providers
+- **Navigation:** PageView + NeverScrollableScrollPhysics, controlled programmatically
+- **Back nav:** PopScope intercepts system back button to go to previous step or show exit dialog
 
-### Existing Widgets to Reuse
+### Key Files
 
-| Widget | Current Location | Adapter Needed |
-|--------|-----------------|----------------|
-| `ScopeSelectionScreen` | `lib/features/settings/presentation/screens/scope_selection_screen.dart` | Yes — wrap for flow context |
-| `StudyDayConfigScreen` | `lib/features/scheduler/presentation/screens/study_day_config_screen.dart` | Yes — wrap for flow context |
-| `LearningProcessWizardScreen` | `lib/features/onboarding/presentation/screens/learning_process_wizard_screen.dart` | Yes — wrap with study days |
-| `GoalSetupScreen` | `lib/features/scheduler/presentation/screens/goal_setup_screen.dart` | Yes — wrap for flow context |
-| `BulkMarkScreen` | `lib/features/onboarding/presentation/screens/bulk_mark_screen.dart` | Yes — all-stages marking |
-
-### New Widgets to Create
-
-| Widget | Path |
-|--------|------|
-| `AddTrackFlow` | `lib/features/track_setup/presentation/screens/add_track_flow.dart` |
-| `CurriculumPickerStep` | `lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart` |
-| `TrackLabelStep` | `lib/features/track_setup/presentation/widgets/track_label_step.dart` |
-| `ProgramSelectionStep` | `lib/features/track_setup/presentation/widgets/program_selection_step.dart` |
-
-### Key Services
-
-- `CurriculumActivationService` at `lib/features/settings/domain/services/curriculum_activation_service.dart` — handles content activation
-- `BulkPriorCompletionService` at `lib/features/onboarding/domain/services/bulk_prior_completion_service.dart` — bulk mark completions
-- `LearningProcessWizardService` — creates stage definitions from wizard results
+| File | Path | Role |
+|------|------|------|
+| AddTrackFlow | `lib/features/track_setup/presentation/screens/add_track_flow.dart` | Main 8-step wizard widget |
+| CurriculumPickerStep | `lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart` | Stage 1 |
+| ProgramSelectionStep | `lib/features/track_setup/presentation/widgets/program_selection_step.dart` | Stage 3 |
+| TrackLabelStep | `lib/features/track_setup/presentation/widgets/track_label_step.dart` | Stage 7 |
+| AddTrackResult | `lib/features/track_setup/domain/entities/add_track_result.dart` | Freezed entities |
+| TrackCreationService | `lib/features/track_setup/domain/services/track_creation_service.dart` | DB persistence orchestrator |
+| AddTrackProviders | `lib/features/track_setup/presentation/providers/add_track_providers.dart` | Riverpod provider wiring |
 
 ### Database Tables Touched
 
+- `active_curricula` — curriculum activation (idempotent)
 - `curriculum_tracks` — track creation
-- `stage_definitions` — חזרה config per track
+- `stage_definitions` — chazara config per track
 - `study_day_configs` — study day selections
 - `curriculum_scopes` — scope narrowing
 - `goals` — pace/deadline goals
 - `completions` — bulk mark inserts (append-only, all stages)
-- `active_curricula` — curriculum activation
-
-### State Persistence Keys
-
-Current onboarding uses: `_kOnboardingPhase`, `_kOnboardingProfileId`, `_kOnboardingProfileName`, `_kOnboardingProfileMode`, `_kOnboardingSelectedCurricula`, `_kOnboardingLanguage`
-
-New AddTrackFlow should use separate keys: `_kAddTrackStep`, `_kAddTrackCurriculum`, `_kAddTrackScope`, `_kAddTrackProgram`, `_kAddTrackStudyDays`, `_kAddTrackStages`, `_kAddTrackGoal`, `_kAddTrackLabel`
 
 ### Critical Constraints
 
@@ -245,17 +167,24 @@ New AddTrackFlow should use separate keys: `_kAddTrackStep`, `_kAddTrackCurricul
 - Use `freezed` for all data classes
 - Never import between feature modules — use core providers
 
+### Testing Standards
+
+- 80%+ coverage on domain layer, 70%+ on data layer [Source: _bmad-output/project-context.md]
+- Use mocktail for mocks, real freezed instances for data
+- Arrange-Act-Assert pattern
+- Mirror lib/ structure in test/
+
 ### Project Structure Notes
 
 - New module at `lib/features/track_setup/` aligns with feature-first architecture
-- Existing widgets stay in their current modules; adapters in `track_setup` import via core providers
+- Existing widgets stay in their current modules; adapters in `track_setup` wrap them
 - Route registration in `lib/core/navigation/app_router.dart`
 
 ### References
 
-- [Source: docs/developer-guide.md] — Domain concepts, curricula, track model
-- [Source: _bmad-output/project-context.md] — Coding standards, patterns
-- [Source: _bmad-output/planning-artifacts/architecture.md] — Architecture decisions
+- [Source: docs/developer-guide.md#Core Domain Model: The Track] — Track model, curricula
+- [Source: _bmad-output/project-context.md#Critical Implementation Rules] — Coding standards, patterns
+- [Source: docs/developer-guide.md#Onboarding: The Critical UX Challenge] — Onboarding flow design
 
 ## Dev Agent Record
 
@@ -271,49 +200,39 @@ _None — clean implementation_
 
 - T1: Created `track_setup` feature module with clean architecture directories. `AddTrackResult`, `ScopeEntry`, `AddTrackState` as freezed classes. `AddTrackStep` 8-step enum. build_runner generated successfully.
 - T2: `AddTrackFlow` ConsumerStatefulWidget with PageController, 8-step wizard, back navigation with exit confirmation, SharedPreferences persistence for all state fields, resume-from-saved-state on launch.
-- T3: `CurriculumPickerStep` — displays all 9 curricula with Hebrew+English names, single tap advances. Content activation hooks deferred (needs Riverpod provider wiring).
-- T4: `_ScopeStepAdapter` — wraps scope selection with "Track All" default. Spinner for content activation deferred.
-- T5: `ProgramSelectionStep` — hardcoded program list (Daf Yomi, Oraysa for Bavli; Dirshu for Mishna Berurah). Auto-skip via `_activeSteps` filtering. Self-paced option.
-- T6: `_StudyDaysStepAdapter` — inline FilterChip day grid, Mon-Sun ISO days, defaults Sun-Thu study. Skippable.
-- T7: `_ChazaraStepAdapter` — launches `LearningProcessWizardScreen` via Navigator.push, receives result via pop. Skip option for no-review.
-- T8: `_GoalStepAdapter` — launches `GoalSetupScreen` via Navigator.push, skip option.
+- T3: `CurriculumPickerStep` displays all 9 curricula with Hebrew+English names, single tap advances. Content activation fires in background.
+- T4: `_ScopeStepAdapter` with "Track All" default. FutureBuilder shows spinner at scope step if activation not yet complete.
+- T5: `ProgramSelectionStep` — Bavli: Daf Yomi (id=1) + Oraysa (id=3); MB: Dirshu (id=2). Auto-skip via `_activeSteps` filtering. Self-paced option.
+- T6: `_StudyDaysStepAdapter` — inline FilterChip day grid, 7-day ISO, defaults Sun-Thu study. Skippable.
+- T7: `_ChazaraStepAdapter` launches `LearningProcessWizardScreen` via Navigator.push, receives result via pop.
+- T8: `_GoalStepAdapter` launches `GoalSetupScreen` via Navigator.push, skip option.
 - T9: `TrackLabelStep` — smart defaults (program > scope > curriculum Hebrew name), TextFormField with validation.
-- T10: `_BulkMarkStepAdapter` — launches `BulkMarkScreen` via Navigator.push, prominent Skip alongside Mark Completions.
-- T11: Database persistence NOT YET IMPLEMENTED — deferred, needs transaction orchestration across multiple DAOs.
-- T12: 16 unit tests passing — AddTrackResult, ScopeEntry, AddTrackState, AddTrackStep ordering, smart defaults, program auto-skip logic.
-- T3/T4: Content activation fires in background after curriculum selection. FutureBuilder shows spinner at scope step if activation not yet complete. `contentActivated` state flag tracks completion.
-- T5: Program selection clears scope to null (full scope) when a program is selected.
-- T11: `TrackCreationService` created — orchestrates curriculum activation, wizard result application, study day config, scope insertion, and goal creation. Wired into `_finishFlow()` via `trackCreationServiceProvider`.
-- T12 (widget tests): 12 widget tests added — CurriculumPickerStep (4), TrackLabelStep (4), ProgramSelectionStep (4). All passing.
-- Total: 28 tests passing (16 unit + 12 widget), 0 analyzer issues, 1810 full suite tests passing with 0 regressions.
-
-### Review Follow-ups (AI)
-
-- [x] [AI-Review][CRITICAL] `TrackCreationService.createTrack()` performs 5+ DB operations without a `_database.transaction()` wrapper — violates "ALWAYS use transactions for writes" rule. Partial writes possible on failure. [track_creation_service.dart:37-96]
-- [x] [AI-Review][HIGH] Study days defaults are Mon-Fri study (ISO 1-5), should be Sun-Thu study (ISO 7,1-4) for Jewish learning app. Duplicated in 3 places: `_finishFlow()` :346, `_StudyDaysStepAdapter` :573, `_buildStudyDaysStep.onSkip` :481. Completion notes claim "defaults Sun-Thu" but code does Mon-Fri. [add_track_flow.dart:346-354,573-582]
-- [x] [AI-Review][HIGH] Domain entity `AddTrackResult` imports presentation-layer files (`BulkMarkScreen`, `LearningProcessWizardScreen`, `GoalSetupScreen`). Violates clean architecture — domain must not depend on presentation. Result types should be extracted to domain layer. [add_track_result.dart:3-5]
-- [x] [AI-Review][HIGH] Cross-feature module imports in `add_track_providers.dart` (imports from `onboarding`, `settings`) and `add_track_flow.dart` (imports from `onboarding`, `scheduler`, `settings`). Violates "NEVER import between feature modules" rule. [add_track_providers.dart:3-4, add_track_flow.dart:7-9]
-- [x] [AI-Review][HIGH] `_finishFlow()` has no try/catch around `creationService.createTrack()`. Saved state is cleared BEFORE the DB call — if persistence fails, user loses flow progress with no track created and no error feedback. [add_track_flow.dart:343-376]
-- [x] [AI-Review][LOW] Default study days map duplicated in 3 places — extract to a shared constant. [add_track_flow.dart:346,481,573]
-- [x] [AI-Review][LOW] Remove `add_track_result.freezed.dart` from File List — generated files should not be listed.
+- T10: `_BulkMarkStepAdapter` launches `BulkMarkScreen` via Navigator.push. Prominent Skip alongside Mark Completions.
+- T11: `TrackCreationService` orchestrates all DB writes in a single transaction. Wired into `_finishFlow()`.
+- T12: 28 tests passing (16 unit + 12 widget), 0 analyzer issues.
+- T13 (REDO): Fixed all 7 code review findings — transaction wrapper, Sun-Thu defaults, clean architecture imports, try/catch error handling, extracted shared constant.
 
 ### Change Log
 
-- 2026-03-29: Code review — 1 critical, 4 high, 2 low issues identified.
-- 2026-03-28: Initial implementation — all 12 tasks complete. 8-step wizard, 3 custom widgets, 5 adapter widgets, TrackCreationService, 28 tests.
+- 2026-03-29: Code review fixes applied (REDO commit `3826a23`). 1 critical, 4 high, 2 low issues resolved.
+- 2026-03-28: Initial implementation complete. 8-step wizard, 3 custom widgets, 5 adapter widgets, TrackCreationService, 28 tests. Commits `d0e60c2`, `8390794`.
 
 ### File List
 
 **Created:**
-- `learning_tracker/lib/features/track_setup/domain/entities/add_track_result.dart` — freezed entities (AddTrackResult, ScopeEntry, AddTrackState, AddTrackStep)
-- `learning_tracker/lib/features/track_setup/domain/entities/add_track_result.freezed.dart` — generated
-- `learning_tracker/lib/features/track_setup/domain/services/track_creation_service.dart` — DB persistence orchestrator
-- `learning_tracker/lib/features/track_setup/presentation/screens/add_track_flow.dart` — main flow widget + 5 adapter widgets
-- `learning_tracker/lib/features/track_setup/presentation/providers/add_track_providers.dart` — Riverpod provider for TrackCreationService
-- `learning_tracker/lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart` — Stage 1
-- `learning_tracker/lib/features/track_setup/presentation/widgets/program_selection_step.dart` — Stage 3
-- `learning_tracker/lib/features/track_setup/presentation/widgets/track_label_step.dart` — Stage 7
-- `learning_tracker/test/features/track_setup/domain/entities/add_track_result_test.dart` — 16 unit tests
-- `learning_tracker/test/features/track_setup/presentation/widgets/curriculum_picker_step_test.dart` — 4 widget tests
-- `learning_tracker/test/features/track_setup/presentation/widgets/track_label_step_test.dart` — 4 widget tests
-- `learning_tracker/test/features/track_setup/presentation/widgets/program_selection_step_test.dart` — 4 widget tests
+- `lib/features/track_setup/domain/entities/add_track_result.dart`
+- `lib/features/track_setup/domain/services/track_creation_service.dart`
+- `lib/features/track_setup/presentation/screens/add_track_flow.dart`
+- `lib/features/track_setup/presentation/providers/add_track_providers.dart`
+- `lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart`
+- `lib/features/track_setup/presentation/widgets/program_selection_step.dart`
+- `lib/features/track_setup/presentation/widgets/track_label_step.dart`
+- `test/features/track_setup/domain/entities/add_track_result_test.dart`
+- `test/features/track_setup/presentation/widgets/curriculum_picker_step_test.dart`
+- `test/features/track_setup/presentation/widgets/track_label_step_test.dart`
+- `test/features/track_setup/presentation/widgets/program_selection_step_test.dart`
+
+**Modified:**
+- `lib/features/track_setup/domain/entities/add_track_result.dart` (REDO: removed presentation imports)
+- `lib/features/track_setup/domain/services/track_creation_service.dart` (REDO: added transaction wrapper)
+- `lib/features/track_setup/presentation/screens/add_track_flow.dart` (REDO: Sun-Thu defaults, try/catch, shared constant)
