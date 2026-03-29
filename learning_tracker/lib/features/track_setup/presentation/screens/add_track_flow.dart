@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/learni
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/program_selection_step.dart';
@@ -341,38 +342,36 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   Future<void> _finishFlow() async {
-    await _clearSavedState();
-
-    final defaultStudyDays = <int, String>{
-      1: 'study',
-      2: 'study',
-      3: 'study',
-      4: 'study',
-      5: 'study',
-      6: 'review',
-      7: 'review',
-    };
-
     final result = AddTrackResult(
       curriculumId: _state.curriculumId!,
       label: _state.trackLabel ?? _state.curriculumId!.displayNameHe,
       programId: _state.programId,
       programName: _state.programName,
       scopeSelections: _state.scopeSelections,
-      studyDays: _state.studyDays ?? defaultStudyDays,
+      studyDays: _state.studyDays ?? kDefaultStudyDays,
       wizardResult: _state.wizardResult,
       goalResult: _state.goalResult,
       bulkMarkResult: _state.bulkMarkResult,
     );
 
-    // Persist track to database (T11/AC-8)
-    final creationService = ref.read(trackCreationServiceProvider);
-    await creationService.createTrack(
-      result: result,
-      profileId: widget.profileId,
-    );
-
-    widget.onComplete?.call(result);
+    // Persist track to database — clear state only on success (FIX-5)
+    try {
+      final creationService = ref.read(trackCreationServiceProvider);
+      await creationService.createTrack(
+        result: result,
+        profileId: widget.profileId,
+      );
+      await _clearSavedState();
+      widget.onComplete?.call(result);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to save track. Please try again.'),
+          action: SnackBarAction(label: 'Retry', onPressed: _finishFlow),
+        ),
+      );
+    }
   }
 
   String _getSmartDefault() {
@@ -478,15 +477,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     return _StudyDaysStepAdapter(
       curriculumId: _state.curriculumId!,
       onComplete: _onStudyDaysComplete,
-      onSkip: () => _onStudyDaysComplete({
-        1: 'study',
-        2: 'study',
-        3: 'study',
-        4: 'study',
-        5: 'study',
-        6: 'review',
-        7: 'review',
-      }),
+      onSkip: () =>
+          _onStudyDaysComplete(Map<int, String>.from(kDefaultStudyDays)),
     );
   }
 
@@ -569,16 +561,7 @@ class _StudyDaysStepAdapter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Default: Sun-Thu study, Fri-Sat review (ISO: Mon=1..Sun=7)
-    final days = {
-      1: 'study',
-      2: 'study',
-      3: 'study',
-      4: 'study',
-      5: 'study',
-      6: 'review',
-      7: 'review',
-    };
+    final days = Map<int, String>.from(kDefaultStudyDays);
     final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     return StatefulBuilder(

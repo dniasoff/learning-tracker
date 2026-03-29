@@ -1,14 +1,13 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
-import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 
 part 'add_track_result.freezed.dart';
 
 /// Result returned by [AddTrackFlow] on successful completion.
 ///
 /// Contains all configuration gathered across the 8-step wizard.
+/// Uses [Object?] for wizard/goal/bulkMark results to avoid importing
+/// presentation-layer types into the domain layer (clean architecture).
 @freezed
 abstract class AddTrackResult with _$AddTrackResult {
   const factory AddTrackResult({
@@ -18,9 +17,15 @@ abstract class AddTrackResult with _$AddTrackResult {
     String? programName,
     List<ScopeEntry>? scopeSelections,
     required Map<int, String> studyDays,
-    LearningProcessWizardResult? wizardResult,
-    GoalFormResult? goalResult,
-    BulkMarkResult? bulkMarkResult,
+
+    /// Opaque wizard result — cast to `LearningProcessWizardResult` in presentation.
+    Object? wizardResult,
+
+    /// Opaque goal result — cast to `GoalFormResult` in presentation.
+    Object? goalResult,
+
+    /// Opaque bulk mark result — cast to `BulkMarkResult` in presentation.
+    Object? bulkMarkResult,
   }) = _AddTrackResult;
 }
 
@@ -43,10 +48,10 @@ abstract class AddTrackState with _$AddTrackState {
     int? programId,
     String? programName,
     Map<int, String>? studyDays,
-    LearningProcessWizardResult? wizardResult,
-    GoalFormResult? goalResult,
+    Object? wizardResult,
+    Object? goalResult,
     String? trackLabel,
-    BulkMarkResult? bulkMarkResult,
+    Object? bulkMarkResult,
     @Default(false) bool contentActivated,
   }) = _AddTrackState;
 }

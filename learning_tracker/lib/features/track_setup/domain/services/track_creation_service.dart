@@ -3,15 +3,29 @@ import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
+import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
+/// Default study days: Sun–Thu study, Fri–Sat review (Jewish week).
+///
+/// ISO weekdays: Mon=1 ... Sun=7.
+const kDefaultStudyDays = <int, String>{
+  7: 'study', // Sunday
+  1: 'study', // Monday
+  2: 'study', // Tuesday
+  3: 'study', // Wednesday
+  4: 'study', // Thursday
+  5: 'review', // Friday
+  6: 'review', // Saturday (Shabbat)
+};
+
 /// Creates a track in the database from an [AddTrackResult].
 ///
-/// Orchestrates all DB writes within a transaction:
-/// curriculum activation, track record, stages, study days,
-/// scopes, goals, and bulk mark completions.
+/// All DB writes (stages, study days, scopes, goals) are wrapped
+/// in a single transaction for atomicity.
 class TrackCreationService {
   TrackCreationService({
     required AppDatabase database,
@@ -30,64 +44,74 @@ class TrackCreationService {
 
   /// Persist all track configuration from the AddTrackFlow result.
   ///
-  /// Activates the curriculum, creates the track, saves stages,
-  /// study days, scopes, and goals. Bulk mark completions are
-  /// handled separately by [BulkPriorCompletionService] since
-  /// [BulkMarkScreen] already persists them during the flow.
+  /// Curriculum activation runs outside the transaction (idempotent).
+  /// All subsequent writes run inside a single transaction — if any
+  /// step fails, everything rolls back.
   Future<void> createTrack({
     required AddTrackResult result,
     required int profileId,
   }) async {
     final curriculum = result.curriculumId;
 
-    // 1. Ensure curriculum is activated (idempotent)
+    // 1. Ensure curriculum is activated (idempotent, outside transaction)
     try {
       await _activationService.activate(curriculum);
     } catch (_) {
-      // May already be active — that's fine
       AppLogger.instance.debug(
         'TrackCreationService: curriculum ${curriculum.storageKey} '
         'activation skipped (likely already active)',
       );
     }
 
-    // 2. Apply wizard result (stages) if provided
-    if (result.wizardResult != null) {
-      await _wizardService.applyWizardResult(
-        result.wizardResult!.wizardResult,
-        profileId: profileId,
-      );
-    }
+    // 2. All remaining writes in a single transaction
+    await _database.transaction(() async {
+      // Apply wizard result (stages) if provided
+      if (result.wizardResult is LearningProcessWizardResult) {
+        final wizard = result.wizardResult! as LearningProcessWizardResult;
+        await _wizardService.applyWizardResult(
+          wizard.wizardResult,
+          profileId: profileId,
+        );
+      }
 
-    // 3. Save study day configs
-    await _saveStudyDays(
-      profileId: profileId,
-      curriculumId: curriculum,
-      studyDays: result.studyDays,
-    );
-
-    // 4. Save scope selections if narrowed
-    if (result.scopeSelections != null && result.scopeSelections!.isNotEmpty) {
-      await _saveScopes(
+      // Save study day configs
+      await _saveStudyDays(
         profileId: profileId,
         curriculumId: curriculum,
-        scopes: result.scopeSelections!,
+        studyDays: result.studyDays,
       );
-    }
 
-    // 5. Create goal if provided
-    if (result.goalResult != null) {
-      await _goalRepository.createGoal(
+      // Save scope selections if narrowed
+      if (result.scopeSelections != null &&
+          result.scopeSelections!.isNotEmpty) {
+        await _saveScopes(
+          profileId: profileId,
+          curriculumId: curriculum,
+          scopes: result.scopeSelections!,
+        );
+      }
+
+      // Create goal if provided
+      if (result.goalResult is GoalFormResult) {
+        final goal = result.goalResult! as GoalFormResult;
+        await _goalRepository.createGoal(
+          curriculumId: curriculum,
+          targetPercent: goal.targetPercent,
+          targetDate: goal.targetDate,
+          description: goal.description,
+          dateType: goal.dateType,
+          goalType: goal.goalType,
+          paceValue: goal.paceValue,
+          paceUnit: goal.paceUnit,
+        );
+      }
+
+      // Seed default point configs for child mode tracks
+      await _seedPointConfigsIfNeeded(
+        profileId: profileId,
         curriculumId: curriculum,
-        targetPercent: result.goalResult!.targetPercent,
-        targetDate: result.goalResult!.targetDate,
-        description: result.goalResult!.description,
-        dateType: result.goalResult!.dateType,
-        goalType: result.goalResult!.goalType,
-        paceValue: result.goalResult!.paceValue,
-        paceUnit: result.goalResult!.paceUnit,
       );
-    }
+    });
 
     AppLogger.instance.info(
       'TrackCreationService: track "${result.label}" created for '
@@ -101,7 +125,6 @@ class TrackCreationService {
     required Map<int, String> studyDays,
   }) async {
     final dao = _database.studyDayConfigDao;
-    // Delete existing and re-seed with user selections
     await dao.deleteConfigsByCurriculumAndProfile(
       curriculumId.storageKey,
       profileId,
@@ -134,6 +157,18 @@ class TrackCreationService {
               createdAt: now,
             ),
           );
+    }
+  }
+
+  Future<void> _seedPointConfigsIfNeeded({
+    required int profileId,
+    required CurriculumId curriculumId,
+  }) async {
+    final existing = await _database.pointConfigDao.getConfigsByCurriculum(
+      curriculumId.storageKey,
+    );
+    if (existing.isEmpty) {
+      await _database.pointConfigDao.seedDefaults(curriculumId.storageKey);
     }
   }
 }
