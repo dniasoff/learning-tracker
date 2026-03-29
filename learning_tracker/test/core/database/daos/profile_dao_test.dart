@@ -120,5 +120,75 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       await database.profileDao.insertProfile(makeProfile(accountId: 1));
     });
+
+    // ── profileExistsByName (DNI-174) ────────────────────────────────────────
+
+    test('profileExistsByName returns true for exact match', () async {
+      await database.profileDao.insertProfile(
+        makeProfile(displayName: 'Daniel'),
+      );
+      expect(
+        await database.profileDao.profileExistsByName(1, 'Daniel'),
+        isTrue,
+      );
+    });
+
+    test('profileExistsByName is case-insensitive', () async {
+      await database.profileDao.insertProfile(
+        makeProfile(displayName: 'Daniel'),
+      );
+      expect(
+        await database.profileDao.profileExistsByName(1, 'daniel'),
+        isTrue,
+      );
+      expect(
+        await database.profileDao.profileExistsByName(1, 'DANIEL'),
+        isTrue,
+      );
+    });
+
+    test('profileExistsByName trims whitespace', () async {
+      await database.profileDao.insertProfile(
+        makeProfile(displayName: 'Daniel'),
+      );
+      expect(
+        await database.profileDao.profileExistsByName(1, '  Daniel  '),
+        isTrue,
+      );
+    });
+
+    test('profileExistsByName returns false for different account', () async {
+      await database.profileDao.insertProfile(
+        makeProfile(accountId: 1, displayName: 'Daniel'),
+      );
+      expect(
+        await database.profileDao.profileExistsByName(2, 'Daniel'),
+        isFalse,
+      );
+    });
+
+    test('profileExistsByName excludeId skips self', () async {
+      final id = await database.profileDao.insertProfile(
+        makeProfile(displayName: 'Daniel'),
+      );
+      expect(
+        await database.profileDao.profileExistsByName(
+          1,
+          'Daniel',
+          excludeId: id,
+        ),
+        isFalse,
+      );
+    });
+
+    test('profileExistsByName returns false for no match', () async {
+      await database.profileDao.insertProfile(
+        makeProfile(displayName: 'Daniel'),
+      );
+      expect(
+        await database.profileDao.profileExistsByName(1, 'Sarah'),
+        isFalse,
+      );
+    });
   });
 }

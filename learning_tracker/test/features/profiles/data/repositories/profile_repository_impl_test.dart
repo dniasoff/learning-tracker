@@ -134,5 +134,143 @@ void main() {
         );
       },
     );
+
+    // ── Duplicate name prevention (DNI-174) ──────────────────────────────────
+
+    test('AT-1: rejects exact duplicate name', () async {
+      await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+
+      expect(
+        () => repo.createProfile(
+          accountId: 1,
+          displayName: 'Daniel',
+          mode: 'adult',
+        ),
+        throwsA(isA<DuplicateProfileNameException>()),
+      );
+    });
+
+    test('AT-2: rejects case-insensitive duplicate', () async {
+      await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+
+      expect(
+        () => repo.createProfile(
+          accountId: 1,
+          displayName: 'daniel',
+          mode: 'adult',
+        ),
+        throwsA(isA<DuplicateProfileNameException>()),
+      );
+
+      expect(
+        () => repo.createProfile(
+          accountId: 1,
+          displayName: 'DANIEL',
+          mode: 'adult',
+        ),
+        throwsA(isA<DuplicateProfileNameException>()),
+      );
+    });
+
+    test('AT-3: rejects whitespace-padded duplicate', () async {
+      await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+
+      expect(
+        () => repo.createProfile(
+          accountId: 1,
+          displayName: '  Daniel  ',
+          mode: 'adult',
+        ),
+        throwsA(isA<DuplicateProfileNameException>()),
+      );
+    });
+
+    test('AT-4: different accounts can have same name', () async {
+      await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+
+      final profile2 = await repo.createProfile(
+        accountId: 2,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+      expect(profile2.displayName, 'Daniel');
+    });
+
+    test('AT-5: rename blocked when name conflicts', () async {
+      await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+      final sarah = await repo.createProfile(
+        accountId: 1,
+        displayName: 'Sarah',
+        mode: 'adult',
+      );
+
+      expect(
+        () => repo.updateProfile(id: sarah.id, displayName: 'Daniel'),
+        throwsA(isA<DuplicateProfileNameException>()),
+      );
+
+      // Verify Sarah's name is unchanged
+      final unchanged = await repo.getProfileById(sarah.id);
+      expect(unchanged!.displayName, 'Sarah');
+    });
+
+    test('AT-6: rename to same name (self-match) allowed', () async {
+      final daniel = await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+
+      final updated = await repo.updateProfile(
+        id: daniel.id,
+        displayName: 'Daniel',
+      );
+      expect(updated.displayName, 'Daniel');
+    });
+
+    test('AT-8: deleted profile name is reusable', () async {
+      final profile = await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+      await repo.deleteProfile(profile.id);
+
+      final newProfile = await repo.createProfile(
+        accountId: 1,
+        displayName: 'Daniel',
+        mode: 'adult',
+      );
+      expect(newProfile.displayName, 'Daniel');
+    });
+
+    test('createProfile trims stored name', () async {
+      final profile = await repo.createProfile(
+        accountId: 1,
+        displayName: '  Trimmed  ',
+        mode: 'adult',
+      );
+      expect(profile.displayName, 'Trimmed');
+    });
   });
 }

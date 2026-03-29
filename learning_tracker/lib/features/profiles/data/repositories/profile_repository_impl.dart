@@ -30,16 +30,27 @@ class ProfileRepositoryImpl implements ProfileRepository {
     required String mode,
     int avatarIndex = 0,
   }) async {
+    final trimmedName = displayName.trim();
+
     final count = await _db.profileDao.countProfilesForAccount(accountId);
     if (count >= maxProfilesPerAccount) {
       throw MaxProfilesExceededException(accountId);
+    }
+
+    // Case-insensitive duplicate name check
+    final nameExists = await _db.profileDao.profileExistsByName(
+      accountId,
+      trimmedName,
+    );
+    if (nameExists) {
+      throw DuplicateProfileNameException(trimmedName);
     }
 
     final now = DateTime.now().toUtc();
     final id = await _db.profileDao.insertProfile(
       ProfilesCompanion.insert(
         accountId: accountId,
-        displayName: displayName,
+        displayName: trimmedName,
         mode: mode,
         avatarIndex: Value(avatarIndex),
         createdAt: now,
@@ -50,7 +61,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     return ProfileModel(
       id: id,
       accountId: accountId,
-      displayName: displayName,
+      displayName: trimmedName,
       mode: mode,
       avatarIndex: avatarIndex,
       createdAt: now,
@@ -70,11 +81,25 @@ class ProfileRepositoryImpl implements ProfileRepository {
       throw StateError('Profile $id not found');
     }
 
+    // Case-insensitive duplicate name check (excluding self)
+    if (displayName != null) {
+      final trimmedName = displayName.trim();
+      final nameExists = await _db.profileDao.profileExistsByName(
+        existing.accountId,
+        trimmedName,
+        excludeId: id,
+      );
+      if (nameExists) {
+        throw DuplicateProfileNameException(trimmedName);
+      }
+    }
+
+    final trimmedDisplayName = displayName?.trim();
     final now = DateTime.now().toUtc();
     await (_db.update(_db.profiles)..where((t) => t.id.equals(id))).write(
       ProfilesCompanion(
-        displayName: displayName != null
-            ? Value(displayName)
+        displayName: trimmedDisplayName != null
+            ? Value(trimmedDisplayName)
             : const Value.absent(),
         mode: mode != null ? Value(mode) : const Value.absent(),
         avatarIndex: avatarIndex != null

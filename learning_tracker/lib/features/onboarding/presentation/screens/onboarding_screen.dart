@@ -8,6 +8,8 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -74,6 +76,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _profileMode = 'adult';
   int? _createdProfileId;
   String? _profileName;
+  String? _nameError; // Inline validation error for duplicate names
 
   // Track count for "add another" prompt
   int _trackCount = 0;
@@ -85,12 +88,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void initState() {
     super.initState();
     _tryResumeFromSavedState();
+    _nameController.addListener(_validateProfileName);
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_validateProfileName);
     _nameController.dispose();
     super.dispose();
+  }
+
+  /// Check the entered name against existing profiles (case-insensitive).
+  Future<void> _validateProfileName() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      if (_nameError != null) setState(() => _nameError = null);
+      return;
+    }
+
+    final profiles = await ref
+        .read(profileRepositoryProvider)
+        .getProfilesByAccount(1);
+    final isDuplicate = profiles.any(
+      (p) => p.displayName.trim().toLowerCase() == name.toLowerCase(),
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _nameError = isDuplicate
+          ? 'A profile with this name already exists'
+          : null;
+    });
   }
 
   // ── State Persistence ──────────────────────────────────────────────────────
@@ -146,14 +174,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _createProfile() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty || _nameError != null) return;
 
     final repo = ref.read(profileRepositoryProvider);
-    final profile = await repo.createProfile(
-      accountId: 1,
-      displayName: name,
-      mode: _profileMode,
-    );
+    final ProfileModel profile;
+    try {
+      profile = await repo.createProfile(
+        accountId: 1,
+        displayName: name,
+        mode: _profileMode,
+      );
+    } on DuplicateProfileNameException {
+      if (mounted) {
+        setState(() {
+          _nameError = 'A profile with this name already exists';
+        });
+      }
+      return;
+    }
 
     // Set user mode via profile service
     final user = ref.read(firebaseAuthProvider).currentUser;
@@ -210,6 +248,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _createdProfileId = null;
     _profileName = null;
     _profileMode = 'adult';
+    _nameError = null;
     _trackCount = 0;
     _lastTrackLabel = null;
     setState(() => _phase = _ScreenPhase.profileCreation);
@@ -282,9 +321,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             const SizedBox(height: 24),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Name',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _nameError,
               ),
               textCapitalization: TextCapitalization.words,
               onChanged: (_) => setState(() {}),
@@ -302,7 +342,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
             const Spacer(),
             FilledButton(
-              onPressed: _nameController.text.trim().isNotEmpty
+              onPressed:
+                  _nameController.text.trim().isNotEmpty && _nameError == null
                   ? _createProfile
                   : null,
               child: const Text('Continue'),

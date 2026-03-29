@@ -41,3 +41,14 @@ class MaxProfilesExceededException implements Exception {
   String toString() =>
       'MaxProfilesExceededException: Account $accountId already has 10 profiles';
 }
+
+/// Thrown when a profile with the same name (case-insensitive) already exists
+/// for the account.
+class DuplicateProfileNameException implements Exception {
+  final String displayName;
+  const DuplicateProfileNameException(this.displayName);
+
+  @override
+  String toString() =>
+      'DuplicateProfileNameException: A profile named "$displayName" already exists';
+}

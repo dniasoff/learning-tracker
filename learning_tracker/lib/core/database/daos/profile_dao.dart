@@ -39,6 +39,23 @@ class ProfileDao extends DatabaseAccessor<AppDatabase> with _$ProfileDaoMixin {
   Future<int> deleteProfile(int id) =>
       (delete(profiles)..where((t) => t.id.equals(id))).go();
 
+  /// Check if a profile with the given name (case-insensitive, trimmed)
+  /// already exists for the account. Optionally excludes a profile by ID
+  /// (for rename self-match).
+  Future<bool> profileExistsByName(
+    int accountId,
+    String displayName, {
+    int? excludeId,
+  }) async {
+    final allProfiles = await getProfilesByAccount(accountId);
+    final normalized = displayName.trim().toLowerCase();
+    return allProfiles.any(
+      (p) =>
+          p.displayName.trim().toLowerCase() == normalized &&
+          (excludeId == null || p.id != excludeId),
+    );
+  }
+
   /// Watch all profiles for an account.
   Stream<List<Profile>> watchProfilesByAccount(int accountId) =>
       (select(profiles)..where((t) => t.accountId.equals(accountId))).watch();
