@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -13,7 +14,7 @@ class ProfilePickerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profilesAsync = ref.watch(profileListProvider);
+    final profilesAsync = ref.watch(profileListStreamProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -29,7 +30,6 @@ class ProfilePickerScreen extends ConsumerWidget {
 
 class _PickerBody extends ConsumerWidget {
   final List<ProfileModel> profiles;
-
   const _PickerBody({required this.profiles});
 
   @override
@@ -53,11 +53,11 @@ class _PickerBody extends ConsumerWidget {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              itemCount: profiles.length + 1, // +1 for add button
+              itemCount: profiles.length + 1,
               itemBuilder: (context, index) {
                 if (index == profiles.length) {
                   return _AddProfileCard(
-                    onTap: () => _showAddProfileDialog(context, ref),
+                    onTap: () => _showAddDialog(context, ref),
                     isDisabled: profiles.length >= 10,
                   );
                 }
@@ -70,8 +70,7 @@ class _PickerBody extends ConsumerWidget {
                         .select(profile.id);
                     context.router.replace(const AppShellRoute());
                   },
-                  onLongPress: () =>
-                      _showManagementSheet(context, ref, profile, profiles),
+                  onLongPress: () => _showManageSheet(context, ref, profile),
                 );
               },
             ),
@@ -81,93 +80,145 @@ class _PickerBody extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAddProfileDialog(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final nameController = TextEditingController();
+  Future<void> _showAddDialog(BuildContext context, WidgetRef ref) async {
+    final ctrl = TextEditingController();
     var mode = 'adult';
+    var avatar = 0;
+    String? err;
 
-    final result = await showDialog<({String name, String mode})>(
+    final result = await showDialog<({String n, String m, int a})>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Add Profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'adult', label: Text('Adult')),
-                  ButtonSegment(value: 'child', label: Text('Child')),
+        builder: (ctx, set) {
+          Future<void> check() async {
+            final n = ctrl.text.trim();
+            if (n.isEmpty) {
+              set(() => err = null);
+              return;
+            }
+            final exists = await ref
+                .read(appDatabaseProvider)
+                .profileDao
+                .profileExistsByName(1, n);
+            set(
+              () => err = exists
+                  ? 'A profile with this name already exists'
+                  : null,
+            );
+          }
+
+          return AlertDialog(
+            title: const Text('Add Profile'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: 'Name',
+                      border: const OutlineInputBorder(),
+                      errorText: err,
+                    ),
+                    onChanged: (_) => check(),
+                  ),
+                  const SizedBox(height: 16),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'adult', label: Text('Adult')),
+                      ButtonSegment(value: 'child', label: Text('Child')),
+                    ],
+                    selected: {mode},
+                    onSelectionChanged: (v) => set(() => mode = v.first),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Choose an avatar',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 60,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 10,
+                      itemBuilder: (_, i) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: GestureDetector(
+                          onTap: () => set(() => avatar = i),
+                          child: Container(
+                            decoration: avatar == i
+                                ? BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Theme.of(ctx).colorScheme.primary,
+                                      width: 3,
+                                    ),
+                                  )
+                                : null,
+                            padding: const EdgeInsets.all(2),
+                            child: ProfileAvatar(avatarIndex: i, radius: 24),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
-                selected: {mode},
-                onSelectionChanged: (v) => setState(() => mode = v.first),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: ctrl.text.trim().isNotEmpty && err == null
+                    ? () => Navigator.pop(ctx, (
+                        n: ctrl.text.trim(),
+                        m: mode,
+                        a: avatar,
+                      ))
+                    : null,
+                child: const Text('Create'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                if (name.isNotEmpty) {
-                  Navigator.pop(ctx, (name: name, mode: mode));
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
-    nameController.dispose();
-
-    if (result != null && context.mounted) {
-      try {
-        final repo = ref.read(profileRepositoryProvider);
-        await repo.createProfile(
-          accountId: 1,
-          displayName: result.name,
-          mode: result.mode,
+    ctrl.dispose();
+    if (result == null || !context.mounted) return;
+    try {
+      await ref
+          .read(profileRepositoryProvider)
+          .createProfile(
+            accountId: 1,
+            displayName: result.n,
+            mode: result.m,
+            avatarIndex: result.a,
+          );
+      ref.invalidate(profileListStreamProvider);
+    } on DuplicateProfileNameException {
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('A profile named "${result.n}" already exists'),
+          ),
         );
-        ref.invalidate(profileListProvider);
-      } on DuplicateProfileNameException {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('A profile named "${result.name}" already exists'),
-            ),
-          );
-        }
-      } on MaxProfilesExceededException {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Maximum 10 profiles reached')),
-          );
-        }
-      }
+    } on MaxProfilesExceededException {
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Maximum 10 profiles reached')),
+        );
     }
   }
 
-  Future<void> _showManagementSheet(
+  Future<void> _showManageSheet(
     BuildContext context,
     WidgetRef ref,
     ProfileModel profile,
-    List<ProfileModel> allProfiles,
   ) async {
     final action = await showModalBottomSheet<String>(
       context: context,
@@ -189,11 +240,11 @@ class _PickerBody extends ConsumerWidget {
                 'Delete',
                 style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
-              enabled: allProfiles.length > 1,
-              subtitle: allProfiles.length <= 1
+              enabled: profiles.length > 1,
+              subtitle: profiles.length <= 1
                   ? const Text('You must have at least one profile')
                   : null,
-              onTap: allProfiles.length > 1
+              onTap: profiles.length > 1
                   ? () => Navigator.pop(ctx, 'delete')
                   : null,
             ),
@@ -201,13 +252,11 @@ class _PickerBody extends ConsumerWidget {
         ),
       ),
     );
-
     if (!context.mounted || action == null) return;
-
     if (action == 'rename') {
       await _showRenameDialog(context, ref, profile);
-    } else if (action == 'delete') {
-      await _showDeleteConfirmation(context, ref, profile);
+    } else if (action == 'delete' && context.mounted) {
+      await _showDeleteDialog(context, ref, profile);
     }
   }
 
@@ -216,63 +265,84 @@ class _PickerBody extends ConsumerWidget {
     WidgetRef ref,
     ProfileModel profile,
   ) async {
-    final controller = TextEditingController(text: profile.displayName);
-    final newName = await showDialog<String>(
+    final ctrl = TextEditingController(text: profile.displayName);
+    String? err;
+    final name = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rename Profile'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Display Name',
-            border: OutlineInputBorder(),
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) {
+          Future<void> check() async {
+            final n = ctrl.text.trim();
+            if (n.isEmpty) {
+              set(() => err = null);
+              return;
+            }
+            final exists = await ref
+                .read(appDatabaseProvider)
+                .profileDao
+                .profileExistsByName(1, n, excludeId: profile.id);
+            set(
+              () => err = exists
+                  ? 'A profile with this name already exists'
+                  : null,
+            );
+          }
+
+          return AlertDialog(
+            title: const Text('Rename Profile'),
+            content: TextField(
+              controller: ctrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Display Name',
+                border: const OutlineInputBorder(),
+                errorText: err,
+              ),
+              onChanged: (_) => check(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: ctrl.text.trim().isNotEmpty && err == null
+                    ? () => Navigator.pop(ctx, ctrl.text.trim())
+                    : null,
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    controller.dispose();
-
-    if (newName != null && newName.isNotEmpty && context.mounted) {
-      try {
-        final repo = ref.read(profileRepositoryProvider);
-        await repo.updateProfile(id: profile.id, displayName: newName);
-        ref.invalidate(profileListProvider);
-      } on DuplicateProfileNameException {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('A profile named "$newName" already exists'),
-            ),
-          );
-        }
-      }
+    ctrl.dispose();
+    if (name == null || name.isEmpty || !context.mounted) return;
+    try {
+      await ref
+          .read(profileRepositoryProvider)
+          .updateProfile(id: profile.id, displayName: name);
+      ref.invalidate(profileListStreamProvider);
+    } on DuplicateProfileNameException {
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('A profile named "$name" already exists')),
+        );
     }
   }
 
-  Future<void> _showDeleteConfirmation(
+  Future<void> _showDeleteDialog(
     BuildContext context,
     WidgetRef ref,
     ProfileModel profile,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Profile?'),
         content: Text(
-          'Permanently delete "${profile.displayName}" and ALL associated '
-          'learning data? This cannot be undone.',
+          'Permanently delete "${profile.displayName}" and ALL associated learning data? This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -289,26 +359,18 @@ class _PickerBody extends ConsumerWidget {
         ],
       ),
     );
-
-    if ((confirmed ?? false) && context.mounted) {
-      try {
-        final repo = ref.read(profileRepositoryProvider);
-        await repo.deleteProfile(profile.id);
-
-        // Clear selection if deleted profile was selected
-        final selectedId = ref.read(selectedProfileIdProvider) ?? -1;
-        if (selectedId == profile.id) {
-          ref.read(selectedProfileIdProvider.notifier).clear();
-        }
-
-        ref.invalidate(profileListProvider);
-      } on LastProfileException {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cannot delete your only profile')),
-          );
-        }
-      }
+    if (!(ok ?? false) || !context.mounted) return;
+    try {
+      await ref.read(profileRepositoryProvider).deleteProfile(profile.id);
+      final sel = ref.read(selectedProfileIdProvider) ?? -1;
+      if (sel == profile.id)
+        ref.read(selectedProfileIdProvider.notifier).clear();
+      ref.invalidate(profileListStreamProvider);
+    } on LastProfileException {
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot delete your only profile')),
+        );
     }
   }
 }
@@ -317,7 +379,6 @@ class _ProfileCard extends StatelessWidget {
   final ProfileModel profile;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-
   const _ProfileCard({
     required this.profile,
     required this.onTap,
@@ -361,13 +422,11 @@ class _ProfileCard extends StatelessWidget {
 class _AddProfileCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool isDisabled;
-
   const _AddProfileCard({required this.onTap, this.isDisabled = false});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Card(
       clipBehavior: Clip.antiAlias,
       color: isDisabled

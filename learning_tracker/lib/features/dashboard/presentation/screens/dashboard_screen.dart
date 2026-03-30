@@ -1067,7 +1067,7 @@ class _EmptyDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Ready to start learning?',
+              'No tracks yet',
               style: theme.textTheme.titleLarge?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -1075,7 +1075,7 @@ class _EmptyDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Set up your first learning program to begin tracking your progress.',
+              'Add your first learning track to get started.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.white.withValues(alpha: 0.6),

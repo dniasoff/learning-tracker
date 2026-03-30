@@ -1,6 +1,6 @@
 # Story 18.1: Add Track Flow — 8 Screens, One Concept Each (DNI-180 REDO)
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -37,94 +37,94 @@ so that I get a clean, focused setup experience whether I'm creating my first tr
 
 ### T1: Fix AddTrackStep Enum Order (AC: 3, 13)
 
-- [ ] Reorder enum in `add_track_result.dart`: `curriculum`, `program`, `scope`, `studyDays`, `chazaraSetup`, `goal`, `trackName`, `bulkMark`
-- [ ] Update `_buildStep()` switch statement in `add_track_flow.dart` to match new order
-- [ ] Run `dart run build_runner build --delete-conflicting-outputs`
+- [x] Reorder enum in `add_track_result.dart`: `curriculum`, `program`, `scope`, `studyDays`, `chazaraSetup`, `goal`, `trackName`, `bulkMark`
+- [x] Update `_buildStep()` switch statement in `add_track_flow.dart` to match new order
+- [x] Run `dart run build_runner build --delete-conflicting-outputs`
 
 ### T2: Rewrite _activeSteps for Program-Aware Skipping (AC: 3, 4, 14-17, 20)
 
-- [ ] Add `_isProgramTrack` getter: `_state.programId != null`
-- [ ] Add `_programHasChazara` getter: parse `stagesConfig` JSON from selected program
-- [ ] New `_activeSteps` logic:
+- [x] Add `_isProgramTrack` getter: `_state.programId != null`
+- [x] Add `_programHasChazara` getter: parse `stagesConfig` JSON from selected program
+- [x] New `_activeSteps` logic:
   - Always include: `curriculum`, `program` (auto-skip if no programs), `studyDays`, `trackName`
   - Skip `scope` if program selected
   - Skip `goal` if program selected
   - Include `chazaraSetup` always (behavior changes: read-only vs ask vs offer)
   - Include `bulkMark` always (behavior changes: bulk mark vs starting position)
-- [ ] Program auto-skip: use `LearningProgramDao.getProgramsByCurriculumType()` instead of hardcoded check
+- [x] Program auto-skip: use `LearningProgramDao.getProgramsByCurriculumType()` instead of hardcoded check
 
 ### T3: Rewrite ProgramSelectionStep — DB Lookup (AC: 21)
 
-- [ ] Replace hardcoded `_availablePrograms` with async DB query
-- [ ] Use `LearningProgramDao.getProgramsByCurriculumType(curriculum.storageKey)`
-- [ ] Display: program `displayName` (Hebrew) + English name from `name` field
-- [ ] Include "Self-paced" option at bottom
-- [ ] On select: store `programId`, `programName`, AND full `LearningProgram` object (for stagesConfig access)
-- [ ] Add `LearningProgram? selectedProgram` to `AddTrackState`
+- [x] Replace hardcoded `_availablePrograms` with async DB query
+- [x] Use `LearningProgramDao.getProgramsByCurriculumType(curriculum.storageKey)`
+- [x] Display: program `displayName` (Hebrew) + English name from `name` field
+- [x] Include "Self-paced" option at bottom
+- [x] On select: store `programId`, `programName`, AND full `LearningProgram` object (for stagesConfig access)
+- [x] Add `LearningProgram? selectedProgram` to `AddTrackState`
 
 ### T4: Update kDefaultStudyDays — All 7 Days Active (AC: 22)
 
-- [ ] Change `kDefaultStudyDays` to all 7 days = 'study' (no review days by default)
-- [ ] Update all references in `add_track_flow.dart`
+- [x] Change `kDefaultStudyDays` to all 7 days = 'study' (no review days by default)
+- [x] Update all references in `add_track_flow.dart`
 
 ### T5: Rewrite Study Days Step — Vertical + Read-Only + Shabbos (AC: 12, 14, 22)
 
-- [ ] Replace `_StudyDaysStepAdapter` horizontal FilterChips with **vertical ListTile rows**
-- [ ] Each row: day name on left, toggle on right
-- [ ] Day labels: Sun, Mon, Tue, Wed, Thu, Fri, **Shabbos** (not "Sat")
-- [ ] Day order: Sunday first (Jewish week)
-- [ ] Default: all 7 active
-- [ ] **Program mode:** Auto-fill from program metadata (`frequency` field in stagesConfig), display read-only with informational header "Study days set by [program name]"
+- [x] Replace `_StudyDaysStepAdapter` horizontal FilterChips with **vertical ListTile rows**
+- [x] Each row: day name on left, toggle on right
+- [x] Day labels: Sun, Mon, Tue, Wed, Thu, Fri, **Shabbos** (not "Sat")
+- [x] Day order: Sunday first (Jewish week)
+- [x] Default: all 7 active
+- [x] **Program mode:** Auto-fill from program metadata (`frequency` field in stagesConfig), display read-only with informational header "Study days set by [program name]"
 
 ### T6: Rewrite Chazara Step — Show/Offer/Ask (AC: 15, 16)
 
-- [ ] Three modes based on program:
+- [x] Three modes based on program:
   - **No program (self-paced):** Ask — launch `LearningProcessWizardScreen` (current behavior)
   - **Program with defined chazara (Oraysa, Dirshu*):** Show read-only — display stages from `stagesConfig` in a non-editable list
   - **Program with open chazara (Daf Yomi, Mishnah Yomis, Nach Yomi):** Offer optional — "Would you like to add review stages?" with Configure/Skip buttons
-- [ ] Parse `stagesConfig` JSON: if any stage has `"stage": "chazara_*"` → fully prescribed; otherwise → open
+- [x] Parse `stagesConfig` JSON: if any stage has `"stage": "chazara_*"` → fully prescribed; otherwise → open
 
 ### T7: Skip Goal for Program Tracks (AC: 17)
 
-- [ ] In `_activeSteps`, remove `goal` when `_isProgramTrack`
-- [ ] Self-paced: show goal step as before
+- [x] In `_activeSteps`, remove `goal` when `_isProgramTrack`
+- [x] Self-paced: show goal step as before
 
 ### T8: Auto-fill Track Name for Programs (AC: 18)
 
-- [ ] `_getSmartDefault()` already handles this (priority: programName > scope > curriculum)
-- [ ] Verify program displayName is stored in `_state.programName`
+- [x] `_getSmartDefault()` already handles this (priority: programName > scope > curriculum)
+- [x] Verify program displayName is stored in `_state.programName`
 
 ### T9: Screen 8 — Dual Mode: Bulk Mark vs Starting Position (AC: 7, 19)
 
-- [ ] **Self-paced mode:** Bulk mark with option to mark stages separately (enhance current behavior)
-- [ ] **Program mode:** Show starting position placeholder — "Today: [current daf] — Start here?" with adjust option
+- [x] **Self-paced mode:** Bulk mark with option to mark stages separately (enhance current behavior)
+- [x] **Program mode:** Show starting position placeholder — "Today: [current daf] — Start here?" with adjust option
   - Epic 19 dependency for actual calendar position — for now show placeholder: "Starting from today's position"
   - Store starting position in `AddTrackResult` (new field: `startingRef`)
 
 ### T10: Store Program Link in DB (AC: 10)
 
-- [ ] In `TrackCreationService.createTrack()`, after transaction:
+- [x] In `TrackCreationService.createTrack()`, after transaction:
   - If `result.programId != null`, call `profileProgramDao.setProfileProgram(profileId, curriculumType, programId)`
-- [ ] Add `startingRef` field to `AddTrackResult` for program starting position
+- [x] Add `startingRef` field to `AddTrackResult` for program starting position
 
 ### T11: Fix Scope Step — Conditional + Real Hierarchy (AC: 3, 5)
 
-- [ ] Scope step only shown when `_state.programId == null`
-- [ ] Replace placeholder "Track All" button with real `ScopeSelectionScreen` integration (or keep placeholder if hierarchy browser not ready)
+- [x] Scope step only shown when `_state.programId == null`
+- [x] Replace placeholder "Track All" button with real `ScopeSelectionScreen` integration (or keep placeholder if hierarchy browser not ready)
 
 ### T12: Tests (AC: 1-22)
 
-- [ ] Unit test: enum order is `curriculum, program, scope, studyDays, chazaraSetup, goal, trackName, bulkMark`
-- [ ] Unit test: program auto-skip when no programs for curriculum
-- [ ] Unit test: scope skipped when program selected
-- [ ] Unit test: goal skipped when program selected
-- [ ] Unit test: default study days = all 7 active
-- [ ] Widget test: study days vertical layout with "Shabbos" label
-- [ ] Widget test: ProgramSelectionStep loads from DB (mock DAO)
-- [ ] Widget test: chazara read-only mode for prescribed programs
-- [ ] Widget test: chazara offer mode for open programs
-- [ ] Unit test: smart track name defaults
-- [ ] Unit test: program-aware _activeSteps filtering
+- [x] Unit test: enum order is `curriculum, program, scope, studyDays, chazaraSetup, goal, trackName, bulkMark`
+- [x] Unit test: program auto-skip when no programs for curriculum
+- [x] Unit test: scope skipped when program selected
+- [x] Unit test: goal skipped when program selected
+- [x] Unit test: default study days = all 7 active
+- [x] Widget test: study days vertical layout with "Shabbos" label
+- [x] Widget test: ProgramSelectionStep loads from DB (mock DAO)
+- [x] Widget test: chazara read-only mode for prescribed programs
+- [x] Widget test: chazara offer mode for open programs
+- [x] Unit test: smart track name defaults
+- [x] Unit test: program-aware _activeSteps filtering
 
 ## Dev Notes
 

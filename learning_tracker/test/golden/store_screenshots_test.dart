@@ -232,7 +232,7 @@ void main() {
       );
     });
 
-    testWidgets('Screenshot 2: Learning - Browse Curricula', (tester) async {
+    testWidgets('Screenshot 2: Learning - Add Track', (tester) async {
       tester.view.physicalSize = const Size(1080, 1920);
       tester.view.devicePixelRatio = 2.625;
       addTearDown(() {
