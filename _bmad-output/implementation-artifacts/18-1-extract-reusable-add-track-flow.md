@@ -1,238 +1,230 @@
-# Story 18.1: Add Track Flow — 8 Screens (DNI-180)
+# Story 18.1: Add Track Flow — 8 Screens, One Concept Each (DNI-180 REDO)
 
-Status: review
+Status: in-progress
 
 ## Story
 
 As a learner (or parent setting up a child),
-I want a standalone "Add Track" flow that walks me through configuring a single learning track,
-so that the same polished experience is available during initial onboarding AND when adding tracks later from settings.
+I want a standalone "Add Track" flow with 8 screens — each asking ONE question — that can be launched from onboarding, settings, or empty states,
+so that I get a clean, focused setup experience whether I'm creating my first track or my fifth.
 
 ## Acceptance Criteria
 
-**AC-1:** `AddTrackFlow` is a standalone widget with NO dependency on OnboardingScreen
-**AC-2:** Exactly 8 screens, each with ONE concept (never mix goals + study days, never mix scope + import)
-**AC-3:** Study days (screen 4) comes BEFORE chazara (screen 5)
+**AC-1:** `AddTrackFlow` is standalone — NO dependency on OnboardingScreen
+**AC-2:** Exactly 8 screens, each with ONE concept
+**AC-3:** **Program (screen 2) comes BEFORE Scope (screen 3)** — selecting a program skips scope
 **AC-4:** Program screen auto-skips when no programs exist for the curriculum
 **AC-5:** Content loading from bundled assets is invisible — no "import" screen
-**AC-6:** Track name defaults are smart: program name > scope name > curriculum name
-**AC-7:** Bulk mark marks ALL stages complete — no future chazara for selected items
-**AC-8:** Back navigation preserves all selections on every screen
+**AC-6:** Track name defaults: program name > scope name > curriculum name
+**AC-7:** Bulk mark marks ALL stages complete by default, with option to mark stages separately
+**AC-8:** Back navigation preserves all selections
 **AC-9:** State persists across app interruption (SharedPreferences)
-**AC-10:** On completion, creates the track in DB with all settings applied
-**AC-11:** No rewards step in this flow
+**AC-10:** On completion, creates track in DB with all settings applied (in transaction)
+**AC-11:** No rewards step
+**AC-12:** Study days uses **vertical layout** (each day on its own row)
+**AC-13:** Study days (screen 4) BEFORE chazara (screen 5)
+**AC-14:** Program selected → study days **auto-filled read-only** from program metadata
+**AC-15:** Program **defines** chazara → stages **shown read-only**
+**AC-16:** Program **leaves chazara open** → user offered **optional setup**
+**AC-17:** Goal step **skipped for all program tracks**
+**AC-18:** Track name **auto-fills from program displayName**
+**AC-19:** Screen 8 program mode: show starting position in Hebrew from calendar (Epic 19 dependency — placeholder OK)
+**AC-20:** Self-paced tracks go through full flow unchanged
+**AC-21:** `ProgramSelectionStep` loads from DB via DAO — no hardcoded IDs
+**AC-22:** Default study days = **all 7 days active**. Saturday displayed as "Shabbos"
 
 ## Tasks / Subtasks
 
-### T1: Create track_setup Feature Module Scaffold (AC: 1)
+### T1: Fix AddTrackStep Enum Order (AC: 3, 13)
 
-- [x] Create directory structure: `lib/features/track_setup/{data,domain,presentation}/{screens,widgets,providers,entities}`
-- [x] Create `AddTrackResult` freezed entity at `lib/features/track_setup/domain/entities/add_track_result.dart`
-  - Fields: `curriculumId`, `label`, `programId?`, `scopeSelection?`, `studyDays`, `stageDefinitions`, `goal?`, `bulkMarkResult?`
-- [x] Create `AddTrackState` freezed class for internal flow state management
-- [x] Run `dart run build_runner build --delete-conflicting-outputs`
+- [ ] Reorder enum in `add_track_result.dart`: `curriculum`, `program`, `scope`, `studyDays`, `chazaraSetup`, `goal`, `trackName`, `bulkMark`
+- [ ] Update `_buildStep()` switch statement in `add_track_flow.dart` to match new order
+- [ ] Run `dart run build_runner build --delete-conflicting-outputs`
 
-### T2: AddTrackFlow Shell — Step Management & Navigation (AC: 1, 7, 9)
+### T2: Rewrite _activeSteps for Program-Aware Skipping (AC: 3, 4, 14-17, 20)
 
-- [x] Create `AddTrackFlow` ConsumerStatefulWidget at `lib/features/track_setup/presentation/screens/add_track_flow.dart`
-  - Parameters: `profileId`, `isOnboarding`, `isChildMode`, `onComplete`, `onCancel`
-- [x] Implement 8-step enum: `curriculum`, `scope`, `program`, `studyDays`, `chazaraSetup`, `goal`, `trackName`, `bulkMark`
-- [x] Implement PageView + NeverScrollableScrollPhysics for programmatic step navigation
-- [x] Implement PopScope back navigation that preserves state across all steps
-- [x] From Step 1, back exits with confirmation dialog if data entered
-- [x] Persist flow state to SharedPreferences on each step completion (AC-9)
-- [x] On launch, check for persisted state and resume from last completed step
-- [x] Return `AddTrackResult` on flow completion via `onComplete` callback (AC-8)
+- [ ] Add `_isProgramTrack` getter: `_state.programId != null`
+- [ ] Add `_programHasChazara` getter: parse `stagesConfig` JSON from selected program
+- [ ] New `_activeSteps` logic:
+  - Always include: `curriculum`, `program` (auto-skip if no programs), `studyDays`, `trackName`
+  - Skip `scope` if program selected
+  - Skip `goal` if program selected
+  - Include `chazaraSetup` always (behavior changes: read-only vs ask vs offer)
+  - Include `bulkMark` always (behavior changes: bulk mark vs starting position)
+- [ ] Program auto-skip: use `LearningProgramDao.getProgramsByCurriculumType()` instead of hardcoded check
 
-### T3: Stage 1 — Curriculum Picker (AC: 1, 2, 5)
+### T3: Rewrite ProgramSelectionStep — DB Lookup (AC: 21)
 
-- [x] Create `CurriculumPickerStep` widget at `lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart`
-- [x] Display all 9 curricula with Hebrew names from `CurriculumId` enum
-- [x] Single tap selection advances immediately
-- [x] After selection, trigger `CurriculumActivationService.activate()` in background (fire-and-forget)
-- [x] Track activation status via `_activationFuture` + `contentActivated` state for use by Stage 2
+- [ ] Replace hardcoded `_availablePrograms` with async DB query
+- [ ] Use `LearningProgramDao.getProgramsByCurriculumType(curriculum.storageKey)`
+- [ ] Display: program `displayName` (Hebrew) + English name from `name` field
+- [ ] Include "Self-paced" option at bottom
+- [ ] On select: store `programId`, `programName`, AND full `LearningProgram` object (for stagesConfig access)
+- [ ] Add `LearningProgram? selectedProgram` to `AddTrackState`
 
-### T4: Stage 2 — Scope Selection (AC: 2, 5)
+### T4: Update kDefaultStudyDays — All 7 Days Active (AC: 22)
 
-- [x] Create `_ScopeStepAdapter` inline widget wrapping scope selection
-- [x] Default: "Track All" button (skippable)
-- [x] If curriculum content not yet activated, show spinner via FutureBuilder until ready
-- [x] No dedicated import screen — spinner only if needed
+- [ ] Change `kDefaultStudyDays` to all 7 days = 'study' (no review days by default)
+- [ ] Update all references in `add_track_flow.dart`
 
-### T5: Stage 3 — Program Selection (AC: 4)
+### T5: Rewrite Study Days Step — Vertical + Read-Only + Shabbos (AC: 12, 14, 22)
 
-- [x] Create `ProgramSelectionStep` widget at `lib/features/track_setup/presentation/widgets/program_selection_step.dart`
-- [x] Query available programs: Bavli (Daf Yomi id=1, Oraysa id=3), Mishna Berurah (Dirshu id=2)
-- [x] If no programs available (7 of 9 curricula) auto-skip via `_activeSteps` filtering
-- [x] If program selected, auto-adjust scope to null (full scope)
-- [x] "Self-paced" option for no program
+- [ ] Replace `_StudyDaysStepAdapter` horizontal FilterChips with **vertical ListTile rows**
+- [ ] Each row: day name on left, toggle on right
+- [ ] Day labels: Sun, Mon, Tue, Wed, Thu, Fri, **Shabbos** (not "Sat")
+- [ ] Day order: Sunday first (Jewish week)
+- [ ] Default: all 7 active
+- [ ] **Program mode:** Auto-fill from program metadata (`frequency` field in stagesConfig), display read-only with informational header "Study days set by [program name]"
 
-### T6: Stage 4 — Study Days (AC: 2, 3)
+### T6: Rewrite Chazara Step — Show/Offer/Ask (AC: 15, 16)
 
-- [x] Create `_StudyDaysStepAdapter` inline widget with 7-day FilterChip picker
-- [x] Default: Sun-Thu study (ISO 7,1,2,3,4), Fri-Sat review (ISO 5,6)
-- [x] Skippable (uses defaults)
-- [x] Store result for use by Stage 5 (chazara setup)
+- [ ] Three modes based on program:
+  - **No program (self-paced):** Ask — launch `LearningProcessWizardScreen` (current behavior)
+  - **Program with defined chazara (Oraysa, Dirshu*):** Show read-only — display stages from `stagesConfig` in a non-editable list
+  - **Program with open chazara (Daf Yomi, Mishnah Yomis, Nach Yomi):** Offer optional — "Would you like to add review stages?" with Configure/Skip buttons
+- [ ] Parse `stagesConfig` JSON: if any stage has `"stage": "chazara_*"` → fully prescribed; otherwise → open
 
-### T7: Stage 5 — Chazara Setup (AC: 2, 3)
+### T7: Skip Goal for Program Tracks (AC: 17)
 
-- [x] Create `_ChazaraStepAdapter` wrapping `LearningProcessWizardScreen` via Navigator.push
-- [x] Presets: standard, custom, no-review
-- [x] Schedule type: delay-only, delay + Shabbos review, delay + Friday + Shabbos
-- [x] Can reference study days from Stage 4
-- [x] Skip = no review
+- [ ] In `_activeSteps`, remove `goal` when `_isProgramTrack`
+- [ ] Self-paced: show goal step as before
 
-### T8: Stage 6 — Goal Setup (AC: 2)
+### T8: Auto-fill Track Name for Programs (AC: 18)
 
-- [x] Create `_GoalStepAdapter` wrapping `GoalSetupScreen` via Navigator.push
-- [x] Pace-based or deadline-based goal
-- [x] Skippable (no goal = no pace tracking)
+- [ ] `_getSmartDefault()` already handles this (priority: programName > scope > curriculum)
+- [ ] Verify program displayName is stored in `_state.programName`
 
-### T9: Stage 7 — Track Name (AC: 6)
+### T9: Screen 8 — Dual Mode: Bulk Mark vs Starting Position (AC: 7, 19)
 
-- [x] Create `TrackLabelStep` widget at `lib/features/track_setup/presentation/widgets/track_label_step.dart`
-- [x] Smart default pre-fill logic: program name > scope name > curriculum Hebrew name
-- [x] Editable TextField with default pre-filled
-- [x] Validate non-empty
+- [ ] **Self-paced mode:** Bulk mark with option to mark stages separately (enhance current behavior)
+- [ ] **Program mode:** Show starting position placeholder — "Today: [current daf] — Start here?" with adjust option
+  - Epic 19 dependency for actual calendar position — for now show placeholder: "Starting from today's position"
+  - Store starting position in `AddTrackResult` (new field: `startingRef`)
 
-### T10: Stage 8 — Bulk Mark (AC: 7)
+### T10: Store Program Link in DB (AC: 10)
 
-- [x] Create `_BulkMarkStepAdapter` wrapping `BulkMarkScreen` via Navigator.push
-- [x] When marking items, insert completions for ALL configured stages
-- [x] Prominent "Skip" button alongside "Mark completions"
+- [ ] In `TrackCreationService.createTrack()`, after transaction:
+  - If `result.programId != null`, call `profileProgramDao.setProfileProgram(profileId, curriculumType, programId)`
+- [ ] Add `startingRef` field to `AddTrackResult` for program starting position
 
-### T11: Database Persistence — Create Track on Completion (AC: 10)
+### T11: Fix Scope Step — Conditional + Real Hierarchy (AC: 3, 5)
 
-- [x] Create `TrackCreationService` at `lib/features/track_setup/domain/services/track_creation_service.dart`
-- [x] Wrap all DB operations in a single `_database.transaction()` call
-- [x] Orchestrate: curriculum activation, stage definitions, study day config, scope insertion, goal creation
-- [x] Error handling with try/catch in `_finishFlow()` — saved state NOT cleared until success confirmed
-- [x] Return `AddTrackResult` to caller via `onComplete` callback
+- [ ] Scope step only shown when `_state.programId == null`
+- [ ] Replace placeholder "Track All" button with real `ScopeSelectionScreen` integration (or keep placeholder if hierarchy browser not ready)
 
-### T12: Unit & Widget Tests (AC: 1-11)
+### T12: Tests (AC: 1-22)
 
-- [x] 16 unit tests for `AddTrackResult`, `ScopeEntry`, `AddTrackState`, `AddTrackStep`
-- [x] 4 widget tests for `CurriculumPickerStep` (scrollable list, onboarding header, default header, tap callback)
-- [x] 4 widget tests for `TrackLabelStep` (pre-fill, submit, validation, accept default)
-- [x] 4 widget tests for `ProgramSelectionStep` (Bavli programs, MB programs, tap callback, self-paced)
-
-### T13: Code Review Fixes (REDO) (AC: 1-11)
-
-- [x] Wrap `TrackCreationService.createTrack()` in `_database.transaction()` (was CRITICAL)
-- [x] Fix study days defaults to Sun-Thu (ISO 7,1,2,3,4) — was Mon-Fri in 3 places
-- [x] Remove presentation-layer imports from domain entity `AddTrackResult` (clean architecture)
-- [x] Eliminate cross-feature module imports from `add_track_providers.dart` and `add_track_flow.dart`
-- [x] Add try/catch around `_finishFlow()` — clear saved state only on success
-- [x] Extract default study days constant to shared location (was duplicated 3x)
+- [ ] Unit test: enum order is `curriculum, program, scope, studyDays, chazaraSetup, goal, trackName, bulkMark`
+- [ ] Unit test: program auto-skip when no programs for curriculum
+- [ ] Unit test: scope skipped when program selected
+- [ ] Unit test: goal skipped when program selected
+- [ ] Unit test: default study days = all 7 active
+- [ ] Widget test: study days vertical layout with "Shabbos" label
+- [ ] Widget test: ProgramSelectionStep loads from DB (mock DAO)
+- [ ] Widget test: chazara read-only mode for prescribed programs
+- [ ] Widget test: chazara offer mode for open programs
+- [ ] Unit test: smart track name defaults
+- [ ] Unit test: program-aware _activeSteps filtering
 
 ## Dev Notes
 
 ### Architecture
 
-- **Feature module:** `lib/features/track_setup/` — new module following clean architecture (data/domain/presentation)
-- **Pattern:** Feature-first clean architecture with Riverpod providers [Source: _bmad-output/project-context.md]
-- **Key principle:** Each screen = ONE concept. Never mix concerns.
-- **State management:** Local `AddTrackState` (Freezed) for wizard state, NOT Riverpod providers
-- **Navigation:** PageView + NeverScrollableScrollPhysics, controlled programmatically
-- **Back nav:** PopScope intercepts system back button to go to previous step or show exit dialog
+- **Feature module:** `lib/features/track_setup/` — clean architecture (data/domain/presentation)
+- **Pattern:** PageView + NeverScrollableScrollPhysics, PopScope for back nav, local AddTrackState (Freezed)
+- **Key principle:** Each screen = ONE concept. "Show don't ask" for program-defined settings.
 
-### Key Files
+### Step Order (CORRECTED)
 
-| File | Path | Role |
-|------|------|------|
-| AddTrackFlow | `lib/features/track_setup/presentation/screens/add_track_flow.dart` | Main 8-step wizard widget |
-| CurriculumPickerStep | `lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart` | Stage 1 |
-| ProgramSelectionStep | `lib/features/track_setup/presentation/widgets/program_selection_step.dart` | Stage 3 |
-| TrackLabelStep | `lib/features/track_setup/presentation/widgets/track_label_step.dart` | Stage 7 |
-| AddTrackResult | `lib/features/track_setup/domain/entities/add_track_result.dart` | Freezed entities |
-| TrackCreationService | `lib/features/track_setup/domain/services/track_creation_service.dart` | DB persistence orchestrator |
-| AddTrackProviders | `lib/features/track_setup/presentation/providers/add_track_providers.dart` | Riverpod provider wiring |
+```
+curriculum → program → scope → studyDays → chazaraSetup → goal → trackName → bulkMark
+```
 
-### Database Tables Touched
+Program before scope. If program selected: skip scope, auto-fill study days, show/offer chazara, skip goal, auto-fill name.
 
-- `active_curricula` — curriculum activation (idempotent)
-- `curriculum_tracks` — track creation
-- `stage_definitions` — chazara config per track
-- `study_day_configs` — study day selections
-- `curriculum_scopes` — scope narrowing
-- `goals` — pace/deadline goals
-- `completions` — bulk mark inserts (append-only, all stages)
+### Program Prescription Levels
+
+| Program | Curriculum | Chazara | Behavior |
+|---------|-----------|---------|----------|
+| Oraysa | bavli | 4 stages (next-day, weekly, rolling) | Fully prescribed |
+| Dirshu Kinyan Torah | bavli | 3 stages (1d, 7d, 21d) | Fully prescribed |
+| Dirshu Amud HaYomi | bavli | 3 stages (1d, 7d, 21d) | Fully prescribed |
+| Dirshu Kinyan Yerushalmi | yerushalmi | 3 stages (1d, 7d, 21d) | Fully prescribed |
+| Dirshu DhYB | mishna_berurah | 1 stage (7d) | Fully prescribed |
+| Dirshu Kinyan Chochma | mussar | 2 stages (1d, 7d) | Fully prescribed |
+| Daf Yomi | bavli | none (learn only) | Open chazara |
+| Mishnah Yomis | mishnayos | none (learn only) | Open chazara |
+| Nach Yomi | nach | none (learn only) | Open chazara |
+
+### Key Files to Modify
+
+| File | Change |
+|------|--------|
+| `lib/features/track_setup/domain/entities/add_track_result.dart` | Reorder enum, add `selectedProgram` and `startingRef` fields |
+| `lib/features/track_setup/presentation/screens/add_track_flow.dart` | Rewrite `_activeSteps`, `_buildStep`, adapters |
+| `lib/features/track_setup/presentation/widgets/program_selection_step.dart` | DB lookup instead of hardcoded |
+| `lib/features/track_setup/domain/services/track_creation_service.dart` | Add profile_programs insert, update kDefaultStudyDays |
+
+### Key Files to Read (DO NOT modify unless required)
+
+| File | Why |
+|------|-----|
+| `lib/core/database/daos/learning_program_dao.dart` | `getProgramsByCurriculumType()` method |
+| `lib/core/database/daos/profile_program_dao.dart` | `setProfileProgram()` for linking profile to program |
+| `lib/core/database/seed/learning_program_seeds.dart` | All 9 programs with stagesConfig JSON |
+| `lib/core/database/tables/learning_programs.dart` | Schema: stagesConfig, isCalendarProgram |
+
+### stagesConfig JSON Structure
+
+```json
+// Daf Yomi (open chazara — learn only):
+[{"stage": "learn", "pace": "one_daf", "frequency": "daily"}]
+
+// Dirshu Kinyan Torah (fully prescribed):
+[
+  {"stage": "learn", "pace": "one_daf", "frequency": "daily"},
+  {"stage": "chazara_1", "delay_days": 1},
+  {"stage": "chazara_2", "delay_days": 7},
+  {"stage": "chazara_3", "delay_days": 21}
+]
+```
+
+**Detecting chazara:** `stages.any((s) => s['stage'].toString().startsWith('chazara'))` → fully prescribed if true, open if false.
 
 ### Critical Constraints
 
-- All DB writes in transactions [Source: _bmad-output/project-context.md]
-- Completions are append-only — never update/delete
+- All DB writes in transaction (already done in TrackCreationService)
+- Completions are append-only
 - DateTime always UTC
-- Use `@riverpod` code generation for providers
-- Use `freezed` for all data classes
-- Never import between feature modules — use core providers
+- Domain entity must NOT import presentation files (use `Object?` for opaque types)
+- No cross-feature module imports
+- `_finishFlow()` must have try/catch, clear state only on success (already done)
+- Study days stored as ISO weekday (1=Mon...7=Sun)
 
-### Testing Standards
+### Previous Implementation Issues (from code review)
 
-- 80%+ coverage on domain layer, 70%+ on data layer [Source: _bmad-output/project-context.md]
-- Use mocktail for mocks, real freezed instances for data
-- Arrange-Act-Assert pattern
-- Mirror lib/ structure in test/
-
-### Project Structure Notes
-
-- New module at `lib/features/track_setup/` aligns with feature-first architecture
-- Existing widgets stay in their current modules; adapters in `track_setup` wrap them
-- Route registration in `lib/core/navigation/app_router.dart`
+1. Step order was scope→program (now program→scope)
+2. Study days were Mon-Fri (now all 7 active)
+3. Study days were horizontal chips (now vertical list)
+4. ProgramSelectionStep was hardcoded (now DB lookup)
+5. No program-aware mode (now show-don't-ask pattern)
+6. Blank grey screen from Hub (PageView null guard added in `bc8565a`)
 
 ### References
 
-- [Source: docs/developer-guide.md#Core Domain Model: The Track] — Track model, curricula
-- [Source: _bmad-output/project-context.md#Critical Implementation Rules] — Coding standards, patterns
-- [Source: docs/developer-guide.md#Onboarding: The Critical UX Challenge] — Onboarding flow design
+- [Source: docs/developer-guide.md] — Domain concepts, curricula, track model, programs
+- [Source: _bmad-output/project-context.md] — Coding standards, patterns
+- [Source: _bmad-output/planning-artifacts/architecture.md] — Architecture decisions
+- [Linear: DNI-180] — Full ticket with program-aware behavior summary
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-Claude Opus 4.6 (1M context)
+_To be filled during implementation_
 
 ### Debug Log References
 
-_None — clean implementation_
-
 ### Completion Notes List
 
-- T1: Created `track_setup` feature module with clean architecture directories. `AddTrackResult`, `ScopeEntry`, `AddTrackState` as freezed classes. `AddTrackStep` 8-step enum. build_runner generated successfully.
-- T2: `AddTrackFlow` ConsumerStatefulWidget with PageController, 8-step wizard, back navigation with exit confirmation, SharedPreferences persistence for all state fields, resume-from-saved-state on launch.
-- T3: `CurriculumPickerStep` displays all 9 curricula with Hebrew+English names, single tap advances. Content activation fires in background.
-- T4: `_ScopeStepAdapter` with "Track All" default. FutureBuilder shows spinner at scope step if activation not yet complete.
-- T5: `ProgramSelectionStep` — Bavli: Daf Yomi (id=1) + Oraysa (id=3); MB: Dirshu (id=2). Auto-skip via `_activeSteps` filtering. Self-paced option.
-- T6: `_StudyDaysStepAdapter` — inline FilterChip day grid, 7-day ISO, defaults Sun-Thu study. Skippable.
-- T7: `_ChazaraStepAdapter` launches `LearningProcessWizardScreen` via Navigator.push, receives result via pop.
-- T8: `_GoalStepAdapter` launches `GoalSetupScreen` via Navigator.push, skip option.
-- T9: `TrackLabelStep` — smart defaults (program > scope > curriculum Hebrew name), TextFormField with validation.
-- T10: `_BulkMarkStepAdapter` launches `BulkMarkScreen` via Navigator.push. Prominent Skip alongside Mark Completions.
-- T11: `TrackCreationService` orchestrates all DB writes in a single transaction. Wired into `_finishFlow()`.
-- T12: 28 tests passing (16 unit + 12 widget), 0 analyzer issues.
-- T13 (REDO): Fixed all 7 code review findings — transaction wrapper, Sun-Thu defaults, clean architecture imports, try/catch error handling, extracted shared constant.
-
-### Change Log
-
-- 2026-03-29: Code review fixes applied (REDO commit `3826a23`). 1 critical, 4 high, 2 low issues resolved.
-- 2026-03-28: Initial implementation complete. 8-step wizard, 3 custom widgets, 5 adapter widgets, TrackCreationService, 28 tests. Commits `d0e60c2`, `8390794`.
-
 ### File List
-
-**Created:**
-- `lib/features/track_setup/domain/entities/add_track_result.dart`
-- `lib/features/track_setup/domain/services/track_creation_service.dart`
-- `lib/features/track_setup/presentation/screens/add_track_flow.dart`
-- `lib/features/track_setup/presentation/providers/add_track_providers.dart`
-- `lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart`
-- `lib/features/track_setup/presentation/widgets/program_selection_step.dart`
-- `lib/features/track_setup/presentation/widgets/track_label_step.dart`
-- `test/features/track_setup/domain/entities/add_track_result_test.dart`
-- `test/features/track_setup/presentation/widgets/curriculum_picker_step_test.dart`
-- `test/features/track_setup/presentation/widgets/track_label_step_test.dart`
-- `test/features/track_setup/presentation/widgets/program_selection_step_test.dart`
-
-**Modified:**
-- `lib/features/track_setup/domain/entities/add_track_result.dart` (REDO: removed presentation imports)
-- `lib/features/track_setup/domain/services/track_creation_service.dart` (REDO: added transaction wrapper)
-- `lib/features/track_setup/presentation/screens/add_track_flow.dart` (REDO: Sun-Thu defaults, try/catch, shared constant)

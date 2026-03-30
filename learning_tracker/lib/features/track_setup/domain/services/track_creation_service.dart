@@ -9,7 +9,7 @@ import 'package:learning_tracker/features/scheduler/presentation/screens/goal_se
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
-/// Default study days: Sun–Thu study, Fri–Sat review (Jewish week).
+/// Default study days: all 7 days active (Sun–Shabbos).
 ///
 /// ISO weekdays: Mon=1 ... Sun=7.
 const kDefaultStudyDays = <int, String>{
@@ -18,8 +18,8 @@ const kDefaultStudyDays = <int, String>{
   2: 'study', // Tuesday
   3: 'study', // Wednesday
   4: 'study', // Thursday
-  5: 'review', // Friday
-  6: 'review', // Saturday (Shabbat)
+  5: 'study', // Friday
+  6: 'study', // Shabbos (Saturday)
 };
 
 /// Creates a track in the database from an [AddTrackResult].
@@ -112,6 +112,15 @@ class TrackCreationService {
         curriculumId: curriculum,
       );
     });
+
+    // Link profile to program if one was selected (outside transaction — idempotent)
+    if (result.programId != null) {
+      await _database.profileProgramDao.setProfileProgram(
+        profileId: profileId,
+        curriculumType: curriculum.storageKey,
+        programId: result.programId!,
+      );
+    }
 
     AppLogger.instance.info(
       'TrackCreationService: track "${result.label}" created for '

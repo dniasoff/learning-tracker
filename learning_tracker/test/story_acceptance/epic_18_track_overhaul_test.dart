@@ -48,11 +48,11 @@ void main() {
         expect(AddTrackStep.values.last, AddTrackStep.bulkMark);
       });
 
-      test('AddTrackStep steps are in expected order', () {
+      test('AddTrackStep steps are in expected order (program before scope)', () {
         expect(AddTrackStep.values, [
           AddTrackStep.curriculum,
-          AddTrackStep.scope,
           AddTrackStep.program,
+          AddTrackStep.scope,
           AddTrackStep.studyDays,
           AddTrackStep.chazaraSetup,
           AddTrackStep.goal,

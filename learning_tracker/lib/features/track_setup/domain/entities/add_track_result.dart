@@ -18,14 +18,17 @@ abstract class AddTrackResult with _$AddTrackResult {
     List<ScopeEntry>? scopeSelections,
     required Map<int, String> studyDays,
 
-    /// Opaque wizard result — cast to `LearningProcessWizardResult` in presentation.
+    /// Opaque wizard result — cast to `LearningProcessWizardResult`.
     Object? wizardResult,
 
-    /// Opaque goal result — cast to `GoalFormResult` in presentation.
+    /// Opaque goal result — cast to `GoalFormResult`.
     Object? goalResult,
 
-    /// Opaque bulk mark result — cast to `BulkMarkResult` in presentation.
+    /// Opaque bulk mark result — cast to `BulkMarkResult`.
     Object? bulkMarkResult,
+
+    /// Sefaria ref for program starting position (Screen 8 program mode).
+    String? startingRef,
   }) = _AddTrackResult;
 }
 
@@ -47,23 +50,31 @@ abstract class AddTrackState with _$AddTrackState {
     List<ScopeEntry>? scopeSelections,
     int? programId,
     String? programName,
+
+    /// Full program object for reading stagesConfig metadata.
+    /// Opaque Object? to avoid importing DB types into domain.
+    Object? selectedProgram,
     Map<int, String>? studyDays,
     Object? wizardResult,
     Object? goalResult,
     String? trackLabel,
     Object? bulkMarkResult,
+    String? startingRef,
     @Default(false) bool contentActivated,
   }) = _AddTrackState;
 }
 
 /// Steps in the Add Track flow.
+///
+/// Order: Program comes BEFORE Scope — if user selects a program,
+/// scope is skipped (program defines it).
 enum AddTrackStep {
-  curriculum,
-  scope,
-  program,
-  studyDays,
-  chazaraSetup,
-  goal,
-  trackName,
-  bulkMark,
+  curriculum, // Screen 1
+  program, // Screen 2 (auto-skip if no programs)
+  scope, // Screen 3 (skip if program selected)
+  studyDays, // Screen 4 (program: auto-fill read-only)
+  chazaraSetup, // Screen 5 (program: show or offer)
+  goal, // Screen 6 (program: skip)
+  trackName, // Screen 7 (program: auto-fill)
+  bulkMark, // Screen 8 (program: starting position)
 }

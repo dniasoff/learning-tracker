@@ -97,11 +97,11 @@ void main() {
       expect(AddTrackStep.values, hasLength(8));
     });
 
-    test('steps are in correct order', () {
+    test('steps are in correct order (program before scope)', () {
       expect(AddTrackStep.values, [
         AddTrackStep.curriculum,
-        AddTrackStep.scope,
         AddTrackStep.program,
+        AddTrackStep.scope,
         AddTrackStep.studyDays,
         AddTrackStep.chazaraSetup,
         AddTrackStep.goal,
