@@ -85,7 +85,7 @@ class _CurriculumTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      curriculum.displayNameHe,
+                      curriculum.displayNameEn,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

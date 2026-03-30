@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
@@ -785,7 +786,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
 // ── Adapter Widgets ──────────────────────────────────────────────────────────
 
-class _ScopeStepContent extends ConsumerWidget {
+class _ScopeStepContent extends StatelessWidget {
   const _ScopeStepContent({
     required this.curriculumId,
     required this.onComplete,
@@ -795,22 +796,41 @@ class _ScopeStepContent extends ConsumerWidget {
   final ValueChanged<List<ScopeEntry>?> onComplete;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Select Scope',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text('Select Scope', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
             'Choose which parts of ${curriculumId.displayNameHe} to track, or select all.',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium,
           ),
-          const Spacer(),
+          const SizedBox(height: 24),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.push<void>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ScopeSelectionScreen(curriculumId: curriculumId),
+                  ),
+                ).then((_) {
+                  // ScopeSelectionScreen saves scope to DB directly.
+                  // We advance the flow — scope was set in DB.
+                  onComplete(null);
+                });
+              },
+              icon: const Icon(Icons.tune),
+              label: const Text('Choose Specific Sections'),
+            ),
+          ),
+          const SizedBox(height: 12),
           FilledButton(
             onPressed: () => onComplete(null),
             child: const Text('Track All'),
