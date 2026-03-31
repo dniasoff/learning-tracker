@@ -201,7 +201,8 @@ class CalendarProgramService {
       final uri = Uri.parse(link);
       final path = uri.path;
       // Remove leading '/' to get the ref
-      return path.startsWith('/') ? Uri.decodeComponent(path.substring(1)) : Uri.decodeComponent(path);
+      final rawRef = path.startsWith('/') ? path.substring(1) : path;
+      return Uri.decodeComponent(rawRef);
     } catch (_) {
       return fallback;
     }

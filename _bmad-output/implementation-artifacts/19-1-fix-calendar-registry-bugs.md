@@ -1,6 +1,6 @@
 # Story 19.1: Fix Calendar Registry Bugs (7 bugs)
 
-Status: review
+Status: done
 
 ## Story
 
