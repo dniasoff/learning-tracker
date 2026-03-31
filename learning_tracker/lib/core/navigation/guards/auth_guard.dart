@@ -3,15 +3,14 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+    show kOnboardingComplete;
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// Route guard that redirects unauthenticated users to the sign-in route.
+/// Route guard that redirects unauthenticated users to sign-in or intro.
 ///
-/// Uses [FirebaseAuth.authStateChanges] for a proper async auth check rather
-/// than the synchronous [FirebaseAuth.currentUser], which may not reflect the
-/// latest authentication state on first load.
-///
-/// Uses [StackRouter.replace] so the sign-in page replaces the protected route
-/// and does not leave it on the back stack.
+/// If onboarding has been completed before, skips the intro carousel and goes
+/// directly to [SignInRoute]. Otherwise shows [AppIntroRoute].
 class AuthGuard extends AutoRouteGuard {
   AuthGuard({required FirebaseAuth firebaseAuth})
     : _firebaseAuth = firebaseAuth;
@@ -27,7 +26,11 @@ class AuthGuard extends AutoRouteGuard {
     if (user != null) {
       resolver.next();
     } else {
-      unawaited(router.replace(const AppIntroRoute()));
+      final prefs = await SharedPreferences.getInstance();
+      final onboarded = prefs.getBool(kOnboardingComplete) ?? false;
+      unawaited(
+        router.replace(onboarded ? const SignInRoute() : const AppIntroRoute()),
+      );
       resolver.next(false);
     }
   }

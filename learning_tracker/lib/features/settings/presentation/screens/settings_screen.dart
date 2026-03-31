@@ -786,7 +786,7 @@ Future<void> _showSignOutConfirmation(
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
     if (context.mounted) {
-      await context.router.replaceAll([const AppIntroRoute()]);
+      await context.router.replaceAll([const SignInRoute()]);
     }
   } catch (e) {
     if (context.mounted) {
