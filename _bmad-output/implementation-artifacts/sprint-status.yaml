@@ -1,5 +1,5 @@
 # generated: 2026-01-05
-# last_updated: 2026-03-29
+# last_updated: 2026-04-01
 # project: learning-tracker
 # project_key: learning-tracker
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-01-05
-last_updated: 2026-03-29
+last_updated: 2026-04-01
 project: learning-tracker
 project_key: learning-tracker
 tracking_system: file-system
@@ -185,17 +185,19 @@ development_status:
   18-12-delete-account-redirects-to-welcome: review
   epic-18-retrospective: optional
 
-  # Epic 19: Offline-First Architecture & Local-First Overhaul (11 stories)
-  epic-19: backlog
-  19-1-fix-calendar-registry-bugs: backlog
-  19-2-two-database-split: backlog
-  19-3-seed-database-build-tool: backlog
-  19-4-local-calendar-engine: backlog
-  19-5-local-first-auth-abstraction: backlog
-  19-6-startup-sequence-hardening: backlog
-  19-7-optional-account-creation-settings: backlog
-  19-8-syncengine-conditional-activation: backlog
-  19-9-multi-device-sync: backlog
-  19-10-navigation-state-cleanup: backlog
-  19-11-e2e-offline-integration-testing: backlog
+  # Epic 19: Offline-First Architecture & Two-Database Split (13 stories)
+  epic-19: in-progress
+  19-1-fix-calendar-registry-bugs: ready-for-dev
+  19-2-two-database-split: ready-for-dev
+  19-2b-content-db-runtime-upgrade-flow: ready-for-dev
+  19-3-seed-database-build-tool: ready-for-dev
+  19-4-local-calendar-engine: ready-for-dev
+  19-5-local-first-auth-abstraction: ready-for-dev
+  19-6-startup-sequence-hardening: ready-for-dev
+  19-7-optional-account-creation-settings: ready-for-dev
+  19-8-syncengine-conditional-activation: ready-for-dev
+  19-9-multi-device-sync: ready-for-dev
+  19-10-navigation-state-cleanup: ready-for-dev
+  19-11-e2e-offline-integration-testing: ready-for-dev
+  19-12-content-db-resilience-error-recovery: ready-for-dev
   epic-19-retrospective: optional
