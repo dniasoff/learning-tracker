@@ -573,6 +573,43 @@ story_19_3:
     covers: AC-7
 ```
 
+## Gap Analysis Additions (2026-03-31)
+
+### APK Size Management
+
+The seed DB with ~52K text items + ~30K calendar rows needs sizing analysis and budgeting:
+
+**Size Budget:**
+- Compressed seed DB (gzip): **< 80MB** (target: ~30-60MB based on estimates)
+- Uncompressed seed DB: **< 400MB**
+
+**Additional Acceptance Criteria:**
+- [ ] Measure actual seed DB size after full population (uncompressed and gzip compressed)
+- [ ] Document size breakdown: TextCache vs CalendarCycles vs LearningPrograms contribution
+- [ ] Add `--size-report` flag to seed tool that outputs size breakdown by table
+- [ ] If compressed size exceeds 80MB, investigate text compression strategies (e.g., removing duplicate content where Hebrew and English are identical)
+- [ ] Document APK size impact in build output (total APK size before/after seed DB inclusion)
+
+**Implementation for `--size-report`:**
+```dart
+if (args.contains('--size-report')) {
+  final db = File('build/seed.db');
+  final gz = File('build/seed.db.gz');
+  print('=== Seed DB Size Report ===');
+  print('Uncompressed: ${(db.lengthSync() / 1024 / 1024).toStringAsFixed(1)} MB');
+  print('Compressed:   ${(gz.lengthSync() / 1024 / 1024).toStringAsFixed(1)} MB');
+  print('Ratio:        ${(gz.lengthSync() / db.lengthSync() * 100).toStringAsFixed(1)}%');
+  // Per-table breakdown via SQL
+  final conn = sqlite3.open('build/seed.db');
+  for (final table in ['text_cache', 'calendar_cycles', 'learning_programs', 'seed_metadata']) {
+    final count = conn.select('SELECT COUNT(*) as c FROM $table').first['c'];
+    final pageCount = conn.select("SELECT SUM(\"pageno\") FROM dbstat WHERE name='$table'").first.values.first;
+    print('  $table: $count rows, ~${(pageCount ?? 0) * 4096 / 1024} KB');
+  }
+  conn.dispose();
+}
+```
+
 ## Dev Agent Record
 
 ### Agent Model Used

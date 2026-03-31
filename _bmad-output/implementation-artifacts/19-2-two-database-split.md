@@ -680,9 +680,30 @@ The architecture doc has a minor inconsistency: Section 1.2 says "TestDates stay
 | Phase 6: Update tests | 2.5 |
 | Phase 7: Remove old files + final verification | 0.5 |
 
+### Gap Analysis Additions (2026-03-31)
+
+#### Content DB Runtime Upgrade Flow (scoped into this story)
+
+The `content_database_opener.dart` must include SeedManager logic:
+1. On startup, check if `content.db` exists → if not, extract from `assets/db/content.db.gz`
+2. If exists, read `SeedMetadata.version` and compare to `BUNDLED_SEED_VERSION` constant
+3. If bundled > installed: close connection → rename to `.bak` → decompress new → verify → delete `.bak`
+4. Key guarantee: deleting `content.db` can never lose user data (separate DB files)
+
+#### Stale Cross-DB Reference Handling
+
+Since Content DB and User DB have no hard foreign keys, repositories doing cross-DB lookups must handle missing refs:
+- Completions referencing `sefariaRef` → TextCache: graceful null display ("Content unavailable")
+- Bookmarks referencing `sefariaRef` → TextCache: skip missing refs in UI
+- LearningOrder referencing `sefariaRef` → TextCache: filter out missing refs
+- ProfilePrograms referencing `programId` → LearningPrograms: programs are stable, low risk
+
+All content lookups should return nullable or use a `ContentResult<T>` wrapper. This is further elaborated in story 19.12 (DNI-209).
+
 ### References
 
 - Design doc: `_bmad-output/planning-artifacts/two-database-drift-architecture.md`
+- Offline-first analysis: `_bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md`
 - Current DB: `learning_tracker/lib/core/database/app_database.dart`
 - Current provider: `learning_tracker/lib/core/providers/database_provider.dart`
 - Test helper: `learning_tracker/test/helpers/test_database.dart`

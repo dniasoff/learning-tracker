@@ -847,6 +847,37 @@ Implement tasks in this order to keep the app compilable at each step:
 
 Mock `SharedPreferences` with `SharedPreferences.setMockInitialValues({})` for unit tests. Mock `FirebaseAuth` with a fake that returns null `currentUser` to test offline scenarios. Use the existing `test/helpers/test_database.dart` for Drift migration tests.
 
+### Auth Transition Edge Cases (Gap Analysis 2026-03-31)
+
+#### Edge Case 1: Existing Firebase Users (dev/testing migration)
+- Migration runs on schema upgrade: copies `firebaseUid` → `localUid` for existing rows, sets `hasAccount = true`
+- For any row where `localUid` is still empty after migration, generate a fresh UUID
+- Must be atomic (single DB transaction)
+- Test: create a UserProfile with `firebaseUid = 'abc123'`, run migration, verify `localUid = 'abc123'` and `hasAccount = true`
+
+#### Edge Case 2: Firebase SDK Not Ready on Startup
+- User has `hasAccount == true` but `FirebaseAuth.instance.currentUser` is null (token expired, SDK not initialized)
+- Emit `LocalAuthState` for this session — user is "local" until Firebase re-authenticates
+- SyncEngine stays dormant (Tier 0 behavior)
+- On next successful Firebase auth event, promote back to `CloudAuthState`
+- Test: set `hasAccount = true` in DB, mock `currentUser` to null, verify `LocalAuthState` emitted
+
+#### Edge Case 3: Sign-Out → Sign-In with Different Account
+- User signs out → `hasAccount` flips to false, `firebaseUid` cleared
+- User later signs in with a DIFFERENT Firebase account
+- **Strategy:** New Firebase UID is stored, but `localUid` remains stable (it's the device identity)
+- All local data stays associated with `localUid` — no data loss
+- Sync pushes all local data to the new Firebase account's Firestore path
+- Old Firestore data under previous UID is orphaned (acceptable — user chose to switch)
+- Test: sign out, sign in with different UID, verify `localUid` unchanged, `firebaseUid` updated
+
+#### Edge Case 4: Multiple Profiles with Mixed Auth State
+- One device, multiple profiles — some created pre-account, some post-account
+- All profiles share the same `UserProfiles.localUid` (device-level identity)
+- `hasAccount` is on `UserProfiles`, not `Profiles` — account-level, not profile-level
+- When account exists, ALL profiles sync together
+- Test: create 2 profiles, link account, verify both profiles visible in Firestore sync
+
 ### References
 
 - [Source: _bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md — Full design doc]
