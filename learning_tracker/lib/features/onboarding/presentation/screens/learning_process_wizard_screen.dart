@@ -23,6 +23,7 @@ class LearningProcessWizardScreen extends StatefulWidget {
     required this.presets,
     required this.isChildMode,
     this.childName,
+    this.skipChooseMethod = false,
     super.key,
   });
 
@@ -30,6 +31,10 @@ class LearningProcessWizardScreen extends StatefulWidget {
   final List<db.LearningProgram> presets;
   final bool isChildMode;
   final String? childName;
+
+  /// When true, skips the initial "How do you review?" choice screen
+  /// and goes directly to the custom schedule builder.
+  final bool skipChooseMethod;
 
   @override
   State<LearningProcessWizardScreen> createState() =>
@@ -46,7 +51,7 @@ enum _WizardStep {
 
 class _LearningProcessWizardScreenState
     extends State<LearningProcessWizardScreen> {
-  _WizardStep _step = _WizardStep.chooseMethod;
+  late _WizardStep _step;
 
   // Preset selection
   int? _selectedPresetId;
@@ -58,7 +63,10 @@ class _LearningProcessWizardScreenState
   @override
   void initState() {
     super.initState();
-    _rounds = [_CustomRoundState()];
+    _step = widget.skipChooseMethod
+        ? _WizardStep.customStep1
+        : _WizardStep.chooseMethod;
+    _rounds = [_CustomRoundState.withDefault(0)];
   }
 
   String get _questionText {
@@ -102,9 +110,9 @@ class _LearningProcessWizardScreenState
   }
 
   void _onCustomStep1Next() {
-    // Ensure rounds list matches slider value.
+    // Ensure rounds list matches slider value with smart defaults.
     while (_rounds.length < _chazarahRounds) {
-      _rounds.add(_CustomRoundState());
+      _rounds.add(_CustomRoundState.withDefault(_rounds.length));
     }
     while (_rounds.length > _chazarahRounds) {
       _rounds.removeLast();
@@ -152,6 +160,9 @@ class _LearningProcessWizardScreenState
           onPressed: () {
             if (_step == _WizardStep.chooseMethod) {
               Navigator.of(context).pop(); // Skip — wizard skippable
+            } else if (_step == _WizardStep.customStep1 &&
+                widget.skipChooseMethod) {
+              Navigator.of(context).pop(); // Back exits when choice was skipped
             } else if (_step == _WizardStep.customStep2) {
               setState(() => _step = _WizardStep.customStep1);
             } else if (_step == _WizardStep.customStep3) {
@@ -273,13 +284,13 @@ class _LearningProcessWizardScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Step 1: How many review rounds?',
+              'How many review rounds?',
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Plus mandatory Learn stage',
+              'Each round reviews the material at increasing intervals',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -319,8 +330,16 @@ class _LearningProcessWizardScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Step 2: Set timing for each round',
+              'Set delay for each round',
               style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'How long after learning before each review?',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -355,7 +374,7 @@ class _LearningProcessWizardScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Step 3: Review your schedule',
+              'Review your schedule',
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
@@ -385,7 +404,7 @@ class _LearningProcessWizardScreenState
                       Text(
                         _rounds[i].useWeekly
                             ? 'Every ${_formatDays(_rounds[i].selectedDays)}'
-                            : '${_rounds[i].delayDays} days later',
+                            : '${_rounds[i].delayDays} ${_rounds[i].delayDays == 1 ? 'day' : 'days'} after learning',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -423,9 +442,20 @@ class _LearningProcessWizardScreenState
 }
 
 class _CustomRoundState {
+  _CustomRoundState({this.delayDays = 1});
+
   bool useWeekly = false;
-  int delayDays = 1;
+  int delayDays;
   Set<int> selectedDays = {};
+
+  /// Spaced repetition defaults: 1 day, 7 days, 30 days, 31, 32...
+  static _CustomRoundState withDefault(int roundIndex) {
+    final defaults = [1, 7, 30];
+    final delay = roundIndex < defaults.length
+        ? defaults[roundIndex]
+        : 30 + (roundIndex - 2);
+    return _CustomRoundState(delayDays: delay);
+  }
 }
 
 class _OptionCard extends StatelessWidget {
@@ -578,8 +608,8 @@ class _RoundTimingCard extends StatelessWidget {
             const SizedBox(height: 8),
             SegmentedButton<bool>(
               segments: const [
-                ButtonSegment(value: false, label: Text('Days later')),
-                ButtonSegment(value: true, label: Text('Weekly')),
+                ButtonSegment(value: false, label: Text('Days')),
+                ButtonSegment(value: true, label: Text('Weeks')),
               ],
               selected: {state.useWeekly},
               onSelectionChanged: (s) {
@@ -591,13 +621,15 @@ class _RoundTimingCard extends StatelessWidget {
             if (!state.useWeekly) ...[
               Row(
                 children: [
-                  const Text('Days: '),
+                  Text(
+                    '${state.delayDays} ${state.delayDays == 1 ? 'day' : 'days'} after',
+                  ),
                   Expanded(
                     child: Slider(
                       value: state.delayDays.toDouble(),
                       min: 1,
-                      max: 30,
-                      divisions: 29,
+                      max: 60,
+                      divisions: 59,
                       label: '${state.delayDays}',
                       onChanged: (v) {
                         state.delayDays = v.round();
@@ -605,7 +637,6 @@ class _RoundTimingCard extends StatelessWidget {
                       },
                     ),
                   ),
-                  Text('${state.delayDays}'),
                 ],
               ),
             ] else ...[

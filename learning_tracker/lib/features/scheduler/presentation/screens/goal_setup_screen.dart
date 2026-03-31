@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 
 /// Screen for creating or editing a learning goal.
 ///
@@ -30,20 +31,19 @@ class GoalSetupScreen extends ConsumerStatefulWidget {
 class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
   late double _targetPercent;
   DateTime? _targetDate;
-  bool _useHebrewDate = false;
   late TextEditingController _descriptionController;
 
   // Pace mode fields
   late String _goalType;
   late int _paceValue;
   String _paceUnit = 'per_day';
+  late String _learningUnit;
 
   @override
   void initState() {
     super.initState();
     _targetPercent = widget.existingGoal?.targetPercent ?? 100.0;
     _targetDate = widget.existingGoal?.targetDate;
-    _useHebrewDate = widget.existingGoal?.dateType == 'hebrew';
     _descriptionController = TextEditingController(
       text: widget.existingGoal?.description ?? '',
     );
@@ -52,6 +52,28 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
         widget.existingGoal?.paceValue ??
         (CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1);
     _paceUnit = widget.existingGoal?.paceUnit ?? 'per_day';
+    _learningUnit = _defaultUnit;
+  }
+
+  /// Default learning unit based on curriculum type.
+  String get _defaultUnit {
+    // Bavli/Yerushalmi use Amud as smallest unit
+    if (widget.curriculumId == CurriculumId.bavli ||
+        widget.curriculumId == CurriculumId.yerushalmi) {
+      return 'amud';
+    }
+    return 'item';
+  }
+
+  /// Whether the curriculum supports Amud/Daf unit selection.
+  bool get _showUnitPicker =>
+      widget.curriculumId == CurriculumId.bavli ||
+      widget.curriculumId == CurriculumId.yerushalmi;
+
+  String get _unitDisplayLabel {
+    if (_learningUnit == 'daf') return 'Daf';
+    if (_learningUnit == 'amud') return 'Amud';
+    return _getUnitLabel(widget.curriculumId);
   }
 
   @override
@@ -100,10 +122,11 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
         targetPercent: _targetPercent,
         targetDate: _goalType == 'deadline' ? _targetDate : null,
         description: _descriptionController.text,
-        dateType: _useHebrewDate ? 'hebrew' : 'gregorian',
+        dateType: ref.read(useHebrewDateProvider) ? 'hebrew' : 'gregorian',
         goalType: _goalType,
         paceValue: _goalType == 'pace' ? _paceValue : null,
         paceUnit: _goalType == 'pace' ? _paceUnit : null,
+        learningUnit: _showUnitPicker ? _learningUnit : null,
       ),
     );
   }
@@ -112,35 +135,51 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Date picker toggle
-        SwitchListTile(
-          title: const Text('Use Hebrew date'),
-          value: _useHebrewDate,
-          onChanged: (v) => setState(() => _useHebrewDate = v),
-        ),
-        const SizedBox(height: 8),
-        // Date selection
-        ListTile(
-          title: Text(
-            _targetDate != null
-                ? 'Target: ${_targetDate!.year}-${_targetDate!.month.toString().padLeft(2, '0')}-${_targetDate!.day.toString().padLeft(2, '0')}'
-                : 'No deadline (learn at your own pace)',
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.calendar_today),
-                onPressed: _useHebrewDate
-                    ? _pickHebrewDate
-                    : _pickGregorianDate,
+        // Date selection — pick a date immediately
+        Card(
+          child: InkWell(
+            onTap: ref.read(useHebrewDateProvider) ? _pickHebrewDate : _pickGregorianDate,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      _targetDate != null
+                          ? '${_targetDate!.day}/${_targetDate!.month}/${_targetDate!.year}'
+                          : 'Tap to choose a date',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (_targetDate != null)
+                    IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => setState(() => _targetDate = null),
+                    )
+                  else
+                    Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                ],
               ),
-              if (_targetDate != null)
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () => setState(() => _targetDate = null),
-                ),
-            ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Optional occasion/label field
+        TextField(
+          controller: _descriptionController,
+          decoration: const InputDecoration(
+            labelText: 'Occasion (optional)',
+            hintText: 'e.g., Bar Mitzvah, Yahrzeit, Siyum',
+            prefixIcon: Icon(Icons.label_outline),
           ),
         ),
         // Daily pace summary (deadline mode)
@@ -188,7 +227,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
   }
 
   Widget _buildPaceSection() {
-    final unitLabel = _getUnitLabel(widget.curriculumId);
+    final unitLabel = _unitDisplayLabel;
     final perLabel = _paceUnit == 'per_day' ? 'per day' : 'per week';
 
     return Column(
@@ -204,7 +243,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                 decoration: InputDecoration(
                   labelText: '$unitLabel $perLabel',
                   helperText:
-                      'How many per ${_paceUnit == 'per_day' ? 'day' : 'week'}?',
+                      'How many ${unitLabel.toLowerCase()} ${_paceUnit == 'per_day' ? 'per day' : 'per week'}?',
                 ),
                 onChanged: (v) {
                   final parsed = int.tryParse(v);
@@ -256,7 +295,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$remainingItems $unitLabel in ~$daysToComplete days',
+                        '$remainingItems ${unitLabel.toLowerCase()} in ~$daysToComplete days',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -292,18 +331,9 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Description
-                      TextField(
-                        controller: _descriptionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Description (optional)',
-                          hintText: 'e.g., Finish all Mishnayos by bar mitzvah',
-                        ),
-                      ),
-                      const SizedBox(height: 24),
                       // Target percentage slider
                       Text(
-                        'Target: ${_targetPercent.round()}%',
+                        'Complete ${_targetPercent.round()}% of the material',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Slider(
@@ -315,6 +345,31 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                         onChanged: (v) => setState(() => _targetPercent = v),
                       ),
                       const SizedBox(height: 24),
+                      // Unit picker (Amud/Daf) for Bavli/Yerushalmi
+                      if (_showUnitPicker) ...[
+                        Text(
+                          'Learning unit',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(
+                              value: 'amud',
+                              label: Text('Amud'),
+                            ),
+                            ButtonSegment(
+                              value: 'daf',
+                              label: Text('Daf'),
+                            ),
+                          ],
+                          selected: {_learningUnit},
+                          onSelectionChanged: (selected) {
+                            setState(() => _learningUnit = selected.first);
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                       // Goal type toggle
                       SegmentedButton<String>(
                         segments: const [
@@ -369,6 +424,9 @@ class GoalFormResult {
   final int? paceValue;
   final String? paceUnit;
 
+  /// Learning unit for Bavli/Yerushalmi: 'amud' or 'daf'. Null for other curricula.
+  final String? learningUnit;
+
   const GoalFormResult({
     required this.targetPercent,
     this.targetDate,
@@ -377,5 +435,6 @@ class GoalFormResult {
     this.goalType = 'deadline',
     this.paceValue,
     this.paceUnit,
+    this.learningUnit,
   });
 }

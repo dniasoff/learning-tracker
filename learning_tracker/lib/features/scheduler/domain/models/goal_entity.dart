@@ -31,6 +31,9 @@ abstract class GoalEntity with _$GoalEntity {
 
     /// Pace unit: 'per_day' or 'per_week'. Only used when goalType == 'pace'.
     String? paceUnit,
+
+    /// Learning unit for Bavli/Yerushalmi: 'amud' or 'daf'. Null for other curricula.
+    String? learningUnit,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _GoalEntity;
@@ -58,6 +61,7 @@ abstract class GoalEntity with _$GoalEntity {
       'goalType': goalType,
       'paceValue': paceValue,
       'paceUnit': paceUnit,
+      'learningUnit': learningUnit,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -81,6 +85,7 @@ abstract class GoalEntity with _$GoalEntity {
       goalType: data['goalType'] as String? ?? 'deadline',
       paceValue: data['paceValue'] as int?,
       paceUnit: data['paceUnit'] as String?,
+      learningUnit: data['learningUnit'] as String?,
       createdAt: DateTime.parse(data['createdAt'] as String).toUtc(),
       updatedAt: DateTime.parse(data['updatedAt'] as String).toUtc(),
     );

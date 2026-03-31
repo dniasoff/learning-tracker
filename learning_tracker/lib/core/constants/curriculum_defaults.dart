@@ -34,10 +34,11 @@ class CurriculumDefaults {
           maxLevels: 4,
         ),
         CurriculumId.bavli: CurriculumHierarchyDefaults(
-          level1Label: 'Masechta',
-          level2Label: 'Daf',
-          level3Label: 'Amud',
-          maxLevels: 3,
+          level1Label: 'Seder',
+          level2Label: 'Masechta',
+          level3Label: 'Daf',
+          level4Label: 'Amud',
+          maxLevels: 4,
         ),
         CurriculumId.yerushalmi: CurriculumHierarchyDefaults(
           level1Label: 'Masechta',

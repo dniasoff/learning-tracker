@@ -15,6 +15,9 @@ class Goals extends Table {
   TextColumn get goalType => text().withDefault(const Constant('deadline'))();
   IntColumn get paceValue => integer().nullable()();
   TextColumn get paceUnit => text().nullable()();
+
+  /// Learning unit: 'amud', 'daf', or null. Used for Bavli/Yerushalmi curricula.
+  TextColumn get learningUnit => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

@@ -66,16 +66,14 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   /// Whether a program was selected (vs self-paced).
   bool get _isProgramTrack => _state.programId != null;
 
-  /// Whether the selected program defines chazara stages.
+  /// Whether the selected program defines review/chazara stages.
   bool get _programHasChazara {
     final program = _state.selectedProgram;
     if (program is! LearningProgram) return false;
     try {
       final stages = jsonDecode(program.stagesConfig) as List<dynamic>;
       return stages.any(
-        (s) => (s as Map<String, dynamic>)['stage'].toString().startsWith(
-          'chazara',
-        ),
+        (s) => (s as Map<String, dynamic>)['stage'].toString() != 'learn',
       );
     } catch (_) {
       return false;
@@ -96,8 +94,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       steps.add(AddTrackStep.scope);
     }
 
-    // Study days — always shown (program: read-only; self-paced: editable)
-    steps.add(AddTrackStep.studyDays);
+    // Study days — skip for program tracks (all days are study days)
+    if (!_isProgramTrack) {
+      steps.add(AddTrackStep.studyDays);
+    }
 
     // Chazara — always shown (behavior varies: ask/show/offer)
     steps.add(AddTrackStep.chazaraSetup);
@@ -326,7 +326,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   void _onCurriculumSelected(CurriculumId curriculum) {
     final service = ref.read(curriculumActivationServiceProvider);
     _activationFuture = service
-        .activate(curriculum)
+        .activateForProfile(curriculum, widget.profileId)
         .then((_) {
           if (mounted) {
             setState(() => _state = _state.copyWith(contentActivated: true));
@@ -445,26 +445,29 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _goToPreviousStep();
       },
-      child: Column(
-        children: [
-          if (steps.length > 1)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: LinearProgressIndicator(
-                value: (_currentIndex + 1) / steps.length,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            if (steps.length > 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: LinearProgressIndicator(
+                  value: (_currentIndex + 1) / steps.length,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: steps.map(_buildStep).toList(),
               ),
             ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: steps.map(_buildStep).toList(),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -627,6 +630,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                       curriculumId: _state.curriculumId!,
                       presets: const [],
                       isChildMode: widget.isChildMode,
+                      skipChooseMethod: true,
                     ),
                   ),
                 ).then((result) => _onChazaraComplete(result));
@@ -643,7 +647,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       );
     }
 
-    // Self-paced → ask (full wizard)
+    // Self-paced → ask (skip directly to custom builder)
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -665,6 +669,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                     curriculumId: _state.curriculumId!,
                     presets: const [],
                     isChildMode: widget.isChildMode,
+                    skipChooseMethod: true,
                   ),
                 ),
               ).then((result) => _onChazaraComplete(result));
@@ -770,8 +775,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                     Navigator.push<BulkMarkResult>(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            BulkMarkScreen(curriculumId: _state.curriculumId!),
+                        builder: (_) => BulkMarkScreen(
+                          curriculumId: _state.curriculumId!,
+                          scopeConstraints: _state.scopeSelections,
+                        ),
                       ),
                     ).then(_onBulkMarkComplete);
                   },
@@ -842,12 +849,6 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
     return result;
   }
 
-  int _leafCountForValue(List<ContentItem> items, String value) {
-    return items
-        .where((i) => i.isLeaf && _getItemLevel(i, _selectedLevel!) == value)
-        .length;
-  }
-
   void _done() {
     if (_selectedLevel == null || _selectedValues.isEmpty) {
       widget.onComplete(null);
@@ -896,7 +897,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
     );
   }
 
-  /// Initial screen: "Track All" + level drill-down options.
+  /// Initial screen: "Learn All" + level drill-down options.
   Widget _buildInitialChoice(List<ContentItem> items) {
     final theme = Theme.of(context);
     return Column(
@@ -905,7 +906,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
         FilledButton.icon(
           onPressed: () => widget.onComplete(null),
           icon: const Icon(Icons.select_all),
-          label: const Text('Track All'),
+          label: const Text('Learn All'),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
@@ -924,11 +925,9 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final level = index + 1;
-              final values = _distinctValuesAtLevel(items, level);
               return ListTile(
                 leading: const Icon(Icons.folder_outlined),
-                title: Text('By ${_labelForLevel(level)}'),
-                subtitle: Text('${values.length} options'),
+                title: Text('Choose a ${_labelForLevel(level)}'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => setState(() {
                   _selectedLevel = level;
@@ -983,9 +982,9 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             ),
           ],
         ),
-        if (_selectedValues.isNotEmpty)
+        if (_selectedValues.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            padding: const EdgeInsets.only(left: 16, bottom: 4),
             child: Text(
               '${_selectedValues.length} of ${values.length} selected',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -993,16 +992,33 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: _selectedValues
+                  .map(
+                    (v) => Chip(
+                      label: Text(v, style: theme.textTheme.labelSmall),
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      onDeleted: () => setState(() => _selectedValues.remove(v)),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
         Expanded(
           child: ListView.builder(
             itemCount: values.length,
             itemBuilder: (context, index) {
               final value = values[index];
               final isSelected = _selectedValues.contains(value);
-              final leafCount = _leafCountForValue(items, value);
               return CheckboxListTile(
                 title: Text(value),
-                subtitle: Text('$leafCount items'),
                 value: isSelected,
                 onChanged: (checked) {
                   setState(() {
@@ -1165,7 +1181,9 @@ class _StudyDaysReadOnly extends StatelessWidget {
 }
 
 /// Starting position step for program tracks (Screen 8 program mode).
-class _StartingPositionStep extends StatelessWidget {
+///
+/// Allows users to offset the starting position by +/- 30 days from today.
+class _StartingPositionStep extends StatefulWidget {
   const _StartingPositionStep({
     required this.programName,
     required this.onComplete,
@@ -1173,6 +1191,19 @@ class _StartingPositionStep extends StatelessWidget {
 
   final String programName;
   final ValueChanged<String?> onComplete;
+
+  @override
+  State<_StartingPositionStep> createState() => _StartingPositionStepState();
+}
+
+class _StartingPositionStepState extends State<_StartingPositionStep> {
+  int _dayOffset = 0;
+
+  String get _offsetLabel {
+    if (_dayOffset == 0) return "Today's position";
+    if (_dayOffset > 0) return '$_dayOffset ${_dayOffset == 1 ? 'day' : 'days'} ahead';
+    return '${_dayOffset.abs()} ${_dayOffset.abs() == 1 ? 'day' : 'days'} behind';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1186,7 +1217,7 @@ class _StartingPositionStep extends StatelessWidget {
           Text('Starting Position', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
-            'Where are you in $programName?',
+            'Where are you in ${widget.programName}?',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
@@ -1202,25 +1233,61 @@ class _StartingPositionStep extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Starting from today\'s position',
+                    _offsetLabel,
                     style: theme.textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Calendar position will be auto-detected',
+                    'Adjust if you started earlier or later',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '-30',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: _dayOffset.toDouble(),
+                          min: -30,
+                          max: 30,
+                          divisions: 60,
+                          label: _offsetLabel,
+                          onChanged: (v) =>
+                              setState(() => _dayOffset = v.round()),
+                        ),
+                      ),
+                      Text(
+                        '+30',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_dayOffset != 0)
+                    TextButton(
+                      onPressed: () => setState(() => _dayOffset = 0),
+                      child: const Text('Reset to today'),
+                    ),
                 ],
               ),
             ),
           ),
           const Spacer(),
           FilledButton(
-            onPressed: () => onComplete(null),
+            onPressed: () => widget.onComplete(
+              _dayOffset != 0 ? 'offset:$_dayOffset' : null,
+            ),
             child: const Text('Start Here'),
           ),
         ],

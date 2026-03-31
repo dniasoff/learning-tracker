@@ -195,18 +195,26 @@ class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
     return tracks.length;
   }
 
-  /// Initialize default tracks for a curriculum.
+  /// Initialize default tracks for a curriculum and profile.
   ///
   /// Creates only the personal track (active by default).
   /// Should be called when a curriculum is first activated.
-  Future<void> initializeDefaultTracks(CurriculumId curriculumId) async {
+  Future<void> initializeDefaultTracks(
+    CurriculumId curriculumId, {
+    int profileId = 0,
+  }) async {
     final existing = await (select(
       curriculumTracks,
-    )..where((t) => t.curriculumId.equals(curriculumId.storageKey))).get();
+    )..where(
+          (t) =>
+              t.curriculumId.equals(curriculumId.storageKey) &
+              t.profileId.equals(profileId),
+        )).get();
 
     if (existing.isEmpty) {
       await into(curriculumTracks).insert(
         CurriculumTracksCompanion.insert(
+          profileId: Value(profileId),
           curriculumId: curriculumId.storageKey,
           trackType: TrackType.personal.storageKey,
           isActive: const Value(true),

@@ -25,6 +25,7 @@ class GoalRepositoryImpl implements GoalRepository {
     String goalType = 'deadline',
     int? paceValue,
     String? paceUnit,
+    String? learningUnit,
   }) async {
     return await _database.transaction(() async {
       final now = DateTimeFactory.nowUtc();
@@ -39,6 +40,7 @@ class GoalRepositoryImpl implements GoalRepository {
           goalType: drift.Value(goalType),
           paceValue: drift.Value(paceValue),
           paceUnit: drift.Value(paceUnit),
+          learningUnit: drift.Value(learningUnit),
           createdAt: now,
           updatedAt: now,
         ),
@@ -145,6 +147,7 @@ class GoalRepositoryImpl implements GoalRepository {
       goalType: goal.goalType,
       paceValue: goal.paceValue,
       paceUnit: goal.paceUnit,
+      learningUnit: goal.learningUnit,
       createdAt: goal.createdAt.toUtc(),
       updatedAt: goal.updatedAt.toUtc(),
     );

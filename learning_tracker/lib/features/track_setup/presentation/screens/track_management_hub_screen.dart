@@ -67,11 +67,13 @@ class _TrackManagementHubScreenState
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => setState(() => _addingTrack = true),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Track'),
-      ),
+      floatingActionButton: (activeAsync.asData?.value.isNotEmpty ?? false)
+          ? FloatingActionButton.extended(
+              onPressed: () => setState(() => _addingTrack = true),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Track'),
+            )
+          : null,
       body: activeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),

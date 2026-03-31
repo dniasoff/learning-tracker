@@ -16,6 +16,7 @@ abstract class GoalRepository {
     String goalType,
     int? paceValue,
     String? paceUnit,
+    String? learningUnit,
   });
 
   /// Get all goals for a curriculum, sorted by target date.

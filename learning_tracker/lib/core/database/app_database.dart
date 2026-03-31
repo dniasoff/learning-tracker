@@ -116,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration {
@@ -412,6 +412,12 @@ class AppDatabase extends _$AppDatabase {
               "WHERE stage_name = '${entry.key}'",
             );
           }
+        }
+        if (from < 25) {
+          // Migration from schema v24 to v25: Add learning_unit to goals
+          await customStatement(
+            'ALTER TABLE goals ADD COLUMN learning_unit TEXT',
+          );
         }
       },
     );

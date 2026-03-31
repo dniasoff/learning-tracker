@@ -36,7 +36,10 @@ abstract class TrackRepository {
   ///
   /// Creates the personal track (active by default). Should be called
   /// when a curriculum is first activated by the user.
-  Future<void> initializeDefaultTracks(CurriculumId curriculumId);
+  Future<void> initializeDefaultTracks(
+    CurriculumId curriculumId, {
+    int profileId = 0,
+  });
 }
 
 /// Exception thrown when attempting an invalid track operation.

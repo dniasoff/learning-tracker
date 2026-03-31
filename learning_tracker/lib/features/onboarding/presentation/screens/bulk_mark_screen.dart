@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
 /// Result returned from the bulk mark screen.
 class BulkMarkResult {
@@ -28,7 +29,15 @@ class BulkMarkResult {
 class BulkMarkScreen extends ConsumerStatefulWidget {
   final CurriculumId curriculumId;
 
-  const BulkMarkScreen({super.key, required this.curriculumId});
+  /// Optional scope constraints from the Add Track flow.
+  /// When provided, only content within these scopes is shown.
+  final List<ScopeEntry>? scopeConstraints;
+
+  const BulkMarkScreen({
+    super.key,
+    required this.curriculumId,
+    this.scopeConstraints,
+  });
 
   @override
   ConsumerState<BulkMarkScreen> createState() => _BulkMarkScreenState();
@@ -55,6 +64,24 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   // Navigation stack for hierarchy browsing within selection
   List<String> _navigationStack = [];
 
+  /// Filter items by scope constraints if provided.
+  List<ContentItem> _applyScope(List<ContentItem> items) {
+    final scopes = widget.scopeConstraints;
+    if (scopes == null || scopes.isEmpty) return items;
+    final level = scopes.first.level;
+    final values = scopes.map((s) => s.value).toSet();
+    return items.where((item) {
+      final itemValue = switch (level) {
+        1 => item.level1,
+        2 => item.level2,
+        3 => item.level3,
+        4 => item.level4,
+        _ => null,
+      };
+      return itemValue != null && values.contains(itemValue);
+    }).toList();
+  }
+
   String? get _currentLevel1 =>
       _navigationStack.isNotEmpty ? _navigationStack[0] : null;
   String? get _currentLevel2 =>
@@ -73,28 +100,39 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   }
 
   bool _isItemSelected(ContentItem item) {
-    // Check if this specific item or any ancestor is selected
-    if (item.isLeaf) {
-      // Check exact match or any ancestor level
-      return _selections.any((s) {
-        if (s.level1 != null && s.level1 != item.level1) return false;
-        if (s.level2 != null && s.level2 != item.level2) return false;
-        if (s.level3 != null && s.level3 != item.level3) return false;
-        if (s.level4 != null && s.level4 != item.level4) return false;
-        return true;
-      });
-    }
-    // For containers, check if this exact container is selected
-    final sel = _selectionForItem(item);
-    return _selections.contains(sel);
+    // Check if this specific item or any ancestor is selected.
+    // Works for both leaf items and containers — a container is "selected"
+    // if it was directly selected OR if an ancestor selection covers it.
+    return _selections.any((s) {
+      if (s.level1 != null && s.level1 != item.level1) return false;
+      if (s.level2 != null && s.level2 != item.level2) return false;
+      if (s.level3 != null && s.level3 != item.level3) return false;
+      if (s.level4 != null && s.level4 != item.level4) return false;
+      return true;
+    });
   }
 
   void _toggleItem(ContentItem item) {
     setState(() {
       final sel = _selectionForItem(item);
-      if (_selections.contains(sel)) {
-        _selections.remove(sel);
+      if (_isItemSelected(item)) {
+        // Remove this selection and any ancestor that covers it
+        _selections.removeWhere((s) {
+          if (s.level1 != null && s.level1 != item.level1) return false;
+          if (s.level2 != null && s.level2 != item.level2) return false;
+          if (s.level3 != null && s.level3 != item.level3) return false;
+          if (s.level4 != null && s.level4 != item.level4) return false;
+          return true;
+        });
       } else {
+        // Add this selection; remove redundant child selections
+        _selections.removeWhere((s) {
+          if (sel.level1 != null && sel.level1 != s.level1) return false;
+          if (sel.level2 != null && sel.level2 != s.level2) return false;
+          if (sel.level3 != null && sel.level3 != s.level3) return false;
+          if (sel.level4 != null && sel.level4 != s.level4) return false;
+          return true;
+        });
         _selections.add(sel);
       }
     });
@@ -113,6 +151,33 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       setState(() {
         _navigationStack = [..._navigationStack, nextValue];
       });
+      // Smart drill-down: auto-skip levels with only one option.
+      // Deferred to after setState so we can check next level's items.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _autoAdvanceIfSingleOption();
+      });
+    }
+  }
+
+  /// Auto-advance past hierarchy levels that have only one option.
+  void _autoAdvanceIfSingleOption() {
+    // We need the current items to check — read from provider synchronously
+    final itemsAsync = ref.read(
+      scopedFilteredContentProvider((
+        curriculumId: widget.curriculumId,
+        level1: _currentLevel1,
+        level2: _currentLevel2,
+        level3: _currentLevel3,
+        level4: null,
+      )),
+    );
+    final items = itemsAsync.asData?.value;
+    if (items == null) return;
+
+    final scopedItems = _applyScope(items);
+    final grouped = _groupItemsByNextLevel(scopedItems);
+    if (grouped.length == 1 && !grouped.first.isLeaf) {
+      _drillDown(grouped.first);
     }
   }
 
@@ -141,6 +206,25 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       curriculumId: widget.curriculumId,
       selections: _selections.toList(),
     );
+
+    // Validate: can't mark everything as completed
+    final repository = ref.read(contentRepositoryProvider);
+    final allItems = await repository.getContentForCurriculum(
+      widget.curriculumId,
+    );
+    final scopedItems = _applyScope(allItems);
+    final totalLeafs = scopedItems.where((i) => i.isLeaf).length;
+    if (resolved.length >= totalLeafs && totalLeafs > 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You must leave at least some content unmarked to continue learning.',
+          ),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _resolvedItems = resolved;
@@ -330,7 +414,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             ),
           Expanded(
             child: itemsAsync.when(
-              data: (items) {
+              data: (rawItems) {
+                final items = _applyScope(rawItems);
                 final displayItems = isSearchActive
                     ? items
                     : _groupItemsByNextLevel(items);

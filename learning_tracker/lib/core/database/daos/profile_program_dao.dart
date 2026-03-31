@@ -32,6 +32,8 @@ class ProfileProgramDao extends DatabaseAccessor<AppDatabase>
     required int profileId,
     required String curriculumType,
     required int programId,
+    DateTime? trackingStartDate,
+    String? trackingStartRef,
   }) async {
     final existing = await getProgramForProfileAndCurriculum(
       profileId,
@@ -39,13 +41,21 @@ class ProfileProgramDao extends DatabaseAccessor<AppDatabase>
     );
     if (existing != null) {
       await (update(profilePrograms)..where((t) => t.id.equals(existing.id)))
-          .write(ProfileProgramsCompanion(programId: Value(programId)));
+          .write(
+            ProfileProgramsCompanion(
+              programId: Value(programId),
+              trackingStartDate: Value(trackingStartDate),
+              trackingStartRef: Value(trackingStartRef),
+            ),
+          );
     } else {
       await insertProfileProgram(
         ProfileProgramsCompanion.insert(
           profileId: profileId,
           curriculumType: curriculumType,
           programId: programId,
+          trackingStartDate: Value(trackingStartDate),
+          trackingStartRef: Value(trackingStartRef),
         ),
       );
     }

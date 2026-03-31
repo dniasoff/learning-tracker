@@ -52,8 +52,14 @@ class TrackRepositoryImpl implements TrackRepository {
   }
 
   @override
-  Future<void> initializeDefaultTracks(CurriculumId curriculumId) async {
-    await _database.trackDao.initializeDefaultTracks(curriculumId);
+  Future<void> initializeDefaultTracks(
+    CurriculumId curriculumId, {
+    int profileId = 0,
+  }) async {
+    await _database.trackDao.initializeDefaultTracks(
+      curriculumId,
+      profileId: profileId,
+    );
 
     // TODO(DNI-38): Add Firestore sync for initial personal track
   }

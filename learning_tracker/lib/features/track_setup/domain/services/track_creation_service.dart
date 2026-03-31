@@ -103,6 +103,7 @@ class TrackCreationService {
           goalType: goal.goalType,
           paceValue: goal.paceValue,
           paceUnit: goal.paceUnit,
+          learningUnit: goal.learningUnit,
         );
       }
 
@@ -115,10 +116,26 @@ class TrackCreationService {
 
     // Link profile to program if one was selected (outside transaction — idempotent)
     if (result.programId != null) {
+      // Parse day offset from startingRef (format: "offset:N")
+      DateTime? trackingStartDate;
+      if (result.startingRef != null &&
+          result.startingRef!.startsWith('offset:')) {
+        final offset = int.tryParse(
+          result.startingRef!.substring('offset:'.length),
+        );
+        if (offset != null) {
+          trackingStartDate = DateTime.now()
+              .toUtc()
+              .add(Duration(days: offset));
+        }
+      }
+
       await _database.profileProgramDao.setProfileProgram(
         profileId: profileId,
         curriculumType: curriculum.storageKey,
         programId: result.programId!,
+        trackingStartDate: trackingStartDate,
+        trackingStartRef: result.startingRef,
       );
     }
 

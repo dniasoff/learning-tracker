@@ -11,8 +11,8 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/theme_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
@@ -29,7 +29,6 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(activeCurriculaStreamProvider);
     final user = ref.watch(firebaseAuthProvider).currentUser;
     final theme = Theme.of(context);
 
@@ -68,55 +67,8 @@ class SettingsScreen extends ConsumerWidget {
                         context.pushRoute(TrackManagementHubRoute()),
                   ),
                   Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  ListTile(
-                    leading: Icon(
-                      Icons.flag_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Goals'),
-                    subtitle: const Text('Set and track learning milestones'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.pushRoute(const SchedulerRoute()),
-                  ),
+                  _HebrewDateTile(theme: theme),
                   Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  // Study Day Configuration
-                  activeCurriculaAsync.when(
-                    data: (curricula) {
-                      if (curricula.isEmpty) return const SizedBox.shrink();
-                      return Column(
-                        children: [
-                          ListTile(
-                            leading: Icon(
-                              Icons.calendar_today_outlined,
-                              color: theme.colorScheme.primary,
-                            ),
-                            title: const Text('Study Days'),
-                            subtitle: const Text(
-                              'Configure study vs review days',
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              final first = curricula.isNotEmpty
-                                  ? curricula.first
-                                  : null;
-                              if (first != null) {
-                                context.pushRoute(
-                                  StudyDayConfigRoute(curriculumId: first),
-                                );
-                              }
-                            },
-                          ),
-                          Divider(
-                            height: 1,
-                            indent: 56,
-                            color: theme.dividerColor,
-                          ),
-                        ],
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
                   ListTile(
                     leading: Icon(
                       Icons.notifications_active_outlined,
@@ -337,6 +289,32 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 /// Section header with uppercase label matching the mockup design.
+class _HebrewDateTile extends ConsumerWidget {
+  const _HebrewDateTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final useHebrew = ref.watch(useHebrewDateProvider);
+    return ListTile(
+      leading: Icon(
+        Icons.calendar_month_outlined,
+        color: theme.colorScheme.primary,
+      ),
+      title: const Text('Hebrew Calendar'),
+      subtitle: const Text('Use Hebrew dates across the app'),
+      trailing: Switch(
+        value: useHebrew,
+        onChanged: (value) {
+          ref.read(useHebrewDateProvider.notifier).setUseHebrewDate(value);
+        },
+        activeTrackColor: theme.colorScheme.primary,
+      ),
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
 

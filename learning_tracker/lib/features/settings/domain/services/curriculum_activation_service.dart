@@ -71,7 +71,10 @@ class CurriculumActivationService {
       curriculum,
       profileId,
     );
-    await _trackRepository.initializeDefaultTracks(curriculum);
+    await _trackRepository.initializeDefaultTracks(
+      curriculum,
+      profileId: profileId,
+    );
     await _database.studyDayConfigDao.seedDefaults(
       profileId: profileId,
       curriculumId: curriculum.storageKey,
