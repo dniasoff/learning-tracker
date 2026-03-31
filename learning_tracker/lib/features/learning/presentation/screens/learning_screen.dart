@@ -48,7 +48,7 @@ class LearningScreen extends ConsumerWidget {
                 icon: Icons.menu_book_outlined,
                 action: FilledButton.icon(
                   onPressed: () =>
-                      context.router.push(const TrackManagementHubRoute()),
+                      context.router.push(TrackManagementHubRoute()),
                   icon: const Icon(Icons.add),
                   label: const Text('Add Track'),
                 ),

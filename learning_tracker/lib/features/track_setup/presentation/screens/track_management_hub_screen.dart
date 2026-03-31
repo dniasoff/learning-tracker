@@ -19,7 +19,12 @@ import 'package:learning_tracker/features/track_setup/presentation/widgets/track
 /// Replaces the old per-curriculum TrackManagementScreen.
 @RoutePage()
 class TrackManagementHubScreen extends ConsumerStatefulWidget {
-  const TrackManagementHubScreen({super.key});
+  const TrackManagementHubScreen({
+    super.key,
+    @QueryParam('startAdding') this.startAdding = false,
+  });
+
+  final bool startAdding;
 
   @override
   ConsumerState<TrackManagementHubScreen> createState() =>
@@ -29,7 +34,7 @@ class TrackManagementHubScreen extends ConsumerStatefulWidget {
 class _TrackManagementHubScreenState
     extends ConsumerState<TrackManagementHubScreen> {
   bool _showArchived = false;
-  bool _addingTrack = false;
+  late bool _addingTrack = widget.startAdding;
 
   @override
   Widget build(BuildContext context) {

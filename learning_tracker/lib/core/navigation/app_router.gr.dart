@@ -1071,18 +1071,59 @@ class TrackDetailRouteArgs {
 
 /// generated route for
 /// [TrackManagementHubScreen]
-class TrackManagementHubRoute extends PageRouteInfo<void> {
-  const TrackManagementHubRoute({List<PageRouteInfo>? children})
-    : super(TrackManagementHubRoute.name, initialChildren: children);
+class TrackManagementHubRoute
+    extends PageRouteInfo<TrackManagementHubRouteArgs> {
+  TrackManagementHubRoute({
+    Key? key,
+    bool startAdding = false,
+    List<PageRouteInfo>? children,
+  }) : super(
+         TrackManagementHubRoute.name,
+         args: TrackManagementHubRouteArgs(key: key, startAdding: startAdding),
+         rawQueryParams: {'startAdding': startAdding},
+         initialChildren: children,
+       );
 
   static const String name = 'TrackManagementHubRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return const TrackManagementHubScreen();
+      final queryParams = data.queryParams;
+      final args = data.argsAs<TrackManagementHubRouteArgs>(
+        orElse: () => TrackManagementHubRouteArgs(
+          startAdding: queryParams.getBool('startAdding', false),
+        ),
+      );
+      return TrackManagementHubScreen(
+        key: args.key,
+        startAdding: args.startAdding,
+      );
     },
   );
+}
+
+class TrackManagementHubRouteArgs {
+  const TrackManagementHubRouteArgs({this.key, this.startAdding = false});
+
+  final Key? key;
+
+  final bool startAdding;
+
+  @override
+  String toString() {
+    return 'TrackManagementHubRouteArgs{key: $key, startAdding: $startAdding}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! TrackManagementHubRouteArgs) return false;
+    return key == other.key && startAdding == other.startAdding;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ startAdding.hashCode;
 }
 
 /// generated route for

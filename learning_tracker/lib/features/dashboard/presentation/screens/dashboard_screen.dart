@@ -1103,8 +1103,8 @@ class _EmptyDashboard extends StatelessWidget {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () =>
-                        context.router.push(const TrackManagementHubRoute()),
+                    onTap: () => context.router
+                        .push(TrackManagementHubRoute(startAdding: true)),
                     borderRadius: BorderRadius.circular(26),
                     child: const Center(
                       child: Text(

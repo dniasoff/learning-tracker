@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart'
+    show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 
 /// Shows a dialog listing available providers that can be linked.
@@ -73,6 +75,16 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Google account linked successfully.')),
         );
+      }
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        setState(() => _loading = false);
+      } else {
+        setState(() {
+          _error = 'Failed to link Google account.';
+          _loading = false;
+        });
       }
     } catch (e) {
       setState(() {

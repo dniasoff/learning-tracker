@@ -2,6 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart'
+    show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
@@ -63,7 +65,7 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: const Text('Add, edit, or archive tracks'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
-                        context.pushRoute(const TrackManagementHubRoute()),
+                        context.pushRoute(TrackManagementHubRoute()),
                   ),
                   Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
@@ -828,6 +830,18 @@ Future<void> _showDeleteAccountFlow(
     try {
       await service.reauthenticateWithGoogle();
       reauthenticated = true;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        // User cancelled — do nothing.
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Re-authentication failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

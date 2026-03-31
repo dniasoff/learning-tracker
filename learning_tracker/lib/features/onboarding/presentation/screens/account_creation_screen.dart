@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart'
+    show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -142,6 +144,13 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         _showError(_mapAuthError(e.code));
+      }
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        // User cancelled — do nothing.
+      } else if (mounted) {
+        _showError('Google Sign-In failed. Please try again.');
       }
     } catch (e) {
       if (mounted) {
