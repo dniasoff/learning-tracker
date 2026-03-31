@@ -2,14 +2,16 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
@@ -786,7 +788,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
 // ── Adapter Widgets ──────────────────────────────────────────────────────────
 
-class _ScopeStepContent extends StatelessWidget {
+/// Inline scope selector — pick "Track All" or drill into hierarchy to
+/// multi-select sections at a chosen level.
+class _ScopeStepContent extends ConsumerStatefulWidget {
   const _ScopeStepContent({
     required this.curriculumId,
     required this.onComplete,
@@ -796,7 +800,69 @@ class _ScopeStepContent extends StatelessWidget {
   final ValueChanged<List<ScopeEntry>?> onComplete;
 
   @override
+  ConsumerState<_ScopeStepContent> createState() => _ScopeStepContentState();
+}
+
+class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
+  /// null = initial choice screen, non-null = selecting values at this level.
+  int? _selectedLevel;
+  final Set<String> _selectedValues = {};
+
+  CurriculumHierarchyDefaults get _hierarchy =>
+      CurriculumDefaults.hierarchyConfigs[widget.curriculumId]!;
+
+  List<String> get _levelLabels => [
+        _hierarchy.level1Label,
+        if (_hierarchy.level2Label != null) _hierarchy.level2Label!,
+        if (_hierarchy.level3Label != null) _hierarchy.level3Label!,
+        if (_hierarchy.level4Label != null) _hierarchy.level4Label!,
+      ];
+
+  String _labelForLevel(int level) {
+    return level <= _levelLabels.length ? _levelLabels[level - 1] : 'Level $level';
+  }
+
+  String? _getItemLevel(ContentItem item, int level) {
+    return switch (level) {
+      1 => item.level1,
+      2 => item.level2,
+      3 => item.level3,
+      4 => item.level4,
+      _ => null,
+    };
+  }
+
+  List<String> _distinctValuesAtLevel(List<ContentItem> items, int level) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final item in items) {
+      final value = _getItemLevel(item, level);
+      if (value != null && seen.add(value)) result.add(value);
+    }
+    return result;
+  }
+
+  int _leafCountForValue(List<ContentItem> items, String value) {
+    return items
+        .where((i) => i.isLeaf && _getItemLevel(i, _selectedLevel!) == value)
+        .length;
+  }
+
+  void _done() {
+    if (_selectedLevel == null || _selectedValues.isEmpty) {
+      widget.onComplete(null);
+    } else {
+      widget.onComplete(
+        _selectedValues
+            .map((v) => ScopeEntry(level: _selectedLevel!, value: v))
+            .toList(),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final contentAsync = ref.watch(curriculumContentProvider(widget.curriculumId));
     final theme = Theme.of(context);
 
     return Padding(
@@ -804,39 +870,166 @@ class _ScopeStepContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Select Scope', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
           Text(
-            'Choose which parts of ${curriculumId.displayNameHe} to track, or select all.',
-            style: theme.textTheme.bodyMedium,
+            'All of it, or just a section?',
+            style: theme.textTheme.headlineSmall,
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.push<void>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ScopeSelectionScreen(curriculumId: curriculumId),
-                  ),
-                ).then((_) {
-                  // ScopeSelectionScreen saves scope to DB directly.
-                  // We advance the flow — scope was set in DB.
-                  onComplete(null);
-                });
-              },
-              icon: const Icon(Icons.tune),
-              label: const Text('Choose Specific Sections'),
+          const SizedBox(height: 4),
+          Text(
+            widget.curriculumId.displayNameHe,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => onComplete(null),
-            child: const Text('Track All'),
+          const SizedBox(height: 16),
+          Expanded(
+            child: contentAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error loading content: $e')),
+              data: (items) => _selectedLevel == null
+                  ? _buildInitialChoice(items)
+                  : _buildValueSelection(items),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Initial screen: "Track All" + level drill-down options.
+  Widget _buildInitialChoice(List<ContentItem> items) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          onPressed: () => widget.onComplete(null),
+          icon: const Icon(Icons.select_all),
+          label: const Text('Track All'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Or choose specific sections:',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView.separated(
+            itemCount: _hierarchy.maxLevels - 1,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final level = index + 1;
+              final values = _distinctValuesAtLevel(items, level);
+              return ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: Text('By ${_labelForLevel(level)}'),
+                subtitle: Text('${values.length} options'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => setState(() {
+                  _selectedLevel = level;
+                  _selectedValues.clear();
+                }),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Multi-select values at the chosen level.
+  Widget _buildValueSelection(List<ContentItem> items) {
+    final values = _distinctValuesAtLevel(items, _selectedLevel!);
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => setState(() {
+                _selectedLevel = null;
+                _selectedValues.clear();
+              }),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Select ${_labelForLevel(_selectedLevel!)}',
+              style: theme.textTheme.titleMedium,
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  if (_selectedValues.length == values.length) {
+                    _selectedValues.clear();
+                  } else {
+                    _selectedValues.addAll(values);
+                  }
+                });
+              },
+              child: Text(
+                _selectedValues.length == values.length
+                    ? 'Deselect All'
+                    : 'Select All',
+              ),
+            ),
+          ],
+        ),
+        if (_selectedValues.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              '${_selectedValues.length} of ${values.length} selected',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: values.length,
+            itemBuilder: (context, index) {
+              final value = values[index];
+              final isSelected = _selectedValues.contains(value);
+              final leafCount = _leafCountForValue(items, value);
+              return CheckboxListTile(
+                title: Text(value),
+                subtitle: Text('$leafCount items'),
+                value: isSelected,
+                onChanged: (checked) {
+                  setState(() {
+                    if (checked ?? false) {
+                      _selectedValues.add(value);
+                    } else {
+                      _selectedValues.remove(value);
+                    }
+                  });
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: _selectedValues.isNotEmpty ? _done : null,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: Text(
+            _selectedValues.isEmpty
+                ? 'Select at least one'
+                : 'Continue with ${_selectedValues.length} selected',
+          ),
+        ),
+      ],
     );
   }
 }
