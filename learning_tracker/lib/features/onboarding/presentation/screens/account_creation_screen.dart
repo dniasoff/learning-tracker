@@ -13,7 +13,10 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_provi
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+    show kOnboardingComplete;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @RoutePage()
 class AccountCreationScreen extends ConsumerStatefulWidget {
@@ -118,26 +121,34 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInWithGoogle();
-      if (mounted) {
-        final user = ref.read(firebaseAuthProvider).currentUser;
-        if (user != null) {
-          final profileService = ref.read(userProfileServiceProvider);
-          final existingMode = await profileService.getUserMode(user.uid);
-          if (mounted) {
-            if (existingMode != null) {
-              final activationService = ref.read(
-                curriculumActivationServiceProvider,
-              );
-              final active = await activationService.getActiveCurricula();
-              if (!mounted) return;
-              if (active.isNotEmpty) {
-                unawaited(context.router.replaceAll([const AppShellRoute()]));
-              } else {
-                unawaited(context.router.replace(const OnboardingRoute()));
-              }
+      if (!mounted) return;
+
+      // If onboarding was already completed on this device, skip it.
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(kOnboardingComplete) ?? false) {
+        if (!mounted) return;
+        unawaited(context.router.replaceAll([const AppShellRoute()]));
+        return;
+      }
+
+      final user = ref.read(firebaseAuthProvider).currentUser;
+      if (user != null && mounted) {
+        final profileService = ref.read(userProfileServiceProvider);
+        final existingMode = await profileService.getUserMode(user.uid);
+        if (mounted) {
+          if (existingMode != null) {
+            final activationService = ref.read(
+              curriculumActivationServiceProvider,
+            );
+            final active = await activationService.getActiveCurricula();
+            if (!mounted) return;
+            if (active.isNotEmpty) {
+              unawaited(context.router.replaceAll([const AppShellRoute()]));
             } else {
-              unawaited(context.router.push(const OnboardingRoute()));
+              unawaited(context.router.replace(const OnboardingRoute()));
             }
+          } else {
+            unawaited(context.router.push(const OnboardingRoute()));
           }
         }
       }

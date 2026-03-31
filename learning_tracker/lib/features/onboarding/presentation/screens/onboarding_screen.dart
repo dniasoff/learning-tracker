@@ -57,6 +57,9 @@ const _kOnboardingProfileName = 'onboarding_profile_name';
 const _kOnboardingProfileMode = 'onboarding_profile_mode';
 const _kOnboardingLanguage = 'onboarding_language';
 
+/// Persistent flag — once set, onboarding is never shown again on this device.
+const kOnboardingComplete = 'onboarding_complete';
+
 /// Supported content languages.
 const _supportedLanguages = <String, String>{
   'he': 'עברית (Hebrew with nikud)',
@@ -257,6 +260,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _navigateToDashboard() async {
     await _clearSavedState();
+    // Mark onboarding as permanently complete so it's never shown again.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kOnboardingComplete, true);
     if (!mounted) return;
     final repo = ref.read(profileRepositoryProvider);
     final profiles = await repo.getProfilesByAccount(1);

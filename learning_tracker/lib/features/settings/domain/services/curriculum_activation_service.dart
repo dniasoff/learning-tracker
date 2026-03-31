@@ -59,6 +59,26 @@ class CurriculumActivationService {
     await _syncToFirestore();
   }
 
+  /// Activate a curriculum for a specific profile.
+  ///
+  /// Throws [TutorModeReadOnlyException] if tutor mode is active.
+  Future<void> activateForProfile(
+    CurriculumId curriculum,
+    int profileId,
+  ) async {
+    guardTutorModeWriteFromBool(isTutorMode);
+    await _database.activeCurriculumDao.activateByProfile(
+      curriculum,
+      profileId,
+    );
+    await _trackRepository.initializeDefaultTracks(curriculum);
+    await _database.studyDayConfigDao.seedDefaults(
+      profileId: profileId,
+      curriculumId: curriculum.storageKey,
+    );
+    await _syncToFirestore();
+  }
+
   /// Deactivate a curriculum.
   ///
   /// Throws [TutorModeReadOnlyException] if tutor mode is active.

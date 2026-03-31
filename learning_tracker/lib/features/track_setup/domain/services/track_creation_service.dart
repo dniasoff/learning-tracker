@@ -53,9 +53,9 @@ class TrackCreationService {
   }) async {
     final curriculum = result.curriculumId;
 
-    // 1. Ensure curriculum is activated (idempotent, outside transaction)
+    // 1. Ensure curriculum is activated for this profile (idempotent, outside transaction)
     try {
-      await _activationService.activate(curriculum);
+      await _activationService.activateForProfile(curriculum, profileId);
     } catch (_) {
       AppLogger.instance.debug(
         'TrackCreationService: curriculum ${curriculum.storageKey} '
