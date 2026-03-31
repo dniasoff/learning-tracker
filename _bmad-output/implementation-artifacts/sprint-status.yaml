@@ -187,7 +187,7 @@ development_status:
 
   # Epic 19: Offline-First Architecture & Two-Database Split (13 stories)
   epic-19: in-progress
-  19-1-fix-calendar-registry-bugs: ready-for-dev
+  19-1-fix-calendar-registry-bugs: review
   19-2-two-database-split: ready-for-dev
   19-2b-content-db-runtime-upgrade-flow: ready-for-dev
   19-3-seed-database-build-tool: ready-for-dev

@@ -126,14 +126,19 @@ class CalendarProgramService {
       final entries = <CalendarProgramEntry>[];
 
       for (final item in response.items) {
-        final def = CalendarProgramRegistry.byApiKey(item.title);
+        final def = item.category != null
+            ? CalendarProgramRegistry.byHebcalCategory(item.category!)
+            : null;
         if (def != null) {
           entries.add(
             CalendarProgramEntry(
               programId: def.id,
               displayNameEn: def.displayNameEn,
               displayNameHe: def.displayNameHe,
-              todayRef: item.memo ?? item.title,
+              todayRef: _extractSefariaRefFromLink(
+                item.link,
+                item.memo ?? item.title,
+              ),
               apiSource: 'hebcal',
             ),
           );
@@ -183,6 +188,23 @@ class CalendarProgramService {
       }
     }
     return entries;
+  }
+
+  /// Extract a Sefaria ref from a Hebcal link URL.
+  ///
+  /// Hebcal items include a `link` field like:
+  /// `https://www.sefaria.org/Chofetz_Chaim%2C_Part_One...?lang=bi&utm_source=hebcal.com`
+  /// The Sefaria ref is the URL-decoded path component.
+  String _extractSefariaRefFromLink(String? link, String fallback) {
+    if (link == null || !link.contains('sefaria.org/')) return fallback;
+    try {
+      final uri = Uri.parse(link);
+      final path = uri.path;
+      // Remove leading '/' to get the ref
+      return path.startsWith('/') ? Uri.decodeComponent(path.substring(1)) : Uri.decodeComponent(path);
+    } catch (_) {
+      return fallback;
+    }
   }
 
   Map<String, dynamic> _sefariaResponseToJson(

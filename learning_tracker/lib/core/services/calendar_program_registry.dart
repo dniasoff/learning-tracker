@@ -6,6 +6,7 @@ class CalendarProgramDefinition {
   final String apiSource; // 'sefaria' | 'hebcal'
   final String apiKey; // Key in the API response
   final String curriculumType; // Maps to CurriculumId.storageKey
+  final String? hebcalCategory; // Hebcal category for matching
 
   const CalendarProgramDefinition({
     required this.id,
@@ -14,6 +15,7 @@ class CalendarProgramDefinition {
     required this.apiSource,
     required this.apiKey,
     required this.curriculumType,
+    this.hebcalCategory,
   });
 }
 
@@ -45,23 +47,24 @@ class CalendarProgramRegistry {
       displayNameEn: 'Mishna Yomit',
       displayNameHe: 'משנה יומית',
       apiSource: 'sefaria',
-      apiKey: 'Mishnah Yomit',
+      apiKey: 'Daily Mishnah',
       curriculumType: 'mishnayos',
     ),
     CalendarProgramDefinition(
       id: 'nach_yomi',
       displayNameEn: 'Nach Yomi',
       displayNameHe: 'נ״ך יומי',
-      apiSource: 'sefaria',
-      apiKey: 'Nach Yomi',
+      apiSource: 'hebcal',
+      apiKey: 'nachyomi',
       curriculumType: 'nach',
+      hebcalCategory: 'nachyomi',
     ),
     CalendarProgramDefinition(
       id: 'rambam_1_chapter',
       displayNameEn: 'Rambam - 1 Chapter',
       displayNameHe: 'רמב״ם - פרק אחד',
       apiSource: 'sefaria',
-      apiKey: 'Daily Rambam 1 Chapter',
+      apiKey: 'Daily Rambam',
       curriculumType: 'torah',
     ),
     CalendarProgramDefinition(
@@ -69,7 +72,7 @@ class CalendarProgramRegistry {
       displayNameEn: 'Rambam - 3 Chapters',
       displayNameHe: 'רמב״ם - ג׳ פרקים',
       apiSource: 'sefaria',
-      apiKey: 'Daily Rambam 3 Chapters',
+      apiKey: 'Daily Rambam (3 Chapters)',
       curriculumType: 'torah',
     ),
     CalendarProgramDefinition(
@@ -112,6 +115,7 @@ class CalendarProgramRegistry {
       apiSource: 'hebcal',
       apiKey: 'Chofetz Chaim',
       curriculumType: 'mussar',
+      hebcalCategory: 'chofetzChaim',
     ),
     CalendarProgramDefinition(
       id: 'kitzur_shulchan_aruch_yomi',
@@ -120,6 +124,7 @@ class CalendarProgramRegistry {
       apiSource: 'hebcal',
       apiKey: 'Kitzur Shulchan Aruch',
       curriculumType: 'mishnaBerurah',
+      hebcalCategory: 'kitzurShulchanAruch',
     ),
   ];
 
@@ -132,6 +137,13 @@ class CalendarProgramRegistry {
   /// Look up a program definition by API key.
   static CalendarProgramDefinition? byApiKey(String apiKey) {
     final matches = programs.where((p) => p.apiKey == apiKey);
+    return matches.isNotEmpty ? matches.first : null;
+  }
+
+  /// Look up a program definition by Hebcal category.
+  static CalendarProgramDefinition? byHebcalCategory(String category) {
+    final matches =
+        programs.where((p) => p.hebcalCategory == category);
     return matches.isNotEmpty ? matches.first : null;
   }
 

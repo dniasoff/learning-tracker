@@ -29,6 +29,8 @@ class HebcalApiClient {
         'nyomi': 'on', // Nach Yomi
         'dr1': 'on', // Rambam 1 chapter
         'dr3': 'on', // Rambam 3 chapters
+        'dcc': 'on', // Chofetz Chaim
+        'dksa': 'on', // Kitzur Shulchan Aruch
       },
     );
 
