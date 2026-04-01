@@ -481,7 +481,9 @@ class DataExportImportService {
             .into(_database.userProfiles)
             .insert(
               UserProfilesCompanion.insert(
-                firebaseUid: map['firebaseUid'] as String,
+                localUid: (map['localUid'] as String?) ??
+                    (map['firebaseUid'] as String),
+                firebaseUid: Value(map['firebaseUid'] as String?),
                 displayName: map['displayName'] as String,
                 userMode: map['userMode'] as String,
                 createdAt: DateTime.parse(map['createdAt'] as String),

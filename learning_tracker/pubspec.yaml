@@ -70,6 +70,9 @@ dependencies:
   # URL launching (email, web links)
   url_launcher: ^6.3.1
 
+  # UUID generation for local auth
+  uuid: ^4.5.0
+
   # HTTP client
   dio: ^5.9.1
   talker_dio_logger: ^5.1.13

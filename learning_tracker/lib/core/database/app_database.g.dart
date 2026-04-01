@@ -5544,6 +5544,18 @@ class $UserProfilesTable extends UserProfiles
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _localUidMeta = const VerificationMeta(
+    'localUid',
+  );
+  @override
+  late final GeneratedColumn<String> localUid = GeneratedColumn<String>(
+    'local_uid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _firebaseUidMeta = const VerificationMeta(
     'firebaseUid',
   );
@@ -5551,9 +5563,9 @@ class $UserProfilesTable extends UserProfiles
   late final GeneratedColumn<String> firebaseUid = GeneratedColumn<String>(
     'firebase_uid',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
   static const VerificationMeta _displayNameMeta = const VerificationMeta(
@@ -5577,6 +5589,21 @@ class $UserProfilesTable extends UserProfiles
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hasAccountMeta = const VerificationMeta(
+    'hasAccount',
+  );
+  @override
+  late final GeneratedColumn<bool> hasAccount = GeneratedColumn<bool>(
+    'has_account',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_account" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -5603,9 +5630,11 @@ class $UserProfilesTable extends UserProfiles
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    localUid,
     firebaseUid,
     displayName,
     userMode,
+    hasAccount,
     createdAt,
     updatedAt,
   ];
@@ -5624,6 +5653,14 @@ class $UserProfilesTable extends UserProfiles
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
+    if (data.containsKey('local_uid')) {
+      context.handle(
+        _localUidMeta,
+        localUid.isAcceptableOrUnknown(data['local_uid']!, _localUidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localUidMeta);
+    }
     if (data.containsKey('firebase_uid')) {
       context.handle(
         _firebaseUidMeta,
@@ -5632,8 +5669,6 @@ class $UserProfilesTable extends UserProfiles
           _firebaseUidMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_firebaseUidMeta);
     }
     if (data.containsKey('display_name')) {
       context.handle(
@@ -5653,6 +5688,12 @@ class $UserProfilesTable extends UserProfiles
       );
     } else if (isInserting) {
       context.missing(_userModeMeta);
+    }
+    if (data.containsKey('has_account')) {
+      context.handle(
+        _hasAccountMeta,
+        hasAccount.isAcceptableOrUnknown(data['has_account']!, _hasAccountMeta),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -5683,10 +5724,14 @@ class $UserProfilesTable extends UserProfiles
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      localUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_uid'],
+      )!,
       firebaseUid: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}firebase_uid'],
-      )!,
+      ),
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
@@ -5694,6 +5739,10 @@ class $UserProfilesTable extends UserProfiles
       userMode: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}user_mode'],
+      )!,
+      hasAccount: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_account'],
       )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -5714,16 +5763,20 @@ class $UserProfilesTable extends UserProfiles
 
 class UserProfile extends DataClass implements Insertable<UserProfile> {
   final int id;
-  final String firebaseUid;
+  final String localUid;
+  final String? firebaseUid;
   final String displayName;
   final String userMode;
+  final bool hasAccount;
   final DateTime createdAt;
   final DateTime updatedAt;
   const UserProfile({
     required this.id,
-    required this.firebaseUid,
+    required this.localUid,
+    this.firebaseUid,
     required this.displayName,
     required this.userMode,
+    required this.hasAccount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -5731,9 +5784,13 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['firebase_uid'] = Variable<String>(firebaseUid);
+    map['local_uid'] = Variable<String>(localUid);
+    if (!nullToAbsent || firebaseUid != null) {
+      map['firebase_uid'] = Variable<String>(firebaseUid);
+    }
     map['display_name'] = Variable<String>(displayName);
     map['user_mode'] = Variable<String>(userMode);
+    map['has_account'] = Variable<bool>(hasAccount);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -5742,9 +5799,13 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
   UserProfilesCompanion toCompanion(bool nullToAbsent) {
     return UserProfilesCompanion(
       id: Value(id),
-      firebaseUid: Value(firebaseUid),
+      localUid: Value(localUid),
+      firebaseUid: firebaseUid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(firebaseUid),
       displayName: Value(displayName),
       userMode: Value(userMode),
+      hasAccount: Value(hasAccount),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -5757,9 +5818,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return UserProfile(
       id: serializer.fromJson<int>(json['id']),
-      firebaseUid: serializer.fromJson<String>(json['firebaseUid']),
+      localUid: serializer.fromJson<String>(json['localUid']),
+      firebaseUid: serializer.fromJson<String?>(json['firebaseUid']),
       displayName: serializer.fromJson<String>(json['displayName']),
       userMode: serializer.fromJson<String>(json['userMode']),
+      hasAccount: serializer.fromJson<bool>(json['hasAccount']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -5769,9 +5832,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'firebaseUid': serializer.toJson<String>(firebaseUid),
+      'localUid': serializer.toJson<String>(localUid),
+      'firebaseUid': serializer.toJson<String?>(firebaseUid),
       'displayName': serializer.toJson<String>(displayName),
       'userMode': serializer.toJson<String>(userMode),
+      'hasAccount': serializer.toJson<bool>(hasAccount),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -5779,22 +5844,27 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
 
   UserProfile copyWith({
     int? id,
-    String? firebaseUid,
+    String? localUid,
+    Value<String?> firebaseUid = const Value.absent(),
     String? displayName,
     String? userMode,
+    bool? hasAccount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => UserProfile(
     id: id ?? this.id,
-    firebaseUid: firebaseUid ?? this.firebaseUid,
+    localUid: localUid ?? this.localUid,
+    firebaseUid: firebaseUid.present ? firebaseUid.value : this.firebaseUid,
     displayName: displayName ?? this.displayName,
     userMode: userMode ?? this.userMode,
+    hasAccount: hasAccount ?? this.hasAccount,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   UserProfile copyWithCompanion(UserProfilesCompanion data) {
     return UserProfile(
       id: data.id.present ? data.id.value : this.id,
+      localUid: data.localUid.present ? data.localUid.value : this.localUid,
       firebaseUid: data.firebaseUid.present
           ? data.firebaseUid.value
           : this.firebaseUid,
@@ -5802,6 +5872,9 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
           ? data.displayName.value
           : this.displayName,
       userMode: data.userMode.present ? data.userMode.value : this.userMode,
+      hasAccount: data.hasAccount.present
+          ? data.hasAccount.value
+          : this.hasAccount,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -5811,9 +5884,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
   String toString() {
     return (StringBuffer('UserProfile(')
           ..write('id: $id, ')
+          ..write('localUid: $localUid, ')
           ..write('firebaseUid: $firebaseUid, ')
           ..write('displayName: $displayName, ')
           ..write('userMode: $userMode, ')
+          ..write('hasAccount: $hasAccount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -5821,60 +5896,80 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, firebaseUid, displayName, userMode, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    localUid,
+    firebaseUid,
+    displayName,
+    userMode,
+    hasAccount,
+    createdAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is UserProfile &&
           other.id == this.id &&
+          other.localUid == this.localUid &&
           other.firebaseUid == this.firebaseUid &&
           other.displayName == this.displayName &&
           other.userMode == this.userMode &&
+          other.hasAccount == this.hasAccount &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
 
 class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
   final Value<int> id;
-  final Value<String> firebaseUid;
+  final Value<String> localUid;
+  final Value<String?> firebaseUid;
   final Value<String> displayName;
   final Value<String> userMode;
+  final Value<bool> hasAccount;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const UserProfilesCompanion({
     this.id = const Value.absent(),
+    this.localUid = const Value.absent(),
     this.firebaseUid = const Value.absent(),
     this.displayName = const Value.absent(),
     this.userMode = const Value.absent(),
+    this.hasAccount = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   UserProfilesCompanion.insert({
     this.id = const Value.absent(),
-    required String firebaseUid,
+    required String localUid,
+    this.firebaseUid = const Value.absent(),
     required String displayName,
     required String userMode,
+    this.hasAccount = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
-  }) : firebaseUid = Value(firebaseUid),
+  }) : localUid = Value(localUid),
        displayName = Value(displayName),
        userMode = Value(userMode),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<UserProfile> custom({
     Expression<int>? id,
+    Expression<String>? localUid,
     Expression<String>? firebaseUid,
     Expression<String>? displayName,
     Expression<String>? userMode,
+    Expression<bool>? hasAccount,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (localUid != null) 'local_uid': localUid,
       if (firebaseUid != null) 'firebase_uid': firebaseUid,
       if (displayName != null) 'display_name': displayName,
       if (userMode != null) 'user_mode': userMode,
+      if (hasAccount != null) 'has_account': hasAccount,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -5882,17 +5977,21 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
 
   UserProfilesCompanion copyWith({
     Value<int>? id,
-    Value<String>? firebaseUid,
+    Value<String>? localUid,
+    Value<String?>? firebaseUid,
     Value<String>? displayName,
     Value<String>? userMode,
+    Value<bool>? hasAccount,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
     return UserProfilesCompanion(
       id: id ?? this.id,
+      localUid: localUid ?? this.localUid,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       displayName: displayName ?? this.displayName,
       userMode: userMode ?? this.userMode,
+      hasAccount: hasAccount ?? this.hasAccount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -5904,6 +6003,9 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
+    if (localUid.present) {
+      map['local_uid'] = Variable<String>(localUid.value);
+    }
     if (firebaseUid.present) {
       map['firebase_uid'] = Variable<String>(firebaseUid.value);
     }
@@ -5912,6 +6014,9 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
     }
     if (userMode.present) {
       map['user_mode'] = Variable<String>(userMode.value);
+    }
+    if (hasAccount.present) {
+      map['has_account'] = Variable<bool>(hasAccount.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -5926,9 +6031,11 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
   String toString() {
     return (StringBuffer('UserProfilesCompanion(')
           ..write('id: $id, ')
+          ..write('localUid: $localUid, ')
           ..write('firebaseUid: $firebaseUid, ')
           ..write('displayName: $displayName, ')
           ..write('userMode: $userMode, ')
+          ..write('hasAccount: $hasAccount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -15242,18 +15349,22 @@ typedef $$ProfilesTableProcessedTableManager =
 typedef $$UserProfilesTableCreateCompanionBuilder =
     UserProfilesCompanion Function({
       Value<int> id,
-      required String firebaseUid,
+      required String localUid,
+      Value<String?> firebaseUid,
       required String displayName,
       required String userMode,
+      Value<bool> hasAccount,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
 typedef $$UserProfilesTableUpdateCompanionBuilder =
     UserProfilesCompanion Function({
       Value<int> id,
-      Value<String> firebaseUid,
+      Value<String> localUid,
+      Value<String?> firebaseUid,
       Value<String> displayName,
       Value<String> userMode,
+      Value<bool> hasAccount,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -15272,6 +15383,11 @@ class $$UserProfilesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get localUid => $composableBuilder(
+    column: $table.localUid,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get firebaseUid => $composableBuilder(
     column: $table.firebaseUid,
     builder: (column) => ColumnFilters(column),
@@ -15284,6 +15400,11 @@ class $$UserProfilesTableFilterComposer
 
   ColumnFilters<String> get userMode => $composableBuilder(
     column: $table.userMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasAccount => $composableBuilder(
+    column: $table.hasAccount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15312,6 +15433,11 @@ class $$UserProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localUid => $composableBuilder(
+    column: $table.localUid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get firebaseUid => $composableBuilder(
     column: $table.firebaseUid,
     builder: (column) => ColumnOrderings(column),
@@ -15324,6 +15450,11 @@ class $$UserProfilesTableOrderingComposer
 
   ColumnOrderings<String> get userMode => $composableBuilder(
     column: $table.userMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasAccount => $composableBuilder(
+    column: $table.hasAccount,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15350,6 +15481,9 @@ class $$UserProfilesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get localUid =>
+      $composableBuilder(column: $table.localUid, builder: (column) => column);
+
   GeneratedColumn<String> get firebaseUid => $composableBuilder(
     column: $table.firebaseUid,
     builder: (column) => column,
@@ -15362,6 +15496,11 @@ class $$UserProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get userMode =>
       $composableBuilder(column: $table.userMode, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasAccount => $composableBuilder(
+    column: $table.hasAccount,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -15402,32 +15541,40 @@ class $$UserProfilesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<String> firebaseUid = const Value.absent(),
+                Value<String> localUid = const Value.absent(),
+                Value<String?> firebaseUid = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
                 Value<String> userMode = const Value.absent(),
+                Value<bool> hasAccount = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => UserProfilesCompanion(
                 id: id,
+                localUid: localUid,
                 firebaseUid: firebaseUid,
                 displayName: displayName,
                 userMode: userMode,
+                hasAccount: hasAccount,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required String firebaseUid,
+                required String localUid,
+                Value<String?> firebaseUid = const Value.absent(),
                 required String displayName,
                 required String userMode,
+                Value<bool> hasAccount = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => UserProfilesCompanion.insert(
                 id: id,
+                localUid: localUid,
                 firebaseUid: firebaseUid,
                 displayName: displayName,
                 userMode: userMode,
+                hasAccount: hasAccount,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),

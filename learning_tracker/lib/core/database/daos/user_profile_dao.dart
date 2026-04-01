@@ -42,7 +42,8 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
     if (existing == null) {
       await insertUserProfile(
         UserProfilesCompanion.insert(
-          firebaseUid: firebaseUid,
+          localUid: firebaseUid, // Use firebaseUid as localUid for cloud users
+          firebaseUid: Value(firebaseUid),
           displayName: displayName,
           userMode: userMode,
           createdAt: updatedAt,

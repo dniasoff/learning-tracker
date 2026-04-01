@@ -189,10 +189,10 @@ development_status:
   epic-19: in-progress
   19-1-fix-calendar-registry-bugs: done
   19-2-two-database-split: done
-  19-2b-content-db-runtime-upgrade-flow: in-progress
+  19-2b-content-db-runtime-upgrade-flow: done
   19-3-seed-database-build-tool: ready-for-dev
   19-4-local-calendar-engine: ready-for-dev
-  19-5-local-first-auth-abstraction: ready-for-dev
+  19-5-local-first-auth-abstraction: in-progress
   19-6-startup-sequence-hardening: ready-for-dev
   19-7-optional-account-creation-settings: ready-for-dev
   19-8-syncengine-conditional-activation: ready-for-dev
