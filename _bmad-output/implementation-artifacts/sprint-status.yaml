@@ -188,8 +188,8 @@ development_status:
   # Epic 19: Offline-First Architecture & Two-Database Split (13 stories)
   epic-19: in-progress
   19-1-fix-calendar-registry-bugs: done
-  19-2-two-database-split: review
-  19-2b-content-db-runtime-upgrade-flow: ready-for-dev
+  19-2-two-database-split: done
+  19-2b-content-db-runtime-upgrade-flow: in-progress
   19-3-seed-database-build-tool: ready-for-dev
   19-4-local-calendar-engine: ready-for-dev
   19-5-local-first-auth-abstraction: ready-for-dev
