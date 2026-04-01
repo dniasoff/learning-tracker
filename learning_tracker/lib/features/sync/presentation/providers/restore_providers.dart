@@ -7,10 +7,14 @@ import 'package:learning_tracker/features/sync/domain/services/device_restore_se
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Provider for DeviceRestoreService.
-final deviceRestoreServiceProvider = Provider<DeviceRestoreService>((ref) {
-  final database = ref.watch(userDatabaseProvider);
+///
+/// Returns null when user has no cloud account (restore requires Firestore).
+final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
   final syncEngine = ref.watch(syncEngineProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
+  if (syncEngine == null || firestoreDataSource == null) return null;
+
+  final database = ref.watch(userDatabaseProvider);
   final curriculumImportService = ref.watch(curriculumImportServiceProvider);
   final logger = ref.watch(talkerProvider);
 
@@ -32,6 +36,7 @@ final deviceRestoreServiceProvider = Provider<DeviceRestoreService>((ref) {
 /// Provider for restore status stream.
 final restoreStatusStreamProvider = StreamProvider<RestoreStatus>((ref) {
   final service = ref.watch(deviceRestoreServiceProvider);
+  if (service == null) return Stream.value(const RestoreStatus.idle());
   return service.statusStream;
 });
 

@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -7,6 +6,7 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 ///
 /// Attaches Firestore listeners when app is in foreground (resumed).
 /// Detaches listeners when app goes to background (paused) to save battery.
+/// Becomes a no-op when SyncEngine is null (local-only mode).
 class SyncLifecycleObserver extends ConsumerStatefulWidget {
   const SyncLifecycleObserver({required this.child, super.key});
 
@@ -24,14 +24,8 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Only attach listeners if user is authenticated — attaching before
-    // auth causes permission-denied errors that permanently disable
-    // real-time sync for the session.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (FirebaseAuth.instance.currentUser != null) {
-        final engine = ref.read(syncEngineProvider);
-        engine.attachListeners();
-      }
+      ref.read(syncEngineProvider)?.attachListeners();
     });
   }
 
@@ -44,28 +38,17 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final engine = ref.read(syncEngineProvider);
+    if (engine == null) return; // Local-only mode — no-op
 
     switch (state) {
       case AppLifecycleState.resumed:
-        // Only attach if authenticated
-        if (FirebaseAuth.instance.currentUser != null) {
-          engine.attachListeners();
-        }
+        engine.attachListeners();
         break;
-
       case AppLifecycleState.inactive:
-        // On iOS, inactive fires for transient states (notification shade,
-        // alerts). Do not detach listeners here.
         break;
-
       case AppLifecycleState.paused:
-        // App going to background, detach listeners
-        engine.detachListeners();
-        break;
-
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
-        // App is being killed or hidden, ensure cleanup
         engine.detachListeners();
         break;
     }

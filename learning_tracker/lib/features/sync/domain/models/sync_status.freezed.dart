@@ -55,10 +55,11 @@ extension SyncStatusPatterns on SyncStatus {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SyncStatusSyncing value)?  syncing,TResult Function( SyncStatusSynced value)?  synced,TResult Function( SyncStatusPending value)?  pending,TResult Function( SyncStatusOffline value)?  offline,TResult Function( SyncStatusError value)?  error,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SyncStatusLocalOnly value)?  localOnly,TResult Function( SyncStatusSyncing value)?  syncing,TResult Function( SyncStatusSynced value)?  synced,TResult Function( SyncStatusPending value)?  pending,TResult Function( SyncStatusOffline value)?  offline,TResult Function( SyncStatusError value)?  error,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case SyncStatusSyncing() when syncing != null:
+case SyncStatusLocalOnly() when localOnly != null:
+return localOnly(_that);case SyncStatusSyncing() when syncing != null:
 return syncing(_that);case SyncStatusSynced() when synced != null:
 return synced(_that);case SyncStatusPending() when pending != null:
 return pending(_that);case SyncStatusOffline() when offline != null:
@@ -81,10 +82,11 @@ return error(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SyncStatusSyncing value)  syncing,required TResult Function( SyncStatusSynced value)  synced,required TResult Function( SyncStatusPending value)  pending,required TResult Function( SyncStatusOffline value)  offline,required TResult Function( SyncStatusError value)  error,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SyncStatusLocalOnly value)  localOnly,required TResult Function( SyncStatusSyncing value)  syncing,required TResult Function( SyncStatusSynced value)  synced,required TResult Function( SyncStatusPending value)  pending,required TResult Function( SyncStatusOffline value)  offline,required TResult Function( SyncStatusError value)  error,}){
 final _that = this;
 switch (_that) {
-case SyncStatusSyncing():
+case SyncStatusLocalOnly():
+return localOnly(_that);case SyncStatusSyncing():
 return syncing(_that);case SyncStatusSynced():
 return synced(_that);case SyncStatusPending():
 return pending(_that);case SyncStatusOffline():
@@ -103,10 +105,11 @@ return error(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SyncStatusSyncing value)?  syncing,TResult? Function( SyncStatusSynced value)?  synced,TResult? Function( SyncStatusPending value)?  pending,TResult? Function( SyncStatusOffline value)?  offline,TResult? Function( SyncStatusError value)?  error,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SyncStatusLocalOnly value)?  localOnly,TResult? Function( SyncStatusSyncing value)?  syncing,TResult? Function( SyncStatusSynced value)?  synced,TResult? Function( SyncStatusPending value)?  pending,TResult? Function( SyncStatusOffline value)?  offline,TResult? Function( SyncStatusError value)?  error,}){
 final _that = this;
 switch (_that) {
-case SyncStatusSyncing() when syncing != null:
+case SyncStatusLocalOnly() when localOnly != null:
+return localOnly(_that);case SyncStatusSyncing() when syncing != null:
 return syncing(_that);case SyncStatusSynced() when synced != null:
 return synced(_that);case SyncStatusPending() when pending != null:
 return pending(_that);case SyncStatusOffline() when offline != null:
@@ -128,9 +131,10 @@ return error(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime startedAt)?  syncing,TResult Function( DateTime lastSyncedAt)?  synced,TResult Function( int pendingChanges)?  pending,TResult Function( int pendingChanges)?  offline,TResult Function( String message,  DateTime failedAt)?  error,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  localOnly,TResult Function( DateTime startedAt)?  syncing,TResult Function( DateTime lastSyncedAt)?  synced,TResult Function( int pendingChanges)?  pending,TResult Function( int pendingChanges)?  offline,TResult Function( String message,  DateTime failedAt)?  error,required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case SyncStatusSyncing() when syncing != null:
+case SyncStatusLocalOnly() when localOnly != null:
+return localOnly();case SyncStatusSyncing() when syncing != null:
 return syncing(_that.startedAt);case SyncStatusSynced() when synced != null:
 return synced(_that.lastSyncedAt);case SyncStatusPending() when pending != null:
 return pending(_that.pendingChanges);case SyncStatusOffline() when offline != null:
@@ -153,9 +157,10 @@ return error(_that.message,_that.failedAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime startedAt)  syncing,required TResult Function( DateTime lastSyncedAt)  synced,required TResult Function( int pendingChanges)  pending,required TResult Function( int pendingChanges)  offline,required TResult Function( String message,  DateTime failedAt)  error,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  localOnly,required TResult Function( DateTime startedAt)  syncing,required TResult Function( DateTime lastSyncedAt)  synced,required TResult Function( int pendingChanges)  pending,required TResult Function( int pendingChanges)  offline,required TResult Function( String message,  DateTime failedAt)  error,}) {final _that = this;
 switch (_that) {
-case SyncStatusSyncing():
+case SyncStatusLocalOnly():
+return localOnly();case SyncStatusSyncing():
 return syncing(_that.startedAt);case SyncStatusSynced():
 return synced(_that.lastSyncedAt);case SyncStatusPending():
 return pending(_that.pendingChanges);case SyncStatusOffline():
@@ -174,9 +179,10 @@ return error(_that.message,_that.failedAt);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime startedAt)?  syncing,TResult? Function( DateTime lastSyncedAt)?  synced,TResult? Function( int pendingChanges)?  pending,TResult? Function( int pendingChanges)?  offline,TResult? Function( String message,  DateTime failedAt)?  error,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  localOnly,TResult? Function( DateTime startedAt)?  syncing,TResult? Function( DateTime lastSyncedAt)?  synced,TResult? Function( int pendingChanges)?  pending,TResult? Function( int pendingChanges)?  offline,TResult? Function( String message,  DateTime failedAt)?  error,}) {final _that = this;
 switch (_that) {
-case SyncStatusSyncing() when syncing != null:
+case SyncStatusLocalOnly() when localOnly != null:
+return localOnly();case SyncStatusSyncing() when syncing != null:
 return syncing(_that.startedAt);case SyncStatusSynced() when synced != null:
 return synced(_that.lastSyncedAt);case SyncStatusPending() when pending != null:
 return pending(_that.pendingChanges);case SyncStatusOffline() when offline != null:
@@ -188,6 +194,38 @@ return error(_that.message,_that.failedAt);case _:
 }
 
 }
+
+/// @nodoc
+
+
+class SyncStatusLocalOnly implements SyncStatus {
+  const SyncStatusLocalOnly();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SyncStatusLocalOnly);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'SyncStatus.localOnly()';
+}
+
+
+}
+
+
+
 
 /// @nodoc
 

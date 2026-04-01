@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.
 class CurriculumActivationService {
   CurriculumActivationService({
     required UserDatabase database,
-    required Future<void> Function(List<String>) pushActiveCurricula,
+    required Future<void> Function(List<String>)? pushActiveCurricula,
     required TrackRepository trackRepository,
     this.isTutorMode = false,
   }) : _database = database,
@@ -22,7 +22,7 @@ class CurriculumActivationService {
        _trackRepository = trackRepository;
 
   final UserDatabase _database;
-  final Future<void> Function(List<String>) _pushActiveCurricula;
+  final Future<void> Function(List<String>)? _pushActiveCurricula;
   final TrackRepository _trackRepository;
 
   /// Whether tutor mode is active (read-only).
@@ -146,7 +146,7 @@ class CurriculumActivationService {
     try {
       final activeCurricula = await _database.activeCurriculumDao
           .getActiveCurricula();
-      await _pushActiveCurricula(activeCurricula);
+      await _pushActiveCurricula?.call(activeCurricula);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional: silent fail for offline/auth
       // Silent fail for offline/auth issues — local database is source of truth

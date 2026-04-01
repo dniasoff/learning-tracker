@@ -29,14 +29,14 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   StageDefinitionRepositoryImpl({
     required StageDao stageDao,
     required CompletionDao completionDao,
-    required Future<void> Function(Map<String, dynamic>) pushSettings,
+    required Future<void> Function(Map<String, dynamic>)? pushSettings,
   }) : _stageDao = stageDao,
        _completionDao = completionDao,
        _pushSettings = pushSettings;
 
   final StageDao _stageDao;
   final CompletionDao _completionDao;
-  final Future<void> Function(Map<String, dynamic>) _pushSettings;
+  final Future<void> Function(Map<String, dynamic>)? _pushSettings;
 
   @override
   Future<List<StageDefinition>> getStagesForCurriculum(
@@ -232,7 +232,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     final stages = await _stageDao.getStageDefinitionsByCurriculum(
       curriculumId.storageKey,
     );
-    await _pushSettings({
+    await _pushSettings?.call({
       'curriculum_id': curriculumId.storageKey,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
       'stages': stages

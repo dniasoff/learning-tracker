@@ -15,7 +15,7 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 /// Implementation of [CompletionRepository] using Drift database and sync engine.
 class CompletionRepositoryImpl implements CompletionRepository {
   final UserDatabase _database;
-  final SyncEngine _syncEngine;
+  final SyncEngine? _syncEngine;
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
@@ -23,7 +23,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   CompletionRepositoryImpl({
     required UserDatabase database,
-    required SyncEngine syncEngine,
+    required SyncEngine? syncEngine,
     required ContentRepository contentRepository,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
@@ -416,7 +416,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       'points': completion.points,
     };
 
-    await _syncEngine.pushCompletion(completionData);
+    await _syncEngine?.pushCompletion(completionData);
   }
 
   @override

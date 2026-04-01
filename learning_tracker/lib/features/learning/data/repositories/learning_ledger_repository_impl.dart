@@ -7,13 +7,13 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 /// Implementation of [LearningLedgerRepository] using Drift database and sync engine.
 class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   final UserDatabase _database;
-  final SyncEngine _syncEngine;
+  final SyncEngine? _syncEngine;
   final int _activeProfileId;
   final String _activeProfileMode;
 
   LearningLedgerRepositoryImpl({
     required UserDatabase database,
-    required SyncEngine syncEngine,
+    required SyncEngine? syncEngine,
     required int activeProfileId,
     required String activeProfileMode,
   }) : _database = database,
@@ -115,6 +115,6 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
       'isManual': entry.isManual,
     };
 
-    await _syncEngine.pushLedgerEntry(data);
+    await _syncEngine?.pushLedgerEntry(data);
   }
 }

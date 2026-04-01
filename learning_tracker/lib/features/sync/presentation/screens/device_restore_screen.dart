@@ -24,6 +24,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
 
   Future<void> _startRestore() async {
     final service = ref.read(deviceRestoreServiceProvider);
+    if (service == null) return; // Local-only — no restore possible
     final success = await service.restore();
     if (mounted && success) {
       _navigateToApp();
@@ -32,6 +33,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
 
   Future<void> _retry() async {
     final service = ref.read(deviceRestoreServiceProvider);
+    if (service == null) return;
     final success = await service.retry();
     if (mounted && success) {
       _navigateToApp();

@@ -22,6 +22,12 @@ class SyncStatusIndicator extends ConsumerWidget {
       String label,
       bool spinning,
     ) = switch (status) {
+      SyncStatusLocalOnly() => (
+        Icons.smartphone,
+        Colors.grey,
+        'Local only',
+        false,
+      ),
       SyncStatusSynced() => (Icons.cloud_done, Colors.green, 'Synced', false),
       SyncStatusSyncing() => (
         Icons.sync,

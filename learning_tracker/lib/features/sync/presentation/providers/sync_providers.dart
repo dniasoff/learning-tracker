@@ -3,6 +3,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_auth_state.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
@@ -11,9 +13,11 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 /// Provider for FirestoreDataSource, scoped to the active profile.
 ///
-/// When the active profile changes, this provider rebuilds with the new
-/// profileId, changing all Firestore paths to the new profile's subcollection.
-final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
+/// Returns null when user has no cloud account (local-only mode).
+final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  if (authState is! CloudAuthState) return null;
+
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
   final profileId = ref.watch(activeProfileIdProvider);
@@ -26,9 +30,15 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
 });
 
 /// Provider for OfflineQueue.
-final offlineQueueProvider = Provider<OfflineQueue>((ref) {
+///
+/// Returns null when user has no cloud account (local-only mode).
+final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  if (!authState.hasCloudAccount) return null;
+
   final database = ref.watch(userDatabaseProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
+  if (firestoreDataSource == null) return null;
   final logger = ref.watch(talkerProvider);
 
   return OfflineQueue(
@@ -39,12 +49,23 @@ final offlineQueueProvider = Provider<OfflineQueue>((ref) {
 });
 
 /// Provider for SyncEngine.
-final syncEngineProvider = Provider<SyncEngine>((ref) {
+///
+/// Three-tier activation:
+/// - Tier 0: No account (local-only) → returns null
+/// - Tier 1: Account exists, offline → engine instantiated but dormant
+/// - Tier 2: Account + online → full sync active
+final syncEngineProvider = Provider<SyncEngine?>((ref) {
+  final authState = ref.watch(authStateProvider);
+
+  // Tier 0: No cloud account — no sync engine needed
+  if (!authState.hasCloudAccount) return null;
+
   final database = ref.watch(userDatabaseProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
+  if (firestoreDataSource == null) return null;
   final offlineQueue = ref.watch(offlineQueueProvider);
+  if (offlineQueue == null) return null;
   final logger = ref.watch(talkerProvider);
-
   final connectivityService = ref.watch(connectivityServiceProvider);
 
   final engine = SyncEngine(
@@ -55,14 +76,11 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     connectivityService: connectivityService,
   );
 
-  // Initialize on creation; surface errors onto the status stream.
+  // Initialize; surface errors onto the status stream.
   engine.initialize().catchError((Object error, StackTrace stackTrace) {
-    // initialize() updates the status stream with an error status on failure,
-    // but catchError is needed here so an unhandled async error doesn't crash
-    // the isolate when the Future is fire-and-forget.
+    // catchError needed so unhandled async error doesn't crash the isolate.
   });
 
-  // Dispose when provider is disposed
   ref.onDispose(() {
     engine.dispose();
   });
@@ -73,11 +91,17 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
 /// Provider for sync status stream.
 final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
   final engine = ref.watch(syncEngineProvider);
+  if (engine == null) {
+    return Stream.value(const SyncStatus.localOnly());
+  }
   return engine.statusStream;
 });
 
 /// Provider for current sync status (from stream).
 final syncStatusProvider = Provider<SyncStatus>((ref) {
+  final engine = ref.watch(syncEngineProvider);
+  if (engine == null) return const SyncStatus.localOnly();
+
   final asyncStatus = ref.watch(syncStatusStreamProvider);
   return asyncStatus.when(
     data: (status) => status,

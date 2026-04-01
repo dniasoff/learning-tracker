@@ -11,12 +11,12 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 /// Implementation of [BookmarkRepository] using Drift database and sync engine.
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final UserDatabase _database;
-  final SyncEngine _syncEngine;
+  final SyncEngine? _syncEngine;
   final ContentRepository _contentRepository;
 
   BookmarkRepositoryImpl({
     required UserDatabase database,
-    required SyncEngine syncEngine,
+    required SyncEngine? syncEngine,
     required ContentRepository contentRepository,
   }) : _database = database,
        _syncEngine = syncEngine,
@@ -166,7 +166,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
   @override
   Future<int> syncFromFirestore() async {
-    final remoteBookmarks = await _syncEngine.fetchBookmarksFromFirestore();
+    final remoteBookmarks = await _syncEngine?.fetchBookmarksFromFirestore() ?? [];
     for (final remote in remoteBookmarks) {
       await mergeRemoteBookmark(remote);
     }
@@ -241,7 +241,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
   /// Queue bookmark for Firestore sync.
   Future<void> _syncBookmark(BookmarkEntity bookmark) async {
-    await _syncEngine.pushBookmark(bookmark.toFirestore());
+    await _syncEngine?.pushBookmark(bookmark.toFirestore());
   }
 
   /// Convert database model to domain entity.

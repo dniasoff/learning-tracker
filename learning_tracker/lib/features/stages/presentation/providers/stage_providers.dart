@@ -15,7 +15,7 @@ final stageDefinitionRepositoryProvider =
       return StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
         completionDao: database.completionDao,
-        pushSettings: syncEngine.pushSettings,
+        pushSettings: syncEngine?.pushSettings,
       );
     });
 
