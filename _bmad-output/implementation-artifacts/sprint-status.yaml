@@ -201,3 +201,19 @@ development_status:
   19-11-e2e-offline-integration-testing: done
   19-12-content-db-resilience-error-recovery: done
   epic-19-retrospective: optional
+
+  # Epic 20: Dashboard & Progress Redesign — Multi-Track, Per-Track Isolation (12 stories)
+  epic-20: backlog
+  20-1-schema-definition-trackid-on-7-config-tables-paceresetdate: backlog
+  20-2-track-scoped-daos-add-trackid-filters-to-all-queries: backlog
+  20-3-trackprogress-domain-models-variant-aware-progress-types: backlog
+  20-4-track-scoped-providers-replace-curriculum-scoped-with-per-track: backlog
+  20-5-per-track-scheduler-scheduler-runs-per-track-tasks-carry-trackid: backlog
+  20-6-program-calendar-mock-calendarposition-model-mock-provider: backlog
+  20-7-dashboard-stats-row-unified-task-list: backlog
+  20-8-dashboard-track-cards-4-variants: backlog
+  20-9-dashboard-recovery-actions-jump-to-today-reset-pace: backlog
+  20-10-progress-screen-track-detail-redesign: backlog
+  20-11-charts-completion-history-track-filter: backlog
+  20-12-learning-journey-curriculum-view-with-learned-reviewed-counts: backlog
+  epic-20-retrospective: optional
