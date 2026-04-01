@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
@@ -68,7 +68,7 @@ class EngagementMetrics {
 ///
 /// Does not create new data models — aggregates completions, streaks, points, and pace.
 class ParentDashboardAggregator {
-  final AppDatabase _db;
+  final UserDatabase _db;
 
   ParentDashboardAggregator(this._db);
 

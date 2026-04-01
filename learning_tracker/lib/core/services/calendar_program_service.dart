@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:learning_tracker/core/database/app_database.dart';
 import 'package:learning_tracker/core/network/hebcal/hebcal_api_client.dart';
 import 'package:learning_tracker/core/network/sefaria/models/sefaria_calendar_response.dart';
 import 'package:learning_tracker/core/network/sefaria/sefaria_calendar_client.dart';
@@ -25,102 +22,46 @@ class CalendarProgramEntry {
 
 /// Service that orchestrates calendar program data from multiple APIs.
 ///
-/// Handles caching, merging Sefaria + Hebcal results, and mapping
-/// API responses to internal program identifiers.
+/// Fetches fresh data from Sefaria + Hebcal on each call.
+/// Story 19.4 will replace API calls with local CalendarCycles lookups.
 class CalendarProgramService {
   final SefariaCalendarClient _sefariaClient;
   final HebcalApiClient _hebcalClient;
-  final AppDatabase _database;
 
   CalendarProgramService(
     this._sefariaClient,
     this._hebcalClient,
-    this._database,
   );
 
-  /// Get today's calendar programs, using cache when available.
+  /// Get today's calendar programs, fetching fresh from APIs.
   Future<List<CalendarProgramEntry>> getTodayPrograms() async {
     final now = DateTime.now();
-    final dateKey =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
     final entries = <CalendarProgramEntry>[];
 
-    // Fetch from Sefaria (with caching)
-    final sefariaEntries = await _fetchSefariaWithCache(now, dateKey);
+    // Fetch from Sefaria
+    final sefariaEntries = await _fetchSefaria(now);
     entries.addAll(sefariaEntries);
 
-    // Fetch from Hebcal (with caching)
-    final hebcalEntries = await _fetchHebcalWithCache(now, dateKey);
+    // Fetch from Hebcal
+    final hebcalEntries = await _fetchHebcal(now);
     entries.addAll(hebcalEntries);
 
     return entries;
   }
 
-  Future<List<CalendarProgramEntry>> _fetchSefariaWithCache(
-    DateTime date,
-    String dateKey,
-  ) async {
-    // Check cache
-    final cached = await _database.calendarCacheDao.getCached(
-      'sefaria',
-      dateKey,
+  Future<List<CalendarProgramEntry>> _fetchSefaria(DateTime date) async {
+    final response = await _sefariaClient.fetchCalendar(
+      year: date.year,
+      month: date.month,
+      day: date.day,
     );
-
-    SefariaCalendarResponse response;
-    if (cached != null &&
-        DateTime.now().difference(cached.fetchedAt).inHours < 24) {
-      // Use cached response
-      response = SefariaCalendarResponse.fromJson(
-        jsonDecode(cached.responseJson) as Map<String, dynamic>,
-      );
-    } else {
-      // Fetch fresh
-      response = await _sefariaClient.fetchCalendar(
-        year: date.year,
-        month: date.month,
-        day: date.day,
-      );
-      // Cache it
-      await _database.calendarCacheDao.upsertCache(
-        source: 'sefaria',
-        dateKey: dateKey,
-        responseJson: jsonEncode(_sefariaResponseToJson(response)),
-        fetchedAt: DateTime.now().toUtc(),
-      );
-    }
 
     // Map API entries to our unified model
     return _mapSefariaEntries(response.calendarItems);
   }
 
-  Future<List<CalendarProgramEntry>> _fetchHebcalWithCache(
-    DateTime date,
-    String dateKey,
-  ) async {
-    final cached = await _database.calendarCacheDao.getCached(
-      'hebcal',
-      dateKey,
-    );
-
-    if (cached != null &&
-        DateTime.now().difference(cached.fetchedAt).inHours < 24) {
-      // For Hebcal, we store the mapped entries directly
-      final items = (jsonDecode(cached.responseJson) as List<dynamic>)
-          .cast<Map<String, dynamic>>();
-      return items
-          .map(
-            (e) => CalendarProgramEntry(
-              programId: e['programId'] as String,
-              displayNameEn: e['displayNameEn'] as String,
-              displayNameHe: e['displayNameHe'] as String,
-              todayRef: e['todayRef'] as String,
-              apiSource: 'hebcal',
-            ),
-          )
-          .toList();
-    }
-
+  Future<List<CalendarProgramEntry>> _fetchHebcal(DateTime date) async {
     try {
       final response = await _hebcalClient.fetchDailyLearning(date: date);
       final entries = <CalendarProgramEntry>[];
@@ -144,25 +85,6 @@ class CalendarProgramService {
           );
         }
       }
-
-      // Cache
-      await _database.calendarCacheDao.upsertCache(
-        source: 'hebcal',
-        dateKey: dateKey,
-        responseJson: jsonEncode(
-          entries
-              .map(
-                (e) => {
-                  'programId': e.programId,
-                  'displayNameEn': e.displayNameEn,
-                  'displayNameHe': e.displayNameHe,
-                  'todayRef': e.todayRef,
-                },
-              )
-              .toList(),
-        ),
-        fetchedAt: DateTime.now().toUtc(),
-      );
 
       return entries;
     } catch (_) {
@@ -206,25 +128,5 @@ class CalendarProgramService {
     } catch (_) {
       return fallback;
     }
-  }
-
-  Map<String, dynamic> _sefariaResponseToJson(
-    SefariaCalendarResponse response,
-  ) {
-    return {
-      'calendar_items': response.calendarItems
-          .map(
-            (e) => {
-              'title': {'en': e.title.en, 'he': e.title.he},
-              'url': e.url,
-              'ref': e.sefariaRef,
-              'category': e.category,
-              'order': e.order,
-            },
-          )
-          .toList(),
-      'date': response.date,
-      'timezone': response.timezone,
-    };
   }
 }

@@ -3,7 +3,7 @@
 part of 'active_curriculum_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$ActiveCurriculumDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$ActiveCurriculumDaoMixin on DatabaseAccessor<UserDatabase> {
   $ActiveCurriculaTable get activeCurricula => attachedDatabase.activeCurricula;
   ActiveCurriculumDaoManager get managers => ActiveCurriculumDaoManager(this);
 }

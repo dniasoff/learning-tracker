@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 
 part 'learning_ledger_dao.g.dart';
@@ -9,7 +9,7 @@ part 'learning_ledger_dao.g.dart';
 /// Learning ledger entries are append-only: only insert operations are exposed.
 /// No update or delete methods are provided to enforce immutability.
 @DriftAccessor(tables: [LearningLedger])
-class LearningLedgerDao extends DatabaseAccessor<AppDatabase>
+class LearningLedgerDao extends DatabaseAccessor<UserDatabase>
     with _$LearningLedgerDaoMixin {
   LearningLedgerDao(super.db);
 

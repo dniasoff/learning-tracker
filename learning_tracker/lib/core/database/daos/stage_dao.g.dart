@@ -3,7 +3,7 @@
 part of 'stage_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$StageDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$StageDaoMixin on DatabaseAccessor<UserDatabase> {
   $StageDefinitionsTable get stageDefinitions =>
       attachedDatabase.stageDefinitions;
   StageDaoManager get managers => StageDaoManager(this);

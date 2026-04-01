@@ -97,7 +97,7 @@ class _PickerBody extends ConsumerWidget {
               return;
             }
             final exists = await ref
-                .read(appDatabaseProvider)
+                .read(userDatabaseProvider)
                 .profileDao
                 .profileExistsByName(1, n);
             set(
@@ -278,7 +278,7 @@ class _PickerBody extends ConsumerWidget {
               return;
             }
             final exists = await ref
-                .read(appDatabaseProvider)
+                .read(userDatabaseProvider)
                 .profileDao
                 .profileExistsByName(1, n, excludeId: profile.id);
             set(

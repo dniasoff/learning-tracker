@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -30,7 +30,7 @@ class MockQueryDocumentSnapshot extends Mock
 void main() {
   late MockAuthRepository mockAuthRepo;
   late MockFirebaseFirestore mockFirestore;
-  late AppDatabase db;
+  late UserDatabase db;
   late AccountManagementService service;
 
   setUp(() {

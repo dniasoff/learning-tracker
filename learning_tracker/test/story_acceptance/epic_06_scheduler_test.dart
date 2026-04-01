@@ -3,7 +3,7 @@
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/services/daily_schedule_composer.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
@@ -34,7 +34,7 @@ void main() {
   // ── Story 6.1: Parametric Scheduler Engine ─────────────────────────
 
   group('Story 6.1 -- Parametric Scheduler Engine', tags: ['story_6_1'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late SchedulerEngine engine;
     final now = DateTime.utc(2026, 3, 15);
     const curriculum = CurriculumId.mishnayos;
@@ -151,7 +151,7 @@ void main() {
   // ── Story 6.2: Daily Task Generation & Display ─────────────────
 
   group('Story 6.2 -- Daily Task Generation & Display', tags: ['story_6_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late SchedulerEngine engine;
     late DailyTaskGenerator generator;
     final now = DateTime.utc(2026, 3, 15);
@@ -384,7 +384,7 @@ void main() {
   // ── Story 6.3: Goal Management (Per-Curriculum Deadlines) ────
 
   group('Story 6.3 -- Goal Management', tags: ['story_6_3'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late GoalRepositoryImpl goalRepo;
     const curriculum = CurriculumId.mishnayos;
     const chumash = CurriculumId.chumash;
@@ -745,7 +745,7 @@ void main() {
 
     // ── Integration: Full pace scenario ──
 
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() async {
       db = createTestDatabase();

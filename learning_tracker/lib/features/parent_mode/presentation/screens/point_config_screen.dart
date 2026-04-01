@@ -2,7 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -27,7 +27,7 @@ class _CurriculumPointData {
 final _pointConfigDataProvider = FutureProvider<List<_CurriculumPointData>>((
   ref,
 ) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final activeCurricula = await db.activeCurriculumDao.getActiveCurricula();
 
   final result = <_CurriculumPointData>[];
@@ -140,7 +140,7 @@ class _CurriculumExpansionTile extends ConsumerWidget {
     );
 
     if (confirmed ?? false) {
-      final db = ref.read(appDatabaseProvider);
+      final db = ref.read(userDatabaseProvider);
       await db.pointConfigDao.deleteAllForCurriculum(
         data.curriculum.storageKey,
       );
@@ -185,7 +185,7 @@ class _StagePointRow extends ConsumerWidget {
         stageName: stagePoint.stage.stageName,
         currentPoints: stagePoint.config.points,
         onSave: (newPoints) async {
-          final db = ref.read(appDatabaseProvider);
+          final db = ref.read(userDatabaseProvider);
           await db.pointConfigDao.upsertConfig(
             PointConfigsCompanion(
               curriculumId: Value(curriculumId),

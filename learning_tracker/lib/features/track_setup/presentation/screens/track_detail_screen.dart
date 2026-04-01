@@ -2,7 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -48,7 +48,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
   Future<List<Goal>>? _goalsFuture;
 
   void _refreshData() {
-    final db = ref.read(appDatabaseProvider);
+    final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     _trackFuture =
         (db.select(db.curriculumTracks)..where(
@@ -527,7 +527,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       ),
     ).then((result) async {
       if (result != null && mounted) {
-        final db = ref.read(appDatabaseProvider);
+        final db = ref.read(userDatabaseProvider);
         final profileId = ref.read(activeProfileIdProvider);
         final wizardResult = result.wizardResult;
 
@@ -592,7 +592,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       ),
     ).then((result) async {
       if (result != null && mounted) {
-        final db = ref.read(appDatabaseProvider);
+        final db = ref.read(userDatabaseProvider);
         final now = DateTime.now().toUtc();
 
         if (existingGoals.isNotEmpty) {

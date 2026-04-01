@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/reward_pool_items.dart';
 import 'package:learning_tracker/core/database/tables/reward_pools.dart';
 
@@ -7,7 +7,7 @@ part 'reward_pool_dao.g.dart';
 
 /// DAO for reward pools and their items.
 @DriftAccessor(tables: [RewardPools, RewardPoolItems])
-class RewardPoolDao extends DatabaseAccessor<AppDatabase>
+class RewardPoolDao extends DatabaseAccessor<UserDatabase>
     with _$RewardPoolDaoMixin {
   RewardPoolDao(super.db);
 

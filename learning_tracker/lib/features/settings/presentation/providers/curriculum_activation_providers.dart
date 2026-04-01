@@ -10,7 +10,7 @@ import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.
 /// Provider for CurriculumActivationService
 final curriculumActivationServiceProvider =
     Provider<CurriculumActivationService>((ref) {
-      final database = ref.watch(appDatabaseProvider);
+      final database = ref.watch(userDatabaseProvider);
       final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
       final trackRepository = ref.watch(trackRepositoryProvider);
 
@@ -34,7 +34,7 @@ final activeCurriculaProvider = FutureProvider<List<CurriculumId>>((ref) async {
 final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((
   ref,
 ) async* {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
 
   await for (final storageKeys
       in database.activeCurriculumDao.watchActiveCurricula()) {
@@ -63,6 +63,6 @@ final isCurriculumActiveProvider = FutureProvider.family<bool, CurriculumId>((
   ref,
   curriculum,
 ) async {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   return database.activeCurriculumDao.isActive(curriculum);
 });

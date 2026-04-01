@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
@@ -389,7 +389,7 @@ void main() {
   // ── Story 11.2: Tutor Dashboard (Read-Only) ──────────────────
 
   group('Story 11.2 -- Tutor Dashboard (Read-Only)', tags: ['story_11_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() {
       db = createTestDatabase();
@@ -399,7 +399,7 @@ void main() {
       await db.close();
     });
 
-    Future<void> seedCompletions(AppDatabase db) async {
+    Future<void> seedCompletions(UserDatabase db) async {
       final now = DateTime.now().toUtc();
       // Seed active curriculum
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);

@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
 
 part 'goal_dao.g.dart';
 
 @DriftAccessor(tables: [Goals])
-class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
+class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
   GoalDao(super.db);
 
   Future<List<Goal>> getAllGoals() => select(goals).get();

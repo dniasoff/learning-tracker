@@ -10,7 +10,7 @@ final accountManagementServiceProvider = Provider<AccountManagementService>((
 ) {
   return AccountManagementService(
     authRepository: ref.watch(authRepositoryProvider),
-    database: ref.watch(appDatabaseProvider),
+    database: ref.watch(userDatabaseProvider),
     firestore: ref.watch(firebaseFirestoreProvider),
   );
 });

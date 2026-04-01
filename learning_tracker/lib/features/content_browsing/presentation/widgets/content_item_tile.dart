@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -196,7 +196,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
         sefariaRef: sefariaRef,
       )),
     );
-    final db = ref.watch(appDatabaseProvider);
+    final db = ref.watch(userDatabaseProvider);
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -261,7 +261,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
   }
 
   Future<Map<int, String>> _resolveStageNames(
-    AppDatabase db,
+    UserDatabase db,
     String curriculumId,
   ) async {
     final stages = await db.stageDao.getStageDefinitionsByCurriculum(

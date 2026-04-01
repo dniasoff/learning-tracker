@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -54,7 +54,7 @@ void main() {
 
   Widget createTestWidgetWithProfileService({
     required MockFirebaseAuth mockFirebaseAuth,
-    required AppDatabase database,
+    required UserDatabase database,
   }) {
     return ProviderScope(
       overrides: [
@@ -238,7 +238,7 @@ void main() {
         final mockCredential = MockUserCredential();
         final mockAuth = MockFirebaseAuth();
         final mockUser = MockUser();
-        final db = AppDatabase(NativeDatabase.memory());
+        final db = UserDatabase(NativeDatabase.memory());
 
         addTearDown(() async => db.close());
 

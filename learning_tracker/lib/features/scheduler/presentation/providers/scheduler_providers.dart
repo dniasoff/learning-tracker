@@ -25,7 +25,7 @@ DateTime clock(Ref ref) => DateTime.now().toUtc();
 
 @riverpod
 SchedulerEngine schedulerEngine(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
 
   // Use scope-aware content: returns scoped content if scopes are set,
   // otherwise returns full curriculum content.
@@ -143,7 +143,7 @@ Future<PaceStatus?> paceStatus(
   String goalType = 'deadline',
   double? pacePerDay,
 }) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final now = ref.watch(clockProvider);
 
   final profileId = ref.watch(activeProfileIdProvider);
@@ -194,7 +194,7 @@ Future<PaceStatus?> paceStatus(
 /// boost so they appear near the top of the list.
 @riverpod
 Future<List<DailyTask>> allDailyTasks(Ref ref) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final generator = ref.watch(dailyTaskGeneratorProvider);
   final skipped = ref.watch(skippedTasksProvider);
   final previouslySkipped = await ref.watch(

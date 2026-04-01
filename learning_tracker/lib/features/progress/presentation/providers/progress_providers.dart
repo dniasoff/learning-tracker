@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -20,7 +20,7 @@ part 'progress_providers.g.dart';
 /// Provider for the progress repository instance.
 @riverpod
 ProgressRepository progressRepository(Ref ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   return ProgressRepositoryImpl(database: database);
 }
 
@@ -29,7 +29,7 @@ ProgressRepository progressRepository(Ref ref) {
 /// Returns a map of TrackType to completion counts for the given curriculum.
 @riverpod
 Future<Map<TrackType, int>> trackBreakdown(Ref ref, String curriculumId) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final rawBreakdown = await db.completionDao.getTrackBreakdownByProfile(
     curriculumId,
@@ -57,7 +57,7 @@ Future<Map<TrackType, int>> trackBreakdown(Ref ref, String curriculumId) async {
 /// Returns the total completion count across all tracks for the given curriculum.
 @riverpod
 Future<int> aggregateCount(Ref ref, String curriculumId) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.completionDao.getAggregateCountByProfile(curriculumId, profileId);
 }
@@ -67,7 +67,7 @@ Future<int> aggregateCount(Ref ref, String curriculumId) async {
 ///
 /// Using [ProgressRepository] (not [CompletionRepository]) keeps the history
 /// screen decoupled from write-side concerns (sync engine, content repository)
-/// and makes widget testing simpler — only [appDatabaseProvider] needs to be
+/// and makes widget testing simpler — only [userDatabaseProvider] needs to be
 /// overridden. Watching this provider keeps the screen reactive; invalidating
 /// it causes the UI to rebuild with fresh data.
 final completionHistoryForCurriculumProvider = FutureProvider.autoDispose
@@ -95,7 +95,7 @@ Future<CurriculumProgressData> curriculumProgress(
   Ref ref,
   String curriculumId,
 ) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
 
   // Resolve CurriculumId enum for content repository
   final curriculumEnum = CurriculumId.values.firstWhere(
@@ -130,7 +130,7 @@ Future<CurriculumProgressData> curriculumProgress(
 /// Family provider keyed by curriculumId per P3.
 @riverpod
 Future<PaceStatus?> curriculumPaceStatus(Ref ref, String curriculumId) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final now = ref.watch(clockProvider);
 
   final profileId = ref.watch(activeProfileIdProvider);

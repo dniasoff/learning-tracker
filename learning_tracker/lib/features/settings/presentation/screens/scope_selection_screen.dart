@@ -45,7 +45,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
   }
 
   Future<void> _loadExistingScopes() async {
-    final db = ref.read(appDatabaseProvider);
+    final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final scopes = await db.curriculumScopeDao.getScopes(
       profileId,
@@ -267,7 +267,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
   }
 
   Future<void> _save() async {
-    final db = ref.read(appDatabaseProvider);
+    final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
 
     if (_selectAll) {

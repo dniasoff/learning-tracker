@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -14,7 +14,7 @@ part 'learning_ledger_providers.g.dart';
 final _activeProfileModeProvider = FutureProvider.autoDispose<String>((
   ref,
 ) async {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profile = await database.profileDao.getProfileById(profileId);
   return profile?.mode ?? 'adult';
@@ -23,7 +23,7 @@ final _activeProfileModeProvider = FutureProvider.autoDispose<String>((
 /// Provides the learning ledger repository.
 @riverpod
 LearningLedgerRepository learningLedgerRepository(Ref ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
@@ -52,7 +52,7 @@ ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
 /// Watches all ledger entries for the active profile.
 final learningLedgerProvider =
     FutureProvider.autoDispose<List<LearningLedgerData>>((ref) async {
-      final database = ref.watch(appDatabaseProvider);
+      final database = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       return database.learningLedgerDao.getEntriesByProfile(profileId);
     });
@@ -60,7 +60,7 @@ final learningLedgerProvider =
 /// Watches ledger entries filtered by curriculum for the active profile.
 final curriculumLedgerProvider = FutureProvider.autoDispose
     .family<List<LearningLedgerData>, String>((ref, curriculumId) async {
-      final database = ref.watch(appDatabaseProvider);
+      final database = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       return database.learningLedgerDao.getEntriesByCurriculum(
         profileId,

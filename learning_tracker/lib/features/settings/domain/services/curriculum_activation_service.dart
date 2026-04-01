@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
@@ -13,7 +13,7 @@ import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.
 /// - Initializing default active curriculum (Mishnayos)
 class CurriculumActivationService {
   CurriculumActivationService({
-    required AppDatabase database,
+    required UserDatabase database,
     required Future<void> Function(List<String>) pushActiveCurricula,
     required TrackRepository trackRepository,
     this.isTutorMode = false,
@@ -21,7 +21,7 @@ class CurriculumActivationService {
        _pushActiveCurricula = pushActiveCurricula,
        _trackRepository = trackRepository;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
   final Future<void> Function(List<String>) _pushActiveCurricula;
   final TrackRepository _trackRepository;
 

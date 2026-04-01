@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
@@ -7,14 +7,14 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 class LearningOrderRepositoryImpl implements LearningOrderRepository {
   LearningOrderRepositoryImpl({
-    required AppDatabase database,
+    required UserDatabase database,
     required ContentRepository contentRepository,
     SyncEngine? syncEngine,
   }) : _database = database,
        _contentRepository = contentRepository,
        _syncEngine = syncEngine;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
   final ContentRepository _contentRepository;
   // ignore: unused_field, will be used once SyncEngine supports pushLearningOrder
   // ignore: unused_field

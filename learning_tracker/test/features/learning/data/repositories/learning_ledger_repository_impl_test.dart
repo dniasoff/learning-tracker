@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
@@ -10,7 +10,7 @@ import '../../../../helpers/test_database.dart';
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late _MockSyncEngine mockSyncEngine;
 
   setUp(() {

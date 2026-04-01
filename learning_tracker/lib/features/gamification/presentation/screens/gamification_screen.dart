@@ -18,7 +18,7 @@ part 'gamification_screen.g.dart';
 
 @riverpod
 Future<Set<DateTime>> streakCalendar(Ref ref) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final streakService = StreakService(db);
   final now = DateTime.now().toUtc();
   final thirtyDaysAgo = now.subtract(const Duration(days: 30));

@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -79,7 +79,7 @@ class TutorPaceInfo {
 
 /// Read-only aggregator that computes tutor dashboard data from existing providers.
 class TutorDashboardAggregator {
-  final AppDatabase _db;
+  final UserDatabase _db;
 
   TutorDashboardAggregator(this._db);
 

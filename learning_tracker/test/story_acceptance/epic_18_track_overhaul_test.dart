@@ -10,8 +10,9 @@ import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -22,6 +23,8 @@ import 'package:learning_tracker/features/track_setup/domain/entities/add_track_
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
+
+import '../helpers/test_database.dart';
 
 class _MockTrackRepository extends Mock implements TrackRepository {}
 
@@ -100,12 +103,14 @@ void main() {
       // ── AC-6: Points initialization per track ──
 
       group('AC-6: Points initialization per track', () {
-        late AppDatabase db;
+        late UserDatabase db;
+        late ContentDatabase contentDb;
         late TrackCreationService service;
         late _MockTrackRepository mockTrackRepo;
 
         setUp(() {
-          db = AppDatabase(NativeDatabase.memory());
+          db = UserDatabase(NativeDatabase.memory());
+          contentDb = createTestContentDatabase();
           mockTrackRepo = _MockTrackRepository();
 
           when(
@@ -120,7 +125,7 @@ void main() {
 
           final wizardService = LearningProcessWizardService(
             stageDao: db.stageDao,
-            learningProgramDao: db.learningProgramDao,
+            learningProgramDao: contentDb.contentLearningProgramDao,
             profileProgramDao: db.profileProgramDao,
           );
 
@@ -136,6 +141,7 @@ void main() {
 
         tearDown(() async {
           await db.close();
+          await contentDb.close();
         });
 
         test('creating a track seeds default point_configs '
@@ -326,7 +332,7 @@ void main() {
         test(
           'StageDefinitionRepositoryImpl.initializeDefaults creates Hebrew stages',
           () async {
-            final db = AppDatabase(NativeDatabase.memory());
+            final db = UserDatabase(NativeDatabase.memory());
             addTearDown(db.close);
 
             final repo = StageDefinitionRepositoryImpl(
@@ -349,12 +355,14 @@ void main() {
         test(
           'LearningProcessWizardService._applyCustom creates לימוד stage',
           () async {
-            final db = AppDatabase(NativeDatabase.memory());
+            final db = UserDatabase(NativeDatabase.memory());
+            final cDb = createTestContentDatabase();
             addTearDown(db.close);
+            addTearDown(cDb.close);
 
             final service = LearningProcessWizardService(
               stageDao: db.stageDao,
-              learningProgramDao: db.learningProgramDao,
+              learningProgramDao: cDb.contentLearningProgramDao,
               profileProgramDao: db.profileProgramDao,
             );
 
@@ -378,12 +386,14 @@ void main() {
         test(
           'LearningProcessWizardService._applyNoReview creates לימוד stage',
           () async {
-            final db = AppDatabase(NativeDatabase.memory());
+            final db = UserDatabase(NativeDatabase.memory());
+            final cDb = createTestContentDatabase();
             addTearDown(db.close);
+            addTearDown(cDb.close);
 
             final service = LearningProcessWizardService(
               stageDao: db.stageDao,
-              learningProgramDao: db.learningProgramDao,
+              learningProgramDao: cDb.contentLearningProgramDao,
               profileProgramDao: db.profileProgramDao,
             );
 
@@ -471,7 +481,7 @@ void main() {
 
       group('AC-5: Data migration v23→v24', () {
         test('migration converts English defaults to Hebrew', () async {
-          final db = AppDatabase(NativeDatabase.memory());
+          final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
 
           // Insert English defaults
@@ -509,7 +519,7 @@ void main() {
         });
 
         test('migration does not touch user-customized names', () async {
-          final db = AppDatabase(NativeDatabase.memory());
+          final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
 
           await db.stageDao.insertStageDefinition(
@@ -535,7 +545,7 @@ void main() {
         });
 
         test('migration is idempotent', () async {
-          final db = AppDatabase(NativeDatabase.memory());
+          final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
 
           await db.stageDao.insertStageDefinition(

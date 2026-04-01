@@ -962,7 +962,7 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'4c4c3c28d951e406d13398f7c9031b5648e4db96';
+    r'd66ad53edbf1f8c602195fcb39a82301bf3f8fcb';
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.

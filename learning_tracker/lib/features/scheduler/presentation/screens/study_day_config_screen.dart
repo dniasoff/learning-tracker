@@ -128,7 +128,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
   }
 
   void _toggleDay(WidgetRef ref, int dayOfWeek, DayType newType) {
-    final db = ref.read(appDatabaseProvider);
+    final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     db.studyDayConfigDao.upsertDayConfig(
       profileId: profileId,

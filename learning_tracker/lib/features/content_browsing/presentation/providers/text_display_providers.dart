@@ -10,9 +10,9 @@ part 'text_display_providers.g.dart';
 /// Provider for the text cache repository.
 @Riverpod(keepAlive: true)
 TextCacheRepository textCacheRepository(Ref ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(contentDatabaseProvider);
 
-  return TextCacheRepository(textCacheDao: database.textCacheDao);
+  return TextCacheRepository(textCacheDao: database.contentTextCacheDao);
 }
 
 /// Provider for fetching text by Sefaria reference.
@@ -54,10 +54,11 @@ class ShowNikud extends _$ShowNikud {
 /// Provider for the text download service.
 @Riverpod(keepAlive: true)
 TextDownloadService textDownloadService(Ref ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final contentDb = ref.watch(contentDatabaseProvider);
+  final userDb = ref.watch(userDatabaseProvider);
   return TextDownloadService(
-    textCacheDao: database.textCacheDao,
-    textDownloadStatusDao: database.textDownloadStatusDao,
+    textCacheDao: contentDb.contentTextCacheDao,
+    textDownloadStatusDao: userDb.textDownloadStatusDao,
   );
 }
 

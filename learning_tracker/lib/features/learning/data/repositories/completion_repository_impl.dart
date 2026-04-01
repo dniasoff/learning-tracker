@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' as drift;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [CompletionRepository] using Drift database and sync engine.
 class CompletionRepositoryImpl implements CompletionRepository {
-  final AppDatabase _database;
+  final UserDatabase _database;
   final SyncEngine _syncEngine;
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
@@ -22,7 +22,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final int _activeProfileId;
 
   CompletionRepositoryImpl({
-    required AppDatabase database,
+    required UserDatabase database,
     required SyncEngine syncEngine,
     required ContentRepository contentRepository,
     BookmarkRepository? bookmarkRepository,

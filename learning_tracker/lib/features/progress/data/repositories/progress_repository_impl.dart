@@ -1,12 +1,12 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 
 /// Implementation of [ProgressRepository] using Drift database.
 class ProgressRepositoryImpl implements ProgressRepository {
-  final AppDatabase _database;
+  final UserDatabase _database;
 
-  ProgressRepositoryImpl({required AppDatabase database})
+  ProgressRepositoryImpl({required UserDatabase database})
     : _database = database;
 
   @override

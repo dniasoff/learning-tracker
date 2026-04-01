@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:talker/talker.dart';
@@ -12,14 +12,14 @@ import 'package:talker/talker.dart';
 /// flushed to Firestore.
 class OfflineQueue {
   OfflineQueue({
-    required AppDatabase database,
+    required UserDatabase database,
     required FirestoreDataSource firestoreDataSource,
     required Talker logger,
   }) : _database = database,
        _firestoreDataSource = firestoreDataSource,
        _logger = logger;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
   final Talker _logger;
 

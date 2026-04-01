@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart'
     show FirebaseException, Timestamp;
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -20,7 +20,7 @@ import 'package:talker/talker.dart';
 /// - **Offline queue**: Writes are queued when offline, flushed on reconnect
 class SyncEngine {
   SyncEngine({
-    required AppDatabase database,
+    required UserDatabase database,
     required FirestoreDataSource firestoreDataSource,
     required OfflineQueue offlineQueue,
     required Talker logger,
@@ -31,7 +31,7 @@ class SyncEngine {
        _logger = logger,
        _connectivityService = connectivityService;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
   final OfflineQueue _offlineQueue;
   final Talker _logger;
@@ -130,6 +130,11 @@ class SyncEngine {
 
   /// Attach foreground listeners for real-time sync.
   Future<void> attachListeners() async {
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.debug('Cannot attach listeners: user not authenticated');
+      return;
+    }
+
     if (_listenersAttached) {
       _logger.debug('Listeners already attached');
       return;
@@ -220,6 +225,11 @@ class SyncEngine {
 
   /// Pull latest data from Firestore on app launch.
   Future<void> pullOnLaunch() async {
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.info('Pull-on-launch skipped: user not authenticated');
+      return;
+    }
+
     if (!_isOnline) {
       _updateStatus(
         SyncStatus.offline(
@@ -1084,6 +1094,27 @@ class SyncEngine {
   /// pull-on-launch sync only.
   void _handleListenerError(Object error, StackTrace stackTrace) {
     _logger.error('Listener error', error, stackTrace);
+
+    // Distinguish PERMISSION_DENIED (auth issue) from other errors (quota).
+    // Permission errors should detach immediately — retrying just wastes
+    // requests and the 3-strike counter would misattribute them as quota.
+    if (error is FirebaseException && error.code == 'permission-denied') {
+      _logger.warning(
+        'Listener received PERMISSION_DENIED — detaching listeners. '
+        'Likely a stale or missing auth session.',
+      );
+      detachListeners();
+      _updateStatus(
+        SyncStatus.error(
+          message:
+              'Authentication error — real-time sync paused. '
+              'Sync will resume on next sign-in.',
+          failedAt: DateTime.now().toUtc(),
+        ),
+      );
+      return;
+    }
+
     _consecutiveListenerErrors++;
 
     if (_consecutiveListenerErrors >= quotaErrorThreshold && !_quotaDegraded) {

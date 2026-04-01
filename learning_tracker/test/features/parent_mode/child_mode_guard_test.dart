@@ -4,7 +4,7 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -15,7 +15,7 @@ class MockNavigationResolver extends Mock implements NavigationResolver {}
 class MockStackRouter extends Mock implements StackRouter {}
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late MockNavigationResolver mockResolver;
   late MockStackRouter mockRouter;
 

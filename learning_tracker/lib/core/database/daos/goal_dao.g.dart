@@ -3,7 +3,7 @@
 part of 'goal_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$GoalDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$GoalDaoMixin on DatabaseAccessor<UserDatabase> {
   $GoalsTable get goals => attachedDatabase.goals;
   GoalDaoManager get managers => GoalDaoManager(this);
 }

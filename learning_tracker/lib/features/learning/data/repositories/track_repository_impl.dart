@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -6,9 +6,9 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 
 /// Implementation of [TrackRepository] using Drift database.
 class TrackRepositoryImpl implements TrackRepository {
-  final AppDatabase _database;
+  final UserDatabase _database;
 
-  TrackRepositoryImpl({required AppDatabase database}) : _database = database;
+  TrackRepositoryImpl({required UserDatabase database}) : _database = database;
 
   @override
   Future<List<TrackType>> getActiveTracks(CurriculumId curriculumId) async {

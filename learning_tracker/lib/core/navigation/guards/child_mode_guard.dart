@@ -1,5 +1,5 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 
 /// Route guard that only allows access for child-mode accounts (FR67).
@@ -9,7 +9,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 class ChildModeGuard extends AutoRouteGuard {
   ChildModeGuard({required this.database});
 
-  final AppDatabase database;
+  final UserDatabase database;
 
   @override
   Future<void> onNavigation(

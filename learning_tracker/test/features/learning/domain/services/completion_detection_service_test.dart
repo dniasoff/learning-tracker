@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -18,7 +18,7 @@ class _MockContentRepository extends Mock implements ContentRepository {}
 const _currId = 'mishnayos';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late _MockSyncEngine mockSyncEngine;
   late _MockContentRepository mockContentRepo;
 

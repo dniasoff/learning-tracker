@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 
 /// Implementation of [ProfileRepository] using Drift database.
 class ProfileRepositoryImpl implements ProfileRepository {
-  final AppDatabase _db;
+  final UserDatabase _db;
 
   ProfileRepositoryImpl(this._db);
 

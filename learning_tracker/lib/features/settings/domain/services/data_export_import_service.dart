@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 /// Result of validating an import file.
 class ImportPreview {
@@ -55,10 +55,10 @@ class ImportPreview {
 /// streaks, points. Export does NOT include content items (text cache,
 /// download statuses) or sync queue.
 class DataExportImportService {
-  DataExportImportService({required AppDatabase database})
+  DataExportImportService({required UserDatabase database})
     : _database = database;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
 
   static const String _formatVersion = '1';
   static const List<String> _requiredSections = [

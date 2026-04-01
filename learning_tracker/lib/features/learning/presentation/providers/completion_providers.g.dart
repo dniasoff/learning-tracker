@@ -59,7 +59,7 @@ final class CompletionRepositoryProvider
 }
 
 String _$completionRepositoryHash() =>
-    r'a064c239251fead4f355e9af6611439f18d842eb';
+    r'ea0648954fd77832b9d74ebe55744dd86156d1e3';
 
 /// Provides the mark completion use case.
 
@@ -229,7 +229,7 @@ final class CompletionCountProvider
   }
 }
 
-String _$completionCountHash() => r'0a9090349dae10e96ad81e1ddef53ad3da8a33b1';
+String _$completionCountHash() => r'6945dfea9b86842bd2801dd6e83c986f265960af';
 
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.
@@ -329,7 +329,7 @@ final class ReviewCountsForCurriculumProvider
 }
 
 String _$reviewCountsForCurriculumHash() =>
-    r'6b66870b60c9a716ba3edf1909be820d47fd812b';
+    r'71312744f39f7921dd5153a9aeaf589f21bf523d';
 
 /// Batch review counts for all items in a curriculum (AC-3, AC-7).
 /// Single GROUP BY query — avoids N+1 per-item watches.
@@ -417,7 +417,7 @@ final class ItemStageBreakdownProvider
 }
 
 String _$itemStageBreakdownHash() =>
-    r'1fe87c28d61900a0b235e44b36ed6c2ada313389';
+    r'a6483b57733865d4ce8e43541014efbff3058043';
 
 /// Per-stage breakdown for a single item (AC-1, AC-5).
 

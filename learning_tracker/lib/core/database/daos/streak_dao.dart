@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
 
 part 'streak_dao.g.dart';
@@ -8,7 +8,7 @@ part 'streak_dao.g.dart';
 ///
 /// Manages the single-row global streak record.
 @DriftAccessor(tables: [Streaks])
-class StreakDao extends DatabaseAccessor<AppDatabase> with _$StreakDaoMixin {
+class StreakDao extends DatabaseAccessor<UserDatabase> with _$StreakDaoMixin {
   StreakDao(super.db);
 
   /// Get the current streak record, or null if none exists.

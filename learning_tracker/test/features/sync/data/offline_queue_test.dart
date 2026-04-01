@@ -1,6 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:mocktail/mocktail.dart';
@@ -8,12 +8,12 @@ import 'package:talker/talker.dart';
 
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
-AppDatabase _createInMemoryDatabase() {
-  return AppDatabase(NativeDatabase.memory());
+UserDatabase _createInMemoryDatabase() {
+  return UserDatabase(NativeDatabase.memory());
 }
 
 void main() {
-  late AppDatabase database;
+  late UserDatabase database;
   late MockFirestoreDataSource mockFirestore;
   late Talker logger;
   late OfflineQueue offlineQueue;

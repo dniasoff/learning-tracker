@@ -55,7 +55,7 @@ final class TutorDashboardAggregatorProvider
 }
 
 String _$tutorDashboardAggregatorHash() =>
-    r'44cc5375ecbbfc138ec14ac9e1d359fa3d45693b';
+    r'819c38d0f32520f77a9bdb16bd4d3b1103c2ef5f';
 
 @ProviderFor(tutorDashboardData)
 final tutorDashboardDataProvider = TutorDashboardDataProvider._();

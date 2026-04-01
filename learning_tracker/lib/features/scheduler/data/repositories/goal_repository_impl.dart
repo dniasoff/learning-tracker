@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart' as drift;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -8,10 +8,10 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [GoalRepository] using Drift database and sync engine.
 class GoalRepositoryImpl implements GoalRepository {
-  final AppDatabase _database;
+  final UserDatabase _database;
   final SyncEngine? _syncEngine;
 
-  GoalRepositoryImpl({required AppDatabase database, SyncEngine? syncEngine})
+  GoalRepositoryImpl({required UserDatabase database, SyncEngine? syncEngine})
     : _database = database,
       _syncEngine = syncEngine;
 

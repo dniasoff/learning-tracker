@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
 
 part 'point_config_dao.g.dart';
 
 @DriftAccessor(tables: [PointConfigs])
-class PointConfigDao extends DatabaseAccessor<AppDatabase>
+class PointConfigDao extends DatabaseAccessor<UserDatabase>
     with _$PointConfigDaoMixin {
   PointConfigDao(super.db);
 

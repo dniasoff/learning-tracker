@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
 
 part 'reward_dao.g.dart';
 
 /// DAO for the rewards table.
 @DriftAccessor(tables: [Rewards])
-class RewardDao extends DatabaseAccessor<AppDatabase> with _$RewardDaoMixin {
+class RewardDao extends DatabaseAccessor<UserDatabase> with _$RewardDaoMixin {
   RewardDao(super.db);
 
   /// Get all rewards ordered by point threshold ascending.

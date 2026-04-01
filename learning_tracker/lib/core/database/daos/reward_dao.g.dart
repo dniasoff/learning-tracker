@@ -3,7 +3,7 @@
 part of 'reward_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$RewardDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$RewardDaoMixin on DatabaseAccessor<UserDatabase> {
   $RewardsTable get rewards => attachedDatabase.rewards;
   RewardDaoManager get managers => RewardDaoManager(this);
 }

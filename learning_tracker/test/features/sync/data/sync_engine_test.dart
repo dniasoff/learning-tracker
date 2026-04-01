@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
@@ -18,12 +18,12 @@ class MockOfflineQueue extends Mock implements OfflineQueue {}
 
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
-AppDatabase _createInMemoryDatabase() {
-  return AppDatabase(NativeDatabase.memory());
+UserDatabase _createInMemoryDatabase() {
+  return UserDatabase(NativeDatabase.memory());
 }
 
 void main() {
-  late AppDatabase database;
+  late UserDatabase database;
   late MockFirestoreDataSource mockFirestore;
   late MockOfflineQueue mockOfflineQueue;
   late MockConnectivityService mockConnectivity;
@@ -38,6 +38,7 @@ void main() {
     logger = Talker();
 
     when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
+    when(() => mockFirestore.isAuthenticated).thenReturn(true);
 
     // Default stubs for methods called by pullOnLaunch / attachListeners
     when(() => mockFirestore.fetchLedgerEntries()).thenAnswer((_) async => []);

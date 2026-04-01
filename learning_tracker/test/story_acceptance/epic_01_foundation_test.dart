@@ -7,7 +7,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:kosher_dart/kosher_dart.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -53,7 +53,7 @@ void main() {
     test('clean architecture directories exist (core, features)', () {
       // Verified by the fact that all imports above resolve.
       // If the directory structure were wrong these imports would fail.
-      expect(AppDatabase, isNotNull);
+      expect(UserDatabase, isNotNull);
       expect(CurriculumId.values, isNotEmpty);
     });
 
@@ -67,7 +67,7 @@ void main() {
   // ── Story 1.2: Database layer ─────────────────────────────────
 
   group('Story 1.2 -- Database layer', tags: ['story_1_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() {
       db = createTestDatabase();
@@ -97,7 +97,6 @@ void main() {
       expect(db.trackDao, isNotNull);
       expect(db.userProfileDao, isNotNull);
       expect(db.syncQueueDao, isNotNull);
-      expect(db.textCacheDao, isNotNull);
       expect(db.textDownloadStatusDao, isNotNull);
       expect(db.learningLedgerDao, isNotNull);
     });

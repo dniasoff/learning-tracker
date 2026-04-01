@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 
@@ -6,7 +6,7 @@ import 'package:learning_tracker/features/progress/domain/models/chart_data.dart
 ///
 /// All date operations use local timezone for day boundaries.
 class ChartDataService {
-  final AppDatabase _db;
+  final UserDatabase _db;
 
   ChartDataService(this._db);
 

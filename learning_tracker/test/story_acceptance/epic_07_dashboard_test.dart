@@ -6,7 +6,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, tearDown, test;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -45,7 +45,7 @@ void main() {
   // ── Story 7.1: Dashboard screen ───────────────────────────────
 
   group('Story 7.1 -- Dashboard screen', tags: ['story_7_1'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late CrossCurriculumAggregator aggregator;
 
     setUp(() {
@@ -513,7 +513,7 @@ void main() {
   // ── Story 7.2: Per-Curriculum Progress Views ────────────────
 
   group('Story 7.2 -- Per-Curriculum Progress Views', tags: ['story_7_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() {
       db = createTestDatabase();
@@ -833,7 +833,7 @@ void main() {
   // ── Story 7.3: Progress Charts & Statistics ──────────────────
 
   group('Story 7.3 -- Progress Charts & Statistics', tags: ['story_7_3'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late ChartDataService chartService;
 
     setUp(() {

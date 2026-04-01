@@ -107,7 +107,7 @@ final class DashboardUserModeProvider
   }
 }
 
-String _$dashboardUserModeHash() => r'e3557fadb9ed67a00a1417ee7ee4146e550f6f95';
+String _$dashboardUserModeHash() => r'764afdb87c03bf200cfe2657dd1eb9c106b0ac9a';
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 
@@ -154,7 +154,7 @@ final class DashboardActiveCurriculaProvider
 }
 
 String _$dashboardActiveCurriculaHash() =>
-    r'5a748c490812c856063dadca8cf4fec13dc2ae78';
+    r'bcbc18bb9a788007e9d8e0f89b9cd92f02707587';
 
 /// Stream provider for watching active curricula changes, scoped to active profile.
 
@@ -202,7 +202,7 @@ final class DashboardActiveCurriculaStreamProvider
 }
 
 String _$dashboardActiveCurriculaStreamHash() =>
-    r'd22707c8346b40236bab79b1341fd90de0d3fc8d';
+    r'9689fa138119b78a0b3bf8ad2013549a05ca3d37';
 
 /// Per-curriculum completion percentage, scoped to active profile.
 
@@ -261,7 +261,7 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'984f34a412f64faf16316d2a802dabc1d7db5c1e';
+    r'f5c524f5179db498c518be07428baf8b31368067';
 
 /// Per-curriculum completion percentage, scoped to active profile.
 
@@ -346,7 +346,7 @@ final class DashboardLastCompletionProvider
 }
 
 String _$dashboardLastCompletionHash() =>
-    r'2dbfcf2c43503cebbfa09a9ac244f77058be0713';
+    r'7c1b1bd065a319bc338ed8ac893e903faf55acaa';
 
 /// Per-curriculum last completion timestamp, scoped to active profile.
 
@@ -414,7 +414,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'9f262b606eec43dafc352be089daa6649a763588';
+String _$dashboardStreakHash() => r'94c107a627b4f45a010eb12d223d1a503a10b1e1';
 
 /// Global points total, scoped to active profile.
 
@@ -453,7 +453,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'7b414255ea50c70ee6ed1f4a80cada3871859e54';
+    r'f2b80312a8c532c7fe3570037a703e773b51c7cb';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
@@ -500,7 +500,7 @@ final class DashboardStreakRecoveryProvider
 }
 
 String _$dashboardStreakRecoveryHash() =>
-    r'9f7b13fa1ee1a90f8d860eac8b3c06087a13e8df';
+    r'48e813bbd75a6daf89530b387bea8a862f26ac20';
 
 /// Per-curriculum pace status for the dashboard.
 ///
@@ -572,7 +572,7 @@ final class DashboardPaceStatusProvider
 }
 
 String _$dashboardPaceStatusHash() =>
-    r'aa03e0f915505782275bee73f6db45c39d072536';
+    r'807eb9cacf3233fae7f8bae20a19ec6ed8a6ed7b';
 
 /// Per-curriculum pace status for the dashboard.
 ///

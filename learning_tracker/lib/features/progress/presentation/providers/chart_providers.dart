@@ -4,6 +4,6 @@ import 'package:learning_tracker/features/progress/domain/services/chart_data_se
 
 /// Provider for the ChartDataService.
 final chartDataServiceProvider = Provider<ChartDataService>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   return ChartDataService(database);
 });

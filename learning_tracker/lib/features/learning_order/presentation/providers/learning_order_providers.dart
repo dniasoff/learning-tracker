@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
   ref,
 ) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
   final syncEngine = ref.watch(syncEngineProvider);
   return LearningOrderRepositoryImpl(
@@ -49,7 +49,7 @@ final userModeProvider = FutureProvider<UserMode>((ref) async {
   final uid = firebaseAuth.currentUser?.uid;
   if (uid == null) return UserMode.adult;
 
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
     uid,
   );

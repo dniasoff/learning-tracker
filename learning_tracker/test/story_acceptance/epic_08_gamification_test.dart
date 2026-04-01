@@ -3,7 +3,7 @@
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -19,7 +19,7 @@ void main() {
   // ── Story 8.1: Points system ──────────────────────────────────
 
   group('Story 8.1 -- Points system', tags: ['story_8_1'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late PointsService pointsService;
 
     setUp(() {
@@ -124,7 +124,7 @@ void main() {
   // ── Story 8.2: Global Streak Tracking ────────────────────────
 
   group('Story 8.2 -- Global Streak Tracking', tags: ['story_8_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late StreakService streakService;
 
     setUp(() {
@@ -196,7 +196,7 @@ void main() {
   // ── Story 8.3: Mystery Rewards System ────────────────────────
 
   group('Story 8.3 -- Mystery Rewards System', tags: ['story_8_3'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late RewardService rewardService;
 
     setUp(() {

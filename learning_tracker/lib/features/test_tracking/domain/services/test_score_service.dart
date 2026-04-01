@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 /// Trend direction for test scores.
 enum ScoreTrend { improving, declining, stable, insufficient }

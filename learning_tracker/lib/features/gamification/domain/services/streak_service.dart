@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 
@@ -11,7 +11,7 @@ import 'package:learning_tracker/features/gamification/domain/models/streak_reco
 /// Supports a 1-day grace period: if the user misses exactly 1 day and
 /// hasn't used grace within the last 7 days, the streak is preserved.
 class StreakService {
-  final AppDatabase _db;
+  final UserDatabase _db;
 
   StreakService(this._db);
 

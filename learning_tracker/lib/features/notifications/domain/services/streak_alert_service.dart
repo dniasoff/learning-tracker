@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 
@@ -9,14 +9,14 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 /// On app launch, the service evaluates whether to schedule or cancel.
 class StreakAlertService {
   StreakAlertService({
-    required AppDatabase db,
+    required UserDatabase db,
     required NotificationService notificationService,
     DateTime Function()? clock,
   }) : _db = db,
        _notificationService = notificationService,
        _clock = clock ?? DateTimeFactory.nowUtc;
 
-  final AppDatabase _db;
+  final UserDatabase _db;
   final NotificationService _notificationService;
   final DateTime Function() _clock;
 

@@ -2,7 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -62,10 +62,10 @@ void main() {
     });
 
     group('MEDIUM-risk screen: GamificationScreen', () {
-      late AppDatabase db;
+      late UserDatabase db;
 
       setUp(() {
-        db = AppDatabase(NativeDatabase.memory());
+        db = UserDatabase(NativeDatabase.memory());
       });
 
       tearDown(() async {

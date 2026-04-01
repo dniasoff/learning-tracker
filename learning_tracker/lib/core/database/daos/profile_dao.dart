@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/profiles.dart';
 
 part 'profile_dao.g.dart';
 
 /// DAO for the profiles table.
 @DriftAccessor(tables: [Profiles])
-class ProfileDao extends DatabaseAccessor<AppDatabase> with _$ProfileDaoMixin {
+class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   ProfileDao(super.db);
 
   /// Get all profiles for an account.

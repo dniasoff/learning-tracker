@@ -1,19 +1,19 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 
 void main() {
-  late AppDatabase database;
+  late UserDatabase database;
   late List<Map<String, dynamic>> pushedSettings;
   late StageDefinitionRepositoryImpl repository;
 
   const curriculum = CurriculumId.mishnayos;
 
   setUp(() {
-    database = AppDatabase(NativeDatabase.memory());
+    database = UserDatabase(NativeDatabase.memory());
     pushedSettings = [];
     repository = StageDefinitionRepositoryImpl(
       stageDao: database.stageDao,

@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 
 import '../../../../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late ProfileRepositoryImpl repo;
 
   setUp(() {

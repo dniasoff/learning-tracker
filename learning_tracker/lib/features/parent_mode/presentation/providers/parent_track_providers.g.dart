@@ -56,4 +56,4 @@ final class ParentTrackCurriculaProvider
 }
 
 String _$parentTrackCurriculaHash() =>
-    r'3a49763127a8ee6fa9a0543dc819b99bd423b408';
+    r'dec24d2fb4f782d0c92f2958d964bdca78790c13';

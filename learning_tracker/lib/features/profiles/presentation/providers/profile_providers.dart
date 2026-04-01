@@ -16,7 +16,7 @@ int currentAccountId(Ref ref) => 1;
 /// Provider for the ProfileRepository implementation.
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   return ProfileRepositoryImpl(db);
 }
 
@@ -46,7 +46,7 @@ Future<List<ProfileModel>> profileList(Ref ref) async {
 /// Stream of profiles for the current account, for reactive UI.
 @riverpod
 Stream<List<ProfileModel>> profileListStream(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final accountId = ref.watch(currentAccountIdProvider);
   return db.profileDao
       .watchProfilesByAccount(accountId)

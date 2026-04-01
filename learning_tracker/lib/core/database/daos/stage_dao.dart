@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 
 part 'stage_dao.g.dart';
 
 @DriftAccessor(tables: [StageDefinitions])
-class StageDao extends DatabaseAccessor<AppDatabase> with _$StageDaoMixin {
+class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   StageDao(super.db);
 
   Future<List<StageDefinition>> getAllStageDefinitions() =>

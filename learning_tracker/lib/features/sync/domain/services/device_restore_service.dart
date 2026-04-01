@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -20,7 +20,7 @@ import 'package:talker/talker.dart';
 /// PINs are NOT restored — they are device-local only (FR99).
 class DeviceRestoreService {
   DeviceRestoreService({
-    required AppDatabase database,
+    required UserDatabase database,
     required SyncEngine syncEngine,
     required FirestoreDataSource firestoreDataSource,
     required CurriculumImportService curriculumImportService,
@@ -31,7 +31,7 @@ class DeviceRestoreService {
        _curriculumImportService = curriculumImportService,
        _logger = logger;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
   final SyncEngine _syncEngine;
   final FirestoreDataSource _firestoreDataSource;
   final CurriculumImportService _curriculumImportService;

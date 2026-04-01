@@ -59,7 +59,7 @@ final class ProgressRepositoryProvider
 }
 
 String _$progressRepositoryHash() =>
-    r'8b9ef03690ec431e816b724f72b650c144ece3bc';
+    r'c6f1ae20db9d3912441660fa17cf687e205758b7';
 
 /// Provider for track breakdown by curriculum, scoped to the active profile.
 ///
@@ -129,7 +129,7 @@ final class TrackBreakdownProvider
   }
 }
 
-String _$trackBreakdownHash() => r'129304be12ee250bb39a6b3c993d9588873fadc3';
+String _$trackBreakdownHash() => r'ca265ceca574217987cb113e78ce06027302283b';
 
 /// Provider for track breakdown by curriculum, scoped to the active profile.
 ///
@@ -217,7 +217,7 @@ final class AggregateCountProvider
   }
 }
 
-String _$aggregateCountHash() => r'0b4796e250c8d5a27d0caa0e3d7c2b35c1b98291';
+String _$aggregateCountHash() => r'0be708b27af3275b27018c37928a269a124f9337';
 
 /// Provider for aggregate completion count by curriculum, scoped to the active profile.
 ///
@@ -320,7 +320,7 @@ final class CurriculumProgressProvider
 }
 
 String _$curriculumProgressHash() =>
-    r'c5d48a83925fe978347ecc2166ee92a4d5bd7452';
+    r'c47a5bbe1c5e336fbd9fa9a0cb2bc784f26986d9';
 
 /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
 ///
@@ -419,7 +419,7 @@ final class CurriculumPaceStatusProvider
 }
 
 String _$curriculumPaceStatusHash() =>
-    r'39e806a9783c9b801e827113e1c0f29212916084';
+    r'0bb55fe962271104641add8ee3dce467b2668144';
 
 /// Pace status for a curriculum (null if no goal exists).
 ///

@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
@@ -23,7 +23,7 @@ import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.
 /// In child mode, surprise rewards show as "Mystery Reward!" even before earning.
 /// In adult mode, all rewards are always visible.
 class RewardService {
-  final AppDatabase _database;
+  final UserDatabase _database;
   final PointsService _pointsService;
   final bool isTutorMode;
 

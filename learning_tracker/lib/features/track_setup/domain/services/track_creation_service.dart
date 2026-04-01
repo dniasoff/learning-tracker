@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -28,7 +28,7 @@ const kDefaultStudyDays = <int, String>{
 /// in a single transaction for atomicity.
 class TrackCreationService {
   TrackCreationService({
-    required AppDatabase database,
+    required UserDatabase database,
     required CurriculumActivationService activationService,
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
@@ -37,7 +37,7 @@ class TrackCreationService {
        _wizardService = wizardService,
        _goalRepository = goalRepository;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
   final CurriculumActivationService _activationService;
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;

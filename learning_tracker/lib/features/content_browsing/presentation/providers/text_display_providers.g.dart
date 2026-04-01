@@ -59,7 +59,7 @@ final class TextCacheRepositoryProvider
 }
 
 String _$textCacheRepositoryHash() =>
-    r'bf7c52ad16dc0e56961b36a614c84f6692f23715';
+    r'a8a2d94054ddc0f12f5a4c3b030e9700695f11e1';
 
 /// Provider for fetching text by Sefaria reference.
 
@@ -311,7 +311,7 @@ final class TextDownloadServiceProvider
 }
 
 String _$textDownloadServiceHash() =>
-    r'88f5b744cab777d8a64f1ecc9e98339805deb843';
+    r'dd245016a3fc4399072561f31350411ca1bbe0cf';
 
 /// Provider to check if text is downloaded for a curriculum.
 

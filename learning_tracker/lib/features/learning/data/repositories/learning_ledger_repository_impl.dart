@@ -1,18 +1,18 @@
 import 'package:drift/drift.dart' as drift;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [LearningLedgerRepository] using Drift database and sync engine.
 class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
-  final AppDatabase _database;
+  final UserDatabase _database;
   final SyncEngine _syncEngine;
   final int _activeProfileId;
   final String _activeProfileMode;
 
   LearningLedgerRepositoryImpl({
-    required AppDatabase database,
+    required UserDatabase database,
     required SyncEngine syncEngine,
     required int activeProfileId,
     required String activeProfileMode,

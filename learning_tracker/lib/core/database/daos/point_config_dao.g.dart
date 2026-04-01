@@ -3,7 +3,7 @@
 part of 'point_config_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$PointConfigDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$PointConfigDaoMixin on DatabaseAccessor<UserDatabase> {
   $PointConfigsTable get pointConfigs => attachedDatabase.pointConfigs;
   PointConfigDaoManager get managers => PointConfigDaoManager(this);
 }

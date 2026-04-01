@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 import '../../helpers/test_database.dart';
 
 void main() {
   group('Schema migration v23→v24: Hebrew stage names', () {
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() {
       db = createTestDatabase();
@@ -219,7 +219,7 @@ void main() {
 }
 
 /// Runs the same SQL statements as the v24 migration.
-Future<void> _runHebrewMigration(AppDatabase db) async {
+Future<void> _runHebrewMigration(UserDatabase db) async {
   const englishToHebrew = {
     'Learn': 'לימוד',
     'Chazara 1': 'חזרה א׳',

@@ -3,7 +3,7 @@
 part of 'sync_queue_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$SyncQueueDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$SyncQueueDaoMixin on DatabaseAccessor<UserDatabase> {
   $SyncQueueTable get syncQueue => attachedDatabase.syncQueue;
   SyncQueueDaoManager get managers => SyncQueueDaoManager(this);
 }

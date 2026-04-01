@@ -3,7 +3,7 @@
 part of 'learning_order_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$LearningOrderDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$LearningOrderDaoMixin on DatabaseAccessor<UserDatabase> {
   $LearningOrderTable get learningOrder => attachedDatabase.learningOrder;
   LearningOrderDaoManager get managers => LearningOrderDaoManager(this);
 }

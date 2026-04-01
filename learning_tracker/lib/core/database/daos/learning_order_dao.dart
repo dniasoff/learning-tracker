@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
 
 part 'learning_order_dao.g.dart';
 
 @DriftAccessor(tables: [LearningOrder])
-class LearningOrderDao extends DatabaseAccessor<AppDatabase>
+class LearningOrderDao extends DatabaseAccessor<UserDatabase>
     with _$LearningOrderDaoMixin {
   LearningOrderDao(super.db);
 

@@ -94,7 +94,7 @@ final class SchedulerEngineProvider
   }
 }
 
-String _$schedulerEngineHash() => r'99d6589a3e00fca02a89df6f2a024b1027a14c17';
+String _$schedulerEngineHash() => r'416a2bd1a8ff2e64c4c5b9ed502ac1742c511172';
 
 @ProviderFor(dailyTaskGenerator)
 final dailyTaskGeneratorProvider = DailyTaskGeneratorProvider._();
@@ -450,7 +450,7 @@ final class PaceStatusProvider
   }
 }
 
-String _$paceStatusHash() => r'5daea9e300083adbaadd137835df48fd09f62d9b';
+String _$paceStatusHash() => r'b917f97e6ddeeafdb97cc84d0759ba7ccefd7ede';
 
 /// Pace status for a curriculum goal.
 ///
@@ -560,4 +560,4 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'5d853b6d51457fd4239c54a0eb7799906d423247';
+String _$allDailyTasksHash() => r'a0bccb119a409d44fc0ec9e189f7f7113d40c97b';

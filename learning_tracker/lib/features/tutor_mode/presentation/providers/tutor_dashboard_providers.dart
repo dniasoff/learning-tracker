@@ -7,7 +7,7 @@ part 'tutor_dashboard_providers.g.dart';
 
 @riverpod
 TutorDashboardAggregator tutorDashboardAggregator(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   return TutorDashboardAggregator(db);
 }
 

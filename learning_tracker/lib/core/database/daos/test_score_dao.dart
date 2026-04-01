@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/test_scores.dart';
 
 part 'test_score_dao.g.dart';
 
 @DriftAccessor(tables: [TestScores])
-class TestScoreDao extends DatabaseAccessor<AppDatabase>
+class TestScoreDao extends DatabaseAccessor<UserDatabase>
     with _$TestScoreDaoMixin {
   TestScoreDao(super.db);
 

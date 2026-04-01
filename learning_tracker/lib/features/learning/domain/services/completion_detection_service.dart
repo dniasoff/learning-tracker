@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -8,12 +8,12 @@ import 'package:learning_tracker/features/learning/domain/repositories/learning_
 ///
 /// Called immediately after each markComplete() in CompletionRepositoryImpl.
 class CompletionDetectionService {
-  final AppDatabase _database;
+  final UserDatabase _database;
   final ContentRepository _contentRepository;
   final LearningLedgerRepository _ledgerRepository;
 
   CompletionDetectionService({
-    required AppDatabase database,
+    required UserDatabase database,
     required ContentRepository contentRepository,
     required LearningLedgerRepository ledgerRepository,
   }) : _database = database,

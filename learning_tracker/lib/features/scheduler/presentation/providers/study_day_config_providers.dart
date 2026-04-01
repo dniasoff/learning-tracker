@@ -14,7 +14,7 @@ Stream<List<StudyDayConfigEntry>> studyDayConfigs(
   Ref ref,
   CurriculumId curriculumId,
 ) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.studyDayConfigDao
       .watchConfigsByCurriculumAndProfile(curriculumId.storageKey, profileId)
@@ -33,7 +33,7 @@ Stream<List<StudyDayConfigEntry>> studyDayConfigs(
 /// Check if today is a study day for a curriculum.
 @riverpod
 Future<bool> isStudyDay(Ref ref, CurriculumId curriculumId) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final today = ref.watch(clockProvider);
   return db.studyDayConfigDao.isStudyDay(
@@ -46,7 +46,7 @@ Future<bool> isStudyDay(Ref ref, CurriculumId curriculumId) async {
 /// Get count of study days per week for a curriculum.
 @riverpod
 Future<int> studyDaysPerWeek(Ref ref, CurriculumId curriculumId) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.studyDayConfigDao.getStudyDaysPerWeek(
     profileId: profileId,
@@ -62,7 +62,7 @@ Future<void> toggleStudyDay(
   int dayOfWeek,
   DayType newType,
 ) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   await db.studyDayConfigDao.upsertDayConfig(
     profileId: profileId,

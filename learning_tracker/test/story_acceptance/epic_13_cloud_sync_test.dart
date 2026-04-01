@@ -5,7 +5,7 @@ library;
 import 'dart:async';
 
 import 'package:drift/native.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -26,8 +26,8 @@ class MockConnectivityService extends Mock implements ConnectivityService {}
 class MockCurriculumImportService extends Mock
     implements CurriculumImportService {}
 
-AppDatabase _createInMemoryDatabase() {
-  return AppDatabase(NativeDatabase.memory());
+UserDatabase _createInMemoryDatabase() {
+  return UserDatabase(NativeDatabase.memory());
 }
 
 void main() {
@@ -37,7 +37,7 @@ void main() {
     'Story 13.1 -- Push-on-Write with Offline Queuing',
     tags: ['story_13_1'],
     () {
-      late AppDatabase database;
+      late UserDatabase database;
       late MockFirestoreDataSource mockFirestore;
       late MockConnectivityService mockConnectivity;
       late Talker logger;
@@ -207,7 +207,7 @@ void main() {
   // ── Story 13.2: Pull-on-Launch Merge ─────────────────────────
 
   group('Story 13.2 -- Pull-on-Launch Merge', tags: ['story_13_2'], () {
-    late AppDatabase database;
+    late UserDatabase database;
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
     late Talker logger;
@@ -415,7 +415,7 @@ void main() {
   // ── Story 13.3: Real-Time Foreground Listeners ──────────────
 
   group('Story 13.3 -- Real-Time Foreground Listeners', tags: ['story_13_3'], () {
-    late AppDatabase database;
+    late UserDatabase database;
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
     late Talker logger;
@@ -667,7 +667,7 @@ void main() {
   // ── Story 13.4: New Device Data Restore ─────────────────────
 
   group('Story 13.4 -- New Device Data Restore', tags: ['story_13_4'], () {
-    late AppDatabase database;
+    late UserDatabase database;
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
     late MockCurriculumImportService mockImportService;

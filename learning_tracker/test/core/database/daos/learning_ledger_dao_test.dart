@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:test/test.dart';
 
 import '../../../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
 
   setUp(() {
     db = createTestDatabase();

@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -43,12 +43,12 @@ void main() {
   // ── Story 9.1: Welcome flow ───────────────────────────────────
 
   group('Story 9.1 -- Welcome flow', tags: ['story_9_1'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late UserProfileService profileService;
     late List<Map<String, String>> firestorePushes;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
+      db = UserDatabase(NativeDatabase.memory());
       firestorePushes = [];
       profileService = UserProfileService(
         userProfileDao: db.userProfileDao,
@@ -135,10 +135,10 @@ void main() {
   });
 
   group('Story 9.2 -- Curriculum selection', tags: ['story_9_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
+      db = UserDatabase(NativeDatabase.memory());
     });
 
     tearDown(() async {
@@ -243,11 +243,11 @@ void main() {
   // ── Story 9.3: Per-Curriculum Goal Setup ──────────────────────
 
   group('Story 9.3 -- Per-Curriculum Goal Setup', tags: ['story_9_3'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late GoalRepositoryImpl goalRepo;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
+      db = UserDatabase(NativeDatabase.memory());
       goalRepo = GoalRepositoryImpl(database: db);
     });
 
@@ -800,12 +800,12 @@ void main() {
     'Story 9.5 -- Initial Rewards Setup (Child Mode)',
     tags: ['story_9_5'],
     () {
-      late AppDatabase db;
+      late UserDatabase db;
       late RewardService rewardService;
       late PointsService pointsService;
 
       setUp(() {
-        db = AppDatabase(NativeDatabase.memory());
+        db = UserDatabase(NativeDatabase.memory());
         pointsService = PointsService(db);
         rewardService = RewardService(db, pointsService);
       });

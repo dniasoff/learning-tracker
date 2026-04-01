@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -10,7 +10,7 @@ import '../../../../helpers/test_database.dart';
 class MockNotificationService extends Mock implements NotificationService {}
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late MockNotificationService mockNotificationService;
   late StreakAlertService service;
   late DateTime Function() clock;

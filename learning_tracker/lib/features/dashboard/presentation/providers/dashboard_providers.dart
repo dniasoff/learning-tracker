@@ -25,7 +25,7 @@ CrossCurriculumAggregator crossCurriculumAggregator(Ref ref) {
 /// P6 compliant: uses only core database, no feature imports.
 @riverpod
 Future<UserMode> dashboardUserMode(Ref ref) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profiles = await db.userProfileDao.getAllUserProfiles();
   if (profiles.isEmpty) return UserMode.adult;
   return UserMode.values.firstWhere(
@@ -37,7 +37,7 @@ Future<UserMode> dashboardUserMode(Ref ref) async {
 /// Provider for list of active curricula IDs, scoped to active profile.
 @riverpod
 Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final storageKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
     profileId,
@@ -54,7 +54,7 @@ Future<List<CurriculumId>> dashboardActiveCurricula(Ref ref) async {
 /// Stream provider for watching active curricula changes, scoped to active profile.
 @riverpod
 Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.activeCurriculumDao.watchActiveCurriculaByProfile(profileId).map((
     storageKeys,
@@ -75,7 +75,7 @@ Future<double> dashboardCompletionPercentage(
   Ref ref,
   CurriculumId curriculum,
 ) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
@@ -114,7 +114,7 @@ Future<DateTime?> dashboardLastCompletion(
   Ref ref,
   CurriculumId curriculum,
 ) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
@@ -130,7 +130,7 @@ Future<DateTime?> dashboardLastCompletion(
 /// Streak data provider (P6 compliant — uses core DB DAO).
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   return db.streakDao.watchStreak().map((streak) {
     if (streak == null) return (currentStreak: 0, maxStreak: 0);
     return (currentStreak: streak.currentStreak, maxStreak: streak.maxStreak);
@@ -140,7 +140,7 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
 /// Global points total, scoped to active profile.
 @riverpod
 Future<int> dashboardGlobalPoints(Ref ref) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao.getCompletionsByProfile(profileId);
   return completions.fold<int>(0, (sum, c) => sum + c.points);
@@ -149,7 +149,7 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 /// Streak recovery info — whether the streak was just saved by grace period.
 @riverpod
 Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final streakService = StreakService(db);
   return streakService.getRecoveryInfo();
 }
@@ -163,7 +163,7 @@ Future<PaceStatus?> dashboardPaceStatus(
   Ref ref,
   CurriculumId curriculum,
 ) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final now = ref.watch(clockProvider);
 

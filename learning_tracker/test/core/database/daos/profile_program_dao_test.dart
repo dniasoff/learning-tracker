@@ -1,22 +1,27 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:test/test.dart';
 
 import '../../../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
+  late ContentDatabase contentDb;
 
   setUp(() {
     db = createTestDatabase();
+    contentDb = createTestContentDatabase();
   });
 
   tearDown(() async {
     await db.close();
+    await contentDb.close();
   });
 
   group('ProfileProgramDao', () {
     test('setProfileProgram creates association', () async {
-      final programs = await db.learningProgramDao.getAllPrograms();
+      final programs =
+          await contentDb.contentLearningProgramDao.getAllPrograms();
       final program = programs.first;
 
       await db.profileProgramDao.setProfileProgram(
@@ -32,7 +37,8 @@ void main() {
     });
 
     test('setProfileProgram upserts on duplicate', () async {
-      final programs = await db.learningProgramDao.getProgramsByCurriculumType(
+      final programs = await contentDb.contentLearningProgramDao
+          .getProgramsByCurriculumType(
         'bavli',
       );
       expect(programs.length, greaterThanOrEqualTo(2));
@@ -60,7 +66,8 @@ void main() {
     });
 
     test('getProgramsForProfile returns all for a profile', () async {
-      final programs = await db.learningProgramDao.getAllPrograms();
+      final programs =
+          await contentDb.contentLearningProgramDao.getAllPrograms();
       final bavli = programs.firstWhere((p) => p.curriculumType == 'bavli');
       final nach = programs.firstWhere((p) => p.curriculumType == 'nach');
 
@@ -80,7 +87,8 @@ void main() {
     });
 
     test('different profiles can have different programs', () async {
-      final programs = await db.learningProgramDao.getProgramsByCurriculumType(
+      final programs = await contentDb.contentLearningProgramDao
+          .getProgramsByCurriculumType(
         'bavli',
       );
 
@@ -108,7 +116,8 @@ void main() {
     });
 
     test('deleteForProfile removes all associations', () async {
-      final programs = await db.learningProgramDao.getAllPrograms();
+      final programs =
+          await contentDb.contentLearningProgramDao.getAllPrograms();
       await db.profileProgramDao.setProfileProgram(
         profileId: 1,
         curriculumType: 'bavli',

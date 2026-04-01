@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
@@ -14,12 +14,12 @@ class MockFirestoreSync extends Mock {
 }
 
 void main() {
-  late AppDatabase database;
+  late UserDatabase database;
   late CurriculumActivationService service;
   late MockFirestoreSync mockFirestore;
 
   setUp(() {
-    database = AppDatabase(NativeDatabase.memory());
+    database = UserDatabase(NativeDatabase.memory());
     mockFirestore = MockFirestoreSync();
     service = CurriculumActivationService(
       database: database,

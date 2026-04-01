@@ -6,7 +6,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 
 /// Provider for the PointsService, scoped to active profile.
 final pointsServiceProvider = Provider<PointsService>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return PointsService(database, profileId: profileId);
 });

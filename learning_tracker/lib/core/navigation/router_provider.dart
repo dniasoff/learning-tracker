@@ -19,7 +19,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 /// uses secure storage rather than hard-coded stubs.
 final routerProvider = Provider<AppRouter>((ref) {
   final pinSvc = ref.watch(pinServiceProvider);
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
 
   return AppRouter(
     authGuard: AuthGuard(firebaseAuth: FirebaseAuth.instance),

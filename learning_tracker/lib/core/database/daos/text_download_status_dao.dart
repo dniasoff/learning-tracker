@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'text_download_status_dao.g.dart';
 
 @DriftAccessor(tables: [TextDownloadStatuses])
-class TextDownloadStatusDao extends DatabaseAccessor<AppDatabase>
+class TextDownloadStatusDao extends DatabaseAccessor<UserDatabase>
     with _$TextDownloadStatusDaoMixin {
   TextDownloadStatusDao(super.db);
 

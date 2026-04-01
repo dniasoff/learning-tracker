@@ -6,7 +6,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
@@ -44,7 +44,7 @@ void main() {
   // ── Story 14.1: Settings screen ───────────────────────────────
 
   group('Story 14.1 -- Settings screen', tags: ['story_14_1'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late UserProfileService profileService;
 
     setUp(() {
@@ -136,7 +136,7 @@ void main() {
   // ── Story 14.2: Data Export & Import (JSON) ─────────────────────
 
   group('Story 14.2 -- Data Export & Import (JSON)', tags: ['story_14_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late DataExportImportService service;
 
     setUp(() {
@@ -148,7 +148,7 @@ void main() {
       await db.close();
     });
 
-    Future<void> seedTestData(AppDatabase db) async {
+    Future<void> seedTestData(UserDatabase db) async {
       // Completions
       await db
           .into(db.completions)
@@ -346,17 +346,9 @@ void main() {
     test(
       'export excludes content items (text cache, download statuses)',
       () async {
-        // Add text cache and download status data
-        await db
-            .into(db.textCache)
-            .insert(
-              TextCacheCompanion.insert(
-                sefariaRef: 'Mishnah_Berakhot.1.1',
-                hebrewText: 'Hebrew text',
-                englishText: 'English text',
-                fetchedAt: DateTime.now(),
-              ),
-            );
+        // Text cache is now in ContentDatabase (read-only, bundled).
+        // Export only covers UserDatabase, so content tables are
+        // automatically excluded.
 
         final jsonString = await service.exportData();
         final data = json.decode(jsonString) as Map<String, dynamic>;
@@ -626,7 +618,7 @@ void main() {
   group('Story 14.3 -- Account management', tags: ['story_14_3'], () {
     late MockAuthRepository mockAuthRepo;
     late MockFirebaseFirestore mockFirestore;
-    late AppDatabase db;
+    late UserDatabase db;
     late AccountManagementService service;
 
     setUp(() {

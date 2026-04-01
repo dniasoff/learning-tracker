@@ -26,6 +26,12 @@ class FirestoreDataSource {
   /// The active profile ID for Firestore path scoping.
   final int profileId;
 
+  /// Whether the current Firebase user is authenticated.
+  ///
+  /// Used by [SyncEngine] to skip Firestore operations before auth completes,
+  /// avoiding PERMISSION_DENIED errors that cascade into permanent degradation.
+  bool get isAuthenticated => _auth.currentUser != null;
+
   /// Get current user's Firestore document reference.
   DocumentReference<Map<String, dynamic>>? get _userDoc {
     final uid = _auth.currentUser?.uid;

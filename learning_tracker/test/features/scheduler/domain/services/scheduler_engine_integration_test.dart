@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
@@ -23,7 +23,7 @@ class InMemoryContentRepo implements SchedulerContentRepository {
 }
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
 
   setUp(() async {
     db = createTestDatabase();

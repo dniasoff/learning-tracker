@@ -3,7 +3,7 @@
 part of 'completion_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$CompletionDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$CompletionDaoMixin on DatabaseAccessor<UserDatabase> {
   $CompletionsTable get completions => attachedDatabase.completions;
   CompletionDaoManager get managers => CompletionDaoManager(this);
 }

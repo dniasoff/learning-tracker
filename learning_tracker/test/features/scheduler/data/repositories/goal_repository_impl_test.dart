@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 
 import '../../../../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late GoalRepositoryImpl repo;
 
   setUp(() {

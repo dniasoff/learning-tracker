@@ -1,16 +1,16 @@
 import 'package:drift/native.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:test/test.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late UserProfileService service;
   late List<Map<String, String>> firestorePushes;
 
   setUp(() {
-    db = AppDatabase(NativeDatabase.memory());
+    db = UserDatabase(NativeDatabase.memory());
     firestorePushes = [];
     service = UserProfileService(
       userProfileDao: db.userProfileDao,

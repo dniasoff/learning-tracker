@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 import '../../../../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
 
   setUp(() {
     db = createTestDatabase();
@@ -37,7 +37,7 @@ void main() {
 
   /// Helper to insert a completion and return the generated row.
   Future<Completion> insertCompletion(
-    AppDatabase db, {
+    UserDatabase db, {
     required String sefariaRef,
     required int stageId,
     String trackType = 'personal',
@@ -57,7 +57,7 @@ void main() {
 
   /// Helper to insert a stage definition and return the row.
   Future<StageDefinition> insertStage(
-    AppDatabase db, {
+    UserDatabase db, {
     required int stageOrder,
     required String stageName,
     String curriculumId = 'mishnayos',

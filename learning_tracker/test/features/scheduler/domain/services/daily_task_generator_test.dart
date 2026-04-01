@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
@@ -21,7 +21,7 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
 }
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late DailyTaskGenerator generator;
   final now = DateTime.utc(2026, 3, 15);
   const curriculum = CurriculumId.mishnayos;

@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 
 part 'study_day_config_dao.g.dart';
 
 @DriftAccessor(tables: [StudyDayConfigs])
-class StudyDayConfigDao extends DatabaseAccessor<AppDatabase>
+class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     with _$StudyDayConfigDaoMixin {
   StudyDayConfigDao(super.db);
 

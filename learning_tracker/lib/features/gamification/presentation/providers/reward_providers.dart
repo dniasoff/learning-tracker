@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
@@ -10,7 +10,7 @@ import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.
 
 /// Provider for the RewardService singleton.
 final rewardServiceProvider = Provider<RewardService>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final pointsService = ref.watch(pointsServiceProvider);
   final isTutorMode = ref.watch(tutorModeProvider);
   return RewardService(database, pointsService, isTutorMode: isTutorMode);
@@ -18,7 +18,7 @@ final rewardServiceProvider = Provider<RewardService>((ref) {
 
 /// All rewards stream for reactive UI updates, scoped to active profile.
 final allRewardsStreamProvider = StreamProvider<List<Reward>>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return database.rewardDao.watchRewardsByProfile(profileId);
 });

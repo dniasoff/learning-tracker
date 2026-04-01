@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -260,7 +260,7 @@ void main() {
   // ── Story 10.2: Parent dashboard ──────────────────────────────
 
   group('Story 10.2 -- Parent dashboard', tags: ['story_10_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() {
       db = createTestDatabase();
@@ -269,7 +269,7 @@ void main() {
     tearDown(() => db.close());
 
     Future<void> seedCurriculumAndCompletions(
-      AppDatabase db, {
+      UserDatabase db, {
       required String curriculumId,
       int completionCount = 5,
       int stageCount = 1,
@@ -661,7 +661,7 @@ void main() {
   // ── Story 10.3: Reward Catalog Management ──────────────────────
 
   group('Story 10.3 -- Reward Catalog Management', tags: ['story_10_3'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late RewardService rewardService;
 
     setUp(() {
@@ -1020,7 +1020,7 @@ void main() {
   // ── Story 10.4: Point Value Configuration ────────────────────
 
   group('Story 10.4 -- Point Value Configuration', tags: ['story_10_4'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late PointsService pointsService;
 
     setUp(() async {
@@ -1336,7 +1336,7 @@ void main() {
   // ── Story 10.5: Parent Track Management ──────────────────────
 
   group('Story 10.5 -- Parent Track Management', tags: ['story_10_5'], () {
-    late AppDatabase db;
+    late UserDatabase db;
 
     setUp(() {
       db = createTestDatabase();

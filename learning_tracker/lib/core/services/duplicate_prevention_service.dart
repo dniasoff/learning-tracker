@@ -1,13 +1,13 @@
 import 'package:drift/drift.dart';
 
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 /// Service to prevent duplicate completions for the same content item and stage.
 ///
 /// This service enforces the rule that a content item can only be completed
 /// once for a given stage within a curriculum, regardless of track type.
 class DuplicatePreventionService {
-  final AppDatabase _database;
+  final UserDatabase _database;
 
   DuplicatePreventionService(this._database);
 

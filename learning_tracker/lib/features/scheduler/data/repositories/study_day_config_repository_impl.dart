@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart'
+import 'package:learning_tracker/core/database/user/user_database.dart'
     as db
     show StudyDayConfig;
 import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';

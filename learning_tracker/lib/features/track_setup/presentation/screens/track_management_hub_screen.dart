@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -210,7 +210,7 @@ class _TrackManagementHubScreenState
   Future<void> _showArchiveDialog(CurriculumTrack track) async {
     // Prevent archiving the last active track
     final activeCount = await ref
-        .read(appDatabaseProvider)
+        .read(userDatabaseProvider)
         .trackDao
         .countActiveTracksForProfile(track.profileId);
     if (activeCount <= 1) {
@@ -249,7 +249,7 @@ class _TrackManagementHubScreenState
     );
 
     if ((confirmed ?? false) && mounted) {
-      final db = ref.read(appDatabaseProvider);
+      final db = ref.read(userDatabaseProvider);
       await db.trackDao.archiveTrack(
         track.profileId,
         curriculum ?? CurriculumId.mishnayos,
@@ -290,7 +290,7 @@ class _TrackManagementHubScreenState
     );
 
     if ((confirmed ?? false) && mounted) {
-      final db = ref.read(appDatabaseProvider);
+      final db = ref.read(userDatabaseProvider);
       await db.trackDao.unarchiveTrack(
         track.profileId,
         curriculum ?? CurriculumId.mishnayos,

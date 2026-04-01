@@ -27,7 +27,7 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
 
 /// Provider for OfflineQueue.
 final offlineQueueProvider = Provider<OfflineQueue>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
   final logger = ref.watch(talkerProvider);
 
@@ -40,7 +40,7 @@ final offlineQueueProvider = Provider<OfflineQueue>((ref) {
 
 /// Provider for SyncEngine.
 final syncEngineProvider = Provider<SyncEngine>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
   final offlineQueue = ref.watch(offlineQueueProvider);
   final logger = ref.watch(talkerProvider);

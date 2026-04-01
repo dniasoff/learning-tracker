@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 
 part 'bookmark_dao.g.dart';
 
 @DriftAccessor(tables: [Bookmarks])
-class BookmarkDao extends DatabaseAccessor<AppDatabase>
+class BookmarkDao extends DatabaseAccessor<UserDatabase>
     with _$BookmarkDaoMixin {
   BookmarkDao(super.db);
 

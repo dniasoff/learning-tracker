@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart';
 
 /// Configuration for test reminders.
 class TestReminderConfig {

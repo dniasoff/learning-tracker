@@ -1,6 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_service.dart';
@@ -10,12 +10,12 @@ import 'package:mocktail/mocktail.dart';
 class MockPointsService extends Mock implements PointsService {}
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late MockPointsService mockPointsService;
   late RewardService service;
 
   setUp(() {
-    db = AppDatabase(NativeDatabase.memory());
+    db = UserDatabase(NativeDatabase.memory());
     mockPointsService = MockPointsService();
     service = RewardService(db, mockPointsService);
   });

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 
 /// Route guard that redirects to the profile picker when 2+ profiles exist
@@ -10,7 +10,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 /// When only 1 profile exists, it auto-selects that profile.
 class ProfileGuard extends AutoRouteGuard {
   ProfileGuard({
-    required AppDatabase database,
+    required UserDatabase database,
     required int? Function() getSelectedProfileId,
     required void Function(int) setSelectedProfileId,
     required int Function() getAccountId,
@@ -19,7 +19,7 @@ class ProfileGuard extends AutoRouteGuard {
        _setSelectedProfileId = setSelectedProfileId,
        _getAccountId = getAccountId;
 
-  final AppDatabase _database;
+  final UserDatabase _database;
   final int? Function() _getSelectedProfileId;
   final void Function(int) _setSelectedProfileId;
   final int Function() _getAccountId;

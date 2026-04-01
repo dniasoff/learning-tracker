@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:learning_tracker/core/database/app_database.dart' as drift;
+import 'package:learning_tracker/core/database/user/user_database.dart' as drift;
 
 part 'profile_model.freezed.dart';
 

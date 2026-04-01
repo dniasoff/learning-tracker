@@ -1,17 +1,17 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 
 void main() {
-  late AppDatabase database;
+  late UserDatabase database;
   late TrackRepository repository;
 
   setUp(() {
-    database = AppDatabase(NativeDatabase.memory());
+    database = UserDatabase(NativeDatabase.memory());
     repository = TrackRepositoryImpl(database: database);
   });
 

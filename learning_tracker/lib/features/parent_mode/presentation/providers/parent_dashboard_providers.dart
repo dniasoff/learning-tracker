@@ -6,7 +6,7 @@ part 'parent_dashboard_providers.g.dart';
 
 @riverpod
 ParentDashboardAggregator parentDashboardAggregator(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   return ParentDashboardAggregator(db);
 }
 

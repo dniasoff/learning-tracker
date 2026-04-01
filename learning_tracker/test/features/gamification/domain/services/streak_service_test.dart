@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:test/test.dart';
@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 import '../../../../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late StreakService service;
 
   setUp(() {
@@ -19,7 +19,7 @@ void main() {
   });
 
   /// Helper to insert a completion at a given UTC time.
-  Future<void> addCompletion(AppDatabase db, DateTime completedAtUtc) async {
+  Future<void> addCompletion(UserDatabase db, DateTime completedAtUtc) async {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
         curriculumId: 'test-curriculum',

@@ -4,7 +4,7 @@ library;
 
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_model.dart';
@@ -114,7 +114,7 @@ void main() {
   // ── Story 12.2: Streak Protection Alerts ──────────────────────
 
   group('Story 12.2 -- Streak Protection Alerts', tags: ['story_12_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late MockNotificationService mockService;
     late StreakAlertService alertService;
 
@@ -242,7 +242,7 @@ void main() {
   // ── Story 12.3: Reward Milestone Notifications ──────────────────────
 
   group('Story 12.3 -- Reward Milestone Notifications', tags: ['story_12_3'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late MockNotificationService mockService;
     late RewardMilestoneNotificationService milestoneService;
 

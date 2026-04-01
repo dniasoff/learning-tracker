@@ -2,7 +2,7 @@
 @Tags(['epic_3'])
 library;
 
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -19,10 +19,10 @@ class _MockSyncEngine extends Mock implements SyncEngine {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
-AppDatabase _db() => createTestDatabase();
+UserDatabase _db() => createTestDatabase();
 
 CompletionRepositoryImpl _repo(
-  AppDatabase db,
+  UserDatabase db,
   SyncEngine engine,
   ContentRepository content,
 ) => CompletionRepositoryImpl(
@@ -53,7 +53,7 @@ void main() {
   // ── Story 3.1: Record completion ──────────────────────────────
 
   group('Story 3.1 -- Record completion', tags: ['story_3_1'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
@@ -156,7 +156,7 @@ void main() {
   // ── Story 3.2: Chazara stages ─────────────────────────────────
 
   group('Story 3.2 -- Chazara stages', tags: ['story_3_2'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
@@ -265,7 +265,7 @@ void main() {
   // ── Story 3.3: Progress tracking ──────────────────────────────
 
   group('Story 3.3 -- Progress tracking', tags: ['story_3_3'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/app_constants.dart';
-import 'package:learning_tracker/core/database/app_database.dart' as db;
+import 'package:learning_tracker/core/database/content/content_database.dart'
+    as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -178,12 +179,13 @@ final _currentProgramProvider =
       ref,
       curriculum,
     ) async {
-      final database = ref.watch(appDatabaseProvider);
+      final userDb = ref.watch(userDatabaseProvider);
+      final contentDb = ref.watch(contentDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
-      final profileProgram = await database.profileProgramDao
+      final profileProgram = await userDb.profileProgramDao
           .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
       if (profileProgram == null) return null;
-      return database.learningProgramDao.getProgramById(
+      return contentDb.contentLearningProgramDao.getProgramById(
         profileProgram.programId,
       );
     });

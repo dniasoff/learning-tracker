@@ -11,7 +11,7 @@ import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.
 
 /// Provider for bookmark repository.
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
 

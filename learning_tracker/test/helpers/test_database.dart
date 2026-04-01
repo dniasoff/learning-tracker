@@ -4,38 +4,34 @@ library;
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
-/// Creates an in-memory test database
-///
-/// Usage:
-/// ```dart
-/// late AppDatabase db;
-///
-/// setUp(() {
-///   db = createTestDatabase();
-/// });
-///
-/// tearDown(() async {
-///   await db.close();
-/// });
-/// ```
-AppDatabase createTestDatabase() {
-  return AppDatabase(NativeDatabase.memory());
+/// Creates an in-memory test UserDatabase
+UserDatabase createTestDatabase() {
+  return UserDatabase(NativeDatabase.memory());
+}
+
+/// Creates an in-memory test UserDatabase (explicit name)
+UserDatabase createTestUserDatabase() {
+  return UserDatabase(NativeDatabase.memory());
+}
+
+/// Creates an in-memory test ContentDatabase
+ContentDatabase createTestContentDatabase() {
+  return ContentDatabase(NativeDatabase.memory());
 }
 
 /// Creates an in-memory test database with custom executor
-///
-/// Useful for testing database migrations or custom configurations.
-AppDatabase createTestDatabaseWithExecutor(QueryExecutor executor) {
-  return AppDatabase(executor);
+UserDatabase createTestDatabaseWithExecutor(QueryExecutor executor) {
+  return UserDatabase(executor);
 }
 
 /// Helper for batch inserting test data
 ///
 /// Wraps insertions in a transaction for speed.
 Future<void> batchInsert<T extends Table, D extends DataClass>(
-  AppDatabase db,
+  UserDatabase db,
   TableInfo<T, D> table,
   List<Insertable<D>> rows,
 ) async {

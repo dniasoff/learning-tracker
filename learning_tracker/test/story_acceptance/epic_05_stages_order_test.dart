@@ -3,7 +3,7 @@
 library;
 
 import 'package:drift/native.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -37,12 +37,12 @@ void main() {
   // ── Story 5.1: Custom stage definitions ───────────────────────
 
   group('Story 5.1 -- Custom stage definitions', tags: ['story_5_1'], () {
-    late AppDatabase database;
+    late UserDatabase database;
     late StageDefinitionRepositoryImpl repository;
     const curriculum = CurriculumId.mishnayos;
 
     setUp(() {
-      database = AppDatabase(NativeDatabase.memory());
+      database = UserDatabase(NativeDatabase.memory());
       repository = StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
         completionDao: database.completionDao,
@@ -98,12 +98,12 @@ void main() {
   // ── Story 5.2: Custom learning order ──────────────────────────
 
   group('Story 5.2 -- Custom learning order', () {
-    late AppDatabase database;
+    late UserDatabase database;
     late _MockContentRepository mockContent;
     late LearningOrderRepositoryImpl repo;
 
     setUp(() {
-      database = AppDatabase(NativeDatabase.memory());
+      database = UserDatabase(NativeDatabase.memory());
       mockContent = _MockContentRepository();
       repo = LearningOrderRepositoryImpl(
         database: database,

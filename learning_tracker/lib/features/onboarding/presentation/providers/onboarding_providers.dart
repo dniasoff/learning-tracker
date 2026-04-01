@@ -17,7 +17,7 @@ part 'onboarding_providers.g.dart';
 
 @Riverpod(keepAlive: true)
 UserProfileService userProfileService(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final firestore = ref.watch(firebaseFirestoreProvider);
   return UserProfileService(
     userProfileDao: db.userProfileDao,
@@ -35,7 +35,7 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
 
 /// Provider for GoalRepository used during onboarding goal setup.
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   return GoalRepositoryImpl(database: db);
 });
 
@@ -56,10 +56,11 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
 /// Provider for LearningProcessWizardService used during onboarding.
 final learningProcessWizardServiceProvider =
     Provider<LearningProcessWizardService>((ref) {
-      final db = ref.watch(appDatabaseProvider);
+      final db = ref.watch(userDatabaseProvider);
+      final contentDb = ref.watch(contentDatabaseProvider);
       return LearningProcessWizardService(
         stageDao: db.stageDao,
-        learningProgramDao: db.learningProgramDao,
+        learningProgramDao: contentDb.contentLearningProgramDao,
         profileProgramDao: db.profileProgramDao,
       );
     });

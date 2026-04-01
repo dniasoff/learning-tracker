@@ -3,7 +3,7 @@
 part of 'text_download_status_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$TextDownloadStatusDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$TextDownloadStatusDaoMixin on DatabaseAccessor<UserDatabase> {
   $TextDownloadStatusesTable get textDownloadStatuses =>
       attachedDatabase.textDownloadStatuses;
   TextDownloadStatusDaoManager get managers =>

@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 /// Service for account management operations:
@@ -9,14 +9,14 @@ import 'package:learning_tracker/features/auth/domain/repositories/auth_reposito
 class AccountManagementService {
   AccountManagementService({
     required AuthRepository authRepository,
-    required AppDatabase database,
+    required UserDatabase database,
     required FirebaseFirestore firestore,
   }) : _authRepository = authRepository,
        _database = database,
        _firestore = firestore;
 
   final AuthRepository _authRepository;
-  final AppDatabase _database;
+  final UserDatabase _database;
   final FirebaseFirestore _firestore;
 
   /// Signs out the current user.
@@ -132,7 +132,6 @@ class AccountManagementService {
       await _database.delete(_database.pointConfigs).go();
       await _database.delete(_database.activeCurricula).go();
       await _database.delete(_database.userProfiles).go();
-      await _database.delete(_database.textCache).go();
       await _database.delete(_database.textDownloadStatuses).go();
       await _database.delete(_database.stageDefinitions).go();
       await _database.delete(_database.curriculumTracks).go();

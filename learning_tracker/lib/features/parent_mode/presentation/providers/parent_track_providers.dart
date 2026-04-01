@@ -8,7 +8,7 @@ part 'parent_track_providers.g.dart';
 /// for the parent track management screen.
 @riverpod
 Future<List<CurriculumId>> parentTrackCurricula(Ref ref) async {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final keys = await db.activeCurriculumDao.getActiveCurricula();
   return keys
       .map<CurriculumId?>((key) {

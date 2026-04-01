@@ -9,7 +9,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -27,11 +27,11 @@ import 'package:learning_tracker/features/track_setup/presentation/screens/track
 void main() {
   group('Epic 4.1: Track Management - Story Acceptance Tests', () {
     group('AC1: Each curriculum starts with personal track only', () {
-      late AppDatabase database;
+      late UserDatabase database;
       late TrackRepository repository;
 
       setUp(() {
-        database = AppDatabase(NativeDatabase.memory());
+        database = UserDatabase(NativeDatabase.memory());
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -60,11 +60,11 @@ void main() {
     group(
       'AC2: User can add school track and/or tutor track per curriculum',
       () {
-        late AppDatabase database;
+        late UserDatabase database;
         late TrackRepository repository;
 
         setUp(() {
-          database = AppDatabase(NativeDatabase.memory());
+          database = UserDatabase(NativeDatabase.memory());
           repository = TrackRepositoryImpl(database: database);
         });
 
@@ -121,11 +121,11 @@ void main() {
     );
 
     group('AC3: Removing track preserves completion data', () {
-      late AppDatabase database;
+      late UserDatabase database;
       late TrackRepository repository;
 
       setUp(() {
-        database = AppDatabase(NativeDatabase.memory());
+        database = UserDatabase(NativeDatabase.memory());
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -189,11 +189,11 @@ void main() {
     });
 
     group('AC4: Track status synced per curriculum', () {
-      late AppDatabase database;
+      late UserDatabase database;
       late TrackRepository repository;
 
       setUp(() {
-        database = AppDatabase(NativeDatabase.memory());
+        database = UserDatabase(NativeDatabase.memory());
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -288,11 +288,11 @@ void main() {
     });
 
     group('Integration Tests', () {
-      late AppDatabase database;
+      late UserDatabase database;
       late TrackRepository repository;
 
       setUp(() {
-        database = AppDatabase(NativeDatabase.memory());
+        database = UserDatabase(NativeDatabase.memory());
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -417,10 +417,10 @@ void main() {
   // ── Story 4.3: Track-Specific Progress Views (DNI-40) ────────
 
   group('Story 4.3: Track-Specific Progress Views', () {
-    late AppDatabase database;
+    late UserDatabase database;
 
     setUp(() {
-      database = AppDatabase(NativeDatabase.memory());
+      database = UserDatabase(NativeDatabase.memory());
     });
 
     tearDown(() async {

@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 part 'track_dao.g.dart';
 
 @DriftAccessor(tables: [CurriculumTracks])
-class TrackDao extends DatabaseAccessor<AppDatabase> with _$TrackDaoMixin {
+class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   TrackDao(super.db);
 
   /// Get all active tracks for a curriculum.

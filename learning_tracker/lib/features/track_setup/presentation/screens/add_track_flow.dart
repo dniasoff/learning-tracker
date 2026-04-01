@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -185,8 +185,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Reload program from DB if we had one
     LearningProgram? selectedProgram;
     if (programId != null) {
-      final db = ref.read(appDatabaseProvider);
-      selectedProgram = await db.learningProgramDao.getProgramById(programId);
+      final contentDb = ref.read(contentDatabaseProvider);
+      selectedProgram = await contentDb.contentLearningProgramDao
+          .getProgramById(programId);
     }
 
     final step =

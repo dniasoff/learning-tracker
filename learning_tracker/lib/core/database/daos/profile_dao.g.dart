@@ -3,7 +3,7 @@
 part of 'profile_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$ProfileDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$ProfileDaoMixin on DatabaseAccessor<UserDatabase> {
   $ProfilesTable get profiles => attachedDatabase.profiles;
   ProfileDaoManager get managers => ProfileDaoManager(this);
 }

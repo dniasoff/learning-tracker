@@ -1,6 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -29,12 +29,12 @@ void main() {
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  late AppDatabase database;
+  late UserDatabase database;
   late MockContentRepository mockContent;
   late LearningOrderRepositoryImpl repo;
 
   setUp(() {
-    database = AppDatabase(NativeDatabase.memory());
+    database = UserDatabase(NativeDatabase.memory());
     mockContent = MockContentRepository();
     repo = LearningOrderRepositoryImpl(
       database: database,

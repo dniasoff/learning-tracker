@@ -3,7 +3,7 @@
 part of 'streak_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$StreakDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$StreakDaoMixin on DatabaseAccessor<UserDatabase> {
   $StreaksTable get streaks => attachedDatabase.streaks;
   StreakDaoManager get managers => StreakDaoManager(this);
 }

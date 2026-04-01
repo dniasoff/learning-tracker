@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 
 /// Provider for DeviceRestoreService.
 final deviceRestoreServiceProvider = Provider<DeviceRestoreService>((ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
   final curriculumImportService = ref.watch(curriculumImportServiceProvider);

@@ -1,25 +1,25 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockAppDatabase extends Mock implements AppDatabase {}
+class MockUserDatabase extends Mock implements UserDatabase {}
 
 class MockCompletionDao extends Mock implements CompletionDao {}
 
 class MockGoalDao extends Mock implements GoalDao {}
 
 void main() {
-  late MockAppDatabase mockDb;
+  late MockUserDatabase mockDb;
   late MockCompletionDao mockCompletionDao;
   late MockGoalDao mockGoalDao;
   late ChartDataService service;
 
   setUp(() {
-    mockDb = MockAppDatabase();
+    mockDb = MockUserDatabase();
     mockCompletionDao = MockCompletionDao();
     mockGoalDao = MockGoalDao();
     when(() => mockDb.completionDao).thenReturn(mockCompletionDao);

@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/daos/text_cache_dao.dart';
+import 'package:learning_tracker/core/database/content/daos/text_cache_dao.dart';
 
 /// Model for fetched text content.
 class TextContent {
@@ -18,7 +18,7 @@ class TextContent {
 class TextCacheRepository {
   TextCacheRepository({required this.textCacheDao});
 
-  final TextCacheDao textCacheDao;
+  final ContentTextCacheDao textCacheDao;
 
   /// Retrieves text for a given Sefaria reference.
   /// Returns cached text if available, otherwise returns null.
@@ -33,9 +33,6 @@ class TextCacheRepository {
     }
     return null;
   }
-
-  /// Clears all cached text.
-  Future<void> clearCache() => textCacheDao.clearCache();
 
   /// Returns list of all cached Sefaria references.
   Future<List<String>> getCachedRefs() => textCacheDao.getAllCachedRefs();

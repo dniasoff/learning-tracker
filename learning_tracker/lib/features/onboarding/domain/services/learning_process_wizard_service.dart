@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart' as db;
-import 'package:learning_tracker/core/database/daos/learning_program_dao.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart'
+    as content_db;
+import 'package:learning_tracker/core/database/content/daos/learning_program_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -53,18 +55,18 @@ class CustomRound {
 class LearningProcessWizardService {
   LearningProcessWizardService({
     required StageDao stageDao,
-    required LearningProgramDao learningProgramDao,
+    required ContentLearningProgramDao learningProgramDao,
     required ProfileProgramDao profileProgramDao,
   }) : _stageDao = stageDao,
        _learningProgramDao = learningProgramDao,
        _profileProgramDao = profileProgramDao;
 
   final StageDao _stageDao;
-  final LearningProgramDao _learningProgramDao;
+  final ContentLearningProgramDao _learningProgramDao;
   final ProfileProgramDao _profileProgramDao;
 
   /// Get active programs filtered by curriculum type.
-  Future<List<db.LearningProgram>> getPresetsForCurriculum(
+  Future<List<content_db.LearningProgram>> getPresetsForCurriculum(
     CurriculumId curriculumId,
   ) {
     return _learningProgramDao.getProgramsByCurriculumType(

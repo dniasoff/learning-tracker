@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -7,7 +7,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 part 'active_curriculum_dao.g.dart';
 
 @DriftAccessor(tables: [ActiveCurricula])
-class ActiveCurriculumDao extends DatabaseAccessor<AppDatabase>
+class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
     with _$ActiveCurriculumDaoMixin {
   ActiveCurriculumDao(super.db);
 

@@ -44,7 +44,7 @@ final isStageCompletedProvider = FutureProvider.autoDispose
 /// Provides the completion repository.
 @riverpod
 CompletionRepository completionRepository(Ref ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
 
@@ -93,7 +93,7 @@ Future<int> completionCount(
   required String curriculumId,
   required String sefariaRef,
 }) async {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await database.completionDao
       .getCompletionsForContentAndProfile(sefariaRef, profileId);
@@ -107,7 +107,7 @@ Future<Map<String, int>> reviewCountsForCurriculum(
   Ref ref,
   String curriculumId,
 ) async {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return database.completionDao.getReviewCountsByItem(curriculumId, profileId);
 }
@@ -118,7 +118,7 @@ Future<Map<int, int>> itemStageBreakdown(
   Ref ref,
   ({String curriculumId, String sefariaRef}) params,
 ) async {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return database.completionDao.getStageBreakdownByItem(
     params.curriculumId,

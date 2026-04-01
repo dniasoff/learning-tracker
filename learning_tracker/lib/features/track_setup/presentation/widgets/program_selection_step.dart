@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 
@@ -28,10 +28,10 @@ class ProgramSelectionStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final db = ref.watch(appDatabaseProvider);
+    final contentDb = ref.watch(contentDatabaseProvider);
 
     return FutureBuilder<List<LearningProgram>>(
-      future: db.learningProgramDao.getProgramsByCurriculumType(
+      future: contentDb.contentLearningProgramDao.getProgramsByCurriculumType(
         curriculumId.storageKey,
       ),
       builder: (context, snapshot) {

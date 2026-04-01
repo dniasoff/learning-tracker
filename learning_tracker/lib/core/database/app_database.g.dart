@@ -12369,48 +12369,48 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $CalendarCacheTable calendarCache = $CalendarCacheTable(this);
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
   late final CurriculumScopeDao curriculumScopeDao = CurriculumScopeDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
-  late final CompletionDao completionDao = CompletionDao(this as AppDatabase);
+  late final CompletionDao completionDao = CompletionDao(this as UserDatabase);
   late final LearningLedgerDao learningLedgerDao = LearningLedgerDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
-  late final GoalDao goalDao = GoalDao(this as AppDatabase);
+  late final GoalDao goalDao = GoalDao(this as UserDatabase);
   late final PointConfigDao pointConfigDao = PointConfigDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
-  late final StageDao stageDao = StageDao(this as AppDatabase);
-  late final BookmarkDao bookmarkDao = BookmarkDao(this as AppDatabase);
+  late final StageDao stageDao = StageDao(this as UserDatabase);
+  late final BookmarkDao bookmarkDao = BookmarkDao(this as UserDatabase);
   late final LearningOrderDao learningOrderDao = LearningOrderDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
-  late final TrackDao trackDao = TrackDao(this as AppDatabase);
-  late final ProfileDao profileDao = ProfileDao(this as AppDatabase);
+  late final TrackDao trackDao = TrackDao(this as UserDatabase);
+  late final ProfileDao profileDao = ProfileDao(this as UserDatabase);
   late final UserProfileDao userProfileDao = UserProfileDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
-  late final StreakDao streakDao = StreakDao(this as AppDatabase);
-  late final RewardDao rewardDao = RewardDao(this as AppDatabase);
-  late final RewardPoolDao rewardPoolDao = RewardPoolDao(this as AppDatabase);
-  late final SyncQueueDao syncQueueDao = SyncQueueDao(this as AppDatabase);
+  late final StreakDao streakDao = StreakDao(this as UserDatabase);
+  late final RewardDao rewardDao = RewardDao(this as UserDatabase);
+  late final RewardPoolDao rewardPoolDao = RewardPoolDao(this as UserDatabase);
+  late final SyncQueueDao syncQueueDao = SyncQueueDao(this as UserDatabase);
   late final TextCacheDao textCacheDao = TextCacheDao(this as AppDatabase);
   late final TextDownloadStatusDao textDownloadStatusDao =
-      TextDownloadStatusDao(this as AppDatabase);
+      TextDownloadStatusDao(this as UserDatabase);
   late final ContentDownloadStatusDao contentDownloadStatusDao =
       ContentDownloadStatusDao(this as AppDatabase);
   late final LearningProgramDao learningProgramDao = LearningProgramDao(
     this as AppDatabase,
   );
   late final ProfileProgramDao profileProgramDao = ProfileProgramDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
   late final TestDateDao testDateDao = TestDateDao(this as AppDatabase);
-  late final TestScoreDao testScoreDao = TestScoreDao(this as AppDatabase);
+  late final TestScoreDao testScoreDao = TestScoreDao(this as UserDatabase);
   late final StudyDayConfigDao studyDayConfigDao = StudyDayConfigDao(
-    this as AppDatabase,
+    this as UserDatabase,
   );
   late final CalendarCacheDao calendarCacheDao = CalendarCacheDao(
     this as AppDatabase,

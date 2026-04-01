@@ -8,7 +8,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -236,66 +236,39 @@ void main() {
       expect(content.englishText, isNotEmpty);
     });
 
-    test('TextCacheDao stores and retrieves text', () async {
-      final db = createTestDatabase();
-      addTearDown(() => db.close());
+    test('ContentTextCacheDao reads text from content database', () async {
+      final contentDb = createTestContentDatabase();
+      addTearDown(() => contentDb.close());
 
-      await db.textCacheDao.storeText(
-        sefariaRef: 'Mishnah Berachos 1.1',
-        hebrewText: 'מאימתי קורין את שמע',
-        englishText: 'From when does one recite Shema',
-      );
-
-      final cached = await db.textCacheDao.getText('Mishnah Berachos 1.1');
-      expect(cached, isNotNull);
-      expect(cached!.hebrewText, contains('מאימתי'));
-      expect(cached.englishText, contains('Shema'));
+      // Fresh content DB has no cached text (seeded DB would have data)
+      final cached = await contentDb.contentTextCacheDao
+          .getText('Mishnah Berachos 1.1');
+      expect(cached, isNull);
     });
 
     test(
-      'AC: cache-only — returns pre-cached text, null if not cached',
+      'AC: cache-only — returns null if not cached (no API fallback)',
       () async {
-        final db = createTestDatabase();
-        addTearDown(() => db.close());
+        final contentDb = createTestContentDatabase();
+        addTearDown(() => contentDb.close());
 
-        final repo = TextCacheRepository(textCacheDao: db.textCacheDao);
+        final repo = TextCacheRepository(
+          textCacheDao: contentDb.contentTextCacheDao,
+        );
 
         // Not cached — returns null (no API fallback)
         final missing = await repo.getText('Mishnah Berakhot 1.1');
         expect(missing, isNull);
-
-        // Pre-cache text (simulates download service)
-        await db.textCacheDao.storeText(
-          sefariaRef: 'Mishnah Berakhot 1.1',
-          hebrewText: '\u05DE\u05D0\u05D9\u05DE\u05EA\u05D9',
-          englishText: 'From when',
-        );
-
-        // Now returns cached text
-        final result = await repo.getText('Mishnah Berakhot 1.1');
-        expect(result, isNotNull);
-        expect(result!.hebrewText, '\u05DE\u05D0\u05D9\u05DE\u05EA\u05D9');
-        expect(result.englishText, 'From when');
       },
     );
 
-    test('AC: offline shows cached text, or null if never fetched', () async {
-      final db = createTestDatabase();
-      addTearDown(() => db.close());
+    test('AC: offline shows null if never fetched', () async {
+      final contentDb = createTestContentDatabase();
+      addTearDown(() => contentDb.close());
 
-      // Pre-cache one text
-      await db.textCacheDao.storeText(
-        sefariaRef: 'cached_ref',
-        hebrewText: 'cached hebrew',
-        englishText: 'cached english',
+      final repo = TextCacheRepository(
+        textCacheDao: contentDb.contentTextCacheDao,
       );
-
-      final repo = TextCacheRepository(textCacheDao: db.textCacheDao);
-
-      // Cached text returns successfully
-      final cachedResult = await repo.getText('cached_ref');
-      expect(cachedResult, isNotNull);
-      expect(cachedResult!.hebrewText, 'cached hebrew');
 
       // Uncached text returns null (not available)
       final uncachedResult = await repo.getText('uncached_ref');
@@ -328,7 +301,7 @@ void main() {
   // ── Story 2.4: Curriculum activation ──────────────────────────
 
   group('Story 2.4 -- Curriculum activation', tags: ['story_2_4'], () {
-    late AppDatabase db;
+    late UserDatabase db;
     late CurriculumActivationService service;
 
     setUp(() {

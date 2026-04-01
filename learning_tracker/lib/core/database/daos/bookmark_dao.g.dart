@@ -3,7 +3,7 @@
 part of 'bookmark_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$BookmarkDaoMixin on DatabaseAccessor<AppDatabase> {
+mixin _$BookmarkDaoMixin on DatabaseAccessor<UserDatabase> {
   $BookmarksTable get bookmarks => attachedDatabase.bookmarks;
   BookmarkDaoManager get managers => BookmarkDaoManager(this);
 }

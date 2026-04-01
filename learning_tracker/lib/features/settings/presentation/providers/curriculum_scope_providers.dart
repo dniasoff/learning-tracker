@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 /// Get a scope summary string for display (e.g., "Seder Zeraim, Seder Moed" or "All").
 final curriculumScopeSummaryProvider =
     FutureProvider.family<String, CurriculumId>((ref, curriculumId) async {
-      final db = ref.watch(appDatabaseProvider);
+      final db = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       final values = await db.curriculumScopeDao.getScopeValues(
         profileId,
@@ -25,7 +25,7 @@ final scopedCurriculumContentProvider =
       ref,
       curriculumId,
     ) async {
-      final db = ref.watch(appDatabaseProvider);
+      final db = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       final repository = ref.watch(contentRepositoryProvider);
 

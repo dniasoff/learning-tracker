@@ -6,5 +6,5 @@ import 'package:learning_tracker/features/settings/domain/services/data_export_i
 final dataExportImportServiceProvider = Provider<DataExportImportService>((
   ref,
 ) {
-  return DataExportImportService(database: ref.watch(appDatabaseProvider));
+  return DataExportImportService(database: ref.watch(userDatabaseProvider));
 });

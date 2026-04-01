@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:test/test.dart';
@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 import '../../../../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
   late PointsService service;
 
   setUp(() {

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
 void main() {
@@ -39,11 +39,11 @@ void main() {
   }
 
   group('validateAndPreview', () {
-    late AppDatabase db;
+    late UserDatabase db;
     late DataExportImportService service;
 
     setUp(() {
-      db = AppDatabase(NativeDatabase.memory());
+      db = UserDatabase(NativeDatabase.memory());
       service = DataExportImportService(database: db);
     });
 

@@ -403,7 +403,7 @@ Future<void> reminderSyncEffect(Ref ref) async {
 /// Provides the [StreakAlertService] instance.
 @riverpod
 StreakAlertService streakAlertService(Ref ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final notifService = ref.watch(notificationServiceProvider);
   return StreakAlertService(db: db, notificationService: notifService);
 }

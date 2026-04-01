@@ -10,7 +10,7 @@ import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.
 /// Provider for [StageDefinitionRepository], scoped per [CurriculumId].
 final stageDefinitionRepositoryProvider =
     Provider.family<StageDefinitionRepository, CurriculumId>((ref, curriculum) {
-      final database = ref.watch(appDatabaseProvider);
+      final database = ref.watch(userDatabaseProvider);
       final syncEngine = ref.watch(syncEngineProvider);
       return StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,

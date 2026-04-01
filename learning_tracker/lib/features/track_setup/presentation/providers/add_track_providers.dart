@@ -6,7 +6,7 @@ import 'package:learning_tracker/features/track_setup/domain/services/track_crea
 
 /// Provider for [TrackCreationService] used by AddTrackFlow.
 final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(userDatabaseProvider);
   final activationService = ref.watch(curriculumActivationServiceProvider);
   final wizardService = ref.watch(learningProcessWizardServiceProvider);
   final goalRepo = ref.watch(goalRepositoryProvider);

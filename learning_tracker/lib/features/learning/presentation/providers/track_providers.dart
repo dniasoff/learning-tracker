@@ -10,7 +10,7 @@ part 'track_providers.g.dart';
 /// Provides the track repository.
 @riverpod
 TrackRepository trackRepository(Ref ref) {
-  final database = ref.watch(appDatabaseProvider);
+  final database = ref.watch(userDatabaseProvider);
 
   return TrackRepositoryImpl(database: database);
 }

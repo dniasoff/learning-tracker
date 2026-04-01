@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 /// Record of a single points award event.
@@ -23,7 +23,7 @@ class PointsHistoryEntry {
 /// Points are awarded as a side effect of completion (via CompletionRepository).
 /// This service provides read access to points totals, history, and configuration.
 class PointsService {
-  final AppDatabase _database;
+  final UserDatabase _database;
   final int profileId;
 
   PointsService(this._database, {this.profileId = 0});
