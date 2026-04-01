@@ -193,7 +193,7 @@ development_status:
   19-3-seed-database-build-tool: ready-for-dev
   19-4-local-calendar-engine: ready-for-dev
   19-5-local-first-auth-abstraction: done
-  19-6-startup-sequence-hardening: in-progress
+  19-6-startup-sequence-hardening: done
   19-7-optional-account-creation-settings: ready-for-dev
   19-8-syncengine-conditional-activation: ready-for-dev
   19-9-multi-device-sync: ready-for-dev
