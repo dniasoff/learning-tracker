@@ -186,18 +186,18 @@ development_status:
   epic-18-retrospective: optional
 
   # Epic 19: Offline-First Architecture & Two-Database Split (13 stories)
-  epic-19: in-progress
+  epic-19: done
   19-1-fix-calendar-registry-bugs: done
   19-2-two-database-split: done
   19-2b-content-db-runtime-upgrade-flow: done
-  19-3-seed-database-build-tool: in-progress
-  19-4-local-calendar-engine: ready-for-dev
+  19-3-seed-database-build-tool: done
+  19-4-local-calendar-engine: done
   19-5-local-first-auth-abstraction: done
   19-6-startup-sequence-hardening: done
-  19-7-optional-account-creation-settings: ready-for-dev
+  19-7-optional-account-creation-settings: done
   19-8-syncengine-conditional-activation: done
-  19-9-multi-device-sync: ready-for-dev
-  19-10-navigation-state-cleanup: ready-for-dev
-  19-11-e2e-offline-integration-testing: ready-for-dev
-  19-12-content-db-resilience-error-recovery: ready-for-dev
+  19-9-multi-device-sync: done
+  19-10-navigation-state-cleanup: done
+  19-11-e2e-offline-integration-testing: done
+  19-12-content-db-resilience-error-recovery: done
   epic-19-retrospective: optional
