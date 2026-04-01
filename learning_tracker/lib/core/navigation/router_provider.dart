@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Riverpod provider that creates and owns the [AppRouter] singleton.
@@ -22,7 +23,11 @@ final routerProvider = Provider<AppRouter>((ref) {
 
   return AppRouter(
     authGuard: LocalAuthGuard(),
-    restoreGuard: RestoreGuard(database: db),
+    restoreGuard: RestoreGuard(
+      database: db,
+      hasCloudAccount: () =>
+          ref.read(authStateProvider).hasCloudAccount,
+    ),
     profileGuard: ProfileGuard(
       database: db,
       getSelectedProfileId: () => ref.read(selectedProfileIdProvider),

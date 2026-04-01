@@ -9,6 +9,8 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_auth_state.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
@@ -18,6 +20,8 @@ import 'package:learning_tracker/features/settings/presentation/widgets/change_p
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/link_provider_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 // TODO(DNI-105): Replace with dynamic version from package_info_plus
 // once the dependency is added to pubspec.yaml.
@@ -139,40 +143,18 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
+            // BACKUP & SYNC section (DNI-188)
+            const _SectionHeader(title: 'BACKUP & SYNC'),
+            const SizedBox(height: 8),
+            const _BackupSyncSection(),
+            const SizedBox(height: 24),
+
             // DATA & PRIVACY section
             const _SectionHeader(title: 'DATA & PRIVACY'),
             const SizedBox(height: 8),
             Card(
               child: Column(
                 children: [
-                  ListTile(
-                    leading: Icon(
-                      Icons.cloud_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Cloud Sync'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: theme.colorScheme.primary,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Synced',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ),
-                    onTap: () => context.pushRoute(const SyncRoute()),
-                  ),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
                     leading: Icon(
                       Icons.file_upload_outlined,
@@ -285,6 +267,111 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Displays sync status and account creation CTA for local-only users.
+///
+/// DNI-188: Optional Account Creation in Settings.
+class _BackupSyncSection extends ConsumerWidget {
+  const _BackupSyncSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final syncStatus = ref.watch(syncStatusProvider);
+    final authState = ref.watch(authStateProvider);
+
+    return Card(
+      child: Column(
+        children: [
+          switch (syncStatus) {
+            SyncStatusLocalOnly() => _buildLocalOnlyTile(
+                context,
+                theme,
+                isLocalAuth: authState is LocalAuthState,
+              ),
+            SyncStatusSynced(:final lastSyncedAt) =>
+              _buildSyncedTile(theme, lastSyncedAt),
+            SyncStatusSyncing() => _buildStatusTile(
+                theme,
+                icon: Icons.sync,
+                label: 'Syncing...',
+                color: theme.colorScheme.primary,
+              ),
+            SyncStatusPending(:final pendingChanges) => _buildStatusTile(
+                theme,
+                icon: Icons.schedule,
+                label: '$pendingChanges changes pending',
+                color: Colors.orange,
+              ),
+            SyncStatusOffline(:final pendingChanges) => _buildStatusTile(
+                theme,
+                icon: Icons.cloud_off,
+                label: pendingChanges > 0
+                    ? '$pendingChanges changes queued'
+                    : 'Offline',
+                color: Colors.grey,
+              ),
+            SyncStatusError(:final message) => _buildStatusTile(
+                theme,
+                icon: Icons.warning_amber,
+                label: 'Sync error: $message',
+                color: Colors.red,
+              ),
+          },
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalOnlyTile(
+    BuildContext context,
+    ThemeData theme, {
+    required bool isLocalAuth,
+  }) {
+    return ListTile(
+      leading: Icon(Icons.smartphone, color: theme.colorScheme.onSurfaceVariant),
+      title: const Text('Local only'),
+      subtitle: const Text('Create an account to enable cloud backup'),
+      trailing: isLocalAuth
+          ? FilledButton.tonal(
+              onPressed: () =>
+                  context.pushRoute(const AccountCreationRoute()),
+              child: const Text('Create Account'),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildSyncedTile(ThemeData theme, DateTime lastSyncedAt) {
+    final timeAgo = _formatTimeAgo(lastSyncedAt);
+    return ListTile(
+      leading: const Icon(Icons.cloud_done, color: Colors.green),
+      title: const Text('Sync enabled'),
+      subtitle: Text('Last synced $timeAgo'),
+      trailing: const Icon(Icons.chevron_right),
+    );
+  }
+
+  Widget _buildStatusTile(
+    ThemeData theme, {
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(label),
+    );
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }
 

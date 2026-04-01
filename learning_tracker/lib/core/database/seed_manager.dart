@@ -210,4 +210,18 @@ class SeedManager {
     await _extractSeedDb(_dbPath);
     return _dbPath;
   }
+
+  /// Deletes the existing content database and re-extracts from the seed.
+  ///
+  /// Convenience static factory that creates a temporary [SeedManager] and
+  /// calls [forceReExtract]. Use this when you need a one-shot repair without
+  /// holding a [SeedManager] instance.
+  static Future<String> repairContentDatabase({
+    required String dbDirectory,
+    Talker? talker,
+  }) async {
+    final manager = SeedManager(dbDirectory: dbDirectory, talker: talker);
+    talker?.info('SeedManager: repairContentDatabase requested');
+    return manager.forceReExtract();
+  }
 }

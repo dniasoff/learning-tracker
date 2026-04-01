@@ -1323,4 +1323,144 @@ class SyncEngine {
 
   /// Whether battery saver mode is currently active.
   bool get isBatterySaverMode => _isBatterySaverMode;
+
+  // ========== Initial Cloud Push (DNI-190) ==========
+
+  /// Push all local data to Firestore after account creation.
+  ///
+  /// Reads every user-data table and pushes each record using the existing
+  /// push-on-write methods. Firestore uses `set(merge: true)` underneath,
+  /// so this is idempotent and safe to retry.
+  ///
+  /// Called once after the user creates a cloud account (story 19.7).
+  Future<void> pushAllLocalData() async {
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.warning('pushAllLocalData skipped: user not authenticated');
+      return;
+    }
+
+    _logger.info('pushAllLocalData: starting initial cloud push');
+    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
+
+    try {
+      // --- Completions (append-only) ---
+      final completions = await _database.completionDao.getAllCompletions();
+      for (final c in completions) {
+        await pushCompletion({
+          'curriculum_id': c.curriculumId,
+          'content_item_id': c.sefariaRef,
+          'stage_id': c.stageId,
+          'track_type': c.trackType,
+          'completed_at': c.completedAt.toIso8601String(),
+          'points': c.points,
+        });
+      }
+      _logger.debug('Pushed ${completions.length} completions');
+
+      // --- Bookmarks ---
+      final bookmarks = await _database.bookmarkDao.getAllBookmarks();
+      for (final b in bookmarks) {
+        await pushBookmark({
+          'curriculum_id': b.curriculumId,
+          'track_type': b.trackType,
+          'content_item_id': b.sefariaRef,
+          'updated_at': b.updatedAt.toIso8601String(),
+        });
+      }
+      _logger.debug('Pushed ${bookmarks.length} bookmarks');
+
+      // --- Goals ---
+      final goals = await _database.goalDao.getAllGoals();
+      for (final g in goals) {
+        await pushGoal({
+          'curriculum_id': g.curriculumId,
+          'description': g.description,
+          'target_percent': g.targetPercent,
+          'target_date': g.targetDate?.toIso8601String(),
+          'date_type': g.dateType,
+          'goal_type': g.goalType,
+          'pace_value': g.paceValue,
+          'pace_unit': g.paceUnit,
+          'created_at': g.createdAt.toIso8601String(),
+          'updated_at': g.updatedAt.toIso8601String(),
+        });
+      }
+      _logger.debug('Pushed ${goals.length} goals');
+
+      // --- Rewards ---
+      final rewards = await _database.rewardDao.getAllRewards();
+      for (final r in rewards) {
+        await pushReward({
+          'title': r.title,
+          'description': r.description,
+          'points_threshold': r.pointsThreshold,
+          'is_revealed': r.isRevealed,
+          'is_earned': r.isEarned,
+          'earned_at': r.earnedAt?.toIso8601String(),
+          'created_at': r.createdAt.toIso8601String(),
+          'updated_at': r.updatedAt.toIso8601String(),
+          'curriculum_id': r.curriculumId,
+        });
+      }
+      _logger.debug('Pushed ${rewards.length} rewards');
+
+      // --- Streak ---
+      final streak = await _database.streakDao.getStreak();
+      if (streak != null) {
+        await pushStreak({
+          'current_count': streak.currentStreak,
+          'max_count': streak.maxStreak,
+          'last_completion_date':
+              streak.lastCompletionDate?.toIso8601String(),
+          'grace_used_date':
+              streak.graceUsedDate?.toIso8601String(),
+          'grace_period_days': streak.gracePeriodDays,
+        });
+        _logger.debug('Pushed streak');
+      }
+
+      // --- Ledger entries ---
+      // LearningLedgerDao has no getAll, so query via the database
+      // directly using select on the table.
+      final ledgerEntries =
+          await _database.select(_database.learningLedger).get();
+      for (final e in ledgerEntries) {
+        await pushLedgerEntry({
+          'curriculumId': e.curriculumId,
+          'unitType': e.unitType,
+          'unitIdentifier': e.unitIdentifier,
+          'unitDisplayNameHe': e.unitDisplayNameHe,
+          'unitDisplayNameEn': e.unitDisplayNameEn,
+          'trackType': e.trackType,
+          'trackId': e.trackId,
+          'completedAt': e.completedAt.toIso8601String(),
+          'completionNumber': e.completionNumber,
+          'markedBy': e.markedBy,
+          'isManual': e.isManual,
+        });
+      }
+      _logger.debug('Pushed ${ledgerEntries.length} ledger entries');
+
+      // --- Active curricula ---
+      final activeCurricula =
+          await _database.activeCurriculumDao.getActiveCurricula();
+      if (activeCurricula.isNotEmpty) {
+        await _firestoreDataSource.pushActiveCurricula(activeCurricula);
+        _logger.debug('Pushed ${activeCurricula.length} active curricula');
+      }
+
+      _logger.info('pushAllLocalData: completed successfully');
+      final syncedAt = DateTime.now().toUtc();
+      await _persistLastSyncTimestamp(syncedAt);
+      _updateStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
+    } catch (e, stackTrace) {
+      _logger.error('pushAllLocalData failed', e, stackTrace);
+      _updateStatus(
+        SyncStatus.error(
+          message: e.toString(),
+          failedAt: DateTime.now().toUtc(),
+        ),
+      );
+    }
+  }
 }
