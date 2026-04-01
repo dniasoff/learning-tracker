@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/locale_provider.dart';
@@ -15,30 +14,19 @@ import 'package:learning_tracker/features/settings/presentation/providers/theme_
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:talker/talker.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
 
 void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      try {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
-      } on FirebaseException catch (_) {
-        // Already initialized (e.g. hot restart) — use existing app.
-      }
-
-      // google_sign_in v7 requires initialize() before authenticate().
-      await GoogleSignIn.instance.initialize();
 
       final talker = AppLogger.init();
       AppLogger.setupFlutterErrorHandlers();
+      talker.info('App starting — local-first mode');
 
-      talker.info('App starting');
-
-      // Create the shared provider container so pre-runApp initialization
-      // and the widget tree use the same state.
+      // Create the shared provider container — no network deps here.
       final container = ProviderContainer(
         observers: [
           TalkerRiverpodObserver(
@@ -51,8 +39,7 @@ void main() {
       );
 
       // Initialize notification system (timezone data + plugin).
-      // Wrapped in try/catch so a notification init failure doesn't block
-      // the entire app from starting (user sees stuck Flutter logo).
+      // Non-fatal — app works fine without notifications.
       try {
         final router = container.read(routerProvider);
         final notificationInitializer = NotificationInitializer(
@@ -64,17 +51,43 @@ void main() {
         talker.error('Notification init failed (non-fatal)', e, stack);
       }
 
+      // Launch app immediately — no network calls, no Firebase dependency.
       runApp(
         UncontrolledProviderScope(
           container: container,
           child: const LearningTrackerApp(),
         ),
       );
+
+      // Background: Initialize Firebase (non-blocking).
+      // Firebase is optional — only needed for sync + account features.
+      unawaited(_initFirebaseInBackground(talker));
     },
     (Object error, StackTrace stack) {
       AppLogger.instance.handle(error, stack);
     },
   );
+}
+
+/// Initialize Firebase in the background after the app is already running.
+///
+/// This ensures the app is usable instantly. Firebase activation enables
+/// SyncEngine and account features but is not required for core functionality.
+Future<void> _initFirebaseInBackground(Talker talker) async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    talker.info('Firebase initialized (background)');
+  } catch (e) {
+    // Firebase init failed — sync features unavailable this session.
+    // App continues to work fully in local-first mode.
+    talker.warning('Firebase init failed (non-fatal): $e');
+  }
+
+  // GoogleSignIn.initialize() deferred — only called when user
+  // actively chooses Google sign-in from Settings.
+  // Previously called at startup with NO try/catch — crashed offline.
 }
 
 class LearningTrackerApp extends ConsumerWidget {
