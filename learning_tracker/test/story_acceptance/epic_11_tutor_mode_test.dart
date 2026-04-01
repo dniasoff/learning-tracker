@@ -154,7 +154,8 @@ void main() {
       addTearDown(() => db.close());
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
-          firebaseUid: 'uid-child',
+          localUid: 'local-uid-child',
+          firebaseUid: const Value('uid-child'),
           displayName: 'Child User',
           userMode: 'child',
           createdAt: DateTime.now(),
@@ -178,7 +179,8 @@ void main() {
       addTearDown(() => db.close());
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
-          firebaseUid: 'uid-adult',
+          localUid: 'local-uid-adult',
+          firebaseUid: const Value('uid-adult'),
           displayName: 'Adult User',
           userMode: 'adult',
           createdAt: DateTime.now(),

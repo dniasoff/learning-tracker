@@ -13,7 +13,7 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
@@ -123,9 +123,9 @@ void main() {
 
   group('Story 1.3 -- Firebase auth repository', tags: ['story_1_3'], () {
     test('AuthRepository interface is importable', () {
-      // The import of AuthGuard (which depends on FirebaseAuth) confirms
+      // The import of LocalAuthGuard (which depends on FirebaseAuth) confirms
       // the auth layer compiles. We verify the guard type here.
-      expect(AuthGuard, isNotNull);
+      expect(LocalAuthGuard, isNotNull);
     });
 
     test('AuthRepositoryImpl exists in data layer', () {
@@ -162,8 +162,8 @@ void main() {
       expect(AppRouter, isNotNull);
     });
 
-    test('AuthGuard exists', () {
-      expect(AuthGuard, isNotNull);
+    test('LocalAuthGuard exists', () {
+      expect(LocalAuthGuard, isNotNull);
     });
 
     test('ParentPinGuard exists', () {

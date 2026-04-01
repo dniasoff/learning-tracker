@@ -3,6 +3,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
@@ -41,7 +42,8 @@ void main() {
   test('adult account blocked — resolver.next(false)', () async {
     await db.userProfileDao.insertUserProfile(
       UserProfilesCompanion.insert(
-        firebaseUid: 'uid-1',
+        localUid: 'local-uid-1',
+        firebaseUid: const Value('uid-1'),
         displayName: 'Adult User',
         userMode: 'adult',
         createdAt: DateTime.now(),
@@ -60,7 +62,8 @@ void main() {
   test('child account allowed — resolver.next(true)', () async {
     await db.userProfileDao.insertUserProfile(
       UserProfilesCompanion.insert(
-        firebaseUid: 'uid-2',
+        localUid: 'local-uid-2',
+        firebaseUid: const Value('uid-2'),
         displayName: 'Child User',
         userMode: 'child',
         createdAt: DateTime.now(),

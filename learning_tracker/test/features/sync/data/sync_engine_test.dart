@@ -568,7 +568,8 @@ void main() {
       // Insert older local profile
       await database.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
-          firebaseUid: 'uid-123',
+          localUid: 'local-uid-123',
+          firebaseUid: const Value('uid-123'),
           displayName: 'Old Name',
           userMode: 'adult',
           createdAt: DateTime.utc(2026, 2, 7),

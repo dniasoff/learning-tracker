@@ -157,6 +157,7 @@ void main() {
         final status = SyncStatus.syncing(startedAt: DateTime.now());
 
         final result = status.when(
+          localOnly: () => 'localOnly',
           syncing: (_) => 'syncing',
           synced: (_) => 'synced',
           pending: (_) => 'pending',
@@ -182,6 +183,7 @@ void main() {
         const status = SyncStatus.pending(pendingChanges: 2);
 
         final result = status.when(
+          localOnly: () => 'localOnly',
           syncing: (_) => 'syncing',
           synced: (_) => 'synced',
           pending: (count) => 'pending:$count',
@@ -196,6 +198,7 @@ void main() {
         const status = SyncStatus.pending(pendingChanges: 5);
 
         final label = switch (status) {
+          SyncStatusLocalOnly() => 'localOnly',
           SyncStatusSyncing() => 'syncing',
           SyncStatusSynced() => 'synced',
           SyncStatusPending(:final pendingChanges) => 'pending:$pendingChanges',

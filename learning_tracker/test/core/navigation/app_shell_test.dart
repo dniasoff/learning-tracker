@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
@@ -17,32 +17,28 @@ import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_database.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
-class MockUser extends Mock implements User {}
-
 class MockPinService extends Mock implements PinService {}
 
 AppRouter _createAuthenticatedRouter() {
-  final mockAuth = MockFirebaseAuth();
-  final mockUser = MockUser();
-  when(
-    () => mockAuth.authStateChanges(),
-  ).thenAnswer((_) => Stream.value(mockUser));
-
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
   when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
 
-  final restoreGuard = RestoreGuard(database: createTestDatabase());
+  final testDb = createTestDatabase();
+  final restoreGuard = RestoreGuard(
+    database: testDb,
+    hasCloudAccount: () => false,
+  );
   restoreGuard.markRestoreComplete();
 
-  final testDb = createTestDatabase();
   return AppRouter(
-    authGuard: AuthGuard(firebaseAuth: mockAuth),
+    authGuard: LocalAuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
       database: testDb,
@@ -63,19 +59,19 @@ AppRouter _createAuthenticatedRouter() {
 }
 
 AppRouter _createUnauthenticatedRouter() {
-  final mockAuth = MockFirebaseAuth();
-  when(() => mockAuth.authStateChanges()).thenAnswer((_) => Stream.value(null));
-
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
   when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
 
-  final restoreGuard = RestoreGuard(database: createTestDatabase());
+  final testDb = createTestDatabase();
+  final restoreGuard = RestoreGuard(
+    database: testDb,
+    hasCloudAccount: () => false,
+  );
   restoreGuard.markRestoreComplete();
 
-  final testDb = createTestDatabase();
   return AppRouter(
-    authGuard: AuthGuard(firebaseAuth: mockAuth),
+    authGuard: LocalAuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
       database: testDb,
@@ -107,6 +103,9 @@ void main() {
   late UserDatabase db;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({
+      'onboarding_complete': true,
+    });
     db = createTestDatabase();
   });
 

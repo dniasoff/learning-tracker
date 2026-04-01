@@ -1,31 +1,25 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
 import 'package:mocktail/mocktail.dart';
-
-class MockFirebaseAuth extends Mock implements FirebaseAuth {}
-
-class MockUser extends Mock implements User {}
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockNavigationResolver extends Mock implements NavigationResolver {}
 
 class MockStackRouter extends Mock implements StackRouter {}
 
 void main() {
-  late MockFirebaseAuth mockFirebaseAuth;
-  late AuthGuard authGuard;
+  late LocalAuthGuard authGuard;
   late MockNavigationResolver mockResolver;
   late MockStackRouter mockRouter;
 
   setUpAll(() {
-    registerFallbackValue(const SignInRoute());
+    registerFallbackValue(const AppIntroRoute());
   });
 
   setUp(() {
-    mockFirebaseAuth = MockFirebaseAuth();
-    authGuard = AuthGuard(firebaseAuth: mockFirebaseAuth);
+    authGuard = LocalAuthGuard();
     mockResolver = MockNavigationResolver();
     mockRouter = MockStackRouter();
 
@@ -33,12 +27,9 @@ void main() {
     when(() => mockResolver.next()).thenReturn(null);
   });
 
-  group('AuthGuard', () {
-    test('allows navigation when auth state has valid user', () async {
-      final mockUser = MockUser();
-      when(
-        () => mockFirebaseAuth.authStateChanges(),
-      ).thenAnswer((_) => Stream.value(mockUser));
+  group('LocalAuthGuard', () {
+    test('allows navigation when onboarding is complete', () async {
+      SharedPreferences.setMockInitialValues({'onboarding_complete': true});
 
       await authGuard.onNavigation(mockResolver, mockRouter);
 
@@ -46,10 +37,8 @@ void main() {
       verifyNever(() => mockRouter.replace(any()));
     });
 
-    test('redirects to sign-in route when auth state is null', () async {
-      when(
-        () => mockFirebaseAuth.authStateChanges(),
-      ).thenAnswer((_) => Stream.value(null));
+    test('redirects to app intro when onboarding is not complete', () async {
+      SharedPreferences.setMockInitialValues({});
       when(() => mockRouter.replace(any())).thenAnswer((_) async => null);
 
       await authGuard.onNavigation(mockResolver, mockRouter);

@@ -16,6 +16,7 @@ void main() {
 
   group('UserProfileDao', () {
     Future<int> insertTestProfile({
+      String localUid = 'local-test-uid',
       String firebaseUid = 'uid-123',
       String displayName = 'Test User',
       String userMode = 'adult',
@@ -25,7 +26,8 @@ void main() {
       final now = createdAt ?? DateTime.utc(2025, 1, 1);
       return database.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
-          firebaseUid: firebaseUid,
+          localUid: localUid,
+          firebaseUid: Value(firebaseUid),
           displayName: displayName,
           userMode: userMode,
           createdAt: now,
@@ -50,7 +52,7 @@ void main() {
     });
 
     test('getUserProfileByFirebaseUid finds by uid', () async {
-      await insertTestProfile(firebaseUid: 'abc');
+      await insertTestProfile(localUid: 'local-abc', firebaseUid: 'abc');
 
       final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
         'abc',
@@ -67,8 +69,8 @@ void main() {
     });
 
     test('getAllUserProfiles returns all profiles', () async {
-      await insertTestProfile(firebaseUid: 'uid-1');
-      await insertTestProfile(firebaseUid: 'uid-2');
+      await insertTestProfile(localUid: 'local-1', firebaseUid: 'uid-1');
+      await insertTestProfile(localUid: 'local-2', firebaseUid: 'uid-2');
 
       final profiles = await database.userProfileDao.getAllUserProfiles();
       expect(profiles, hasLength(2));
@@ -81,6 +83,7 @@ void main() {
       await database.userProfileDao.updateUserProfile(
         UserProfilesCompanion(
           id: Value(profile!.id),
+          localUid: Value(profile.localUid),
           firebaseUid: Value(profile.firebaseUid),
           displayName: const Value('New Name'),
           userMode: Value(profile.userMode),
@@ -121,6 +124,7 @@ void main() {
 
     test('upsertProfile updates when remote is newer', () async {
       await insertTestProfile(
+        localUid: 'local-1',
         firebaseUid: 'uid-1',
         displayName: 'Old Name',
         updatedAt: DateTime.utc(2025, 1, 1),
@@ -142,6 +146,7 @@ void main() {
 
     test('upsertProfile does not update when remote is older', () async {
       await insertTestProfile(
+        localUid: 'local-1',
         firebaseUid: 'uid-1',
         displayName: 'Current Name',
         updatedAt: DateTime.utc(2025, 6, 1),
