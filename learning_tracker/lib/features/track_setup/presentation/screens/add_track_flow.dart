@@ -94,20 +94,18 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       steps.add(AddTrackStep.scope);
     }
 
-    // Study days — skip for program tracks (all days are study days)
-    if (!_isProgramTrack) {
-      steps.add(AddTrackStep.studyDays);
-    }
+    // Study days — always shown. Program: auto-fill read-only. Self-paced: editable.
+    steps.add(AddTrackStep.studyDays);
 
     // Chazara — always shown (behavior varies: ask/show/offer)
     steps.add(AddTrackStep.chazaraSetup);
 
-    // Goal — skip for program tracks
+    // Goal — skip for program tracks (goal is always "finish the program")
     if (!_isProgramTrack) {
       steps.add(AddTrackStep.goal);
     }
 
-    // Track name — always shown
+    // Track name — always shown. Program: auto-fill from program name.
     steps.add(AddTrackStep.trackName);
 
     // Bulk mark / starting position — always shown
