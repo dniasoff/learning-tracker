@@ -58,6 +58,18 @@ class ContentDatabase extends _$ContentDatabase {
         await _seedLearningPrograms();
         await _seedTestDates();
       },
+      beforeOpen: (details) async {
+        // Fix for existing dev installs: if the DB was created before
+        // seeding was added to onCreate, programs table will be empty.
+        // Re-seed if needed — this is idempotent.
+        final count = await customSelect(
+          'SELECT COUNT(*) AS c FROM learning_programs',
+        ).getSingle();
+        if ((count.read<int>('c')) == 0) {
+          await _seedLearningPrograms();
+          await _seedTestDates();
+        }
+      },
     );
   }
 
