@@ -84,10 +84,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   List<AddTrackStep> get _activeSteps {
     final steps = <AddTrackStep>[AddTrackStep.curriculum];
 
-    // Program — auto-skip if no programs exist for curriculum
-    if (_state.curriculumId == null || _curriculumHasPrograms) {
-      steps.add(AddTrackStep.program);
-    }
+    // Program — always included. ProgramSelectionStep handles the empty
+    // case by auto-dismissing when no programs exist for the curriculum.
+    // This avoids hardcoding which curricula have programs.
+    steps.add(AddTrackStep.program);
 
     // Scope — skip if program selected (program defines scope)
     if (!_isProgramTrack) {
@@ -114,18 +114,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     steps.add(AddTrackStep.bulkMark);
 
     return steps;
-  }
-
-  /// Whether the selected curriculum has programs in the DB.
-  bool get _curriculumHasPrograms {
-    // Curricula with programs: bavli (4 programs), yerushalmi (1),
-    // mishna_berurah (1), mussar (1), mishnayos (1), nach (1)
-    // Simpler: check if NOT in the list with zero programs
-    // chumash, torah, tanach have no programs
-    if (_state.curriculumId == null) return true;
-    return _state.curriculumId != CurriculumId.chumash &&
-        _state.curriculumId != CurriculumId.torah &&
-        _state.curriculumId != CurriculumId.tanach;
   }
 
   int get _currentIndex => _activeSteps.indexOf(_state.currentStep);
