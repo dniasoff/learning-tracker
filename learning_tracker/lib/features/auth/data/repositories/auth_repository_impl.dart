@@ -12,6 +12,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
+  bool _googleSignInInitialized = false;
 
   static const _packageName = 'com.jcom.torah.learning_tracker';
 
@@ -23,8 +24,20 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
+  /// Lazily initialize GoogleSignIn on first use.
+  ///
+  /// google_sign_in v7 requires initialize() before authenticate().
+  /// Previously called at startup with no try/catch — crashed offline.
+  /// Now deferred to first actual sign-in attempt.
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (_googleSignInInitialized) return;
+    await _googleSignIn.initialize();
+    _googleSignInInitialized = true;
+  }
+
   @override
   Future<UserCredential> signInWithGoogle() async {
+    await _ensureGoogleSignInInitialized();
     final googleUser = await _googleSignIn.authenticate();
     final googleAuth = googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
@@ -118,6 +131,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> reauthenticateWithGoogle() async {
+    await _ensureGoogleSignInInitialized();
     final googleUser = await _googleSignIn.authenticate();
     final googleAuth = googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
@@ -128,6 +142,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> linkGoogleProvider() async {
+    await _ensureGoogleSignInInitialized();
     final googleUser = await _googleSignIn.authenticate();
     final googleAuth = googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
