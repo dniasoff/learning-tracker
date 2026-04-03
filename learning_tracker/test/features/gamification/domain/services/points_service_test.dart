@@ -9,10 +9,20 @@ import '../../../../helpers/test_database.dart';
 void main() {
   late UserDatabase db;
   late PointsService service;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
     service = PointsService(db);
+
+    final trackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
   });
 
   tearDown(() async {
@@ -34,6 +44,7 @@ void main() {
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
+        trackId: trackId,
         completedAt: completedAt ?? DateTime.now(),
         points: Value(points),
       ),
@@ -77,6 +88,7 @@ void main() {
         await db.pointConfigDao.insertConfig(
           PointConfigsCompanion.insert(
             curriculumId: CurriculumId.mishnayos.storageKey,
+            trackId: trackId,
             stageOrder: 1,
             points: 20,
           ),
@@ -198,7 +210,7 @@ void main() {
     test('ensureDefaultConfigs seeds configs only when empty', () async {
       final currId = CurriculumId.mishnayos.storageKey;
 
-      await service.ensureDefaultConfigs(currId);
+      await service.ensureDefaultConfigs(currId, trackId: trackId);
       var configs = await db.pointConfigDao.getConfigsByCurriculum(currId);
       expect(configs, hasLength(3));
       expect(configs[0].points, 10); // Learn
@@ -206,7 +218,7 @@ void main() {
       expect(configs[2].points, 3); // Chazara 2
 
       // Calling again doesn't duplicate
-      await service.ensureDefaultConfigs(currId);
+      await service.ensureDefaultConfigs(currId, trackId: trackId);
       configs = await db.pointConfigDao.getConfigsByCurriculum(currId);
       expect(configs, hasLength(3));
     });

@@ -49,12 +49,31 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
   Future<int> deleteGoalsByCurriculum(String curriculumId) =>
       (delete(goals)..where((t) => t.curriculumId.equals(curriculumId))).go();
 
+  // ========== Track-Scoped Queries (Story 20.2) ==========
+
+  /// Get the goal for a specific track (single goal per track).
+  Future<Goal?> getGoalByTrack(int trackId) =>
+      (select(goals)..where((t) => t.trackId.equals(trackId)))
+          .getSingleOrNull();
+
+  /// Get all goals for a specific track.
+  Future<List<Goal>> getGoalsByTrack(int trackId) =>
+      (select(goals)
+            ..where((t) => t.trackId.equals(trackId))
+            ..orderBy([(t) => OrderingTerm.asc(t.targetDate)]))
+          .get();
+
+  /// Delete all goals for a specific track.
+  Future<int> deleteGoalsForTrack(int trackId) =>
+      (delete(goals)..where((t) => t.trackId.equals(trackId))).go();
+
   /// Upsert a goal by curriculum and description (last-write-wins per D4).
   ///
   /// Matches by [curriculumId] and [description]. Inserts if not found,
   /// or updates if remote [updatedAt] is newer than local.
   Future<void> upsertGoal({
     required String curriculumId,
+    required int trackId,
     required String description,
     required double targetPercent,
     required DateTime? targetDate,
@@ -77,6 +96,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
       await insertGoal(
         GoalsCompanion.insert(
           curriculumId: curriculumId,
+          trackId: trackId,
           description: Value(description),
           targetPercent: Value(targetPercent),
           targetDate: Value(targetDate),

@@ -77,26 +77,29 @@ class LearningProcessWizardService {
   /// Apply the wizard result — creates stages for the curriculum.
   ///
   /// [profileId] identifies the profile to associate with the preset program.
+  /// [trackId] is the FK to curriculum_tracks.id for the target track.
   Future<void> applyWizardResult(
     WizardResult result, {
     required int profileId,
+    required int trackId,
   }) async {
     // Clear any existing stages for this curriculum first.
     await _stageDao.deleteAllForCurriculum(result.curriculumId.storageKey);
 
     switch (result.choice) {
       case WizardChoice.preset:
-        await _applyPreset(result, profileId: profileId);
+        await _applyPreset(result, profileId: profileId, trackId: trackId);
       case WizardChoice.custom:
-        await _applyCustom(result);
+        await _applyCustom(result, trackId: trackId);
       case WizardChoice.noReview:
-        await _applyNoReview(result);
+        await _applyNoReview(result, trackId: trackId);
     }
   }
 
   Future<void> _applyPreset(
     WizardResult result, {
     required int profileId,
+    required int trackId,
   }) async {
     final program = await _learningProgramDao.getProgramById(result.programId!);
     if (program == null) return;
@@ -121,6 +124,7 @@ class LearningProcessWizardService {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
           curriculumId: result.curriculumId.storageKey,
+          trackId: trackId,
           stageOrder: i + 1,
           stageName: stage['label'] as String,
           delayDays: (stage['delay_days'] as int?) ?? 0,
@@ -133,11 +137,12 @@ class LearningProcessWizardService {
     }
   }
 
-  Future<void> _applyCustom(WizardResult result) async {
+  Future<void> _applyCustom(WizardResult result, {required int trackId}) async {
     // Always create לימוד as stage 1.
     await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         curriculumId: result.curriculumId.storageKey,
+        trackId: trackId,
         stageOrder: 1,
         stageName: 'לימוד',
         delayDays: 0,
@@ -152,6 +157,7 @@ class LearningProcessWizardService {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
           curriculumId: result.curriculumId.storageKey,
+          trackId: trackId,
           stageOrder: i + 2,
           stageName: round.label,
           delayDays: round.delayDays ?? 0,
@@ -165,10 +171,11 @@ class LearningProcessWizardService {
     }
   }
 
-  Future<void> _applyNoReview(WizardResult result) async {
+  Future<void> _applyNoReview(WizardResult result, {required int trackId}) async {
     await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         curriculumId: result.curriculumId.storageKey,
+        trackId: trackId,
         stageOrder: 1,
         stageName: 'לימוד',
         delayDays: 0,

@@ -15,15 +15,29 @@ import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 8.1: Points system ──────────────────────────────────
 
   group('Story 8.1 -- Points system', tags: ['story_8_1'], () {
     late UserDatabase db;
+    late int trackId;
     late PointsService pointsService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       pointsService = PointsService(db);
     });
 
@@ -44,6 +58,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: trackType,
+          trackId: trackId,
           completedAt: DateTime.now(),
           points: Value(points),
         ),
@@ -125,10 +140,12 @@ void main() {
 
   group('Story 8.2 -- Global Streak Tracking', tags: ['story_8_2'], () {
     late UserDatabase db;
+    late int trackId;
     late StreakService streakService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       streakService = StreakService(db);
     });
 
@@ -172,6 +189,7 @@ void main() {
           sefariaRef: 'Genesis.1',
           stageId: 1,
           trackType: 'primary',
+          trackId: trackId,
           completedAt: DateTimeFactory.utc(2026, 3, 10, 12),
         ),
       );
@@ -181,6 +199,7 @@ void main() {
           sefariaRef: 'Genesis.2',
           stageId: 1,
           trackType: 'primary',
+          trackId: trackId,
           completedAt: DateTimeFactory.utc(2026, 3, 12, 12),
         ),
       );
@@ -197,10 +216,12 @@ void main() {
 
   group('Story 8.3 -- Mystery Rewards System', tags: ['story_8_3'], () {
     late UserDatabase db;
+    late int trackId;
     late RewardService rewardService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       rewardService = RewardService(db, PointsService(db));
     });
 
@@ -220,6 +241,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: DateTime.now(),
           points: Value(points),
         ),

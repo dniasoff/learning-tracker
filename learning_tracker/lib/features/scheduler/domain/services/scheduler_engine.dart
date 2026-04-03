@@ -53,10 +53,9 @@ class SchedulerEngine {
 
     if (stages.isEmpty || contentItems.isEmpty) return [];
 
-    // Filter to personal track only
-    final completions = allCompletions
-        .where((c) => c.trackType == 'personal')
-        .toList();
+    // Track scoping is now handled at the repository level (Story 20.2/20.5).
+    // No client-side filtering needed.
+    final completions = allCompletions;
 
     // Phase 2: Analysis
     // Build completion map: sefariaRef -> {stageOrder -> completedAt}
@@ -158,6 +157,8 @@ class SchedulerEngine {
         isOverdue: false,
         reason: 'New learning',
         stageName: firstStage.stageName,
+        trackId: config.trackId,
+        trackLabel: config.trackLabel,
         estimatedEffortMinutes: 5,
       );
     }).toList();
@@ -203,6 +204,8 @@ class SchedulerEngine {
             isOverdue: true,
             reason: '${stage.stageName} overdue by ${-daysUntilDue} day(s)',
             stageName: stage.stageName,
+            trackId: config.trackId,
+            trackLabel: config.trackLabel,
             estimatedEffortMinutes: 3,
           ),
         );
@@ -217,6 +220,8 @@ class SchedulerEngine {
             isOverdue: false,
             reason: '${stage.stageName} due today',
             stageName: stage.stageName,
+            trackId: config.trackId,
+            trackLabel: config.trackLabel,
             estimatedEffortMinutes: 3,
           ),
         );
@@ -259,6 +264,8 @@ class SchedulerEngine {
             isOverdue: false,
             reason: '${stage.stageName} scheduled for today',
             stageName: stage.stageName,
+            trackId: config.trackId,
+            trackLabel: config.trackLabel,
             estimatedEffortMinutes: 3,
           ),
         );
@@ -310,6 +317,8 @@ class SchedulerEngine {
             isOverdue: false,
             reason: '${stage.stageName} (rolling window)',
             stageName: stage.stageName,
+            trackId: config.trackId,
+            trackLabel: config.trackLabel,
             estimatedEffortMinutes: 3,
           ),
         );

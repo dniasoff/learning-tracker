@@ -58,11 +58,15 @@ DailyTaskGenerator dailyTaskGenerator(Ref ref) {
 Future<List<DailyTask>> dailyTasks(
   Ref ref, {
   required CurriculumId curriculumId,
+  required int trackId,
+  required String trackLabel,
   DateTime? goalDeadline,
 }) async {
   final engine = ref.watch(schedulerEngineProvider);
   final config = ScheduleConfig(
     curriculumId: curriculumId,
+    trackId: trackId,
+    trackLabel: trackLabel,
     goalDeadline: goalDeadline,
     currentDate: ref.watch(clockProvider),
   );

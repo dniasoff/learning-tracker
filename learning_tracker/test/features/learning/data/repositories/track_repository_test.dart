@@ -190,12 +190,19 @@ void main() {
 
         // Create a mock completion for school track
         // (In real scenario, this would use CompletionRepository)
+        final tracks = await database.trackDao.getAllTracks(
+          CurriculumId.mishnayos,
+        );
+        final schoolTrackId = tracks
+            .firstWhere((t) => t.trackType == TrackType.school.storageKey)
+            .id;
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: 'Mishnah Berakhot 1:1',
             stageId: 1,
             trackType: TrackType.school.storageKey,
+            trackId: schoolTrackId,
             completedAt: DateTime.now(),
           ),
         );

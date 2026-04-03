@@ -8,10 +8,30 @@ import '../../../../helpers/test_database.dart';
 void main() {
   late UserDatabase db;
   late GoalRepositoryImpl repo;
+  late int trackId;
+  late int bavliTrackId;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
     repo = GoalRepositoryImpl(database: db);
+
+    final trackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
+
+    final bavliTrackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    bavliTrackId = bavliTrackRow.id;
   });
 
   tearDown(() async {
@@ -23,6 +43,7 @@ void main() {
       final targetDate = DateTime(2026, 12, 31);
       final goal = await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
+        trackId: trackId,
         targetPercent: 100.0,
         targetDate: targetDate,
         description: 'Finish mishnayos',
@@ -38,10 +59,12 @@ void main() {
     test('getGoals returns goals for specific curriculum', () async {
       await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
+        trackId: trackId,
         targetPercent: 50.0,
       );
       await repo.createGoal(
         curriculumId: CurriculumId.bavli,
+        trackId: bavliTrackId,
         targetPercent: 25.0,
       );
 
@@ -56,6 +79,7 @@ void main() {
     test('updateGoal modifies existing goal', () async {
       final goal = await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
+        trackId: trackId,
         targetPercent: 50.0,
       );
 
@@ -72,6 +96,7 @@ void main() {
     test('deleteGoal removes the goal', () async {
       final goal = await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
+        trackId: trackId,
         targetPercent: 100.0,
       );
 
@@ -90,6 +115,7 @@ void main() {
       test('createGoal with pace fields persists correctly', () async {
         final goal = await repo.createGoal(
           curriculumId: CurriculumId.bavli,
+          trackId: bavliTrackId,
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 1,
@@ -105,6 +131,7 @@ void main() {
       test('createGoal defaults to deadline goalType', () async {
         final goal = await repo.createGoal(
           curriculumId: CurriculumId.bavli,
+          trackId: bavliTrackId,
           targetPercent: 100.0,
         );
 
@@ -116,6 +143,7 @@ void main() {
       test('updateGoal changes pace fields', () async {
         final goal = await repo.createGoal(
           curriculumId: CurriculumId.bavli,
+          trackId: bavliTrackId,
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 1,
@@ -135,6 +163,7 @@ void main() {
       test('updateGoal with clearPace nulls out pace fields', () async {
         final goal = await repo.createGoal(
           curriculumId: CurriculumId.bavli,
+          trackId: bavliTrackId,
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 1,
@@ -155,6 +184,7 @@ void main() {
       test('updateGoal preserves pace fields when not clearing', () async {
         final goal = await repo.createGoal(
           curriculumId: CurriculumId.bavli,
+          trackId: bavliTrackId,
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 3,

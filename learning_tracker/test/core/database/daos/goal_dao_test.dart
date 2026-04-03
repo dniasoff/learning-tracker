@@ -5,9 +5,17 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 
 void main() {
   late UserDatabase database;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    trackId = await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
   });
 
   tearDown(() async {
@@ -25,6 +33,7 @@ void main() {
     return database.goalDao.insertGoal(
       GoalsCompanion.insert(
         curriculumId: curriculumId,
+        trackId: trackId,
         description: Value(description),
         targetPercent: Value(targetPercent),
         targetDate: Value(targetDate),
@@ -76,6 +85,7 @@ void main() {
         GoalsCompanion(
           id: Value(id),
           curriculumId: const Value('bavli'),
+          trackId: Value(trackId),
           description: const Value('Updated goal'),
           targetPercent: const Value(50.0),
           createdAt: Value(now),
@@ -114,6 +124,7 @@ void main() {
     test('upsertGoal inserts when no existing goal', () async {
       await database.goalDao.upsertGoal(
         curriculumId: 'bavli',
+        trackId: trackId,
         description: 'New goal',
         targetPercent: 75.0,
         targetDate: DateTime(2025, 1, 1),
@@ -133,6 +144,7 @@ void main() {
 
       await database.goalDao.upsertGoal(
         curriculumId: 'bavli',
+        trackId: trackId,
         description: 'My goal',
         targetPercent: 50.0,
         targetDate: null,
@@ -142,6 +154,7 @@ void main() {
 
       await database.goalDao.upsertGoal(
         curriculumId: 'bavli',
+        trackId: trackId,
         description: 'My goal',
         targetPercent: 75.0,
         targetDate: DateTime(2025, 1, 1),
@@ -160,6 +173,7 @@ void main() {
 
       await database.goalDao.upsertGoal(
         curriculumId: 'bavli',
+        trackId: trackId,
         description: 'My goal',
         targetPercent: 75.0,
         targetDate: null,
@@ -169,6 +183,7 @@ void main() {
 
       await database.goalDao.upsertGoal(
         curriculumId: 'bavli',
+        trackId: trackId,
         description: 'My goal',
         targetPercent: 50.0,
         targetDate: null,

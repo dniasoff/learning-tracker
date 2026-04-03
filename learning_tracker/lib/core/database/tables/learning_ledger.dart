@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 
 /// Learning Ledger table — append-only record of lifetime learning completions.
 ///
@@ -14,7 +15,8 @@ class LearningLedger extends Table {
   TextColumn get unitDisplayNameHe => text()();
   TextColumn get unitDisplayNameEn => text()();
   TextColumn get trackType => text()(); // personal/school/tutor
-  IntColumn get trackId => integer().nullable()(); // survives track deletion
+  IntColumn get trackId =>
+      integer().nullable().references(CurriculumTracks, #id)(); // survives track deletion
   DateTimeColumn get completedAt => dateTime()();
   IntColumn get completionNumber => integer()(); // nth time completing
   IntColumn get markedBy => integer()(); // profile_id of who marked it

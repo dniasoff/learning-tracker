@@ -5,9 +5,18 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 void main() {
   late UserDatabase database;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    // Insert a track first to satisfy FK constraint on curriculum_scopes.trackId
+    trackId = await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
   });
 
   tearDown(() async {
@@ -35,6 +44,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim', 'Seder Moed'],
       );
@@ -55,6 +65,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim'],
       );
@@ -70,6 +81,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim'],
       );
@@ -77,6 +89,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         2,
         ['Berachos', 'Shabbos'],
       );
@@ -97,6 +110,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim', 'Seder Moed'],
       );
@@ -114,6 +128,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim', 'Seder Moed'],
       );
@@ -129,6 +144,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         2,
         ['Berachos'],
       );
@@ -152,6 +168,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim'],
       );
@@ -159,6 +176,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         1,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Moed'],
       );
@@ -177,16 +195,30 @@ void main() {
     });
 
     test('scopes are isolated by curriculumId', () async {
+      // Need a track for bavli too
+      final bavliTrackId = await database.into(database.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
+
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim'],
       );
 
-      await database.curriculumScopeDao.setScopes(0, CurriculumId.bavli, 1, [
-        'Berachos',
-      ]);
+      await database.curriculumScopeDao.setScopes(
+        0,
+        CurriculumId.bavli,
+        bavliTrackId,
+        1,
+        ['Berachos'],
+      );
 
       final mishnayos = await database.curriculumScopeDao.getScopeValues(
         0,
@@ -205,6 +237,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim'],
       );
@@ -212,6 +245,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         [],
       );
@@ -237,6 +271,7 @@ void main() {
       await database.curriculumScopeDao.setScopes(
         0,
         CurriculumId.mishnayos,
+        trackId,
         1,
         ['Seder Zeraim'],
       );

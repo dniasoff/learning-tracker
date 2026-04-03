@@ -4,9 +4,18 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 
 void main() {
   late UserDatabase database;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    // Insert a track first to satisfy FK constraint on completions.trackId
+    trackId = await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
   });
 
   tearDown(() async {
@@ -26,6 +35,7 @@ void main() {
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
+        trackId: trackId,
         completedAt: completedAt ?? DateTime(2024, 6, 15),
       ),
     );

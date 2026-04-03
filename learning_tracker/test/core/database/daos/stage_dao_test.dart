@@ -5,9 +5,17 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 
 void main() {
   late UserDatabase database;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    trackId = await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
   });
 
   tearDown(() async {
@@ -24,6 +32,7 @@ void main() {
   }) => database.stageDao.insertStageDefinition(
     StageDefinitionsCompanion.insert(
       curriculumId: curriculumId,
+      trackId: trackId,
       stageOrder: stageOrder,
       stageName: stageName,
       delayDays: delayDays,
@@ -92,9 +101,17 @@ void main() {
 
     test('countStagesForCurriculum is scoped to curriculum', () async {
       await insertStage(stageOrder: 1);
+      final bavliTrackId = await database.into(database.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
       await database.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -123,9 +140,17 @@ void main() {
       'deleteAllForCurriculum removes only that curriculum stages',
       () async {
         await insertStage(stageOrder: 1);
+        final bavliTrackId = await database.into(database.curriculumTracks).insert(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'bavli',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: 'bavli',
+            trackId: bavliTrackId,
             stageOrder: 1,
             stageName: 'Learn',
             delayDays: 0,
@@ -151,18 +176,21 @@ void main() {
       await database.stageDao.replaceStagesForCurriculum(curriculumId, [
         StageDefinitionsCompanion.insert(
           curriculumId: curriculumId,
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
         ),
         StageDefinitionsCompanion.insert(
           curriculumId: curriculumId,
+          trackId: trackId,
           stageOrder: 2,
           stageName: 'New Stage',
           delayDays: 3,
         ),
         StageDefinitionsCompanion.insert(
           curriculumId: curriculumId,
+          trackId: trackId,
           stageOrder: 3,
           stageName: 'Another',
           delayDays: 14,

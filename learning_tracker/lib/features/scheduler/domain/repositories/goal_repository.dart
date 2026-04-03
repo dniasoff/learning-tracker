@@ -9,6 +9,7 @@ abstract class GoalRepository {
   /// Hebrew date picker, it must be converted to Gregorian UTC before calling.
   Future<GoalEntity> createGoal({
     required CurriculumId curriculumId,
+    required int trackId,
     required double targetPercent,
     DateTime? targetDate,
     String description,

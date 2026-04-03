@@ -48,21 +48,24 @@ class StudyDayConfigRepositoryImpl implements StudyDayConfigRepository {
   Future<void> updateDayType(
     CurriculumId curriculumId,
     int dayOfWeek,
-    DayType dayType,
-  ) async {
+    DayType dayType, {
+    required int trackId,
+  }) async {
     await _dao.upsertDayConfig(
       profileId: _profileId,
       curriculumId: curriculumId.storageKey,
+      trackId: trackId,
       dayOfWeek: dayOfWeek,
       dayType: dayType.storageKey,
     );
   }
 
   @override
-  Future<void> seedDefaults(CurriculumId curriculumId) async {
+  Future<void> seedDefaults(CurriculumId curriculumId, {required int trackId}) async {
     await _dao.seedDefaults(
       profileId: _profileId,
       curriculumId: curriculumId.storageKey,
+      trackId: trackId,
     );
   }
 

@@ -67,6 +67,18 @@ MockFlutterSecureStorage _createMockStorage() {
   return mock;
 }
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 10.1: Parent PIN setup ──────────────────────────────
 
@@ -140,6 +152,7 @@ void main() {
     test('parent mode access denied for adult accounts', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
+      final trackId = await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
           localUid: 'local-uid-adult',
@@ -161,6 +174,7 @@ void main() {
     test('parent mode access allowed for child accounts', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
+      final trackId = await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
           localUid: 'local-uid-child',
@@ -263,9 +277,11 @@ void main() {
 
   group('Story 10.2 -- Parent dashboard', tags: ['story_10_2'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() => db.close());
@@ -288,6 +304,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculumId,
+            trackId: trackId,
             stageOrder: i,
             stageName: 'Stage $i',
             delayDays: 0,
@@ -304,6 +321,7 @@ void main() {
             sefariaRef: 'ref-$curriculumId-$i',
             stageId: (i % stageCount) + 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: base.subtract(Duration(hours: i * 12)),
             points: Value(pointsPerCompletion),
           ),
@@ -352,6 +370,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: 'mishnayos',
+            trackId: trackId,
             stageOrder: 1,
             stageName: 'Stage 1',
             delayDays: 0,
@@ -366,6 +385,7 @@ void main() {
               sefariaRef: 'ref-mishnayos-$i',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
               points: const Value(10),
             ),
@@ -436,6 +456,7 @@ void main() {
             sefariaRef: 'old-ref-$i',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: now.subtract(const Duration(days: 10)),
             points: const Value(5),
           ),
@@ -601,6 +622,7 @@ void main() {
               sefariaRef: 'day1-ref-$i',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now.subtract(const Duration(days: 2)),
               points: const Value(10),
             ),
@@ -615,6 +637,7 @@ void main() {
               sefariaRef: 'day2-ref-$i',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now.subtract(const Duration(days: 1)),
               points: const Value(10),
             ),
@@ -664,10 +687,12 @@ void main() {
 
   group('Story 10.3 -- Reward Catalog Management', tags: ['story_10_3'], () {
     late UserDatabase db;
+    late int trackId;
     late RewardService rewardService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       final pointsService = PointsService(db);
       rewardService = RewardService(db, pointsService);
     });
@@ -1023,10 +1048,12 @@ void main() {
 
   group('Story 10.4 -- Point Value Configuration', tags: ['story_10_4'], () {
     late UserDatabase db;
+    late int trackId;
     late PointsService pointsService;
 
     setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       pointsService = PointsService(db);
 
       // Activate mishnayos and seed stages + point configs
@@ -1035,13 +1062,14 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: CurriculumId.mishnayos.storageKey,
+            trackId: trackId,
             stageOrder: i,
             stageName: i == 1 ? 'Learning' : 'Chazara ${i - 1}',
             delayDays: 0,
           ),
         );
       }
-      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey);
+      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey, trackId);
     });
 
     tearDown(() => db.close());
@@ -1093,7 +1121,7 @@ void main() {
       await db.pointConfigDao.deleteAllForCurriculum(
         CurriculumId.mishnayos.storageKey,
       );
-      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey);
+      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey, trackId);
 
       final configs = await db.pointConfigDao.getConfigsByCurriculum(
         CurriculumId.mishnayos.storageKey,
@@ -1113,6 +1141,7 @@ void main() {
           sefariaRef: 'test-ref-1',
           stageId: 1,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: DateTime.now().toUtc(),
           points: const Value(10),
         ),
@@ -1153,13 +1182,14 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: CurriculumId.bavli.storageKey,
+            trackId: trackId,
             stageOrder: i,
             stageName: i == 1 ? 'Learning' : 'Chazara 1',
             delayDays: 0,
           ),
         );
       }
-      await db.pointConfigDao.seedDefaults(CurriculumId.bavli.storageKey);
+      await db.pointConfigDao.seedDefaults(CurriculumId.bavli.storageKey, trackId);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -1315,6 +1345,7 @@ void main() {
             sefariaRef: 'new-completion-ref',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: DateTime.now().toUtc(),
             points: Value(points),
           ),
@@ -1339,9 +1370,11 @@ void main() {
 
   group('Story 10.5 -- Parent Track Management', tags: ['story_10_5'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -1379,6 +1412,7 @@ void main() {
             sefariaRef: 'Mishnah_Berakhot.1.1',
             stageId: 1,
             trackType: TrackType.school.storageKey,
+            trackId: trackId,
             completedAt: DateTime.now().toUtc(),
             points: const Value(10),
           ),

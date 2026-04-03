@@ -4,6 +4,8 @@ part of 'stage_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$StageDaoMixin on DatabaseAccessor<UserDatabase> {
+  $CurriculumTracksTable get curriculumTracks =>
+      attachedDatabase.curriculumTracks;
   $StageDefinitionsTable get stageDefinitions =>
       attachedDatabase.stageDefinitions;
   StageDaoManager get managers => StageDaoManager(this);
@@ -12,6 +14,11 @@ mixin _$StageDaoMixin on DatabaseAccessor<UserDatabase> {
 class StageDaoManager {
   final _$StageDaoMixin _db;
   StageDaoManager(this._db);
+  $$CurriculumTracksTableTableManager get curriculumTracks =>
+      $$CurriculumTracksTableTableManager(
+        _db.attachedDatabase,
+        _db.curriculumTracks,
+      );
   $$StageDefinitionsTableTableManager get stageDefinitions =>
       $$StageDefinitionsTableTableManager(
         _db.attachedDatabase,

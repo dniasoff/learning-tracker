@@ -4,9 +4,17 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 
 void main() {
   late UserDatabase database;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    trackId = await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
   });
 
   tearDown(() async {
@@ -18,6 +26,7 @@ void main() {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 1,
           points: 10,
         ),
@@ -39,6 +48,7 @@ void main() {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 3,
           points: 3,
         ),
@@ -46,6 +56,7 @@ void main() {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 1,
           points: 10,
         ),
@@ -53,6 +64,7 @@ void main() {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 2,
           points: 5,
         ),
@@ -71,6 +83,7 @@ void main() {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 1,
           points: 10,
         ),
@@ -78,6 +91,7 @@ void main() {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 1,
           points: 8,
         ),
@@ -94,6 +108,7 @@ void main() {
       await database.pointConfigDao.upsertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 1,
           points: 10,
         ),
@@ -108,6 +123,7 @@ void main() {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 1,
           points: 10,
         ),
@@ -116,6 +132,7 @@ void main() {
       await database.pointConfigDao.upsertConfig(
         PointConfigsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           stageOrder: 1,
           points: 20,
         ),
@@ -131,6 +148,7 @@ void main() {
         await database.pointConfigDao.insertConfig(
           PointConfigsCompanion.insert(
             curriculumId: 'bavli',
+            trackId: trackId,
             stageOrder: 1,
             points: 10,
           ),
@@ -138,6 +156,7 @@ void main() {
         await database.pointConfigDao.insertConfig(
           PointConfigsCompanion.insert(
             curriculumId: 'mishnayos',
+            trackId: trackId,
             stageOrder: 1,
             points: 8,
           ),
@@ -161,7 +180,7 @@ void main() {
     test(
       'seedDefaults creates fallback configs when no stages exist',
       () async {
-        await database.pointConfigDao.seedDefaults('bavli');
+        await database.pointConfigDao.seedDefaults('bavli', trackId);
 
         final configs = await database.pointConfigDao.getConfigsByCurriculum(
           'bavli',

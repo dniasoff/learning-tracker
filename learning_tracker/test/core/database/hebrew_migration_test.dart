@@ -7,9 +7,33 @@ import '../../helpers/test_database.dart';
 void main() {
   group('Schema migration v23→v24: Hebrew stage names', () {
     late UserDatabase db;
+    late int bavliTrackId;
+    late int mishnayosTrackId;
+    late int mbTrackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      bavliTrackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
+      mishnayosTrackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
+      mbTrackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishna_berurah',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
     });
 
     tearDown(() async {
@@ -21,6 +45,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'לימוד',
           delayDays: 0,
@@ -38,6 +63,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -56,6 +82,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Chazara 1',
           delayDays: 1,
@@ -64,6 +91,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 2,
           stageName: 'Chazara 2',
           delayDays: 7,
@@ -81,6 +109,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishna_berurah',
+          trackId: mbTrackId,
           stageOrder: 1,
           stageName: 'Review',
           delayDays: 7,
@@ -99,6 +128,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Next-Day Review',
           delayDays: 1,
@@ -107,6 +137,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 2,
           stageName: 'Weekly Review',
           delayDays: 7,
@@ -115,6 +146,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 3,
           stageName: 'Rolling Back-20',
           delayDays: 20,
@@ -133,6 +165,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: mishnayosTrackId,
           stageOrder: 1,
           stageName: 'My Morning Study',
           delayDays: 0,
@@ -141,6 +174,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: mishnayosTrackId,
           stageOrder: 2,
           stageName: 'Evening Review Session',
           delayDays: 1,
@@ -160,6 +194,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -181,6 +216,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: 'bavli',
+            trackId: bavliTrackId,
             stageOrder: 1,
             stageName: 'Learn',
             delayDays: 0,
@@ -190,6 +226,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: 'bavli',
+            trackId: bavliTrackId,
             stageOrder: 2,
             stageName: 'Quick Review',
             delayDays: 1,
@@ -199,6 +236,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: 'bavli',
+            trackId: bavliTrackId,
             stageOrder: 3,
             stageName: 'Chazara 2',
             delayDays: 7,

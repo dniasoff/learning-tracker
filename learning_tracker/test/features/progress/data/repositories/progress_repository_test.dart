@@ -9,10 +9,20 @@ import 'package:learning_tracker/features/progress/domain/repositories/progress_
 void main() {
   late UserDatabase database;
   late ProgressRepository repository;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
     repository = ProgressRepositoryImpl(database: database);
+
+    final trackRow = await database.into(database.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
   });
 
   tearDown(() async {
@@ -28,6 +38,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
@@ -38,6 +49,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
@@ -48,6 +60,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.3a',
               stageId: 1,
               trackType: TrackType.school.storageKey,
@@ -73,6 +86,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
@@ -99,6 +113,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.school.storageKey,
@@ -109,6 +124,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.school.storageKey,
@@ -140,6 +156,7 @@ void main() {
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: 'bavli',
+            trackId: trackId,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
@@ -150,6 +167,7 @@ void main() {
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: 'mishnayos',
+            trackId: trackId,
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
@@ -176,6 +194,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
@@ -186,6 +205,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
@@ -196,6 +216,7 @@ void main() {
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               sefariaRef: 'Berakhot.3a',
               stageId: 1,
               trackType: TrackType.school.storageKey,
@@ -231,6 +252,7 @@ void main() {
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: 'bavli',
+            trackId: trackId,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
@@ -241,6 +263,7 @@ void main() {
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: 'mishnayos',
+            trackId: trackId,
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
             trackType: TrackType.personal.storageKey,

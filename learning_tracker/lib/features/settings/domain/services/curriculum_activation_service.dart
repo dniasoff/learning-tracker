@@ -1,5 +1,7 @@
+import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
@@ -37,9 +39,11 @@ class CurriculumActivationService {
     if (activeCurricula.isEmpty) {
       await _database.activeCurriculumDao.activate(CurriculumId.mishnayos);
       await _trackRepository.initializeDefaultTracks(CurriculumId.mishnayos);
+      final trackId = await _resolveTrackId(CurriculumId.mishnayos, 0);
       await _database.studyDayConfigDao.seedDefaults(
         profileId: 0,
         curriculumId: CurriculumId.mishnayos.storageKey,
+        trackId: trackId,
       );
       await _syncToFirestore();
     }
@@ -52,9 +56,11 @@ class CurriculumActivationService {
     guardTutorModeWriteFromBool(isTutorMode);
     await _database.activeCurriculumDao.activate(curriculum);
     await _trackRepository.initializeDefaultTracks(curriculum);
+    final trackId = await _resolveTrackId(curriculum, 0);
     await _database.studyDayConfigDao.seedDefaults(
       profileId: 0,
       curriculumId: curriculum.storageKey,
+      trackId: trackId,
     );
     await _syncToFirestore();
   }
@@ -75,9 +81,11 @@ class CurriculumActivationService {
       curriculum,
       profileId: profileId,
     );
+    final trackId = await _resolveTrackId(curriculum, profileId);
     await _database.studyDayConfigDao.seedDefaults(
       profileId: profileId,
       curriculumId: curriculum.storageKey,
+      trackId: trackId,
     );
     await _syncToFirestore();
   }
@@ -137,6 +145,18 @@ class CurriculumActivationService {
   /// Watch stream of active curriculum IDs.
   Stream<List<String>> watchActiveCurricula() {
     return _database.activeCurriculumDao.watchActiveCurricula();
+  }
+
+  /// Look up the curriculum_tracks.id for a curriculum's personal track.
+  Future<int> _resolveTrackId(CurriculumId curriculum, int profileId) async {
+    final track = await (_database.select(_database.curriculumTracks)
+          ..where((t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculum.storageKey) &
+              t.trackType.equals(TrackType.personal.storageKey))
+          ..limit(1))
+        .getSingleOrNull();
+    return track?.id ?? 0;
   }
 
   /// Sync active curricula to Firestore.

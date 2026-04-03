@@ -125,6 +125,23 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     }
   }
 
+  /// Get all active (non-archived) tracks for a profile.
+  Future<List<CurriculumTrack>> getActiveTracksForProfile(int profileId) =>
+      (select(curriculumTracks)
+            ..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.isActive.equals(true) &
+                  t.archivedAt.isNull(),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
+          .get();
+
+  /// Get a single track by its ID.
+  Future<CurriculumTrack?> getTrackById(int trackId) =>
+      (select(curriculumTracks)..where((t) => t.id.equals(trackId)))
+          .getSingleOrNull();
+
   /// Watch all active (non-archived) tracks for a profile.
   Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {
     return (select(curriculumTracks)
@@ -193,6 +210,17 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
             ))
             .get();
     return tracks.length;
+  }
+
+  /// Reset the pace baseline for a track (Recovery Action).
+  ///
+  /// Sets `paceResetDate` to now. Does NOT touch completions or chazara data.
+  Future<void> resetPace(int trackId) async {
+    await (update(curriculumTracks)..where((t) => t.id.equals(trackId))).write(
+      CurriculumTracksCompanion(
+        paceResetDate: Value(DateTimeFactory.nowUtc()),
+      ),
+    );
   }
 
   /// Initialize default tracks for a curriculum and profile.

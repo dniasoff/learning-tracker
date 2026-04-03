@@ -52,8 +52,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   Future<StageDefinition> addStage(
     CurriculumId curriculumId,
     String name,
-    int delayDays,
-  ) async {
+    int delayDays, {
+    required int trackId,
+  }) async {
     final count = await _stageDao.countStagesForCurriculum(
       curriculumId.storageKey,
     );
@@ -68,6 +69,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     final id = await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         curriculumId: curriculumId.storageKey,
+        trackId: trackId,
         stageOrder: newOrder,
         stageName: name,
         delayDays: delayDays,
@@ -90,6 +92,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       db.StageDefinitionsCompanion(
         id: Value(id),
         curriculumId: Value(existing.curriculumId),
+        trackId: Value(existing.trackId),
         stageOrder: Value(existing.stageOrder),
         stageName: Value(name ?? existing.stageName),
         delayDays: Value(delayDays ?? existing.delayDays),
@@ -134,6 +137,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         db.StageDefinitionsCompanion(
           id: Value(stageId),
           curriculumId: Value(existing.curriculumId),
+          trackId: Value(existing.trackId),
           stageOrder: Value(-(i + 1)),
           stageName: Value(existing.stageName),
           delayDays: Value(existing.delayDays),
@@ -153,6 +157,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         db.StageDefinitionsCompanion(
           id: Value(stageId),
           curriculumId: Value(existing.curriculumId),
+          trackId: Value(existing.trackId),
           stageOrder: Value(i + 1),
           stageName: Value(existing.stageName),
           delayDays: Value(existing.delayDays),
@@ -167,7 +172,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   }
 
   @override
-  Future<void> initializeDefaults(CurriculumId curriculumId) async {
+  Future<void> initializeDefaults(CurriculumId curriculumId, {required int trackId}) async {
     final existing = await _stageDao.getStageDefinitionsByCurriculum(
       curriculumId.storageKey,
     );
@@ -177,6 +182,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
           curriculumId: curriculumId.storageKey,
+          trackId: trackId,
           stageOrder: d.stageOrder,
           stageName: d.stageName,
           delayDays: d.delayDays,
@@ -187,12 +193,13 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   }
 
   @override
-  Future<void> resetToDefaults(CurriculumId curriculumId) async {
+  Future<void> resetToDefaults(CurriculumId curriculumId, {required int trackId}) async {
     await _stageDao.deleteAllForCurriculum(curriculumId.storageKey);
     for (final d in _defaults) {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
           curriculumId: curriculumId.storageKey,
+          trackId: trackId,
           stageOrder: d.stageOrder,
           stageName: d.stageName,
           delayDays: d.delayDays,

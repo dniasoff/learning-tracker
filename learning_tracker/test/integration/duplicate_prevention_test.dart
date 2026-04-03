@@ -7,13 +7,27 @@ import 'package:learning_tracker/core/exceptions/duplicate_completion_exception.
 import 'package:learning_tracker/core/services/duplicate_prevention_service.dart';
 import 'package:learning_tracker/core/services/track_service.dart';
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   late UserDatabase database;
   late DuplicatePreventionService duplicateService;
   late TrackService trackService;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    trackId = await _insertTrack(database);
     duplicateService = DuplicatePreventionService(database);
     trackService = TrackService();
   });
@@ -37,6 +51,7 @@ void main() {
             sefariaRef: sefariaRef,
             stageId: stageId,
             trackType: TrackType.personal.storageKey,
+            trackId: trackId,
             completedAt: DateTime.now().toUtc(),
           ),
         );
@@ -86,6 +101,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: learnStageId,
           trackType: TrackType.personal.storageKey,
+          trackId: trackId,
           completedAt: DateTime.now().toUtc(),
         ),
       );
@@ -105,6 +121,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: chazara1StageId,
           trackType: TrackType.school.storageKey,
+          trackId: trackId,
           completedAt: DateTime.now().toUtc(),
         ),
       );
@@ -169,6 +186,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: TrackType.personal.storageKey,
+          trackId: trackId,
           completedAt: DateTime.now().toUtc(),
         ),
       );

@@ -39,16 +39,30 @@ class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockBookmarkRepository extends Mock implements BookmarkRepository {}
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 9.1: Welcome flow ───────────────────────────────────
 
   group('Story 9.1 -- Welcome flow', tags: ['story_9_1'], () {
     late UserDatabase db;
+    late int trackId;
     late UserProfileService profileService;
     late List<Map<String, String>> firestorePushes;
 
-    setUp(() {
+    setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      trackId = await _insertTrack(db);
       firestorePushes = [];
       profileService = UserProfileService(
         userProfileDao: db.userProfileDao,
@@ -136,9 +150,11 @@ void main() {
 
   group('Story 9.2 -- Curriculum selection', tags: ['story_9_2'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -244,10 +260,12 @@ void main() {
 
   group('Story 9.3 -- Per-Curriculum Goal Setup', tags: ['story_9_3'], () {
     late UserDatabase db;
+    late int trackId;
     late GoalRepositoryImpl goalRepo;
 
-    setUp(() {
+    setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      trackId = await _insertTrack(db);
       goalRepo = GoalRepositoryImpl(database: db);
     });
 
@@ -261,6 +279,7 @@ void main() {
         final targetDate = DateTime.utc(2027, 6, 15);
         final goal = await goalRepo.createGoal(
           curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: targetDate,
           description: 'Finish by summer',
@@ -334,6 +353,7 @@ void main() {
       // Set goal for first, skip second
       await goalRepo.createGoal(
         curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
         targetPercent: 100.0,
         targetDate: DateTime.utc(2027, 6, 15),
       );
@@ -425,6 +445,7 @@ void main() {
     test('goals saved to database and retrievable', () async {
       final goal = await goalRepo.createGoal(
         curriculumId: CurriculumId.chumash,
+          trackId: trackId,
         targetPercent: 100.0,
         targetDate: DateTime.utc(2027, 9, 1),
         description: 'Complete Chumash',
@@ -440,6 +461,7 @@ void main() {
       // Create during onboarding
       final goal = await goalRepo.createGoal(
         curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
         targetPercent: 100.0,
         targetDate: DateTime.utc(2027, 6, 15),
       );
@@ -465,6 +487,7 @@ void main() {
         // Set goal with deadline for mishnayos
         await goalRepo.createGoal(
           curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: DateTime.utc(2027, 6, 15),
           description: 'Complete by summer',
@@ -594,6 +617,7 @@ void main() {
               curriculumId: req.curriculumId,
               sefariaRef: req.sefariaRefs.first,
               stageId: req.stageId,
+              trackId: 1,
               trackType: req.trackType,
               completedAt: DateTime.now(),
               points: 10,
@@ -801,6 +825,7 @@ void main() {
     tags: ['story_9_5'],
     () {
       late UserDatabase db;
+      late int trackId;
       late RewardService rewardService;
       late PointsService pointsService;
 

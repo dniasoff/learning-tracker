@@ -294,6 +294,7 @@ Completion _fakeCompletion(String ref) {
     sefariaRef: ref,
     stageId: 1,
     trackType: 'personal',
+    trackId: 1,
     completedAt: DateTime.now(),
     points: 10,
     profileId: 0,

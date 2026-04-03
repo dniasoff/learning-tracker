@@ -77,6 +77,7 @@ Completion _makeCompletion(DateTime completedAt) {
     sefariaRef: 'ref_1',
     stageId: 1,
     trackType: 'personal',
+    trackId: 1,
     completedAt: completedAt,
     points: 10,
   );

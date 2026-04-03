@@ -49,16 +49,30 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
 
 class _MockTrackRepository extends Mock implements TrackRepository {}
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   group(
     'Story 15.1 -- Multi-Profile Data Model & Migration',
     tags: ['story_15_1'],
     () {
       late UserDatabase db;
+      late int trackId;
       late ProfileRepositoryImpl profileRepo;
 
-      setUp(() {
+      setUp(() async {
         db = createTestDatabase();
+        trackId = await _insertTrack(db);
         profileRepo = ProfileRepositoryImpl(db);
       });
 
@@ -118,6 +132,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -128,6 +143,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.2',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -199,6 +215,7 @@ void main() {
             GoalsCompanion.insert(
               profileId: Value(p1.id),
               curriculumId: 'mishnah',
+              trackId: trackId,
               createdAt: DateTime.now().toUtc(),
               updatedAt: DateTime.now().toUtc(),
             ),
@@ -365,6 +382,7 @@ void main() {
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: DateTime.now().toUtc(),
               ),
             );
@@ -381,6 +399,7 @@ void main() {
               GoalsCompanion.insert(
                 profileId: Value(pid),
                 curriculumId: 'mishnah',
+                trackId: trackId,
                 createdAt: DateTime.now().toUtc(),
                 updatedAt: DateTime.now().toUtc(),
               ),
@@ -459,6 +478,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -469,6 +489,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.2',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -534,10 +555,12 @@ void main() {
     tags: ['story_15_4'],
     () {
       late UserDatabase db;
+      late int trackId;
       late ContentDatabase contentDb;
 
-      setUp(() {
+      setUp(() async {
         db = createTestDatabase();
+        trackId = await _insertTrack(db);
         contentDb = createTestContentDatabase();
       });
 
@@ -701,9 +724,11 @@ void main() {
     tags: ['story_15_13'],
     () {
       late UserDatabase db;
+      late int trackId;
 
-      setUp(() {
+      setUp(() async {
         db = createTestDatabase();
+        trackId = await _insertTrack(db);
       });
 
       tearDown(() async {
@@ -851,10 +876,12 @@ void main() {
     tags: ['story_15_2'],
     () {
       late UserDatabase db;
+      late int trackId;
       late ProfileRepositoryImpl profileRepo;
 
-      setUp(() {
+      setUp(() async {
         db = createTestDatabase();
+        trackId = await _insertTrack(db);
         profileRepo = ProfileRepositoryImpl(db);
       });
 
@@ -981,6 +1008,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -1044,10 +1072,12 @@ void main() {
     tags: ['story_15_11'],
     () {
       late UserDatabase db;
+      late int trackId;
       late ProfileRepositoryImpl profileRepo;
 
-      setUp(() {
+      setUp(() async {
         db = createTestDatabase();
+        trackId = await _insertTrack(db);
         profileRepo = ProfileRepositoryImpl(db);
       });
 
@@ -1078,6 +1108,7 @@ void main() {
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: DateTime.now().toUtc(),
               ),
             );
@@ -1088,6 +1119,7 @@ void main() {
                 sefariaRef: 'Mishnah_Berakhot.1.2',
                 stageId: 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: DateTime.now().toUtc(),
               ),
             );
@@ -1124,6 +1156,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -1134,6 +1167,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.2.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -1213,6 +1247,7 @@ void main() {
             GoalsCompanion.insert(
               profileId: Value(p1.id),
               curriculumId: 'mishnah',
+              trackId: trackId,
               createdAt: DateTime.now().toUtc(),
               updatedAt: DateTime.now().toUtc(),
             ),
@@ -1221,6 +1256,7 @@ void main() {
             GoalsCompanion.insert(
               profileId: Value(p2.id),
               curriculumId: 'bavli',
+              trackId: trackId,
               createdAt: DateTime.now().toUtc(),
               updatedAt: DateTime.now().toUtc(),
             ),
@@ -1336,6 +1372,7 @@ void main() {
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: DateTime.now().toUtc(),
               ),
             );
@@ -1346,6 +1383,7 @@ void main() {
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: DateTime.now().toUtc(),
               ),
             );
@@ -1387,6 +1425,7 @@ void main() {
                 sefariaRef: 'Mishnah_Berakhot.1.$i',
                 stageId: 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: DateTime.now().toUtc(),
               ),
             );
@@ -1400,6 +1439,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.2.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
             ),
           );
@@ -1450,6 +1490,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
               points: const Value(10),
             ),
@@ -1463,6 +1504,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.2.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.now().toUtc(),
               points: const Value(5),
             ),
@@ -1482,10 +1524,12 @@ void main() {
 
   group('Story 15.10 -- Dirshu Test Tracking', tags: ['story_15_10'], () {
     late UserDatabase db;
+    late int trackId;
     late ContentDatabase contentDb;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       contentDb = createTestContentDatabase();
     });
 
@@ -1870,6 +1914,7 @@ void main() {
   // ── Story 15.5: Expanded Stage Scheduling Model ────────────────────
   group('Story 15.5 -- Expanded Stage Scheduling Model', tags: ['story_15_5'], () {
     late UserDatabase db;
+    late int trackId;
     late SchedulerEngine engine;
     final now = DateTime.utc(2026, 3, 18); // Wednesday (weekday=3)
     const curriculum = CurriculumId.bavli;
@@ -1882,6 +1927,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -1907,6 +1953,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
             delayDays: 0,
@@ -1924,6 +1971,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 2,
             stageName: 'Weekly Review',
             delayDays: 0,
@@ -1944,6 +1992,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 3,
             stageName: 'Rolling Back-20',
             delayDays: 0,
@@ -1967,6 +2016,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
             delayDays: 0,
@@ -1975,6 +2025,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 2,
             stageName: 'Chazara 1',
             delayDays: 1,
@@ -2001,6 +2052,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
             delayDays: 0,
@@ -2010,6 +2062,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 2,
             stageName: 'Weekly Review',
             delayDays: 0,
@@ -2026,6 +2079,7 @@ void main() {
               sefariaRef: 'Berakhot.${i + 1}a',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now.subtract(const Duration(days: 3)),
               points: const Value(10),
             ),
@@ -2037,6 +2091,8 @@ void main() {
         final tasks = await engine.generateDailyTasks(
           ScheduleConfig(
             curriculumId: curriculum,
+            trackId: 1,
+            trackLabel: 'Test Track',
             currentDate: now, // Wednesday
           ),
         );
@@ -2057,6 +2113,7 @@ void main() {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: curriculum.storageKey,
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
               delayDays: 0,
@@ -2066,6 +2123,7 @@ void main() {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: curriculum.storageKey,
+              trackId: trackId,
               stageOrder: 2,
               stageName: 'Weekly Review',
               delayDays: 0,
@@ -2080,6 +2138,7 @@ void main() {
               sefariaRef: 'Berakhot.1a',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now.subtract(const Duration(days: 3)),
               points: const Value(10),
             ),
@@ -2088,7 +2147,7 @@ void main() {
           engine = createEngine();
           // now = Wednesday (3), stages are for Fri/Sat
           final tasks = await engine.generateDailyTasks(
-            ScheduleConfig(curriculumId: curriculum, currentDate: now),
+            ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now),
           );
 
           final weeklyTasks = tasks
@@ -2104,6 +2163,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
             delayDays: 0,
@@ -2113,6 +2173,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             stageOrder: 2,
             stageName: 'Rolling Back-5',
             delayDays: 0,
@@ -2129,6 +2190,7 @@ void main() {
               sefariaRef: 'Berakhot.${i + 1}a',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now.subtract(Duration(days: 10 - i)),
               points: const Value(10),
             ),
@@ -2137,7 +2199,7 @@ void main() {
 
         engine = createEngine();
         final tasks = await engine.generateDailyTasks(
-          ScheduleConfig(curriculumId: curriculum, currentDate: now),
+          ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now),
         );
 
         final rollingTasks = tasks
@@ -2159,6 +2221,7 @@ void main() {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: curriculum.storageKey,
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
               delayDays: 0,
@@ -2167,6 +2230,7 @@ void main() {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: curriculum.storageKey,
+              trackId: trackId,
               stageOrder: 2,
               stageName: 'Rolling Back-3',
               delayDays: 0,
@@ -2183,6 +2247,7 @@ void main() {
                 sefariaRef: 'Berakhot.${i + 1}a',
                 stageId: 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: now.subtract(Duration(days: 5 - i)),
                 points: const Value(10),
               ),
@@ -2195,6 +2260,7 @@ void main() {
               sefariaRef: 'Berakhot.5a',
               stageId: 2,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now.subtract(const Duration(days: 1)),
               points: const Value(5),
             ),
@@ -2202,7 +2268,7 @@ void main() {
 
           engine = createEngine();
           final tasks = await engine.generateDailyTasks(
-            ScheduleConfig(curriculumId: curriculum, currentDate: now),
+            ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now),
           );
 
           final rollingTasks = tasks
@@ -2300,11 +2366,13 @@ void main() {
 
   group('Story 15.6 -- Learning Process Wizard', tags: ['story_15_6'], () {
     late UserDatabase db;
+    late int trackId;
     late ContentDatabase contentDb;
     late LearningProcessWizardService wizardService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       contentDb = createTestContentDatabase();
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
@@ -2361,6 +2429,7 @@ void main() {
             programId: oraysa.id,
           ),
           profileId: 0,
+          trackId: trackId,
         );
 
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -2391,6 +2460,7 @@ void main() {
             programId: oraysa.id,
           ),
           profileId: 0,
+          trackId: trackId,
         );
 
         final enrollment = await db.profileProgramDao
@@ -2420,6 +2490,7 @@ void main() {
             ],
           ),
           profileId: 0,
+          trackId: trackId,
         );
 
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -2449,6 +2520,7 @@ void main() {
             ],
           ),
           profileId: 0,
+          trackId: trackId,
         );
 
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -2470,6 +2542,7 @@ void main() {
             choice: WizardChoice.noReview,
           ),
           profileId: 0,
+          trackId: trackId,
         );
 
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -2496,6 +2569,7 @@ void main() {
             programId: dafYomi.id,
           ),
           profileId: 0,
+          trackId: trackId,
         );
         var stages = await db.stageDao.getStageDefinitionsByCurriculum('bavli');
         expect(stages.length, 1); // Daf Yomi = Learn only
@@ -2509,6 +2583,7 @@ void main() {
             programId: oraysa.id,
           ),
           profileId: 0,
+          trackId: trackId,
         );
         stages = await db.stageDao.getStageDefinitionsByCurriculum('bavli');
         expect(
@@ -2529,6 +2604,7 @@ void main() {
               choice: WizardChoice.noReview,
             ),
             profileId: 0,
+            trackId: trackId,
           );
           await wizardService.applyWizardResult(
             const WizardResult(
@@ -2543,6 +2619,7 @@ void main() {
               ],
             ),
             profileId: 0,
+            trackId: trackId,
           );
 
           final bavliStages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -2560,9 +2637,11 @@ void main() {
 
   group('Story 15.7 -- Enhanced Bulk Mark Tool', tags: ['story_15_7'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -2664,10 +2743,12 @@ void main() {
 
   group('Story 15.8 -- Revised Onboarding Flow', tags: ['story_15_8'], () {
     late UserDatabase db;
+    late int trackId;
     late ProfileRepositoryImpl profileRepo;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       profileRepo = ProfileRepositoryImpl(db);
     });
 
@@ -2836,11 +2917,13 @@ void main() {
   // ── Story 15.9: Program Management in Settings ──────────────────────
   group('Story 15.9 -- Program Management in Settings', tags: ['story_15_9'], () {
     late UserDatabase db;
+    late int trackId;
     late ContentDatabase contentDb;
     late LearningProcessWizardService wizardService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       contentDb = createTestContentDatabase();
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
@@ -2870,6 +2953,7 @@ void main() {
               programId: oraysa.id,
             ),
             profileId: 0,
+            trackId: trackId,
           );
 
           // Verify the program info can be queried for display.
@@ -2900,6 +2984,7 @@ void main() {
             ],
           ),
           profileId: 0,
+          trackId: trackId,
         );
 
         // Custom schedule should NOT create a profile_program entry.
@@ -2926,6 +3011,7 @@ void main() {
               programId: oraysa.id,
             ),
             profileId: 0,
+            trackId: trackId,
           );
 
           final stagesBefore = await db.stageDao
@@ -2940,6 +3026,7 @@ void main() {
               sefariaRef: 'Berakhot 2a',
               stageId: stagesBefore.first.id,
               trackType: 'default',
+              trackId: trackId,
               completedAt: DateTime.now(),
             ),
           );
@@ -2958,6 +3045,7 @@ void main() {
               ],
             ),
             profileId: 0,
+            trackId: trackId,
           );
 
           // New stages should exist and be different.
@@ -3043,6 +3131,7 @@ void main() {
             choice: WizardChoice.noReview,
           ),
           profileId: 0,
+          trackId: trackId,
         );
 
         final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -3056,9 +3145,11 @@ void main() {
 
   group('Story 15.16 -- Lifetime Learning Ledger', tags: ['story_15_16'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -3072,6 +3163,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: const Value(1),
             curriculumId: 'mishnayos',
+            trackId: Value(trackId),
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
@@ -3094,6 +3186,7 @@ void main() {
             LearningLedgerCompanion.insert(
               profileId: const Value(1),
               curriculumId: 'mishnayos',
+              trackId: Value(trackId),
               unitType: 'masechta',
               unitIdentifier: 'Berakhot',
               unitDisplayNameHe: 'ברכות',
@@ -3134,6 +3227,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: const Value(5), // child
             curriculumId: 'mishnayos',
+            trackId: Value(trackId),
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
@@ -3184,6 +3278,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: const Value(1),
             curriculumId: 'mishnayos',
+            trackId: Value(trackId),
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
@@ -3200,6 +3295,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: const Value(1),
             curriculumId: 'mishnayos',
+            trackId: Value(trackId),
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
@@ -3350,9 +3446,11 @@ void main() {
 
   group('Story 15.15: Curriculum Scope Selection', tags: ['story_15_15'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -3365,6 +3463,7 @@ void main() {
         await db.curriculumScopeDao.setScopes(
           0,
           CurriculumId.mishnayos,
+          trackId,
           1, // scopeLevel 1 = seder
           ['Seder Zeraim', 'Seder Moed'],
         );
@@ -3386,6 +3485,7 @@ void main() {
         await db.curriculumScopeDao.setScopes(
           0,
           CurriculumId.bavli,
+          trackId,
           2, // scopeLevel 2 = masechta
           ['Berachos'],
         );
@@ -3440,7 +3540,7 @@ void main() {
       test(
         'set scopes persist and are queryable by profile+curriculum',
         () async {
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
             'Seder Zeraim',
           ]);
 
@@ -3465,10 +3565,10 @@ void main() {
       );
 
       test('scopes are isolated between profiles', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
           'Seder Zeraim',
         ]);
-        await db.curriculumScopeDao.setScopes(2, CurriculumId.mishnayos, 1, [
+        await db.curriculumScopeDao.setScopes(2, CurriculumId.mishnayos, trackId, 1, [
           'Seder Moed',
           'Seder Nezikin',
         ]);
@@ -3488,10 +3588,10 @@ void main() {
       });
 
       test('scopes are isolated between curricula for same profile', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
           'Seder Zeraim',
         ]);
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.bavli, 2, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.bavli, trackId, 2, [
           'Berachos',
           'Shabbos',
         ]);
@@ -3512,12 +3612,12 @@ void main() {
       });
 
       test('setScopes replaces existing scopes atomically', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
           'Seder Zeraim',
         ]);
 
         // Replace with different scope level and values
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 2, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 2, [
           'Berachos',
           'Shabbos',
         ]);
@@ -3540,7 +3640,7 @@ void main() {
     // AC: Scope changes are reflected in filtered content queries
     group('AC: Scope changes reflected in filtered content queries', () {
       test('clearScopes restores full curriculum tracking', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
           'Seder Zeraim',
         ]);
 
@@ -3566,11 +3666,11 @@ void main() {
       });
 
       test('setScopes with empty list clears scopes', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
           'Seder Zeraim',
         ]);
 
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, []);
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, []);
 
         final scopes = await db.curriculumScopeDao.getScopes(
           1,
@@ -3590,7 +3690,7 @@ void main() {
         expect(initial, isEmpty);
 
         // Set scopes
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
           'Seder Zeraim',
         ]);
 
@@ -3627,12 +3727,12 @@ void main() {
           // Simulate the _save() flow: setScopes is transactional — it deletes
           // existing scopes then inserts new ones, ensuring stale scopes don't
           // persist. This is the data-layer prerequisite for provider invalidation.
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
             'Seder Zeraim',
           ]);
 
           // Change to different scope
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
             'Seder Moed',
           ]);
 
@@ -3649,7 +3749,7 @@ void main() {
       test(
         'clearScopes removes all entries triggering recalculation',
         () async {
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
             'Seder Zeraim',
             'Seder Moed',
           ]);
@@ -3679,14 +3779,14 @@ void main() {
           expect(emissions.last, isEmpty);
 
           // Set scopes
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
             'Seder Zeraim',
           ]);
           await Future<void>.delayed(const Duration(milliseconds: 50));
           expect(emissions.last, hasLength(1));
 
           // Change scopes
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, 1, [
+          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
             'Seder Moed',
           ]);
           await Future<void>.delayed(const Duration(milliseconds: 50));

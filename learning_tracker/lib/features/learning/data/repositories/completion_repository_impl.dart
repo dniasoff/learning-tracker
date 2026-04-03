@@ -280,12 +280,38 @@ class CompletionRepositoryImpl implements CompletionRepository {
     };
   }
 
+  /// Look up the curriculum_tracks.id for a given curriculum + trackType.
+  Future<int> _resolveTrackId({
+    required String curriculumId,
+    required String trackType,
+  }) async {
+    final track = await (
+      _database.select(_database.curriculumTracks)
+        ..where((t) =>
+            t.profileId.equals(_activeProfileId) &
+            t.curriculumId.equals(curriculumId) &
+            t.trackType.equals(trackType))
+        ..limit(1)
+    ).getSingleOrNull();
+    if (track == null) {
+      throw StateError(
+        'No curriculum track found for profile=$_activeProfileId, '
+        'curriculum=$curriculumId, trackType=$trackType',
+      );
+    }
+    return track.id;
+  }
+
   /// Create the completion record in the database.
   Future<Completion> _createCompletion({
     required CompletionRequest request,
     required int points,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
+    final trackId = await _resolveTrackId(
+      curriculumId: request.curriculumId,
+      trackType: request.trackType,
+    );
 
     final id = await _database.completionDao.insertCompletion(
       CompletionsCompanion.insert(
@@ -293,6 +319,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         sefariaRef: request.sefariaRef,
         stageId: request.stageId,
         trackType: request.trackType,
+        trackId: trackId,
         completedAt: now,
         points: drift.Value(points),
       ),

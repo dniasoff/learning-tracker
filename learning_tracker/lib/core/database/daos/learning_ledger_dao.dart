@@ -89,6 +89,40 @@ class LearningLedgerDao extends DatabaseAccessor<UserDatabase>
             ..limit(limit))
           .get();
 
+  // ========== Track-Scoped Queries (Story 20.2) ==========
+
+  /// Get ledger entries for a specific track and profile.
+  Future<List<LearningLedgerData>> getEntriesByTrack(
+    int trackId,
+    int profileId,
+  ) =>
+      (select(learningLedger)
+            ..where(
+              (t) =>
+                  t.trackId.equals(trackId) & t.profileId.equals(profileId),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
+          .get();
+
+  /// Get completion count for a specific track, curriculum, and unit.
+  Future<int> getCompletionCountByTrack(
+    int trackId,
+    int profileId,
+    String curriculumId,
+    String unitIdentifier,
+  ) async {
+    final query = selectOnly(learningLedger)
+      ..addColumns([learningLedger.id.count()])
+      ..where(
+        learningLedger.trackId.equals(trackId) &
+            learningLedger.profileId.equals(profileId) &
+            learningLedger.curriculumId.equals(curriculumId) &
+            learningLedger.unitIdentifier.equals(unitIdentifier),
+      );
+    final result = await query.getSingle();
+    return result.read(learningLedger.id.count()) ?? 0;
+  }
+
   /// Check if a ledger entry already exists (for dedup during sync merge).
   Future<bool> entryExists({
     required int profileId,

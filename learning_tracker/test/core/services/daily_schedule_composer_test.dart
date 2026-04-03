@@ -19,6 +19,8 @@ DailyTask _task(
     isOverdue: isOverdue,
     reason: 'test',
     stageName: 'Stage $stageOrder',
+    trackId: 1,
+    trackLabel: 'Test Track',
     estimatedEffortMinutes: 5,
   );
 }

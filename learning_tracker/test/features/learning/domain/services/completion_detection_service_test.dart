@@ -21,12 +21,22 @@ void main() {
   late UserDatabase db;
   late _MockSyncEngine mockSyncEngine;
   late _MockContentRepository mockContentRepo;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
     mockSyncEngine = _MockSyncEngine();
     mockContentRepo = _MockContentRepository();
     when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
+
+    final trackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: _currId,
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
   });
 
   tearDown(() async {
@@ -54,6 +64,7 @@ void main() {
     await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
         curriculumId: _currId,
+        trackId: trackId,
         stageOrder: stageOrder,
         stageName: 'Stage $stageOrder',
         delayDays: 0,
@@ -74,6 +85,7 @@ void main() {
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
+        trackId: trackId,
         completedAt: DateTime.utc(2026, 3, 1),
       ),
     );

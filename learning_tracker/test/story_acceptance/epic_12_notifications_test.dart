@@ -25,6 +25,18 @@ class MockNotificationService extends Mock implements NotificationService {}
 
 class MockAppRouter extends Mock implements AppRouter {}
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(const GamificationRoute());
@@ -115,11 +127,13 @@ void main() {
 
   group('Story 12.2 -- Streak Protection Alerts', tags: ['story_12_2'], () {
     late UserDatabase db;
+    late int trackId;
     late MockNotificationService mockService;
     late StreakAlertService alertService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       mockService = MockNotificationService();
       alertService = StreakAlertService(
         db: db,
@@ -176,6 +190,7 @@ void main() {
           sefariaRef: 'test_ref',
           stageId: 1,
           trackType: 'review',
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
         ),
       );
@@ -243,11 +258,13 @@ void main() {
 
   group('Story 12.3 -- Reward Milestone Notifications', tags: ['story_12_3'], () {
     late UserDatabase db;
+    late int trackId;
     late MockNotificationService mockService;
     late RewardMilestoneNotificationService milestoneService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       mockService = MockNotificationService();
       milestoneService = RewardMilestoneNotificationService(
         notificationService: mockService,
@@ -279,6 +296,7 @@ void main() {
           sefariaRef: 'ref1',
           stageId: 1,
           trackType: 'learn',
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
           points: const Value(50),
         ),
@@ -370,6 +388,7 @@ void main() {
             sefariaRef: 'ref1',
             stageId: 1,
             trackType: 'learn',
+            trackId: trackId,
             completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
             points: const Value(60),
           ),
@@ -415,6 +434,7 @@ void main() {
             sefariaRef: 'ref1',
             stageId: 1,
             trackType: 'learn',
+            trackId: trackId,
             completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
             points: const Value(20),
           ),
@@ -425,6 +445,7 @@ void main() {
             sefariaRef: 'ref2',
             stageId: 1,
             trackType: 'learn',
+            trackId: trackId,
             completedAt: DateTime.utc(2026, 3, 16, 11, 0, 0),
             points: const Value(10),
           ),

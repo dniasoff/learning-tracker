@@ -4,6 +4,8 @@ part of 'goal_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$GoalDaoMixin on DatabaseAccessor<UserDatabase> {
+  $CurriculumTracksTable get curriculumTracks =>
+      attachedDatabase.curriculumTracks;
   $GoalsTable get goals => attachedDatabase.goals;
   GoalDaoManager get managers => GoalDaoManager(this);
 }
@@ -11,6 +13,11 @@ mixin _$GoalDaoMixin on DatabaseAccessor<UserDatabase> {
 class GoalDaoManager {
   final _$GoalDaoMixin _db;
   GoalDaoManager(this._db);
+  $$CurriculumTracksTableTableManager get curriculumTracks =>
+      $$CurriculumTracksTableTableManager(
+        _db.attachedDatabase,
+        _db.curriculumTracks,
+      );
   $$GoalsTableTableManager get goals =>
       $$GoalsTableTableManager(_db.attachedDatabase, _db.goals);
 }

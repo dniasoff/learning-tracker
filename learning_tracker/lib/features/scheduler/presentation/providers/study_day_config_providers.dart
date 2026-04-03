@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -64,9 +65,18 @@ Future<void> toggleStudyDay(
 ) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  // Look up trackId for this curriculum
+  final track = await (db.select(db.curriculumTracks)
+        ..where((t) =>
+            t.profileId.equals(profileId) &
+            t.curriculumId.equals(curriculumId.storageKey))
+        ..limit(1))
+      .getSingleOrNull();
+  final trackId = track?.id ?? 0;
   await db.studyDayConfigDao.upsertDayConfig(
     profileId: profileId,
     curriculumId: curriculumId.storageKey,
+    trackId: trackId,
     dayOfWeek: dayOfWeek,
     dayType: newType.storageKey,
   );

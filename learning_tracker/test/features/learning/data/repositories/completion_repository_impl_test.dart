@@ -23,11 +23,30 @@ void main() {
   late MockSyncEngine mockSyncEngine;
   late MockContentRepository mockContentRepository;
   late CompletionRepositoryImpl repository;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = createTestDatabase();
     mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
+
+    final trackRow = await database.into(database.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
+
+    // Also create a school track for tests that use it
+    await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackType: 'school',
+        activatedAt: DateTime.now(),
+      ),
+    );
 
     repository = CompletionRepositoryImpl(
       database: database,
@@ -158,6 +177,7 @@ void main() {
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculumId,
+            trackId: trackId,
             stageOrder: 1,
             stageName: 'Learning',
             delayDays: 0,
@@ -166,6 +186,7 @@ void main() {
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: curriculumId,
+            trackId: trackId,
             stageOrder: 2,
             stageName: 'Chazara 1',
             delayDays: 1,

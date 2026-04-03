@@ -23,6 +23,7 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
 void main() {
   late UserDatabase db;
   late DailyTaskGenerator generator;
+  late int trackId;
   final now = DateTime.utc(2026, 3, 15);
   const curriculum = CurriculumId.mishnayos;
 
@@ -35,9 +36,19 @@ void main() {
   setUp(() async {
     db = createTestDatabase();
 
+    final trackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: curriculum.storageKey,
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
+
     await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         stageOrder: 1,
         stageName: 'Learn',
         delayDays: 0,
@@ -46,6 +57,7 @@ void main() {
     await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         stageOrder: 2,
         stageName: 'Chazara 1',
         delayDays: 1,
@@ -54,6 +66,7 @@ void main() {
     await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         stageOrder: 3,
         stageName: 'Chazara 2',
         delayDays: 7,
@@ -80,7 +93,7 @@ void main() {
   });
 
   test('generate returns correctly structured DailyTask items', () async {
-    final tasks = await generator.generate(curriculum, now);
+    final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
 
     expect(tasks, isNotEmpty);
     for (final task in tasks) {
@@ -100,6 +113,7 @@ void main() {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         sefariaRef: 'Mishnah_Berakhot_1.0',
         stageId: learnId,
         trackType: 'personal',
@@ -112,6 +126,7 @@ void main() {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         sefariaRef: 'Mishnah_Berakhot_1.1',
         stageId: learnId,
         trackType: 'personal',
@@ -120,7 +135,7 @@ void main() {
       ),
     );
 
-    final tasks = await generator.generate(curriculum, now);
+    final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
 
     // Should have overdue, scheduled, and new items
     final overdueIdx = tasks.indexWhere(
@@ -142,6 +157,8 @@ void main() {
     final tasks = await generator.generate(
       curriculum,
       now,
+      trackId: 1,
+      trackLabel: 'Test',
       skippedRefs: {'Mishnah_Berakhot_1.0'},
     );
 
@@ -161,6 +178,7 @@ void main() {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         sefariaRef: 'Mishnah_Berakhot_1.0',
         stageId: learnId,
         trackType: 'personal',
@@ -169,7 +187,7 @@ void main() {
       ),
     );
 
-    final tasksToday = await generator.generate(curriculum, now);
+    final tasksToday = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
     // Item 0 should NOT have chazara due today (delay=1)
     expect(
       tasksToday.any(
@@ -184,6 +202,8 @@ void main() {
     final tasksTomorrow = await generator.generate(
       curriculum,
       now.add(const Duration(days: 1)),
+      trackId: 1,
+      trackLabel: 'Test',
     );
     expect(
       tasksTomorrow.any(
@@ -202,6 +222,7 @@ void main() {
     await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         stageOrder: 1,
         stageName: 'Learn',
         delayDays: 0,
@@ -210,6 +231,7 @@ void main() {
     await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         stageOrder: 2,
         stageName: 'Chazara 1',
         delayDays: 0,
@@ -225,6 +247,7 @@ void main() {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
         curriculumId: curriculum.storageKey,
+        trackId: trackId,
         sefariaRef: 'Mishnah_Berakhot_1.0',
         stageId: learnId,
         trackType: 'personal',
@@ -233,7 +256,7 @@ void main() {
       ),
     );
 
-    final tasks = await generator.generate(curriculum, now);
+    final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
 
     // delay_days=0 means Chazara 1 is due immediately (today)
     expect(

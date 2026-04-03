@@ -13,10 +13,12 @@ class DailyTaskGenerator {
 
   final SchedulerEngine _engine;
 
-  /// Generate daily tasks for a single curriculum.
+  /// Generate daily tasks for a single curriculum/track.
   Future<List<DailyTask>> generate(
     CurriculumId curriculumId,
     DateTime date, {
+    required int trackId,
+    required String trackLabel,
     DateTime? goalDeadline,
     double? pacePerDay,
     bool isStudyDay = true,
@@ -25,6 +27,8 @@ class DailyTaskGenerator {
   }) async {
     final config = ScheduleConfig(
       curriculumId: curriculumId,
+      trackId: trackId,
+      trackLabel: trackLabel,
       currentDate: date,
       goalDeadline: goalDeadline,
       pacePerDay: pacePerDay,
@@ -40,10 +44,11 @@ class DailyTaskGenerator {
         .toList();
   }
 
-  /// Generate daily tasks across multiple curricula.
+  /// Generate daily tasks across multiple curricula/tracks.
   ///
   /// [goalDeadlines] maps curriculum IDs to their earliest goal deadline,
   /// enabling deadline-aware pacing.
+  /// [trackIds] and [trackLabels] map curriculum IDs to their track context.
   Future<List<DailyTask>> generateAll(
     List<CurriculumId> curricula,
     DateTime date, {
@@ -52,6 +57,8 @@ class DailyTaskGenerator {
     Map<CurriculumId, double> pacePerDayMap = const {},
     Map<CurriculumId, bool> isStudyDayMap = const {},
     Map<CurriculumId, int> studyDaysPerWeekMap = const {},
+    Map<CurriculumId, int> trackIds = const {},
+    Map<CurriculumId, String> trackLabels = const {},
   }) async {
     final allTasks = <DailyTask>[];
 
@@ -59,6 +66,8 @@ class DailyTaskGenerator {
       final tasks = await generate(
         curriculum,
         date,
+        trackId: trackIds[curriculum] ?? 0,
+        trackLabel: trackLabels[curriculum] ?? '',
         goalDeadline: goalDeadlines[curriculum],
         pacePerDay: pacePerDayMap[curriculum],
         isStudyDay: isStudyDayMap[curriculum] ?? true,

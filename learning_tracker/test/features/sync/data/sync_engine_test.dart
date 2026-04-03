@@ -296,6 +296,7 @@ void main() {
           sefariaRef: 'mishna-1',
           stageId: 1,
           trackType: 'personal',
+          trackId: 0,
           completedAt: completedAt,
           points: const Value(10),
         ),
@@ -492,6 +493,7 @@ void main() {
       await database.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: 0,
           stageOrder: 1,
           stageName: 'Old Learn',
           delayDays: 0,
@@ -637,6 +639,7 @@ void main() {
       await database.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: 0,
           description: const Value('Finish Berachos'),
           targetPercent: const Value(50.0),
           createdAt: DateTime.utc(2026, 2, 1),
@@ -665,6 +668,7 @@ void main() {
       await database.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: 0,
           description: const Value('Finish Berachos'),
           targetPercent: const Value(50.0),
           createdAt: DateTime.utc(2026, 2, 1),

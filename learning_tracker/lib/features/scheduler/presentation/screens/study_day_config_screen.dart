@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -130,12 +131,23 @@ class StudyDayConfigScreen extends ConsumerWidget {
   void _toggleDay(WidgetRef ref, int dayOfWeek, DayType newType) {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
-    db.studyDayConfigDao.upsertDayConfig(
-      profileId: profileId,
-      curriculumId: curriculumId.storageKey,
-      dayOfWeek: dayOfWeek,
-      dayType: newType.storageKey,
-    );
+    // Look up trackId then upsert
+    (db.select(db.curriculumTracks)
+          ..where((t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculumId.storageKey))
+          ..limit(1))
+        .getSingleOrNull()
+        .then((track) {
+      final trackId = track?.id ?? 0;
+      db.studyDayConfigDao.upsertDayConfig(
+        profileId: profileId,
+        curriculumId: curriculumId.storageKey,
+        trackId: trackId,
+        dayOfWeek: dayOfWeek,
+        dayType: newType.storageKey,
+      );
+    });
     ref.invalidate(allDailyTasksProvider);
   }
 }

@@ -157,7 +157,12 @@ final class DailyTasksProvider
     with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
   DailyTasksProvider._({
     required DailyTasksFamily super.from,
-    required ({CurriculumId curriculumId, DateTime? goalDeadline})
+    required ({
+      CurriculumId curriculumId,
+      int trackId,
+      String trackLabel,
+      DateTime? goalDeadline,
+    })
     super.argument,
   }) : super(
          retry: null,
@@ -186,10 +191,18 @@ final class DailyTasksProvider
   @override
   FutureOr<List<DailyTask>> create(Ref ref) {
     final argument =
-        this.argument as ({CurriculumId curriculumId, DateTime? goalDeadline});
+        this.argument
+            as ({
+              CurriculumId curriculumId,
+              int trackId,
+              String trackLabel,
+              DateTime? goalDeadline,
+            });
     return dailyTasks(
       ref,
       curriculumId: argument.curriculumId,
+      trackId: argument.trackId,
+      trackLabel: argument.trackLabel,
       goalDeadline: argument.goalDeadline,
     );
   }
@@ -205,13 +218,18 @@ final class DailyTasksProvider
   }
 }
 
-String _$dailyTasksHash() => r'1f63a511925068923961c9e1b4c61023b42d4fcc';
+String _$dailyTasksHash() => r'93eb55acff506fb02a96868e8a9d49ed957c0971';
 
 final class DailyTasksFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<List<DailyTask>>,
-          ({CurriculumId curriculumId, DateTime? goalDeadline})
+          ({
+            CurriculumId curriculumId,
+            int trackId,
+            String trackLabel,
+            DateTime? goalDeadline,
+          })
         > {
   DailyTasksFamily._()
     : super(
@@ -224,9 +242,16 @@ final class DailyTasksFamily extends $Family
 
   DailyTasksProvider call({
     required CurriculumId curriculumId,
+    required int trackId,
+    required String trackLabel,
     DateTime? goalDeadline,
   }) => DailyTasksProvider._(
-    argument: (curriculumId: curriculumId, goalDeadline: goalDeadline),
+    argument: (
+      curriculumId: curriculumId,
+      trackId: trackId,
+      trackLabel: trackLabel,
+      goalDeadline: goalDeadline,
+    ),
     from: this,
   );
 

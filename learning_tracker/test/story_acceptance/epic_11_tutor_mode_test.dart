@@ -63,6 +63,18 @@ MockFlutterSecureStorage _createMockStorage() {
   return mock;
 }
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 11.1: Tutor PIN setup ───────────────────────────────
 
@@ -152,6 +164,7 @@ void main() {
     test('tutor mode accessible from child account', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
+      final trackId = await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
           localUid: 'local-uid-child',
@@ -177,6 +190,7 @@ void main() {
     test('tutor mode accessible from adult account', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
+      final trackId = await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
           localUid: 'local-uid-adult',
@@ -392,9 +406,11 @@ void main() {
 
   group('Story 11.2 -- Tutor Dashboard (Read-Only)', tags: ['story_11_2'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -412,6 +428,7 @@ void main() {
           .insert(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishnayos',
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
               delayDays: 0,
@@ -422,6 +439,7 @@ void main() {
           .insert(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishnayos',
+              trackId: trackId,
               stageOrder: 2,
               stageName: 'Chazara 1',
               delayDays: 1,
@@ -432,6 +450,7 @@ void main() {
           .insert(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishnayos',
+              trackId: trackId,
               stageOrder: 3,
               stageName: 'Chazara 2',
               delayDays: 7,
@@ -446,6 +465,7 @@ void main() {
             sefariaRef: 'Mishnah Berakhot ${i + 1}',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: now.subtract(Duration(days: i)),
             points: const Value(10),
           ),
@@ -458,6 +478,7 @@ void main() {
           sefariaRef: 'Mishnah Berakhot 1',
           stageId: 2,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: now.subtract(const Duration(days: 1)),
           points: const Value(5),
         ),
@@ -509,6 +530,8 @@ void main() {
           isOverdue: true,
           reason: 'Chazara 1 overdue by 3 day(s)',
           stageName: 'Chazara 1',
+          trackId: 1,
+          trackLabel: 'Test Track',
         ),
         DailyTask(
           curriculumId: CurriculumId.mishnayos,
@@ -519,6 +542,8 @@ void main() {
           isOverdue: false,
           reason: 'Chazara 1 due today',
           stageName: 'Chazara 1',
+          trackId: 1,
+          trackLabel: 'Test Track',
         ),
         DailyTask(
           curriculumId: CurriculumId.mishnayos,
@@ -529,6 +554,8 @@ void main() {
           isOverdue: false,
           reason: 'New learning',
           stageName: 'Learn',
+          trackId: 1,
+          trackLabel: 'Test Track',
           estimatedEffortMinutes: 5,
         ),
       ];
@@ -597,6 +624,7 @@ void main() {
         sefariaRef: ref,
         stageId: 1,
         trackType: 'personal',
+        trackId: trackId,
         completedAt: completedAt,
         points: points,
       );
@@ -715,6 +743,8 @@ void main() {
             isOverdue: false,
             reason: 'New learning',
             stageName: 'Learn',
+            trackId: 1,
+            trackLabel: 'Test Track',
             estimatedEffortMinutes: 5,
           ),
         ],
@@ -752,6 +782,8 @@ void main() {
             isOverdue: false,
             reason: 'New learning',
             stageName: 'Learn',
+            trackId: 1,
+            trackLabel: 'Test Track',
             estimatedEffortMinutes: 5,
           ),
         ],
@@ -798,6 +830,8 @@ void main() {
             isOverdue: true,
             reason: 'Chazara 1 overdue by 2 day(s)',
             stageName: 'Chazara 1',
+            trackId: 1,
+            trackLabel: 'Test Track',
           ),
           DailyTask(
             curriculumId: CurriculumId.mishnayos,
@@ -808,6 +842,8 @@ void main() {
             isOverdue: false,
             reason: 'New learning',
             stageName: 'Learn',
+            trackId: 1,
+            trackLabel: 'Test Track',
             estimatedEffortMinutes: 5,
           ),
         ];

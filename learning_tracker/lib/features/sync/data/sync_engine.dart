@@ -604,6 +604,7 @@ class SyncEngine {
               sefariaRef: sefariaRef,
               stageId: stageId,
               trackType: trackType,
+              trackId: remote['track_id'] as int? ?? 0,
               completedAt: completedAt,
               points: Value(remote['points'] as int? ?? 0),
             ),
@@ -749,11 +750,13 @@ class SyncEngine {
           }
         }
 
+        final trackId = remote['track_id'] as int? ?? 0;
         final companions = stages
             .cast<Map<String, dynamic>>()
             .map(
               (s) => StageDefinitionsCompanion.insert(
                 curriculumId: curriculumId,
+                trackId: s['track_id'] as int? ?? trackId,
                 stageOrder: s['stage_order'] as int,
                 stageName: s['stage_name'] as String,
                 delayDays: s['delay_days'] as int,
@@ -815,6 +818,7 @@ class SyncEngine {
         await _database.studyDayConfigDao.upsertDayConfig(
           profileId: profileId,
           curriculumId: curriculumId,
+          trackId: remote['track_id'] as int? ?? 0,
           dayOfWeek: dayOfWeek,
           dayType: dayType,
         );
@@ -847,6 +851,7 @@ class SyncEngine {
 
         await _database.goalDao.upsertGoal(
           curriculumId: curriculumId,
+          trackId: remote['track_id'] as int? ?? 0,
           description: description,
           targetPercent: targetPercent,
           targetDate: targetDate,

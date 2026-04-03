@@ -40,15 +40,29 @@ Future<void> _noOpPush({
   required String userMode,
 }) async {}
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 14.1: Settings screen ───────────────────────────────
 
   group('Story 14.1 -- Settings screen', tags: ['story_14_1'], () {
     late UserDatabase db;
+    late int trackId;
     late UserProfileService profileService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       profileService = UserProfileService(
         userProfileDao: db.userProfileDao,
         pushUserProfile: _noOpPush,
@@ -137,10 +151,12 @@ void main() {
 
   group('Story 14.2 -- Data Export & Import (JSON)', tags: ['story_14_2'], () {
     late UserDatabase db;
+    late int trackId;
     late DataExportImportService service;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       service = DataExportImportService(database: db);
     });
 
@@ -158,6 +174,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime(2026, 1, 15),
               points: const Value(10),
             ),
@@ -170,6 +187,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot.1.2',
               stageId: 2,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime(2026, 1, 16),
               points: const Value(5),
             ),
@@ -181,6 +199,7 @@ void main() {
           .insert(
             GoalsCompanion.insert(
               curriculumId: 'mishna',
+              trackId: trackId,
               targetPercent: const Value(50.0),
               targetDate: Value(DateTime(2026, 6, 1)),
               description: const Value('Finish half by June'),
@@ -195,6 +214,7 @@ void main() {
           .insert(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishna',
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'learning',
               delayDays: 0,
@@ -206,6 +226,7 @@ void main() {
           .insert(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishna',
+              trackId: trackId,
               stageOrder: 2,
               stageName: 'chazara1',
               delayDays: 1,
@@ -244,6 +265,7 @@ void main() {
           .insert(
             PointConfigsCompanion.insert(
               curriculumId: 'mishna',
+              trackId: trackId,
               stageOrder: 1,
               points: 10,
             ),
@@ -619,6 +641,7 @@ void main() {
     late MockAuthRepository mockAuthRepo;
     late MockFirebaseFirestore mockFirestore;
     late UserDatabase db;
+    late int trackId;
     late AccountManagementService service;
 
     setUp(() {

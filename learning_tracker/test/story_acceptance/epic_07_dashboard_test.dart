@@ -41,15 +41,29 @@ ContentItem _leaf({
   );
 }
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 7.1: Dashboard screen ───────────────────────────────
 
   group('Story 7.1 -- Dashboard screen', tags: ['story_7_1'], () {
     late UserDatabase db;
+    late int trackId;
     late CrossCurriculumAggregator aggregator;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       aggregator = CrossCurriculumAggregator();
     });
 
@@ -252,6 +266,7 @@ void main() {
           sefariaRef: 'ref1',
           stageId: 1,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 3, 16),
           points: const Value(10),
         ),
@@ -262,6 +277,7 @@ void main() {
           sefariaRef: 'ref2',
           stageId: 1,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 3, 16),
           points: const Value(5),
         ),
@@ -272,6 +288,7 @@ void main() {
           sefariaRef: 'ref3',
           stageId: 2,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 3, 16),
           points: const Value(3),
         ),
@@ -336,6 +353,7 @@ void main() {
             sefariaRef: 'r1',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: DateTime.utc(2026, 3, 15, 10, 0),
           ),
         );
@@ -345,6 +363,7 @@ void main() {
             sefariaRef: 'r2',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: DateTime.utc(2026, 3, 16, 14, 30),
           ),
         );
@@ -514,9 +533,11 @@ void main() {
 
   group('Story 7.2 -- Per-Curriculum Progress Views', tags: ['story_7_2'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -530,6 +551,7 @@ void main() {
       final id = await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: stageOrder,
           stageName: stageName,
           delayDays: 0,
@@ -549,6 +571,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: trackType,
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 3, 15),
         ),
       );
@@ -776,6 +799,7 @@ void main() {
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           createdAt: DateTime.utc(2026, 1, 1),
           updatedAt: DateTime.utc(2026, 1, 1),
           targetDate: Value(DateTime.utc(2026, 6, 1)),
@@ -790,6 +814,7 @@ void main() {
             sefariaRef: 'ref_$i',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: DateTime.utc(2026, 3, 16 - i),
           ),
         );
@@ -834,10 +859,12 @@ void main() {
 
   group('Story 7.3 -- Progress Charts & Statistics', tags: ['story_7_3'], () {
     late UserDatabase db;
+    late int trackId;
     late ChartDataService chartService;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       chartService = ChartDataService(db);
     });
 
@@ -856,6 +883,7 @@ void main() {
           sefariaRef: 'ref_${completedAt.millisecondsSinceEpoch}',
           stageId: 1,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: completedAt,
           points: Value(points),
         ),

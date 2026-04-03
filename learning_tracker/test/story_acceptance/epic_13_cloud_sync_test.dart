@@ -30,6 +30,18 @@ UserDatabase _createInMemoryDatabase() {
   return UserDatabase(NativeDatabase.memory());
 }
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 13.1: Push-on-Write with Offline Queuing ─────────────
 
@@ -38,14 +50,16 @@ void main() {
     tags: ['story_13_1'],
     () {
       late UserDatabase database;
+      late int trackId;
       late MockFirestoreDataSource mockFirestore;
       late MockConnectivityService mockConnectivity;
       late Talker logger;
       late OfflineQueue offlineQueue;
       late SyncEngine syncEngine;
 
-      setUp(() {
+      setUp(() async {
         database = _createInMemoryDatabase();
+        trackId = await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
         mockConnectivity = MockConnectivityService();
         logger = Talker();
@@ -208,14 +222,16 @@ void main() {
 
   group('Story 13.2 -- Pull-on-Launch Merge', tags: ['story_13_2'], () {
     late UserDatabase database;
+    late int trackId;
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
     late Talker logger;
     late OfflineQueue offlineQueue;
     late SyncEngine syncEngine;
 
-    setUp(() {
+    setUp(() async {
       database = _createInMemoryDatabase();
+      trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
       mockConnectivity = MockConnectivityService();
       logger = Talker();
@@ -277,6 +293,7 @@ void main() {
           sefariaRef: 'mishna-1',
           stageId: 1,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: completedAt,
         ),
       );
@@ -385,6 +402,7 @@ void main() {
             sefariaRef: 'mishna-1',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: DateTime.utc(2026, 2, 9),
           ),
         );
@@ -416,14 +434,16 @@ void main() {
 
   group('Story 13.3 -- Real-Time Foreground Listeners', tags: ['story_13_3'], () {
     late UserDatabase database;
+    late int trackId;
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
     late Talker logger;
     late OfflineQueue offlineQueue;
     late SyncEngine syncEngine;
 
-    setUp(() {
+    setUp(() async {
       database = _createInMemoryDatabase();
+      trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
       mockConnectivity = MockConnectivityService();
       logger = Talker();
@@ -539,6 +559,7 @@ void main() {
       // Insert older local goal
       await database.goalDao.upsertGoal(
         curriculumId: 'mishnayos',
+        trackId: trackId,
         description: 'finish by pesach',
         targetPercent: 50.0,
         targetDate: null,
@@ -668,6 +689,7 @@ void main() {
 
   group('Story 13.4 -- New Device Data Restore', tags: ['story_13_4'], () {
     late UserDatabase database;
+    late int trackId;
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
     late MockCurriculumImportService mockImportService;
@@ -692,8 +714,9 @@ void main() {
       ).thenAnswer((_) async => []);
     }
 
-    setUp(() {
+    setUp(() async {
       database = _createInMemoryDatabase();
+      trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
       mockConnectivity = MockConnectivityService();
       mockImportService = MockCurriculumImportService();
@@ -929,6 +952,7 @@ void main() {
           sefariaRef: 'mishna-1',
           stageId: 1,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 2, 9),
         ),
       );

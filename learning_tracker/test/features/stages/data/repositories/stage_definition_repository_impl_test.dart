@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
@@ -38,6 +38,7 @@ void main() {
       id: id,
       profileId: 0,
       curriculumId: curriculumKey,
+      trackId: 1,
       stageOrder: stageOrder,
       stageName: stageName,
       delayDays: delayDays,
@@ -134,7 +135,7 @@ void main() {
           ],
         );
 
-        final result = await repository.addStage(curriculum, 'Chazara 3', 30);
+        final result = await repository.addStage(curriculum, 'Chazara 3', 30, trackId: 1);
 
         expect(result.stageOrder, 4);
         expect(result.isDefault, false);
@@ -235,7 +236,7 @@ void main() {
           ],
         );
 
-        await repository.resetToDefaults(curriculum);
+        await repository.resetToDefaults(curriculum, trackId: 1);
 
         verify(
           () => mockStageDao.deleteAllForCurriculum(curriculumKey),
@@ -251,7 +252,7 @@ void main() {
       ).thenAnswer((_) async => 10);
 
       expect(
-        () => repository.addStage(curriculum, 'Extra Stage', 60),
+        () => repository.addStage(curriculum, 'Extra Stage', 60, trackId: 1),
         throwsA(isA<StageLimitExceededException>()),
       );
     });
@@ -262,7 +263,7 @@ void main() {
         () => mockStageDao.getStageDefinitionsByCurriculum(curriculumKey),
       ).thenAnswer((_) async => [makeRow(id: 1)]);
 
-      await repository.initializeDefaults(curriculum);
+      await repository.initializeDefaults(curriculum, trackId: 1);
 
       verifyNever(() => mockStageDao.insertStageDefinition(any()));
     });
@@ -278,7 +279,7 @@ void main() {
           () => mockStageDao.insertStageDefinition(any()),
         ).thenAnswer((_) async => 1);
 
-        await repository.initializeDefaults(curriculum);
+        await repository.initializeDefaults(curriculum, trackId: 1);
 
         verify(() => mockStageDao.insertStageDefinition(any())).called(3);
       },
@@ -308,7 +309,7 @@ void main() {
         () => mockStageDao.getStageDefinitionsByCurriculum(curriculumKey),
       ).thenAnswer((_) async => [makeRow(id: 1)]);
 
-      await repository.addStage(curriculum, 'Extra', 30);
+      await repository.addStage(curriculum, 'Extra', 30, trackId: 1);
 
       expect(pushedSettings, hasLength(1));
       expect(pushedSettings[0]['curriculum_id'], curriculumKey);
@@ -348,7 +349,7 @@ void main() {
         () => mockStageDao.getStageDefinitionsByCurriculum(curriculumKey),
       ).thenAnswer((_) async => [makeRow(id: 1)]);
 
-      await repository.resetToDefaults(curriculum);
+      await repository.resetToDefaults(curriculum, trackId: 1);
 
       expect(pushedSettings, hasLength(1));
     });

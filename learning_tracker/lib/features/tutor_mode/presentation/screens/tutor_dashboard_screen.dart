@@ -407,11 +407,15 @@ class _DailyTasksSection extends StatelessWidget {
     return Column(
       children: tasks.map((task) {
         final priorityColor = switch (task.priority) {
+          DailyTaskPriority.overdueProgram => Colors.red,
+          DailyTaskPriority.todayProgram => Colors.blue,
           DailyTaskPriority.overdueChazara => Colors.red,
           DailyTaskPriority.scheduledChazara => Colors.orange,
           DailyTaskPriority.newLearning => Colors.green,
         };
         final priorityLabel = switch (task.priority) {
+          DailyTaskPriority.overdueProgram => 'Overdue',
+          DailyTaskPriority.todayProgram => 'Program',
           DailyTaskPriority.overdueChazara => 'Overdue',
           DailyTaskPriority.scheduledChazara => 'Chazara',
           DailyTaskPriority.newLearning => 'New',

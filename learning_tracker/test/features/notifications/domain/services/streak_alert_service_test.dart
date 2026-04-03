@@ -14,13 +14,23 @@ void main() {
   late MockNotificationService mockNotificationService;
   late StreakAlertService service;
   late DateTime Function() clock;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
     mockNotificationService = MockNotificationService();
 
     // Default clock: noon UTC
     clock = () => DateTime.utc(2026, 3, 16, 12, 0, 0);
+
+    final trackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'test',
+        trackType: 'review',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
 
     service = StreakAlertService(
       db: db,
@@ -85,6 +95,7 @@ void main() {
           sefariaRef: 'test_ref',
           stageId: 1,
           trackType: 'review',
+          trackId: trackId,
           completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
         ),
       );

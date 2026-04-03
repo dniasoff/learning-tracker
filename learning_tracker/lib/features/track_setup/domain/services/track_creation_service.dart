@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
@@ -63,7 +64,24 @@ class TrackCreationService {
       );
     }
 
-    // 2. All remaining writes in a single transaction
+    // 2. Resolve the trackId — activation created the personal track above.
+    final track = await (
+      _database.select(_database.curriculumTracks)
+        ..where((t) =>
+            t.profileId.equals(profileId) &
+            t.curriculumId.equals(curriculum.storageKey) &
+            t.trackType.equals(TrackType.personal.storageKey))
+        ..limit(1)
+    ).getSingleOrNull();
+    if (track == null) {
+      throw StateError(
+        'No curriculum track found after activation for '
+        '${curriculum.storageKey} (profile=$profileId)',
+      );
+    }
+    final trackId = track.id;
+
+    // 3. All remaining writes in a single transaction
     await _database.transaction(() async {
       // Apply wizard result (stages) if provided
       if (result.wizardResult is LearningProcessWizardResult) {
@@ -71,6 +89,7 @@ class TrackCreationService {
         await _wizardService.applyWizardResult(
           wizard.wizardResult,
           profileId: profileId,
+          trackId: trackId,
         );
       }
 
@@ -78,6 +97,7 @@ class TrackCreationService {
       await _saveStudyDays(
         profileId: profileId,
         curriculumId: curriculum,
+        trackId: trackId,
         studyDays: result.studyDays,
       );
 
@@ -87,6 +107,7 @@ class TrackCreationService {
         await _saveScopes(
           profileId: profileId,
           curriculumId: curriculum,
+          trackId: trackId,
           scopes: result.scopeSelections!,
         );
       }
@@ -96,6 +117,7 @@ class TrackCreationService {
         final goal = result.goalResult! as GoalFormResult;
         await _goalRepository.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: goal.targetPercent,
           targetDate: goal.targetDate,
           description: goal.description,
@@ -111,6 +133,7 @@ class TrackCreationService {
       await _seedPointConfigsIfNeeded(
         profileId: profileId,
         curriculumId: curriculum,
+        trackId: trackId,
       );
     });
 
@@ -148,6 +171,7 @@ class TrackCreationService {
   Future<void> _saveStudyDays({
     required int profileId,
     required CurriculumId curriculumId,
+    required int trackId,
     required Map<int, String> studyDays,
   }) async {
     final dao = _database.studyDayConfigDao;
@@ -159,6 +183,7 @@ class TrackCreationService {
       await dao.upsertDayConfig(
         profileId: profileId,
         curriculumId: curriculumId.storageKey,
+        trackId: trackId,
         dayOfWeek: entry.key,
         dayType: entry.value,
       );
@@ -168,6 +193,7 @@ class TrackCreationService {
   Future<void> _saveScopes({
     required int profileId,
     required CurriculumId curriculumId,
+    required int trackId,
     required List<ScopeEntry> scopes,
   }) async {
     final now = DateTime.now().toUtc();
@@ -178,6 +204,7 @@ class TrackCreationService {
             CurriculumScopesCompanion.insert(
               profileId: Value(profileId),
               curriculumId: curriculumId.storageKey,
+              trackId: trackId,
               scopeLevel: scope.level,
               scopeValue: scope.value,
               createdAt: now,
@@ -189,12 +216,13 @@ class TrackCreationService {
   Future<void> _seedPointConfigsIfNeeded({
     required int profileId,
     required CurriculumId curriculumId,
+    required int trackId,
   }) async {
     final existing = await _database.pointConfigDao.getConfigsByCurriculum(
       curriculumId.storageKey,
     );
     if (existing.isEmpty) {
-      await _database.pointConfigDao.seedDefaults(curriculumId.storageKey);
+      await _database.pointConfigDao.seedDefaults(curriculumId.storageKey, trackId);
     }
   }
 }

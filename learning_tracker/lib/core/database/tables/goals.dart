@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 
 /// Goals table — learning goals with per-curriculum deadlines.
 ///
@@ -8,6 +9,7 @@ class Goals extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
+  IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   RealColumn get targetPercent => real().withDefault(const Constant(100.0))();
   DateTimeColumn get targetDate => dateTime().nullable()();
   TextColumn get description => text().withDefault(const Constant(''))();

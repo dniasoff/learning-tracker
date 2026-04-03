@@ -9,6 +9,12 @@ abstract class ScheduleConfig with _$ScheduleConfig {
   const factory ScheduleConfig({
     required CurriculumId curriculumId,
 
+    /// The track this scheduler run is for.
+    required int trackId,
+
+    /// Display label for the track.
+    required String trackLabel,
+
     /// Goal deadline for completing the curriculum. Null means no deadline.
     DateTime? goalDeadline,
 

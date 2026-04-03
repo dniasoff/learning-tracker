@@ -8,9 +8,10 @@ abstract class StudyDayConfigRepository {
   Future<void> updateDayType(
     CurriculumId curriculumId,
     int dayOfWeek,
-    DayType dayType,
-  );
-  Future<void> seedDefaults(CurriculumId curriculumId);
+    DayType dayType, {
+    required int trackId,
+  });
+  Future<void> seedDefaults(CurriculumId curriculumId, {required int trackId});
   Future<bool> isStudyDay(CurriculumId curriculumId, int dayOfWeek);
   Future<int> getStudyDaysPerWeek(CurriculumId curriculumId);
 }

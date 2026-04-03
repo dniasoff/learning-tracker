@@ -93,6 +93,8 @@ void main() {
 
       final config = ScheduleConfig(
         curriculumId: CurriculumId.mishnayos,
+        trackId: 1,
+        trackLabel: 'Test Track',
         goalDeadline: now.add(const Duration(days: 60)),
         currentDate: now,
       );

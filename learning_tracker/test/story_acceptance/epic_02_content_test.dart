@@ -32,6 +32,18 @@ import '../fixtures/content_fixtures.dart';
 import '../helpers/test_database.dart';
 import '../mocks/mock_repositories.dart';
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
@@ -302,10 +314,12 @@ void main() {
 
   group('Story 2.4 -- Curriculum activation', tags: ['story_2_4'], () {
     late UserDatabase db;
+    late int trackId;
     late CurriculumActivationService service;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       addTearDown(() => db.close());
 
       service = CurriculumActivationService(
@@ -379,6 +393,7 @@ void main() {
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
+            trackId: trackId,
             completedAt: DateTime.now(),
             points: const Value(10),
           ),
@@ -420,6 +435,7 @@ void main() {
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
+            trackId: trackId,
             completedAt: DateTime.now(),
             points: const Value(10),
           ),
@@ -634,7 +650,6 @@ void main() {
     test('content_items table is not in Drift schema', () {
       final db = createTestDatabase();
       addTearDown(() => db.close());
-
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
       expect(db.schemaVersion, equals(24));
@@ -645,7 +660,6 @@ void main() {
     test('curriculum_hierarchy_config table removed from Drift schema', () {
       final db = createTestDatabase();
       addTearDown(() => db.close());
-
       // Schema v3 drops these tables.
       expect(db.schemaVersion, equals(24));
     });
@@ -655,6 +669,7 @@ void main() {
     test('completions table uses sefariaRef column', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
+      final trackId = await _insertTrack(db);
 
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
@@ -662,6 +677,7 @@ void main() {
           sefariaRef: 'Mishnah Berakhot 1.1',
           stageId: 1,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: DateTime.now().toUtc(),
         ),
       );
@@ -676,7 +692,6 @@ void main() {
     test('bookmarks table uses sefariaRef column', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
-
       await db.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           curriculumId: CurriculumId.mishnayos.storageKey,
@@ -697,7 +712,6 @@ void main() {
     test('learning_order table uses sefariaRef column', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
-
       await db.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(
           curriculumId: CurriculumId.mishnayos.storageKey,

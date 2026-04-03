@@ -8,9 +8,19 @@ import '../../../../helpers/test_database.dart';
 
 void main() {
   late UserDatabase db;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
+
+    final trackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
   });
 
   tearDown(() async {
@@ -49,6 +59,7 @@ void main() {
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
+        trackId: trackId,
         completedAt: DateTime.utc(2026, 3, 15),
       ),
     );
@@ -65,6 +76,7 @@ void main() {
     final id = await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
         curriculumId: curriculumId,
+        trackId: trackId,
         stageOrder: stageOrder,
         stageName: stageName,
         delayDays: 0,

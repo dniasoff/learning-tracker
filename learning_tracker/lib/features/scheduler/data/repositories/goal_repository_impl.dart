@@ -18,6 +18,7 @@ class GoalRepositoryImpl implements GoalRepository {
   @override
   Future<GoalEntity> createGoal({
     required CurriculumId curriculumId,
+    required int trackId,
     required double targetPercent,
     DateTime? targetDate,
     String description = '',
@@ -33,6 +34,7 @@ class GoalRepositoryImpl implements GoalRepository {
       final id = await _database.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: curriculumId.storageKey,
+          trackId: trackId,
           targetPercent: drift.Value(targetPercent),
           targetDate: drift.Value(targetDate?.toUtc()),
           description: drift.Value(description),
@@ -92,6 +94,7 @@ class GoalRepositoryImpl implements GoalRepository {
         GoalsCompanion(
           id: drift.Value(goalId),
           curriculumId: drift.Value(existing.curriculumId),
+          trackId: drift.Value(existing.trackId),
           targetPercent: drift.Value(targetPercent ?? existing.targetPercent),
           targetDate: clearTargetDate
               ? const drift.Value(null)

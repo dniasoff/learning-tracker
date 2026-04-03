@@ -56,7 +56,7 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
   /// Queries stage definitions for the curriculum to determine how many stages
   /// exist, then assigns descending point values: first stage gets 10 points,
   /// subsequent stages get decreasing values (minimum 1).
-  Future<void> seedDefaults(String curriculumId) async {
+  Future<void> seedDefaults(String curriculumId, int trackId) async {
     final stages = await db.stageDao.getStageDefinitionsByCurriculum(
       curriculumId,
     );
@@ -72,6 +72,7 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
         await insertConfig(
           PointConfigsCompanion.insert(
             curriculumId: curriculumId,
+            trackId: trackId,
             stageOrder: d.stageOrder,
             points: d.points,
           ),
@@ -90,10 +91,24 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
       await insertConfig(
         PointConfigsCompanion.insert(
           curriculumId: curriculumId,
+          trackId: trackId,
           stageOrder: stage.stageOrder,
           points: points,
         ),
       );
     }
   }
+
+  // ========== Track-Scoped Queries (Story 20.2) ==========
+
+  /// Get all point configs for a specific track, ordered by stage.
+  Future<List<PointConfig>> getConfigsByTrack(int trackId) =>
+      (select(pointConfigs)
+            ..where((t) => t.trackId.equals(trackId))
+            ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
+          .get();
+
+  /// Delete all point configs for a specific track.
+  Future<int> deleteAllForTrack(int trackId) =>
+      (delete(pointConfigs)..where((t) => t.trackId.equals(trackId))).go();
 }

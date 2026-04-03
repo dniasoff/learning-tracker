@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -121,9 +122,18 @@ class _CurriculumSettingsScreenState
 
     // Apply the wizard result (deletes old stages, creates new ones).
     final profileId = ref.read(activeProfileIdProvider);
+    final db = ref.read(userDatabaseProvider);
+    final track = await (db.select(db.curriculumTracks)
+          ..where((t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(_curriculum.storageKey))
+          ..limit(1))
+        .getSingleOrNull();
+    final trackId = track?.id ?? 0;
     await wizardService.applyWizardResult(
       result.wizardResult,
       profileId: profileId,
+      trackId: trackId,
     );
 
     // Invalidate providers so UI reflects new stages.

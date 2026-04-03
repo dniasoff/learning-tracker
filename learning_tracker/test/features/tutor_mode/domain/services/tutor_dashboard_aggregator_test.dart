@@ -45,6 +45,8 @@ void main() {
               isOverdue: false,
               reason: 'New',
               stageName: 'Learn',
+              trackId: 1,
+              trackLabel: 'Test Track',
             ),
             const DailyTask(
               curriculumId: CurriculumId.bavli,
@@ -55,6 +57,8 @@ void main() {
               isOverdue: false,
               reason: 'New',
               stageName: 'Learn',
+              trackId: 1,
+              trackLabel: 'Test Track',
             ),
           ],
         );

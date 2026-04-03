@@ -30,11 +30,24 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
       items;
 }
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 6.1: Parametric Scheduler Engine ─────────────────────────
 
   group('Story 6.1 -- Parametric Scheduler Engine', tags: ['story_6_1'], () {
     late UserDatabase db;
+    late int trackId;
     late SchedulerEngine engine;
     final now = DateTime.utc(2026, 3, 15);
     const curriculum = CurriculumId.mishnayos;
@@ -49,11 +62,13 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
 
       // Set up 3 stages
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -62,6 +77,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
           delayDays: 1,
@@ -70,6 +86,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 3,
           stageName: 'Chazara 2',
           delayDays: 7,
@@ -98,6 +115,8 @@ void main() {
       () async {
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 10)),
           currentDate: now,
         );
@@ -126,12 +145,13 @@ void main() {
           sefariaRef: 'Mishnah_Berakhot_1.0',
           stageId: learnId,
           trackType: 'personal',
+          trackId: trackId,
           completedAt: now.subtract(const Duration(days: 1)),
           points: const Value(10),
         ),
       );
 
-      final config = ScheduleConfig(curriculumId: curriculum, currentDate: now);
+      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
 
       final tasks = await engine.generateDailyTasks(config);
 
@@ -152,6 +172,7 @@ void main() {
 
   group('Story 6.2 -- Daily Task Generation & Display', tags: ['story_6_2'], () {
     late UserDatabase db;
+    late int trackId;
     late SchedulerEngine engine;
     late DailyTaskGenerator generator;
     final now = DateTime.utc(2026, 3, 15);
@@ -167,10 +188,12 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
 
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -179,6 +202,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
           delayDays: 0,
@@ -187,6 +211,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 3,
           stageName: 'Chazara 2',
           delayDays: 7,
@@ -215,7 +240,7 @@ void main() {
     test(
       'DailyTaskGenerator.generate returns correctly structured DailyTask items',
       () async {
-        final tasks = await generator.generate(curriculum, now);
+        final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
         expect(tasks, isNotEmpty);
         for (final task in tasks) {
           expect(task.curriculumId, curriculum);
@@ -242,6 +267,7 @@ void main() {
             sefariaRef: 'Mishnah_Berakhot_1.0',
             stageId: learnId,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: now.subtract(const Duration(days: 10)),
             points: const Value(10),
           ),
@@ -254,12 +280,13 @@ void main() {
             sefariaRef: 'Mishnah_Berakhot_1.1',
             stageId: learnId,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: now,
             points: const Value(10),
           ),
         );
 
-        final tasks = await generator.generate(curriculum, now);
+        final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
 
         final overdueIdx = tasks.indexWhere(
           (t) => t.priority == DailyTaskPriority.overdueChazara,
@@ -283,6 +310,8 @@ void main() {
         final tasks = await generator.generate(
           curriculum,
           now,
+          trackId: 1,
+          trackLabel: 'Test',
           skippedRefs: {'Mishnah_Berakhot_1.0'},
         );
         expect(
@@ -306,12 +335,13 @@ void main() {
             sefariaRef: 'Mishnah_Berakhot_1.0',
             stageId: learnId,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: now,
             points: const Value(10),
           ),
         );
 
-        final tasks = await generator.generate(curriculum, now);
+        final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
 
         expect(
           tasks.any(
@@ -340,6 +370,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot_1.$i',
               stageId: learnId,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now,
               points: const Value(10),
             ),
@@ -349,6 +380,8 @@ void main() {
         // Use config that limits new items to 3
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           currentDate: now,
           defaultNewItemsPerDay: 3,
         );
@@ -385,12 +418,14 @@ void main() {
 
   group('Story 6.3 -- Goal Management', tags: ['story_6_3'], () {
     late UserDatabase db;
+    late int trackId;
     late GoalRepositoryImpl goalRepo;
     const curriculum = CurriculumId.mishnayos;
     const chumash = CurriculumId.chumash;
 
     setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
       goalRepo = GoalRepositoryImpl(database: db);
     });
 
@@ -406,6 +441,7 @@ void main() {
         final targetDate = DateTime(2027, 1, 1, 12, 0); // local time
         final goal = await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: targetDate,
         );
@@ -427,6 +463,7 @@ void main() {
         final hebrewConverted = DateTime.utc(2027, 9, 16); // 13 Tishrei 5788
         final goal = await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: hebrewConverted,
         );
@@ -445,16 +482,19 @@ void main() {
 
         await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: date1,
         );
         await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 50.0,
           targetDate: date2,
         );
         await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 75.0,
           targetDate: date3,
         );
@@ -473,6 +513,7 @@ void main() {
       () async {
         final goal = await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: DateTime.utc(2027, 1, 1),
         );
@@ -533,11 +574,13 @@ void main() {
       () async {
         await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: DateTime.utc(2027, 1, 1),
         );
         await goalRepo.createGoal(
           curriculumId: chumash,
+          trackId: trackId,
           targetPercent: 50.0,
           targetDate: DateTime.utc(2027, 6, 1),
         );
@@ -559,6 +602,7 @@ void main() {
       () async {
         final goal = await goalRepo.createGoal(
           curriculumId: curriculum,
+          trackId: trackId,
           targetPercent: 100.0,
           targetDate: DateTime.utc(2027, 1, 1),
           description: 'Complete all Mishnayos by 2027',
@@ -746,14 +790,17 @@ void main() {
     // ── Integration: Full pace scenario ──
 
     late UserDatabase db;
+    late int trackId;
 
     setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
 
       // Set up stage definitions for mishnayos
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: CurriculumId.mishnayos.storageKey,
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -787,6 +834,7 @@ void main() {
                 sefariaRef: 'Mishnah_Berakhot_${dayOffset}_$j',
                 stageId: learnId,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: date,
                 points: const Value(10),
               ),
@@ -807,6 +855,7 @@ void main() {
               sefariaRef: 'Mishnah_Berakhot_early_$i',
               stageId: learnId,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: DateTime.utc(2026, 2, 1),
               points: const Value(10),
             ),
@@ -860,6 +909,8 @@ void main() {
           isOverdue: isOverdue,
           reason: 'test',
           stageName: 'Learn',
+          trackId: 1,
+          trackLabel: 'Test Track',
         );
       }
 

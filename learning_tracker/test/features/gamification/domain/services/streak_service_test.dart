@@ -8,10 +8,20 @@ import '../../../../helpers/test_database.dart';
 void main() {
   late UserDatabase db;
   late StreakService service;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
     service = StreakService(db);
+
+    final trackRow = await db.into(db.curriculumTracks).insertReturning(
+      CurriculumTracksCompanion.insert(
+        curriculumId: 'test-curriculum',
+        trackType: 'primary',
+        activatedAt: DateTime.now(),
+      ),
+    );
+    trackId = trackRow.id;
   });
 
   tearDown(() async {
@@ -26,6 +36,7 @@ void main() {
         sefariaRef: 'Genesis.1',
         stageId: 1,
         trackType: 'primary',
+        trackId: trackId,
         completedAt: completedAtUtc,
       ),
     );

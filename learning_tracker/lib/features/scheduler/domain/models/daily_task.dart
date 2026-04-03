@@ -5,8 +5,14 @@ part 'daily_task.freezed.dart';
 
 /// Priority ranking for daily tasks.
 ///
-/// Ordering: overdueChazara > scheduledChazara > newLearning
+/// Ordering: overdueProgram > todayProgram > overdueChazara > scheduledChazara > newLearning
 enum DailyTaskPriority {
+  /// Program item that is past due (missed a calendar day).
+  overdueProgram,
+
+  /// Program item scheduled for today.
+  todayProgram,
+
   /// Chazara that is past its scheduled review date.
   overdueChazara,
 
@@ -29,6 +35,12 @@ abstract class DailyTask with _$DailyTask {
     required bool isOverdue,
     required String reason,
     required String stageName,
+
+    /// The track that produced this task.
+    required int trackId,
+
+    /// Display label for the track (e.g., "Daf Yomi", "Mishnayos - School").
+    required String trackLabel,
 
     /// Estimated effort in minutes. Defaults based on priority:
     /// newLearning = 5 min, chazara = 3 min.

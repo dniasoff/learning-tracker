@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -270,12 +271,22 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
 
+    // Look up trackId for this curriculum
+    final track = await (db.select(db.curriculumTracks)
+          ..where((t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(widget.curriculumId.storageKey))
+          ..limit(1))
+        .getSingleOrNull();
+    final trackId = track?.id ?? 0;
+
     if (_selectAll) {
       await db.curriculumScopeDao.clearScopes(profileId, widget.curriculumId);
     } else if (_selectedLevel != null && _selectedValues.isNotEmpty) {
       await db.curriculumScopeDao.setScopes(
         profileId,
         widget.curriculumId,
+        trackId,
         _selectedLevel!,
         _selectedValues.toList(),
       );

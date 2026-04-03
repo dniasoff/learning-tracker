@@ -106,6 +106,7 @@ class DataExportImportService {
               'sefariaRef': c.sefariaRef,
               'stageId': c.stageId,
               'trackType': c.trackType,
+              'trackId': c.trackId,
               'completedAt': c.completedAt.toIso8601String(),
               'points': c.points,
             },
@@ -116,6 +117,7 @@ class DataExportImportService {
             (g) => {
               'id': g.id,
               'curriculumId': g.curriculumId,
+              'trackId': g.trackId,
               'targetPercent': g.targetPercent,
               'targetDate': g.targetDate?.toIso8601String(),
               'description': g.description,
@@ -130,6 +132,7 @@ class DataExportImportService {
             (s) => {
               'id': s.id,
               'curriculumId': s.curriculumId,
+              'trackId': s.trackId,
               'stageOrder': s.stageOrder,
               'stageName': s.stageName,
               'delayDays': s.delayDays,
@@ -169,6 +172,7 @@ class DataExportImportService {
             (p) => {
               'id': p.id,
               'curriculumId': p.curriculumId,
+              'trackId': p.trackId,
               'stageOrder': p.stageOrder,
               'points': p.points,
             },
@@ -310,6 +314,7 @@ class DataExportImportService {
                 sefariaRef: map['sefariaRef'] as String,
                 stageId: map['stageId'] as int,
                 trackType: map['trackType'] as String,
+                trackId: map['trackId'] as int? ?? 0,
                 completedAt: DateTime.parse(map['completedAt'] as String),
                 points: Value(map['points'] as int? ?? 0),
               ),
@@ -324,6 +329,7 @@ class DataExportImportService {
             .insert(
               GoalsCompanion.insert(
                 curriculumId: map['curriculumId'] as String,
+                trackId: map['trackId'] as int? ?? 0,
                 targetPercent: Value(map['targetPercent'] as double? ?? 100.0),
                 targetDate: Value(
                   map['targetDate'] != null
@@ -346,6 +352,7 @@ class DataExportImportService {
             .insert(
               StageDefinitionsCompanion.insert(
                 curriculumId: map['curriculumId'] as String,
+                trackId: map['trackId'] as int? ?? 0,
                 stageOrder: map['stageOrder'] as int,
                 stageName: map['stageName'] as String,
                 delayDays: map['delayDays'] as int,
@@ -404,6 +411,7 @@ class DataExportImportService {
             .insert(
               PointConfigsCompanion.insert(
                 curriculumId: map['curriculumId'] as String,
+                trackId: map['trackId'] as int? ?? 0,
                 stageOrder: map['stageOrder'] as int,
                 points: map['points'] as int,
               ),

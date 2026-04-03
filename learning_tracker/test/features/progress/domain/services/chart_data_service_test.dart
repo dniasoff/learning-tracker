@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -40,6 +40,7 @@ void main() {
       sefariaRef: 'ref_1',
       stageId: stageId,
       trackType: 'personal',
+      trackId: 1,
       completedAt: completedAt,
       points: points,
     );

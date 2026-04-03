@@ -531,6 +531,15 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         final profileId = ref.read(activeProfileIdProvider);
         final wizardResult = result.wizardResult;
 
+        // Look up the trackId for this track
+        final track = await (db.select(db.curriculumTracks)
+              ..where((t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculum.storageKey) &
+                  t.trackType.equals(widget.trackType)))
+            .getSingleOrNull();
+        final trackId = track?.id ?? 0;
+
         // Delete existing stages and recreate
         await db.stageDao.deleteAllForCurriculum(curriculum.storageKey);
 
@@ -542,6 +551,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               StageDefinitionsCompanion.insert(
                 profileId: drift.Value(profileId),
                 curriculumId: curriculum.storageKey,
+                trackId: trackId,
                 stageOrder: i + 1,
                 stageName: round.label,
                 delayDays: round.delayDays ?? 0,
@@ -593,6 +603,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     ).then((result) async {
       if (result != null && mounted) {
         final db = ref.read(userDatabaseProvider);
+        final profileId = ref.read(activeProfileIdProvider);
         final now = DateTime.now().toUtc();
 
         if (existingGoals.isNotEmpty) {
@@ -611,11 +622,21 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             ),
           );
         } else {
+          // Look up the trackId for this track
+          final track = await (db.select(db.curriculumTracks)
+                ..where((t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(widget.curriculumId) &
+                    t.trackType.equals(widget.trackType)))
+              .getSingleOrNull();
+          final trackId = track?.id ?? 0;
+
           await db
               .into(db.goals)
               .insert(
                 GoalsCompanion.insert(
                   curriculumId: widget.curriculumId,
+                  trackId: trackId,
                   targetPercent: drift.Value(result.targetPercent),
                   targetDate: drift.Value(result.targetDate),
                   description: drift.Value(result.description),

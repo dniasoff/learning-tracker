@@ -97,6 +97,8 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 10)),
           currentDate: now,
         );
@@ -131,6 +133,8 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           currentDate: now,
         );
 
@@ -168,6 +172,8 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           currentDate: now,
         );
 
@@ -189,6 +195,8 @@ void main() {
         // Only 2 days left, 50 items remaining
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 2)),
           currentDate: now,
         );
@@ -212,6 +220,8 @@ void main() {
         // 100 days left, only 5 items
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           goalDeadline: now.add(const Duration(days: 100)),
           currentDate: now,
         );
@@ -244,6 +254,8 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           currentDate: now,
           defaultNewItemsPerDay: 3,
         );
@@ -315,7 +327,7 @@ void main() {
         ),
       ];
 
-      final config = ScheduleConfig(curriculumId: curriculum, currentDate: now);
+      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
 
       final tasks = await engine.generateDailyTasks(config);
 
@@ -352,6 +364,8 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           currentDate: now,
         );
 
@@ -391,6 +405,8 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           currentDate: now,
           defaultNewItemsPerDay: 2,
         );
@@ -431,6 +447,8 @@ void main() {
 
         final config = ScheduleConfig(
           curriculumId: curriculum,
+          trackId: 1,
+          trackLabel: 'Test Track',
           currentDate: now,
         );
 
@@ -464,7 +482,7 @@ void main() {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [];
 
-      final config = ScheduleConfig(curriculumId: curriculum, currentDate: now);
+      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
 
       final tasks = await engine.generateDailyTasks(config);
       expect(tasks, isEmpty);
@@ -474,7 +492,7 @@ void main() {
       contentRepo.items = [];
       stageRepo.stages = threeStages();
 
-      final config = ScheduleConfig(curriculumId: curriculum, currentDate: now);
+      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
 
       final tasks = await engine.generateDailyTasks(config);
       expect(tasks, isEmpty);

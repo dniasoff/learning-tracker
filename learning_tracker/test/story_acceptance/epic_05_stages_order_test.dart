@@ -29,6 +29,18 @@ ContentItem _makeItem(String ref, {int sortOrder = 0}) {
   );
 }
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
@@ -38,11 +50,13 @@ void main() {
 
   group('Story 5.1 -- Custom stage definitions', tags: ['story_5_1'], () {
     late UserDatabase database;
+    late int trackId;
     late StageDefinitionRepositoryImpl repository;
     const curriculum = CurriculumId.mishnayos;
 
-    setUp(() {
+    setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
+      trackId = await _insertTrack(database);
       repository = StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
         completionDao: database.completionDao,
@@ -55,9 +69,9 @@ void main() {
     });
 
     test('user can add a custom chazara stage', () async {
-      await repository.initializeDefaults(curriculum);
+      await repository.initializeDefaults(curriculum, trackId: trackId);
 
-      final newStage = await repository.addStage(curriculum, 'Chazara 3', 30);
+      final newStage = await repository.addStage(curriculum, 'Chazara 3', 30, trackId: trackId);
 
       expect(newStage.stageName, 'Chazara 3');
       expect(newStage.delayDays, 30);
@@ -69,7 +83,7 @@ void main() {
     });
 
     test('user can reorder stages', () async {
-      await repository.initializeDefaults(curriculum);
+      await repository.initializeDefaults(curriculum, trackId: trackId);
       final stages = await repository.getStagesForCurriculum(curriculum);
       // Reverse order: [3, 2, 1]
       final reversed = stages.reversed.map((s) => s.id).toList();
@@ -83,7 +97,7 @@ void main() {
     });
 
     test('user can adjust delay days for a stage', () async {
-      await repository.initializeDefaults(curriculum);
+      await repository.initializeDefaults(curriculum, trackId: trackId);
       final stages = await repository.getStagesForCurriculum(curriculum);
       final chazara1 = stages.firstWhere((s) => s.stageName == 'חזרה א׳');
 
@@ -99,11 +113,13 @@ void main() {
 
   group('Story 5.2 -- Custom learning order', () {
     late UserDatabase database;
+    late int trackId;
     late _MockContentRepository mockContent;
     late LearningOrderRepositoryImpl repo;
 
-    setUp(() {
+    setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
+      trackId = await _insertTrack(database);
       mockContent = _MockContentRepository();
       repo = LearningOrderRepositoryImpl(
         database: database,

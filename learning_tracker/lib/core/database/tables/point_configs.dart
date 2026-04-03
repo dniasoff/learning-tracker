@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 
 /// Configuration table for points awarded per stage per curriculum.
 ///
@@ -8,12 +9,13 @@ class PointConfigs extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
+  IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   IntColumn get stageOrder => integer()();
   IntColumn get points =>
       integer().customConstraint('NOT NULL CHECK (points > 0)')();
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {profileId, curriculumId, stageOrder},
+    {profileId, curriculumId, stageOrder, trackId},
   ];
 }

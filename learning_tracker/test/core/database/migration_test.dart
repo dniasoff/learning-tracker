@@ -7,9 +7,17 @@ import '../../helpers/test_database.dart';
 void main() {
   group('Schema migration v15 to v16', () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
     });
 
     tearDown(() async {
@@ -22,6 +30,7 @@ void main() {
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           createdAt: now,
           updatedAt: now,
         ),
@@ -42,6 +51,7 @@ void main() {
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: 'bavli',
+          trackId: trackId,
           goalType: const Value('pace'),
           paceValue: const Value(1),
           paceUnit: const Value('per_day'),
@@ -64,6 +74,7 @@ void main() {
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           goalType: const Value('pace'),
           paceValue: const Value(5),
           paceUnit: const Value('per_week'),
@@ -85,6 +96,7 @@ void main() {
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           targetDate: Value(targetDate),
           createdAt: now,
           updatedAt: now,

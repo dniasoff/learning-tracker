@@ -28,6 +28,18 @@ import '../helpers/test_database.dart';
 
 class _MockTrackRepository extends Mock implements TrackRepository {}
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
@@ -104,18 +116,37 @@ void main() {
 
       group('AC-6: Points initialization per track', () {
         late UserDatabase db;
+        late int trackId;
         late ContentDatabase contentDb;
         late TrackCreationService service;
         late _MockTrackRepository mockTrackRepo;
 
-        setUp(() {
+        setUp(() async {
           db = UserDatabase(NativeDatabase.memory());
+          trackId = await _insertTrack(db);
           contentDb = createTestContentDatabase();
           mockTrackRepo = _MockTrackRepository();
 
           when(
-            () => mockTrackRepo.initializeDefaultTracks(any()),
-          ).thenAnswer((_) async {});
+            () => mockTrackRepo.initializeDefaultTracks(
+              any(),
+              profileId: any(named: 'profileId'),
+            ),
+          ).thenAnswer((invocation) async {
+            final curriculum =
+                invocation.positionalArguments[0] as CurriculumId;
+            final pId =
+                invocation.namedArguments[#profileId] as int? ?? 0;
+            // Actually create the track so downstream lookups succeed
+            await db.into(db.curriculumTracks).insert(
+              CurriculumTracksCompanion.insert(
+                profileId: Value(pId),
+                curriculumId: curriculum.storageKey,
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
+          });
 
           final activationService = CurriculumActivationService(
             database: db,
@@ -334,6 +365,7 @@ void main() {
           () async {
             final db = UserDatabase(NativeDatabase.memory());
             addTearDown(db.close);
+            final trackId = await _insertTrack(db);
 
             final repo = StageDefinitionRepositoryImpl(
               stageDao: db.stageDao,
@@ -341,7 +373,7 @@ void main() {
               pushSettings: (_) async {},
             );
 
-            await repo.initializeDefaults(CurriculumId.mishnayos);
+            await repo.initializeDefaults(CurriculumId.mishnayos, trackId: trackId);
             final stages = await repo.getStagesForCurriculum(
               CurriculumId.mishnayos,
             );
@@ -366,6 +398,14 @@ void main() {
               profileProgramDao: db.profileProgramDao,
             );
 
+            final bavliTrack = await db.into(db.curriculumTracks).insertReturning(
+              CurriculumTracksCompanion.insert(
+                curriculumId: 'bavli',
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
+
             await service.applyWizardResult(
               const WizardResult(
                 curriculumId: CurriculumId.bavli,
@@ -373,6 +413,7 @@ void main() {
                 customRounds: [],
               ),
               profileId: 1,
+              trackId: bavliTrack.id,
             );
 
             final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -391,6 +432,14 @@ void main() {
             addTearDown(db.close);
             addTearDown(cDb.close);
 
+            final bavliTrack = await db.into(db.curriculumTracks).insertReturning(
+              CurriculumTracksCompanion.insert(
+                curriculumId: 'bavli',
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
+
             final service = LearningProcessWizardService(
               stageDao: db.stageDao,
               learningProgramDao: cDb.contentLearningProgramDao,
@@ -403,6 +452,7 @@ void main() {
                 choice: WizardChoice.noReview,
               ),
               profileId: 1,
+              trackId: bavliTrack.id,
             );
 
             final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -483,11 +533,13 @@ void main() {
         test('migration converts English defaults to Hebrew', () async {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
+          final trackId = await _insertTrack(db);
 
           // Insert English defaults
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
               delayDays: 0,
@@ -497,6 +549,7 @@ void main() {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               stageOrder: 2,
               stageName: 'Chazara 1',
               delayDays: 1,
@@ -521,10 +574,12 @@ void main() {
         test('migration does not touch user-customized names', () async {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
+          final trackId = await _insertTrack(db);
 
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishnayos',
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'My Custom Stage',
               delayDays: 0,
@@ -547,10 +602,12 @@ void main() {
         test('migration is idempotent', () async {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
+          final trackId = await _insertTrack(db);
 
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: 'bavli',
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
               delayDays: 0,

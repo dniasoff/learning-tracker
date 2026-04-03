@@ -24,6 +24,7 @@ class InMemoryContentRepo implements SchedulerContentRepository {
 
 void main() {
   late UserDatabase db;
+  late int trackId;
 
   setUp(() async {
     db = createTestDatabase();
@@ -39,10 +40,20 @@ void main() {
       const curriculum = CurriculumId.mishnayos;
       final now = DateTime.utc(2026, 3, 15);
 
+      final trackRow = await db.into(db.curriculumTracks).insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: curriculum.storageKey,
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
+      trackId = trackRow.id;
+
       // 1. Set up stages
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
           delayDays: 0,
@@ -51,6 +62,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: curriculum.storageKey,
+          trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
           delayDays: 1,
@@ -82,6 +94,8 @@ void main() {
       // 4. Generate initial tasks (no completions yet)
       var config = ScheduleConfig(
         curriculumId: curriculum,
+        trackId: 1,
+        trackLabel: 'Test Track',
         goalDeadline: now.add(const Duration(days: 5)),
         currentDate: now,
       );
@@ -103,6 +117,7 @@ void main() {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: curriculum.storageKey,
+            trackId: trackId,
             sefariaRef: 'Mishnah_Berakhot_1.$i',
             stageId: learnStageId,
             trackType: 'personal',
@@ -115,6 +130,8 @@ void main() {
       // 6. Regenerate next day — should reflect updated state
       config = ScheduleConfig(
         curriculumId: curriculum,
+        trackId: 1,
+        trackLabel: 'Test Track',
         goalDeadline: now.add(const Duration(days: 5)),
         currentDate: now.add(const Duration(days: 1)),
       );

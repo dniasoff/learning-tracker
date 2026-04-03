@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 
 /// Completions table — append-only record of all completions.
 ///
@@ -11,6 +12,7 @@ class Completions extends Table {
   TextColumn get sefariaRef => text()();
   IntColumn get stageId => integer()();
   TextColumn get trackType => text()();
+  IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   DateTimeColumn get completedAt => dateTime()();
   IntColumn get points => integer().withDefault(const Constant(0))();
 }

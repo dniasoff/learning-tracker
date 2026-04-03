@@ -41,6 +41,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
   Future<void> upsertDayConfig({
     required int profileId,
     required String curriculumId,
+    required int trackId,
     required int dayOfWeek,
     required String dayType,
   }) async {
@@ -48,6 +49,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
       StudyDayConfigsCompanion.insert(
         profileId: Value(profileId),
         curriculumId: curriculumId,
+        trackId: trackId,
         dayOfWeek: dayOfWeek,
         dayType: Value(dayType),
         updatedAt: DateTime.now().toUtc(),
@@ -59,6 +61,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
   Future<void> seedDefaults({
     required int profileId,
     required String curriculumId,
+    required int trackId,
   }) async {
     final now = DateTime.now().toUtc();
     for (var day = 1; day <= 7; day++) {
@@ -66,6 +69,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
         StudyDayConfigsCompanion.insert(
           profileId: Value(profileId),
           curriculumId: curriculumId,
+          trackId: trackId,
           dayOfWeek: day,
           dayType: const Value('study'),
           updatedAt: now,
@@ -114,6 +118,43 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
       profileId,
     );
     if (configs.isEmpty) return 7; // default all days are study
+    return configs.where((c) => c.dayType == 'study').length;
+  }
+
+  // ========== Track-Scoped Queries (Story 20.2) ==========
+
+  /// Get study day configs for a specific track.
+  Future<List<StudyDayConfig>> getConfigsByTrack(int trackId) =>
+      (select(studyDayConfigs)
+            ..where((t) => t.trackId.equals(trackId))
+            ..orderBy([(t) => OrderingTerm.asc(t.dayOfWeek)]))
+          .get();
+
+  /// Watch study day configs for a specific track reactively.
+  Stream<List<StudyDayConfig>> watchConfigsByTrack(int trackId) =>
+      (select(studyDayConfigs)
+            ..where((t) => t.trackId.equals(trackId))
+            ..orderBy([(t) => OrderingTerm.asc(t.dayOfWeek)]))
+          .watch();
+
+  /// Check if a specific day is a study day for a track.
+  Future<bool> isStudyDayForTrack({
+    required int trackId,
+    required int dayOfWeek,
+  }) async {
+    final config =
+        await (select(studyDayConfigs)..where(
+              (t) =>
+                  t.trackId.equals(trackId) & t.dayOfWeek.equals(dayOfWeek),
+            ))
+            .getSingleOrNull();
+    return config == null || config.dayType == 'study';
+  }
+
+  /// Get count of study days per week for a track.
+  Future<int> getStudyDaysPerWeekForTrack({required int trackId}) async {
+    final configs = await getConfigsByTrack(trackId);
+    if (configs.isEmpty) return 7;
     return configs.where((c) => c.dayType == 'study').length;
   }
 

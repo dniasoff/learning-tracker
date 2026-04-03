@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 
 /// Data model pairing a stage definition with its point config.
@@ -141,10 +142,19 @@ class _CurriculumExpansionTile extends ConsumerWidget {
 
     if (confirmed ?? false) {
       final db = ref.read(userDatabaseProvider);
+      final profileId = ref.read(activeProfileIdProvider);
+      // Look up trackId for this curriculum
+      final track = await (db.select(db.curriculumTracks)
+            ..where((t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumId.equals(data.curriculum.storageKey))
+            ..limit(1))
+          .getSingleOrNull();
+      final trackId = track?.id ?? 0;
       await db.pointConfigDao.deleteAllForCurriculum(
         data.curriculum.storageKey,
       );
-      await db.pointConfigDao.seedDefaults(data.curriculum.storageKey);
+      await db.pointConfigDao.seedDefaults(data.curriculum.storageKey, trackId);
       ref.invalidate(_pointConfigDataProvider);
     }
   }

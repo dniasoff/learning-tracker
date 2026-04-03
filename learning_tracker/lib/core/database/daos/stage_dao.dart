@@ -56,6 +56,52 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
     return row?.read(countCol) ?? 0;
   }
 
+  // ========== Track-Scoped Queries (Story 20.2) ==========
+
+  /// Get stage definitions for a specific track, ordered by stageOrder.
+  Future<List<StageDefinition>> getStagesByTrack(int trackId) =>
+      (select(stageDefinitions)
+            ..where((t) => t.trackId.equals(trackId))
+            ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
+          .get();
+
+  /// Delete all stage definitions for a specific track.
+  Future<int> deleteStagesForTrack(int trackId) =>
+      (delete(stageDefinitions)..where((t) => t.trackId.equals(trackId))).go();
+
+  /// Replace all stage definitions for a track.
+  Future<void> replaceStagesForTrack(
+    int trackId,
+    List<StageDefinitionsCompanion> stages,
+  ) async {
+    await db.transaction(() async {
+      await deleteStagesForTrack(trackId);
+      for (final stage in stages) {
+        await insertStageDefinition(stage);
+      }
+    });
+  }
+
+  /// Count stages for a specific track.
+  Future<int> countStagesForTrack(int trackId) async {
+    final countCol = stageDefinitions.id.count();
+    final query = selectOnly(stageDefinitions)
+      ..addColumns([countCol])
+      ..where(stageDefinitions.trackId.equals(trackId));
+    final row = await query.getSingleOrNull();
+    return row?.read(countCol) ?? 0;
+  }
+
+  /// Get max stage order for a specific track.
+  Future<int?> getMaxStageOrderForTrack(int trackId) async {
+    final maxCol = stageDefinitions.stageOrder.max();
+    final query = selectOnly(stageDefinitions)
+      ..addColumns([maxCol])
+      ..where(stageDefinitions.trackId.equals(trackId));
+    final row = await query.getSingleOrNull();
+    return row?.read(maxCol);
+  }
+
   /// Replace all stage definitions for a curriculum with remote data.
   ///
   /// Used during sync merge (last-write-wins per D4).

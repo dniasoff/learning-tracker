@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 
 /// Curriculum scopes table — limits which parts of a curriculum are tracked.
 ///
@@ -10,6 +11,7 @@ class CurriculumScopes extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get profileId => integer().withDefault(const Constant(0))();
   TextColumn get curriculumId => text()();
+  IntColumn get trackId => integer().references(CurriculumTracks, #id)();
 
   /// Which hierarchy level the scope applies to (1-4, matching level1-level4).
   IntColumn get scopeLevel => integer()();
@@ -21,6 +23,6 @@ class CurriculumScopes extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {profileId, curriculumId, scopeLevel, scopeValue},
+    {profileId, curriculumId, scopeLevel, scopeValue, trackId},
   ];
 }

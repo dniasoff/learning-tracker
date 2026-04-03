@@ -27,6 +27,8 @@ DailyTask _task({
     isOverdue: isOverdue,
     reason: 'test reason',
     stageName: stageOrder == 1 ? 'Learn' : 'Chazara $stageOrder',
+    trackId: 1,
+    trackLabel: 'Test Track',
     estimatedEffortMinutes: estimatedEffortMinutes,
   );
 }

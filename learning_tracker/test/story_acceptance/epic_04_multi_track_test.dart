@@ -24,14 +24,28 @@ import 'package:learning_tracker/features/progress/presentation/screens/completi
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   group('Epic 4.1: Track Management - Story Acceptance Tests', () {
     group('AC1: Each curriculum starts with personal track only', () {
       late UserDatabase database;
+      late int trackId;
       late TrackRepository repository;
 
-      setUp(() {
+      setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
+        trackId = await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -61,6 +75,7 @@ void main() {
       'AC2: User can add school track and/or tutor track per curriculum',
       () {
         late UserDatabase database;
+      late int trackId;
         late TrackRepository repository;
 
         setUp(() {
@@ -122,10 +137,12 @@ void main() {
 
     group('AC3: Removing track preserves completion data', () {
       late UserDatabase database;
+      late int trackId;
       late TrackRepository repository;
 
-      setUp(() {
+      setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
+        trackId = await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -190,10 +207,12 @@ void main() {
 
     group('AC4: Track status synced per curriculum', () {
       late UserDatabase database;
+      late int trackId;
       late TrackRepository repository;
 
-      setUp(() {
+      setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
+        trackId = await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -289,10 +308,12 @@ void main() {
 
     group('Integration Tests', () {
       late UserDatabase database;
+      late int trackId;
       late TrackRepository repository;
 
-      setUp(() {
+      setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
+        trackId = await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -418,9 +439,11 @@ void main() {
 
   group('Story 4.3: Track-Specific Progress Views', () {
     late UserDatabase database;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
+      trackId = await _insertTrack(database);
     });
 
     tearDown(() async {
@@ -439,6 +462,7 @@ void main() {
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -449,6 +473,7 @@ void main() {
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.school.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -475,6 +500,7 @@ void main() {
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -501,6 +527,7 @@ void main() {
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.school.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -525,6 +552,7 @@ void main() {
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -535,6 +563,7 @@ void main() {
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.school.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -613,6 +642,7 @@ void main() {
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -623,6 +653,7 @@ void main() {
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.school.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -668,6 +699,7 @@ void main() {
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -678,6 +710,7 @@ void main() {
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.school.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -752,6 +785,7 @@ void main() {
                 sefariaRef: 'Berakhot.${i}a',
                 stageId: 1,
                 trackType: TrackType.personal.storageKey,
+                trackId: trackId,
                 completedAt: DateTime.now(),
                 points: const drift.Value(10),
               ),
@@ -766,6 +800,7 @@ void main() {
                 sefariaRef: 'Berakhot.${i}a',
                 stageId: 1,
                 trackType: TrackType.school.storageKey,
+                trackId: trackId,
                 completedAt: DateTime.now(),
                 points: const drift.Value(10),
               ),
@@ -795,6 +830,7 @@ void main() {
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.school.storageKey,
+              trackId: trackId,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),

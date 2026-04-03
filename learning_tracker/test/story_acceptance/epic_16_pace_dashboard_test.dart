@@ -22,6 +22,18 @@ import '../helpers/test_database.dart';
 const _milestoneThresholds = [7, 14, 30, 50, 100, 180, 365];
 bool _isMilestone(int streak) => _milestoneThresholds.contains(streak);
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 16.1: Pace-Based Goal Mode ────────────────────────────────
   group('Story 16.1 -- Pace-Based Goal Mode', tags: ['story_16_1'], () {
@@ -197,11 +209,13 @@ void main() {
     test('AC-1: StudyDayConfigDao CRUD operations', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
+      final trackId = await _insertTrack(db);
 
       // Seed defaults — all 7 days as study
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
       );
 
       final configs = await db.studyDayConfigDao
@@ -213,6 +227,7 @@ void main() {
       await db.studyDayConfigDao.upsertDayConfig(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
         dayOfWeek: 6, // Saturday
         dayType: 'review',
       );
@@ -227,6 +242,7 @@ void main() {
     test('AC-2: defaults to study when no config exists', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
+      final trackId = await _insertTrack(db);
 
       // No config seeded — isStudyDay should default to true
       final result = await db.studyDayConfigDao.isStudyDay(
@@ -248,6 +264,8 @@ void main() {
     test('AC-3: ScheduleConfig.isStudyDay=false suppresses new learning', () {
       final config = ScheduleConfig(
         curriculumId: CurriculumId.mishnayos,
+        trackId: 1,
+        trackLabel: 'Test Track',
         currentDate: DateTime.utc(2026, 3, 25),
         isStudyDay: false,
       );
@@ -258,6 +276,8 @@ void main() {
     test('AC-4: ScheduleConfig.isStudyDay defaults to true', () {
       final config = ScheduleConfig(
         curriculumId: CurriculumId.mishnayos,
+        trackId: 1,
+        trackLabel: 'Test Track',
         currentDate: DateTime.utc(2026, 3, 25),
       );
       expect(config.isStudyDay, isTrue);
@@ -267,16 +287,19 @@ void main() {
     test('AC-5: upsertDayConfig toggles between study and review', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
+      final trackId = await _insertTrack(db);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
         curriculumId: 'bavli',
+        trackId: trackId,
       );
 
       // Toggle Friday (day 5) to review
       await db.studyDayConfigDao.upsertDayConfig(
         profileId: 1,
         curriculumId: 'bavli',
+        trackId: trackId,
         dayOfWeek: 5,
         dayType: 'review',
       );
@@ -292,6 +315,7 @@ void main() {
       await db.studyDayConfigDao.upsertDayConfig(
         profileId: 1,
         curriculumId: 'bavli',
+        trackId: trackId,
         dayOfWeek: 5,
         dayType: 'study',
       );
@@ -308,22 +332,26 @@ void main() {
     test('AC-8: studyDaysPerWeek correctly counts study days', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
+      final trackId = await _insertTrack(db);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
       );
 
       // Set Fri and Sat to review (5 study days)
       await db.studyDayConfigDao.upsertDayConfig(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
         dayOfWeek: 5,
         dayType: 'review',
       );
       await db.studyDayConfigDao.upsertDayConfig(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
         dayOfWeek: 6,
         dayType: 'review',
       );
@@ -338,6 +366,8 @@ void main() {
     test('AC-8: ScheduleConfig carries studyDaysPerWeek', () {
       final config = ScheduleConfig(
         curriculumId: CurriculumId.mishnayos,
+        trackId: 1,
+        trackLabel: 'Test Track',
         currentDate: DateTime.utc(2026, 3, 25),
         studyDaysPerWeek: 5,
         goalDeadline: DateTime.utc(2026, 12, 31),
@@ -349,20 +379,24 @@ void main() {
     test('AC-1: configs are scoped to profile', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
+      final trackId = await _insertTrack(db);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
       );
       await db.studyDayConfigDao.seedDefaults(
         profileId: 2,
         curriculumId: 'mishnayos',
+        trackId: trackId,
       );
 
       // Modify profile 1 only
       await db.studyDayConfigDao.upsertDayConfig(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
         dayOfWeek: 7,
         dayType: 'review',
       );
@@ -396,10 +430,12 @@ void main() {
     test('deleteConfigsByCurriculumAndProfile removes all configs', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
+      final trackId = await _insertTrack(db);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
         curriculumId: 'mishnayos',
+        trackId: trackId,
       );
       final deleted = await db.studyDayConfigDao
           .deleteConfigsByCurriculumAndProfile('mishnayos', 1);
@@ -514,6 +550,8 @@ void main() {
             isOverdue: false,
             reason: 'New',
             stageName: 'Learn',
+            trackId: 1,
+            trackLabel: 'Test Track',
           ),
         ];
         final hasNew = tasks.any(
@@ -539,6 +577,8 @@ void main() {
             isOverdue: false,
             reason: 'Review',
             stageName: 'Chazara 1',
+            trackId: 1,
+            trackLabel: 'Test Track',
           ),
         ];
         final hasNew = tasks.any(
@@ -564,6 +604,8 @@ void main() {
             isOverdue: false,
             reason: 'New',
             stageName: 'Learn',
+            trackId: 1,
+            trackLabel: 'Test Track',
           ),
           const DailyTask(
             curriculumId: CurriculumId.mishnayos,
@@ -574,6 +616,8 @@ void main() {
             isOverdue: true,
             reason: 'Overdue',
             stageName: 'Chazara 1',
+            trackId: 1,
+            trackLabel: 'Test Track',
           ),
         ];
         final hasNew = tasks.any(
@@ -601,6 +645,8 @@ void main() {
             isOverdue: false,
             reason: 'New learning',
             stageName: 'Learn',
+            trackId: 1,
+            trackLabel: 'Test Track',
           );
           expect(task.contentItemSefariaRef, 'Berakhot 2a');
           expect(task.stageName, 'Learn');
@@ -619,6 +665,8 @@ void main() {
           isOverdue: true,
           reason: 'Overdue by 3 days',
           stageName: 'Chazara 1',
+          trackId: 1,
+          trackLabel: 'Test Track',
         );
         expect(overdueTask.isOverdue, isTrue);
         expect(overdueTask.priority, DailyTaskPriority.overdueChazara);
@@ -708,11 +756,13 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
+          final trackId = await _insertTrack(db);
 
           // Insert stage definitions first
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishnayos',
+              trackId: trackId,
               stageOrder: 0,
               stageName: 'Learn',
               delayDays: 0,
@@ -721,6 +771,7 @@ void main() {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
               curriculumId: 'mishnayos',
+              trackId: trackId,
               stageOrder: 1,
               stageName: 'Chazara 1',
               delayDays: 1,
@@ -735,6 +786,7 @@ void main() {
               sefariaRef: 'Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now,
               points: const Value(1),
             ),
@@ -745,6 +797,7 @@ void main() {
               sefariaRef: 'Berakhot.1.1',
               stageId: 2,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now,
               points: const Value(1),
             ),
@@ -755,6 +808,7 @@ void main() {
               sefariaRef: 'Berakhot.1.1',
               stageId: 2,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now.add(const Duration(days: 1)),
               points: const Value(1),
             ),
@@ -776,6 +830,7 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
+          final trackId = await _insertTrack(db);
 
           final now = DateTime.now().toUtc();
           for (var i = 0; i < 5; i++) {
@@ -785,6 +840,7 @@ void main() {
                 sefariaRef: 'Berakhot.1.1',
                 stageId: i % 2 + 1,
                 trackType: 'personal',
+                trackId: trackId,
                 completedAt: now.add(Duration(days: i)),
                 points: const Value(1),
               ),
@@ -796,6 +852,7 @@ void main() {
               sefariaRef: 'Berakhot.1.2',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now,
               points: const Value(1),
             ),
@@ -816,6 +873,7 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
+          final trackId = await _insertTrack(db);
 
           final now = DateTime.now().toUtc();
           await db.completionDao.insertCompletion(
@@ -824,6 +882,7 @@ void main() {
               sefariaRef: 'Berakhot.1.1',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now,
               points: const Value(1),
             ),
@@ -834,6 +893,7 @@ void main() {
               sefariaRef: 'Berakhot.1.2',
               stageId: 1,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now,
               points: const Value(1),
             ),
@@ -844,6 +904,7 @@ void main() {
               sefariaRef: 'Berakhot.1.2',
               stageId: 2,
               trackType: 'personal',
+              trackId: trackId,
               completedAt: now,
               points: const Value(1),
             ),
@@ -862,6 +923,7 @@ void main() {
       test('AC-3: review counts are scoped by profileId', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
+        final trackId = await _insertTrack(db);
 
         final now = DateTime.now().toUtc();
         // Profile 0
@@ -871,6 +933,7 @@ void main() {
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: now,
             points: const Value(1),
           ),
@@ -883,6 +946,7 @@ void main() {
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
             trackType: 'personal',
+            trackId: trackId,
             completedAt: now,
             points: const Value(1),
           ),
@@ -906,6 +970,7 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
+          final trackId = await _insertTrack(db);
 
           final counts = await db.completionDao.getReviewCountsByItem(
             'mishnayos',
@@ -919,6 +984,7 @@ void main() {
       test('AC-1: returns empty map for item with no completions', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
+        final trackId = await _insertTrack(db);
 
         final breakdown = await db.completionDao.getStageBreakdownByItem(
           'mishnayos',
@@ -1036,14 +1102,17 @@ void main() {
       test('AC-6: study day config persists via DAO', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
+        final trackId = await _insertTrack(db);
 
         await db.studyDayConfigDao.seedDefaults(
           profileId: 1,
           curriculumId: 'mishnayos',
+        trackId: trackId,
         );
         await db.studyDayConfigDao.upsertDayConfig(
           profileId: 1,
           curriculumId: 'mishnayos',
+        trackId: trackId,
           dayOfWeek: 6,
           dayType: 'review',
         );
@@ -1079,6 +1148,7 @@ void main() {
       test('AC-8: skip leaves defaults (all days = study)', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
+        final trackId = await _insertTrack(db);
 
         // No config saved — isStudyDay defaults to true
         final isStudy = await db.studyDayConfigDao.isStudyDay(
@@ -1112,6 +1182,8 @@ void main() {
           isOverdue: false,
           reason: 'New',
           stageName: 'Learn',
+          trackId: 1,
+          trackLabel: 'Test Track',
         );
         expect(task.curriculumId, CurriculumId.mishnayos);
         expect(task.contentItemSefariaRef, 'Berakhot.1.1');
@@ -1129,6 +1201,8 @@ void main() {
           isOverdue: false,
           reason: 'Chazara',
           stageName: 'Chazara 1',
+          trackId: 1,
+          trackLabel: 'Test Track',
         );
         final request = CompletionRequest(
           curriculumId: task.curriculumId.storageKey,

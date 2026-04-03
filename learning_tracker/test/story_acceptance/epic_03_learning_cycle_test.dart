@@ -45,6 +45,18 @@ List<ContentItem> _fiveItems() => List.generate(
   ),
 );
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
@@ -54,12 +66,14 @@ void main() {
 
   group('Story 3.1 -- Record completion', tags: ['story_3_1'], () {
     late UserDatabase db;
+    late int trackId;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
 
-    setUp(() {
+    setUp(() async {
       db = _db();
+      trackId = await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
@@ -102,6 +116,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Learning',
           delayDays: 0,
@@ -110,6 +125,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
           delayDays: 1,
@@ -157,12 +173,14 @@ void main() {
 
   group('Story 3.2 -- Chazara stages', tags: ['story_3_2'], () {
     late UserDatabase db;
+    late int trackId;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
 
-    setUp(() {
+    setUp(() async {
       db = _db();
+      trackId = await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
@@ -179,6 +197,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Learning',
           delayDays: 0,
@@ -187,6 +206,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
           delayDays: 7,
@@ -232,6 +252,7 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'Old Stage',
           delayDays: 5,
@@ -241,12 +262,14 @@ void main() {
       await db.stageDao.replaceStagesForCurriculum('mishnayos', [
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 1,
           stageName: 'New Stage 1',
           delayDays: 0,
         ),
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
+          trackId: trackId,
           stageOrder: 2,
           stageName: 'New Stage 2',
           delayDays: 14,
@@ -266,12 +289,14 @@ void main() {
 
   group('Story 3.3 -- Progress tracking', tags: ['story_3_3'], () {
     late UserDatabase db;
+    late int trackId;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
 
-    setUp(() {
+    setUp(() async {
       db = _db();
+      trackId = await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);

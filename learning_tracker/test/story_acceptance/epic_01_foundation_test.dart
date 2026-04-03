@@ -46,6 +46,18 @@ class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
 
 // ── Tests ──────────────────────────────────────────────────────────
 
+/// Creates a default curriculum track and returns its ID.
+Future<int> _insertTrack(UserDatabase db) async {
+  final row = await db.into(db.curriculumTracks).insertReturning(
+    CurriculumTracksCompanion.insert(
+      curriculumId: 'mishnayos',
+      trackType: 'personal',
+      activatedAt: DateTime.now(),
+    ),
+  );
+  return row.id;
+}
+
 void main() {
   // ── Story 1.1: Project initialisation ──────────────────────────
 
@@ -68,9 +80,11 @@ void main() {
 
   group('Story 1.2 -- Database layer', tags: ['story_1_2'], () {
     late UserDatabase db;
+    late int trackId;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      trackId = await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -108,6 +122,7 @@ void main() {
           sefariaRef: 'Mishnah Berachos 1.1',
           stageId: 1,
           trackType: TrackType.personal.storageKey,
+          trackId: trackId,
           completedAt: DateTime.now(),
           points: const Value(10),
         ),

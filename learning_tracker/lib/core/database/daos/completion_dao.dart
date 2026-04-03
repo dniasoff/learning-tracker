@@ -336,6 +336,130 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     return nested;
   }
 
+  // ========== Track-Scoped Queries (Story 20.2) ==========
+
+  /// Get all completions for a specific track.
+  Future<List<Completion>> getCompletionsByTrack(int trackId) =>
+      (select(completions)..where((t) => t.trackId.equals(trackId))).get();
+
+  /// Get completions for a track scoped to a specific profile.
+  Future<List<Completion>> getCompletionsByTrackAndProfile(
+    int trackId,
+    int profileId,
+  ) =>
+      (select(completions)..where(
+            (t) =>
+                t.trackId.equals(trackId) & t.profileId.equals(profileId),
+          ))
+          .get();
+
+  /// Get completion count for a track scoped to a specific profile.
+  Future<int> getAggregateCountByTrack(int trackId, int profileId) async {
+    final query = selectOnly(completions)
+      ..addColumns([completions.id.count()])
+      ..where(
+        completions.trackId.equals(trackId) &
+            completions.profileId.equals(profileId),
+      );
+    final result = await query.getSingle();
+    return result.read(completions.id.count()) ?? 0;
+  }
+
+  /// Check if a completion exists scoped to a specific track.
+  Future<bool> completionExistsByTrack({
+    required int trackId,
+    required String curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required DateTime completedAt,
+  }) async {
+    final result =
+        await (select(completions)
+              ..where(
+                (t) =>
+                    t.trackId.equals(trackId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.sefariaRef.equals(sefariaRef) &
+                    t.stageId.equals(stageId) &
+                    t.completedAt.equals(completedAt),
+              )
+              ..limit(1))
+            .get();
+    return result.isNotEmpty;
+  }
+
+  /// Get completions within a date range for a specific track and profile.
+  Future<List<Completion>> getCompletionsByDateRangeAndTrack(
+    DateTime start,
+    DateTime end,
+    int trackId,
+    int profileId,
+  ) =>
+      (select(completions)..where(
+            (t) =>
+                t.completedAt.isBiggerOrEqualValue(start) &
+                t.completedAt.isSmallerOrEqualValue(end) &
+                t.trackId.equals(trackId) &
+                t.profileId.equals(profileId),
+          ))
+          .get();
+
+  /// Get review counts per item for a track.
+  Future<Map<String, int>> getReviewCountsByItemAndTrack(
+    int trackId,
+    String curriculumId,
+    int profileId,
+  ) async {
+    final query = selectOnly(completions)
+      ..addColumns([completions.sefariaRef, completions.id.count()])
+      ..where(
+        completions.trackId.equals(trackId) &
+            completions.curriculumId.equals(curriculumId) &
+            completions.profileId.equals(profileId),
+      )
+      ..groupBy([completions.sefariaRef]);
+
+    final results = await query.get();
+    final counts = <String, int>{};
+    for (final row in results) {
+      final ref = row.read(completions.sefariaRef);
+      final count = row.read(completions.id.count());
+      if (ref != null && count != null) {
+        counts[ref] = count;
+      }
+    }
+    return counts;
+  }
+
+  /// Get per-stage breakdown for a single item scoped to a track.
+  Future<Map<int, int>> getStageBreakdownByItemAndTrack(
+    int trackId,
+    String curriculumId,
+    String sefariaRef,
+    int profileId,
+  ) async {
+    final query = selectOnly(completions)
+      ..addColumns([completions.stageId, completions.id.count()])
+      ..where(
+        completions.trackId.equals(trackId) &
+            completions.curriculumId.equals(curriculumId) &
+            completions.sefariaRef.equals(sefariaRef) &
+            completions.profileId.equals(profileId),
+      )
+      ..groupBy([completions.stageId]);
+
+    final results = await query.get();
+    final breakdown = <int, int>{};
+    for (final row in results) {
+      final stageId = row.read(completions.stageId);
+      final count = row.read(completions.id.count());
+      if (stageId != null && count != null) {
+        breakdown[stageId] = count;
+      }
+    }
+    return breakdown;
+  }
+
   /// Returns true if any completions reference the given stage ID.
   Future<bool> hasCompletionsForStage(int stageId) async {
     final result =

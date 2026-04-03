@@ -18,7 +18,7 @@ void main() {
   late CurriculumActivationService service;
   late MockFirestoreSync mockFirestore;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
     mockFirestore = MockFirestoreSync();
     service = CurriculumActivationService(
@@ -39,6 +39,11 @@ void main() {
   tearDown(() async {
     await database.close();
   });
+
+  Future<int> getTrackId(CurriculumId curriculum) async {
+    final tracks = await database.trackDao.getAllTracks(curriculum);
+    return tracks.first.id;
+  }
 
   group('CurriculumActivationService', () {
     test(
@@ -211,12 +216,14 @@ void main() {
         await service.activate(CurriculumId.mishnayos);
 
         // Insert a completion for Bavli
+        final bavliTrackId = await getTrackId(CurriculumId.bavli);
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
+            trackId: bavliTrackId,
             completedAt: DateTime.now(),
             points: const Value(10),
           ),
@@ -269,12 +276,14 @@ void main() {
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
 
+        final bavliTrackId = await getTrackId(CurriculumId.bavli);
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
+            trackId: bavliTrackId,
             completedAt: DateTime.now(),
             points: const Value(10),
           ),
