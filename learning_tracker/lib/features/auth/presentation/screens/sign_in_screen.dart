@@ -207,6 +207,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       final active = await activationService.getActiveCurricula();
       if (!mounted) return;
       if (active.isNotEmpty) {
+        // Returning user with existing data — mark onboarding complete
+        // so LocalAuthGuard on AppShellRoute doesn't redirect back.
+        await prefs.setBool(kOnboardingComplete, true);
+        if (!mounted) return;
         unawaited(context.router.replaceAll([const AppShellRoute()]));
       } else {
         unawaited(context.router.replace(const OnboardingRoute()));

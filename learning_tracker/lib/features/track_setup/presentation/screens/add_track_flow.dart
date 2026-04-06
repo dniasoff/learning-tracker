@@ -62,6 +62,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   AddTrackState _state = const AddTrackState();
   late final PageController _pageController;
   Future<void>? _activationFuture;
+  bool _isAnimating = false;
 
   /// Whether a program was selected (vs self-paced).
   bool get _isProgramTrack => _state.programId != null;
@@ -252,16 +253,20 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   void _goToNextStep() {
+    if (_isAnimating) return;
     final currentIndex = _currentIndex;
     if (currentIndex < _activeSteps.length - 1) {
       final nextStep = _activeSteps[currentIndex + 1];
       setState(() {
         _state = _state.copyWith(currentStep: nextStep);
       });
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _isAnimating = true;
+      _pageController
+          .nextPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          )
+          .then((_) => _isAnimating = false);
       _saveState();
     }
   }
@@ -433,7 +438,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         if (!didPop) _goToPreviousStep();
       },
       child: SafeArea(
-        top: false,
         child: Column(
           children: [
             if (steps.length > 1)
@@ -782,8 +786,11 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
 // ── Adapter Widgets ──────────────────────────────────────────────────────────
 
-/// Inline scope selector — pick "Track All" or drill into hierarchy to
-/// multi-select sections at a chosen level.
+/// Hierarchical scope selector — drill down through the content tree
+/// (e.g. Seder → Masechta → Perek) and select at any level.
+///
+/// Selecting at a higher level implicitly includes all children.
+/// Auto-skips levels with only one option (DNI-202).
 class _ScopeStepContent extends ConsumerStatefulWidget {
   const _ScopeStepContent({
     required this.curriculumId,
@@ -798,9 +805,11 @@ class _ScopeStepContent extends ConsumerStatefulWidget {
 }
 
 class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
-  /// null = initial choice screen, non-null = selecting values at this level.
-  int? _selectedLevel;
-  final Set<String> _selectedValues = {};
+  /// Breadcrumb path: list of (level, value) pairs representing drill-down.
+  final List<ScopeEntry> _breadcrumbs = [];
+
+  /// Selected scope entries — can be at different levels.
+  final List<ScopeEntry> _selections = [];
 
   CurriculumHierarchyDefaults get _hierarchy =>
       CurriculumDefaults.hierarchyConfigs[widget.curriculumId]!;
@@ -811,6 +820,12 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
         if (_hierarchy.level3Label != null) _hierarchy.level3Label!,
         if (_hierarchy.level4Label != null) _hierarchy.level4Label!,
       ];
+
+  /// Current drill-down depth (0 = top level showing level 1 items).
+  int get _currentLevel => _breadcrumbs.isEmpty ? 1 : _breadcrumbs.last.level + 1;
+
+  /// Max selectable level (exclude leaf level — no "By Daf/Amud").
+  int get _maxSelectableLevel => _hierarchy.maxLevels - 1;
 
   String _labelForLevel(int level) {
     return level <= _levelLabels.length ? _levelLabels[level - 1] : 'Level $level';
@@ -826,27 +841,93 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
     };
   }
 
-  List<String> _distinctValuesAtLevel(List<ContentItem> items, int level) {
+  /// Get distinct values at the current level, filtered by breadcrumb ancestors.
+  List<String> _valuesAtCurrentLevel(List<ContentItem> items) {
+    var filtered = items;
+    // Apply breadcrumb filters
+    for (final crumb in _breadcrumbs) {
+      filtered = filtered.where((item) {
+        return _getItemLevel(item, crumb.level) == crumb.value;
+      }).toList();
+    }
     final seen = <String>{};
     final result = <String>[];
-    for (final item in items) {
-      final value = _getItemLevel(item, level);
+    for (final item in filtered) {
+      final value = _getItemLevel(item, _currentLevel);
       if (value != null && seen.add(value)) result.add(value);
     }
     return result;
   }
 
+  /// Whether a value at the current level is selected (directly or via ancestor).
+  bool _isSelected(String value) {
+    // Directly selected at this level
+    if (_selections.any((s) => s.level == _currentLevel && s.value == value)) {
+      return true;
+    }
+    // Implicitly selected via ancestor breadcrumb selection
+    for (final crumb in _breadcrumbs) {
+      if (_selections.any((s) => s.level == crumb.level && s.value == crumb.value)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Whether a value is directly (not implicitly) selected.
+  bool _isDirectlySelected(String value) {
+    return _selections.any((s) => s.level == _currentLevel && s.value == value);
+  }
+
+  void _toggleSelection(String value) {
+    setState(() {
+      final existing = _selections.indexWhere(
+        (s) => s.level == _currentLevel && s.value == value,
+      );
+      if (existing >= 0) {
+        _selections.removeAt(existing);
+      } else {
+        // Remove any child selections that would be redundant
+        _selections.removeWhere((s) => s.level > _currentLevel);
+        _selections.add(ScopeEntry(level: _currentLevel, value: value));
+      }
+    });
+  }
+
+  void _drillInto(String value, List<ContentItem> items) {
+    final nextLevel = _currentLevel + 1;
+    if (nextLevel > _maxSelectableLevel) return;
+
+    setState(() {
+      _breadcrumbs.add(ScopeEntry(level: _currentLevel, value: value));
+    });
+
+    // Auto-skip levels with only one option
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final nextValues = _valuesAtCurrentLevel(items);
+      if (nextValues.length == 1 && _currentLevel < _maxSelectableLevel) {
+        _drillInto(nextValues.first, items);
+      }
+    });
+  }
+
+  void _goBack() {
+    setState(() {
+      if (_breadcrumbs.isNotEmpty) {
+        _breadcrumbs.removeLast();
+      }
+    });
+  }
+
   void _done() {
-    if (_selectedLevel == null || _selectedValues.isEmpty) {
+    if (_selections.isEmpty) {
       widget.onComplete(null);
     } else {
-      widget.onComplete(
-        _selectedValues
-            .map((v) => ScopeEntry(level: _selectedLevel!, value: v))
-            .toList(),
-      );
+      widget.onComplete(List.of(_selections));
     }
   }
+
+  int get _totalSelectionCount => _selections.length;
 
   @override
   Widget build(BuildContext context) {
@@ -874,9 +955,9 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             child: contentAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error loading content: $e')),
-              data: (items) => _selectedLevel == null
-                  ? _buildInitialChoice(items)
-                  : _buildValueSelection(items),
+              data: (items) => _breadcrumbs.isEmpty && _selections.isEmpty
+                  ? _buildTopLevel(items)
+                  : _buildHierarchyView(items),
             ),
           ),
         ],
@@ -884,9 +965,11 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
     );
   }
 
-  /// Initial screen: "Learn All" + level drill-down options.
-  Widget _buildInitialChoice(List<ContentItem> items) {
+  /// Top-level: "Learn All" + list of level 1 items to drill into or select.
+  Widget _buildTopLevel(List<ContentItem> items) {
     final theme = Theme.of(context);
+    final values = _valuesAtCurrentLevel(items);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -900,96 +983,74 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
         ),
         const SizedBox(height: 24),
         Text(
-          'Or choose specific sections:',
+          'Or choose by ${_labelForLevel(1)}:',
           style: theme.textTheme.titleSmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: ListView.separated(
-            itemCount: _hierarchy.maxLevels - 1,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+          child: ListView.builder(
+            itemCount: values.length,
             itemBuilder: (context, index) {
-              final level = index + 1;
-              return ListTile(
-                leading: const Icon(Icons.folder_outlined),
-                title: Text('Choose a ${_labelForLevel(level)}'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => setState(() {
-                  _selectedLevel = level;
-                  _selectedValues.clear();
-                }),
+              final value = values[index];
+              final canDrillDeeper = _currentLevel < _maxSelectableLevel;
+              return _HierarchyTile(
+                title: value,
+                isSelected: _isDirectlySelected(value),
+                canDrill: canDrillDeeper,
+                onCheck: () => _toggleSelection(value),
+                onDrill: canDrillDeeper
+                    ? () => _drillInto(value, items)
+                    : null,
               );
             },
           ),
         ),
+        if (_selections.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: _done,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: Text(
+              'Continue with $_totalSelectionCount selected',
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  /// Multi-select values at the chosen level.
-  Widget _buildValueSelection(List<ContentItem> items) {
-    final values = _distinctValuesAtLevel(items, _selectedLevel!);
+  /// Drill-down view with breadcrumbs and item list.
+  Widget _buildHierarchyView(List<ContentItem> items) {
     final theme = Theme.of(context);
+    final values = _valuesAtCurrentLevel(items);
+    final canDrillDeeper = _currentLevel < _maxSelectableLevel;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => setState(() {
-                _selectedLevel = null;
-                _selectedValues.clear();
-              }),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Select ${_labelForLevel(_selectedLevel!)}',
-              style: theme.textTheme.titleMedium,
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  if (_selectedValues.length == values.length) {
-                    _selectedValues.clear();
-                  } else {
-                    _selectedValues.addAll(values);
-                  }
-                });
-              },
-              child: Text(
-                _selectedValues.length == values.length
-                    ? 'Deselect All'
-                    : 'Select All',
-              ),
-            ),
-          ],
-        ),
-        if (_selectedValues.isNotEmpty) ...[
+        // Breadcrumb trail
+        _buildBreadcrumbs(theme),
+        const SizedBox(height: 8),
+        // Selection chips
+        if (_selections.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 4),
-            child: Text(
-              '${_selectedValues.length} of ${values.length} selected',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: _selectedValues
+              children: _selections
                   .map(
-                    (v) => Chip(
-                      label: Text(v, style: theme.textTheme.labelSmall),
+                    (s) => Chip(
+                      label: Text(
+                        '${_labelForLevel(s.level)}: ${s.value}',
+                        style: theme.textTheme.labelSmall,
+                      ),
                       deleteIcon: const Icon(Icons.close, size: 16),
-                      onDeleted: () => setState(() => _selectedValues.remove(v)),
+                      onDeleted: () => setState(() => _selections.remove(s)),
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -998,41 +1059,139 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             ),
           ),
         ],
+        // Item list
         Expanded(
           child: ListView.builder(
             itemCount: values.length,
             itemBuilder: (context, index) {
               final value = values[index];
-              final isSelected = _selectedValues.contains(value);
-              return CheckboxListTile(
-                title: Text(value),
-                value: isSelected,
-                onChanged: (checked) {
-                  setState(() {
-                    if (checked ?? false) {
-                      _selectedValues.add(value);
-                    } else {
-                      _selectedValues.remove(value);
-                    }
-                  });
-                },
+              return _HierarchyTile(
+                title: value,
+                isSelected: _isSelected(value),
+                isImplicit: _isSelected(value) && !_isDirectlySelected(value),
+                canDrill: canDrillDeeper,
+                onCheck: () => _toggleSelection(value),
+                onDrill: canDrillDeeper
+                    ? () => _drillInto(value, items)
+                    : null,
               );
             },
           ),
         ),
         const SizedBox(height: 8),
         FilledButton(
-          onPressed: _selectedValues.isNotEmpty ? _done : null,
+          onPressed: _selections.isNotEmpty ? _done : null,
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
           child: Text(
-            _selectedValues.isEmpty
+            _selections.isEmpty
                 ? 'Select at least one'
-                : 'Continue with ${_selectedValues.length} selected',
+                : 'Continue with $_totalSelectionCount selected',
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBreadcrumbs(ThemeData theme) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _goBack,
+          tooltip: 'Back',
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () => setState(() => _breadcrumbs.clear()),
+                  child: Text(
+                    widget.curriculumId.displayNameHe,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                for (var i = 0; i < _breadcrumbs.length; i++) ...[
+                  Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  InkWell(
+                    onTap: i < _breadcrumbs.length - 1
+                        ? () => setState(() {
+                              _breadcrumbs.removeRange(
+                                i + 1,
+                                _breadcrumbs.length,
+                              );
+                            })
+                        : null,
+                    child: Text(
+                      _breadcrumbs[i].value,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: i < _breadcrumbs.length - 1
+                            ? theme.colorScheme.primary
+                            : null,
+                        fontWeight: i == _breadcrumbs.length - 1
+                            ? FontWeight.bold
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A single row in the hierarchy: checkbox + title + optional drill arrow.
+class _HierarchyTile extends StatelessWidget {
+  const _HierarchyTile({
+    required this.title,
+    required this.isSelected,
+    required this.canDrill,
+    required this.onCheck,
+    this.onDrill,
+    this.isImplicit = false,
+  });
+
+  final String title;
+  final bool isSelected;
+  final bool isImplicit;
+  final bool canDrill;
+  final VoidCallback onCheck;
+  final VoidCallback? onDrill;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Checkbox(
+        value: isSelected,
+        onChanged: isImplicit ? null : (_) => onCheck(),
+      ),
+      title: Text(
+        title,
+        style: isImplicit
+            ? TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)
+            : null,
+      ),
+      trailing: canDrill
+          ? IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: onDrill,
+              tooltip: 'Show contents',
+            )
+          : null,
+      onTap: onCheck,
     );
   }
 }

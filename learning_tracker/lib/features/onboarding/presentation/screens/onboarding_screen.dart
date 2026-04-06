@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,6 +45,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 enum _ScreenPhase {
   profileCreation,
   languageSelection,
+  calendarPreference,
   addTrack,
   addAnotherPrompt,
   handoff,
@@ -216,6 +218,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _onLanguageSelected() {
+    setState(() => _phase = _ScreenPhase.calendarPreference);
+    _saveState();
+  }
+
+  void _onCalendarPreferenceSet(bool useHebrew) {
+    ref.read(useHebrewDateProvider.notifier).setUseHebrewDate(useHebrew);
     setState(() => _phase = _ScreenPhase.addTrack);
     _saveState();
   }
@@ -283,6 +291,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation => 'Add a Learner',
       _ScreenPhase.languageSelection => 'Choose Language',
+      _ScreenPhase.calendarPreference => 'Calendar',
       _ScreenPhase.addTrack => 'Set Up a Track',
       _ScreenPhase.addAnotherPrompt => 'Track Ready!',
       _ScreenPhase.handoff => 'Setup Complete!',
@@ -298,6 +307,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: switch (_phase) {
           _ScreenPhase.profileCreation => _buildProfileCreation(theme),
           _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
+          _ScreenPhase.calendarPreference => _buildCalendarPreference(theme),
           _ScreenPhase.addTrack => _buildAddTrack(),
           _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),
           _ScreenPhase.handoff => _buildHandoff(theme),
@@ -450,6 +460,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCalendarPreference(ThemeData theme) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Which calendar do you prefer?',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This applies to dates throughout the app. You can change it later in Settings.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            FilledButton.icon(
+              onPressed: () => _onCalendarPreferenceSet(true),
+              icon: const Icon(Icons.calendar_month),
+              label: const Text('Hebrew Calendar'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => _onCalendarPreferenceSet(false),
+              icon: const Icon(Icons.calendar_today),
+              label: const Text('Gregorian Calendar'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

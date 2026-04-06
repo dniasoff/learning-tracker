@@ -16,6 +16,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(const AppIntroRoute());
+    registerFallbackValue(const WelcomeRoute());
   });
 
   setUp(() {
@@ -25,6 +26,7 @@ void main() {
 
     when(() => mockResolver.next(any())).thenReturn(null);
     when(() => mockResolver.next()).thenReturn(null);
+    when(() => mockRouter.replace(any())).thenAnswer((_) async => null);
   });
 
   group('LocalAuthGuard', () {
@@ -37,13 +39,23 @@ void main() {
       verifyNever(() => mockRouter.replace(any()));
     });
 
-    test('redirects to app intro when onboarding is not complete', () async {
+    test('redirects to app intro when onboarding not complete and intro not seen', () async {
       SharedPreferences.setMockInitialValues({});
-      when(() => mockRouter.replace(any())).thenAnswer((_) async => null);
 
       await authGuard.onNavigation(mockResolver, mockRouter);
 
-      verify(() => mockRouter.replace(any())).called(1);
+      final captured = verify(() => mockRouter.replace(captureAny())).captured;
+      expect(captured.single, isA<AppIntroRoute>());
+      verify(() => mockResolver.next(false)).called(1);
+    });
+
+    test('redirects to welcome when onboarding not complete but intro already seen', () async {
+      SharedPreferences.setMockInitialValues({'intro_seen': true});
+
+      await authGuard.onNavigation(mockResolver, mockRouter);
+
+      final captured = verify(() => mockRouter.replace(captureAny())).captured;
+      expect(captured.single, isA<WelcomeRoute>());
       verify(() => mockResolver.next(false)).called(1);
     });
   });

@@ -3,10 +3,10 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
-import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 

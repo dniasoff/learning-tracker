@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 ///
 /// Loads programs from DB via [LearningProgramDao] — no hardcoded IDs.
 /// Auto-skipped if no programs exist for the selected curriculum.
-class ProgramSelectionStep extends ConsumerWidget {
+class ProgramSelectionStep extends ConsumerStatefulWidget {
   const ProgramSelectionStep({
     required this.curriculumId,
     required this.onSelected,
@@ -26,14 +26,28 @@ class ProgramSelectionStep extends ConsumerWidget {
   onSelected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProgramSelectionStep> createState() =>
+      _ProgramSelectionStepState();
+}
+
+class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
+  late final Future<List<LearningProgram>> _programsFuture;
+  bool _didAutoSkip = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final contentDb = ref.read(contentDatabaseProvider);
+    _programsFuture = contentDb.contentLearningProgramDao
+        .getProgramsByCurriculumType(widget.curriculumId.storageKey);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final contentDb = ref.watch(contentDatabaseProvider);
 
     return FutureBuilder<List<LearningProgram>>(
-      future: contentDb.contentLearningProgramDao.getProgramsByCurriculumType(
-        curriculumId.storageKey,
-      ),
+      future: _programsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
@@ -42,10 +56,12 @@ class ProgramSelectionStep extends ConsumerWidget {
         final programs = snapshot.data ?? [];
 
         if (programs.isEmpty) {
-          // Should have been auto-skipped — but just in case
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            onSelected(null, null, null);
-          });
+          if (!_didAutoSkip) {
+            _didAutoSkip = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              widget.onSelected(null, null, null);
+            });
+          }
           return const SizedBox.shrink();
         }
 
@@ -70,7 +86,7 @@ class ProgramSelectionStep extends ConsumerWidget {
                         child: Card(
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
-                            onTap: () => onSelected(
+                            onTap: () => widget.onSelected(
                               program.id,
                               program.displayName,
                               program,
@@ -127,7 +143,7 @@ class ProgramSelectionStep extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     OutlinedButton(
-                      onPressed: () => onSelected(null, null, null),
+                      onPressed: () => widget.onSelected(null, null, null),
                       child: const Text('Self-paced (no program)'),
                     ),
                   ],

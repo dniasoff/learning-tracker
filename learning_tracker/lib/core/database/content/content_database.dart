@@ -59,14 +59,25 @@ class ContentDatabase extends _$ContentDatabase {
         await _seedTestDates();
       },
       beforeOpen: (details) async {
-        // Fix for existing dev installs: if the DB was created before
-        // seeding was added to onCreate, programs table will be empty.
-        // Re-seed if needed — this is idempotent.
-        final count = await customSelect(
-          'SELECT COUNT(*) AS c FROM learning_programs',
-        ).getSingle();
-        if ((count.read<int>('c')) == 0) {
-          await _seedLearningPrograms();
+        // Always re-seed learning programs to ensure data is current.
+        // Uses INSERT OR REPLACE keyed on `name` so updated seed data
+        // (e.g. Oraysa review stages — DNI-201) propagates to existing installs.
+        try {
+          await _upsertLearningPrograms();
+        } catch (_) {
+          // Table might not exist yet on very old installs; try full seed.
+          try {
+            await _seedLearningPrograms();
+          } catch (_) {}
+        }
+        try {
+          final count = await customSelect(
+            'SELECT COUNT(*) AS c FROM test_dates',
+          ).getSingle();
+          if ((count.read<int>('c')) == 0) {
+            await _seedTestDates();
+          }
+        } catch (_) {
           await _seedTestDates();
         }
       },
@@ -94,16 +105,51 @@ class ContentDatabase extends _$ContentDatabase {
     }
   }
 
+  /// Upsert all learning program seeds — updates existing rows keyed on `name`.
+  Future<void> _upsertLearningPrograms() async {
+    for (final program in learningProgramSeeds) {
+      await customInsert(
+        'INSERT OR REPLACE INTO learning_programs '
+        '(name, display_name, description, curriculum_type, is_active, '
+        'has_tests, stages_config, test_config, created_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable.withString(program['name']! as String),
+          Variable.withString(program['display_name']! as String),
+          Variable.withString(program['description']! as String),
+          Variable.withString(program['curriculum_type']! as String),
+          Variable.withBool(program['is_active']! as bool),
+          Variable.withBool(program['has_tests']! as bool),
+          Variable.withString(program['stages_config']! as String),
+          Variable.withString(program['test_config']! as String),
+          Variable.withDateTime(DateTime.now().toUtc()),
+        ],
+      );
+    }
+  }
+
   Future<void> _seedTestDates() async {
     final seeds = generateTestDateSeeds();
     for (final testDate in seeds) {
+      // Look up program ID from program name
+      final programName = testDate['program_name'] as String?;
+      if (programName == null) continue;
+      final programRows = await customSelect(
+        'SELECT id FROM learning_programs WHERE name = ?',
+        variables: [Variable.withString(programName)],
+      ).get();
+      if (programRows.isEmpty) continue;
+      final programId = programRows.first.read<int>('id');
+
       await customInsert(
-        'INSERT INTO test_dates (program_id, test_date, description) '
+        'INSERT INTO test_dates (program_id, test_date, material_description) '
         'VALUES (?, ?, ?)',
         variables: [
-          Variable.withInt(testDate['program_id']! as int),
+          Variable.withInt(programId),
           Variable.withDateTime(testDate['test_date']! as DateTime),
-          Variable.withString(testDate['description']! as String),
+          Variable.withString(
+            testDate['material_description'] as String? ?? '',
+          ),
         ],
       );
     }

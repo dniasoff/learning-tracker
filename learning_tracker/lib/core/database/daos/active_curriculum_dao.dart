@@ -88,4 +88,6 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
       )..where((t) => t.curriculumId.equals(curriculum.storageKey))).go();
     });
   }
+
+  
 }

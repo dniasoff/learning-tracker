@@ -4,9 +4,14 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
+
+// Re-export from domain layer for backward compatibility.
+export 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart'
+    show GoalFormResult;
 
 /// Screen for creating or editing a learning goal.
 ///
@@ -121,7 +126,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
       GoalFormResult(
         targetPercent: _targetPercent,
         targetDate: _goalType == 'deadline' ? _targetDate : null,
-        description: _descriptionController.text,
+        description: _goalType == 'deadline' ? _descriptionController.text : '',
         dateType: ref.read(useHebrewDateProvider) ? 'hebrew' : 'gregorian',
         goalType: _goalType,
         paceValue: _goalType == 'pace' ? _paceValue : null,
@@ -375,13 +380,18 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                         segments: const [
                           ButtonSegment(
                             value: 'deadline',
-                            label: Text('Set a deadline'),
+                            label: Text('Deadline'),
                             icon: Icon(Icons.calendar_today),
                           ),
                           ButtonSegment(
                             value: 'pace',
-                            label: Text('Set a pace'),
+                            label: Text('Pace'),
                             icon: Icon(Icons.speed),
+                          ),
+                          ButtonSegment(
+                            value: 'none',
+                            label: Text('No deadline'),
+                            icon: Icon(Icons.all_inclusive),
                           ),
                         ],
                         selected: {_goalType},
@@ -395,6 +405,13 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                       // Mode-specific content
                       if (_goalType == 'deadline') _buildDeadlineSection(),
                       if (_goalType == 'pace') _buildPaceSection(),
+                      if (_goalType == 'none')
+                        Text(
+                          'Learn at your own pace with no time pressure.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -412,29 +429,4 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
       ),
     );
   }
-}
-
-/// Result returned from GoalSetupScreen.
-class GoalFormResult {
-  final double targetPercent;
-  final DateTime? targetDate;
-  final String description;
-  final String dateType;
-  final String goalType;
-  final int? paceValue;
-  final String? paceUnit;
-
-  /// Learning unit for Bavli/Yerushalmi: 'amud' or 'daf'. Null for other curricula.
-  final String? learningUnit;
-
-  const GoalFormResult({
-    required this.targetPercent,
-    this.targetDate,
-    this.description = '',
-    this.dateType = 'gregorian',
-    this.goalType = 'deadline',
-    this.paceValue,
-    this.paceUnit,
-    this.learningUnit,
-  });
 }

@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Persistent flag — once set, intro slides are never shown again on this device.
+const kIntroSeen = 'intro_seen';
 
 @RoutePage()
 class AppIntroScreen extends StatefulWidget {
@@ -108,12 +113,18 @@ class _AppIntroScreenState extends State<AppIntroScreen>
         curve: Curves.easeOutCubic,
       );
     } else {
-      context.router.replace(const WelcomeRoute());
+      _markIntroSeenAndContinue();
     }
   }
 
   void _skip() {
-    context.router.replace(const WelcomeRoute());
+    _markIntroSeenAndContinue();
+  }
+
+  Future<void> _markIntroSeenAndContinue() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kIntroSeen, true);
+    if (mounted) unawaited(context.router.replace(const WelcomeRoute()));
   }
 
   @override

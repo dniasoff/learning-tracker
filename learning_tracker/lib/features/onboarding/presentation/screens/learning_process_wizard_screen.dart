@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 
-/// Result returned to the onboarding flow after the wizard completes.
-class LearningProcessWizardResult {
-  const LearningProcessWizardResult({required this.wizardResult});
-  final WizardResult wizardResult;
-}
+// Re-export from domain layer for backward compatibility.
+export 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart'
+    show LearningProcessWizardResult;
 
 /// Learning Process Wizard screen — shown per curriculum during onboarding.
 ///
@@ -448,12 +447,12 @@ class _CustomRoundState {
   int delayDays;
   Set<int> selectedDays = {};
 
-  /// Spaced repetition defaults: 1 day, 7 days, 30 days, 31, 32...
+  /// Spaced repetition defaults: 1 day, 7 days, 30 days, 60 days, 90 days.
   static _CustomRoundState withDefault(int roundIndex) {
-    final defaults = [1, 7, 30];
+    const defaults = [1, 7, 30, 60, 90];
     final delay = roundIndex < defaults.length
         ? defaults[roundIndex]
-        : 30 + (roundIndex - 2);
+        : 90;
     return _CustomRoundState(delayDays: delay);
   }
 }
