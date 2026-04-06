@@ -3,6 +3,9 @@ import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+    show kOnboardingComplete;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service for account management operations:
 /// sign out, delete account, change password, link providers.
@@ -25,6 +28,8 @@ class AccountManagementService {
   /// can sign back in and see their data (FR102).
   Future<void> signOut() async {
     await _authRepository.signOut();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(kOnboardingComplete);
   }
 
   /// Deletes the current user's account and all associated data.
