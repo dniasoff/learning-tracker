@@ -24,12 +24,30 @@ class AccountManagementService {
 
   /// Signs out the current user.
   ///
-  /// Clears the auth session but preserves local data so the user
-  /// can sign back in and see their data (FR102).
+  /// Clears the auth session and onboarding flag so the user goes
+  /// through onboarding on next sign-in, but preserves local data
+  /// so they can sign back in and see their data (FR102).
   Future<void> signOut() async {
     await _authRepository.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(kOnboardingComplete);
+    // Clear transient onboarding/add-track state
+    for (final key in [
+      'onboarding_phase',
+      'onboarding_profile_id',
+      'onboarding_profile_name',
+      'onboarding_profile_mode',
+      'onboarding_language',
+      'add_track_step',
+      'add_track_curriculum',
+      'add_track_scope',
+      'add_track_program',
+      'add_track_program_name',
+      'add_track_study_days',
+      'add_track_label',
+    ]) {
+      await prefs.remove(key);
+    }
   }
 
   /// Deletes the current user's account and all associated data.
@@ -39,6 +57,7 @@ class AccountManagementService {
   /// 1. Delete Firestore user document and subcollections
   /// 2. Delete Firebase Auth account
   /// 3. Clear local database (FR103)
+  /// 4. Clear SharedPreferences
   Future<void> deleteAccount(String uid) async {
     // 1. Delete Firestore data
     await _deleteFirestoreUserData(uid);
@@ -48,6 +67,10 @@ class AccountManagementService {
 
     // 3. Clear local database
     await _clearLocalDatabase();
+
+    // 4. Clear all local preferences (onboarding state, settings, etc.)
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
 
   /// Changes the password for the current email/password user.
@@ -124,22 +147,34 @@ class AccountManagementService {
   }
 
   /// Clears all data from the local database.
+  ///
+  /// Deletes all rows from every table in the user database.
+  /// Order matters: child tables (with FK references) before parent tables.
   Future<void> _clearLocalDatabase() async {
-    // Delete all rows from all tables
     await _database.transaction(() async {
+      // Child / leaf tables first
       await _database.delete(_database.syncQueue).go();
       await _database.delete(_database.completions).go();
       await _database.delete(_database.bookmarks).go();
-      await _database.delete(_database.goals).go();
+      await _database.delete(_database.learningLedger).go();
       await _database.delete(_database.learningOrder).go();
+      await _database.delete(_database.goals).go();
       await _database.delete(_database.rewards).go();
+      await _database.delete(_database.rewardPoolItems).go();
+      await _database.delete(_database.rewardPools).go();
       await _database.delete(_database.streaks).go();
       await _database.delete(_database.pointConfigs).go();
-      await _database.delete(_database.activeCurricula).go();
-      await _database.delete(_database.userProfiles).go();
-      await _database.delete(_database.textDownloadStatuses).go();
       await _database.delete(_database.stageDefinitions).go();
+      await _database.delete(_database.studyDayConfigs).go();
+      await _database.delete(_database.curriculumScopes).go();
+      await _database.delete(_database.profilePrograms).go();
+      await _database.delete(_database.testScores).go();
+      await _database.delete(_database.textDownloadStatuses).go();
+      // Parent tables
       await _database.delete(_database.curriculumTracks).go();
+      await _database.delete(_database.activeCurricula).go();
+      await _database.delete(_database.profiles).go();
+      await _database.delete(_database.userProfiles).go();
     });
   }
 }

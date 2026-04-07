@@ -18,7 +18,7 @@ class ProgressScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaProvider);
+    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaStreamProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
@@ -52,7 +52,7 @@ class ProgressScreen extends ConsumerWidget {
 
             return RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(dashboardActiveCurriculaProvider);
+                ref.invalidate(dashboardActiveCurriculaStreamProvider);
                 ref.invalidate(dashboardStreakProvider);
                 ref.invalidate(dashboardGlobalPointsProvider);
                 ref.invalidate(journeyViewModelProvider(profileId));

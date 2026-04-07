@@ -19,7 +19,7 @@ class LearningScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaProvider);
+    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaStreamProvider);
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
@@ -63,7 +63,7 @@ class LearningScreen extends ConsumerWidget {
             return RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(allDailyTasksProvider);
-                ref.invalidate(dashboardActiveCurriculaProvider);
+                ref.invalidate(dashboardActiveCurriculaStreamProvider);
                 ref.invalidate(dashboardStreakProvider);
               },
               child: ListView(

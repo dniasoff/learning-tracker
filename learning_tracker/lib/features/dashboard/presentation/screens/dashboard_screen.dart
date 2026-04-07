@@ -25,7 +25,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaProvider);
+    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaStreamProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final selectedProfileAsync = ref.watch(selectedProfileProvider);
@@ -72,7 +72,7 @@ class DashboardScreen extends ConsumerWidget {
 
             return RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(dashboardActiveCurriculaProvider);
+                ref.invalidate(dashboardActiveCurriculaStreamProvider);
                 ref.invalidate(dashboardUserModeProvider);
                 ref.invalidate(dashboardStreakProvider);
                 ref.invalidate(dashboardGlobalPointsProvider);

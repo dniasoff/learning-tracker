@@ -9,11 +9,17 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 
 @RoutePage()
-class ProfilePickerScreen extends ConsumerWidget {
+class ProfilePickerScreen extends ConsumerStatefulWidget {
   const ProfilePickerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePickerScreen> createState() =>
+      _ProfilePickerScreenState();
+}
+
+class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
+  @override
+  Widget build(BuildContext context) {
     final profilesAsync = ref.watch(profileListStreamProvider);
 
     return Scaffold(
@@ -21,19 +27,13 @@ class ProfilePickerScreen extends ConsumerWidget {
         child: profilesAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, s) => Center(child: Text('Error: $e')),
-          data: (profiles) => _PickerBody(profiles: profiles),
+          data: (profiles) => _buildBody(context, profiles),
         ),
       ),
     );
   }
-}
 
-class _PickerBody extends ConsumerWidget {
-  final List<ProfileModel> profiles;
-  const _PickerBody({required this.profiles});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget _buildBody(BuildContext context, List<ProfileModel> profiles) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -54,10 +54,10 @@ class _PickerBody extends ConsumerWidget {
                 mainAxisSpacing: 16,
               ),
               itemCount: profiles.length + 1,
-              itemBuilder: (context, index) {
+              itemBuilder: (_, index) {
                 if (index == profiles.length) {
                   return _AddProfileCard(
-                    onTap: () => _showAddDialog(context, ref),
+                    onTap: () => _showAddDialog(profiles.length),
                     isDisabled: profiles.length >= 10,
                   );
                 }
@@ -70,7 +70,8 @@ class _PickerBody extends ConsumerWidget {
                         .select(profile.id);
                     context.router.replace(const AppShellRoute());
                   },
-                  onLongPress: () => _showManageSheet(context, ref, profile),
+                  onLongPress: () =>
+                      _showManageSheet(profile, profiles.length),
                 );
               },
             ),
@@ -80,7 +81,13 @@ class _PickerBody extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAddDialog(BuildContext context, WidgetRef ref) async {
+  // ── Add Profile ───────────────────────────────────────────────────────────
+
+  Future<void> _showAddDialog(int profileCount) async {
+    // Capture providers before opening dialog to avoid ref-in-overlay issues.
+    final profileDao = ref.read(userDatabaseProvider).profileDao;
+    final repo = ref.read(profileRepositoryProvider);
+
     final ctrl = TextEditingController();
     var mode = 'adult';
     var avatar = 0;
@@ -88,6 +95,7 @@ class _PickerBody extends ConsumerWidget {
 
     final result = await showDialog<({String n, String m, int a})>(
       context: context,
+      useRootNavigator: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
           Future<void> check() async {
@@ -96,15 +104,16 @@ class _PickerBody extends ConsumerWidget {
               set(() => err = null);
               return;
             }
-            final exists = await ref
-                .read(userDatabaseProvider)
-                .profileDao
-                .profileExistsByName(1, n);
-            set(
-              () => err = exists
-                  ? 'A profile with this name already exists'
-                  : null,
-            );
+            try {
+              final exists = await profileDao.profileExistsByName(1, n);
+              set(
+                () => err = exists
+                    ? 'A profile with this name already exists'
+                    : null,
+              );
+            } catch (_) {
+              set(() => err = null);
+            }
           }
 
           return AlertDialog(
@@ -139,31 +148,27 @@ class _PickerBody extends ConsumerWidget {
                     style: Theme.of(ctx).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    height: 60,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: 10,
-                      itemBuilder: (_, i) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: GestureDetector(
-                          onTap: () => set(() => avatar = i),
-                          child: Container(
-                            decoration: avatar == i
-                                ? BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Theme.of(ctx).colorScheme.primary,
-                                      width: 3,
-                                    ),
-                                  )
-                                : null,
-                            padding: const EdgeInsets.all(2),
-                            child: ProfileAvatar(avatarIndex: i, radius: 24),
-                          ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: List.generate(10, (i) {
+                      return GestureDetector(
+                        onTap: () => set(() => avatar = i),
+                        child: Container(
+                          decoration: avatar == i
+                              ? BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Theme.of(ctx).colorScheme.primary,
+                                    width: 3,
+                                  ),
+                                )
+                              : null,
+                          padding: const EdgeInsets.all(2),
+                          child: ProfileAvatar(avatarIndex: i, radius: 24),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -189,36 +194,37 @@ class _PickerBody extends ConsumerWidget {
       ),
     );
     ctrl.dispose();
-    if (result == null || !context.mounted) return;
+    if (result == null || !mounted) return;
     try {
-      await ref
-          .read(profileRepositoryProvider)
-          .createProfile(
-            accountId: 1,
-            displayName: result.n,
-            mode: result.m,
-            avatarIndex: result.a,
-          );
-      ref.invalidate(profileListStreamProvider);
+      await repo.createProfile(
+        accountId: 1,
+        displayName: result.n,
+        mode: result.m,
+        avatarIndex: result.a,
+      );
+      // Stream auto-updates the grid — no invalidate needed.
     } on DuplicateProfileNameException {
-      if (context.mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('A profile named "${result.n}" already exists'),
           ),
         );
+      }
     } on MaxProfilesExceededException {
-      if (context.mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Maximum 10 profiles reached')),
         );
+      }
     }
   }
 
+  // ── Manage (Long-press) ───────────────────────────────────────────────────
+
   Future<void> _showManageSheet(
-    BuildContext context,
-    WidgetRef ref,
     ProfileModel profile,
+    int profileCount,
   ) async {
     final action = await showModalBottomSheet<String>(
       context: context,
@@ -240,11 +246,11 @@ class _PickerBody extends ConsumerWidget {
                 'Delete',
                 style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
-              enabled: profiles.length > 1,
-              subtitle: profiles.length <= 1
+              enabled: profileCount > 1,
+              subtitle: profileCount <= 1
                   ? const Text('You must have at least one profile')
                   : null,
-              onTap: profiles.length > 1
+              onTap: profileCount > 1
                   ? () => Navigator.pop(ctx, 'delete')
                   : null,
             ),
@@ -252,23 +258,25 @@ class _PickerBody extends ConsumerWidget {
         ),
       ),
     );
-    if (!context.mounted || action == null) return;
+    if (!mounted || action == null) return;
     if (action == 'rename') {
-      await _showRenameDialog(context, ref, profile);
-    } else if (action == 'delete' && context.mounted) {
-      await _showDeleteDialog(context, ref, profile);
+      await _showRenameDialog(profile);
+    } else if (action == 'delete' && mounted) {
+      await _showDeleteDialog(profile);
     }
   }
 
-  Future<void> _showRenameDialog(
-    BuildContext context,
-    WidgetRef ref,
-    ProfileModel profile,
-  ) async {
+  // ── Rename ────────────────────────────────────────────────────────────────
+
+  Future<void> _showRenameDialog(ProfileModel profile) async {
+    final profileDao = ref.read(userDatabaseProvider).profileDao;
+    final repo = ref.read(profileRepositoryProvider);
+
     final ctrl = TextEditingController(text: profile.displayName);
     String? err;
     final name = await showDialog<String>(
       context: context,
+      useRootNavigator: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
           Future<void> check() async {
@@ -277,15 +285,20 @@ class _PickerBody extends ConsumerWidget {
               set(() => err = null);
               return;
             }
-            final exists = await ref
-                .read(userDatabaseProvider)
-                .profileDao
-                .profileExistsByName(1, n, excludeId: profile.id);
-            set(
-              () => err = exists
-                  ? 'A profile with this name already exists'
-                  : null,
-            );
+            try {
+              final exists = await profileDao.profileExistsByName(
+                1,
+                n,
+                excludeId: profile.id,
+              );
+              set(
+                () => err = exists
+                    ? 'A profile with this name already exists'
+                    : null,
+              );
+            } catch (_) {
+              set(() => err = null);
+            }
           }
 
           return AlertDialog(
@@ -318,31 +331,31 @@ class _PickerBody extends ConsumerWidget {
       ),
     );
     ctrl.dispose();
-    if (name == null || name.isEmpty || !context.mounted) return;
+    if (name == null || name.isEmpty || !mounted) return;
     try {
-      await ref
-          .read(profileRepositoryProvider)
-          .updateProfile(id: profile.id, displayName: name);
-      ref.invalidate(profileListStreamProvider);
+      await repo.updateProfile(id: profile.id, displayName: name);
     } on DuplicateProfileNameException {
-      if (context.mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('A profile named "$name" already exists')),
         );
+      }
     }
   }
 
-  Future<void> _showDeleteDialog(
-    BuildContext context,
-    WidgetRef ref,
-    ProfileModel profile,
-  ) async {
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  Future<void> _showDeleteDialog(ProfileModel profile) async {
+    final repo = ref.read(profileRepositoryProvider);
+
     final ok = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Profile?'),
         content: Text(
-          'Permanently delete "${profile.displayName}" and ALL associated learning data? This cannot be undone.',
+          'Permanently delete "${profile.displayName}" and ALL associated '
+          'learning data? This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -359,21 +372,24 @@ class _PickerBody extends ConsumerWidget {
         ],
       ),
     );
-    if (!(ok ?? false) || !context.mounted) return;
+    if (!(ok ?? false) || !mounted) return;
     try {
-      await ref.read(profileRepositoryProvider).deleteProfile(profile.id);
+      await repo.deleteProfile(profile.id);
       final sel = ref.read(selectedProfileIdProvider) ?? -1;
-      if (sel == profile.id)
+      if (sel == profile.id) {
         ref.read(selectedProfileIdProvider.notifier).clear();
-      ref.invalidate(profileListStreamProvider);
+      }
     } on LastProfileException {
-      if (context.mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cannot delete your only profile')),
         );
+      }
     }
   }
 }
+
+// ── Stateless card widgets ──────────────────────────────────────────────────
 
 class _ProfileCard extends StatelessWidget {
   final ProfileModel profile;

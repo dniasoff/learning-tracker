@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -211,7 +210,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     _createdProfileId = profile.id;
     _profileName = name;
-    ref.read(activeProfileIdProvider.notifier).switchTo(profile.id);
+    ref.read(selectedProfileIdProvider.notifier).select(profile.id);
 
     setState(() => _phase = _ScreenPhase.languageSelection);
     await _saveState();
