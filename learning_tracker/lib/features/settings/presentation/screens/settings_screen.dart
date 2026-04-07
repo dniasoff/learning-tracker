@@ -850,6 +850,7 @@ Future<void> _showSignOutConfirmation(
   try {
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
+    ref.read(authStateProvider.notifier).demoteToLocal();
     if (context.mounted) {
       await context.router.replaceAll([const SignInRoute()]);
     }

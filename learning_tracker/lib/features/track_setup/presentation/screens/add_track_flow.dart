@@ -95,8 +95,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       steps.add(AddTrackStep.scope);
     }
 
-    // Study days — always shown. Program: auto-fill read-only. Self-paced: editable.
-    steps.add(AddTrackStep.studyDays);
+    // Study days — skip for program tracks (all days, not user-configurable).
+    if (!_isProgramTrack) {
+      steps.add(AddTrackStep.studyDays);
+    }
 
     // Chazara — always shown (behavior varies: ask/show/offer)
     steps.add(AddTrackStep.chazaraSetup);
@@ -345,6 +347,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         programName: programName,
         selectedProgram: program,
         scopeSelections: programId != null ? null : _state.scopeSelections,
+        // Auto-fill study days for program tracks (step is skipped).
+        studyDays: programId != null
+            ? Map<int, String>.from(kDefaultStudyDays)
+            : _state.studyDays,
       );
     });
     _goToNextStep();

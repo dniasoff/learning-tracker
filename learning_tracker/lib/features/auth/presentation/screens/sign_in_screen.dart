@@ -11,6 +11,8 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
+    as auth_state;
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -189,6 +191,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   Future<void> _navigateAfterSignIn() async {
     final user = ref.read(firebaseAuthProvider).currentUser;
     if (user == null || !mounted) return;
+
+    // Promote auth state so SyncEngine activates
+    await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(user);
+    if (!mounted) return;
 
     // If onboarding was already completed on this device, go straight to app.
     final prefs = await SharedPreferences.getInstance();
