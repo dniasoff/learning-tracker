@@ -106,12 +106,16 @@ class AccountManagementService {
   }
 
   /// Deletes all Firestore data for the given user.
+  ///
+  /// Handles both profile-scoped collections (`users/{uid}/profiles/{pid}/...`)
+  /// and legacy flat collections (`users/{uid}/...`).
+  /// A server-side Cloud Function (`onUserDeleted`) also performs this cascade
+  /// when a user is deleted from Firebase Auth outside the app.
   Future<void> _deleteFirestoreUserData(String uid) async {
     try {
       final userDocRef = _firestore.collection('users').doc(uid);
 
-      // Delete known subcollections
-      const subcollections = [
+      const profileSubcollections = [
         'completions',
         'bookmarks',
         'settings',
@@ -120,20 +124,49 @@ class AccountManagementService {
         'learning_ledger',
         'active_curricula',
         'curriculum_imports',
+      ];
+
+      // 1. Delete profile-scoped data
+      final profilesSnapshot =
+          await userDocRef.collection('profiles').get();
+      for (final profileDoc in profilesSnapshot.docs) {
+        for (final sub in profileSubcollections) {
+          final subSnapshot =
+              await profileDoc.reference.collection(sub).get();
+          for (final doc in subSnapshot.docs) {
+            await doc.reference.delete();
+          }
+        }
+        // Delete streak/data and active_curricula/data within profile
+        await profileDoc.reference
+            .collection('streak')
+            .doc('data')
+            .delete();
+        await profileDoc.reference
+            .collection('active_curricula')
+            .doc('data')
+            .delete();
+        // Delete the profile document itself
+        await profileDoc.reference.delete();
+      }
+
+      // 2. Delete legacy flat subcollections
+      const legacySubcollections = [
+        ...profileSubcollections,
         'profile',
       ];
 
-      for (final sub in subcollections) {
+      for (final sub in legacySubcollections) {
         final snapshot = await userDocRef.collection(sub).get();
         for (final doc in snapshot.docs) {
           await doc.reference.delete();
         }
       }
 
-      // Delete streak document
+      // Delete legacy streak document
       await userDocRef.collection('streak').doc('current').delete();
 
-      // Delete user document itself
+      // 3. Delete user document itself
       await userDocRef.delete();
     } catch (e, stack) {
       developer.log(

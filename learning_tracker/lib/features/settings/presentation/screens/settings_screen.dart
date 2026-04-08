@@ -456,12 +456,18 @@ class _SectionHeader extends StatelessWidget {
 }
 
 /// Displays user profile info with avatar, name, email, and badge.
-class _UserProfileSection extends StatelessWidget {
+class _UserProfileSection extends ConsumerStatefulWidget {
   const _UserProfileSection({required this.user});
 
   final User? user;
 
-  Future<void> _showEditNameDialog(BuildContext context, User user) async {
+  @override
+  ConsumerState<_UserProfileSection> createState() =>
+      _UserProfileSectionState();
+}
+
+class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
+  Future<void> _showEditNameDialog(User user) async {
     final controller = TextEditingController(text: user.displayName ?? '');
     final newName = await showDialog<String>(
       context: context,
@@ -490,14 +496,23 @@ class _UserProfileSection extends StatelessWidget {
     );
     controller.dispose();
 
-    if (newName != null && newName.isNotEmpty && context.mounted) {
-      await user.updateDisplayName(newName);
-    }
+    if (newName == null || newName.isEmpty || !mounted) return;
+
+    // Defer the update to after the dialog's exit animation completes,
+    // avoiding the _dependents.isEmpty assertion in the framework.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
+    await user.updateDisplayName(newName);
+    await user.reload();
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final user = widget.user;
 
     if (user == null) {
       return const Padding(
@@ -513,7 +528,7 @@ class _UserProfileSection extends StatelessWidget {
     }
 
     final displayName =
-        user!.displayName ?? user!.email?.split('@').first ?? 'User';
+        user.displayName ?? user.email?.split('@').first ?? 'User';
     final initials = displayName.isNotEmpty
         ? displayName
               .split(' ')
@@ -549,9 +564,9 @@ class _UserProfileSection extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (user!.email != null)
+                if (user.email != null)
                   Text(
-                    user!.email!,
+                    user.email!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -584,7 +599,7 @@ class _UserProfileSection extends StatelessWidget {
               Icons.edit_outlined,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            onPressed: () => _showEditNameDialog(context, user!),
+            onPressed: () => _showEditNameDialog(user),
           ),
         ],
       ),
