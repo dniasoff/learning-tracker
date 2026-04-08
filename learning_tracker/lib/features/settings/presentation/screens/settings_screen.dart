@@ -7,7 +7,6 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -67,8 +66,7 @@ class SettingsScreen extends ConsumerWidget {
                     title: const Text('Manage Tracks'),
                     subtitle: const Text('Add, edit, or archive tracks'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () =>
-                        context.pushRoute(TrackManagementHubRoute()),
+                    onTap: () => context.pushRoute(TrackManagementHubRoute()),
                   ),
                   Divider(height: 1, indent: 56, color: theme.dividerColor),
                   _HebrewDateTile(theme: theme),
@@ -98,13 +96,7 @@ class SettingsScreen extends ConsumerWidget {
             const _SectionHeader(title: 'APPEARANCE'),
             const SizedBox(height: 8),
             Card(
-              child: Column(
-                children: [
-                  _ThemeTile(theme: theme),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  _AccentColorTile(theme: theme),
-                ],
-              ),
+              child: Column(children: [_ThemeTile(theme: theme)]),
             ),
             const SizedBox(height: 24),
 
@@ -287,38 +279,40 @@ class _BackupSyncSection extends ConsumerWidget {
         children: [
           switch (syncStatus) {
             SyncStatusLocalOnly() => _buildLocalOnlyTile(
-                context,
-                theme,
-                isLocalAuth: authState is LocalAuthState,
-              ),
-            SyncStatusSynced(:final lastSyncedAt) =>
-              _buildSyncedTile(theme, lastSyncedAt),
+              context,
+              theme,
+              isLocalAuth: authState is LocalAuthState,
+            ),
+            SyncStatusSynced(:final lastSyncedAt) => _buildSyncedTile(
+              theme,
+              lastSyncedAt,
+            ),
             SyncStatusSyncing() => _buildStatusTile(
-                theme,
-                icon: Icons.sync,
-                label: 'Syncing...',
-                color: theme.colorScheme.primary,
-              ),
+              theme,
+              icon: Icons.sync,
+              label: 'Syncing...',
+              color: theme.colorScheme.primary,
+            ),
             SyncStatusPending(:final pendingChanges) => _buildStatusTile(
-                theme,
-                icon: Icons.schedule,
-                label: '$pendingChanges changes pending',
-                color: Colors.orange,
-              ),
+              theme,
+              icon: Icons.schedule,
+              label: '$pendingChanges changes pending',
+              color: Colors.orange,
+            ),
             SyncStatusOffline(:final pendingChanges) => _buildStatusTile(
-                theme,
-                icon: Icons.cloud_off,
-                label: pendingChanges > 0
-                    ? '$pendingChanges changes queued'
-                    : 'Offline',
-                color: Colors.grey,
-              ),
+              theme,
+              icon: Icons.cloud_off,
+              label: pendingChanges > 0
+                  ? '$pendingChanges changes queued'
+                  : 'Offline',
+              color: Colors.grey,
+            ),
             SyncStatusError(:final message) => _buildStatusTile(
-                theme,
-                icon: Icons.warning_amber,
-                label: 'Sync error: $message',
-                color: Colors.red,
-              ),
+              theme,
+              icon: Icons.warning_amber,
+              label: 'Sync error: $message',
+              color: Colors.red,
+            ),
           },
         ],
       ),
@@ -331,13 +325,15 @@ class _BackupSyncSection extends ConsumerWidget {
     required bool isLocalAuth,
   }) {
     return ListTile(
-      leading: Icon(Icons.smartphone, color: theme.colorScheme.onSurfaceVariant),
+      leading: Icon(
+        Icons.smartphone,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
       title: const Text('Local only'),
       subtitle: const Text('Create an account to enable cloud backup'),
       trailing: isLocalAuth
           ? FilledButton.tonal(
-              onPressed: () =>
-                  context.pushRoute(const AccountCreationRoute()),
+              onPressed: () => context.pushRoute(const AccountCreationRoute()),
               child: const Text('Create Account'),
             )
           : null,
@@ -375,7 +371,7 @@ class _BackupSyncSection extends ConsumerWidget {
   }
 }
 
-/// Section header with uppercase label matching the mockup design.
+/// Calendar preference tile with explicit Hebrew / Gregorian choice.
 class _HebrewDateTile extends ConsumerWidget {
   const _HebrewDateTile({required this.theme});
 
@@ -384,19 +380,54 @@ class _HebrewDateTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final useHebrew = ref.watch(useHebrewDateProvider);
-    return ListTile(
-      leading: Icon(
-        Icons.calendar_month_outlined,
-        color: theme.colorScheme.primary,
-      ),
-      title: const Text('Hebrew Calendar'),
-      subtitle: const Text('Use Hebrew dates across the app'),
-      trailing: Switch(
-        value: useHebrew,
-        onChanged: (value) {
-          ref.read(useHebrewDateProvider.notifier).setUseHebrewDate(value);
-        },
-        activeTrackColor: theme.colorScheme.primary,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_month_outlined,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text('Calendar Preference', style: theme.textTheme.titleSmall),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Applies to all date pickers across the app',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: false,
+                  label: Text('Gregorian'),
+                  icon: Icon(Icons.calendar_today),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text('Hebrew'),
+                  icon: Icon(Icons.calendar_month),
+                ),
+              ],
+              selected: {useHebrew},
+              onSelectionChanged: (selected) {
+                ref
+                    .read(useHebrewDateProvider.notifier)
+                    .setUseHebrewDate(selected.first);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1055,116 +1086,6 @@ class _ThemeTile extends ConsumerWidget {
                 },
               ),
             const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AccentColorTile extends ConsumerWidget {
-  const _AccentColorTile({required this.theme});
-
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final accentColor = ref.watch(accentColorProvider);
-
-    return ListTile(
-      leading: Icon(
-        Icons.color_lens_outlined,
-        color: theme.colorScheme.primary,
-      ),
-      title: const Text('Accent Color'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: accentColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_right),
-        ],
-      ),
-      onTap: () => _showAccentColorPicker(context, ref, accentColor),
-    );
-  }
-
-  void _showAccentColorPicker(
-    BuildContext context,
-    WidgetRef ref,
-    Color current,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Text(
-              'Choose Accent Color',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  for (final option in AppTheme.accentColors)
-                    GestureDetector(
-                      onTap: () {
-                        ref
-                            .read(accentColorProvider.notifier)
-                            .setAccentColor(option.color);
-                        Navigator.pop(context);
-                      },
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: option.color,
-                              shape: BoxShape.circle,
-                              border: current == option.color
-                                  ? Border.all(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
-                                      width: 3,
-                                    )
-                                  : null,
-                            ),
-                            child: current == option.color
-                                ? const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 24,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            option.name,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),

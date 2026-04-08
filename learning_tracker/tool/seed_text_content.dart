@@ -26,6 +26,8 @@ const _curricula = {
   'yerushalmi': 'yerushalmi.json',
   'chumash': 'chumash.json',
   'mishna_berurah': 'mishna_berurah.json',
+  'nach': 'nach.json',
+  'mussar': 'mussar.json',
 };
 
 const _maxConcurrent = 5;
@@ -71,7 +73,7 @@ Future<void> _processCurriculum(
   Directory outputDir,
 ) async {
   // 1. Read hierarchy JSON to get leaf items
-  final hierarchyPath = 'assets/content/$hierarchyFile';
+  final hierarchyPath = 'assets/content/hierarchy/$hierarchyFile';
   final hierarchyJson =
       jsonDecode(File(hierarchyPath).readAsStringSync())
           as Map<String, dynamic>;

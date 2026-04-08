@@ -88,14 +88,13 @@ class LearningTrackerApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appRouter = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final accentColor = ref.watch(accentColorProvider);
     final locale = ref.watch(appLocaleProvider);
 
     return SyncLifecycleObserver(
       child: MaterialApp.router(
         title: 'Torah Learning Tracker',
-        theme: AppTheme.lightTheme(accentColor),
-        darkTheme: AppTheme.darkTheme(accentColor),
+        theme: AppTheme.lightTheme(),
+        darkTheme: AppTheme.darkTheme(),
         themeMode: themeMode,
         debugShowCheckedModeBanner: false,
         routerConfig: appRouter.config(),

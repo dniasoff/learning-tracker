@@ -139,7 +139,10 @@ class TrackCreationService {
 
     // Link profile to program if one was selected (outside transaction — idempotent)
     if (result.programId != null) {
-      // Parse day offset from startingRef (format: "offset:N")
+      // startingRef is either:
+      //   - null → start from beginning
+      //   - "offset:N" → legacy day-offset format
+      //   - a sefariaRef string (e.g. "Berakhot 42a") → content-based position
       DateTime? trackingStartDate;
       if (result.startingRef != null &&
           result.startingRef!.startsWith('offset:')) {

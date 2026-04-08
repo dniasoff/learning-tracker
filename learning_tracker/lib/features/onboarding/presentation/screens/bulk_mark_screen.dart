@@ -52,6 +52,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   List<ContentItem>? _resolvedItems;
   BulkPriorCompletionResult? _result;
   String? _error;
+  bool _didInitialAutoAdvance = false;
 
   // Search state
   final _searchController = TextEditingController();
@@ -419,6 +420,18 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 final displayItems = isSearchActive
                     ? items
                     : _groupItemsByNextLevel(items);
+
+                // Auto-advance past single-option levels on initial load
+                if (!_didInitialAutoAdvance && !isSearchActive) {
+                  _didInitialAutoAdvance = true;
+                  if (displayItems.length == 1 &&
+                      !displayItems.first.isLeaf) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _drillDown(displayItems.first);
+                    });
+                  }
+                }
+
                 if (displayItems.isEmpty) {
                   return Center(
                     child: Text(

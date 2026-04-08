@@ -737,6 +737,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     if (_isProgramTrack) {
       return _StartingPositionStep(
         programName: _state.programName ?? '',
+        curriculumId: _state.curriculumId!,
         onComplete: _onStartingPositionComplete,
       );
     }
@@ -1334,32 +1335,119 @@ class _StudyDaysReadOnly extends StatelessWidget {
 
 /// Starting position step for program tracks (Screen 8 program mode).
 ///
-/// Allows users to offset the starting position by +/- 30 days from today.
-class _StartingPositionStep extends StatefulWidget {
+/// Lets users pick their current position by content (e.g. which daf/page
+/// they are up to) using a two-level drill-down: container → leaf item.
+class _StartingPositionStep extends ConsumerStatefulWidget {
   const _StartingPositionStep({
     required this.programName,
+    required this.curriculumId,
     required this.onComplete,
   });
 
   final String programName;
+  final CurriculumId curriculumId;
   final ValueChanged<String?> onComplete;
 
   @override
-  State<_StartingPositionStep> createState() => _StartingPositionStepState();
+  ConsumerState<_StartingPositionStep> createState() =>
+      _StartingPositionStepState();
 }
 
-class _StartingPositionStepState extends State<_StartingPositionStep> {
-  int _dayOffset = 0;
+class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
+  List<ContentItem>? _allItems;
+  bool _loading = true;
 
-  String get _offsetLabel {
-    if (_dayOffset == 0) return "Today's position";
-    if (_dayOffset > 0) return '$_dayOffset ${_dayOffset == 1 ? 'day' : 'days'} ahead';
-    return '${_dayOffset.abs()} ${_dayOffset.abs() == 1 ? 'day' : 'days'} behind';
+  // Drill-down state: level2 containers → leaf items within selected container.
+  List<ContentItem> _containers = []; // e.g. list of Masechtos
+  ContentItem? _selectedContainer; // e.g. selected Masechta
+  List<ContentItem> _leaves = []; // e.g. Dapim within selected Masechta
+  ContentItem? _selectedLeaf; // e.g. selected Daf
+
+  String _containerLabel = 'Section'; // e.g. "Masechta"
+  String _leafLabel = 'Item'; // e.g. "Daf"
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContent();
+  }
+
+  Future<void> _loadContent() async {
+    try {
+      final repo = ref.read(contentRepositoryProvider);
+      final config = await repo.getHierarchyConfig(widget.curriculumId);
+      final items = await repo.getContentForCurriculum(widget.curriculumId);
+
+      // Use hierarchy labels (e.g. ["Seder","Masechta","Daf","Amud"])
+      final labels = config.levelLabels;
+      // Pick the two most useful levels for drill-down.
+      // Typically level2 (Masechta) → level3+level4 leaf (Daf).
+      // For 2-level curricula, use level1 → leaves.
+      final containerLvl = labels.length >= 3 ? 1 : 0; // 0-indexed
+      final containerLevelLabel =
+          containerLvl < labels.length ? labels[containerLvl] : 'Section';
+      final leafLevelLabel = containerLvl + 1 < labels.length
+          ? labels[containerLvl + 1]
+          : 'Item';
+
+      // Get distinct containers (non-leaf items at the container level).
+      final containers = <String, ContentItem>{};
+      for (final item in items) {
+        if (item.isLeaf) continue;
+        final key = containerLvl == 0 ? item.level1 : item.level2;
+        if (key != null && !containers.containsKey(key)) {
+          containers[key] = item;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _allItems = items;
+        _containers = containers.values.toList();
+        _containerLabel = containerLevelLabel;
+        _leafLabel = leafLevelLabel;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _onContainerSelected(ContentItem container) {
+    if (_allItems == null) return;
+
+    // Find leaf items within this container.
+    final leaves = _allItems!.where((item) {
+      if (!item.isLeaf) return false;
+      // Match by the container's level
+      if (container.level2 != null) {
+        return item.level2 == container.level2;
+      }
+      return item.level1 == container.level1;
+    }).toList();
+
+    setState(() {
+      _selectedContainer = container;
+      _leaves = leaves;
+      _selectedLeaf = null;
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedContainer = null;
+      _leaves = [];
+      _selectedLeaf = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -1372,78 +1460,145 @@ class _StartingPositionStepState extends State<_StartingPositionStep> {
             'Where are you in ${widget.programName}?',
             style: theme.textTheme.bodyMedium,
           ),
-          const SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+          const SizedBox(height: 4),
+          Text(
+            'Select the $_leafLabel you are currently up to.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Show selected item chip
+          if (_selectedLeaf != null)
+            Card(
+              color: theme.colorScheme.primaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.menu_book,
+                        color: theme.colorScheme.onPrimaryContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedLeaf!.displayNameEn,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                          Text(
+                            _selectedLeaf!.displayNameHe,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _clearSelection,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 8),
+
+          // Breadcrumb / back button when drilled into a container
+          if (_selectedContainer != null && _selectedLeaf == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 48,
-                    color: theme.colorScheme.primary,
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: _clearSelection,
+                    tooltip: 'Back to $_containerLabel list',
                   ),
-                  const SizedBox(height: 12),
                   Text(
-                    _offsetLabel,
-                    style: theme.textTheme.titleMedium,
-                    textAlign: TextAlign.center,
+                    _selectedContainer!.displayNameEn,
+                    style: theme.textTheme.titleSmall,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Adjust if you started earlier or later',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '-30',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: _dayOffset.toDouble(),
-                          min: -30,
-                          max: 30,
-                          divisions: 60,
-                          label: _offsetLabel,
-                          onChanged: (v) =>
-                              setState(() => _dayOffset = v.round()),
-                        ),
-                      ),
-                      Text(
-                        '+30',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_dayOffset != 0)
-                    TextButton(
-                      onPressed: () => setState(() => _dayOffset = 0),
-                      child: const Text('Reset to today'),
-                    ),
                 ],
               ),
             ),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: () => widget.onComplete(
-              _dayOffset != 0 ? 'offset:$_dayOffset' : null,
-            ),
-            child: const Text('Start Here'),
+
+          // Content list
+          if (_selectedLeaf == null)
+            Expanded(
+              child: _selectedContainer == null
+                  ? _buildContainerList(theme)
+                  : _buildLeafList(theme),
+            )
+          else
+            const Spacer(),
+
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => widget.onComplete(null),
+                  child: const Text('Start from beginning'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _selectedLeaf != null
+                      ? () => widget
+                          .onComplete(_selectedLeaf!.sefariaRef)
+                      : null,
+                  child: const Text('Start here'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildContainerList(ThemeData theme) {
+    return ListView.builder(
+      itemCount: _containers.length,
+      itemBuilder: (context, index) {
+        final container = _containers[index];
+        return ListTile(
+          title: Text(container.displayNameEn),
+          subtitle: Text(container.displayNameHe),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _onContainerSelected(container),
+        );
+      },
+    );
+  }
+
+  Widget _buildLeafList(ThemeData theme) {
+    return ListView.builder(
+      itemCount: _leaves.length,
+      itemBuilder: (context, index) {
+        final leaf = _leaves[index];
+        final isSelected = _selectedLeaf?.sefariaRef == leaf.sefariaRef;
+        return ListTile(
+          title: Text(leaf.displayNameEn),
+          subtitle: Text(leaf.displayNameHe),
+          selected: isSelected,
+          selectedTileColor:
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+          leading: isSelected
+              ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
+              : const Icon(Icons.circle_outlined),
+          onTap: () => setState(() => _selectedLeaf = leaf),
+        );
+      },
     );
   }
 }

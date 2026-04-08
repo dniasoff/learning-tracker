@@ -20,7 +20,10 @@ class ProfilePickerScreen extends ConsumerStatefulWidget {
 class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
   @override
   Widget build(BuildContext context) {
-    final profilesAsync = ref.watch(profileListStreamProvider);
+    // Use future provider instead of stream provider to avoid the
+    // InheritedElement '_dependents.isEmpty' assertion that fires when
+    // a stream-triggered rebuild races with dialog/overlay dismissal.
+    final profilesAsync = ref.watch(profileListProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -64,12 +67,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 final profile = profiles[index];
                 return _ProfileCard(
                   profile: profile,
-                  onTap: () {
-                    ref
-                        .read(selectedProfileIdProvider.notifier)
-                        .select(profile.id);
-                    context.router.replace(const AppShellRoute());
-                  },
+                  onTap: () => _selectProfile(profile.id),
                   onLongPress: () =>
                       _showManageSheet(profile, profiles.length),
                 );
@@ -81,19 +79,24 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     );
   }
 
+  // ── Select Profile ─────────────────────────────────────────────────────────
+
+  void _selectProfile(int profileId) {
+    ref.read(selectedProfileIdProvider.notifier).select(profileId);
+    context.router.replaceAll([const AppShellRoute()]);
+  }
+
   // ── Add Profile ───────────────────────────────────────────────────────────
 
   Future<void> _showAddDialog(int profileCount) async {
-    // Capture providers before opening dialog to avoid ref-in-overlay issues.
     final profileDao = ref.read(userDatabaseProvider).profileDao;
     final repo = ref.read(profileRepositoryProvider);
 
     final ctrl = TextEditingController();
     var mode = 'adult';
-    var avatar = 0;
     String? err;
 
-    final result = await showDialog<({String n, String m, int a})>(
+    final result = await showDialog<({String n, String m})>(
       context: context,
       useRootNavigator: true,
       builder: (ctx) => StatefulBuilder(
@@ -142,34 +145,6 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                     selected: {mode},
                     onSelectionChanged: (v) => set(() => mode = v.first),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Choose an avatar',
-                    style: Theme.of(ctx).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: List.generate(10, (i) {
-                      return GestureDetector(
-                        onTap: () => set(() => avatar = i),
-                        child: Container(
-                          decoration: avatar == i
-                              ? BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Theme.of(ctx).colorScheme.primary,
-                                    width: 3,
-                                  ),
-                                )
-                              : null,
-                          padding: const EdgeInsets.all(2),
-                          child: ProfileAvatar(avatarIndex: i, radius: 24),
-                        ),
-                      );
-                    }),
-                  ),
                 ],
               ),
             ),
@@ -183,7 +158,6 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                     ? () => Navigator.pop(ctx, (
                         n: ctrl.text.trim(),
                         m: mode,
-                        a: avatar,
                       ))
                     : null,
                 child: const Text('Create'),
@@ -193,16 +167,21 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
         },
       ),
     );
-    ctrl.dispose();
-    if (result == null || !mounted) return;
+    if (result == null || !mounted) {
+      // Delay dispose so the dialog exit animation finishes using the controller.
+      Future.delayed(const Duration(milliseconds: 300), ctrl.dispose);
+      return;
+    }
     try {
       await repo.createProfile(
         accountId: 1,
         displayName: result.n,
         mode: result.m,
-        avatarIndex: result.a,
       );
-      // Stream auto-updates the grid — no invalidate needed.
+      // Dispose after creation (dialog animation is done by now).
+      ctrl.dispose();
+      // Manually refresh the profile list after creation.
+      if (mounted) ref.invalidate(profileListProvider);
     } on DuplicateProfileNameException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -330,10 +309,14 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
         },
       ),
     );
-    ctrl.dispose();
-    if (name == null || name.isEmpty || !mounted) return;
+    if (name == null || name.isEmpty || !mounted) {
+      Future.delayed(const Duration(milliseconds: 300), ctrl.dispose);
+      return;
+    }
     try {
       await repo.updateProfile(id: profile.id, displayName: name);
+      ctrl.dispose();
+      if (mounted) ref.invalidate(profileListProvider);
     } on DuplicateProfileNameException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -379,6 +362,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       if (sel == profile.id) {
         ref.read(selectedProfileIdProvider.notifier).clear();
       }
+      ref.invalidate(profileListProvider);
     } on LastProfileException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

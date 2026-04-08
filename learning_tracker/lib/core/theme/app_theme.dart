@@ -11,20 +11,8 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 class AppTheme {
   AppTheme._();
 
-  /// Default primary color: Yellow/gold accent
-  static const Color defaultAccentColor = Color(0xFFE8C519);
-
-  /// Available accent color options.
-  static const List<AccentColorOption> accentColors = [
-    AccentColorOption('Gold', Color(0xFFE8C519)),
-    AccentColorOption('Blue', Color(0xFF4A90E2)),
-    AccentColorOption('Teal', Color(0xFF1ABC9C)),
-    AccentColorOption('Green', Color(0xFF2ECC71)),
-    AccentColorOption('Orange', Color(0xFFE67E22)),
-    AccentColorOption('Purple', Color(0xFF9B59B6)),
-    AccentColorOption('Red', Color(0xFFE74C3C)),
-    AccentColorOption('Pink', Color(0xFFE91E8B)),
-  ];
+  /// Default primary color: Green accent
+  static const Color defaultAccentColor = Color(0xFF2ECC71);
 
   /// Secondary color: Bright green for success states
   static const Color _secondaryColor = Color(0xFF4ADE80);
@@ -510,10 +498,3 @@ class AppTheme {
   }
 }
 
-/// Represents a selectable accent color option.
-class AccentColorOption {
-  const AccentColorOption(this.name, this.color);
-
-  final String name;
-  final Color color;
-}

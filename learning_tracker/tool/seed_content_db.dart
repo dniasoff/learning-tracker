@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -22,13 +23,23 @@ import 'package:learning_tracker/core/database/seed_version.dart';
 ///   1. Create SQLite DB matching ContentDatabase Drift schema
 ///   2. Populate LearningPrograms from seed constants
 ///   3. Populate SeedMetadata
-///   4. Populate TextCache (from Sefaria API — ~52K items, ~60-90 min)
-///   5. Populate CalendarCycles (from Sefaria/Hebcal APIs — ~22 min)
+///   4. Populate TextCache from fetched text JSON files
+///   5. Populate CalendarCycles (stub — awaiting API integration)
 ///   6. Compress to .gz
 ///
-/// The text and calendar population phases are stubs that will be
-/// fully implemented when API integration is ready. For now, the tool
-/// creates a valid but empty seed DB for development.
+/// Before running, fetch text content first:
+///   dart run tool/seed_text_content.dart
+
+const _curricula = [
+  'mishnayos',
+  'bavli',
+  'yerushalmi',
+  'chumash',
+  'mishna_berurah',
+  'nach',
+  'mussar',
+];
+
 Future<void> main(List<String> args) async {
   final validateOnly = args.contains('--validate-only');
   final sizeReport = args.contains('--size-report');
@@ -68,8 +79,21 @@ Future<void> main(List<String> args) async {
   print('Phase 2: Populating LearningPrograms...');
   await _seedLearningPrograms(db);
 
-  // Phase 3: Populate SeedMetadata
-  print('Phase 3: Writing SeedMetadata...');
+  // Phase 3: Populate SeedMetadata (updated with actual counts after Phase 4)
+  print('Phase 3: SeedMetadata — deferred until after content population');
+
+  // Phase 4: Populate TextCache from fetched text JSON files
+  print('Phase 4: Populating TextCache...');
+  final textCacheCount = await _seedTextCache(db);
+
+  // Phase 5: Calendar cycles (stub — full implementation in separate PR)
+  print('Phase 5: CalendarCycles population (stub — 0 items for dev)');
+  // TODO: Reverse-engineer all 12 calendar programs from
+  // Sefaria/Hebcal APIs for 2024-2030 date range
+  const calendarCycleCount = 0;
+
+  // Write SeedMetadata with actual counts
+  print('Phase 3 (deferred): Writing SeedMetadata...');
   await db.customInsert(
     'INSERT INTO seed_metadata (version, built_at, build_id, text_cache_count, calendar_cycle_count) '
     'VALUES (?, ?, ?, ?, ?)',
@@ -77,20 +101,10 @@ Future<void> main(List<String> args) async {
       Variable.withInt(bundledSeedVersion),
       Variable.withString(DateTime.now().toUtc().toIso8601String()),
       Variable.withString('local-dev-${DateTime.now().millisecondsSinceEpoch}'),
-      Variable.withInt(0),
-      Variable.withInt(0),
+      Variable.withInt(textCacheCount),
+      Variable.withInt(calendarCycleCount),
     ],
   );
-
-  // Phase 4: Text content (stub — full implementation in separate PR)
-  print('Phase 4: TextCache population (stub — 0 items for dev)');
-  // TODO: Integrate with existing seed_content.dart fetchers
-  // to populate ~52,528 text items from Sefaria API
-
-  // Phase 5: Calendar cycles (stub — full implementation in separate PR)
-  print('Phase 5: CalendarCycles population (stub — 0 items for dev)');
-  // TODO: Reverse-engineer all 12 calendar programs from
-  // Sefaria/Hebcal APIs for 2024-2030 date range
 
   await db.close();
 
@@ -115,6 +129,8 @@ Future<void> main(List<String> args) async {
   print('  Uncompressed: ${uncompressedMB.toStringAsFixed(2)} MB');
   print('  Compressed:   ${compressedMB.toStringAsFixed(2)} MB');
   print('  Ratio:        ${(compressed.length / uncompressed.length * 100).toStringAsFixed(1)}%');
+  print('  TextCache:    $textCacheCount items');
+  print('  CalendarCycles: $calendarCycleCount items');
   print('  Output:       $gzPath → $assetPath');
 
   if (sizeReport) {
@@ -125,7 +141,7 @@ Future<void> main(List<String> args) async {
 Future<void> _seedLearningPrograms(ContentDatabase db) async {
   for (final program in learningProgramSeeds) {
     await db.customInsert(
-      'INSERT INTO learning_programs (name, display_name, description, '
+      'INSERT OR IGNORE INTO learning_programs (name, display_name, description, '
       'curriculum_type, is_active, has_tests, stages_config, test_config, '
       'created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       variables: [
@@ -143,6 +159,100 @@ Future<void> _seedLearningPrograms(ContentDatabase db) async {
   }
   final count = await db.contentLearningProgramDao.getAllPrograms();
   print('  Inserted ${count.length} programs');
+}
+
+/// Populates TextCache from pre-fetched text JSON files.
+///
+/// Reads `build/text_content/{curriculum}_text.json.gz` (or uncompressed
+/// `.json`) for each curriculum and bulk-inserts into the TextCache table.
+///
+/// Returns the total number of items inserted.
+Future<int> _seedTextCache(ContentDatabase db) async {
+  final textContentDir = Directory('build/text_content');
+  if (!textContentDir.existsSync()) {
+    print('  ⚠️  No build/text_content/ directory found.');
+    print('  Run `dart run tool/seed_text_content.dart` first to fetch text.');
+    return 0;
+  }
+
+  var totalInserted = 0;
+  final now = DateTime.now().toUtc();
+
+  for (final curriculum in _curricula) {
+    final gzFile = File('${textContentDir.path}/${curriculum}_text.json.gz');
+    final jsonFile = File('${textContentDir.path}/${curriculum}_text.json');
+    // Also check progress file as fallback
+    final progressFile =
+        File('${textContentDir.path}/${curriculum}_progress.json');
+
+    String? jsonString;
+
+    if (gzFile.existsSync()) {
+      final compressed = gzFile.readAsBytesSync();
+      jsonString = utf8.decode(gzip.decode(compressed));
+    } else if (jsonFile.existsSync()) {
+      jsonString = jsonFile.readAsStringSync();
+    } else if (progressFile.existsSync()) {
+      jsonString = progressFile.readAsStringSync();
+    }
+
+    if (jsonString == null) {
+      print('  ⚠️  No text data for $curriculum — skipping');
+      continue;
+    }
+
+    final data = jsonDecode(jsonString) as Map<String, dynamic>;
+    final items = data['items'] as List<dynamic>? ?? [];
+
+    if (items.isEmpty) {
+      print('  ⚠️  $curriculum: 0 items — skipping');
+      continue;
+    }
+
+    // Bulk insert using batched raw SQL for performance
+    var inserted = 0;
+    var skipped = 0;
+
+    for (final item in items) {
+      final m = item as Map<String, dynamic>;
+      final ref = m['ref'] as String?;
+      final he = m['he'] as String? ?? '';
+      final en = m['en'] as String? ?? '';
+
+      if (ref == null || ref.isEmpty) {
+        skipped++;
+        continue;
+      }
+
+      // Skip items with no content at all
+      if (he.isEmpty && en.isEmpty) {
+        skipped++;
+        continue;
+      }
+
+      await db.customInsert(
+        'INSERT OR IGNORE INTO text_cache '
+        '(sefaria_ref, hebrew_text, english_text, fetched_at) '
+        'VALUES (?, ?, ?, ?)',
+        variables: [
+          Variable.withString(ref),
+          Variable.withString(he),
+          Variable.withString(en),
+          Variable.withDateTime(now),
+        ],
+      );
+      inserted++;
+    }
+
+    totalInserted += inserted;
+    print(
+      '  $curriculum: $inserted inserted'
+      '${skipped > 0 ? ', $skipped skipped' : ''}',
+    );
+  }
+
+  print('  Total TextCache: $totalInserted items');
+  return totalInserted;
 }
 
 Future<void> _validateExisting(String dbPath) async {
@@ -170,6 +280,10 @@ Future<void> _validateExisting(String dbPath) async {
     final refs = await db.contentTextCacheDao.getAllCachedRefs();
     print('  TextCache: ${refs.length} items');
 
+    if (refs.isEmpty) {
+      print('  ⚠️  TextCache is empty! Text display will show offline message.');
+    }
+
     print('✅ Validation passed');
   } finally {
     await db.close();
@@ -181,7 +295,4 @@ Future<void> _printSizeReport(String dbPath) async {
   print('=== Size Report ===');
   final file = File(dbPath);
   print('Total DB size: ${(file.lengthSync() / 1024 / 1024).toStringAsFixed(2)} MB');
-  // Detailed per-table breakdown would require raw SQL DBSTAT queries
-  // which are not available through Drift. The total size is sufficient
-  // for budget monitoring.
 }

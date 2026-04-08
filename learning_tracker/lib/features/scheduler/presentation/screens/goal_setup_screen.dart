@@ -338,7 +338,9 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                     children: [
                       // Target percentage slider
                       Text(
-                        'Complete ${_targetPercent.round()}% of the material',
+                        widget.totalItems != null
+                            ? 'Complete ${_targetPercent.round()}% of the material (${(widget.totalItems! * _targetPercent / 100).ceil()} of ${widget.totalItems!} items)'
+                            : 'Complete ${_targetPercent.round()}% of the material',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Slider(
