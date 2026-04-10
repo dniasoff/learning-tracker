@@ -1,10 +1,11 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'study_day_config_dao.g.dart';
 
-@DriftAccessor(tables: [StudyDayConfigs])
+@DriftAccessor(tables: [StudyDayConfigs, CurriculumTracks])
 class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     with _$StudyDayConfigDaoMixin {
   StudyDayConfigDao(super.db);
@@ -156,6 +157,28 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     final configs = await getConfigsByTrack(trackId);
     if (configs.isEmpty) return 7;
     return configs.where((c) => c.dayType == 'study').length;
+  }
+
+  /// Seed default 7-day 'study' configs for a track.
+  ///
+  /// Per Epic 20 / DNI-212 — track-only API. Looks up the owning profile
+  /// and curriculum from `curriculum_tracks` so callers don't need to
+  /// pass them explicitly.
+  Future<void> seedDefaultsForTrack({required int trackId}) async {
+    final track =
+        await (select(curriculumTracks)
+              ..where((t) => t.id.equals(trackId)))
+            .getSingleOrNull();
+    if (track == null) {
+      throw StateError(
+        'Cannot seed study day defaults: curriculum_tracks row $trackId not found',
+      );
+    }
+    await seedDefaults(
+      profileId: track.profileId,
+      curriculumId: track.curriculumId,
+      trackId: trackId,
+    );
   }
 
   /// Get the latest updatedAt timestamp across all day configs for a curriculum.
