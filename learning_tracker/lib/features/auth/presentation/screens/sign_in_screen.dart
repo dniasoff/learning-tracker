@@ -571,7 +571,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
               children: [
                 const TextSpan(text: "Don't have an account? "),
                 TextSpan(
-                  text: 'Create one',
+                  text: 'Get started',
                   style: const TextStyle(
                     color: _green,
                     fontWeight: FontWeight.w600,
@@ -579,7 +579,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                   recognizer: TapGestureRecognizer()
                     ..onTap = () {
                       if (!_isLoading) {
-                        context.router.replace(const AccountCreationRoute());
+                        context.router.replace(const OnboardingRoute());
                       }
                     },
                 ),
