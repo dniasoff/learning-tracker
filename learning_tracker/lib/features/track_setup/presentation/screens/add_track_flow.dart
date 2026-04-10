@@ -3,15 +3,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
@@ -63,6 +66,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   late final PageController _pageController;
   Future<void>? _activationFuture;
   bool _isAnimating = false;
+  bool _pendingAdvance = false;
 
   /// Whether a program was selected (vs self-paced).
   bool get _isProgramTrack => _state.programId != null;
@@ -255,7 +259,14 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   void _goToNextStep() {
-    if (_isAnimating) return;
+    // If a previous animation is in progress (e.g. an auto-skip fired during
+    // the curriculum→program transition), queue the advance and run it after
+    // the current animation completes. Otherwise the call would be dropped
+    // and the user would be stuck on the auto-skipped (blank) step.
+    if (_isAnimating) {
+      _pendingAdvance = true;
+      return;
+    }
     final currentIndex = _currentIndex;
     if (currentIndex < _activeSteps.length - 1) {
       final nextStep = _activeSteps[currentIndex + 1];
@@ -268,7 +279,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           )
-          .then((_) => _isAnimating = false);
+          .then((_) {
+            _isAnimating = false;
+            if (_pendingAdvance && mounted) {
+              _pendingAdvance = false;
+              _goToNextStep();
+            }
+          });
       _saveState();
     }
   }
@@ -603,129 +620,63 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       );
     }
 
-    // Program with OPEN chazara → offer optional
-    if (_isProgramTrack && !_programHasChazara) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Add Review?', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              '${_state.programName} doesn\'t include a review schedule. '
-              'Would you like to add one?',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const Spacer(),
-            FilledButton(
-              onPressed: () {
-                Navigator.push<LearningProcessWizardResult>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => LearningProcessWizardScreen(
-                      curriculumId: _state.curriculumId!,
-                      presets: const [],
-                      isChildMode: widget.isChildMode,
-                      skipChooseMethod: true,
-                    ),
-                  ),
-                ).then((result) => _onChazaraComplete(result));
-              },
-              child: const Text('Configure חזרה'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => _onChazaraComplete(null),
-              child: const Text('Skip (no review)'),
-            ),
-          ],
-        ),
-      );
-    }
+    // Program with OPEN chazara → offer optional inline setup
+    // Self-paced → inline setup
+    // Both paths use _ChazaraInlineSetup; differ only in header copy.
+    final headerTitle = _isProgramTrack
+        ? 'Add Review?'
+        : 'How do you want to review?';
+    final headerSubtitle = _isProgramTrack
+        ? '${_state.programName} doesn\'t include a review schedule. '
+            'Set one up now or skip.'
+        : 'Pick a preset or build your own חזרה schedule.';
 
-    // Self-paced → ask (skip directly to custom builder)
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Configure Review', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(
-            'Set up your review (חזרה) schedule.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: () {
-              Navigator.push<LearningProcessWizardResult>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => LearningProcessWizardScreen(
-                    curriculumId: _state.curriculumId!,
-                    presets: const [],
-                    isChildMode: widget.isChildMode,
-                    skipChooseMethod: true,
-                  ),
-                ),
-              ).then((result) => _onChazaraComplete(result));
-            },
-            child: const Text('Configure חזרה'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () => _onChazaraComplete(null),
-            child: const Text('Skip (no review)'),
-          ),
-        ],
-      ),
+    return _ChazaraInlineSetup(
+      curriculumId: _state.curriculumId!,
+      headerTitle: headerTitle,
+      headerSubtitle: headerSubtitle,
+      onComplete: _onChazaraComplete,
     );
   }
 
   Widget _buildGoalStep() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Set a Goal', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(
-            'Set a pace or deadline goal, or skip for now.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const Spacer(),
-          Row(
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _onGoalComplete(null),
-                  child: const Text('Skip'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.push<GoalFormResult>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            GoalSetupScreen(curriculumId: _state.curriculumId!),
-                      ),
-                    ).then((result) {
-                      if (result != null) _onGoalComplete(result);
-                    });
-                  },
-                  child: const Text('Set Goal'),
+              Text("What's your pace or deadline?",
+                  style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 4),
+              Text(
+                'Set a goal, or skip for now.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: GoalSetupForm(
+            curriculumId: _state.curriculumId!,
+            submitLabel: 'Continue',
+            onComplete: _onGoalComplete,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: TextButton(
+            onPressed: () => _onGoalComplete(null),
+            child: const Text('Skip'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -817,6 +768,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   /// Selected scope entries — can be at different levels.
   final List<ScopeEntry> _selections = [];
+
+  bool _didAutoSkip = false;
 
   CurriculumHierarchyDefaults get _hierarchy =>
       CurriculumDefaults.hierarchyConfigs[widget.curriculumId]!;
@@ -961,10 +914,32 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
           Expanded(
             child: contentAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error loading content: $e')),
-              data: (items) => _breadcrumbs.isEmpty && _selections.isEmpty
-                  ? _buildTopLevel(items)
-                  : _buildHierarchyView(items),
+              error: (e, _) {
+                // No bundled content for this curriculum — auto-skip scope
+                // (treat as "learn all") per DNI-180: "Skip = all".
+                if (!_didAutoSkip) {
+                  _didAutoSkip = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    widget.onComplete(null);
+                  });
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+              data: (items) {
+                if (items.isEmpty) {
+                  // Empty content — auto-skip scope (treat as "learn all").
+                  if (!_didAutoSkip) {
+                    _didAutoSkip = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      widget.onComplete(null);
+                    });
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return _breadcrumbs.isEmpty && _selections.isEmpty
+                    ? _buildTopLevel(items)
+                    : _buildHierarchyView(items);
+              },
             ),
           ),
         ],
@@ -1599,6 +1574,335 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
           onTap: () => setState(() => _selectedLeaf = leaf),
         );
       },
+    );
+  }
+}
+
+// ── Chazara Inline Setup ───────────────────────────────────────────────────
+//
+// Single-screen חזרה configuration. Per DNI-180:
+//   "Choose a preset, customize stages, or 'no חזרה'"
+//   "All חזרה config on ONE screen"
+// Replaces a Navigator.push to LearningProcessWizardScreen.
+
+class _ChazaraInlineSetup extends StatefulWidget {
+  const _ChazaraInlineSetup({
+    required this.curriculumId,
+    required this.headerTitle,
+    required this.headerSubtitle,
+    required this.onComplete,
+  });
+
+  final CurriculumId curriculumId;
+  final String headerTitle;
+  final String headerSubtitle;
+  final ValueChanged<LearningProcessWizardResult?> onComplete;
+
+  @override
+  State<_ChazaraInlineSetup> createState() => _ChazaraInlineSetupState();
+}
+
+/// Built-in preset templates expressed as round delays in days.
+class _ChazaraPreset {
+  const _ChazaraPreset({required this.label, required this.delays});
+  final String label;
+  final List<int> delays;
+}
+
+class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
+  static const List<_ChazaraPreset> _presets = [
+    _ChazaraPreset(label: 'לימוד only', delays: []),
+    _ChazaraPreset(label: '1 day', delays: [1]),
+    _ChazaraPreset(label: '1 + 7 days', delays: [1, 7]),
+    _ChazaraPreset(label: '1 + 7 + 30 days', delays: [1, 7, 30]),
+  ];
+
+  /// Index of selected preset, or -1 for "Custom".
+  int _selectedPresetIndex = 2; // default: 1 + 7 days
+  late List<int> _customDelays;
+
+  @override
+  void initState() {
+    super.initState();
+    _customDelays = List.of(_presets[_selectedPresetIndex].delays);
+  }
+
+  List<int> get _activeDelays =>
+      _selectedPresetIndex >= 0 ? _presets[_selectedPresetIndex].delays : _customDelays;
+
+  void _selectPreset(int index) {
+    setState(() {
+      _selectedPresetIndex = index;
+      _customDelays = List.of(_presets[index].delays);
+    });
+  }
+
+  void _selectCustom() {
+    setState(() {
+      _selectedPresetIndex = -1;
+      if (_customDelays.isEmpty) _customDelays = [1];
+    });
+  }
+
+  void _addCustomRound() {
+    setState(() {
+      final next = _customDelays.isEmpty ? 1 : _customDelays.last * 2;
+      _customDelays.add(next);
+    });
+  }
+
+  void _removeCustomRound(int index) {
+    setState(() => _customDelays.removeAt(index));
+  }
+
+  void _updateCustomRound(int index, int value) {
+    setState(() => _customDelays[index] = value);
+  }
+
+  void _confirm() {
+    final delays = _activeDelays;
+    if (delays.isEmpty) {
+      // לימוד only — equivalent to "no review".
+      widget.onComplete(
+        LearningProcessWizardResult(
+          wizardResult: WizardResult(
+            curriculumId: widget.curriculumId,
+            choice: WizardChoice.noReview,
+          ),
+        ),
+      );
+      return;
+    }
+
+    final rounds = <CustomRound>[];
+    for (var i = 0; i < delays.length; i++) {
+      rounds.add(
+        CustomRound(
+          label: HebrewTerms.getChazaraStageName(i + 1),
+          scheduleType: ScheduleType.delay,
+          delayDays: delays[i],
+        ),
+      );
+    }
+    widget.onComplete(
+      LearningProcessWizardResult(
+        wizardResult: WizardResult(
+          curriculumId: widget.curriculumId,
+          choice: WizardChoice.custom,
+          customRounds: rounds,
+        ),
+      ),
+    );
+  }
+
+  void _skip() => widget.onComplete(null);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(widget.headerTitle, style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 4),
+          Text(
+            widget.headerSubtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Presets
+                  for (var i = 0; i < _presets.length; i++)
+                    _PresetTile(
+                      label: _presets[i].label,
+                      stagesPreview: _stagesPreview(_presets[i].delays),
+                      isSelected: _selectedPresetIndex == i,
+                      onTap: () => _selectPreset(i),
+                    ),
+                  // Custom
+                  _PresetTile(
+                    label: 'Custom',
+                    stagesPreview: _selectedPresetIndex == -1
+                        ? _stagesPreview(_customDelays)
+                        : 'Build your own',
+                    isSelected: _selectedPresetIndex == -1,
+                    onTap: _selectCustom,
+                  ),
+                  if (_selectedPresetIndex == -1) ...[
+                    const SizedBox(height: 12),
+                    for (var i = 0; i < _customDelays.length; i++)
+                      _CustomRoundEditor(
+                        label: HebrewTerms.getChazaraStageName(i + 1),
+                        delayDays: _customDelays[i],
+                        onChanged: (v) => _updateCustomRound(i, v),
+                        onRemove: () => _removeCustomRound(i),
+                      ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _customDelays.length >= 5
+                            ? null
+                            : _addCustomRound,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add a round'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: _confirm,
+            child: const Text('Continue'),
+          ),
+          TextButton(
+            onPressed: _skip,
+            child: const Text('Skip (no review)'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _stagesPreview(List<int> delays) {
+    if (delays.isEmpty) return HebrewTerms.stageLearn;
+    final parts = <String>[HebrewTerms.stageLearn];
+    for (var i = 0; i < delays.length; i++) {
+      parts.add(
+        '${HebrewTerms.getChazaraStageName(i + 1)} (+${delays[i]}d)',
+      );
+    }
+    return parts.join(' → ');
+  }
+}
+
+class _PresetTile extends StatelessWidget {
+  const _PresetTile({
+    required this.label,
+    required this.stagesPreview,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String stagesPreview;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outline.withValues(alpha: 0.3),
+          width: isSelected ? 2 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(
+                isSelected ? Icons.check_circle : Icons.circle_outlined,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      stagesPreview,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomRoundEditor extends StatelessWidget {
+  const _CustomRoundEditor({
+    required this.label,
+    required this.delayDays,
+    required this.onChanged,
+    required this.onRemove,
+  });
+
+  final String label;
+  final int delayDays;
+  final ValueChanged<int> onChanged;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 70,
+              child: Text(label, style: theme.textTheme.titleSmall),
+            ),
+            Expanded(
+              child: Slider(
+                value: delayDays.toDouble().clamp(1, 60),
+                min: 1,
+                max: 60,
+                divisions: 59,
+                label: '${delayDays}d',
+                onChanged: (v) => onChanged(v.round()),
+              ),
+            ),
+            SizedBox(
+              width: 56,
+              child: Text(
+                '${delayDays}d',
+                textAlign: TextAlign.end,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: onRemove,
+              tooltip: 'Remove',
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

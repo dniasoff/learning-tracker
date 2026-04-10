@@ -15,9 +15,10 @@ export 'package:learning_tracker/features/scheduler/domain/models/goal_form_resu
 
 /// Screen for creating or editing a learning goal.
 ///
-/// Renders a form with a target percentage slider (default 100%),
-/// mode toggle (deadline vs pace), and appropriate inputs for each mode.
-class GoalSetupScreen extends ConsumerStatefulWidget {
+/// Thin Scaffold wrapper around [GoalSetupForm]. The form is exposed
+/// separately so it can be embedded inline (e.g. inside the Add Track
+/// flow page view) without nesting Scaffolds.
+class GoalSetupScreen extends StatelessWidget {
   final CurriculumId curriculumId;
   final GoalEntity? existingGoal;
   final int? totalItems;
@@ -30,10 +31,50 @@ class GoalSetupScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<GoalSetupScreen> createState() => _GoalSetupScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: AppBarTitle(
+          text: existingGoal != null ? 'Edit Goal' : 'New Goal',
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: GoalSetupForm(
+          curriculumId: curriculumId,
+          existingGoal: existingGoal,
+          totalItems: totalItems,
+          onComplete: (result) => Navigator.of(context).pop(result),
+        ),
+      ),
+    );
+  }
 }
 
-class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
+/// Form body for goal setup. Embeddable — no Scaffold or AppBar.
+///
+/// Calls [onComplete] when the user submits the form.
+class GoalSetupForm extends ConsumerStatefulWidget {
+  final CurriculumId curriculumId;
+  final GoalEntity? existingGoal;
+  final int? totalItems;
+  final ValueChanged<GoalFormResult> onComplete;
+  final String? submitLabel;
+
+  const GoalSetupForm({
+    super.key,
+    required this.curriculumId,
+    required this.onComplete,
+    this.existingGoal,
+    this.totalItems,
+    this.submitLabel,
+  });
+
+  @override
+  ConsumerState<GoalSetupForm> createState() => _GoalSetupFormState();
+}
+
+class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   late double _targetPercent;
   DateTime? _targetDate;
   late TextEditingController _descriptionController;
@@ -122,7 +163,7 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
   }
 
   void _submit() {
-    Navigator.of(context).pop(
+    widget.onComplete(
       GoalFormResult(
         targetPercent: _targetPercent,
         targetDate: _goalType == 'deadline' ? _targetDate : null,
@@ -318,24 +359,16 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: AppBarTitle(
-          text: widget.existingGoal != null ? 'Edit Goal' : 'New Goal',
-        ),
-      ),
-      body: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                       // Target percentage slider
                       Text(
                         widget.totalItems != null
@@ -418,16 +451,15 @@ class _GoalSetupScreenState extends ConsumerState<GoalSetupScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _submit,
-                child: Text(
-                  widget.existingGoal != null ? 'Update Goal' : 'Create Goal',
-                ),
-              ),
-            ],
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _submit,
+            child: Text(
+              widget.submitLabel ??
+                  (widget.existingGoal != null ? 'Update Goal' : 'Create Goal'),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
