@@ -71,6 +71,9 @@ dependencies:
   # URL launching (email, web links)
   url_launcher: ^6.3.1
 
+  # Deep links (magic-link auth handler)
+  app_links: ^6.4.0
+
   # UUID generation for local auth
   uuid: ^4.5.0
 
