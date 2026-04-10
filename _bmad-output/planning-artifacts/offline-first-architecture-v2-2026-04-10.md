@@ -178,7 +178,7 @@ All of the following are still canonical and should be implemented as specified 
 | # | Item | Owner | Priority |
 |---|---|---|---|
 | 1 | Tune argon2id parameters for API 21 target (benchmark to ~250ms) | Dev | Before Stream 1 impl |
-| 2 | UX spec for the upgrade flow (§4.3), including merge flow copy | UX | Before v1 ship |
+| 2 | ~~UX spec for the upgrade flow (§4.3), including merge flow copy~~ | Analyst → UX designer | **Flow + copy + state spec done 2026-04-10** → `upgrade-flow-ux-spec-2026-04-10.md`. Remaining: wireframes, component selection, visual design, accessibility pass, and resolution of 9 open questions in §10 of that doc. |
 | 3 | Amend `v1-developer-roadmap.md` to reflect new auth model | PM | Before next sprint |
 | 4 | Amend `epics.md` and any sprint stories touching auth to reflect v2 | PM | Before next sprint |
 | 5 | ~~Archive or delete `local-first-auth-abstraction-layer.md`~~ | Analyst | **Done 2026-04-10** |
