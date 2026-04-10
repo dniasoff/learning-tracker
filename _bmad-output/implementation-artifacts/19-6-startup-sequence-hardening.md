@@ -688,8 +688,7 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
 
 ### References
 
-- [Local-First Auth Abstraction Layer, Section 4](../_bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md) — Startup sequence redesign spec
-- [Offline-First Analysis, Stream 4](../_bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md) — Startup and connectivity hardening requirements
+- [Offline-First Architecture v2, §5 Inherited Unchanged](../_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md) — Startup hardening (deferred Firebase init, deferred Google Sign-In init, 2s DNS timeout) is inherited from the prior architecture and remains canon
 - [Seed Database Build Tool Design, Section 11](../_bmad-output/implementation-artifacts/seed-database-build-tool-design.md) — SeedManager runtime integration
 
 ## Dev Agent Record

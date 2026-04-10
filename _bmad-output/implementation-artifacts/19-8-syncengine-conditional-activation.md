@@ -633,9 +633,8 @@ Adding `SyncStatus.localOnly` to the freezed union will cause compile errors eve
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md — Section 3: Target Architecture]
-- [Source: _bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md — Section 6: SyncEngine Conditional Activation]
-- [Source: _bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md — Section 3.3: Optional Sync User Journey]
+- [Source: _bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md — §3 Mental Model, §5 Inherited Unchanged (sync engine takes UserDatabase, Content DB never synced)]
+- ⚠️ SUPERSEDED-ARCHITECTURE NOTE: This story's activation rule ("has Firebase account → activate") is from the March model. Per v2, sync is conditional on tier (cloud-born only), set at signup and immutable. When the v2 code refactor lands, the activation check simplifies from `hasAccount` to `tier == cloudBorn`. The rest of this story (queue behavior, lifecycle, foreground observer) remains valid.
 
 ## Dev Agent Record
 

@@ -880,7 +880,7 @@ Mock `SharedPreferences` with `SharedPreferences.setMockInitialValues({})` for u
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md — Full design doc]
+- [Source: _bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md — v2 supersedes the prior local-first auth abstraction design; this story's implementation reflects the prior design and is tracked for refactor in the v2 refactor epic]
 - [Source: lib/core/navigation/guards/auth_guard.dart — Current guard being replaced]
 - [Source: lib/main.dart — Current startup sequence being redesigned]
 

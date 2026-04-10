@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-29
 **Status:** Draft
-**Scope:** Phase 2 of Offline-First Architecture (per `offline-first-analysis-2026-03-27.md`)
+**Scope:** Phase 2 of Offline-First Architecture (per `offline-first-architecture-v2-2026-04-10.md`, §5 Inherited Unchanged)
 
 ---
 

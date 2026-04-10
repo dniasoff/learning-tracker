@@ -1110,7 +1110,7 @@ test/helpers/
 - `_bmad-output/implementation-artifacts/19-3-seed-database-build-tool.md` -- SeedManager runtime section (T9, T10), seed asset format
 - `_bmad-output/implementation-artifacts/19-6-startup-sequence-hardening.md` -- Startup sequence integration (T5), contentDbPathProvider
 - `_bmad-output/implementation-artifacts/seed-database-build-tool-design.md` -- Schema generation strategy, ContentDatabase class design
-- `_bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md` -- Section 3.2 Upgrade Flow
+- `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md` -- §4.4 Content DB Versioning
 
 ## Acceptance Tests
 

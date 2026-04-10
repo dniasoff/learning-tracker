@@ -703,7 +703,7 @@ All content lookups should return nullable or use a `ContentResult<T>` wrapper. 
 ### References
 
 - Design doc: `_bmad-output/planning-artifacts/two-database-drift-architecture.md`
-- Offline-first analysis: `_bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md`
+- Offline-first architecture v2: `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md`
 - Current DB: `learning_tracker/lib/core/database/app_database.dart`
 - Current provider: `learning_tracker/lib/core/providers/database_provider.dart`
 - Test helper: `learning_tracker/test/helpers/test_database.dart`

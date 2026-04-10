@@ -467,7 +467,7 @@ Output: Chofetz_Chaim,_Part_One,_The_Prohibition_Against_Lashon_Hara,_Principle_
 
 - [Source: `_bmad-output/implementation-artifacts/seed-database-build-tool-design.md`]
 - [Source: `_bmad-output/planning-artifacts/calendar-cycle-computation-analysis.md`]
-- [Source: `_bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md`]
+- [Source: `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md` — §5 Inherited Unchanged]
 
 ## Acceptance Tests
 

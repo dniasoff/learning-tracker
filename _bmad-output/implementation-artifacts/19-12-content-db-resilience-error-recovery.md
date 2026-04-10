@@ -845,7 +845,7 @@ lib/features/dashboard/presentation/
 ### References
 
 - Two-Database Architecture: `_bmad-output/planning-artifacts/two-database-drift-architecture.md`
-- Offline-First Analysis: `_bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md`
+- Offline-First Architecture v2: `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md`
 - 19.2 Story Spec: `_bmad-output/implementation-artifacts/19-2-two-database-split.md`
 - 19.6 Startup Hardening: `_bmad-output/implementation-artifacts/19-6-startup-sequence-hardening.md`
 - Seed Database Build Tool Design: `_bmad-output/implementation-artifacts/seed-database-build-tool-design.md` (Section 11: SeedManager)

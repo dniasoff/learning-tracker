@@ -4,9 +4,8 @@ inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/architecture.md
   - _bmad-output/planning-artifacts/two-database-drift-architecture.md
-  - _bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md
+  - _bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md
   - _bmad-output/planning-artifacts/calendar-cycle-computation-analysis.md
-  - _bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md
   - _bmad-output/planning-artifacts/ux-design-specification.md
 ---
 
@@ -43,8 +42,8 @@ This document provides the complete epic and story breakdown for Epic 19: Offlin
 
 - D-TWODB: Two separate SQLite databases — Content DB (read-only, 4 tables) + User DB (read-write, 20+ tables)
 - D-OFFLINE: All content bundled in APK (~52K items + 30K calendar rows)
-- D2: Local-first auth: UUID on first launch, Firebase optional
-- D4: SyncEngine three-tier activation (local/dormant/active)
+- D2-v3: Hard-tier auth (cloud-born vs local-born), tier set at signup by network state and immutable. Every user has an email+password account; local-born uses argon2id hash in SQLite. Supersedes the prior "optional UUID, Firebase optional" model. See `offline-first-architecture-v2-2026-04-10.md`.
+- D4-v3: SyncEngine activation gated by tier (`tier == cloudBorn`), not connectivity. Conflict resolution is per-data-type: LWW for settings, merge-forward for progress, append-only event log for streaks/XP.
 - Seed DB: `tool/seed_content_db.dart` builds pre-built Content DB, ships as `assets/seed.db.gz`
 - Content DB upgrade: Compare SeedMetadata.version, atomic file replacement on app update
 - Calendar bugs: 7 bugs in CalendarProgramRegistry — 6 of 12 programs broken
@@ -55,10 +54,10 @@ This document provides the complete epic and story breakdown for Epic 19: Offlin
 
 ### UX Design Requirements
 
-- UX-DR1: App must launch to usable state without network — no loading spinners, no sign-in wall
+- UX-DR1: App must launch to usable state without hanging on network calls — Firebase init is background/deferred, no startup spinners waiting on network
 - UX-DR2: Content unavailable states must show graceful fallbacks (ref string + message), not blank screens
-- UX-DR3: Account creation relocated from onboarding to Settings — optional, discoverable
-- UX-DR4: Sync status indicator (local-only / syncing / synced) in Settings, not main UI
+- UX-DR3-v2: Signup is mandatory at first launch. Tier (cloud-born vs local-born) is auto-determined by network state at signup. Local-born signup requires explicit "no backup" acknowledgment. Upgrade (local → cloud) is available later via Settings with a guided merge flow.
+- UX-DR4: Offline indicator — subtle top banner for cloud-born users temporarily offline. Persistent "no backup" badge in profile area for local-born users (always visible).
 - UX-DR5: First-launch decompression shows brief loading indicator (< 5 sec)
 
 ### FR Coverage Map
@@ -82,6 +81,17 @@ Invert the app from "online with offline queue" to local-first by default with t
 
 **FRs covered:** FR88, FR89, FR93, FR99, FR106, FR18, FR26
 **NFRs covered:** NFR8, NFR14, NFR19, NFR20, NFR23, NFR25, NFR26, NFR27
+
+> ⚠️ **Partial supersede by Epic 20.** Epic 19 stories 19.5 (local-first auth abstraction) and 19.7 (optional account creation in Settings) implement the prior "anonymous localUid + optional deferred account" model, which was superseded on 2026-04-10 by the hard-tier auth model in `offline-first-architecture-v2-2026-04-10.md`. Those two stories must not ship in their current form. Epic 20 (below) replaces them. All other Epic 19 stories — two-database split, seed DB, calendar engine, startup hardening, SyncEngine conditional activation, content DB resilience, E2E testing — remain valid and canonical.
+
+### Epic 20: Offline-First Architecture v2 — Hard-Tier Auth Refactor
+
+Refactor auth to the hard-tier cloud-born / local-born model per `offline-first-architecture-v2-2026-04-10.md`. Every user has a real account; tier is set at signup by network state and is immutable. Supersedes the March 2026 anonymous-localUid architecture and the Epic 19 stories 19.5 and 19.7.
+
+**Linear:** [Epic 20: Offline-First Architecture v2 — Hard-Tier Auth Refactor](https://linear.app/dniasoff/project/epic-20-offline-first-architecture-v2-hard-tier-auth-refactor-d9ed0690d244)
+**Gates:** Epic 19 shipping in its current form
+**Scope:** Auth domain (drop `AppAuthState` sealed hierarchy), DB schema (drop `localUid`, add `passwordHash` + `tier`), onboarding (mandatory signup at first launch), settings (guided upgrade flow per v2 §4.3), sync engine (tier-gated activation, conflict resolution per v2 §4.1 with event-log streaks/XP), ~15 production files + 6 test files affected
+**Canonical doc:** `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md`
 
 ---
 

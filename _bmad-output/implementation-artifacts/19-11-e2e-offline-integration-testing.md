@@ -981,11 +981,10 @@ so that I can verify the app works fully without network from first launch throu
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md — Section 10: Success Criteria]
-- [Source: _bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md — Section 3: Architecture]
+- [Source: _bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md — §9 Success Criteria, §3 Mental Model]
 - [Source: _bmad-output/planning-artifacts/two-database-drift-architecture.md]
-- [Source: _bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md]
 - [Source: _bmad-output/planning-artifacts/calendar-cycle-computation-analysis.md]
+- ⚠️ SUPERSEDED-ARCHITECTURE NOTE: Any tests in this story that exercise the "anonymous local user with generated UUID" flow are testing the March model. When the v2 code refactor lands, those tests will be rewritten to cover local-born signup (email + argon2id password) and the guided upgrade flow. E2E tests for content DB, calendar, and sync engine remain valid.
 
 ## Dev Agent Record
 

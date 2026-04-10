@@ -1,8 +1,8 @@
 # Two-Database Drift Architecture — Detailed Technical Design
 
 **Date:** 2026-03-29
-**Status:** Draft
-**Relates to:** offline-first-analysis-2026-03-27.md, Section 3.1
+**Status:** Canonical
+**Relates to:** offline-first-architecture-v2-2026-04-10.md, §5 (Inherited Unchanged)
 
 ---
 

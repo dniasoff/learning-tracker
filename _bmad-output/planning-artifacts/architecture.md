@@ -1280,13 +1280,15 @@ This section evolves the V1 architecture to support users who never connect to t
 
 ### Decision Evolutions
 
-#### D2-v2: Local-First Auth with Cached Firebase
+#### D2-v2: Local-First Auth with Cached Firebase (SUPERSEDED by D2-v3)
+
+> ⚠️ **SUPERSEDED (2026-04-10).** This decision has been replaced by D2-v3 below. D2-v2 is preserved here for historical context only — do not use it as a source for new implementation work. Production code currently still reflects D2-v2 (sealed `AppAuthState`, `LocalAuthGuard`, anonymous `localUid`). The refactor to D2-v3 is tracked as a separate Linear epic; see `offline-first-architecture-v2-2026-04-10.md` §6 "What This Supersedes" for the full list of concepts to be removed.
 
 **Supersedes:** D2 (Firebase Auth mandatory)
 
-**Decision:** Auth abstraction layer with local-first default and optional Firebase.
+**Decision (historical):** Auth abstraction layer with local-first default and optional Firebase.
 
-**Architecture:**
+**Architecture (historical):**
 - `AuthStateService` interface with two implementations:
   - `LocalAuthState`: generates stable UUID, persists in SharedPreferences, always returns "authenticated"
   - `FirebaseAuthState`: existing Firebase behavior, caches auth state locally
@@ -1295,12 +1297,25 @@ This section evolves the V1 architecture to support users who never connect to t
 - First launch offline → Local UUID, full app access immediately
 - No migration path: account creation is greenfield (sync starts fresh)
 
-**Sync Activation Rule:**
-- Firebase-backed user (cached): SyncEngine always active — queues when offline, flushes when connected. Existing D4 behavior unchanged.
-- Local UUID user: SyncEngine dormant — no queuing, no push, no pull.
-- Trigger is "does this user have a Firebase account, ever" — not current connectivity state.
+#### D2-v3: Hard-Tier Auth Model (Cloud-Born vs Local-Born)
 
-**Affects:** Auth feature module, route guards, sync engine, startup sequence, onboarding flow.
+**Supersedes:** D2-v2
+**Canonical doc:** `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md`
+
+**Decision:** Every user has a real account with email + password. Tier is set at signup by network state and is immutable.
+
+- **Cloud-born (90%):** Signed up with internet. Firebase Auth + Firestore sync. Session persists locally indefinitely so offline use works for weeks without re-auth.
+- **Local-born (10%):** Signed up without internet. argon2id password hash stored in SQLite. No backup, no recovery, no multi-device. Clear "no backup" warning at signup and persistent badge in profile area.
+- **Tier is immutable.** Upgrade (local → cloud) is one-way and explicit, via a guided UX flow with email-collision merge handling (see v2 doc §4.3).
+- **Rationale for superseding v2:** The v2 abstraction layer (sealed auth state, `LocalAuthGuard`, UID migration) created ~800 lines of parallel auth infrastructure to hide a distinction that users didn't benefit from. v3 collapses to one auth concept with two storage backends — simpler code, clearer mental model, matches Yafet's and other stakeholders' expectations of a sign-in screen.
+
+**Sync Activation Rule:**
+- Cloud-born user: SyncEngine active. Queues offline writes, flushes on reconnect. Identical to existing D4 behavior.
+- Local-born user: SyncEngine dormant. No queuing, no push, no pull. Tier gate, not connectivity gate.
+
+**Conflict Resolution (new in v3):** Per-data-type strategy. LWW for profile settings. Merge-forward (union / max) for progress markers. Append-only event log for streaks and XP, reduced to state on each device. See v2 doc §4.1 for full rules.
+
+**Affects:** Auth feature module, route guards, sync engine, startup sequence, onboarding flow, UserProfiles schema (drop `localUid`, add `passwordHash` for local-born).
 
 #### D4-v2: Conditional Sync
 

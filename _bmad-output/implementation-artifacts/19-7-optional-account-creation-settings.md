@@ -10,7 +10,7 @@ so that I can back up and sync my data without being forced to create an account
 
 ## Context & Dependencies
 
-This story implements Phase 6 of the local-first auth abstraction layer (see `_bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md`). It assumes the following prior stories are complete:
+This story implements Phase 6 of the prior local-first auth abstraction design (now superseded by `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md`). It assumes the following prior stories are complete:
 
 - **19.5**: Auth abstraction (`localUid`, nullable `firebaseUid`, `hasAccount` columns on `UserProfiles`)
 - **19.8**: `SyncEngine` conditional activation (dormant by default, activates on account link)
@@ -472,8 +472,7 @@ The new "BACKUP & SYNC" section inserts between (5) and (6). The existing "Cloud
 
 ### References
 
-- [Source: `_bmad-output/planning-artifacts/local-first-auth-abstraction-layer.md` — Sections 5 (UID Migration), 6 (SyncEngine Conditional Activation), 7.4 (Where "Create Account" Moves)]
-- [Source: `_bmad-output/planning-artifacts/offline-first-analysis-2026-03-27.md` — Local-first architecture]
+- [Source: `_bmad-output/planning-artifacts/offline-first-architecture-v2-2026-04-10.md` — v2 supersedes the prior UID migration and deferred-account-creation design; this story's implementation reflects the prior design and is tracked for refactor in the v2 refactor epic]
 - [Source: Firebase Auth — Email Link Authentication docs]
 
 ## Dev Agent Record
