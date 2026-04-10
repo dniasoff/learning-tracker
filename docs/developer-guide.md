@@ -38,6 +38,7 @@ Learning Tracker turns large-scale learning goals into a clear daily plan. You c
 ### Who Uses It
 
 - **Children** (ages 10-13): Bar mitzvah-age learners who need daily structure and motivation. The app provides full gamification — points, streaks, mystery rewards — with a parent dashboard for oversight.
+
 - **Adults**: Self-directed learners pursuing personal learning goals. The app provides clean progress tracking without the gamification.
 - **Parents**: Configure and monitor their child's learning — set up curricula, activate tracks, manage rewards.
 
@@ -49,12 +50,12 @@ If you have no background in Jewish texts, this section gives you the minimum co
 
 ### Key Terms
 
-| Term | Hebrew | Meaning |
-|---|---|---|
-| **Chazara** | חזרה | Review. You don't read something once — you review it on a structured cycle to retain it. This is the app's core scheduling challenge. |
-| **Sefaria** | — | An [open-source library](https://www.sefaria.org) of Jewish texts. The app's content source — every learnable item has a `sefariaRef` (Sefaria reference string) that uniquely identifies it. |
-| **Shabbos / Shabbat** | שבת | The Jewish Sabbath (Friday evening to Saturday night). Many learners use Shabbos as a weekly review day. |
-| **Siyum** | סיום | Completion celebration — finishing an entire unit (a tractate, a book, etc.). Tracked in the learning ledger. |
+| Term                  | Hebrew | Meaning                                                                                                                                                                                       |
+| --------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chazara**           | חזרה   | Review. You don't read something once — you review it on a structured cycle to retain it. This is the app's core scheduling challenge.                                                        |
+| **Sefaria**           | —      | An [open-source library](https://www.sefaria.org) of Jewish texts. The app's content source — every learnable item has a `sefariaRef` (Sefaria reference string) that uniquely identifies it. |
+| **Shabbos / Shabbat** | שבת    | The Jewish Sabbath (Friday evening to Saturday night). Many learners use Shabbos as a weekly review day.                                                                                      |
+| **Siyum**             | סיום   | Completion celebration — finishing an entire unit (a tractate, a book, etc.). Tracked in the learning ledger.                                                                                 |
 
 ### Programs (Daf Yomi, Dirshu, Oraysa)
 
@@ -72,12 +73,12 @@ The app supports nine curricula grouped into four categories. Each curriculum is
 
 The foundational text of Judaism: Genesis, Exodus, Leviticus, Numbers, and Deuteronomy. ~5,845 verses.
 
-| Level | Transliteration | Hebrew | English |
-|---|---|---|---|
-| 1 | Sefer | ספר | Book |
-| 2 | Parsha | פרשה | Weekly portion |
-| 3 | Perek | פרק | Chapter |
-| 4 | Pasuk | פסוק | Verse |
+| Level | Transliteration | Hebrew | English        |
+| ----- | --------------- | ------ | -------------- |
+| 1     | Sefer           | ספר    | Book           |
+| 2     | Parsha          | פרשה   | Weekly portion |
+| 3     | Perek           | פרק    | Chapter        |
+| 4     | Pasuk           | פסוק   | Verse          |
 
 #### Torah (תורה)
 
@@ -87,12 +88,12 @@ Can refer to the same Five Books as Chumash, or more broadly to the entire body 
 
 The rest of the Hebrew Bible beyond the Five Books. Nach is short for **N**evi'im (Prophets) + **K**etuvim (Writings). Includes books like Joshua, Isaiah, Psalms, and Proverbs.
 
-| Level | Transliteration | Hebrew | English |
-|---|---|---|---|
-| 1 | Section | סעיף | Section (Nevi'im or Ketuvim) |
-| 2 | Sefer | ספר | Book |
-| 3 | Perek | פרק | Chapter |
-| 4 | Pasuk | פסוק | Verse |
+| Level | Transliteration | Hebrew | English                      |
+| ----- | --------------- | ------ | ---------------------------- |
+| 1     | Section         | סעיף   | Section (Nevi'im or Ketuvim) |
+| 2     | Sefer           | ספר    | Book                         |
+| 3     | Perek           | פרק    | Chapter                      |
+| 4     | Pasuk           | פסוק   | Verse                        |
 
 #### Tanach (תנ"ך) — The Complete Hebrew Bible
 
@@ -104,32 +105,32 @@ The complete Hebrew Bible as a single curriculum. Tanach is an acronym: **T**ora
 
 The first written compilation of Jewish oral law (~200 CE). Organized into 6 orders covering everything from agriculture to family law to temple rituals. 63 tractates, ~4,192 individual mishnayos.
 
-| Level | Transliteration | Hebrew | English |
-|---|---|---|---|
-| 1 | Seder | סדר | Order (one of 6 major divisions) |
-| 2 | Masechta | מסכת | Tractate (a topical volume) |
-| 3 | Perek | פרק | Chapter |
-| 4 | Mishna | משנה | Individual paragraph of law |
+| Level | Transliteration | Hebrew | English                          |
+| ----- | --------------- | ------ | -------------------------------- |
+| 1     | Seder           | סדר    | Order (one of 6 major divisions) |
+| 2     | Masechta        | מסכת   | Tractate (a topical volume)      |
+| 3     | Perek           | פרק    | Chapter                          |
+| 4     | Mishna          | משנה   | Individual paragraph of law      |
 
 #### Talmud Bavli (תלמוד בבלי) — Babylonian Talmud
 
 Extensive rabbinical discussion and analysis built on top of the Mishnah, compiled in Babylon (~500 CE). The most studied text in traditional Jewish education. ~2,711 folio pages of legal debate, stories, and rulings.
 
-| Level | Transliteration | Hebrew | English |
-|---|---|---|---|
-| 1 | Masechta | מסכת | Tractate |
-| 2 | Daf | דף | Folio page |
-| 3 | Amud | עמוד | Page side (each daf has side a and side b) |
+| Level | Transliteration | Hebrew | English                                    |
+| ----- | --------------- | ------ | ------------------------------------------ |
+| 1     | Masechta        | מסכת   | Tractate                                   |
+| 2     | Daf             | דף     | Folio page                                 |
+| 3     | Amud            | עמוד   | Page side (each daf has side a and side b) |
 
 #### Talmud Yerushalmi (תלמוד ירושלמי) — Jerusalem Talmud
 
 An alternative, shorter compilation of rabbinical discussion on the Mishnah, compiled in the Land of Israel. Less commonly studied than the Bavli.
 
-| Level | Transliteration | Hebrew | English |
-|---|---|---|---|
-| 1 | Masechta | מסכת | Tractate |
-| 2 | Daf | דף | Folio page |
-| 3 | Halacha | הלכה | Legal ruling (leaf unit) |
+| Level | Transliteration | Hebrew | English                  |
+| ----- | --------------- | ------ | ------------------------ |
+| 1     | Masechta        | מסכת   | Tractate                 |
+| 2     | Daf             | דף     | Folio page               |
+| 3     | Halacha         | הלכה   | Legal ruling (leaf unit) |
 
 ### Law Codes
 
@@ -137,11 +138,11 @@ An alternative, shorter compilation of rabbinical discussion on the Mishnah, com
 
 A widely studied guide to daily Jewish practice (early 1900s). A practical distillation of Talmudic law — "here's what to actually do." Organized as commentary on an earlier law code (the Shulchan Aruch). 697 sections.
 
-| Level | Transliteration | Hebrew | English |
-|---|---|---|---|
-| 1 | Siman | סימן | Section |
-| 2 | Se'if | סעיף | Sub-section |
-| 3 | Se'if Katan | סעיף קטן | Minor sub-section |
+| Level | Transliteration | Hebrew   | English           |
+| ----- | --------------- | -------- | ----------------- |
+| 1     | Siman           | סימן     | Section           |
+| 2     | Se'if           | סעיף     | Sub-section       |
+| 3     | Se'if Katan     | סעיף קטן | Minor sub-section |
 
 ### Ethics and Character Development
 
@@ -149,11 +150,11 @@ A widely studied guide to daily Jewish practice (early 1900s). A practical disti
 
 A collective grouping of ethical and character-development texts from various authors and eras. Not a single book but a genre — the specific texts available are defined by the app's content library.
 
-| Level | Transliteration | Hebrew | English |
-|---|---|---|---|
-| 1 | Sefer | ספר | Book (individual work within the genre) |
-| 2 | Section | פרק | Section |
-| 3 | Chapter | פרק | Chapter |
+| Level | Transliteration | Hebrew | English                                 |
+| ----- | --------------- | ------ | --------------------------------------- |
+| 1     | Sefer           | ספר    | Book (individual work within the genre) |
+| 2     | Section         | פרק    | Section                                 |
+| 3     | Chapter         | פרק    | Chapter                                 |
 
 ---
 
@@ -165,18 +166,18 @@ A track is a named, independent learning instance within a curriculum. It repres
 
 ### What a Track Owns
 
-| Property | Description |
-|---|---|
-| **Type** | `Personal` in v1 (School and Tutor types planned for v2) |
-| **Label** | User-provided name (e.g., "Daf Yomi", "My Mishnayos", "Morning Seder") |
-| **Curriculum** | Which body of text this track covers |
-| **Scope** | Optional subset of the curriculum (e.g., only Masechta Berachos within Bavli) |
-| **Program** | Optional global calendar (e.g., Daf Yomi) |
-| **Bookmark** | Current position in the learning sequence |
-| **Goals** | Deadline, target completion percentage, study days |
-| **Stage definitions** | Chazara (review) schedule configuration |
-| **Points** | Accumulated score (child mode only) |
-| **Streak** | Consecutive-day learning counter |
+| Property              | Description                                                                   |
+| --------------------- | ----------------------------------------------------------------------------- |
+| **Type**              | `Personal` in v1 (School and Tutor types planned for v2)                      |
+| **Label**             | User-provided name (e.g., "Daf Yomi", "My Mishnayos", "Morning Seder")        |
+| **Curriculum**        | Which body of text this track covers                                          |
+| **Scope**             | Optional subset of the curriculum (e.g., only Masechta Berachos within Bavli) |
+| **Program**           | Optional global calendar (e.g., Daf Yomi)                                     |
+| **Bookmark**          | Current position in the learning sequence                                     |
+| **Goals**             | Deadline, target completion percentage, study days                            |
+| **Stage definitions** | Chazara (review) schedule configuration                                       |
+| **Points**            | Accumulated score (child mode only)                                           |
+| **Streak**            | Consecutive-day learning counter                                              |
 
 ### Multiple Tracks per Curriculum
 
@@ -184,17 +185,17 @@ A user can have **multiple tracks of the same type** within the same curriculum.
 
 Example — a learner studying Bavli:
 
-| Track Label | Type | Program | Scope |
-|---|---|---|---|
-| Daf Yomi | Personal | Daf Yomi | All of Bavli |
-| Berachos Deep Dive | Personal | — | Masechta Berachos only |
+| Track Label        | Type     | Program  | Scope                  |
+| ------------------ | -------- | -------- | ---------------------- |
+| Daf Yomi           | Personal | Daf Yomi | All of Bavli           |
+| Berachos Deep Dive | Personal | —        | Masechta Berachos only |
 
 Example — a learner studying Mishnayos:
 
-| Track Label | Type | Program | Scope |
-|---|---|---|---|
-| My Mishnayos | Personal | — | All of Mishnayos |
-| Zeraim Focus | Personal | — | Seder Zeraim |
+| Track Label  | Type     | Program | Scope            |
+| ------------ | -------- | ------- | ---------------- |
+| My Mishnayos | Personal | —       | All of Mishnayos |
+| Zeraim Focus | Personal | —       | Seder Zeraim     |
 
 > **Note**: "Seder" has two meanings in this domain. A **Seder** (Order) is one of the 6 major divisions of the Mishnah. A **seder** (study session) is a colloquial term for a scheduled block of learning time (e.g., "morning seder" = morning study session). Context makes the meaning clear.
 
@@ -247,24 +248,24 @@ A **program** is a global, calendar-based study schedule shared by thousands of 
 
 ### How Programs Differ From Custom Learning
 
-| Aspect | Custom (Self-Paced) | Program |
-|---|---|---|
-| **Schedule source** | User-configured goals and deadlines | Fixed global calendar |
-| **What to learn today** | App calculates based on pace and chazara | Calendar dictates today's material |
-| **Social dimension** | Individual | Thousands learning the same thing daily |
-| **Review** | User-configured chazara stages | Some programs include review; user can layer on additional chazara |
+| Aspect                  | Custom (Self-Paced)                      | Program                                                            |
+| ----------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| **Schedule source**     | User-configured goals and deadlines      | Fixed global calendar                                              |
+| **What to learn today** | App calculates based on pace and chazara | Calendar dictates today's material                                 |
+| **Social dimension**    | Individual                               | Thousands learning the same thing daily                            |
+| **Review**              | User-configured chazara stages           | Some programs include review; user can layer on additional chazara |
 
 ### Supported Programs (v1)
 
-| Program | Curriculum | Description |
-|---|---|---|
-| **Daf Yomi** | Bavli | One folio page of Talmud per day. Completes the entire Babylonian Talmud in ~7.5 years. The most widely followed program. |
-| **Dirshu** | Mishna Berurah | Structured study of practical Jewish law with periodic tests. |
-| **Oraysa** | Bavli | An alternative Talmud study program. |
+| Program      | Curriculum     | Description                                                                                                               |
+| ------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Daf Yomi** | Bavli          | One folio page of Talmud per day. Completes the entire Babylonian Talmud in ~7.5 years. The most widely followed program. |
+| **Dirshu**   | Mishna Berurah | Structured study of practical Jewish law with periodic tests.                                                             |
+| **Oraysa**   | Bavli          | An alternative Talmud study program.                                                                                      |
 
 ### Program + Chazara
 
-Programs define *what* to learn each day, but don't necessarily define review. A user can layer the app's chazara system on top of any program — adding delay-based spaced repetition and/or weekly review to program-assigned material.
+Programs define _what_ to learn each day, but don't necessarily define review. A user can layer the app's chazara system on top of any program — adding delay-based spaced repetition and/or weekly review to program-assigned material.
 
 ### Program Data
 
@@ -280,11 +281,11 @@ The scheduling system answers two questions: **What should I review?** and **Whe
 
 Each track has configurable **stages** — steps in a review cycle. The default configuration:
 
-| Stage | Name | Delay |
-|---|---|---|
-| 0 | Learn | — (first encounter) |
-| 1 | Chazara 1 | 1 day after Learn |
-| 2 | Chazara 2 | 7 days after Chazara 1 |
+| Stage | Name      | Delay                  |
+| ----- | --------- | ---------------------- |
+| 0     | Learn     | — (first encounter)    |
+| 1     | Chazara 1 | 1 day after Learn      |
+| 2     | Chazara 2 | 7 days after Chazara 1 |
 
 Users can customize this per curriculum:
 
@@ -296,11 +297,11 @@ Users can customize this per curriculum:
 
 Each curriculum uses one schedule type — chosen at configuration:
 
-| Type | How It Works | Use Case |
-|---|---|---|
-| **Delay** | Review item X days after completing the previous stage. Classic spaced repetition. | Self-paced learning of any curriculum — Mishnayos, Gemara, etc. |
+| Type                      | How It Works                                                                                          | Use Case                                                                        |
+| ------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Delay**                 | Review item X days after completing the previous stage. Classic spaced repetition.                    | Self-paced learning of any curriculum — Mishnayos, Gemara, etc.                 |
 | **Friday/Shabbos Review** | Review the week's learned material on both Friday and Shabbos, layered on top of delay-based chazara. | Learners who want a weekly consolidation pass in addition to spaced repetition. |
-| **Shabbos Review** | Review the week's material on Shabbos only, layered on top of delay-based chazara. | Same concept, single review day. |
+| **Shabbos Review**        | Review the week's material on Shabbos only, layered on top of delay-based chazara.                    | Same concept, single review day.                                                |
 
 **Important**: Delay is the core engine. Friday/Shabbos and Shabbos-only are **additional layers** — they don't replace delay-based chazara, they supplement it with a weekly review session.
 
@@ -339,15 +340,15 @@ Priority order across all tracks and curricula:
 
 The app serves two audiences from a single codebase, gated by a mode flag on the user profile.
 
-| Aspect | Adult Mode | Child Mode |
-|---|---|---|
-| **Track types** | Personal only | Personal (v2 adds School + Tutor) |
-| **Configuration** | Self-managed | Parent-managed (PIN-protected) |
-| **Gamification** | None | Points, streaks, mystery rewards, celebrations |
-| **UI tone** | Clean, minimal | Animated, playful |
-| **Completion feedback** | Subtle snackbar | Points popup, celebration animation |
-| **Parent dashboard** | N/A | PIN-protected analytics and reward management |
-| **Reward system** | N/A | Configurable mystery rewards tied to point thresholds |
+| Aspect                  | Adult Mode      | Child Mode                                            |
+| ----------------------- | --------------- | ----------------------------------------------------- |
+| **Track types**         | Personal only   | Personal (v2 adds School + Tutor)                     |
+| **Configuration**       | Self-managed    | Parent-managed (PIN-protected)                        |
+| **Gamification**        | None            | Points, streaks, mystery rewards, celebrations        |
+| **UI tone**             | Clean, minimal  | Animated, playful                                     |
+| **Completion feedback** | Subtle snackbar | Points popup, celebration animation                   |
+| **Parent dashboard**    | N/A             | PIN-protected analytics and reward management         |
+| **Reward system**       | N/A             | Configurable mystery rewards tied to point thresholds |
 
 ### Points and Rewards (Child Mode)
 
@@ -472,17 +473,17 @@ This is an open design problem. The dashboard must balance information density w
 
 ### Stack Summary
 
-| Category | Technology |
-|---|---|
-| Framework | Flutter (Dart) |
-| Platform | Android (iOS planned) |
-| State Management | Riverpod 3.x with code generation |
-| Navigation | auto_route 11.x (type-safe) |
-| Local Database | Drift (SQLite ORM) |
-| Backend | Firebase Auth + Cloud Firestore + Firebase Storage |
-| Content Source | Sefaria (bundled, not live) |
-| Calendar | kosher_dart (Hebrew dates) |
-| Code Generation | build_runner (Drift, Riverpod, Freezed, auto_route, json_serializable) |
+| Category         | Technology                                                             |
+| ---------------- | ---------------------------------------------------------------------- |
+| Framework        | Flutter (Dart)                                                         |
+| Platform         | Android (iOS planned)                                                  |
+| State Management | Riverpod 3.x with code generation                                      |
+| Navigation       | auto_route 11.x (type-safe)                                            |
+| Local Database   | Drift (SQLite ORM)                                                     |
+| Backend          | Firebase Auth + Cloud Firestore + Firebase Storage                     |
+| Content Source   | Sefaria (bundled, not live)                                            |
+| Calendar         | kosher_dart (Hebrew dates)                                             |
+| Code Generation  | build_runner (Drift, Riverpod, Freezed, auto_route, json_serializable) |
 
 ### Architecture
 
