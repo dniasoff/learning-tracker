@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -20,6 +21,12 @@ class ContentRepositoryImpl implements ContentRepository {
   /// Cache of hierarchy configs, keyed by curriculum storage key.
   final _configCache = <String, CurriculumHierarchyConfig>{};
 
+  /// Maps composite curricula to their source asset(s).
+  /// Torah reuses Chumash content (identical hierarchy).
+  static const _compositeSources = <String, List<String>>{
+    'torah': ['chumash'],
+  };
+
   @override
   Future<List<ContentItem>> getContentForCurriculum(
     CurriculumId curriculumId,
@@ -28,6 +35,52 @@ class ContentRepositoryImpl implements ContentRepository {
 
     if (_contentCache.containsKey(key)) {
       return _contentCache[key]!;
+    }
+
+    // Composite curricula: load from source asset(s) and remap curriculumId.
+    final sources = _compositeSources[key];
+    if (sources != null) {
+      final allItems = <ContentItem>[];
+      for (final source in sources) {
+        final sourceId = CurriculumId.values.firstWhere(
+          (c) => c.storageKey == source,
+        );
+        final sourceItems = await getContentForCurriculum(sourceId);
+        allItems.addAll(
+          sourceItems.map(
+            (item) => ContentItem(
+              curriculumId: key,
+              level1: item.level1,
+              level2: item.level2,
+              level3: item.level3,
+              level4: item.level4,
+              displayNameHe: item.displayNameHe,
+              displayNameEn: item.displayNameEn,
+              sefariaRef: item.sefariaRef,
+              sortOrder: item.sortOrder + allItems.length,
+              isLeaf: item.isLeaf,
+            ),
+          ),
+        );
+      }
+      _contentCache[key] = allItems;
+
+      // Build a hierarchy config for the composite curriculum from its defaults.
+      final defaults = CurriculumDefaults.hierarchyConfigs[curriculumId];
+      if (defaults != null) {
+        _configCache[key] = CurriculumHierarchyConfig(
+          curriculumId: key,
+          levelLabels: [
+            defaults.level1Label,
+            if (defaults.level2Label != null) defaults.level2Label!,
+            if (defaults.level3Label != null) defaults.level3Label!,
+            if (defaults.level4Label != null) defaults.level4Label!,
+          ],
+          totalItems: allItems.where((i) => i.isLeaf).length,
+        );
+      }
+
+      return allItems;
     }
 
     try {
