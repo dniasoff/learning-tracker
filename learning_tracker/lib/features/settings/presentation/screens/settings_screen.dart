@@ -433,6 +433,57 @@ class _HebrewDateTile extends ConsumerWidget {
   }
 }
 
+class _EditNameDialog extends StatefulWidget {
+  const _EditNameDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_EditNameDialog> createState() => _EditNameDialogState();
+}
+
+class _EditNameDialogState extends State<_EditNameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Name'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: 'Display Name',
+          border: OutlineInputBorder(),
+        ),
+        textCapitalization: TextCapitalization.words,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
 
@@ -467,52 +518,43 @@ class _UserProfileSection extends ConsumerStatefulWidget {
 }
 
 class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
+  User? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = widget.user;
+  }
+
+  @override
+  void didUpdateWidget(covariant _UserProfileSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.user != oldWidget.user) {
+      _user = widget.user;
+    }
+  }
+
   Future<void> _showEditNameDialog(User user) async {
-    final controller = TextEditingController(text: user.displayName ?? '');
     final newName = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Name'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Display Name',
-            border: OutlineInputBorder(),
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (ctx) => _EditNameDialog(initialName: user.displayName ?? ''),
     );
-    controller.dispose();
 
     if (newName == null || newName.isEmpty || !mounted) return;
 
-    // Defer the update to after the dialog's exit animation completes,
-    // avoiding the _dependents.isEmpty assertion in the framework.
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
-
     await user.updateDisplayName(newName);
     await user.reload();
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {
+      _user = FirebaseAuth.instance.currentUser;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final user = widget.user;
+    final user = _user;
 
     if (user == null) {
       return const Padding(
