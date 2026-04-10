@@ -13,7 +13,7 @@ class ConnectivityService {
     try {
       final result = await InternetAddress.lookup(
         'dns.google',
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 2));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } on SocketException {
       return false;
