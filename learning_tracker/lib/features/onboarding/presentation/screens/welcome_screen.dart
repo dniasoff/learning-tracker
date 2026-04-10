@@ -46,7 +46,7 @@ class WelcomeScreen extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () =>
-                      context.router.push(const AccountCreationRoute()),
+                      context.router.push(const OnboardingRoute()),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text('Get Started'),

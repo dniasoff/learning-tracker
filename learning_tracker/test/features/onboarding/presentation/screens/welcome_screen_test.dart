@@ -11,7 +11,7 @@ void main() {
   late MockStackRouter mockRouter;
 
   setUpAll(() {
-    registerFallbackValue(const AccountCreationRoute());
+    registerFallbackValue(const OnboardingRoute());
     registerFallbackValue(const SignInRoute());
   });
 
@@ -60,7 +60,7 @@ void main() {
       expect(find.byIcon(Icons.menu_book_rounded), findsOneWidget);
     });
 
-    testWidgets('tapping Get Started navigates to AccountCreationRoute', (
+    testWidgets('tapping Get Started navigates to OnboardingRoute', (
       tester,
     ) async {
       await tester.pumpWidget(createTestWidget());
@@ -69,7 +69,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockRouter.push(any(that: isA<AccountCreationRoute>())),
+        () => mockRouter.push(any(that: isA<OnboardingRoute>())),
       ).called(1);
     });
   });
