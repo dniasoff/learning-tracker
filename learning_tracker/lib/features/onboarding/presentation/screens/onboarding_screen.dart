@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -93,6 +94,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.initState();
     _tryResumeFromSavedState();
     _nameController.addListener(_validateProfileName);
+    // Epic 20.6: onboarding is only reachable after signup. If the
+    // user somehow lands here without a live AuthState session
+    // (signedOut / initializing fallthrough), bounce them back to
+    // the welcome screen so they can sign up.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authState = ref.read(authStateProvider);
+      if (!authState.isSignedIn) {
+        unawaited(context.router.replaceAll([const WelcomeRoute()]));
+      }
+    });
   }
 
   @override
