@@ -60,10 +60,14 @@ const _textErrorRateThreshold = 0.01; // 1%
 final _calendarStart = DateTime.utc(2024, 1, 1);
 final _calendarEnd = DateTime.utc(2030, 12, 31);
 
-/// Sefaria calendar_items title.en → internal program key.
+/// Sefaria calendar_items title.en → CalendarProgramRegistry.id.
+///
+/// Keys MUST match the registry IDs in [CalendarProgramRegistry] so
+/// LocalCalendarEngine.getEntry() can resolve display names via
+/// `CalendarProgramRegistry.byId()` (Story 19.4 T6).
 const _sefariaCalendarMap = {
   'Daf Yomi': 'daf_yomi',
-  'Daily Mishnah': 'mishnah_yomis',
+  'Daily Mishnah': 'mishna_yomit',
   'Daily Rambam': 'rambam_1_chapter',
   'Daily Rambam (3 Chapters)': 'rambam_3_chapters',
   'Yerushalmi Yomi': 'yerushalmi_yomi',

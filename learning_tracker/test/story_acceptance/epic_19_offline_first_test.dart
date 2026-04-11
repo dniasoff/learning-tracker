@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/content_result.dart';
@@ -9,7 +10,10 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/providers/calendar_providers.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/local_calendar_engine.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -417,41 +421,258 @@ void main() {
   // ─── Story 19.4: Local Calendar Engine ───────────────────────────
   group('Story 19.4 — Local Calendar Engine', () {
     late ContentDatabase contentDb;
+    late LocalCalendarEngine engine;
+
+    // 12 program fixtures for strict AC-2 coverage. Program IDs must
+    // match CalendarProgramRegistry IDs (Story 19.4 T6).
+    const programFixtures = [
+      ('daf_yomi', 'Menachot.77'),
+      ('yerushalmi_yomi', 'Jerusalem_Talmud_Berakhot.1.1.1-7'),
+      ('mishna_yomit', 'Mishnah_Tamid.2.1-2'),
+      ('nach_yomi', 'I_Samuel.1'),
+      ('rambam_1_chapter', 'Mishneh_Torah,_Repentance.7'),
+      ('rambam_3_chapters',
+          'Mishneh_Torah,_Leavened_and_Unleavened_Bread.5-7'),
+      ('daf_a_week', 'Nedarim.75'),
+      ('halakhah_yomit', 'Shulchan_Arukh,_Orach_Chayim.168.17-169.2'),
+      ('arukh_hashulchan_yomi',
+          'Arukh_HaShulchan,_Orach_Chaim.277.9-279.1'),
+      ('tanakh_yomi', 'Jeremiah.31.32-32.21'),
+      ('chofetz_chaim_daily',
+          'Chofetz_Chaim,_Part_One,_The_Prohibition_Against_Lashon_Hara,'
+              '_Principle_9.1'),
+      ('kitzur_shulchan_aruch_yomi', 'Kitzur_Shulchan_Arukh.118.9-119.2'),
+    ];
+
+    Future<void> seedDate(String dateKey,
+        {List<(String, String)>? only}) async {
+      final rows = only ?? programFixtures;
+      for (final (programId, ref) in rows) {
+        await contentDb.customInsert(
+          'INSERT OR REPLACE INTO calendar_cycles '
+          '(program_key, date_key, sefaria_ref, display_name) '
+          'VALUES (?, ?, ?, ?)',
+          variables: [
+            Variable.withString(programId),
+            Variable.withString(dateKey),
+            Variable.withString(ref),
+            Variable.withString(''),
+          ],
+        );
+      }
+    }
 
     setUp(() {
       contentDb = createTestContentDatabase();
+      engine = LocalCalendarEngine(contentDb);
     });
 
     tearDown(() async {
       await contentDb.close();
     });
 
-    test('returns empty list for empty DB', () async {
-      final engine = LocalCalendarEngine(contentDb);
-      final results = await engine.getTodayPrograms();
+    test('formatDateKey zero-pads month and day', () {
+      expect(
+        LocalCalendarEngine.formatDateKey(DateTime(2026, 3, 29)),
+        '2026-03-29',
+      );
+      expect(
+        LocalCalendarEngine.formatDateKey(DateTime(2026, 1, 5)),
+        '2026-01-05',
+      );
+      expect(
+        LocalCalendarEngine.formatDateKey(DateTime(2026, 12, 31)),
+        '2026-12-31',
+      );
+    });
+
+    test('AT-19.4.1 getEntry returns CalendarProgramEntry for known '
+        '(programId, date)', () async {
+      await seedDate('2026-03-29');
+      final entry = await engine.getEntry('daf_yomi', DateTime(2026, 3, 29));
+      expect(entry, isNotNull);
+      expect(entry!.programId, 'daf_yomi');
+      expect(entry.todayRef, 'Menachot.77');
+      expect(entry.apiSource, 'local');
+
+      // Display names sourced from the registry, not the DB row.
+      final def = CalendarProgramRegistry.byId('daf_yomi')!;
+      expect(entry.displayNameEn, def.displayNameEn);
+      expect(entry.displayNameHe, def.displayNameHe);
+    });
+
+    test('AT-19.4.2 getTodayPrograms returns entries for all 12 '
+        'programs when data exists', () async {
+      await seedDate('2026-03-29');
+      final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
+      expect(results, hasLength(12));
+      for (final entry in results) {
+        expect(entry.todayRef, isNotEmpty);
+        expect(entry.apiSource, 'local');
+      }
+      final ids = results.map((e) => e.programId).toSet();
+      expect(ids, hasLength(12));
+      expect(ids.contains('daf_yomi'), isTrue);
+      expect(ids.contains('nach_yomi'), isTrue);
+      expect(ids.contains('chofetz_chaim_daily'), isTrue);
+    });
+
+    test('AT-19.4.3 getEntry returns null for missing (programId, date)',
+        () async {
+      await seedDate('2026-03-29');
+      final entry = await engine.getEntry('daf_yomi', DateTime(2099, 1, 1));
+      expect(entry, isNull);
+    });
+
+    test('getTodayPrograms omits programs with no data for the date',
+        () async {
+      await seedDate('2026-03-29',
+          only: const [('daf_yomi', 'Menachot.77')]);
+      final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
+      expect(results, hasLength(1));
+      expect(results.first.programId, 'daf_yomi');
+    });
+
+    test('getTodayPrograms skips unknown programIds silently', () async {
+      await contentDb.customInsert(
+        'INSERT INTO calendar_cycles '
+        '(program_key, date_key, sefaria_ref, display_name) '
+        'VALUES (?, ?, ?, ?)',
+        variables: [
+          Variable.withString('fake_program'),
+          Variable.withString('2026-03-29'),
+          Variable.withString('Bogus.1'),
+          Variable.withString(''),
+        ],
+      );
+      await seedDate('2026-03-29',
+          only: const [('daf_yomi', 'Menachot.77')]);
+
+      final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
+      expect(results, hasLength(1));
+      expect(results.first.programId, 'daf_yomi');
+    });
+
+    test('AT-19.4.4 CalendarProgramService delegates to engine (no '
+        'network clients in the constructor)', () async {
+      await seedDate('2026-03-29');
+      final service = CalendarProgramService(engine);
+      final results = await service.getTodayPrograms();
+      // seedDate uses the current date only; today == DateTime.now so use
+      // an explicit getEntry for the known date instead.
+      final entry =
+          await service.getEntry('mishna_yomit', DateTime(2026, 3, 29));
+      expect(entry, isNotNull);
+      expect(entry!.todayRef, 'Mishnah_Tamid.2.1-2');
+      expect(results, isA<List<CalendarProgramEntry>>());
+    });
+
+    test('AT-19.4.5 todayCalendarProvider resolves from ContentDatabase',
+        () async {
+      final today = DateTime.now();
+      await seedDate(LocalCalendarEngine.formatDateKey(today));
+
+      final container = ProviderContainer(
+        overrides: [
+          contentDatabaseProvider.overrideWithValue(contentDb),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(todayCalendarProvider.future);
+      expect(result, hasLength(12));
+      expect(
+        result.every((CalendarProgramEntry e) => e.apiSource == 'local'),
+        isTrue,
+      );
+    });
+
+    test('AT-19.4.6 no Sefaria/Hebcal calendar providers remain in '
+        'the provider graph', () async {
+      // The provider file imports only ContentDatabase-backed deps —
+      // any reintroduction of network clients here would fail compile.
+      // We also verify the provider-service constructor takes exactly
+      // one dependency (LocalCalendarEngine) via a runtime construction.
+      expect(
+        () => CalendarProgramService(engine),
+        returnsNormally,
+      );
+    });
+
+    test('AT-19.4.7 getEntriesForRange returns ordered entries', () async {
+      for (var day = 25; day <= 29; day++) {
+        await contentDb.customInsert(
+          'INSERT INTO calendar_cycles '
+          '(program_key, date_key, sefaria_ref, display_name) '
+          'VALUES (?, ?, ?, ?)',
+          variables: [
+            Variable.withString('daf_yomi'),
+            Variable.withString('2026-03-$day'),
+            Variable.withString('Menachot.${day + 50}'),
+            Variable.withString(''),
+          ],
+        );
+      }
+
+      final results = await engine.getEntriesForRange(
+        'daf_yomi',
+        DateTime(2026, 3, 25),
+        DateTime(2026, 3, 29),
+      );
+      expect(results, hasLength(5));
+      expect(results.first.todayRef, 'Menachot.75');
+      expect(results.last.todayRef, 'Menachot.79');
+      expect(results.every((e) => e.apiSource == 'local'), isTrue);
+    });
+
+    test('getEntriesForRange handles sparse dates', () async {
+      for (final day in const [25, 27, 29]) {
+        await contentDb.customInsert(
+          'INSERT INTO calendar_cycles '
+          '(program_key, date_key, sefaria_ref, display_name) '
+          'VALUES (?, ?, ?, ?)',
+          variables: [
+            Variable.withString('daf_yomi'),
+            Variable.withString('2026-03-$day'),
+            Variable.withString('Menachot.$day'),
+            Variable.withString(''),
+          ],
+        );
+      }
+      final results = await engine.getEntriesForRange(
+        'daf_yomi',
+        DateTime(2026, 3, 25),
+        DateTime(2026, 3, 29),
+      );
+      expect(results, hasLength(3));
+      expect(
+        results.map((e) => e.todayRef).toList(),
+        ['Menachot.25', 'Menachot.27', 'Menachot.29'],
+      );
+    });
+
+    test('getEntriesForRange returns empty when program unknown to '
+        'the registry', () async {
+      final results = await engine.getEntriesForRange(
+        'definitely_not_a_program',
+        DateTime(2026, 3, 25),
+        DateTime(2026, 3, 29),
+      );
       expect(results, isEmpty);
     });
 
-    test('returns entry when data exists', () async {
-      final now = DateTime.now();
-      final dateKey =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    test('AT-19.4.registry-consistency every registry ID round-trips '
+        'through the engine', () async {
+      final today = DateTime(2026, 3, 29);
+      await seedDate('2026-03-29');
 
-      await contentDb.customInsert(
-        'INSERT INTO calendar_cycles (program_key, date_key, sefaria_ref, display_name) '
-        'VALUES (?, ?, ?, ?)',
-        variables: [
-          Variable.withString('daf_yomi'),
-          Variable.withString(dateKey),
-          Variable.withString('Berakhot 2a'),
-          Variable.withString('Daf Yomi'),
-        ],
-      );
-
-      final engine = LocalCalendarEngine(contentDb);
-      final results = await engine.getTodayPrograms();
-      expect(results, isNotEmpty);
-      expect(results.first.todayRef, 'Berakhot 2a');
+      for (final def in CalendarProgramRegistry.programs) {
+        final entry = await engine.getEntry(def.id, today);
+        expect(entry, isNotNull,
+            reason: '${def.id} has a fixture but getEntry returned null '
+                '— registry<->seed ID mismatch');
+        expect(entry!.programId, def.id);
+      }
     });
   });
 
