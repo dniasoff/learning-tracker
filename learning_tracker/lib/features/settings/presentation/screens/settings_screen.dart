@@ -329,11 +329,12 @@ class _BackupSyncSection extends ConsumerWidget {
         color: theme.colorScheme.onSurfaceVariant,
       ),
       title: const Text('Local only'),
-      subtitle: const Text('Create an account to enable cloud backup'),
+      subtitle: const Text('Upgrade to enable cloud backup and sync'),
       trailing: isLocalAuth
           ? FilledButton.tonal(
-              onPressed: () => context.pushRoute(const AccountCreationRoute()),
-              child: const Text('Create Account'),
+              onPressed: () =>
+                  context.pushRoute(const UpgradeToCloudRoute()),
+              child: const Text('Upgrade to Cloud'),
             )
           : null,
     );

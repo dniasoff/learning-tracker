@@ -41,6 +41,7 @@ import 'package:learning_tracker/features/scheduler/presentation/screens/schedul
 import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/device_restore_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
@@ -82,6 +83,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(path: '/welcome', page: WelcomeRoute.page),
     AutoRoute(path: '/create-account', page: AccountCreationRoute.page),
     AutoRoute(path: '/local-signup', page: LocalSignupRoute.page),
+    AutoRoute(
+      path: '/upgrade-to-cloud',
+      page: UpgradeToCloudRoute.page,
+      guards: [authGuard],
+    ),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
     AutoRoute(path: '/restore', page: DeviceRestoreRoute.page),
     AutoRoute(

@@ -60,9 +60,6 @@ class NoBackupBadge extends ConsumerWidget {
   }
 
   void _openUpgradeFlow(BuildContext context) {
-    // Navigates to Settings → the Upgrade to Cloud section. Once
-    // 20.9 lands a dedicated UpgradeFlowRoute this will route there
-    // directly instead of going via Settings.
-    context.router.push(const SettingsRoute());
+    context.router.push(const UpgradeToCloudRoute());
   }
 }
