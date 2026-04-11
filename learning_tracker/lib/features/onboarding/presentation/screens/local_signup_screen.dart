@@ -21,7 +21,19 @@ import 'package:learning_tracker/features/onboarding/domain/validators/auth_vali
 /// button is enabled.
 @RoutePage()
 class LocalSignupScreen extends ConsumerStatefulWidget {
-  const LocalSignupScreen({super.key});
+  const LocalSignupScreen({
+    super.key,
+    this.prefilledName,
+    this.prefilledEmail,
+  });
+
+  /// Pre-fills the name field when the user is bounced here from the
+  /// cloud signup screen after a connectivity drop. Lets them keep
+  /// what they typed instead of starting over.
+  final String? prefilledName;
+
+  /// Pre-fills the email field for the same reason.
+  final String? prefilledEmail;
 
   @override
   ConsumerState<LocalSignupScreen> createState() => _LocalSignupScreenState();
@@ -38,6 +50,17 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
   bool _acknowledged = false;
   bool _waitingForInternet = false;
   String? _submitError;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.prefilledName != null) {
+      _nameController.text = widget.prefilledName!;
+    }
+    if (widget.prefilledEmail != null) {
+      _emailController.text = widget.prefilledEmail!;
+    }
+  }
 
   @override
   void dispose() {
@@ -108,7 +131,7 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
         final online = next.maybeWhen(data: (v) => v, orElse: () => false);
         if (online && mounted) {
           _waitingForInternet = false;
-          unawaited(context.router.replace(const AccountCreationRoute()));
+          unawaited(context.router.replace(AccountCreationRoute()));
         }
       });
       return _WaitingForInternetView(

@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/auth/domain/services/local_auth_servic
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
+import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -23,7 +24,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 @RoutePage()
 class AccountCreationScreen extends ConsumerStatefulWidget {
-  const AccountCreationScreen({super.key});
+  const AccountCreationScreen({
+    super.key,
+    this.prefilledName,
+    this.prefilledEmail,
+  });
+
+  /// Pre-fills the name field when the user came from the local
+  /// signup screen via "Wait for Internet" reconnection.
+  final String? prefilledName;
+  final String? prefilledEmail;
 
   @override
   ConsumerState<AccountCreationScreen> createState() =>
@@ -40,6 +50,17 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreedToTerms = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.prefilledName != null) {
+      _nameController.text = widget.prefilledName!;
+    }
+    if (widget.prefilledEmail != null) {
+      _emailController.text = widget.prefilledEmail!;
+    }
+  }
 
   @override
   void dispose() {
@@ -123,7 +144,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
           // signup screen so they can acknowledge the no-backup
           // warning (v2 §4.2 + Epic 20.7).
           if (mounted) {
-            unawaited(context.router.replace(const LocalSignupRoute()));
+            unawaited(context.router.replace(LocalSignupRoute()));
           }
           return;
         }
@@ -239,6 +260,40 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final strength = _passwordStrength(_passwordController.text);
+
+    // Epic 20.6: if connectivity drops while the user is filling
+    // out the cloud signup form, bounce them to the local-born
+    // signup screen with their typed name/email pre-filled. They
+    // only need to re-type the password (intentionally not carried
+    // through navigation for security).
+    ref.listen<AsyncValue<bool>>(connectivityStreamProvider, (prev, next) {
+      if (_isLoading) return; // mid-Firebase-call: let it fail naturally
+      final wasOnline =
+          prev?.maybeWhen(data: (v) => v, orElse: () => true) ?? true;
+      final isOnline =
+          next.maybeWhen(data: (v) => v, orElse: () => true);
+      if (wasOnline && !isOnline && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Connection lost — moving you to offline signup.',
+            ),
+          ),
+        );
+        unawaited(
+          context.router.replace(
+            LocalSignupRoute(
+              prefilledName: _nameController.text.trim().isEmpty
+                  ? null
+                  : _nameController.text.trim(),
+              prefilledEmail: _emailController.text.trim().isEmpty
+                  ? null
+                  : _emailController.text.trim(),
+            ),
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       body: SafeArea(
