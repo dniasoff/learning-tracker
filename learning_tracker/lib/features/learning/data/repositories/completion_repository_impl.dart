@@ -325,6 +325,19 @@ class CompletionRepositoryImpl implements CompletionRepository {
       ),
     );
 
+    // Epic 20.11: tee the completion into the append-only event log
+    // so the streak + XP reducers can derive state independent of
+    // the legacy Streaks / Rewards cached state. Unique keys swallow
+    // duplicates silently; anything else propagates.
+    await _appendStreakEvent(profileId: _activeProfileId, at: now);
+    if (points > 0) {
+      await _appendXpEvent(
+        profileId: _activeProfileId,
+        delta: points,
+        at: now,
+      );
+    }
+
     // Retrieve the created completion
     final completion = await _database.completionDao.getCompletionById(id);
     if (completion == null) {
@@ -332,6 +345,46 @@ class CompletionRepositoryImpl implements CompletionRepository {
     }
 
     return completion;
+  }
+
+  /// Append a streak event. Silently ignores the unique-key conflict
+  /// that happens when the same completion is teed twice (idempotent).
+  Future<void> _appendStreakEvent({
+    required int profileId,
+    required DateTime at,
+  }) async {
+    try {
+      await _database.into(_database.streakEvents).insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              eventTimestamp: at,
+            ),
+            mode: drift.InsertMode.insertOrIgnore,
+          );
+    } catch (_) {
+      // Defensive: never let a telemetry tee block the primary write.
+    }
+  }
+
+  Future<void> _appendXpEvent({
+    required int profileId,
+    required int delta,
+    required DateTime at,
+  }) async {
+    try {
+      await _database.into(_database.xpEvents).insert(
+            XpEventsCompanion.insert(
+              profileId: profileId,
+              xpDelta: delta,
+              source: 'completion',
+              eventTimestamp: at,
+            ),
+            mode: drift.InsertMode.insertOrIgnore,
+          );
+    } catch (_) {
+      // Same defensive rationale as _appendStreakEvent.
+    }
   }
 
   /// Advance the bookmark to the next item in learning order.
