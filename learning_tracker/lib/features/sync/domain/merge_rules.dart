@@ -55,3 +55,17 @@ DateTime mergeForwardMaxDate(DateTime local, DateTime remote) =>
 /// Strictly additive — a sync never removes entries.
 Set<T> mergeForwardUnion<T>(Iterable<T> local, Iterable<T> remote) =>
     {...local, ...remote};
+
+/// Predicate used by the sync engine's pull loops to decide whether
+/// an incoming remote row should overwrite the current local row
+/// under the LWW rule. Returns `true` only when [remoteUpdatedAt] is
+/// strictly after [localUpdatedAt] — ties go to local, matching
+/// [lwwMerge]'s flapping-free behaviour.
+bool remoteIsNewer({
+  required DateTime? localUpdatedAt,
+  required DateTime? remoteUpdatedAt,
+}) {
+  if (remoteUpdatedAt == null) return false;
+  if (localUpdatedAt == null) return true;
+  return remoteUpdatedAt.isAfter(localUpdatedAt);
+}

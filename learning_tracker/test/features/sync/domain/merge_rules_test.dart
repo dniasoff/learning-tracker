@@ -52,6 +52,56 @@ void main() {
     });
   });
 
+  group('remoteIsNewer (sync engine predicate)', () {
+    test('strictly newer remote → true', () {
+      expect(
+        remoteIsNewer(
+          localUpdatedAt: DateTime.utc(2026, 1, 1),
+          remoteUpdatedAt: DateTime.utc(2026, 2, 1),
+        ),
+        isTrue,
+      );
+    });
+
+    test('equal timestamps → false (no flapping)', () {
+      final ts = DateTime.utc(2026, 1, 1);
+      expect(
+        remoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts),
+        isFalse,
+      );
+    });
+
+    test('older remote → false', () {
+      expect(
+        remoteIsNewer(
+          localUpdatedAt: DateTime.utc(2026, 3, 1),
+          remoteUpdatedAt: DateTime.utc(2026, 1, 1),
+        ),
+        isFalse,
+      );
+    });
+
+    test('null local → remote always wins', () {
+      expect(
+        remoteIsNewer(
+          localUpdatedAt: null,
+          remoteUpdatedAt: DateTime.utc(2026, 1, 1),
+        ),
+        isTrue,
+      );
+    });
+
+    test('null remote → never wins', () {
+      expect(
+        remoteIsNewer(
+          localUpdatedAt: DateTime.utc(2026, 1, 1),
+          remoteUpdatedAt: null,
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('mergeForwardUnion', () {
     test('strictly additive union', () {
       expect(

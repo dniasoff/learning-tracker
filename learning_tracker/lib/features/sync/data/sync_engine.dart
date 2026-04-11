@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
+import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker/talker.dart';
@@ -739,10 +740,15 @@ class SyncEngine {
           continue;
         }
 
-        // LWW: compare remote updated_at against local settings timestamp
+        // v2 §4.1 LWW: delegate the "is remote strictly newer?"
+        // predicate to merge_rules.remoteIsNewer so every pull path
+        // uses the same rule.
         if (remoteUpdatedAt != null) {
           final localTs = await _getSettingsTimestamp(curriculumId);
-          if (localTs != null && !remoteUpdatedAt.isAfter(localTs)) {
+          if (!remoteIsNewer(
+            localUpdatedAt: localTs,
+            remoteUpdatedAt: remoteUpdatedAt,
+          )) {
             _logger.debug(
               'Skipping settings for $curriculumId: local is newer or equal',
             );
@@ -795,13 +801,16 @@ class SyncEngine {
     final remoteTs = _parseTimestamp(remote['study_day_config_updated_at']);
     final profileId = _firestoreDataSource.profileId;
 
-    // LWW check against local
+    // v2 §4.1 LWW via merge_rules.remoteIsNewer.
     if (remoteTs != null) {
       final localTs = await _database.studyDayConfigDao.getLatestUpdatedAt(
         profileId: profileId,
         curriculumId: curriculumId,
       );
-      if (localTs != null && !remoteTs.isAfter(localTs)) {
+      if (!remoteIsNewer(
+        localUpdatedAt: localTs,
+        remoteUpdatedAt: remoteTs,
+      )) {
         _logger.debug(
           'Skipping study day config for $curriculumId: local is newer',
         );
