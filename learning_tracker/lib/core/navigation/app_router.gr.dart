@@ -682,6 +682,22 @@ class LearningRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [LocalSignInScreen]
+class LocalSignInRoute extends PageRouteInfo<void> {
+  const LocalSignInRoute({List<PageRouteInfo>? children})
+    : super(LocalSignInRoute.name, initialChildren: children);
+
+  static const String name = 'LocalSignInRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const LocalSignInScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [LocalSignupScreen]
 class LocalSignupRoute extends PageRouteInfo<LocalSignupRouteArgs> {
   LocalSignupRoute({

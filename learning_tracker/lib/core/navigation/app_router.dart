@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/learning_order/presentation/screens/le
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/account_creation_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/local_sign_in_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/local_signup_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
@@ -83,6 +84,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(path: '/welcome', page: WelcomeRoute.page),
     AutoRoute(path: '/create-account', page: AccountCreationRoute.page),
     AutoRoute(path: '/local-signup', page: LocalSignupRoute.page),
+    AutoRoute(path: '/local-sign-in', page: LocalSignInRoute.page),
     AutoRoute(
       path: '/upgrade-to-cloud',
       page: UpgradeToCloudRoute.page,

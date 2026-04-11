@@ -11,10 +11,9 @@ import 'package:learning_tracker/features/auth/presentation/providers/connectivi
 /// - Online  → "Get Started"            → cloud-born signup
 /// - Offline → "Create Offline Account" → local-born signup
 ///
-/// The "Already have an account? Sign in" link is only meaningful
-/// online — local-born accounts are resumed automatically by the
-/// auth state provider on app restart, there's no separate local
-/// sign-in screen. So the link is hidden when offline.
+/// The "Already have an account? Sign in" link routes to the
+/// cloud-born sign-in screen when online, and to the local-born
+/// sign-in screen when offline.
 @RoutePage()
 class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
@@ -87,13 +86,17 @@ class WelcomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (isOnline) ...[
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => context.router.push(const SignInRoute()),
-                  child: const Text('Already have an account? Sign in'),
-                ),
-              ],
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  if (isOnline) {
+                    context.router.push(const SignInRoute());
+                  } else {
+                    context.router.push(const LocalSignInRoute());
+                  }
+                },
+                child: const Text('Already have an account? Sign in'),
+              ),
               const Spacer(),
             ],
           ),

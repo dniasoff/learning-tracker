@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -557,16 +558,25 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
 
     final user = _user;
 
+    // Local-born fallback: when no Firebase user, render from the
+    // auth-state user (populated by LocalAuthService sign-in/sign-up).
     if (user == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Row(
-          children: [
-            Icon(Icons.person_outline, size: 48),
-            SizedBox(width: 16),
-            Text('Not signed in'),
-          ],
-        ),
+      final authState = ref.watch(authStateProvider);
+      if (!authState.isSignedIn || !authState.isLocalBorn) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            children: [
+              Icon(Icons.person_outline, size: 48),
+              SizedBox(width: 16),
+              Text('Not signed in'),
+            ],
+          ),
+        );
+      }
+      return _LocalBornProfileRow(
+        theme: theme,
+        authUser: authState.currentUser!,
       );
     }
 
@@ -655,6 +665,78 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             onPressed: () => _showEditNameDialog(user),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Profile row for local-born accounts. Mirrors the layout of the
+/// Firebase-user row but reads from [AuthUser] (no Firebase user
+/// exists for local-born accounts) and hides the edit-name button
+/// since that path goes through Firebase.
+class _LocalBornProfileRow extends StatelessWidget {
+  const _LocalBornProfileRow({required this.theme, required this.authUser});
+
+  final ThemeData theme;
+  final AuthUser authUser;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayName = authUser.displayName.isNotEmpty
+        ? authUser.displayName
+        : authUser.email.split('@').first;
+    final initials = displayName
+        .split(' ')
+        .take(2)
+        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+        .join();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+            child: Text(
+              initials.isEmpty ? '?' : initials,
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  authUser.email,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    NoBackupBadge(),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
