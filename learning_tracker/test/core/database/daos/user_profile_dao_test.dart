@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
 void main() {
@@ -16,8 +17,9 @@ void main() {
 
   group('UserProfileDao', () {
     Future<int> insertTestProfile({
-      String localUid = 'local-test-uid',
+      String email = 'test@test.local',
       String firebaseUid = 'uid-123',
+      String tier = 'cloudBorn',
       String displayName = 'Test User',
       String userMode = 'adult',
       DateTime? createdAt,
@@ -26,8 +28,9 @@ void main() {
       final now = createdAt ?? DateTime.utc(2025, 1, 1);
       return database.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
-          localUid: localUid,
+          email: email,
           firebaseUid: Value(firebaseUid),
+          tier: tier,
           displayName: displayName,
           userMode: userMode,
           createdAt: now,
@@ -44,6 +47,7 @@ void main() {
       expect(profile!.firebaseUid, 'uid-123');
       expect(profile.displayName, 'Test User');
       expect(profile.userMode, 'adult');
+      expect(profile.tier, 'cloudBorn');
     });
 
     test('getUserProfileById returns null for non-existent id', () async {
@@ -52,7 +56,7 @@ void main() {
     });
 
     test('getUserProfileByFirebaseUid finds by uid', () async {
-      await insertTestProfile(localUid: 'local-abc', firebaseUid: 'abc');
+      await insertTestProfile(email: 'abc@test.local', firebaseUid: 'abc');
 
       final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
         'abc',
@@ -69,8 +73,8 @@ void main() {
     });
 
     test('getAllUserProfiles returns all profiles', () async {
-      await insertTestProfile(localUid: 'local-1', firebaseUid: 'uid-1');
-      await insertTestProfile(localUid: 'local-2', firebaseUid: 'uid-2');
+      await insertTestProfile(email: 'a@test.local', firebaseUid: 'uid-1');
+      await insertTestProfile(email: 'b@test.local', firebaseUid: 'uid-2');
 
       final profiles = await database.userProfileDao.getAllUserProfiles();
       expect(profiles, hasLength(2));
@@ -83,8 +87,9 @@ void main() {
       await database.userProfileDao.updateUserProfile(
         UserProfilesCompanion(
           id: Value(profile!.id),
-          localUid: Value(profile.localUid),
+          email: Value(profile.email),
           firebaseUid: Value(profile.firebaseUid),
+          tier: Value(profile.tier),
           displayName: const Value('New Name'),
           userMode: Value(profile.userMode),
           createdAt: Value(profile.createdAt),
@@ -106,6 +111,68 @@ void main() {
       expect(profile, isNull);
     });
 
+    test('findByTier returns only matching tier', () async {
+      await insertTestProfile(
+        email: 'cloud@test.local',
+        firebaseUid: 'cloud-1',
+        tier: 'cloudBorn',
+      );
+      await database.userProfileDao.insertUserProfile(
+        UserProfilesCompanion.insert(
+          email: 'local@test.local',
+          tier: 'localBorn',
+          passwordHash: const Value(r'argon2id$hash'),
+          displayName: 'Local',
+          userMode: 'adult',
+          createdAt: DateTime.utc(2025, 1, 1),
+          updatedAt: DateTime.utc(2025, 1, 1),
+        ),
+      );
+
+      final locals =
+          await database.userProfileDao.findByTier(UserTier.localBorn);
+      expect(locals, hasLength(1));
+      expect(locals.first.email, 'local@test.local');
+    });
+
+    test('findLocalBornByEmail ignores cloud-born rows', () async {
+      await insertTestProfile(
+        email: 'shared@test.local',
+        firebaseUid: 'cloud-shared',
+        tier: 'cloudBorn',
+      );
+
+      final missing = await database.userProfileDao
+          .findLocalBornByEmail('shared@test.local');
+      expect(missing, isNull);
+    });
+
+    test('upgradeLocalToCloud flips tier atomically', () async {
+      final id = await database.userProfileDao.insertUserProfile(
+        UserProfilesCompanion.insert(
+          email: 'upgrade@test.local',
+          tier: 'localBorn',
+          passwordHash: const Value(r'argon2id$hash'),
+          displayName: 'Upgrade Me',
+          userMode: 'adult',
+          createdAt: DateTime.utc(2025, 1, 1),
+          updatedAt: DateTime.utc(2025, 1, 1),
+        ),
+      );
+
+      await database.userProfileDao.upgradeLocalToCloud(
+        profileId: id,
+        firebaseUid: 'new-firebase-uid',
+        updatedAt: DateTime.utc(2025, 2, 1),
+      );
+
+      final upgraded =
+          await database.userProfileDao.getUserProfileById(id);
+      expect(upgraded!.tier, 'cloudBorn');
+      expect(upgraded.firebaseUid, 'new-firebase-uid');
+      expect(upgraded.passwordHash, isNull);
+    });
+
     test('upsertProfile inserts when no profile exists for uid', () async {
       await database.userProfileDao.upsertProfile(
         firebaseUid: 'new-uid',
@@ -120,11 +187,12 @@ void main() {
       expect(profile, isNotNull);
       expect(profile!.displayName, 'New User');
       expect(profile.userMode, 'child');
+      expect(profile.tier, 'cloudBorn');
     });
 
     test('upsertProfile updates when remote is newer', () async {
       await insertTestProfile(
-        localUid: 'local-1',
+        email: 'uid1@test.local',
         firebaseUid: 'uid-1',
         displayName: 'Old Name',
         updatedAt: DateTime.utc(2025, 1, 1),
@@ -146,7 +214,7 @@ void main() {
 
     test('upsertProfile does not update when remote is older', () async {
       await insertTestProfile(
-        localUid: 'local-1',
+        email: 'uid1@test.local',
         firebaseUid: 'uid-1',
         displayName: 'Current Name',
         updatedAt: DateTime.utc(2025, 6, 1),

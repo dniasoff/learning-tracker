@@ -99,13 +99,23 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        // v2 → v3: Epic 20 hard-tier auth refactor.
+        // Drops the anonymous-localUid schema and rebuilds UserProfiles
+        // with email + passwordHash + tier. Pre-launch data is wiped —
+        // any user must re-sign-up post-upgrade.
+        if (from < 3) {
+          await m.deleteTable('user_profiles');
+          await m.createTable(userProfiles);
+        }
       },
     );
   }

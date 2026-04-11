@@ -42,8 +42,9 @@ void main() {
   test('adult account blocked — resolver.next(false)', () async {
     await db.userProfileDao.insertUserProfile(
       UserProfilesCompanion.insert(
-        localUid: 'local-uid-1',
+        email: 'adult@test.local',
         firebaseUid: const Value('uid-1'),
+        tier: 'cloudBorn',
         displayName: 'Adult User',
         userMode: 'adult',
         createdAt: DateTime.now(),
@@ -62,8 +63,9 @@ void main() {
   test('child account allowed — resolver.next(true)', () async {
     await db.userProfileDao.insertUserProfile(
       UserProfilesCompanion.insert(
-        localUid: 'local-uid-2',
+        email: 'child@test.local',
         firebaseUid: const Value('uid-2'),
+        tier: 'cloudBorn',
         displayName: 'Child User',
         userMode: 'child',
         createdAt: DateTime.now(),

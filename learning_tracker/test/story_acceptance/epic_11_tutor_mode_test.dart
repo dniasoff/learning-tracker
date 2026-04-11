@@ -167,8 +167,9 @@ void main() {
       final trackId = await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
-          localUid: 'local-uid-child',
+          email: 'child@test.local',
           firebaseUid: const Value('uid-child'),
+          tier: 'cloudBorn',
           displayName: 'Child User',
           userMode: 'child',
           createdAt: DateTime.now(),
@@ -193,8 +194,9 @@ void main() {
       final trackId = await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
-          localUid: 'local-uid-adult',
+          email: 'adult@test.local',
           firebaseUid: const Value('uid-adult'),
+          tier: 'cloudBorn',
           displayName: 'Adult User',
           userMode: 'adult',
           createdAt: DateTime.now(),

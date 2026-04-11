@@ -73,7 +73,8 @@ void main() {
     test('UserDatabase creates with user tables', () async {
       await userDb.into(userDb.userProfiles).insert(
             UserProfilesCompanion.insert(
-              localUid: 'test-uid-123',
+              email: 'test@test.local',
+              tier: 'cloudBorn',
               displayName: 'Test User',
               userMode: 'adult',
               createdAt: DateTime.now(),
@@ -82,7 +83,7 @@ void main() {
           );
       final profiles = await userDb.select(userDb.userProfiles).get();
       expect(profiles, hasLength(1));
-      expect(profiles.first.localUid, 'test-uid-123');
+      expect(profiles.first.email, 'test@test.local');
     });
 
     test('ContentDatabase creates with content tables', () async {
@@ -91,10 +92,12 @@ void main() {
       expect(programs, isList);
     });
 
-    test('UserProfiles has localUid and nullable firebaseUid', () async {
+    test('UserProfiles stores local-born account without firebaseUid', () async {
       await userDb.into(userDb.userProfiles).insert(
             UserProfilesCompanion.insert(
-              localUid: 'local-only-user',
+              email: 'localonly@test.local',
+              tier: 'localBorn',
+              passwordHash: const Value(r'argon2id$placeholder'),
               displayName: 'Local User',
               userMode: 'adult',
               createdAt: DateTime.now(),
@@ -103,9 +106,9 @@ void main() {
           );
       final profile =
           await userDb.select(userDb.userProfiles).getSingle();
-      expect(profile.localUid, 'local-only-user');
+      expect(profile.email, 'localonly@test.local');
       expect(profile.firebaseUid, isNull);
-      expect(profile.hasAccount, isFalse);
+      expect(profile.tier, 'localBorn');
     });
   });
 
