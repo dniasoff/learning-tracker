@@ -8,17 +8,20 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
     show kOnboardingComplete;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Route guard that checks if onboarding is complete.
+/// Unified auth/onboarding guard (Epic 20 §4).
 ///
-/// Unlike the old [AuthGuard], this guard NEVER touches Firebase and
-/// NEVER hangs waiting for network. It checks local SharedPreferences
-/// flags synchronously.
+/// Collapses the v1 `AuthGuard` + `LocalAuthGuard` pair into a single
+/// guard. Decision tree:
 ///
-/// Flow:
-/// - Onboarding complete → pass through to requested route
-/// - Intro slides not seen → redirect to AppIntroRoute (4 promo slides)
-/// - Intro seen but onboarding not complete → redirect to WelcomeRoute (sign-in/sign-up)
-class LocalAuthGuard extends AutoRouteGuard {
+/// - Onboarding complete → pass through
+/// - Intro slides not seen → redirect to [AppIntroRoute]
+/// - Intro seen but onboarding incomplete → redirect to [WelcomeRoute]
+///
+/// Signed-in / signed-out session status is owned by `AuthStateNotifier`,
+/// read downstream by individual screens. This guard only governs the
+/// first-launch gate and never touches Firebase — see 19.6 startup
+/// hardening for why that matters.
+class AuthGuard extends AutoRouteGuard {
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,

@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,7 +10,7 @@ class MockNavigationResolver extends Mock implements NavigationResolver {}
 class MockStackRouter extends Mock implements StackRouter {}
 
 void main() {
-  late LocalAuthGuard authGuard;
+  late AuthGuard authGuard;
   late MockNavigationResolver mockResolver;
   late MockStackRouter mockRouter;
 
@@ -20,7 +20,7 @@ void main() {
   });
 
   setUp(() {
-    authGuard = LocalAuthGuard();
+    authGuard = AuthGuard();
     mockResolver = MockNavigationResolver();
     mockRouter = MockStackRouter();
 
@@ -29,7 +29,7 @@ void main() {
     when(() => mockRouter.replace(any())).thenAnswer((_) async => null);
   });
 
-  group('LocalAuthGuard', () {
+  group('AuthGuard', () {
     test('allows navigation when onboarding is complete', () async {
       SharedPreferences.setMockInitialValues({'onboarding_complete': true});
 

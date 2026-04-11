@@ -6,7 +6,7 @@ import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/local_calendar_engine.dart';
-import 'package:learning_tracker/features/auth/domain/models/app_auth_state.dart';
+import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 import '../helpers/test_database.dart';
@@ -160,28 +160,25 @@ void main() {
     });
   });
 
-  // ─── Story 19.5: Local-First Auth ────────────────────────────────
-  group('Story 19.5 — Local-First Auth Abstraction', () {
-    test('LocalAuthState has no cloud account', () {
-      const state = LocalAuthState(
-        localUid: 'test-uid',
-        displayName: 'Test',
-      );
-      expect(state.hasCloudAccount, isFalse);
-      expect(state.firebaseUid, isNull);
-      expect(state.displayUid, 'test-uid');
-    });
+  // ─── Story 19.5 superseded by Epic 20 v2 unified AuthState ──────
+  group('Story 19.5 — superseded by Epic 20 v2 unified AuthState', () {
+    test('unified AuthState exposes tier + session status', () {
+      const signedOut = AuthState.signedOut();
+      expect(signedOut.isSignedIn, isFalse);
+      expect(signedOut.tier, isNull);
 
-    test('CloudAuthState has cloud account', () {
-      const state = CloudAuthState(
-        localUid: 'test-uid',
-        firebaseUid: 'firebase-uid',
-        displayName: 'Test',
-        email: 'test@example.com',
+      const signedIn = AuthState.signedIn(
+        user: AuthUser(
+          profileId: 1,
+          email: 'test@example.com',
+          displayName: 'Test',
+          userMode: 'adult',
+        ),
+        tier: Tier.cloudBorn,
       );
-      expect(state.hasCloudAccount, isTrue);
-      expect(state.firebaseUid, 'firebase-uid');
-      expect(state.displayUid, 'test-uid');
+      expect(signedIn.isSignedIn, isTrue);
+      expect(signedIn.isCloudBorn, isTrue);
+      expect(signedIn.isLocalBorn, isFalse);
     });
   });
 

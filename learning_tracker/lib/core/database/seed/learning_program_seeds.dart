@@ -1,7 +1,13 @@
 /// Seed data for all 9 learning program presets.
 ///
 /// Each preset is immutable — never modified, only deprecated and replaced.
-const List<Map<String, Object>> learningProgramSeeds = [
+///
+/// Calendar fields (Story 19.3 T11):
+/// - `api_source`: 'sefaria' | 'hebcal' | null (custom program)
+/// - `api_program_key`: API response key (e.g. 'Daf Yomi', 'nachyomi')
+/// - `is_calendar_program`: true when the program is date-driven by an
+///   external API / CalendarCycles table; false for custom programs.
+const List<Map<String, Object?>> learningProgramSeeds = [
   {
     'name': 'oraysa',
     'display_name': 'Oraysa',
@@ -18,6 +24,9 @@ const List<Map<String, Object>> learningProgramSeeds = [
         '{"stage":"rolling_back_20","label":"חזרה מחזורית","type":"rolling","window":20}'
         ']',
     'test_config': '{}',
+    'api_source': null,
+    'api_program_key': null,
+    'is_calendar_program': false,
   },
   {
     'name': 'dirshu_kinyan_torah',

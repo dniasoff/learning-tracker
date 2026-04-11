@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
@@ -38,7 +38,7 @@ AppRouter _createAuthenticatedRouter() {
   restoreGuard.markRestoreComplete();
 
   return AppRouter(
-    authGuard: LocalAuthGuard(),
+    authGuard: AuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
       database: testDb,
@@ -71,7 +71,7 @@ AppRouter _createUnauthenticatedRouter() {
   restoreGuard.markRestoreComplete();
 
   return AppRouter(
-    authGuard: LocalAuthGuard(),
+    authGuard: AuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
       database: testDb,

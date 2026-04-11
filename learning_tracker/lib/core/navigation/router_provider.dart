@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/local_auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
@@ -22,11 +22,11 @@ final routerProvider = Provider<AppRouter>((ref) {
   final db = ref.watch(userDatabaseProvider);
 
   return AppRouter(
-    authGuard: LocalAuthGuard(),
+    authGuard: AuthGuard(),
     restoreGuard: RestoreGuard(
       database: db,
       hasCloudAccount: () =>
-          ref.read(authStateProvider).hasCloudAccount,
+          ref.read(authStateProvider).isCloudBorn,
     ),
     profileGuard: ProfileGuard(
       database: db,

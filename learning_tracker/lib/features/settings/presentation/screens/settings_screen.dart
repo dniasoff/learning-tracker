@@ -8,7 +8,6 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/features/auth/domain/models/app_auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
@@ -281,7 +280,7 @@ class _BackupSyncSection extends ConsumerWidget {
             SyncStatusLocalOnly() => _buildLocalOnlyTile(
               context,
               theme,
-              isLocalAuth: authState is LocalAuthState,
+              isLocalAuth: authState.isLocalBorn,
             ),
             SyncStatusSynced(:final lastSyncedAt) => _buildSyncedTile(
               theme,

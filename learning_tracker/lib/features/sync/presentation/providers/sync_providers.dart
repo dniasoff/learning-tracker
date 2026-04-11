@@ -3,7 +3,6 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
-import 'package:learning_tracker/features/auth/domain/models/app_auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -16,7 +15,7 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 /// Returns null when user has no cloud account (local-only mode).
 final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
   final authState = ref.watch(authStateProvider);
-  if (authState is! CloudAuthState) return null;
+  if (!authState.isCloudBorn) return null;
 
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(firebaseAuthProvider);
@@ -34,7 +33,7 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
 /// Returns null when user has no cloud account (local-only mode).
 final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
   final authState = ref.watch(authStateProvider);
-  if (!authState.hasCloudAccount) return null;
+  if (!authState.isCloudBorn) return null;
 
   final database = ref.watch(userDatabaseProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
@@ -57,8 +56,8 @@ final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
 final syncEngineProvider = Provider<SyncEngine?>((ref) {
   final authState = ref.watch(authStateProvider);
 
-  // Tier 0: No cloud account — no sync engine needed
-  if (!authState.hasCloudAccount) return null;
+  // Tier 0: Local-born or signed out — no sync engine needed (v2 §4.5)
+  if (!authState.isCloudBorn) return null;
 
   final database = ref.watch(userDatabaseProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
