@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
@@ -614,24 +615,36 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                     ),
                   ),
                 const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'SELF-LEARNER',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'SELF-LEARNER',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                  ),
+                    // Epic 20.8: no-backup badge for local-born users.
+                    // Tier-gated inside the widget — cloud-born users
+                    // don't see it.
+                    const NoBackupBadge(),
+                  ],
                 ),
               ],
             ),

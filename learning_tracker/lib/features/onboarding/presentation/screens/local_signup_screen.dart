@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
+import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
 
@@ -35,6 +36,7 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
 
   bool _isLoading = false;
   bool _acknowledged = false;
+  bool _waitingForInternet = false;
   String? _submitError;
 
   @override
@@ -97,6 +99,23 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Epic 20.7: while "Wait for Internet" is active, watch the
+    // connectivity stream and auto-advance to the cloud-born signup
+    // screen as soon as the device comes online.
+    if (_waitingForInternet) {
+      ref.listen<AsyncValue<bool>>(connectivityStreamProvider, (prev, next) {
+        final online = next.maybeWhen(data: (v) => v, orElse: () => false);
+        if (online && mounted) {
+          _waitingForInternet = false;
+          unawaited(context.router.replace(const AccountCreationRoute()));
+        }
+      });
+      return _WaitingForInternetView(
+        onCancel: () => setState(() => _waitingForInternet = false),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Offline Account')),
       body: SafeArea(
@@ -185,7 +204,7 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
                 OutlinedButton(
                   onPressed: _isLoading
                       ? null
-                      : () => context.router.maybePop(),
+                      : () => setState(() => _waitingForInternet = true),
                   child: const Text('Wait for Internet'),
                 ),
               ],
@@ -279,6 +298,50 @@ class _WarningBlock extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WaitingForInternetView extends StatelessWidget {
+  const _WaitingForInternetView({required this.onCancel});
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Waiting for Internet')),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 24),
+                Text(
+                  'Waiting for an internet connection…',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "We'll switch to a cloud-backed signup as soon as "
+                  "you're online. You can keep waiting, or go back "
+                  'and create an offline account now.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                OutlinedButton(
+                  onPressed: onCancel,
+                  child: const Text('Back to offline signup'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
