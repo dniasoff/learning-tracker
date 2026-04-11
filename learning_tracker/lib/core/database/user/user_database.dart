@@ -34,12 +34,14 @@ import 'package:learning_tracker/core/database/tables/reward_pool_items.dart';
 import 'package:learning_tracker/core/database/tables/reward_pools.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
+import 'package:learning_tracker/core/database/tables/streak_events.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
 import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/tables/test_scores.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
 import 'package:learning_tracker/core/database/tables/user_profiles.dart';
+import 'package:learning_tracker/core/database/tables/xp_events.dart';
 
 part 'user_database.g.dart';
 
@@ -68,6 +70,8 @@ part 'user_database.g.dart';
     RewardPools,
     RewardPoolItems,
     Streaks,
+    StreakEvents,
+    XpEvents,
     SyncQueue,
     TextDownloadStatuses,
     TestScores,
@@ -99,7 +103,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -115,6 +119,14 @@ class UserDatabase extends _$UserDatabase {
         if (from < 3) {
           await m.deleteTable('user_profiles');
           await m.createTable(userProfiles);
+        }
+        // v3 → v4: Epic 20 story 20.11 event log for streaks + XP.
+        // Append-only tables; no backfill — existing state tables
+        // remain authoritative until a synthetic "initial state"
+        // event is written per profile in a follow-up.
+        if (from < 4) {
+          await m.createTable(streakEvents);
+          await m.createTable(xpEvents);
         }
       },
     );
