@@ -4,6 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 
+/// Welcome screen — the first non-intro surface a brand-new user
+/// sees. Shows a single signup call-to-action whose destination is
+/// chosen by the live connectivity stream:
+///
+/// - Online  → "Get Started"            → cloud-born signup
+/// - Offline → "Create Offline Account" → local-born signup
+///
+/// The "Already have an account? Sign in" link is only meaningful
+/// online — local-born accounts are resumed automatically by the
+/// auth state provider on app restart, there's no separate local
+/// sign-in screen. So the link is hidden when offline.
 @RoutePage()
 class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
@@ -11,6 +22,16 @@ class WelcomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+
+    // Live-watch so the buttons update the instant connectivity flips.
+    // Default to "online" during the initial loading tick so a
+    // cold-start first render doesn't flash the offline UI while
+    // the checker is still resolving.
+    final connectivity = ref.watch(connectivityStreamProvider);
+    final isOnline = connectivity.maybeWhen(
+      data: (v) => v,
+      orElse: () => true,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -43,28 +64,36 @@ class WelcomeScreen extends ConsumerWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
+              if (!isOnline) ...[
+                const SizedBox(height: 24),
+                _OfflineHint(theme: theme),
+              ],
               const Spacer(flex: 3),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  // Epic 20.6: signup is mandatory at first launch.
-                  // Route by current connectivity — online → cloud,
-                  // offline → local. Uses the last emitted value from
-                  // connectivityStreamProvider so the decision is
-                  // made from the already-running checker, no extra
-                  // await or timing budget needed.
-                  onPressed: () => _getStarted(context, ref),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('Get Started'),
+                  onPressed: () {
+                    if (isOnline) {
+                      context.router.push(AccountCreationRoute());
+                    } else {
+                      context.router.push(LocalSignupRoute());
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      isOnline ? 'Get Started' : 'Create Offline Account',
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => context.router.push(const SignInRoute()),
-                child: const Text('Already have an account? Sign in'),
-              ),
+              if (isOnline) ...[
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => context.router.push(const SignInRoute()),
+                  child: const Text('Already have an account? Sign in'),
+                ),
+              ],
               const Spacer(),
             ],
           ),
@@ -72,20 +101,30 @@ class WelcomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _getStarted(BuildContext context, WidgetRef ref) {
-    final connectivity = ref.read(connectivityStreamProvider);
-    // Default to "online" when the stream hasn't produced a value
-    // yet — matches the v2 §3 rule "ambiguous network → try cloud
-    // first and fall back gracefully on Firebase failure".
-    final isOnline = connectivity.maybeWhen(
-      data: (v) => v,
-      orElse: () => true,
+class _OfflineHint extends StatelessWidget {
+  const _OfflineHint({required this.theme});
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.cloud_off,
+          size: 16,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          "You're offline — you'll sign up without cloud backup",
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
-    if (isOnline) {
-      context.router.push(AccountCreationRoute());
-    } else {
-      context.router.push(LocalSignupRoute());
-    }
   }
 }
