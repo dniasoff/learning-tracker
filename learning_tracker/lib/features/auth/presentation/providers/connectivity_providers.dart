@@ -1,17 +1,32 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/providers/network_providers.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 
-/// Polls [ConnectivityService.isOnline] every 2 seconds and emits
-/// `true` for online, `false` for offline.
+/// Shared `InternetConnectionChecker` instance. The package runs a
+/// low-frequency background probe against a set of reliable hosts
+/// and emits a [InternetConnectionStatus] on every change — event-
+/// driven instead of polling, so idle CPU cost is ~0.
 ///
-/// Cheap, stream-based alternative to plumbing through a proper
-/// platform-level connectivity listener — good enough for the
-/// 20.8 banner (spec allows up to 2s detection delay per
-/// v2 §4.6 ACs).
+/// Exposed as a provider so tests can override with a fake that
+/// emits a scripted sequence without touching the network.
+final internetConnectionCheckerProvider =
+    Provider<InternetConnectionChecker>((ref) {
+  final checker = InternetConnectionChecker.createInstance();
+  ref.onDispose(checker.dispose);
+  return checker;
+});
+
+/// Live connectivity stream — `true` when the device has a usable
+/// internet connection, `false` otherwise. Widgets/providers that
+/// need to react to online/offline transitions (offline banner,
+/// "Wait for Internet" screen, sync engine activation) watch this.
+///
+/// Starts with an explicit `hasConnection` check so subscribers get
+/// the current state immediately instead of waiting for the first
+/// transition event.
 final connectivityStreamProvider = StreamProvider<bool>((ref) async* {
-  final service = ref.watch(connectivityServiceProvider);
-  while (true) {
-    yield await service.isOnline;
-    await Future<void>.delayed(const Duration(seconds: 2));
-  }
+  final checker = ref.watch(internetConnectionCheckerProvider);
+  yield await checker.hasConnection;
+  yield* checker.onStatusChange.map(
+    (status) => status == InternetConnectionStatus.connected,
+  );
 });
