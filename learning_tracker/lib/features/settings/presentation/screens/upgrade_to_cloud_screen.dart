@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -23,19 +24,25 @@ class UpgradeToCloudScreen extends ConsumerStatefulWidget {
       _UpgradeToCloudScreenState();
 }
 
+enum _CollisionChoice { none, upload, discard }
+
 class _UpgradeToCloudScreenState
     extends ConsumerState<UpgradeToCloudScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
+  final _cloudPasswordController = TextEditingController();
 
   bool _isLoading = false;
   String? _error;
   bool _collision = false;
   bool _success = false;
+  bool _discardAcknowledged = false;
+  _CollisionChoice _choice = _CollisionChoice.none;
 
   @override
   void dispose() {
     _passwordController.dispose();
+    _cloudPasswordController.dispose();
     super.dispose();
   }
 
@@ -87,6 +94,74 @@ class _UpgradeToCloudScreenState
     }
   }
 
+  /// Execute the user's collision resolution choice. Option A
+  /// (upload) or Option B (discard) both require the cloud account
+  /// password.
+  Future<void> _executeCollisionChoice() async {
+    if (_choice == _CollisionChoice.none) return;
+    if (_cloudPasswordController.text.isEmpty) {
+      setState(() => _error = 'Please enter your cloud account password.');
+      return;
+    }
+    if (_choice == _CollisionChoice.discard && !_discardAcknowledged) {
+      setState(() => _error =
+          'Please acknowledge that local data will be replaced by cloud data.');
+      return;
+    }
+
+    final authState = ref.read(authStateProvider);
+    final user = authState.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final dao = ref.read(userDatabaseProvider).userProfileDao;
+      final profile = await dao.getUserProfileById(user.profileId);
+      if (profile == null) throw StateError('Profile missing');
+
+      final service = UpgradeToCloudService(
+        dao: dao,
+        firebaseAuth: ref.read(firebaseAuthProvider),
+      );
+
+      final upgraded = _choice == _CollisionChoice.upload
+          ? await service.executeUploadLocalIntoCloud(
+              localProfile: profile,
+              cloudPassword: _cloudPasswordController.text,
+            )
+          : await service.executeKeepCloudDiscardLocal(
+              localProfile: profile,
+              cloudPassword: _cloudPasswordController.text,
+            );
+
+      ref
+          .read(authStateProvider.notifier)
+          .setCloudBornSession(profile: upgraded);
+      if (mounted) {
+        setState(() {
+          _success = true;
+          _collision = false;
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.code == 'wrong-password'
+              ? 'Incorrect cloud account password.'
+              : 'Sign-in failed: ${e.code}';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Merge failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -118,7 +193,30 @@ class _UpgradeToCloudScreenState
                 if (_success)
                   _SuccessBlock(theme: theme)
                 else if (_collision)
-                  _CollisionBlock(theme: theme)
+                  _CollisionBlock(
+                    theme: theme,
+                    choice: _choice,
+                    cloudPasswordController: _cloudPasswordController,
+                    discardAcknowledged: _discardAcknowledged,
+                    error: _error,
+                    isLoading: _isLoading,
+                    onChoose: (c) => setState(() {
+                      _choice = c;
+                      _error = null;
+                    }),
+                    onAcknowledge: (v) =>
+                        setState(() => _discardAcknowledged = v ?? false),
+                    onExecute: _executeCollisionChoice,
+                    onCancel: () {
+                      setState(() {
+                        _collision = false;
+                        _choice = _CollisionChoice.none;
+                        _cloudPasswordController.clear();
+                        _discardAcknowledged = false;
+                        _error = null;
+                      });
+                    },
+                  )
                 else ...[
                   TextFormField(
                     controller: _passwordController,
@@ -198,8 +296,30 @@ class _SuccessBlock extends StatelessWidget {
 }
 
 class _CollisionBlock extends StatelessWidget {
-  const _CollisionBlock({required this.theme});
+  const _CollisionBlock({
+    required this.theme,
+    required this.choice,
+    required this.cloudPasswordController,
+    required this.discardAcknowledged,
+    required this.error,
+    required this.isLoading,
+    required this.onChoose,
+    required this.onAcknowledge,
+    required this.onExecute,
+    required this.onCancel,
+  });
+
   final ThemeData theme;
+  final _CollisionChoice choice;
+  final TextEditingController cloudPasswordController;
+  final bool discardAcknowledged;
+  final String? error;
+  final bool isLoading;
+  final ValueChanged<_CollisionChoice> onChoose;
+  final ValueChanged<bool?> onAcknowledge;
+  final Future<void> Function() onExecute;
+  final VoidCallback onCancel;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -228,28 +348,85 @@ class _CollisionBlock extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            "We won't silently merge — you have to choose. Your options:",
+            "We won't silently merge — choose how to resolve this:",
             style: theme.textTheme.bodyMedium,
           ),
-          const SizedBox(height: 8),
-          const _Bullet(
-            'Upload local into cloud — your offline progress merges with the '
-            'existing cloud account using the conflict-resolution rules',
-          ),
-          const _Bullet(
-            'Keep cloud, discard local — you sign in to the existing cloud '
-            'account and your local-only data is removed (irreversible)',
-          ),
-          const _Bullet(
-            'Cancel — back out, your local account stays untouched',
-          ),
           const SizedBox(height: 12),
-          Text(
-            'Full merge UX ships with Epic 20 story 20.11 / 20.12. '
-            'For now, use Cancel.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontStyle: FontStyle.italic,
+          _OptionTile(
+            theme: theme,
+            selected: choice == _CollisionChoice.upload,
+            title: 'Upload local into cloud',
+            subtitle:
+                'Your offline progress merges with the existing cloud account.',
+            onTap: isLoading ? null : () => onChoose(_CollisionChoice.upload),
+          ),
+          const SizedBox(height: 8),
+          _OptionTile(
+            theme: theme,
+            selected: choice == _CollisionChoice.discard,
+            title: 'Keep cloud, discard local',
+            subtitle: 'Sign in to the existing cloud account. Your local-only '
+                'changes on this device are replaced with cloud data.',
+            onTap: isLoading
+                ? null
+                : () => onChoose(_CollisionChoice.discard),
+          ),
+          if (choice != _CollisionChoice.none) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: cloudPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Cloud account password',
+                hintText: 'The password for the existing cloud account',
+              ),
+              enabled: !isLoading,
             ),
+            if (choice == _CollisionChoice.discard) ...[
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: discardAcknowledged,
+                    onChanged: isLoading ? null : onAcknowledge,
+                  ),
+                  const Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: Text(
+                        'I understand that cloud data will replace any '
+                        'purely-local changes on this device.',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (error != null) ...[
+              const SizedBox(height: 12),
+              Text(error!, style: TextStyle(color: theme.colorScheme.error)),
+            ],
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: isLoading ? null : onExecute,
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      choice == _CollisionChoice.upload
+                          ? 'Upload and sign in'
+                          : 'Discard local and sign in',
+                    ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: isLoading ? null : onCancel,
+            child: const Text('Cancel — keep offline account'),
           ),
         ],
       ),
@@ -257,19 +434,63 @@ class _CollisionBlock extends StatelessWidget {
   }
 }
 
-class _Bullet extends StatelessWidget {
-  const _Bullet(this.text);
-  final String text;
+class _OptionTile extends StatelessWidget {
+  const _OptionTile({
+    required this.theme,
+    required this.selected,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+  final ThemeData theme;
+  final bool selected;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• '),
-          Expanded(child: Text(text)),
-        ],
+    return Material(
+      color: selected
+          ? theme.colorScheme.primaryContainer
+          : theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                selected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                size: 20,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

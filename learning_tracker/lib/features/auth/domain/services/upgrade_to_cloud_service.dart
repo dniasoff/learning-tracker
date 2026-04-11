@@ -111,4 +111,52 @@ class UpgradeToCloudService {
         passwordHash: const Value(null),
       ),
     );
-  }}
+  }
+
+  // ───── Collision path execution (v2 §4.3 merge options) ─────
+
+  /// Option A — "Upload local into cloud": sign in to the existing
+  /// Firebase account, flip the local profile to `cloudBorn` keyed
+  /// on the existing `firebaseUid`, and rely on SyncEngine's push
+  /// pipeline to merge local data up via the merge rules.
+  ///
+  /// No data is deleted. Conflicts on specific rows resolve via
+  /// LWW / merge-forward naturally once the sync engine runs its
+  /// first push.
+  Future<UserProfile> executeUploadLocalIntoCloud({
+    required UserProfile localProfile,
+    required String cloudPassword,
+  }) async {
+    final credential = await _auth.signInWithEmailAndPassword(
+      email: localProfile.email,
+      password: cloudPassword,
+    );
+    await _dao.upgradeLocalToCloud(
+      profileId: localProfile.id,
+      firebaseUid: credential.user!.uid,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    return (await _dao.getUserProfileById(localProfile.id))!;
+  }
+
+  /// Option B — "Keep cloud, discard local": sign in to the existing
+  /// Firebase account, clear the local-born password hash, flip the
+  /// profile to `cloudBorn`, and let the next sync pull down the
+  /// authoritative cloud data.
+  Future<UserProfile> executeKeepCloudDiscardLocal({
+    required UserProfile localProfile,
+    required String cloudPassword,
+  }) async {
+    final credential = await _auth.signInWithEmailAndPassword(
+      email: localProfile.email,
+      password: cloudPassword,
+    );
+    await discardLocalCredentials(localProfile.id);
+    await _dao.upgradeLocalToCloud(
+      profileId: localProfile.id,
+      firebaseUid: credential.user!.uid,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    return (await _dao.getUserProfileById(localProfile.id))!;
+  }
+}
