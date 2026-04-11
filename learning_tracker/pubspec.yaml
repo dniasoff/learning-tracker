@@ -77,6 +77,9 @@ dependencies:
   # UUID generation for local auth
   uuid: ^4.5.0
 
+  # Filesystem path resolution (app documents dir for SeedManager)
+  path_provider: ^2.1.4
+
   # HTTP client
   dio: ^5.9.1
   talker_dio_logger: ^5.1.13

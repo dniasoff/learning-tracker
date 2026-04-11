@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -13,15 +15,30 @@ UserDatabase userDatabase(Ref ref) {
   return database;
 }
 
-/// Content database — read-only, bundled content.
+/// Filesystem path for the bundled content database.
 ///
-/// In production, this opens a pre-built seed file. In tests, it uses
-/// an in-memory database. The seed file is managed by SeedManager.
+/// Overridden in `main.dart` with the path resolved by `SeedManager`
+/// (Story 19.2b T13). Tests leave this unset and rely on the content
+/// provider override with an in-memory database.
+@Riverpod(keepAlive: true)
+String contentDbPath(Ref ref) {
+  throw UnimplementedError(
+    'contentDbPathProvider must be overridden before any content lookup. '
+    'main.dart calls SeedManager.ensureContentDb() at startup and provides '
+    'the resolved path via ProviderScope overrides.',
+  );
+}
+
+/// Content database — read-only, bundled seed content.
+///
+/// Opens the content.db file prepared by [SeedManager] at startup with
+/// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+/// Tests typically override this with an in-memory database via
+/// `createTestContentDatabase()` instead of relying on [contentDbPath].
 @Riverpod(keepAlive: true)
 ContentDatabase contentDatabase(Ref ref) {
-  final database = ContentDatabase(
-    driftDatabase(name: 'content'),
-  );
+  final path = ref.watch(contentDbPathProvider);
+  final database = ContentDatabase.openReadOnly(File(path));
   ref.onDispose(database.close);
   return database;
 }

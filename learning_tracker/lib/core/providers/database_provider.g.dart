@@ -54,27 +54,91 @@ final class UserDatabaseProvider
 
 String _$userDatabaseHash() => r'b5b71185532a438393ea9db52f77a754de4b5050';
 
-/// Content database — read-only, bundled content.
+/// Filesystem path for the bundled content database.
 ///
-/// In production, this opens a pre-built seed file. In tests, it uses
-/// an in-memory database. The seed file is managed by SeedManager.
+/// Overridden in `main.dart` with the path resolved by `SeedManager`
+/// (Story 19.2b T13). Tests leave this unset and rely on the content
+/// provider override with an in-memory database.
+
+@ProviderFor(contentDbPath)
+final contentDbPathProvider = ContentDbPathProvider._();
+
+/// Filesystem path for the bundled content database.
+///
+/// Overridden in `main.dart` with the path resolved by `SeedManager`
+/// (Story 19.2b T13). Tests leave this unset and rely on the content
+/// provider override with an in-memory database.
+
+final class ContentDbPathProvider
+    extends $FunctionalProvider<String, String, String>
+    with $Provider<String> {
+  /// Filesystem path for the bundled content database.
+  ///
+  /// Overridden in `main.dart` with the path resolved by `SeedManager`
+  /// (Story 19.2b T13). Tests leave this unset and rely on the content
+  /// provider override with an in-memory database.
+  ContentDbPathProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'contentDbPathProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$contentDbPathHash();
+
+  @$internal
+  @override
+  $ProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String create(Ref ref) {
+    return contentDbPath(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String>(value),
+    );
+  }
+}
+
+String _$contentDbPathHash() => r'99bbed4b861478949d2e31ae1d1d0b38e3494257';
+
+/// Content database — read-only, bundled seed content.
+///
+/// Opens the content.db file prepared by [SeedManager] at startup with
+/// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+/// Tests typically override this with an in-memory database via
+/// `createTestContentDatabase()` instead of relying on [contentDbPath].
 
 @ProviderFor(contentDatabase)
 final contentDatabaseProvider = ContentDatabaseProvider._();
 
-/// Content database — read-only, bundled content.
+/// Content database — read-only, bundled seed content.
 ///
-/// In production, this opens a pre-built seed file. In tests, it uses
-/// an in-memory database. The seed file is managed by SeedManager.
+/// Opens the content.db file prepared by [SeedManager] at startup with
+/// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+/// Tests typically override this with an in-memory database via
+/// `createTestContentDatabase()` instead of relying on [contentDbPath].
 
 final class ContentDatabaseProvider
     extends
         $FunctionalProvider<ContentDatabase, ContentDatabase, ContentDatabase>
     with $Provider<ContentDatabase> {
-  /// Content database — read-only, bundled content.
+  /// Content database — read-only, bundled seed content.
   ///
-  /// In production, this opens a pre-built seed file. In tests, it uses
-  /// an in-memory database. The seed file is managed by SeedManager.
+  /// Opens the content.db file prepared by [SeedManager] at startup with
+  /// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+  /// Tests typically override this with an in-memory database via
+  /// `createTestContentDatabase()` instead of relying on [contentDbPath].
   ContentDatabaseProvider._()
     : super(
         from: null,
@@ -108,7 +172,7 @@ final class ContentDatabaseProvider
   }
 }
 
-String _$contentDatabaseHash() => r'fa7e0c0e654297d8fc8daba72f7a97ed56854ddc';
+String _$contentDatabaseHash() => r'5a481a7eabbd43d69fd32007098cb4f89de96742';
 
 /// Legacy alias — will be removed after full migration.
 /// DO NOT use in new code.

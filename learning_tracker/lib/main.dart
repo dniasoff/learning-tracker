@@ -4,8 +4,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
@@ -14,6 +16,7 @@ import 'package:learning_tracker/features/settings/presentation/providers/theme_
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
 
 void main() {
@@ -45,7 +48,28 @@ void main() {
       AppLogger.setupFlutterErrorHandlers();
       talker.info('App starting — local-first mode');
 
+      // Story 19.2b / 19.6: Decompress the bundled seed DB to a writable
+      // location BEFORE creating any providers that might query content.
+      // SeedManager handles first-launch extraction, version-driven
+      // upgrades, .bak rollback, and corruption recovery.
+      String resolvedContentDbPath;
+      try {
+        final docsDir = await getApplicationDocumentsDirectory();
+        final seedManager = SeedManager(
+          dbDirectory: docsDir.path,
+          talker: talker,
+        );
+        resolvedContentDbPath = await seedManager.ensureContentDb();
+        talker.info('Content DB ready at $resolvedContentDbPath');
+      } catch (e, stack) {
+        talker.error('SeedManager initialization failed', e, stack);
+        rethrow;
+      }
+
       final container = ProviderContainer(
+        overrides: [
+          contentDbPathProvider.overrideWithValue(resolvedContentDbPath),
+        ],
         observers: [
           TalkerRiverpodObserver(
             talker: talker,

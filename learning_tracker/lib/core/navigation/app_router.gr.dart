@@ -12,18 +12,69 @@ part of 'app_router.dart';
 
 /// generated route for
 /// [AccountCreationScreen]
-class AccountCreationRoute extends PageRouteInfo<void> {
-  const AccountCreationRoute({List<PageRouteInfo>? children})
-    : super(AccountCreationRoute.name, initialChildren: children);
+class AccountCreationRoute extends PageRouteInfo<AccountCreationRouteArgs> {
+  AccountCreationRoute({
+    Key? key,
+    String? prefilledName,
+    String? prefilledEmail,
+    List<PageRouteInfo>? children,
+  }) : super(
+         AccountCreationRoute.name,
+         args: AccountCreationRouteArgs(
+           key: key,
+           prefilledName: prefilledName,
+           prefilledEmail: prefilledEmail,
+         ),
+         initialChildren: children,
+       );
 
   static const String name = 'AccountCreationRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return const AccountCreationScreen();
+      final args = data.argsAs<AccountCreationRouteArgs>(
+        orElse: () => const AccountCreationRouteArgs(),
+      );
+      return AccountCreationScreen(
+        key: args.key,
+        prefilledName: args.prefilledName,
+        prefilledEmail: args.prefilledEmail,
+      );
     },
   );
+}
+
+class AccountCreationRouteArgs {
+  const AccountCreationRouteArgs({
+    this.key,
+    this.prefilledName,
+    this.prefilledEmail,
+  });
+
+  final Key? key;
+
+  final String? prefilledName;
+
+  final String? prefilledEmail;
+
+  @override
+  String toString() {
+    return 'AccountCreationRouteArgs{key: $key, prefilledName: $prefilledName, prefilledEmail: $prefilledEmail}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! AccountCreationRouteArgs) return false;
+    return key == other.key &&
+        prefilledName == other.prefilledName &&
+        prefilledEmail == other.prefilledEmail;
+  }
+
+  @override
+  int get hashCode =>
+      key.hashCode ^ prefilledName.hashCode ^ prefilledEmail.hashCode;
 }
 
 /// generated route for
@@ -631,6 +682,73 @@ class LearningRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [LocalSignupScreen]
+class LocalSignupRoute extends PageRouteInfo<LocalSignupRouteArgs> {
+  LocalSignupRoute({
+    Key? key,
+    String? prefilledName,
+    String? prefilledEmail,
+    List<PageRouteInfo>? children,
+  }) : super(
+         LocalSignupRoute.name,
+         args: LocalSignupRouteArgs(
+           key: key,
+           prefilledName: prefilledName,
+           prefilledEmail: prefilledEmail,
+         ),
+         initialChildren: children,
+       );
+
+  static const String name = 'LocalSignupRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<LocalSignupRouteArgs>(
+        orElse: () => const LocalSignupRouteArgs(),
+      );
+      return LocalSignupScreen(
+        key: args.key,
+        prefilledName: args.prefilledName,
+        prefilledEmail: args.prefilledEmail,
+      );
+    },
+  );
+}
+
+class LocalSignupRouteArgs {
+  const LocalSignupRouteArgs({
+    this.key,
+    this.prefilledName,
+    this.prefilledEmail,
+  });
+
+  final Key? key;
+
+  final String? prefilledName;
+
+  final String? prefilledEmail;
+
+  @override
+  String toString() {
+    return 'LocalSignupRouteArgs{key: $key, prefilledName: $prefilledName, prefilledEmail: $prefilledEmail}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! LocalSignupRouteArgs) return false;
+    return key == other.key &&
+        prefilledName == other.prefilledName &&
+        prefilledEmail == other.prefilledEmail;
+  }
+
+  @override
+  int get hashCode =>
+      key.hashCode ^ prefilledName.hashCode ^ prefilledEmail.hashCode;
+}
+
+/// generated route for
 /// [ManageLearnersScreen]
 class ManageLearnersRoute extends PageRouteInfo<void> {
   const ManageLearnersRoute({List<PageRouteInfo>? children})
@@ -1202,6 +1320,22 @@ class TutorPinSetupRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const TutorPinSetupScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [UpgradeToCloudScreen]
+class UpgradeToCloudRoute extends PageRouteInfo<void> {
+  const UpgradeToCloudRoute({List<PageRouteInfo>? children})
+    : super(UpgradeToCloudRoute.name, initialChildren: children);
+
+  static const String name = 'UpgradeToCloudRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const UpgradeToCloudScreen();
     },
   );
 }
