@@ -8,7 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
@@ -100,16 +102,35 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
 
     setState(() => _isLoading = true);
     try {
+      // Epic 20.6: attempt cloud-born signup first. If Firebase is
+      // unreachable (offline, DNS failure, 4xx auth config error),
+      // fall back to a local-born account via LocalAuthService.
       final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.signUp(
-        _emailController.text.trim(),
-        _passwordController.text,
-        _nameController.text.trim(),
-      );
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user != null) {
-        await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(user);
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      final displayName = _nameController.text.trim();
+
+      try {
+        await authRepo.signUp(email, password, displayName);
+        final user = ref.read(firebaseAuthProvider).currentUser;
+        if (user != null) {
+          await ref
+              .read(auth_state.authStateProvider.notifier)
+              .promoteToCloud(user);
+        }
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'network-request-failed') {
+          // Offline → drop to local-born path (v2 §3).
+          await _signUpLocalBorn(
+            email: email,
+            password: password,
+            displayName: displayName,
+          );
+        } else {
+          rethrow;
+        }
       }
+
       if (mounted) {
         unawaited(context.router.push(const OnboardingRoute()));
       }
@@ -117,9 +138,33 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       if (mounted) {
         _showError(_mapAuthError(e.code));
       }
+    } on DuplicateEmailException {
+      if (mounted) _showError('An account already exists with this email.');
+    } on InvalidInputException catch (e) {
+      if (mounted) _showError(e.reason);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Local-born fallback — creates a `tier: localBorn` row via
+  /// [LocalAuthService]. Called only when Firebase is unreachable.
+  Future<void> _signUpLocalBorn({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    final dao = ref.read(userDatabaseProvider).userProfileDao;
+    final service = LocalAuthService(dao: dao);
+    final profile = await service.signUp(
+      email: email,
+      password: password,
+      displayName: displayName,
+      userMode: 'adult',
+    );
+    ref
+        .read(auth_state.authStateProvider.notifier)
+        .setLocalBornSession(profile: profile);
   }
 
   Future<void> _signUpWithGoogle() async {

@@ -45,8 +45,11 @@ class WelcomeScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
+                  // Epic 20.6: signup is mandatory at first launch.
+                  // Tier is auto-decided by network state inside the
+                  // account creation screen (v2 §3).
                   onPressed: () =>
-                      context.router.push(const OnboardingRoute()),
+                      context.router.push(const AccountCreationRoute()),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text('Get Started'),
