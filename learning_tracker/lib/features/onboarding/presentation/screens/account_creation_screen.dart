@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -120,15 +119,15 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
         }
       } on FirebaseAuthException catch (e) {
         if (e.code == 'network-request-failed') {
-          // Offline → drop to local-born path (v2 §3).
-          await _signUpLocalBorn(
-            email: email,
-            password: password,
-            displayName: displayName,
-          );
-        } else {
-          rethrow;
+          // Offline → drop the user on the dedicated local-born
+          // signup screen so they can acknowledge the no-backup
+          // warning (v2 §4.2 + Epic 20.7).
+          if (mounted) {
+            unawaited(context.router.replace(const LocalSignupRoute()));
+          }
+          return;
         }
+        rethrow;
       }
 
       if (mounted) {
@@ -147,25 +146,6 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     }
   }
 
-  /// Local-born fallback — creates a `tier: localBorn` row via
-  /// [LocalAuthService]. Called only when Firebase is unreachable.
-  Future<void> _signUpLocalBorn({
-    required String email,
-    required String password,
-    required String displayName,
-  }) async {
-    final dao = ref.read(userDatabaseProvider).userProfileDao;
-    final service = LocalAuthService(dao: dao);
-    final profile = await service.signUp(
-      email: email,
-      password: password,
-      displayName: displayName,
-      userMode: 'adult',
-    );
-    ref
-        .read(auth_state.authStateProvider.notifier)
-        .setLocalBornSession(profile: profile);
-  }
 
   Future<void> _signUpWithGoogle() async {
     setState(() => _isLoading = true);
