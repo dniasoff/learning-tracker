@@ -12,7 +12,7 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 /// Provider for FirestoreDataSource, scoped to the active profile.
 ///
-/// Returns null when user has no cloud account (local-only mode).
+/// Returns null when the user is not cloud-born (v2 §4.5 tier gate).
 final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
   final authState = ref.watch(authStateProvider);
   if (!authState.isCloudBorn) return null;
@@ -30,7 +30,8 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
 
 /// Provider for OfflineQueue.
 ///
-/// Returns null when user has no cloud account (local-only mode).
+/// Returns null for local-born users — offline queue is a no-op since
+/// there's nothing to sync. Only cloud-born users queue writes.
 final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
   final authState = ref.watch(authStateProvider);
   if (!authState.isCloudBorn) return null;
@@ -49,14 +50,15 @@ final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
 
 /// Provider for SyncEngine.
 ///
-/// Three-tier activation:
-/// - Tier 0: No account (local-only) → returns null
-/// - Tier 1: Account exists, offline → engine instantiated but dormant
-/// - Tier 2: Account + online → full sync active
+/// v2 tier-gated activation (per v2 §4.5):
+/// - `tier != cloudBorn` → returns `null` (local-born accounts never
+///   instantiate SyncEngine — saves memory and battery)
+/// - `tier == cloudBorn` + offline → engine instantiated but dormant
+/// - `tier == cloudBorn` + online → full sync active
 final syncEngineProvider = Provider<SyncEngine?>((ref) {
   final authState = ref.watch(authStateProvider);
 
-  // Tier 0: Local-born or signed out — no sync engine needed (v2 §4.5)
+  // Local-born or signed out — never instantiate (v2 §4.5).
   if (!authState.isCloudBorn) return null;
 
   final database = ref.watch(userDatabaseProvider);

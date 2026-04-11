@@ -5,7 +5,7 @@ part 'sync_status.freezed.dart';
 /// Represents the current state of data synchronization with Firestore.
 ///
 /// The sync status follows this lifecycle:
-/// 0. `localOnly` - No account, sync disabled (local-first default)
+/// 0. `localOnly` - Local-born tier, sync permanently disabled (v2 §4.5)
 /// 1. `syncing` - Active sync operation in progress
 /// 2. `synced` - All data successfully synchronized
 /// 3. `pending` - Online but local changes awaiting push
@@ -13,7 +13,8 @@ part 'sync_status.freezed.dart';
 /// 5. `error` - Sync operation failed
 @freezed
 sealed class SyncStatus with _$SyncStatus {
-  /// Local-only mode — no account, sync not active.
+  /// Local-born tier — sync permanently disabled (v2 §4.5).
+  /// Previously "no account"; v2 frames this as an immutable tier.
   const factory SyncStatus.localOnly() = SyncStatusLocalOnly;
   /// Sync operation is currently in progress.
   const factory SyncStatus.syncing({required DateTime startedAt}) =
