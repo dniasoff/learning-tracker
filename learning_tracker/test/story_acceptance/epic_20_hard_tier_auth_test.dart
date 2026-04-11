@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/auth/domain/services/local_auth_servic
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 import 'package:learning_tracker/features/sync/domain/reducers/streak_reducer.dart';
+import 'package:learning_tracker/features/sync/domain/reducers/xp_reducer.dart';
 
 /// End-to-end story acceptance tests for Epic 20 — v2 hard-tier
 /// auth refactor. Covers the contract promised by the v2 architecture
@@ -214,6 +215,124 @@ void main() {
 
       test('merge-forward never decreases progress', () {
         expect(mergeForwardMaxInt(10, 5), 10);
+      });
+
+      test('remoteIsNewer predicate matches sync engine pull semantics', () {
+        expect(
+          remoteIsNewer(
+            localUpdatedAt: DateTime.utc(2026, 1, 1),
+            remoteUpdatedAt: DateTime.utc(2026, 2, 1),
+          ),
+          isTrue,
+        );
+        // Ties go local — matches the flapping-free promise.
+        final ts = DateTime.utc(2026, 1, 1);
+        expect(
+          remoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts),
+          isFalse,
+        );
+      });
+    });
+
+    // ─── Story 20.11 gap: completion tee + reducer integration ─────
+    group('Story 20.11 — completion tee pipeline', () {
+      test('streak and xp event rows replay through reducers to state',
+          () async {
+        // Simulate what CompletionRepositoryImpl._createCompletion does:
+        // insert a streak + xp event for each completion. Then run the
+        // reducers over what's in the DB.
+        const profileId = 42;
+        final completions = [
+          DateTime.utc(2026, 3, 1),
+          DateTime.utc(2026, 3, 2),
+          DateTime.utc(2026, 3, 3),
+          DateTime.utc(2026, 3, 3), // same-day dupe
+        ];
+
+        for (final at in completions) {
+          await db.into(db.streakEvents).insert(
+                StreakEventsCompanion.insert(
+                  profileId: profileId,
+                  eventType: 'completion',
+                  eventTimestamp: at,
+                ),
+                mode: InsertMode.insertOrIgnore,
+              );
+          await db.into(db.xpEvents).insert(
+                XpEventsCompanion.insert(
+                  profileId: profileId,
+                  xpDelta: 10,
+                  source: 'completion',
+                  eventTimestamp: at,
+                ),
+                mode: InsertMode.insertOrIgnore,
+              );
+        }
+
+        final streakEvents = await (db.select(db.streakEvents)
+              ..where((t) => t.profileId.equals(profileId)))
+            .get();
+        final xpEvents = await (db.select(db.xpEvents)
+              ..where((t) => t.profileId.equals(profileId)))
+            .get();
+
+        final streakState = reduceStreakEvents(streakEvents);
+        expect(streakState.currentStreak, 3);
+        expect(streakState.longestStreak, 3);
+
+        // 3 distinct (profileId, eventTimestamp, source) rows inserted —
+        // the 4th (same-day dupe) was filtered by InsertMode.insertOrIgnore.
+        expect(xpEvents, hasLength(3));
+        expect(reduceXpEvents(xpEvents), 30);
+      });
+
+      test('idempotent tee: same completion twice → one event row',
+          () async {
+        final at = DateTime.utc(2026, 3, 1);
+        for (var i = 0; i < 3; i++) {
+          await db.into(db.streakEvents).insert(
+                StreakEventsCompanion.insert(
+                  profileId: 99,
+                  eventType: 'completion',
+                  eventTimestamp: at,
+                ),
+                mode: InsertMode.insertOrIgnore,
+              );
+        }
+        final rows = await (db.select(db.streakEvents)
+              ..where((t) => t.profileId.equals(99)))
+            .get();
+        expect(rows, hasLength(1));
+      });
+    });
+
+    // ─── Story 20.9 gap: upgrade DAO operations ────────────────────
+    group('Story 20.9 — collision-path DAO operations', () {
+      test('upgradeLocalToCloud preserves profile identity', () async {
+        final profile = await localAuth.signUp(
+          email: 'collide@test.local',
+          password: 'hunter2hunter2',
+          displayName: 'Collide',
+          userMode: 'adult',
+        );
+        expect(profile.tier, 'localBorn');
+        expect(profile.passwordHash, isNotNull);
+
+        await db.userProfileDao.upgradeLocalToCloud(
+          profileId: profile.id,
+          firebaseUid: 'existing-cloud-uid',
+          updatedAt: DateTime.utc(2026, 2, 1),
+        );
+
+        final after =
+            await db.userProfileDao.getUserProfileById(profile.id);
+        expect(after!.tier, 'cloudBorn');
+        expect(after.firebaseUid, 'existing-cloud-uid');
+        expect(after.passwordHash, isNull);
+        // Identity survives: email, displayName, createdAt all unchanged.
+        expect(after.email, 'collide@test.local');
+        expect(after.displayName, 'Collide');
+        expect(after.createdAt, profile.createdAt);
       });
     });
   });
