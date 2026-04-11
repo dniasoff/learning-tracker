@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/daos/calendar_cycle_dao.dart';
 import 'package:learning_tracker/core/database/content/daos/learning_program_dao.dart';
 import 'package:learning_tracker/core/database/content/daos/seed_metadata_dao.dart';
@@ -43,6 +46,23 @@ part 'content_database.g.dart';
 class ContentDatabase extends _$ContentDatabase {
   ContentDatabase(super.e);
 
+  /// Open a ContentDatabase from a prepared seed file in read-only mode
+  /// (Story 19.3 AC-10).
+  ///
+  /// Executes `PRAGMA query_only = ON` at the SQLite level via Drift's
+  /// native setup hook, so any accidental writes will raise
+  /// `SqliteException` at runtime.
+  factory ContentDatabase.openReadOnly(File file) {
+    return ContentDatabase(
+      NativeDatabase(
+        file,
+        setup: (db) {
+          db.execute('PRAGMA query_only = ON');
+        },
+      ),
+    );
+  }
+
   @override
   int get schemaVersion => 1;
 
@@ -86,46 +106,49 @@ class ContentDatabase extends _$ContentDatabase {
 
   Future<void> _seedLearningPrograms() async {
     for (final program in learningProgramSeeds) {
-      await customInsert(
-        'INSERT INTO learning_programs (name, display_name, description, '
-        'curriculum_type, is_active, has_tests, stages_config, test_config, '
-        'created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        variables: [
-          Variable.withString(program['name']! as String),
-          Variable.withString(program['display_name']! as String),
-          Variable.withString(program['description']! as String),
-          Variable.withString(program['curriculum_type']! as String),
-          Variable.withBool(program['is_active']! as bool),
-          Variable.withBool(program['has_tests']! as bool),
-          Variable.withString(program['stages_config']! as String),
-          Variable.withString(program['test_config']! as String),
-          Variable.withDateTime(DateTime.now().toUtc()),
-        ],
-      );
+      await _insertProgram(program, replace: false);
     }
   }
 
   /// Upsert all learning program seeds — updates existing rows keyed on `name`.
   Future<void> _upsertLearningPrograms() async {
     for (final program in learningProgramSeeds) {
-      await customInsert(
-        'INSERT OR REPLACE INTO learning_programs '
-        '(name, display_name, description, curriculum_type, is_active, '
-        'has_tests, stages_config, test_config, created_at) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        variables: [
-          Variable.withString(program['name']! as String),
-          Variable.withString(program['display_name']! as String),
-          Variable.withString(program['description']! as String),
-          Variable.withString(program['curriculum_type']! as String),
-          Variable.withBool(program['is_active']! as bool),
-          Variable.withBool(program['has_tests']! as bool),
-          Variable.withString(program['stages_config']! as String),
-          Variable.withString(program['test_config']! as String),
-          Variable.withDateTime(DateTime.now().toUtc()),
-        ],
-      );
+      await _insertProgram(program, replace: true);
     }
+  }
+
+  Future<void> _insertProgram(
+    Map<String, Object?> program, {
+    required bool replace,
+  }) async {
+    final verb = replace ? 'INSERT OR REPLACE' : 'INSERT';
+    final apiSource = program['api_source'] as String?;
+    final apiKey = program['api_program_key'] as String?;
+    final isCalendar = (program['is_calendar_program'] as bool?) ?? false;
+    final apiSourceSql = apiSource == null ? 'NULL' : '?';
+    final apiKeySql = apiKey == null ? 'NULL' : '?';
+    final variables = <Variable<Object>>[
+      Variable.withString(program['name']! as String),
+      Variable.withString(program['display_name']! as String),
+      Variable.withString(program['description']! as String),
+      Variable.withString(program['curriculum_type']! as String),
+      Variable.withBool(program['is_active']! as bool),
+      Variable.withBool(program['has_tests']! as bool),
+      Variable.withString(program['stages_config']! as String),
+      Variable.withString(program['test_config']! as String),
+      Variable.withDateTime(DateTime.now().toUtc()),
+      if (apiSource != null) Variable.withString(apiSource),
+      if (apiKey != null) Variable.withString(apiKey),
+      Variable.withBool(isCalendar),
+    ];
+    await customInsert(
+      '$verb INTO learning_programs '
+      '(name, display_name, description, curriculum_type, is_active, '
+      'has_tests, stages_config, test_config, created_at, api_source, '
+      'api_program_key, is_calendar_program) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, $apiSourceSql, $apiKeySql, ?)',
+      variables: variables,
+    );
   }
 
   Future<void> _seedTestDates() async {

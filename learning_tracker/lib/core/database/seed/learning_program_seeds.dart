@@ -44,6 +44,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
+    'api_source': null,
+    'api_program_key': null,
+    'is_calendar_program': false,
   },
   {
     'name': 'dirshu_amud_hayomi',
@@ -60,6 +63,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
+    'api_source': null,
+    'api_program_key': null,
+    'is_calendar_program': false,
   },
   {
     'name': 'dirshu_kinyan_yerushalmi',
@@ -76,6 +82,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
+    'api_source': null,
+    'api_program_key': null,
+    'is_calendar_program': false,
   },
   {
     'name': 'dirshu_daf_hayomi_bhalacha',
@@ -90,6 +99,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"review","label":"חזרה","delay_days":7}'
         ']',
     'test_config': '{"frequency":"bimonthly","type":"written"}',
+    'api_source': null,
+    'api_program_key': null,
+    'is_calendar_program': false,
   },
   {
     'name': 'dirshu_kinyan_chochma',
@@ -105,6 +117,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_2","label":"חזרה ב׳","delay_days":7}'
         ']',
     'test_config': '{}',
+    'api_source': null,
+    'api_program_key': null,
+    'is_calendar_program': false,
   },
   {
     'name': 'daf_yomi',
@@ -118,6 +133,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_daf"}'
         ']',
     'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Daf Yomi',
+    'is_calendar_program': true,
   },
   {
     'name': 'mishnah_yomis',
@@ -131,6 +149,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"two_mishnayos"}'
         ']',
     'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Daily Mishnah',
+    'is_calendar_program': true,
   },
   {
     'name': 'nach_yomi',
@@ -144,5 +165,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_chapter"}'
         ']',
     'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'nachyomi',
+    'is_calendar_program': true,
   },
 ];
