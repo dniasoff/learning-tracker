@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/features/auth/presentation/widgets/offline_top_banner.dart';
 
 @RoutePage()
 class AppShellScreen extends StatelessWidget {
@@ -15,6 +16,12 @@ class AppShellScreen extends StatelessWidget {
         ProgressRoute(),
         SettingsRoute(),
       ],
+      // Epic 20.8: top offline banner — cloud-born only, tier-gated
+      // inside the widget so local-born users never see it.
+      appBarBuilder: (_, __) => const PreferredSize(
+        preferredSize: Size.fromHeight(32),
+        child: OfflineTopBanner(),
+      ),
       bottomNavigationBuilder: (context, tabsRouter) {
         return NavigationBar(
           selectedIndex: tabsRouter.activeIndex,
