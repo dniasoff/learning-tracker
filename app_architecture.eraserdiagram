@@ -1,0 +1,348 @@
+// Learning Tracker - Full App Architecture & Flow
+// Paste this into https://app.eraser.io/workspace → Diagram-as-Code
+
+direction down
+colorMode bold
+
+// ════════════════════════════════════════
+// ENTRY & AUTH FLOW
+// ════════════════════════════════════════
+
+App Launch [icon: play-circle, color: green]
+
+Onboarding {
+  Intro Slides [icon: monitor, color: blue]
+  Welcome Screen [icon: home, color: blue]
+}
+
+Cloud Auth {
+  Sign In [icon: log-in, color: purple]
+  Create Account [icon: user-plus, color: purple]
+  Google Sign-In [icon: google, color: purple]
+}
+
+Local Auth {
+  Local Sign Up [icon: user-plus, color: orange]
+  Local Sign In [icon: log-in, color: orange]
+}
+
+Post Auth {
+  Curriculum Onboarding [icon: book-open, color: teal]
+  Device Restore [icon: download-cloud, color: teal]
+  Profile Picker [icon: users, color: teal]
+}
+
+App Launch > Intro Slides: First launch
+Intro Slides > Welcome Screen
+Welcome Screen > Sign In: Online
+Welcome Screen > Create Account: Online
+Welcome Screen > Local Sign Up: Offline
+Welcome Screen > Local Sign In: Offline
+Sign In > Curriculum Onboarding
+Create Account > Curriculum Onboarding
+Google Sign-In > Curriculum Onboarding
+Local Sign Up > Curriculum Onboarding
+Local Sign In > Curriculum Onboarding
+Curriculum Onboarding > Device Restore: Cloud + new device
+Curriculum Onboarding > Profile Picker: Multiple profiles
+Device Restore > Profile Picker
+
+// ════════════════════════════════════════
+// MAIN APP SHELL (4 Tabs)
+// ════════════════════════════════════════
+
+Main App Shell {
+  Dashboard [icon: layout, color: green]
+  Learn [icon: book, color: green]
+  Progress [icon: bar-chart-2, color: green]
+  Settings [icon: settings, color: green]
+}
+
+Profile Picker > Dashboard
+Curriculum Onboarding > Dashboard: Single profile
+
+// ════════════════════════════════════════
+// DASHBOARD FEATURES
+// ════════════════════════════════════════
+
+Dashboard Features {
+  Curriculum Browser [icon: list, color: blue]
+  Learning Journey [icon: map, color: blue]
+  Gamification [icon: award, color: yellow]
+  Notifications [icon: bell, color: blue]
+  Scheduler [icon: calendar, color: blue]
+}
+
+Dashboard > Curriculum Browser
+Dashboard > Learning Journey
+Dashboard > Gamification
+
+// ════════════════════════════════════════
+// CURRICULUM DEEP DIVE
+// ════════════════════════════════════════
+
+Curriculum Features {
+  Content Hierarchy [icon: git-branch, color: teal]
+  Structured Learning [icon: book-open, color: teal]
+  Curriculum Progress [icon: trending-up, color: teal]
+  Content Search [icon: search, color: teal]
+  Learning Order [icon: shuffle, color: teal]
+  Study Day Config [icon: calendar, color: teal]
+  Sefaria Text View [icon: file-text, color: indigo]
+}
+
+Curriculum Browser > Content Hierarchy
+Curriculum Browser > Structured Learning
+Curriculum Browser > Curriculum Progress
+Curriculum Browser > Content Search
+Structured Learning > Sefaria Text View
+
+// ════════════════════════════════════════
+// LEARN TAB
+// ════════════════════════════════════════
+
+Learn > Structured Learning: Active practice
+Learn > Sefaria Text View
+
+// ════════════════════════════════════════
+// PROGRESS TAB
+// ════════════════════════════════════════
+
+Progress Features {
+  Progress Charts [icon: pie-chart, color: green]
+  Cross Curriculum Stats [icon: activity, color: green]
+}
+
+Progress > Progress Charts
+Progress > Cross Curriculum Stats
+
+// ════════════════════════════════════════
+// SETTINGS & MANAGEMENT
+// ════════════════════════════════════════
+
+Settings Features {
+  Track Management Hub [icon: sliders, color: gray]
+  Manage Learners [icon: users, color: gray]
+  Cloud Sync [icon: refresh-cw, color: gray]
+  Upgrade to Cloud [icon: upload-cloud, color: gray]
+}
+
+Settings > Track Management Hub
+Settings > Manage Learners
+Settings > Cloud Sync
+Settings > Upgrade to Cloud
+Settings > Notifications
+Settings > Scheduler
+
+// ════════════════════════════════════════
+// PARENT MODE (PIN-Protected)
+// ════════════════════════════════════════
+
+Parent Mode {
+  Parent PIN Gate [icon: lock, color: red]
+  Parent Dashboard [icon: layout, color: red]
+  Reward Catalog [icon: gift, color: red]
+  Point Config [icon: dollar-sign, color: red]
+  Parent Track Mgmt [icon: sliders, color: red]
+}
+
+Settings > Parent PIN Gate: Child mode only
+Parent PIN Gate > Parent Dashboard
+Parent Dashboard > Reward Catalog
+Parent Dashboard > Point Config
+Parent Dashboard > Parent Track Mgmt
+
+// ════════════════════════════════════════
+// TUTOR MODE (PIN-Protected)
+// ════════════════════════════════════════
+
+Tutor Mode {
+  Tutor PIN Gate [icon: lock, color: violet]
+  Tutor Dashboard [icon: layout, color: violet]
+  Tutor Analytics [icon: bar-chart, color: violet]
+}
+
+Settings > Tutor PIN Gate
+Tutor PIN Gate > Tutor Dashboard
+Tutor Dashboard > Tutor Analytics
+
+// ════════════════════════════════════════
+// STATE MANAGEMENT (Riverpod)
+// ════════════════════════════════════════
+
+State Management Layer {
+  AuthStateNotifier [icon: shield, color: purple]
+  Riverpod Providers [icon: cpu, color: purple]
+  Optimistic State [icon: zap, color: yellow]
+}
+
+// ════════════════════════════════════════
+// REPOSITORY LAYER
+// ════════════════════════════════════════
+
+Repository Layer {
+  Completion Repo [icon: check-circle, color: teal]
+  Bookmark Repo [icon: bookmark, color: teal]
+  Progress Repo [icon: trending-up, color: teal]
+  Content Repo [icon: folder, color: teal]
+  Auth Repo [icon: lock, color: teal]
+  Profile Repo [icon: user, color: teal]
+  Track Repo [icon: git-branch, color: teal]
+  Goal Repo [icon: target, color: teal]
+}
+
+// ════════════════════════════════════════
+// SYNC ENGINE
+// ════════════════════════════════════════
+
+Sync Engine {
+  Push on Write [icon: upload, color: orange]
+  Pull on Launch [icon: download, color: orange]
+  Foreground Listeners [icon: radio, color: orange]
+  Offline Queue [icon: inbox, color: orange]
+  Merge Rules [icon: git-merge, color: orange]
+}
+
+// ════════════════════════════════════════
+// LOCAL STORAGE
+// ════════════════════════════════════════
+
+Local Storage {
+  UserDatabase SQLite [icon: database, color: blue]
+  ContentDatabase SQLite [icon: database, color: indigo]
+  SharedPreferences [icon: hard-drive, color: gray]
+  SeedManager [icon: package, color: gray]
+}
+
+// ════════════════════════════════════════
+// USER DATABASE TABLES
+// ════════════════════════════════════════
+
+UserDB Tables {
+  UserProfiles [icon: users, color: blue]
+  Profiles [icon: user, color: blue]
+  Completions [icon: check-square, color: blue]
+  LearningLedger [icon: book, color: blue]
+  Bookmarks [icon: bookmark, color: blue]
+  Streaks [icon: zap, color: yellow]
+  CurriculumTracks [icon: git-branch, color: blue]
+  Goals [icon: target, color: blue]
+  Rewards [icon: gift, color: blue]
+  SyncQueue [icon: inbox, color: orange]
+  StreakEvents [icon: activity, color: yellow]
+  XpEvents [icon: star, color: yellow]
+}
+
+// ════════════════════════════════════════
+// CONTENT DATABASE TABLES
+// ════════════════════════════════════════
+
+ContentDB Tables {
+  TextCache 52K rows [icon: file-text, color: indigo]
+  CalendarCycles 30K rows [icon: calendar, color: indigo]
+  LearningPrograms [icon: book-open, color: indigo]
+  SeedMetadata [icon: info, color: indigo]
+}
+
+// ════════════════════════════════════════
+// CLOUD STORAGE (Firebase)
+// ════════════════════════════════════════
+
+Cloud Storage {
+  Firebase Auth [icon: shield, color: red]
+  Firestore [icon: cloud, color: red]
+}
+
+Firestore Collections {
+  users collection [icon: folder, color: red]
+  profiles subcollection [icon: folder, color: red]
+  completions docs [icon: file, color: red]
+  learning_ledger docs [icon: file, color: red]
+  bookmarks docs LWW [icon: file, color: red]
+  streak doc [icon: file, color: red]
+  goals docs LWW [icon: file, color: red]
+  rewards docs LWW [icon: file, color: red]
+}
+
+// ════════════════════════════════════════
+// BUNDLED ASSETS
+// ════════════════════════════════════════
+
+Bundled Assets {
+  content.db.gz [icon: archive, color: gray]
+  hierarchy JSON [icon: file, color: gray]
+  Program Seeds [icon: package, color: gray]
+}
+
+// ════════════════════════════════════════
+// EXTERNAL APIs
+// ════════════════════════════════════════
+
+External APIs {
+  Sefaria API [icon: globe, color: indigo]
+  Google Sign-In [icon: google, color: red]
+}
+
+// ════════════════════════════════════════
+// CONNECTIONS: Presentation → State
+// ════════════════════════════════════════
+
+Main App Shell > State Management Layer
+State Management Layer > Repository Layer
+
+// ════════════════════════════════════════
+// CONNECTIONS: Repository → Storage
+// ════════════════════════════════════════
+
+Repository Layer > Sync Engine
+Repository Layer > Local Storage
+
+Sync Engine > Local Storage: Merge & Write
+Sync Engine > Cloud Storage: Push & Pull
+
+// ════════════════════════════════════════
+// CONNECTIONS: Storage Details
+// ════════════════════════════════════════
+
+UserDatabase SQLite > UserDB Tables
+ContentDatabase SQLite > ContentDB Tables
+SeedManager > ContentDatabase SQLite: Decompress + Seed
+Bundled Assets > SeedManager: APK asset
+
+Firestore > Firestore Collections
+users collection > profiles subcollection
+profiles subcollection > completions docs
+profiles subcollection > learning_ledger docs
+profiles subcollection > bookmarks docs LWW
+profiles subcollection > streak doc
+profiles subcollection > goals docs LWW
+profiles subcollection > rewards docs LWW
+
+// ════════════════════════════════════════
+// CONNECTIONS: Sync Details
+// ════════════════════════════════════════
+
+Push on Write > Firestore: Immediate if online
+Offline Queue > Firestore: Flush on reconnect
+Pull on Launch > UserDatabase SQLite: Merge rules
+Foreground Listeners > UserDatabase SQLite: Real-time merge
+Merge Rules > Completions: Append-only union
+Merge Rules > Bookmarks: Last-Write-Wins
+Merge Rules > StreakEvents: Event-sourced replay
+
+// ════════════════════════════════════════
+// CONNECTIONS: External
+// ════════════════════════════════════════
+
+Sefaria Text View > Sefaria API
+Content Repo > hierarchy JSON: In-memory cache
+Auth Repo > Firebase Auth
+Auth Repo > Google Sign-In
+
+// ════════════════════════════════════════
+// CONNECTIONS: Auth State
+// ════════════════════════════════════════
+
+AuthStateNotifier > Firebase Auth: Cloud-born
+AuthStateNotifier > UserProfiles: Local-born
+Upgrade to Cloud -- Firebase Auth: Migrate local to cloud
