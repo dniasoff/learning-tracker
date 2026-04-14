@@ -8,11 +8,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
+import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -36,6 +41,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _registryHint;
+  Timer? _emailDebounce;
 
   late final AnimationController _entranceController;
   late final AnimationController _pulseController;
@@ -90,11 +97,46 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
 
   @override
   void dispose() {
+    _emailDebounce?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _entranceController.dispose();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  /// Epic 21.7: debounced live lookup against the device registry
+  /// as the user types their email.
+  void _onEmailChanged(String email) {
+    _emailDebounce?.cancel();
+    _emailDebounce = Timer(const Duration(milliseconds: 300), () async {
+      final normalized = email.trim().toLowerCase();
+      if (normalized.length < 5) {
+        if (_registryHint != null) setState(() => _registryHint = null);
+        return;
+      }
+
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByEmail(normalized);
+      final isOnline = ref.read(connectivityStreamProvider).maybeWhen(
+            data: (v) => v,
+            orElse: () => true,
+          );
+
+      if (!mounted) return;
+      setState(() {
+        if (account != null) {
+          final tierLabel =
+              account.tier == 'cloudBorn' ? 'Cloud' : 'Local';
+          _registryHint = 'Found on this device ($tierLabel)';
+        } else if (isOnline) {
+          _registryHint = "Not on this device \u2014 we'll check the cloud";
+        } else {
+          _registryHint =
+              'Not on this device (offline \u2014 only device accounts available)';
+        }
+      });
+    });
   }
 
   String? _validateEmail(String? value) => validators.validateEmail(value);
@@ -106,23 +148,80 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     return null;
   }
 
+  /// Epic 21.7: Smart credential routing. Checks the device
+  /// registry first to determine which backend handles sign-in,
+  /// then falls back to Firebase for emails not on this device.
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
+
     setState(() => _isLoading = true);
     try {
-      final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-      if (mounted) {
-        await _navigateAfterSignIn();
+      // Step 1: check device registry for this email
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByEmail(email);
+
+      if (account != null && account.tier == 'localBorn') {
+        // Local-born account on this device → argon2id verification
+        final dao = ref.read(userDatabaseProvider).userProfileDao;
+        final service = LocalAuthService(dao: dao);
+        final profile = await service.signIn(
+          email: email,
+          password: password,
+        );
+        ref
+            .read(auth_state.authStateProvider.notifier)
+            .setLocalBornSession(profile: profile);
+        if (mounted) await _navigateAfterSignIn();
+      } else if (account != null && account.tier == 'cloudBorn') {
+        // Cloud-born account on this device → try Firebase or cached session
+        final isOnline =
+            await InternetConnectionChecker.instance.hasConnection;
+        if (isOnline) {
+          final authRepo = ref.read(authRepositoryProvider);
+          await authRepo.signInWithEmail(email, password);
+          if (mounted) await _navigateAfterSignIn();
+        } else {
+          // Offline — try cached Firebase session
+          final fbUser = FirebaseAuth.instance.currentUser;
+          if (fbUser != null && fbUser.uid == account.firebaseUid) {
+            // Cached session still valid → resume instantly
+            ref
+                .read(auth_state.authStateProvider.notifier)
+                .setCloudBornSession(
+                  profile: (await ref
+                      .read(userDatabaseProvider)
+                      .userProfileDao
+                      .findCloudBornByFirebaseUid(fbUser.uid))!,
+                );
+            if (mounted) await _navigateAfterSignIn();
+          } else {
+            _showError(
+              'This is a cloud account. Connect to the internet to sign in.',
+            );
+          }
+        }
+      } else {
+        // Not on this device → try Firebase (could be account from another device)
+        final isOnline =
+            await InternetConnectionChecker.instance.hasConnection;
+        if (isOnline) {
+          final authRepo = ref.read(authRepositoryProvider);
+          await authRepo.signInWithEmail(email, password);
+          if (mounted) await _navigateAfterSignIn();
+        } else {
+          _showError(
+            "This email isn't on this device and we can't reach the cloud. "
+            'Try again when online.',
+          );
+        }
       }
+    } on InvalidCredentialsException {
+      if (mounted) _showError('Incorrect password.');
     } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showError(_mapAuthError(e.code));
-      }
+      if (mounted) _showError(_mapAuthError(e.code));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -466,7 +565,39 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
           textInputAction: TextInputAction.next,
           validator: _validateEmail,
           enabled: !_isLoading,
+          onChanged: _onEmailChanged,
         ),
+        // Epic 21.7: registry hint — shows where credentials
+        // will be checked as the user types.
+        if (_registryHint != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Row(
+              children: [
+                Icon(
+                  _registryHint!.startsWith('Found')
+                      ? Icons.check_circle_outline
+                      : Icons.info_outline,
+                  size: 14,
+                  color: _registryHint!.startsWith('Found')
+                      ? const Color(0xFF4ADE80)
+                      : Colors.white.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _registryHint!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _registryHint!.startsWith('Found')
+                          ? const Color(0xFF4ADE80)
+                          : Colors.white.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 20),
 
         // Password field
