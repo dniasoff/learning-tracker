@@ -761,7 +761,7 @@ void main() {
             'bavli',
             'mishnayos',
             'yerushalmi',
-            'torah',
+            'mishneh_torah',
             'tanach',
             'nach',
             'mussar',

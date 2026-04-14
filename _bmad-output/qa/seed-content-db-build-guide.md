@@ -303,10 +303,12 @@ The user flow is: **Add Track → pick curriculum → program selection step →
 2. Open Talker/debug logs — confirm you see:
    - `SeedManager: Seed extracted (XX.X MB)` or `Content DB up to date`
    - No `SeedManager initialization failed` error
-3. **Add a Bavli track** — Step 2 should show 4 program cards (Oraysa, Dirshu KT, Dirshu AH, Daf Yomi)
+3. **Add a Bavli track** — Step 2 should show 5 programs (Oraysa, Dirshu KT, Dirshu AH, Daf Yomi, Daf a Week)
 4. **Add a Mishnayos track** — Step 2 should show Mishnah Yomis
 5. **Add a Nach track** — Step 2 should show Nach Yomi
-6. **Add a Chumash track** — Step 2 should auto-skip (no programs seeded for chumash)
+6. **Add a Mishneh Torah track** — Step 2 should show Rambam - 1 Chapter, Rambam - 3 Chapters
+7. **Add a Tanach track** — Step 2 should show Tanakh Yomi
+8. **Add a Chumash track** — Step 2 should auto-skip (no programs seeded for chumash)
 
 ### Known gap: read-only DB blocks upsert
 

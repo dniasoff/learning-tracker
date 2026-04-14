@@ -22,9 +22,7 @@ class ContentRepositoryImpl implements ContentRepository {
   final _configCache = <String, CurriculumHierarchyConfig>{};
 
   /// Maps composite curricula to their source asset(s).
-  /// Torah reuses Chumash content (identical hierarchy).
   static const _compositeSources = <String, List<String>>{
-    'torah': ['chumash'],
   };
 
   @override

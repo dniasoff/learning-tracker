@@ -14,7 +14,7 @@ void main() {
         CurriculumId.mussar, // 2: dirshu_kinyan_chochma, chofetz_chaim_daily
         CurriculumId.mishnayos, // 1: mishnah_yomis
         CurriculumId.nach, // 1: nach_yomi
-        CurriculumId.torah, // 2: rambam_1_chapter, rambam_3_chapters
+        CurriculumId.mishnehTorah, // 2: rambam_1_chapter, rambam_3_chapters
         CurriculumId.tanach, // 1: tanakh_yomi
       ];
 

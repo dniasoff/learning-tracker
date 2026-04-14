@@ -307,7 +307,8 @@ class _CurriculumCard extends ConsumerWidget {
       CurriculumId.mishnayos => 'Masechos',
       CurriculumId.bavli => 'Masechos',
       CurriculumId.yerushalmi => 'Masechos',
-      CurriculumId.chumash || CurriculumId.torah => 'Books',
+      CurriculumId.chumash => 'Books',
+      CurriculumId.mishnehTorah => 'Seforim',
       _ => 'Sections',
     };
   }
@@ -317,7 +318,8 @@ class _CurriculumCard extends ConsumerWidget {
       CurriculumId.mishnayos => 'Mishnayos',
       CurriculumId.bavli => 'Pages',
       CurriculumId.yerushalmi => 'Pages',
-      CurriculumId.chumash || CurriculumId.torah => 'Parshiyos',
+      CurriculumId.chumash => 'Parshiyos',
+      CurriculumId.mishnehTorah => 'Halachos',
       _ => 'Items',
     };
   }

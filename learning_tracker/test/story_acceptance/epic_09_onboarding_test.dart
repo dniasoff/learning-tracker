@@ -197,7 +197,7 @@ void main() {
       expect(CurriculumId.values, contains(CurriculumId.chumash));
       expect(CurriculumId.values, contains(CurriculumId.nach));
       expect(CurriculumId.values, contains(CurriculumId.mussar));
-      expect(CurriculumId.values, contains(CurriculumId.torah));
+      expect(CurriculumId.values, contains(CurriculumId.mishnehTorah));
       expect(CurriculumId.values, contains(CurriculumId.tanach));
     });
 

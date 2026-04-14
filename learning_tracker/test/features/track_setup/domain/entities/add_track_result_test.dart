@@ -158,7 +158,7 @@ void main() {
     });
 
     test('torah has programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.torah), true);
+      expect(_hasProgramsForCurriculum(CurriculumId.mishnehTorah), true);
     });
 
     test('tanach has programs', () {
@@ -184,6 +184,6 @@ bool _hasProgramsForCurriculum(CurriculumId curriculum) {
       curriculum == CurriculumId.mussar ||
       curriculum == CurriculumId.mishnayos ||
       curriculum == CurriculumId.nach ||
-      curriculum == CurriculumId.torah ||
+      curriculum == CurriculumId.mishnehTorah ||
       curriculum == CurriculumId.tanach;
 }
