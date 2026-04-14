@@ -6,7 +6,6 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -35,13 +34,15 @@ import '../mocks/mock_repositories.dart';
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -254,8 +255,9 @@ void main() {
       addTearDown(() => contentDb.close());
 
       // Fresh content DB has no cached text (seeded DB would have data)
-      final cached = await contentDb.contentTextCacheDao
-          .getText('Mishnah Berachos 1.1');
+      final cached = await contentDb.contentTextCacheDao.getText(
+        'Mishnah Berachos 1.1',
+      );
       expect(cached, isNull);
     });
 
@@ -267,7 +269,6 @@ void main() {
 
         final repo = TextCacheRepository(
           textCacheDao: contentDb.contentTextCacheDao,
-          dio: Dio(),
         );
 
         // Not cached — returns null (no API fallback)
@@ -282,7 +283,6 @@ void main() {
 
       final repo = TextCacheRepository(
         textCacheDao: contentDb.contentTextCacheDao,
-        dio: Dio(),
       );
 
       // Uncached text returns null (not available)

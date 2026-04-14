@@ -59,7 +59,7 @@ final class TextCacheRepositoryProvider
 }
 
 String _$textCacheRepositoryHash() =>
-    r'8e4c2320e70ff01f626238001ab6dc0239531870';
+    r'a8a2d94054ddc0f12f5a4c3b030e9700695f11e1';
 
 /// Provider for fetching text by Sefaria reference.
 
