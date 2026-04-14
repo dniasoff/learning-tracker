@@ -197,8 +197,7 @@ Future<void> main(List<String> rawArgs) async {
 
   try {
     // Phase 2: Programs + TestDates
-    if (args.mode == _Mode.build ||
-        args.mode == _Mode.programsOnly) {
+    if (args.mode == _Mode.build || args.mode == _Mode.programsOnly) {
       print('Phase 2: Seeding LearningPrograms + TestDates...');
       await _seedProgramsAndTestDates(db, args.verbose);
     }
@@ -268,8 +267,10 @@ Future<void> main(List<String> rawArgs) async {
   print('✅ Seed DB built successfully!');
   print('  Uncompressed: ${uncompressedMb.toStringAsFixed(2)} MB');
   print('  Compressed:   ${compressedMb.toStringAsFixed(2)} MB');
-  print('  Ratio:        '
-      '${(compressed.length / uncompressed.length * 100).toStringAsFixed(1)}%');
+  print(
+    '  Ratio:        '
+    '${(compressed.length / uncompressed.length * 100).toStringAsFixed(1)}%',
+  );
   print('  Sidecar:      $sidecarPath');
   print('  Asset copy:   $assetPath');
 
@@ -280,10 +281,7 @@ Future<void> main(List<String> rawArgs) async {
 
 // ── Phase 2: Programs + TestDates ────────────────────────────────────────
 
-Future<void> _seedProgramsAndTestDates(
-  ContentDatabase db,
-  bool verbose,
-) async {
+Future<void> _seedProgramsAndTestDates(ContentDatabase db, bool verbose) async {
   // ContentDatabase's onCreate already seeds programs + test dates when the
   // DB is brand new. For resumed runs, force an upsert so renamed/adjusted
   // seed data is reflected.
@@ -331,9 +329,7 @@ Future<void> _seedProgramsAndTestDates(
   for (final td in seeds) {
     final programName = td['program_name'] as String?;
     if (programName == null) continue;
-    final program = programRows
-        .where((p) => p.name == programName)
-        .toList();
+    final program = programRows.where((p) => p.name == programName).toList();
     if (program.isEmpty) continue;
     await db.customInsert(
       'INSERT INTO test_dates (program_id, test_date, material_description) '
@@ -351,10 +347,7 @@ Future<void> _seedProgramsAndTestDates(
 
 // ── Phase 3: Text content ────────────────────────────────────────────────
 
-Future<int> _fetchAndInsertTextContent(
-  ContentDatabase db,
-  _Args args,
-) async {
+Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
   final dio = Dio(
     BaseOptions(
       baseUrl: 'https://www.sefaria.org',
@@ -383,8 +376,7 @@ Future<int> _fetchAndInsertTextContent(
       print('  ⚠️  Missing hierarchy: $hierarchyPath — skipping');
       continue;
     }
-    final json =
-        jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+    final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
     final items = (json['items'] as List<dynamic>?) ?? const [];
     for (final item in items.cast<Map<String, dynamic>>()) {
       if (item['isLeaf'] != true) continue;
@@ -395,21 +387,18 @@ Future<int> _fetchAndInsertTextContent(
   }
   print('  Total leaf items: ${allLeaves.length}');
 
-  final toFetch =
-      allLeaves.where((l) => !alreadyFetched.contains(l.ref)).toList();
+  final toFetch = allLeaves
+      .where((l) => !alreadyFetched.contains(l.ref))
+      .toList();
   print('  Remaining to fetch: ${toFetch.length}');
 
   final errorsLog = File('${args.output}/seed_errors.log');
   var fetched = 0;
   var errors = 0;
-  final bufferedInserts =
-      <({String ref, String he, String en})>[];
+  final bufferedInserts = <({String ref, String he, String en})>[];
 
   for (var i = 0; i < toFetch.length; i += _maxConcurrentFetches) {
-    final batch = toFetch
-        .skip(i)
-        .take(_maxConcurrentFetches)
-        .toList();
+    final batch = toFetch.skip(i).take(_maxConcurrentFetches).toList();
 
     final futures = batch.map((leaf) async {
       try {
@@ -420,12 +409,7 @@ Future<int> _fetchAndInsertTextContent(
           await Future<void>.delayed(const Duration(seconds: 5));
           try {
             final texts = await _fetchBothLanguages(dio, leaf.ref);
-            return (
-              ref: leaf.ref,
-              he: texts.he,
-              en: texts.en,
-              error: false,
-            );
+            return (ref: leaf.ref, he: texts.he, en: texts.en, error: false);
           } catch (_) {
             return (ref: leaf.ref, he: '', en: '', error: true);
           }
@@ -440,13 +424,9 @@ Future<int> _fetchAndInsertTextContent(
     for (final r in results) {
       if (r.error) {
         errors++;
-        errorsLog.writeAsStringSync(
-          '${r.ref}\n',
-          mode: FileMode.append,
-        );
+        errorsLog.writeAsStringSync('${r.ref}\n', mode: FileMode.append);
       } else {
-        bufferedInserts
-            .add((ref: r.ref, he: r.he, en: r.en));
+        bufferedInserts.add((ref: r.ref, he: r.he, en: r.en));
         fetched++;
       }
     }
@@ -458,8 +438,10 @@ Future<int> _fetchAndInsertTextContent(
 
     final progress = fetched + errors;
     if (progress % 500 == 0 || progress == toFetch.length) {
-      print('    Progress: $progress/${toFetch.length} '
-          '(fetched $fetched, errors $errors)');
+      print(
+        '    Progress: $progress/${toFetch.length} '
+        '(fetched $fetched, errors $errors)',
+      );
     }
 
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -521,7 +503,8 @@ Future<({String he, String en})> _fetchBothLanguages(
   String? en;
   for (final version in versions) {
     if (version is! Map<String, dynamic>) continue;
-    final lang = (version['actualLanguage'] as String?) ??
+    final lang =
+        (version['actualLanguage'] as String?) ??
         (version['language'] as String?) ??
         '';
     final text = version['text'];
@@ -538,16 +521,12 @@ String _extractText(dynamic text) {
   if (text == null) return '';
   if (text is String) return _stripHtml(text);
   if (text is List) {
-    return text
-        .map(_extractText)
-        .where((s) => s.isNotEmpty)
-        .join('\n');
+    return text.map(_extractText).where((s) => s.isNotEmpty).join('\n');
   }
   return '';
 }
 
-String _stripHtml(String html) =>
-    html.replaceAll(RegExp('<[^>]*>'), '').trim();
+String _stripHtml(String html) => html.replaceAll(RegExp('<[^>]*>'), '').trim();
 
 // ── Phase 4: Calendar cycles ─────────────────────────────────────────────
 
@@ -581,22 +560,27 @@ Future<void> _fetchSefariaCalendar(
   // Resume support: find the max dateKey per program to skip ahead.
   final perProgramMax = <String, String>{};
   if (args.resume) {
-    final existing = await db.customSelect(
-      'SELECT program_key, MAX(date_key) AS max_date '
-      'FROM calendar_cycles GROUP BY program_key',
-    ).get();
+    final existing = await db
+        .customSelect(
+          'SELECT program_key, MAX(date_key) AS max_date '
+          'FROM calendar_cycles GROUP BY program_key',
+        )
+        .get();
     for (final row in existing) {
-      perProgramMax[row.read<String>('program_key')] =
-          row.read<String>('max_date');
+      perProgramMax[row.read<String>('program_key')] = row.read<String>(
+        'max_date',
+      );
     }
   }
 
   final totalDays = _calendarEnd.difference(_calendarStart).inDays + 1;
   var processed = 0;
 
-  for (var d = _calendarStart;
-      !d.isAfter(_calendarEnd);
-      d = d.add(const Duration(days: 1))) {
+  for (
+    var d = _calendarStart;
+    !d.isAfter(_calendarEnd);
+    d = d.add(const Duration(days: 1))
+  ) {
     final dateKey = _formatDate(d);
 
     // Skip if every Sefaria-sourced program already has a row for
@@ -613,11 +597,7 @@ Future<void> _fetchSefariaCalendar(
     try {
       final response = await dio.get<Map<String, dynamic>>(
         '/api/calendars',
-        queryParameters: {
-          'year': d.year,
-          'month': d.month,
-          'day': d.day,
-        },
+        queryParameters: {'year': d.year, 'month': d.month, 'day': d.day},
       );
       json = response.data;
     } catch (e) {
@@ -627,21 +607,19 @@ Future<void> _fetchSefariaCalendar(
     }
 
     if (json != null) {
-      final items =
-          (json['calendar_items'] as List<dynamic>?) ?? const [];
+      final items = (json['calendar_items'] as List<dynamic>?) ?? const [];
       final rows = <({String program, String ref, String display})>[];
       for (final raw in items.cast<Map<String, dynamic>>()) {
         final titleEn =
-            ((raw['title'] as Map<String, dynamic>?)?['en'] as String?) ??
-                '';
+            ((raw['title'] as Map<String, dynamic>?)?['en'] as String?) ?? '';
         final programKey = _sefariaCalendarMap[titleEn];
         if (programKey == null) continue;
         final ref = (raw['ref'] as String?) ?? '';
         if (ref.isEmpty) continue;
         final display =
             ((raw['displayValue'] as Map<String, dynamic>?)?['en']
-                    as String?) ??
-                '';
+                as String?) ??
+            '';
         rows.add((program: programKey, ref: ref, display: display));
       }
       if (rows.isNotEmpty) {
@@ -734,27 +712,19 @@ Future<void> _fetchHebcalCalendar(ContentDatabase db, _Args args) async {
           'dksa': 'on',
         },
       );
-      final items =
-          (response.data?['items'] as List<dynamic>?) ?? const [];
-      final rows = <({
-        String program,
-        String dateKey,
-        String ref,
-        String display,
-      })>[];
+      final items = (response.data?['items'] as List<dynamic>?) ?? const [];
+      final rows =
+          <({String program, String dateKey, String ref, String display})>[];
       for (final raw in items.cast<Map<String, dynamic>>()) {
         final category = raw['category'] as String?;
         final programKey = _hebcalCategoryMap[category];
         if (programKey == null) continue;
         final date = raw['date'] as String? ?? '';
-        final dateKey =
-            date.length >= 10 ? date.substring(0, 10) : '';
+        final dateKey = date.length >= 10 ? date.substring(0, 10) : '';
         if (dateKey.isEmpty) continue;
         final ref = _extractRefFromHebcalLink(
           raw['link'] as String?,
-          (raw['memo'] as String?) ??
-              (raw['title'] as String?) ??
-              '',
+          (raw['memo'] as String?) ?? (raw['title'] as String?) ?? '',
         );
         final display = (raw['title'] as String?) ?? '';
         rows.add((
@@ -783,9 +753,7 @@ Future<void> _fetchHebcalCalendar(ContentDatabase db, _Args args) async {
       }
     } catch (e) {
       if (args.verbose) {
-        stderr.writeln(
-          '  Hebcal fetch failed for $rangeStart..$rangeEnd: $e',
-        );
+        stderr.writeln('  Hebcal fetch failed for $rangeStart..$rangeEnd: $e');
       }
     }
 
@@ -913,9 +881,7 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
       'seed_metadata',
     ];
     for (final t in expectedTables) {
-      final info = await db
-          .customSelect('PRAGMA table_info($t)')
-          .get();
+      final info = await db.customSelect('PRAGMA table_info($t)').get();
       if (info.isEmpty) {
         stderr.writeln('❌ Missing table: $t');
         exit(1);
@@ -974,8 +940,9 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 Future<int> _countRows(ContentDatabase db, String table) async {
-  final row =
-      await db.customSelect('SELECT COUNT(*) AS c FROM $table').getSingle();
+  final row = await db
+      .customSelect('SELECT COUNT(*) AS c FROM $table')
+      .getSingle();
   return row.read<int>('c');
 }
 

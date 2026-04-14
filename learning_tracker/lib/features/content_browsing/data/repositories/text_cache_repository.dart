@@ -17,10 +17,7 @@ class TextContent {
 /// Repository for cached Sefaria text content.
 /// Tries the local cache first, then falls back to the Sefaria API.
 class TextCacheRepository {
-  TextCacheRepository({
-    required this.textCacheDao,
-    required this.dio,
-  });
+  TextCacheRepository({required this.textCacheDao, required this.dio});
 
   final ContentTextCacheDao textCacheDao;
   final Dio dio;
@@ -56,7 +53,8 @@ class TextCacheRepository {
       String? en;
       for (final version in versions) {
         if (version is! Map<String, dynamic>) continue;
-        final lang = (version['actualLanguage'] as String?) ??
+        final lang =
+            (version['actualLanguage'] as String?) ??
             (version['language'] as String?) ??
             '';
         final text = version['text'];
@@ -85,10 +83,7 @@ class TextCacheRepository {
     if (text == null) return '';
     if (text is String) return _stripHtml(text);
     if (text is List) {
-      return text
-          .map(_extractText)
-          .where((s) => s.isNotEmpty)
-          .join('\n');
+      return text.map(_extractText).where((s) => s.isNotEmpty).join('\n');
     }
     return '';
   }
