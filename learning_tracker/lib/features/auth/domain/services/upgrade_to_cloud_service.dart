@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
 
@@ -36,6 +37,8 @@ class UpgradeToCloudService {
     required UserProfileDao dao,
     required FirebaseAuth firebaseAuth,
     PasswordHasher? hasher,
+    this.registry,
+    this.accountId,
   })  : _dao = dao,
         _auth = firebaseAuth,
         _hasher = hasher ?? PasswordHasher();
@@ -43,6 +46,13 @@ class UpgradeToCloudService {
   final UserProfileDao _dao;
   final FirebaseAuth _auth;
   final PasswordHasher _hasher;
+
+  /// Epic 21.12: optional registry + accountId for multi-account
+  /// context. When provided, the upgrade also updates the device
+  /// registry tier + firebaseUid so the account picker reflects
+  /// the change.
+  final DeviceRegistryDatabase? registry;
+  final String? accountId;
 
   /// Attempts to upgrade [profile] to a cloud-born account.
   ///
@@ -83,6 +93,16 @@ class UpgradeToCloudService {
       firebaseUid: firebaseUid,
       updatedAt: DateTime.now().toUtc(),
     );
+
+    // Epic 21.12: also update the device registry so the account
+    // picker shows the cloud badge after upgrade.
+    if (registry != null && accountId != null) {
+      await registry!.updateAccountTier(
+        accountId!,
+        'cloudBorn',
+        firebaseUid: firebaseUid,
+      );
+    }
 
     return (await _dao.getUserProfileById(profile.id))!;
   }
