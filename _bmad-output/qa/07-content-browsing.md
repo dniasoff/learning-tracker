@@ -42,7 +42,7 @@ level labels and depth differ:
 | Gemara Yerushalmi | 3 | masechta > daf > halacha | varies |
 | Mishna Berurah | 3 | siman > seif > seif katan | 697 simanim |
 | Chumash | 4 | sefer > parsha > perek > pasuk | 5,845 |
-| Torah | varies | sefer > parsha > perek > pasuk | varies |
+| Mishneh Torah | varies | sefer > section > chapter | varies |
 | Tanach | varies | sefer > perek > pasuk | varies |
 | Nach | varies | sefer > perek > pasuk | varies |
 | Mussar | varies | sefer > section > paragraph | varies |

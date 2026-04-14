@@ -64,7 +64,7 @@ vastly different item counts.
 | Talmud Yerushalmi | תלמוד ירושלמי | Jerusalem Talmud -- shorter parallel to Bavli. Less commonly studied but has its own daily programs. | varies | Masechta > Daf > Halacha |
 | Mishna Berurah | משנה ברורה | Practical Jewish law (halacha) compendium by the Chofetz Chaim. 697 sections (simanim). | ~17,397 | Siman > Seif > Seif Katan |
 | Chumash | חומש | The Five Books of Moses (Genesis-Deuteronomy). 5,845 verses. Often studied with weekly Torah portion cycle. | 5,845 | Sefer > Parsha > Perek > Pasuk |
-| Torah | תורה | Same text as Chumash but organized differently for different learning programs. | 5,845 | Sefer > Parsha > Perek > Pasuk |
+| Mishneh Torah | משנה תורה | Maimonides' comprehensive code of Jewish law (Rambam). 14 books, 83 sections, 1,000 chapters. | varies | Sefer > Section > Chapter |
 | Tanach | תנ"ך | Full Hebrew Bible (Torah + Prophets + Writings). 24 books total. | varies | Section > Sefer > Perek > Pasuk |
 | Nach | נ"ך | Prophets + Writings (Tanach minus Torah). 19 books. | ~17,360 | Section > Sefer > Perek > Pasuk |
 | Mussar | מוסר | Ethics and character development texts. Various classic works. | ~51 | Sefer > Section > Chapter |

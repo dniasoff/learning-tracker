@@ -293,7 +293,7 @@ The user flow is: **Add Track → pick curriculum → program selection step →
 | Yerushalmi (`yerushalmi`) | Dirshu Kinyan Yerushalmi, Yerushalmi Yomi | Yerushalmi Yomi |
 | Mishna Berurah (`mishna_berurah`) | Dirshu Daf HaYomi B'Halacha, Halakhah Yomit, Arukh HaShulchan Yomi, Kitzur SA Yomi | Last 3 calendar-linked |
 | Mussar (`mussar`) | Dirshu Kinyan Chochma, Chofetz Chaim Daily | Chofetz Chaim Daily |
-| Torah (`torah`) | Rambam - 1 Chapter, Rambam - 3 Chapters | Yes (both) |
+| Mishneh Torah (`mishneh_torah`) | Rambam - 1 Chapter, Rambam - 3 Chapters | Yes (both) |
 | Tanach (`tanach`) | Tanakh Yomi | Yes |
 | **Chumash (`chumash`)** | **NONE — auto-skips to self-paced** | — |
 
