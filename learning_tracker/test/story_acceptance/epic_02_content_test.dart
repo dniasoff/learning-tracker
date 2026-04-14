@@ -6,6 +6,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -266,6 +267,7 @@ void main() {
 
         final repo = TextCacheRepository(
           textCacheDao: contentDb.contentTextCacheDao,
+          dio: Dio(),
         );
 
         // Not cached — returns null (no API fallback)
@@ -280,6 +282,7 @@ void main() {
 
       final repo = TextCacheRepository(
         textCacheDao: contentDb.contentTextCacheDao,
+        dio: Dio(),
       );
 
       // Uncached text returns null (not available)

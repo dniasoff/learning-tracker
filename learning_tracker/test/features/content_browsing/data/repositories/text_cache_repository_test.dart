@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
@@ -10,7 +11,7 @@ void main() {
 
   setUp(() {
     database = createTestContentDatabase();
-    repository = TextCacheRepository(textCacheDao: database.contentTextCacheDao);
+    repository = TextCacheRepository(textCacheDao: database.contentTextCacheDao, dio: Dio());
   });
 
   tearDown(() async {
