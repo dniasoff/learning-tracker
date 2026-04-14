@@ -157,7 +157,7 @@ void main() {
       expect(_hasProgramsForCurriculum(CurriculumId.chumash), false);
     });
 
-    test('torah has programs', () {
+    test('mishnehTorah has programs', () {
       expect(_hasProgramsForCurriculum(CurriculumId.mishnehTorah), true);
     });
 
