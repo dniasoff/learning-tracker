@@ -40,6 +40,8 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 
+import 'lib/daf_yomi_sequence.dart';
+
 // ── Configuration ────────────────────────────────────────────────────────
 
 const _curricula = {
@@ -778,10 +780,9 @@ String? _dafYomiCycle15Ref(DateTime date) {
   return _dafYomiSequence[dayIndex];
 }
 
-/// Placeholder — a full 2,711-entry sequence is generated from the
-/// fixed tractate page counts. Kept as an empty list here; the Sefaria
-/// API is authoritative for the 2024-2027 build range used today.
-const List<String> _dafYomiSequence = <String>[];
+/// Complete 2,711-entry Daf Yomi cycle sequence imported from
+/// tool/lib/daf_yomi_sequence.dart.
+const List<String> _dafYomiSequence = dafYomiSequence;
 
 String _extractRefFromHebcalLink(String? link, String fallback) {
   if (link == null || !link.contains('sefaria.org/')) return fallback;
