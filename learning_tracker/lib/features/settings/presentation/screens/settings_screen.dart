@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -1033,9 +1034,19 @@ Future<void> _showSignOutConfirmation(
   try {
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
-    ref.read(authStateProvider.notifier).demoteToLocal();
+    ref.read(authStateProvider.notifier).signOut();
+
+    // Epic 21.10: route to account picker when other accounts
+    // remain on device, or to welcome when this was the last one.
     if (context.mounted) {
-      await context.router.replaceAll([const SignInRoute()]);
+      final registry = ref.read(deviceRegistryProvider);
+      final accounts = await registry.getAllAccounts();
+      if (!context.mounted) return;
+      if (accounts.isNotEmpty) {
+        await context.router.replaceAll([const AccountPickerRoute()]);
+      } else {
+        await context.router.replaceAll([const WelcomeRoute()]);
+      }
     }
   } catch (e) {
     if (context.mounted) {
