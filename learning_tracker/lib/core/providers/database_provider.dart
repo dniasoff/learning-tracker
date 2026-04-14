@@ -2,59 +2,34 @@ import 'dart:io';
 
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 part 'database_provider.g.dart';
 
 /// User database — read-write, scoped to the active account.
 ///
-/// Epic 21: reads `lastActiveAccountId` from SharedPreferences (fast)
-/// or the device registry, then opens that account's DB file
-/// (`user_acc_{id}.db`). When the active account changes, this
-/// provider invalidates and the entire downstream tree rebuilds
-/// with the new account's data.
-///
-/// Falls back to the legacy single-file `learning_tracker.db` name
-/// when no registry exists yet (fresh install before first signup,
-/// or tests that override this provider).
+/// Epic 21: [activeDbFileName] is resolved at startup by
+/// [SessionPersistenceService] and set before the provider tree
+/// builds. Defaults to the legacy `learning_tracker` name so
+/// tests and fresh installs work without a registry.
 @Riverpod(keepAlive: true)
 UserDatabase userDatabase(Ref ref) {
-  final registry = ref.watch(deviceRegistryProvider);
-
-  // Fast path: read SharedPreferences for the active account ID
-  // (available before Drift fully initialises on a cold start).
-  final dbName = _resolveDbName(registry);
-
-  final database = UserDatabase(driftDatabase(name: dbName));
+  final database = UserDatabase(driftDatabase(name: activeDbFileName));
   ref.onDispose(database.close);
   return database;
 }
 
-/// Resolve which database file to open.
+/// The active account's DB file name, set by
+/// [SessionPersistenceService] or [AuthStateNotifier] before the
+/// provider tree builds. Defaults to the legacy single-file name
+/// so tests and fresh installs work without a registry.
 ///
-/// 1. Look up lastActiveAccountId in the registry.
-/// 2. If found, use that account's `dbFileName`.
-/// 3. If not found (fresh install / tests), fall back to the
-///    legacy name so existing tests and first-run still work.
-String _resolveDbName(DeviceRegistryDatabase registry) {
-  // Synchronous read isn't possible with Drift futures, so we
-  // rely on SharedPreferences which IS synchronous-ish after
-  // getInstance(). The registry provider is keepAlive, so it's
-  // already open by the time this runs.
-  //
-  // The actual async resolution of the active account happens in
-  // AuthStateNotifier._init() (story 21.3). Here we just need
-  // the file name to open, and SharedPreferences gives us the
-  // accountId fast enough.
-  //
-  // For the MVP: return the legacy name. Story 21.3 will wire
-  // the full SharedPreferences → registry → dbFileName chain.
-  // This keeps every existing test and the current single-account
-  // flow working while the multi-account infrastructure lands.
-  return 'learning_tracker';
-}
+/// This is a simple global because the provider must resolve
+/// synchronously — Drift's `driftDatabase(name:)` doesn't accept
+/// a Future. The async resolution happens in `main.dart` at
+/// startup (or in tests via provider overrides).
+String activeDbFileName = 'learning_tracker';
 
 /// Filesystem path for the bundled content database.
 ///
