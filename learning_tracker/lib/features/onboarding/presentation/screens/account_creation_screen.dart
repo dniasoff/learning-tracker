@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -50,6 +52,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreedToTerms = false;
+  bool _offlineAcknowledged = false;
 
   @override
   void initState() {
@@ -120,44 +123,59 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       return;
     }
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final displayName = _nameController.text.trim();
+
+    // Epic 21.5: one-shot connectivity check at tap time decides
+    // which backend handles the signup. The stream keeps the UI
+    // honest (banner/warning); the one-shot prevents stale-stream
+    // race conditions at execution time.
+    final isOnline =
+        await InternetConnectionChecker.instance.hasConnection;
+
+    if (!isOnline) {
+      // Offline path — local-born via argon2id.
+      if (!_offlineAcknowledged) {
+        _showError(
+          'Please acknowledge the offline account warning before '
+          'creating an offline account.',
+        );
+        return;
+      }
+      await _signUpLocal(email, password, displayName);
+    } else {
+      // Online path — cloud-born via Firebase.
+      await _signUpCloud(email, password, displayName);
+    }
+  }
+
+  Future<void> _signUpCloud(
+    String email,
+    String password,
+    String displayName,
+  ) async {
     setState(() => _isLoading = true);
     try {
-      // Epic 20.6: attempt cloud-born signup first. If Firebase is
-      // unreachable (offline, DNS failure, 4xx auth config error),
-      // fall back to a local-born account via LocalAuthService.
       final authRepo = ref.read(authRepositoryProvider);
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
-      final displayName = _nameController.text.trim();
-
-      try {
-        await authRepo.signUp(email, password, displayName);
-        final user = ref.read(firebaseAuthProvider).currentUser;
-        if (user != null) {
-          await ref
-              .read(auth_state.authStateProvider.notifier)
-              .promoteToCloud(user);
-        }
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'network-request-failed') {
-          // Offline → drop the user on the dedicated local-born
-          // signup screen so they can acknowledge the no-backup
-          // warning (v2 §4.2 + Epic 20.7).
-          if (mounted) {
-            unawaited(context.router.replace(LocalSignupRoute()));
-          }
-          return;
-        }
-        rethrow;
+      await authRepo.signUp(email, password, displayName);
+      final user = ref.read(firebaseAuthProvider).currentUser;
+      if (user != null) {
+        await ref
+            .read(auth_state.authStateProvider.notifier)
+            .promoteToCloud(user);
       }
-
       if (mounted) {
         unawaited(context.router.push(const OnboardingRoute()));
       }
     } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showError(_mapAuthError(e.code));
+      if (e.code == 'network-request-failed' && mounted) {
+        // Race condition: one-shot said online but Firebase call
+        // failed. Offer graceful fallback to offline account.
+        _showFallbackDialog(email, password, displayName);
+        return;
       }
+      if (mounted) _showError(_mapAuthError(e.code));
     } on DuplicateEmailException {
       if (mounted) _showError('An account already exists with this email.');
     } on InvalidInputException catch (e) {
@@ -165,6 +183,79 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _signUpLocal(
+    String email,
+    String password,
+    String displayName,
+  ) async {
+    setState(() => _isLoading = true);
+    try {
+      final dao = ref.read(userDatabaseProvider).userProfileDao;
+      final service = LocalAuthService(dao: dao);
+      final profile = await service.signUp(
+        email: email,
+        password: password,
+        displayName: displayName,
+        userMode: 'adult',
+      );
+      ref
+          .read(auth_state.authStateProvider.notifier)
+          .setLocalBornSession(profile: profile);
+      if (mounted) {
+        unawaited(context.router.push(const OnboardingRoute()));
+      }
+    } on DuplicateEmailException {
+      if (mounted) {
+        _showError(
+          'An offline account already exists on this device with that email.',
+        );
+      }
+    } on InvalidInputException catch (e) {
+      if (mounted) _showError(e.reason);
+    } catch (e) {
+      if (mounted) _showError('Signup failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Shown when the one-shot said "online" but Firebase threw
+  /// network-request-failed mid-call. Offers to create an offline
+  /// account instead or retry.
+  void _showFallbackDialog(
+    String email,
+    String password,
+    String displayName,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Connection lost'),
+        content: const Text(
+          'The internet connection dropped during signup. '
+          'Would you like to create an offline account instead?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _signUpCloud(email, password, displayName);
+            },
+            child: const Text('Try Again'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() => _offlineAcknowledged = true);
+              _signUpLocal(email, password, displayName);
+            },
+            child: const Text('Create Offline Account'),
+          ),
+        ],
+      ),
+    );
   }
 
 
@@ -261,39 +352,13 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     final theme = Theme.of(context);
     final strength = _passwordStrength(_passwordController.text);
 
-    // Epic 20.6: if connectivity drops while the user is filling
-    // out the cloud signup form, bounce them to the local-born
-    // signup screen with their typed name/email pre-filled. They
-    // only need to re-type the password (intentionally not carried
-    // through navigation for security).
-    ref.listen<AsyncValue<bool>>(connectivityStreamProvider, (prev, next) {
-      if (_isLoading) return; // mid-Firebase-call: let it fail naturally
-      final wasOnline =
-          prev?.maybeWhen(data: (v) => v, orElse: () => true) ?? true;
-      final isOnline =
-          next.maybeWhen(data: (v) => v, orElse: () => true);
-      if (wasOnline && !isOnline && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Connection lost — moving you to offline signup.',
-            ),
-          ),
-        );
-        unawaited(
-          context.router.replace(
-            LocalSignupRoute(
-              prefilledName: _nameController.text.trim().isEmpty
-                  ? null
-                  : _nameController.text.trim(),
-              prefilledEmail: _emailController.text.trim().isEmpty
-                  ? null
-                  : _emailController.text.trim(),
-            ),
-          ),
-        );
-      }
-    });
+    // Epic 21.5: watch connectivity to toggle the offline warning
+    // block and Google button visibility in real time.
+    final connectivity = ref.watch(connectivityStreamProvider);
+    final isOnline = connectivity.maybeWhen(
+      data: (v) => v,
+      orElse: () => true,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -339,7 +404,81 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                     color: Colors.white.withValues(alpha: 0.6),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
+
+                // Epic 21.5: offline warning block — shown only
+                // when the device is offline. Replaces the old
+                // redirect to LocalSignupScreen.
+                if (!isOnline) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0x33FF6B6B),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFFF6B6B).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.cloud_off,
+                                color: Color(0xFFFF6B6B), size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              "You're offline",
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: const Color(0xFFFF6B6B),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'This account will be stored only on this device:\n'
+                          '  \u2022 No cloud backup\n'
+                          '  \u2022 No multi-device sync\n'
+                          '  \u2022 Forget your password = account lost\n\n'
+                          'You can upgrade to cloud later from Settings.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: Checkbox(
+                                value: _offlineAcknowledged,
+                                onChanged: _isLoading
+                                    ? null
+                                    : (v) => setState(
+                                        () => _offlineAcknowledged = v ?? false),
+                                side: const BorderSide(
+                                    color: Color(0xFFFF6B6B)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'I understand — no backup, no recovery',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Full Name
                 _buildLabel('Full Name'),
@@ -521,7 +660,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Create Account button
+                // Create Account button — text adapts to connectivity
                 FilledButton(
                   onPressed: _isLoading ? null : _signUpWithEmail,
                   child: _isLoading
@@ -533,45 +672,47 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                             color: Colors.black,
                           ),
                         )
-                      : const Text('Create Account'),
+                      : Text(isOnline
+                            ? 'Create Account'
+                            : 'Create Offline Account'),
                 ),
-                const SizedBox(height: 24),
 
-                // OR divider
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(
-                        color: Colors.white.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'OR SIGN UP WITH',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.4),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.5,
+                // Google Sign-In section — only shown when online
+                if (isOnline) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Divider(
-                        color: Colors.white.withValues(alpha: 0.1),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'OR SIGN UP WITH',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Google sign up
-                OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _signUpWithGoogle,
-                  icon: const Icon(Icons.g_mobiledata, size: 24),
-                  label: const Text('Sign up with Google'),
-                ),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _signUpWithGoogle,
+                    icon: const Icon(Icons.g_mobiledata, size: 24),
+                    label: const Text('Sign up with Google'),
+                  ),
+                ],
                 const SizedBox(height: 32),
 
                 // Sign in link

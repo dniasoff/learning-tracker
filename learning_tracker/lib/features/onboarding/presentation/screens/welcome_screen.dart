@@ -72,17 +72,14 @@ class WelcomeScreen extends ConsumerWidget {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () {
-                    if (isOnline) {
-                      context.router.push(AccountCreationRoute());
-                    } else {
-                      context.router.push(LocalSignupRoute());
-                    }
+                    // Epic 21.5: always route to the same unified
+                    // signup page. It handles both tiers inline based
+                    // on connectivity.
+                    context.router.push(AccountCreationRoute());
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      isOnline ? 'Get Started' : 'Create Offline Account',
-                    ),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('Get Started'),
                   ),
                 ),
               ),
