@@ -59,11 +59,11 @@ class CurriculumDefaults {
           level4Label: 'Pasuk',
           maxLevels: 4,
         ),
-        CurriculumId.torah: CurriculumHierarchyDefaults(
+        CurriculumId.mishnehTorah: CurriculumHierarchyDefaults(
           level1Label: 'Sefer',
-          level2Label: 'Parsha',
+          level2Label: 'Hilchos',
           level3Label: 'Perek',
-          level4Label: 'Pasuk',
+          level4Label: 'Halacha',
           maxLevels: 4,
         ),
         CurriculumId.tanach: CurriculumHierarchyDefaults(
@@ -95,7 +95,7 @@ class CurriculumDefaults {
     CurriculumId.yerushalmi: 1,
     CurriculumId.mishnaBerurah: 2,
     CurriculumId.chumash: 5,
-    CurriculumId.torah: 5,
+    CurriculumId.mishnehTorah: 1,
     CurriculumId.tanach: 3,
     CurriculumId.nach: 3,
     CurriculumId.mussar: 1,

@@ -8,12 +8,14 @@ void main() {
         'mishnayos, nach', () {
       // These curricula have seeded programs in the DB
       final withPrograms = [
-        CurriculumId.bavli, // 4 programs: daf_yomi, oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi
-        CurriculumId.yerushalmi, // 1: dirshu_kinyan_yerushalmi
-        CurriculumId.mishnaBerurah, // 1: dirshu_daf_hayomi_bhalacha
-        CurriculumId.mussar, // 1: dirshu_kinyan_chochma
+        CurriculumId.bavli, // 5: daf_yomi, oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_a_week
+        CurriculumId.yerushalmi, // 2: dirshu_kinyan_yerushalmi, yerushalmi_yomi
+        CurriculumId.mishnaBerurah, // 4: dirshu_daf_hayomi_bhalacha, halakhah_yomit, arukh_hashulchan_yomi, kitzur_shulchan_aruch_yomi
+        CurriculumId.mussar, // 2: dirshu_kinyan_chochma, chofetz_chaim_daily
         CurriculumId.mishnayos, // 1: mishnah_yomis
         CurriculumId.nach, // 1: nach_yomi
+        CurriculumId.torah, // 2: rambam_1_chapter, rambam_3_chapters
+        CurriculumId.tanach, // 1: tanakh_yomi
       ];
 
       for (final c in withPrograms) {
@@ -21,12 +23,10 @@ void main() {
       }
     });
 
-    test('curricula without programs: chumash, torah, tanach', () {
+    test('curricula without programs: chumash', () {
       // These curricula have no seeded programs — program step auto-skips
       final withoutPrograms = [
         CurriculumId.chumash,
-        CurriculumId.torah,
-        CurriculumId.tanach,
       ];
 
       for (final c in withoutPrograms) {

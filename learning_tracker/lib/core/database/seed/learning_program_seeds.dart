@@ -1,4 +1,4 @@
-/// Seed data for all 9 learning program presets.
+/// Seed data for all learning program presets.
 ///
 /// Each preset is immutable — never modified, only deprecated and replaced.
 ///
@@ -167,6 +167,151 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'test_config': '{}',
     'api_source': 'hebcal',
     'api_program_key': 'nachyomi',
+    'is_calendar_program': true,
+  },
+  // ── Calendar-linked programs (no built-in review) ─────────────────────
+  {
+    'name': 'yerushalmi_yomi',
+    'display_name': 'Yerushalmi Yomi',
+    'description': 'One daf of Talmud Yerushalmi per day.',
+    'curriculum_type': 'yerushalmi',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_daf"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Yerushalmi Yomi',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'rambam_1_chapter',
+    'display_name': 'Rambam - 1 Chapter',
+    'description': 'One chapter of Mishneh Torah per day.',
+    'curriculum_type': 'mishneh_torah',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_chapter"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Daily Rambam',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'rambam_3_chapters',
+    'display_name': 'Rambam - 3 Chapters',
+    'description': 'Three chapters of Mishneh Torah per day.',
+    'curriculum_type': 'mishneh_torah',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"three_chapters"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Daily Rambam (3 Chapters)',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'daf_a_week',
+    'display_name': 'Daf a Week',
+    'description': 'One daf of Talmud Bavli per week.',
+    'curriculum_type': 'bavli',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"weekly","pace":"one_daf"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Daf a Week',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'halakhah_yomit',
+    'display_name': 'Halakhah Yomit',
+    'description': 'Daily halacha study following the Shulchan Aruch cycle.',
+    'curriculum_type': 'mishna_berurah',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Halakhah Yomit',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'arukh_hashulchan_yomi',
+    'display_name': 'Arukh HaShulchan Yomi',
+    'description': 'Daily study of the Arukh HaShulchan.',
+    'curriculum_type': 'mishna_berurah',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Arukh HaShulchan Yomi',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'tanakh_yomi',
+    'display_name': 'Tanakh Yomi',
+    'description': 'Daily Tanakh study cycle.',
+    'curriculum_type': 'tanach',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'sefaria',
+    'api_program_key': 'Tanakh Yomi',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'chofetz_chaim_daily',
+    'display_name': 'Chofetz Chaim Daily',
+    'description': 'Daily study of the Chofetz Chaim on Shmirat HaLashon.',
+    'curriculum_type': 'mussar',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'chofetzChaim',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'kitzur_shulchan_aruch_yomi',
+    'display_name': 'Kitzur Shulchan Aruch Yomi',
+    'description': 'Daily study of the Kitzur Shulchan Aruch.',
+    'curriculum_type': 'mishna_berurah',
+    'is_active': true,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'kitzurShulchanAruch',
     'is_calendar_program': true,
   },
 ];

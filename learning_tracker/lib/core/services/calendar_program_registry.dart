@@ -65,7 +65,7 @@ class CalendarProgramRegistry {
       displayNameHe: 'רמב״ם - פרק אחד',
       apiSource: 'sefaria',
       apiKey: 'Daily Rambam',
-      curriculumType: 'torah',
+      curriculumType: 'mishneh_torah',
     ),
     CalendarProgramDefinition(
       id: 'rambam_3_chapters',
@@ -73,7 +73,7 @@ class CalendarProgramRegistry {
       displayNameHe: 'רמב״ם - ג׳ פרקים',
       apiSource: 'sefaria',
       apiKey: 'Daily Rambam (3 Chapters)',
-      curriculumType: 'torah',
+      curriculumType: 'mishneh_torah',
     ),
     CalendarProgramDefinition(
       id: 'daf_a_week',
@@ -89,7 +89,7 @@ class CalendarProgramRegistry {
       displayNameHe: 'הלכה יומית',
       apiSource: 'sefaria',
       apiKey: 'Halakhah Yomit',
-      curriculumType: 'mishnaBerurah',
+      curriculumType: 'mishna_berurah',
     ),
     CalendarProgramDefinition(
       id: 'arukh_hashulchan_yomi',
@@ -97,7 +97,7 @@ class CalendarProgramRegistry {
       displayNameHe: 'ערוך השולחן יומי',
       apiSource: 'sefaria',
       apiKey: 'Arukh HaShulchan Yomi',
-      curriculumType: 'mishnaBerurah',
+      curriculumType: 'mishna_berurah',
     ),
     CalendarProgramDefinition(
       id: 'tanakh_yomi',
@@ -123,7 +123,7 @@ class CalendarProgramRegistry {
       displayNameHe: 'קיצור שולחן ערוך יומי',
       apiSource: 'hebcal',
       apiKey: 'Kitzur Shulchan Aruch',
-      curriculumType: 'mishnaBerurah',
+      curriculumType: 'mishna_berurah',
       hebcalCategory: 'kitzurShulchanAruch',
     ),
   ];

@@ -149,12 +149,20 @@ void main() {
       expect(_hasProgramsForCurriculum(CurriculumId.mishnaBerurah), true);
     });
 
-    test('mishnayos has no programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.mishnayos), false);
+    test('mishnayos has programs', () {
+      expect(_hasProgramsForCurriculum(CurriculumId.mishnayos), true);
     });
 
     test('chumash has no programs', () {
       expect(_hasProgramsForCurriculum(CurriculumId.chumash), false);
+    });
+
+    test('torah has programs', () {
+      expect(_hasProgramsForCurriculum(CurriculumId.torah), true);
+    });
+
+    test('tanach has programs', () {
+      expect(_hasProgramsForCurriculum(CurriculumId.tanach), true);
     });
   });
 }
@@ -168,7 +176,14 @@ String _getSmartDefault(AddTrackState state) {
   return state.curriculumId?.displayNameHe ?? '';
 }
 
+/// Curricula that have at least one seeded learning program.
 bool _hasProgramsForCurriculum(CurriculumId curriculum) {
   return curriculum == CurriculumId.bavli ||
-      curriculum == CurriculumId.mishnaBerurah;
+      curriculum == CurriculumId.mishnaBerurah ||
+      curriculum == CurriculumId.yerushalmi ||
+      curriculum == CurriculumId.mussar ||
+      curriculum == CurriculumId.mishnayos ||
+      curriculum == CurriculumId.nach ||
+      curriculum == CurriculumId.torah ||
+      curriculum == CurriculumId.tanach;
 }

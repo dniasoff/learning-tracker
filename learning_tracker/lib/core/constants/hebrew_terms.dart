@@ -66,7 +66,7 @@ class HebrewTerms {
     'tanach': 'תנ"ך',
     'mishna_berurah': 'משנה ברורה',
     'mussar': 'מוסר',
-    'torah': 'תורה',
+    'mishneh_torah': 'משנה תורה',
   };
 
   // ── Helpers ──────────────────────────────────────────────────────────────

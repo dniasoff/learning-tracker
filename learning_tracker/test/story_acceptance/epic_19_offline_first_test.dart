@@ -156,11 +156,11 @@ void main() {
       }
     });
 
-    test('AT-19.3.2 programs-only seed yields 9 LearningPrograms with '
+    test('AT-19.3.2 programs-only seed yields 18 LearningPrograms with '
         'api fields populated', () async {
-      // onCreate already seeds programs. Verify the 9 rows + api fields.
+      // onCreate already seeds programs. Verify the 18 rows + api fields.
       final rows = await contentDb.contentLearningProgramDao.getAllPrograms();
-      expect(rows, hasLength(9));
+      expect(rows, hasLength(18));
 
       final dafYomi = rows.firstWhere((p) => p.name == 'daf_yomi');
       expect(dafYomi.apiSource, 'sefaria');

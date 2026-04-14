@@ -944,8 +944,8 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     final failures = <String>[];
     if (args.mode == _Mode.validateOnly) {
       // Row-count thresholds (skip in programs-only builds).
-      if (programCount != 9) {
-        failures.add('LearningPrograms expected 9, got $programCount');
+      if (programCount != 18) {
+        failures.add('LearningPrograms expected 18, got $programCount');
       }
       if (metaCount != 1) {
         failures.add('SeedMetadata expected 1, got $metaCount');

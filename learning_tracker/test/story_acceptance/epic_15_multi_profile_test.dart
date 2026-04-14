@@ -569,11 +569,11 @@ void main() {
         await contentDb.close();
       });
 
-      group('AC: All 9 presets seeded in DB on first launch', () {
-        test('9 programs exist after database creation', () async {
+      group('AC: All 18 presets seeded in DB on first launch', () {
+        test('18 programs exist after database creation', () async {
           final programs =
               await contentDb.contentLearningProgramDao.getAllPrograms();
-          expect(programs.length, 9);
+          expect(programs.length, 18);
         });
 
         test('all expected programs are present by name', () async {
@@ -591,6 +591,15 @@ void main() {
               'daf_yomi',
               'mishnah_yomis',
               'nach_yomi',
+              'yerushalmi_yomi',
+              'rambam_1_chapter',
+              'rambam_3_chapters',
+              'daf_a_week',
+              'halakhah_yomit',
+              'arukh_hashulchan_yomi',
+              'tanakh_yomi',
+              'chofetz_chaim_daily',
+              'kitzur_shulchan_aruch_yomi',
             ]),
           );
         });

@@ -17,12 +17,12 @@ void main() {
   group('ContentLearningProgramDao', () {
     test('getAllPrograms returns seeded programs', () async {
       final programs = await db.contentLearningProgramDao.getAllPrograms();
-      expect(programs.length, 9);
+      expect(programs.length, 18);
     });
 
     test('getActivePrograms returns only active programs', () async {
       final programs = await db.contentLearningProgramDao.getActivePrograms();
-      expect(programs.length, 9); // all seeded programs are active
+      expect(programs.length, 18); // all seeded programs are active
     });
 
     test('getProgramByName finds a specific program', () async {
@@ -38,8 +38,8 @@ void main() {
           .getProgramsByCurriculumType('bavli');
       expect(
         bavliPrograms.length,
-        4,
-      ); // oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_yomi
+        5,
+      ); // oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_yomi, daf_a_week
 
       final nachPrograms = await db.contentLearningProgramDao
           .getProgramsByCurriculumType('nach');
