@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/dio_provider.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
@@ -11,8 +12,12 @@ part 'text_display_providers.g.dart';
 @Riverpod(keepAlive: true)
 TextCacheRepository textCacheRepository(Ref ref) {
   final database = ref.watch(contentDatabaseProvider);
+  final dio = ref.watch(dioProvider);
 
-  return TextCacheRepository(textCacheDao: database.contentTextCacheDao);
+  return TextCacheRepository(
+    textCacheDao: database.contentTextCacheDao,
+    dio: dio,
+  );
 }
 
 /// Provider for fetching text by Sefaria reference.

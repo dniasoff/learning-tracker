@@ -1,7 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
@@ -161,7 +160,7 @@ class _LoadingView extends StatelessWidget {
   }
 }
 
-/// Download required message view.
+/// Message shown when text is unavailable (not cached and API unreachable).
 class _OfflineMessage extends StatelessWidget {
   const _OfflineMessage();
 
@@ -175,30 +174,24 @@ class _OfflineMessage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.download,
+              Icons.cloud_off,
               size: 64,
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
-              'Text content not yet downloaded',
+              'Text not available',
               style: AppTextStyles.titleMedium.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Download this curriculum\'s text from the settings to read offline.',
+              'Check your internet connection and try again.',
               style: AppTextStyles.bodySmall.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => context.router.push(const SettingsRoute()),
-              icon: const Icon(Icons.download),
-              label: const Text('Go to Downloads'),
             ),
           ],
         ),
