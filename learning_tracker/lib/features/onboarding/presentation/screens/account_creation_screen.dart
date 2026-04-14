@@ -9,8 +9,10 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
@@ -266,11 +268,46 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       await authRepo.signInWithGoogle();
       if (!mounted) return;
 
-      // Promote auth state so SyncEngine activates
       final googleUser = ref.read(firebaseAuthProvider).currentUser;
-      if (googleUser != null) {
-        await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(googleUser);
+      if (googleUser == null) return;
+
+      // Epic 21.6: check 5-account cap before adding
+      final registry = ref.read(deviceRegistryProvider);
+      final accounts = await registry.getAllAccounts();
+      // Only count if this is genuinely a NEW account on this device
+      final existingEntry =
+          await registry.findByFirebaseUid(googleUser.uid);
+      if (existingEntry == null && accounts.length >= kMaxDeviceAccounts) {
+        if (mounted) {
+          _showError(
+            'Maximum $kMaxDeviceAccounts accounts reached. '
+            'Remove one to add another.',
+          );
+        }
+        // Sign out the just-signed-in Google user to avoid orphan state
+        await FirebaseAuth.instance.signOut();
+        return;
       }
+
+      // Epic 21.6: check collision with local-born account
+      final localMatch =
+          await registry.findByEmail(googleUser.email ?? '');
+      if (localMatch != null && localMatch.tier == 'localBorn') {
+        // Google returned an email matching a local-born account on
+        // this device — route to collision/upgrade flow instead of
+        // silently merging.
+        if (mounted) {
+          _showError(
+            'An offline account with this email exists on this device. '
+            'Use the Upgrade to Cloud option in Settings instead.',
+          );
+        }
+        await FirebaseAuth.instance.signOut();
+        return;
+      }
+
+      // Promote auth state so SyncEngine activates
+      await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(googleUser);
       if (!mounted) return;
 
       // If onboarding was already completed on this device, skip it.

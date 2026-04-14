@@ -10,6 +10,7 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -264,6 +265,43 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInWithGoogle();
+      if (!mounted) return;
+
+      final googleUser = FirebaseAuth.instance.currentUser;
+      if (googleUser == null) return;
+
+      // Epic 21.8: check 5-account cap for genuinely new accounts
+      final registry = ref.read(deviceRegistryProvider);
+      final existingEntry =
+          await registry.findByFirebaseUid(googleUser.uid);
+      if (existingEntry == null) {
+        final accounts = await registry.getAllAccounts();
+        if (accounts.length >= kMaxDeviceAccounts) {
+          if (mounted) {
+            _showError(
+              'Maximum $kMaxDeviceAccounts accounts reached. '
+              'Remove one to add another.',
+            );
+          }
+          await FirebaseAuth.instance.signOut();
+          return;
+        }
+      }
+
+      // Epic 21.8: collision with local-born account
+      final localMatch =
+          await registry.findByEmail(googleUser.email ?? '');
+      if (localMatch != null && localMatch.tier == 'localBorn') {
+        if (mounted) {
+          _showError(
+            'An offline account with this email exists on this device. '
+            'Use the Upgrade to Cloud option in Settings instead.',
+          );
+        }
+        await FirebaseAuth.instance.signOut();
+        return;
+      }
+
       if (mounted) {
         await _navigateAfterSignIn();
       }
