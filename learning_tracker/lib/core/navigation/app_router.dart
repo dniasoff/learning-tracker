@@ -85,6 +85,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(path: '/create-account', page: AccountCreationRoute.page),
     AutoRoute(path: '/local-signup', page: LocalSignupRoute.page),
     AutoRoute(path: '/local-sign-in', page: LocalSignInRoute.page),
+    AutoRoute(path: '/account-picker', page: AccountPickerRoute.page),
     AutoRoute(
       path: '/upgrade-to-cloud',
       page: UpgradeToCloudRoute.page,
