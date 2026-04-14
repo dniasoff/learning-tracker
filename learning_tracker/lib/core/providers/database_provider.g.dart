@@ -8,17 +8,32 @@ part of 'database_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// User database — read-write, all user data.
+/// User database — read-write, scoped to the active account.
+///
+/// Epic 21: [activeDbFileName] is resolved at startup by
+/// [SessionPersistenceService] and set before the provider tree
+/// builds. Defaults to the legacy `learning_tracker` name so
+/// tests and fresh installs work without a registry.
 
 @ProviderFor(userDatabase)
 final userDatabaseProvider = UserDatabaseProvider._();
 
-/// User database — read-write, all user data.
+/// User database — read-write, scoped to the active account.
+///
+/// Epic 21: [activeDbFileName] is resolved at startup by
+/// [SessionPersistenceService] and set before the provider tree
+/// builds. Defaults to the legacy `learning_tracker` name so
+/// tests and fresh installs work without a registry.
 
 final class UserDatabaseProvider
     extends $FunctionalProvider<UserDatabase, UserDatabase, UserDatabase>
     with $Provider<UserDatabase> {
-  /// User database — read-write, all user data.
+  /// User database — read-write, scoped to the active account.
+  ///
+  /// Epic 21: [activeDbFileName] is resolved at startup by
+  /// [SessionPersistenceService] and set before the provider tree
+  /// builds. Defaults to the legacy `learning_tracker` name so
+  /// tests and fresh installs work without a registry.
   UserDatabaseProvider._()
     : super(
         from: null,
@@ -52,7 +67,7 @@ final class UserDatabaseProvider
   }
 }
 
-String _$userDatabaseHash() => r'b5b71185532a438393ea9db52f77a754de4b5050';
+String _$userDatabaseHash() => r'1df0cea1851023cf26abc0a4ebda0663cb9c7931';
 
 /// Filesystem path for the bundled content database.
 ///

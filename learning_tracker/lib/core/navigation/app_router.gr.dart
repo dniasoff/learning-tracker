@@ -78,6 +78,22 @@ class AccountCreationRouteArgs {
 }
 
 /// generated route for
+/// [AccountPickerScreen]
+class AccountPickerRoute extends PageRouteInfo<void> {
+  const AccountPickerRoute({List<PageRouteInfo>? children})
+    : super(AccountPickerRoute.name, initialChildren: children);
+
+  static const String name = 'AccountPickerRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const AccountPickerScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [AppIntroScreen]
 class AppIntroRoute extends PageRouteInfo<void> {
   const AppIntroRoute({List<PageRouteInfo>? children})
