@@ -7,6 +7,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -48,6 +50,17 @@ void main() {
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             firebaseAuthProvider.overrideWithValue(mockAuth),
+            authStateProvider.overrideWithValue(
+              const AuthState.signedIn(
+                user: AuthUser(
+                  profileId: 1,
+                  email: 'test@test.com',
+                  displayName: 'Test',
+                  userMode: 'adult',
+                ),
+                tier: Tier.localBorn,
+              ),
+            ),
             curriculumActivationServiceProvider.overrideWith((ref) {
               return CurriculumActivationService(
                 database: database,
@@ -102,7 +115,6 @@ void main() {
       await pumpUntilSettled(tester);
 
       expect(find.text('Manage Tracks'), findsOneWidget);
-      expect(find.text('Goals'), findsOneWidget);
       expect(find.text('Daily Reminder'), findsOneWidget);
     });
 

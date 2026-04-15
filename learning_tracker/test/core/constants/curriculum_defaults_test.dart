@@ -57,12 +57,13 @@ void main() {
       expect(config.level4Label, 'Mishna');
     });
 
-    test('Bavli has 3-level hierarchy', () {
+    test('Bavli has 4-level hierarchy', () {
       final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.bavli]!;
-      expect(config.maxLevels, 3);
-      expect(config.level1Label, 'Masechta');
-      expect(config.level2Label, 'Daf');
-      expect(config.level3Label, 'Amud');
+      expect(config.maxLevels, 4);
+      expect(config.level1Label, 'Seder');
+      expect(config.level2Label, 'Masechta');
+      expect(config.level3Label, 'Daf');
+      expect(config.level4Label, 'Amud');
     });
 
     test('Yerushalmi has 3-level hierarchy', () {

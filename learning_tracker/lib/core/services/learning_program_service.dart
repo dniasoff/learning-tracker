@@ -83,6 +83,5 @@ class LearningProgramRepository {
 
   List<LearningProgramData> getProgramsByCurriculumType(
     String curriculumType,
-  ) =>
-      _programs.where((p) => p.curriculumType == curriculumType).toList();
+  ) => _programs.where((p) => p.curriculumType == curriculumType).toList();
 }

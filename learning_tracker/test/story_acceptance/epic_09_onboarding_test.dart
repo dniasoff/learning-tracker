@@ -346,9 +346,7 @@ void main() {
       expect(find.text('Create Goal'), findsOneWidget);
       // Verify the target percentage text is present
       expect(
-        find.text(
-          'Complete 100% of the material (4192 of 4192 items)',
-        ),
+        find.text('Complete 100% of the material (4192 of 4192 items)'),
         findsOneWidget,
       );
       // Verify the deadline section is shown by default
@@ -411,9 +409,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            useHebrewDateProvider.overrideWithValue(true),
-          ],
+          overrides: [useHebrewDateProvider.overrideWithValue(true)],
           child: const MaterialApp(
             home: GoalSetupScreen(
               curriculumId: CurriculumId.mishnayos,

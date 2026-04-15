@@ -270,7 +270,6 @@ Future<void> main(List<String> rawArgs) async {
   }
 }
 
-
 // ── Phase 3: Text content ────────────────────────────────────────────────
 
 /// Record for a single fetched text (Hebrew + English).
@@ -546,48 +545,146 @@ String _fmtDate(DateTime d) =>
 
 /// All 12 calendar program generators — pure date arithmetic.
 final _calendarGens = <(String key, String? Function(DateTime) compute)>[
-  ('daf_yomi', (d) => dafYomiSequence[_cyclicIndex(d, DateTime.utc(2020, 1, 5), dafYomiSequence.length)]),
-  ('daf_a_week', (d) {
-    final weeks = d.toUtc().difference(DateTime.utc(2005, 3, 6)).inDays ~/ 7;
-    return dafYomiSequence[(weeks % dafYomiSequence.length + dafYomiSequence.length) % dafYomiSequence.length];
-  }),
-  ('mishna_yomit', (d) => mishnahYomitSequence[_cyclicIndex(d, DateTime.utc(2027, 9, 21), mishnahYomitSequence.length)]),
-  ('rambam_1_chapter', (d) => rambam1ChapterSequence[_cyclicIndex(d, DateTime.utc(2024, 6, 22), rambam1ChapterSequence.length)]),
-  ('rambam_3_chapters', (d) => rambam3ChaptersSequence[_cyclicIndex(d, DateTime.utc(2025, 3, 5), rambam3ChaptersSequence.length)]),
-  ('halakhah_yomit', (d) => halakhahYomitSequence[_cyclicIndex(d, DateTime.utc(2020, 11, 12), halakhahYomitSequence.length)]),
-  ('arukh_hashulchan_yomi', (d) => arukhHaShulchanSequence[_cyclicIndex(d, DateTime.utc(2020, 5, 29), arukhHaShulchanSequence.length)]),
-  ('nach_yomi', (d) => nachYomiSequence[_cyclicIndex(d, DateTime.utc(2007, 11, 1), nachYomiSequence.length)]),
-  ('yerushalmi_yomi', (d) => yerushalmiyomiSequence[_cyclicIndex(d, DateTime.utc(2022, 11, 14), yerushalmiyomiSequence.length)]),
-  ('tanakh_yomi', (d) {
-    final entry = tanakhYomiData[_fmtDate(d)];
-    return (entry != null && entry.length >= 2) ? entry[1] : null;
-  }),
-  ('chofetz_chaim_daily', (d) {
-    final table = chofetzChaimSimple;
-    final idx = d.difference(DateTime.utc(d.year, 1, 1)).inDays % table.length;
-    final e = table[idx];
-    if (e.length < 4) return null;
-    final name = chofetzChaimSections[e[1] as String] ?? e[1] as String;
-    final begin = '${e[2]}';
-    final end = '${e[3]}';
-    return begin == end ? 'Chofetz Chaim, $name $begin' : 'Chofetz Chaim, $name $begin-$end';
-  }),
-  ('kitzur_shulchan_aruch_yomi', (d) {
-    final all = <String>[];
-    for (final m in ['Tishrei', 'Cheshvan', 'Kislev', 'Tevet', 'Shvat', 'Adar', 'Nisan', 'Iyyar', 'Sivan', 'Tamuz', 'Av', 'Elul']) {
-      all.addAll(kitzurShulchanAruchTable[m] ?? []);
-    }
-    if (all.isEmpty) return null;
-    final tishrei1 = DateTime.utc(d.year - (d.month < 9 ? 1 : 0), 9, 16);
-    final idx = (d.toUtc().difference(tishrei1).inDays % all.length + all.length) % all.length;
-    final r = all[idx];
-    return r.isEmpty ? null : 'Kitzur Shulchan Aruch $r';
-  }),
+  (
+    'daf_yomi',
+    (d) =>
+        dafYomiSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2020, 1, 5),
+          dafYomiSequence.length,
+        )],
+  ),
+  (
+    'daf_a_week',
+    (d) {
+      final weeks = d.toUtc().difference(DateTime.utc(2005, 3, 6)).inDays ~/ 7;
+      return dafYomiSequence[(weeks % dafYomiSequence.length +
+              dafYomiSequence.length) %
+          dafYomiSequence.length];
+    },
+  ),
+  (
+    'mishna_yomit',
+    (d) =>
+        mishnahYomitSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2027, 9, 21),
+          mishnahYomitSequence.length,
+        )],
+  ),
+  (
+    'rambam_1_chapter',
+    (d) =>
+        rambam1ChapterSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2024, 6, 22),
+          rambam1ChapterSequence.length,
+        )],
+  ),
+  (
+    'rambam_3_chapters',
+    (d) =>
+        rambam3ChaptersSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2025, 3, 5),
+          rambam3ChaptersSequence.length,
+        )],
+  ),
+  (
+    'halakhah_yomit',
+    (d) =>
+        halakhahYomitSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2020, 11, 12),
+          halakhahYomitSequence.length,
+        )],
+  ),
+  (
+    'arukh_hashulchan_yomi',
+    (d) =>
+        arukhHaShulchanSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2020, 5, 29),
+          arukhHaShulchanSequence.length,
+        )],
+  ),
+  (
+    'nach_yomi',
+    (d) =>
+        nachYomiSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2007, 11, 1),
+          nachYomiSequence.length,
+        )],
+  ),
+  (
+    'yerushalmi_yomi',
+    (d) =>
+        yerushalmiyomiSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2022, 11, 14),
+          yerushalmiyomiSequence.length,
+        )],
+  ),
+  (
+    'tanakh_yomi',
+    (d) {
+      final entry = tanakhYomiData[_fmtDate(d)];
+      return (entry != null && entry.length >= 2) ? entry[1] : null;
+    },
+  ),
+  (
+    'chofetz_chaim_daily',
+    (d) {
+      const table = chofetzChaimSimple;
+      final idx =
+          d.difference(DateTime.utc(d.year, 1, 1)).inDays % table.length;
+      final e = table[idx];
+      if (e.length < 4) return null;
+      final name = chofetzChaimSections[e[1] as String] ?? e[1] as String;
+      final begin = '${e[2]}';
+      final end = '${e[3]}';
+      return begin == end
+          ? 'Chofetz Chaim, $name $begin'
+          : 'Chofetz Chaim, $name $begin-$end';
+    },
+  ),
+  (
+    'kitzur_shulchan_aruch_yomi',
+    (d) {
+      final all = <String>[];
+      for (final m in [
+        'Tishrei',
+        'Cheshvan',
+        'Kislev',
+        'Tevet',
+        'Shvat',
+        'Adar',
+        'Nisan',
+        'Iyyar',
+        'Sivan',
+        'Tamuz',
+        'Av',
+        'Elul',
+      ]) {
+        all.addAll(kitzurShulchanAruchTable[m] ?? []);
+      }
+      if (all.isEmpty) return null;
+      final tishrei1 = DateTime.utc(d.year - (d.month < 9 ? 1 : 0), 9, 16);
+      final idx =
+          (d.toUtc().difference(tishrei1).inDays % all.length + all.length) %
+          all.length;
+      final r = all[idx];
+      return r.isEmpty ? null : 'Kitzur Shulchan Aruch $r';
+    },
+  ),
 ];
 
 Future<int> _generateCalendarCycles(ContentDatabase db) async {
   final totalDays = _calendarEnd.difference(_calendarStart).inDays + 1;
-  print('    Generating $totalDays days × ${_calendarGens.length} programs locally...');
+  print(
+    '    Generating $totalDays days × ${_calendarGens.length} programs locally...',
+  );
 
   var inserted = 0;
   const batchSize = 100;
@@ -617,7 +714,9 @@ Future<int> _generateCalendarCycles(ContentDatabase db) async {
       }
     });
     if ((i + batchSize) % 500 < batchSize || i + batchSize >= totalDays) {
-      print('    Calendar: ${(i + batchSize).clamp(0, totalDays)}/$totalDays days');
+      print(
+        '    Calendar: ${(i + batchSize).clamp(0, totalDays)}/$totalDays days',
+      );
     }
   }
   print('    Total calendar rows inserted: $inserted');
@@ -691,11 +790,7 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
   final db = ContentDatabase(NativeDatabase(file));
   try {
     // Verify schema against the Drift class by probing each table.
-    final expectedTables = [
-      'text_cache',
-      'calendar_cycles',
-      'seed_metadata',
-    ];
+    final expectedTables = ['text_cache', 'calendar_cycles', 'seed_metadata'];
     for (final t in expectedTables) {
       final info = await db.customSelect('PRAGMA table_info($t)').get();
       if (info.isEmpty) {

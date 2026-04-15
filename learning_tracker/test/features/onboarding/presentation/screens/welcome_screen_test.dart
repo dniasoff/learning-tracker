@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
@@ -13,6 +14,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(const OnboardingRoute());
     registerFallbackValue(const SignInRoute());
+    registerFallbackValue(AccountCreationRoute());
   });
 
   setUp(() {
@@ -22,11 +24,13 @@ void main() {
   });
 
   Widget createTestWidget() {
-    return MaterialApp(
-      home: StackRouterScope(
-        controller: mockRouter,
-        stateHash: 0,
-        child: const WelcomeScreen(),
+    return ProviderScope(
+      child: MaterialApp(
+        home: StackRouterScope(
+          controller: mockRouter,
+          stateHash: 0,
+          child: const WelcomeScreen(),
+        ),
       ),
     );
   }
@@ -60,16 +64,17 @@ void main() {
       expect(find.byIcon(Icons.menu_book_rounded), findsOneWidget);
     });
 
-    testWidgets('tapping Get Started navigates to OnboardingRoute', (
+    testWidgets('tapping Get Started navigates to AccountCreationRoute', (
       tester,
     ) async {
       await tester.pumpWidget(createTestWidget());
 
       await tester.tap(find.text('Get Started'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       verify(
-        () => mockRouter.push(any(that: isA<OnboardingRoute>())),
+        () => mockRouter.push(any(that: isA<AccountCreationRoute>())),
       ).called(1);
     });
   });

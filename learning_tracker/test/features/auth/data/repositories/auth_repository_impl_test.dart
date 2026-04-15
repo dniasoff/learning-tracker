@@ -39,6 +39,7 @@ void main() {
   setUp(() {
     mockFirebaseAuth = MockFirebaseAuth();
     mockGoogleSignIn = MockGoogleSignIn();
+    when(() => mockGoogleSignIn.initialize()).thenAnswer((_) async {});
     repository = AuthRepositoryImpl(
       firebaseAuth: mockFirebaseAuth,
       googleSignIn: mockGoogleSignIn,

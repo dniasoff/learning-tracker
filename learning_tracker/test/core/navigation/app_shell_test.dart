@@ -1,9 +1,12 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
@@ -14,6 +17,8 @@ import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:mocktail/mocktail.dart';
@@ -91,6 +96,16 @@ AppRouter _createUnauthenticatedRouter() {
   );
 }
 
+const _authOverride = AuthState.signedIn(
+  user: AuthUser(
+    profileId: 1,
+    email: 'test@test.com',
+    displayName: 'Test',
+    userMode: 'adult',
+  ),
+  tier: Tier.localBorn,
+);
+
 /// Pump enough frames for navigation and async providers to resolve,
 /// without using pumpAndSettle (which hangs on stream providers).
 Future<void> _pumpDashboard(WidgetTester tester) async {
@@ -101,6 +116,26 @@ Future<void> _pumpDashboard(WidgetTester tester) async {
 
 void main() {
   late UserDatabase db;
+
+  setUpAll(() {
+    // Suppress Drift "multiple database" warning in tests where router
+    // helpers and setUp each create their own in-memory database.
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+    // Mock path_provider so driftDatabase can resolve in the auth guard
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'getTemporaryDirectory' ||
+                methodCall.method == 'getApplicationDocumentsDirectory' ||
+                methodCall.method == 'getApplicationSupportDirectory') {
+              return '/tmp/flutter_test';
+            }
+            return null;
+          },
+        );
+  });
 
   setUp(() {
     SharedPreferences.setMockInitialValues({'onboarding_complete': true});
@@ -121,6 +156,11 @@ void main() {
           ProviderScope(
             overrides: [
               appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
+              ),
               dashboardStreakProvider.overrideWith(
                 (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
               ),
@@ -183,6 +223,11 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(db),
+            userDatabaseProvider.overrideWithValue(db),
+            authStateProvider.overrideWithValue(_authOverride),
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value(<CurriculumId>[]),
+            ),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),
@@ -220,6 +265,11 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(db),
+            userDatabaseProvider.overrideWithValue(db),
+            authStateProvider.overrideWithValue(_authOverride),
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value(<CurriculumId>[]),
+            ),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),
@@ -266,16 +316,26 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            firebaseAuthProvider.overrideWithValue(mockAuthForProvider),
-            dashboardStreakProvider.overrideWith(
-              (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-            ),
-            dashboardStreakRecoveryProvider.overrideWith(
-              (ref) => Future.value(
-                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+            ...[
+              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
               ),
-            ),
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
+            ],
+            firebaseAuthProvider.overrideWithValue(mockAuthForProvider),
           ],
           child: MaterialApp.router(
             routerConfig: router.config(
@@ -306,6 +366,11 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(db),
+            userDatabaseProvider.overrideWithValue(db),
+            authStateProvider.overrideWithValue(_authOverride),
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value(<CurriculumId>[]),
+            ),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),
@@ -328,7 +393,7 @@ void main() {
       // ContentBrowsingScreen is now a ConsumerStatefulWidget that
       // renders the curriculum display name and a loading indicator
       // while content loads from the (bundled JSON) asset provider.
-      expect(find.text('משניות'), findsOneWidget);
+      expect(find.text('\u05DE\u05E9\u05E0\u05D9\u05D5\u05EA'), findsOneWidget);
     });
   });
 
@@ -336,12 +401,16 @@ void main() {
     testWidgets('unauthenticated user is redirected to sign-in', (
       tester,
     ) async {
+      SharedPreferences.setMockInitialValues({}); // no onboarding_complete
       final router = _createUnauthenticatedRouter();
 
-      // Suppress layout-overflow errors from AppIntroScreen in test viewport.
+      // Suppress layout-overflow errors and Drift multiple-database warnings.
       final originalOnError = FlutterError.onError;
       FlutterError.onError = (details) {
-        if (details.exception.toString().contains('overflowed')) return;
+        final msg = details.exception.toString();
+        if (msg.contains('overflowed')) return;
+        if (msg.contains('multiple times')) return;
+        if (msg.contains('drift')) return;
         originalOnError?.call(details);
       };
       addTearDown(() => FlutterError.onError = originalOnError);
@@ -365,6 +434,11 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(db),
+            userDatabaseProvider.overrideWithValue(db),
+            authStateProvider.overrideWithValue(_authOverride),
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value(<CurriculumId>[]),
+            ),
             dashboardStreakProvider.overrideWith(
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),

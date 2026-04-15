@@ -1648,8 +1648,9 @@ void main() {
             );
 
         // Get a Dirshu program
-        final program = LearningProgramRepository.instance
-            .getProgramByName('dirshu_kinyan_torah');
+        final program = LearningProgramRepository.instance.getProgramByName(
+          'dirshu_kinyan_torah',
+        );
         expect(program, isNotNull);
 
         // Log a score (no test date FK needed since test_dates table removed)
@@ -1737,8 +1738,9 @@ void main() {
       test(
         'generateTestDateSeeds returns future test dates for Dirshu programs',
         () {
-          final program = LearningProgramRepository.instance
-              .getProgramByName('dirshu_kinyan_torah');
+          final program = LearningProgramRepository.instance.getProgramByName(
+            'dirshu_kinyan_torah',
+          );
           expect(program, isNotNull);
 
           final seeds = generateTestDateSeeds();
@@ -1752,29 +1754,32 @@ void main() {
         },
       );
 
-      test('generateTestDateSeeds returns dates sorted ascending per program', () {
-        final seeds = generateTestDateSeeds();
-        expect(seeds, isNotEmpty);
+      test(
+        'generateTestDateSeeds returns dates sorted ascending per program',
+        () {
+          final seeds = generateTestDateSeeds();
+          expect(seeds, isNotEmpty);
 
-        // Group by program and verify sorted ascending within each group
-        final byProgram = <String, List<DateTime>>{};
-        for (final s in seeds) {
-          final name = s['program_name']! as String;
-          final date = s['test_date']! as DateTime;
-          byProgram.putIfAbsent(name, () => []).add(date);
-        }
-        for (final entry in byProgram.entries) {
-          final dates = entry.value;
-          for (var i = 1; i < dates.length; i++) {
-            expect(
-              dates[i].isAfter(dates[i - 1]) ||
-                  dates[i].isAtSameMomentAs(dates[i - 1]),
-              isTrue,
-              reason: '${entry.key} dates should be ascending',
-            );
+          // Group by program and verify sorted ascending within each group
+          final byProgram = <String, List<DateTime>>{};
+          for (final s in seeds) {
+            final name = s['program_name']! as String;
+            final date = s['test_date']! as DateTime;
+            byProgram.putIfAbsent(name, () => []).add(date);
           }
-        }
-      });
+          for (final entry in byProgram.entries) {
+            final dates = entry.value;
+            for (var i = 1; i < dates.length; i++) {
+              expect(
+                dates[i].isAfter(dates[i - 1]) ||
+                    dates[i].isAtSameMomentAs(dates[i - 1]),
+                isTrue,
+                reason: '${entry.key} dates should be ascending',
+              );
+            }
+          }
+        },
+      );
     });
 
     group('AC: Motivational notification on score improvement trend', () {
@@ -1907,8 +1912,9 @@ void main() {
           expect(profileProgram, isNotNull);
 
           // Look up program to check if it has tests
-          final program = LearningProgramRepository.instance
-              .getProgramById(profileProgram!.programId);
+          final program = LearningProgramRepository.instance.getProgramById(
+            profileProgram!.programId,
+          );
           expect(program, isNotNull);
           expect(program!.hasTests, isTrue);
 

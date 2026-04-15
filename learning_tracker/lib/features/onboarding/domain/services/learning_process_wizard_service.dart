@@ -64,9 +64,7 @@ class LearningProcessWizardService {
   final ProfileProgramDao _profileProgramDao;
 
   /// Get active programs filtered by curriculum type.
-  List<LearningProgramData> getPresetsForCurriculum(
-    CurriculumId curriculumId,
-  ) {
+  List<LearningProgramData> getPresetsForCurriculum(CurriculumId curriculumId) {
     return _learningProgramRepo.getProgramsByCurriculumType(
       curriculumId.storageKey,
     );

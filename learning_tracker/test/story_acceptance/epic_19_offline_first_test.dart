@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/content_result.dart';
@@ -10,7 +9,6 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
@@ -148,11 +146,7 @@ void main() {
     });
 
     test('AT-19.3.1 ContentDatabase creates core tables', () async {
-      const expected = [
-        'text_cache',
-        'calendar_cycles',
-        'seed_metadata',
-      ];
+      const expected = ['text_cache', 'calendar_cycles', 'seed_metadata'];
       for (final t in expected) {
         final rows = await contentDb
             .customSelect('PRAGMA table_info($t)')
@@ -227,7 +221,10 @@ void main() {
       expect(hit.todayRef, isNotEmpty);
 
       // Unknown program returns null
-      final miss = await engine.getEntry('nonexistent_program', DateTime(2025, 1, 3));
+      final miss = await engine.getEntry(
+        'nonexistent_program',
+        DateTime(2025, 1, 3),
+      );
       expect(miss, isNull);
     });
 
@@ -483,16 +480,13 @@ void main() {
       expect(ids.contains('chofetz_chaim_daily'), isTrue);
     });
 
-    test(
-      'AT-19.4.3 getEntry returns null for unknown programId',
-      () async {
-        final entry = await engine.getEntry(
-          'nonexistent_program',
-          DateTime(2026, 3, 29),
-        );
-        expect(entry, isNull);
-      },
-    );
+    test('AT-19.4.3 getEntry returns null for unknown programId', () async {
+      final entry = await engine.getEntry(
+        'nonexistent_program',
+        DateTime(2026, 3, 29),
+      );
+      expect(entry, isNull);
+    });
 
     test('AT-19.4.4 CalendarProgramService delegates to engine (no '
         'network clients in the constructor)', () async {
@@ -515,9 +509,7 @@ void main() {
         final result = await engine.getTodayPrograms(DateTime(2026, 3, 29));
         expect(result, hasLength(12));
         expect(
-          result.every(
-            (CalendarProgramEntry e) => e.apiSource == 'local',
-          ),
+          result.every((CalendarProgramEntry e) => e.apiSource == 'local'),
           isTrue,
         );
       },

@@ -34,8 +34,9 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
   @override
   void initState() {
     super.initState();
-    _programs = LearningProgramRepository.instance
-        .getProgramsByCurriculumType(widget.curriculumId.storageKey);
+    _programs = LearningProgramRepository.instance.getProgramsByCurriculumType(
+      widget.curriculumId.storageKey,
+    );
   }
 
   @override
@@ -87,8 +88,7 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
                             children: [
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       program.displayName,

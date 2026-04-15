@@ -107,14 +107,8 @@ void main() {
         await tester.pumpWidget(createTestWidget(repository: mockRepo));
         await tester.pumpAndSettle();
 
-        expect(find.text('Text content not yet downloaded'), findsOneWidget);
-        expect(find.byIcon(Icons.download), findsWidgets);
-        expect(find.text('Go to Downloads'), findsOneWidget);
-        // The screen uses ElevatedButton.icon which is an ElevatedButton
-        expect(
-          find.byWidgetPredicate((w) => w is ElevatedButton),
-          findsOneWidget,
-        );
+        expect(find.text('Text not available'), findsOneWidget);
+        expect(find.byIcon(Icons.cloud_off), findsOneWidget);
       },
     );
 

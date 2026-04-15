@@ -96,14 +96,16 @@ void main() {
 
       testWidgets('contains SafeArea widget', (tester) async {
         await tester.pumpWidget(buildWithSystemInsets());
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
         expect(find.byType(SafeArea), findsWidgets);
       });
 
       testWidgets('SafeArea protects bottom content', (tester) async {
         await tester.pumpWidget(buildWithSystemInsets());
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
         // Find the SafeArea that's a direct child of Scaffold's body
         final safeAreas = tester

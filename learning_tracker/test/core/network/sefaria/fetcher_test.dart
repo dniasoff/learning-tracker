@@ -199,12 +199,17 @@ void main() {
       final result = await fetcher.fetchAllContent();
 
       expect(result.items, isNotEmpty);
-      expect(result.hierarchyConfig.levelLabels, ['Masechta', 'Daf', 'Amud']);
+      expect(result.hierarchyConfig.levelLabels, [
+        'Seder',
+        'Masechta',
+        'Daf',
+        'Amud',
+      ]);
 
-      // All leaves should have level3 (amud: 'a' or 'b').
+      // All leaves should have level4 (amud: 'a' or 'b').
       final leaves = result.items.where((i) => i.isLeaf).toList();
       for (final leaf in leaves) {
-        expect(leaf.level3, anyOf('a', 'b'));
+        expect(leaf.level4, anyOf('a', 'b'));
       }
 
       // Berakhot has 10 amudim in fixture = 10 leaf items.
@@ -217,15 +222,25 @@ void main() {
 
       final result = await fetcher.fetchAllContent();
 
-      // Masechta containers.
-      final masechtot = result.items.where((i) => i.level2 == null).toList();
+      // Seder containers (level2 == null).
+      final sedarim = result.items
+          .where((i) => i.level2 == null && !i.isLeaf)
+          .toList();
+      for (final s in sedarim) {
+        expect(s.isLeaf, false);
+      }
+
+      // Masechta containers (level2 set, level3 == null).
+      final masechtot = result.items
+          .where((i) => i.level2 != null && i.level3 == null)
+          .toList();
       for (final m in masechtot) {
         expect(m.isLeaf, false);
       }
 
-      // Daf containers.
+      // Daf containers (level3 set, level4 == null).
       final dapim = result.items
-          .where((i) => i.level2 != null && i.level3 == null)
+          .where((i) => i.level3 != null && i.level4 == null)
           .toList();
       for (final d in dapim) {
         expect(d.isLeaf, false);

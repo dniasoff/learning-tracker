@@ -383,10 +383,8 @@ const kitzurShulchanAruchTable = <String, List<String>>{
     '133:1-133:8',
     '133:9-133:15',
   ],
-  'Adar I': <String>[
-  ],
-  'Adar II': <String>[
-  ],
+  'Adar I': <String>[],
+  'Adar II': <String>[],
   'Leap Option A': <String>[
     '1-4',
     '5-9',

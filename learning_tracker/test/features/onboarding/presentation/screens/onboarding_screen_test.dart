@@ -1,12 +1,47 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class MockStackRouter extends Mock implements StackRouter {}
+
 void main() {
+  late MockStackRouter mockRouter;
+
+  setUp(() {
+    mockRouter = MockStackRouter();
+    when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
+  });
+
   Widget createTestWidget() {
-    return const ProviderScope(child: MaterialApp(home: OnboardingScreen()));
+    return ProviderScope(
+      overrides: [
+        // Override authStateProvider so it doesn't hit Firebase
+        authStateProvider.overrideWithValue(
+          const AuthState.signedIn(
+            user: AuthUser(
+              profileId: 1,
+              email: 'test@test.com',
+              displayName: 'Test',
+              userMode: 'adult',
+            ),
+            tier: Tier.localBorn,
+          ),
+        ),
+      ],
+      child: MaterialApp(
+        home: StackRouterScope(
+          controller: mockRouter,
+          stateHash: 0,
+          child: const OnboardingScreen(),
+        ),
+      ),
+    );
   }
 
   group('OnboardingScreen Slim Flow', () {
@@ -16,7 +51,8 @@ void main() {
 
     testWidgets('starts at profile creation phase', (tester) async {
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Profile creation shows name field and mode selector
       expect(find.text("What's your name?"), findsOneWidget);
@@ -27,7 +63,8 @@ void main() {
 
     testWidgets('Continue disabled with empty name', (tester) async {
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       final button = tester.widget<FilledButton>(
         find.widgetWithText(FilledButton, 'Continue'),
@@ -37,11 +74,13 @@ void main() {
 
     testWidgets('child mode changes prompt text', (tester) async {
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Switch to child mode
       await tester.tap(find.text('Child'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text("What is your child's name?"), findsOneWidget);
     });
@@ -58,14 +97,18 @@ void main() {
       });
 
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Should show language selection
       expect(
         find.text('Choose your preferred language for content'),
         findsOneWidget,
       );
-      expect(find.text('עברית (Hebrew with nikud)'), findsOneWidget);
+      expect(
+        find.text('\u05E2\u05D1\u05E8\u05D9\u05EA (Hebrew with nikud)'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('language selection shows all supported languages', (
@@ -80,10 +123,11 @@ void main() {
       });
 
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('English'), findsOneWidget);
-      expect(find.text('Français'), findsOneWidget);
+      expect(find.text('Fran\u00E7ais'), findsOneWidget);
     });
 
     testWidgets('childAwareText returns adult text in adult mode', (

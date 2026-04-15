@@ -16,10 +16,10 @@ class AccountLifecycleService {
     required String databasesPath,
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-  })  : _registry = registry,
-        _dbPath = databasesPath,
-        _auth = auth,
-        _firestore = firestore;
+  }) : _registry = registry,
+       _dbPath = databasesPath,
+       _auth = auth,
+       _firestore = firestore;
 
   final DeviceRegistryDatabase _registry;
   final String _dbPath;
@@ -27,7 +27,8 @@ class AccountLifecycleService {
   final FirebaseFirestore? _firestore;
 
   FirebaseAuth get _firebaseAuth => _auth ?? FirebaseAuth.instance;
-  FirebaseFirestore get _firestoreDb => _firestore ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _firestoreDb =>
+      _firestore ?? FirebaseFirestore.instance;
 
   // ─── 21.13: Remove cloud-born account from device ──────────
 

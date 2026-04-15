@@ -36,14 +36,16 @@ void main() {
   group('GamificationScreen', () {
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(buildScreen());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
     testWidgets('shows key UI elements', (tester) async {
       await tester.pumpWidget(buildScreen());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Achievements'), findsOneWidget);
     });

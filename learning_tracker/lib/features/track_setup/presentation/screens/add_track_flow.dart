@@ -177,8 +177,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Reload program from DB if we had one
     LearningProgramData? selectedProgram;
     if (programId != null) {
-      selectedProgram = LearningProgramRepository.instance
-          .getProgramById(programId);
+      selectedProgram = LearningProgramRepository.instance.getProgramById(
+        programId,
+      );
     }
 
     final step =

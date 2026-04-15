@@ -345,18 +345,17 @@ void main() {
     });
 
     test(
-      'filters to personal track only — school/tutor completions ignored',
+      'track scoping handled at repository level — all completions used by engine',
       () async {
         contentRepo.items = makeItems(5);
         stageRepo.stages = threeStages();
 
-        // ref_0 completed Learn under school track (should be ignored)
-        // ref_1 completed Learn under personal track
+        // Both completions are used since filtering is now at the repo level
         completionRepo.completions = [
           SchedulerCompletion(
             sefariaRef: 'ref_0',
             stageOrder: 1,
-            trackType: 'school',
+            trackType: 'personal',
             completedAt: now.subtract(const Duration(days: 1)),
           ),
           SchedulerCompletion(
@@ -376,15 +375,16 @@ void main() {
 
         final tasks = await engine.generateDailyTasks(config);
 
-        // ref_0 should appear as new learning (school completion ignored)
-        final ref0NewLearning = tasks.where(
+        // ref_0 should have chazara due (completion counted)
+        final ref0Chazara = tasks.where(
           (t) =>
               t.contentItemSefariaRef == 'ref_0' &&
-              t.priority == DailyTaskPriority.newLearning,
+              (t.priority == DailyTaskPriority.scheduledChazara ||
+                  t.priority == DailyTaskPriority.overdueChazara),
         );
-        expect(ref0NewLearning.length, 1);
+        expect(ref0Chazara.length, 1);
 
-        // ref_1 should have chazara due (personal completion counted)
+        // ref_1 should also have chazara due
         final ref1Chazara = tasks.where(
           (t) =>
               t.contentItemSefariaRef == 'ref_1' &&

@@ -31,28 +31,30 @@ void main() {
 
       tearDown(() => registry.close());
 
-      test('AC1: first account creates registry entry + lastActiveAccountId',
-          () async {
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-1',
-            email: 'alice@test.local',
-            displayName: 'Alice',
-            tier: 'cloudBorn',
-            dbFileName: 'user_acc_acc-1.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-        await registry.setLastActiveAccountId('acc-1');
+      test(
+        'AC1: first account creates registry entry + lastActiveAccountId',
+        () async {
+          await registry.addAccount(
+            DeviceAccountsCompanion.insert(
+              accountId: 'acc-1',
+              email: 'alice@test.local',
+              displayName: 'Alice',
+              tier: 'cloudBorn',
+              dbFileName: 'user_acc_acc-1.db',
+              createdAt: DateTime.utc(2026, 1, 1),
+              lastUsedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
+          await registry.setLastActiveAccountId('acc-1');
 
-        final accounts = await registry.getAllAccounts();
-        expect(accounts, hasLength(1));
-        expect(accounts.first.email, 'alice@test.local');
+          final accounts = await registry.getAllAccounts();
+          expect(accounts, hasLength(1));
+          expect(accounts.first.email, 'alice@test.local');
 
-        final lastActive = await registry.getLastActiveAccountId();
-        expect(lastActive, 'acc-1');
-      });
+          final lastActive = await registry.getLastActiveAccountId();
+          expect(lastActive, 'acc-1');
+        },
+      );
 
       test('AC2: 6th account throws MaxAccountsReachedException', () async {
         for (var i = 0; i < 5; i++) {
@@ -85,27 +87,29 @@ void main() {
         );
       });
 
-      test('AC3: findByEmail returns correct match (case-insensitive)',
-          () async {
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-1',
-            email: 'Alice@Test.Local',
-            displayName: 'Alice',
-            tier: 'cloudBorn',
-            dbFileName: 'user_acc_acc-1.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+      test(
+        'AC3: findByEmail returns correct match (case-insensitive)',
+        () async {
+          await registry.addAccount(
+            DeviceAccountsCompanion.insert(
+              accountId: 'acc-1',
+              email: 'Alice@Test.Local',
+              displayName: 'Alice',
+              tier: 'cloudBorn',
+              dbFileName: 'user_acc_acc-1.db',
+              createdAt: DateTime.utc(2026, 1, 1),
+              lastUsedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
-        final found = await registry.findByEmail('alice@test.local');
-        expect(found, isNotNull);
-        expect(found!.displayName, 'Alice');
+          final found = await registry.findByEmail('alice@test.local');
+          expect(found, isNotNull);
+          expect(found!.displayName, 'Alice');
 
-        final notFound = await registry.findByEmail('bob@test.local');
-        expect(notFound, isNull);
-      });
+          final notFound = await registry.findByEmail('bob@test.local');
+          expect(notFound, isNull);
+        },
+      );
 
       test('AC4: lastActiveAccountId readable from device_state', () async {
         await registry.setLastActiveAccountId('acc-42');
@@ -145,50 +149,55 @@ void main() {
     });
 
     // ─── Story 21.2: Per-Account Database Isolation ─────────────
-    group('Story 21.2 — Per-Account Database Isolation',
-        tags: ['story_21_2'], () {
-      test('AC1: each account gets isolated data in its own DB', () async {
-        final aliceDb = UserDatabase(NativeDatabase.memory());
-        final bobDb = UserDatabase(NativeDatabase.memory());
+    group(
+      'Story 21.2 — Per-Account Database Isolation',
+      tags: ['story_21_2'],
+      () {
+        test('AC1: each account gets isolated data in its own DB', () async {
+          final aliceDb = UserDatabase(NativeDatabase.memory());
+          final bobDb = UserDatabase(NativeDatabase.memory());
 
-        final aliceAuth = LocalAuthService(
-          dao: aliceDb.userProfileDao,
-          hasher: PasswordHasher(params: Argon2idParams.test),
-        );
-        final bobAuth = LocalAuthService(
-          dao: bobDb.userProfileDao,
-          hasher: PasswordHasher(params: Argon2idParams.test),
-        );
+          final aliceAuth = LocalAuthService(
+            dao: aliceDb.userProfileDao,
+            hasher: PasswordHasher(params: Argon2idParams.test),
+          );
+          final bobAuth = LocalAuthService(
+            dao: bobDb.userProfileDao,
+            hasher: PasswordHasher(params: Argon2idParams.test),
+          );
 
-        await aliceAuth.signUp(
-          email: 'alice@test.local',
-          password: 'password1',
-          displayName: 'Alice',
-          userMode: 'adult',
-        );
-        await bobAuth.signUp(
-          email: 'bob@test.local',
-          password: 'password2',
-          displayName: 'Bob',
-          userMode: 'child',
-        );
+          await aliceAuth.signUp(
+            email: 'alice@test.local',
+            password: 'password1',
+            displayName: 'Alice',
+            userMode: 'adult',
+          );
+          await bobAuth.signUp(
+            email: 'bob@test.local',
+            password: 'password2',
+            displayName: 'Bob',
+            userMode: 'child',
+          );
 
-        // Alice's DB has only Alice
-        final aliceProfiles =
-            await aliceDb.userProfileDao.findByTier(UserTier.localBorn);
-        expect(aliceProfiles, hasLength(1));
-        expect(aliceProfiles.first.email, 'alice@test.local');
+          // Alice's DB has only Alice
+          final aliceProfiles = await aliceDb.userProfileDao.findByTier(
+            UserTier.localBorn,
+          );
+          expect(aliceProfiles, hasLength(1));
+          expect(aliceProfiles.first.email, 'alice@test.local');
 
-        // Bob's DB has only Bob
-        final bobProfiles =
-            await bobDb.userProfileDao.findByTier(UserTier.localBorn);
-        expect(bobProfiles, hasLength(1));
-        expect(bobProfiles.first.email, 'bob@test.local');
+          // Bob's DB has only Bob
+          final bobProfiles = await bobDb.userProfileDao.findByTier(
+            UserTier.localBorn,
+          );
+          expect(bobProfiles, hasLength(1));
+          expect(bobProfiles.first.email, 'bob@test.local');
 
-        await aliceDb.close();
-        await bobDb.close();
-      });
-    });
+          await aliceDb.close();
+          await bobDb.close();
+        });
+      },
+    );
 
     // ─── Story 21.3: Session Auto-Resume ────────────────────────
     group('Story 21.3 — Session Auto-Resume', tags: ['story_21_3'], () {
@@ -332,57 +341,62 @@ void main() {
     });
 
     // ─── Story 21.5: Unified Sign-Up Email/Password ─────────────
-    group('Story 21.5 — Unified Sign-Up Email/Password',
-        tags: ['story_21_5'], () {
-      test('AC2: offline path creates local-born with argon2id hash',
+    group(
+      'Story 21.5 — Unified Sign-Up Email/Password',
+      tags: ['story_21_5'],
+      () {
+        test(
+          'AC2: offline path creates local-born with argon2id hash',
           () async {
-        final db = UserDatabase(NativeDatabase.memory());
-        final service = LocalAuthService(
-          dao: db.userProfileDao,
-          hasher: PasswordHasher(params: Argon2idParams.test),
+            final db = UserDatabase(NativeDatabase.memory());
+            final service = LocalAuthService(
+              dao: db.userProfileDao,
+              hasher: PasswordHasher(params: Argon2idParams.test),
+            );
+
+            final profile = await service.signUp(
+              email: 'offline@test.local',
+              password: 'securepass',
+              displayName: 'Offline User',
+              userMode: 'adult',
+            );
+
+            expect(profile.tier, 'localBorn');
+            expect(profile.passwordHash, isNotNull);
+            expect(profile.email, 'offline@test.local');
+
+            await db.close();
+          },
         );
 
-        final profile = await service.signUp(
-          email: 'offline@test.local',
-          password: 'securepass',
-          displayName: 'Offline User',
-          userMode: 'adult',
-        );
+        test('AC4: duplicate email throws DuplicateEmailException', () async {
+          final db = UserDatabase(NativeDatabase.memory());
+          final service = LocalAuthService(
+            dao: db.userProfileDao,
+            hasher: PasswordHasher(params: Argon2idParams.test),
+          );
 
-        expect(profile.tier, 'localBorn');
-        expect(profile.passwordHash, isNotNull);
-        expect(profile.email, 'offline@test.local');
-
-        await db.close();
-      });
-
-      test('AC4: duplicate email throws DuplicateEmailException', () async {
-        final db = UserDatabase(NativeDatabase.memory());
-        final service = LocalAuthService(
-          dao: db.userProfileDao,
-          hasher: PasswordHasher(params: Argon2idParams.test),
-        );
-
-        await service.signUp(
-          email: 'dupe@test.local',
-          password: 'password1',
-          displayName: 'First',
-          userMode: 'adult',
-        );
-
-        expect(
-          () => service.signUp(
+          await service.signUp(
             email: 'dupe@test.local',
-            password: 'password2',
-            displayName: 'Second',
+            password: 'password1',
+            displayName: 'First',
             userMode: 'adult',
-          ),
-          throwsA(isA<DuplicateEmailException>()),
-        );
+          );
 
-        await db.close();
-      });
-    });
+          expect(
+            () => service.signUp(
+              email: 'dupe@test.local',
+              password: 'password2',
+              displayName: 'Second',
+              userMode: 'adult',
+            ),
+            throwsA(isA<DuplicateEmailException>()),
+          );
+
+          await db.close();
+        });
+      },
+    );
 
     // ─── Story 21.7: Sign-In Smart Routing ──────────────────────
     group('Story 21.7 — Sign-In Smart Routing', tags: ['story_21_7'], () {
@@ -424,10 +438,8 @@ void main() {
         );
 
         expect(
-          () => service.signIn(
-            email: 'local@test.local',
-            password: 'wrongpass',
-          ),
+          () =>
+              service.signIn(email: 'local@test.local', password: 'wrongpass'),
           throwsA(isA<InvalidCredentialsException>()),
         );
 
@@ -598,8 +610,7 @@ void main() {
     });
 
     // ─── Story 21.13: Remove Cloud-Born from Device ─────────────
-    group('Story 21.13 — Remove Cloud from Device', tags: ['story_21_13'],
-        () {
+    group('Story 21.13 — Remove Cloud from Device', tags: ['story_21_13'], () {
       test('AC2: removal deletes file + registry entry', () async {
         final tempDir = await Directory.systemTemp.createTemp('epic21_test_');
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
@@ -618,10 +629,7 @@ void main() {
         );
 
         File('${tempDir.path}/user_acc_cloud.db').createSync();
-        expect(
-          File('${tempDir.path}/user_acc_cloud.db').existsSync(),
-          isTrue,
-        );
+        expect(File('${tempDir.path}/user_acc_cloud.db').existsSync(), isTrue);
 
         final service = AccountLifecycleService(
           registry: registry,
@@ -630,10 +638,7 @@ void main() {
 
         await service.removeCloudFromDevice('acc-cloud');
 
-        expect(
-          File('${tempDir.path}/user_acc_cloud.db').existsSync(),
-          isFalse,
-        );
+        expect(File('${tempDir.path}/user_acc_cloud.db').existsSync(), isFalse);
         expect(await registry.findById('acc-cloud'), isNull);
 
         await registry.close();
@@ -696,10 +701,7 @@ void main() {
 
         await service.deleteLocalAccount('acc-local');
 
-        expect(
-          File('${tempDir.path}/user_acc_local.db').existsSync(),
-          isFalse,
-        );
+        expect(File('${tempDir.path}/user_acc_local.db').existsSync(), isFalse);
         expect(await registry.findById('acc-local'), isNull);
         expect(await registry.getAllAccounts(), isEmpty);
 
@@ -768,73 +770,77 @@ void main() {
     });
 
     // ─── Story 21.15: Delete Cloud Account (service contract) ───
-    group('Story 21.15 — Delete Cloud Account (service contract)',
-        tags: ['story_21_15'], () {
-      test('cloud-born without firebaseUid rejects deletion', () async {
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+    group(
+      'Story 21.15 — Delete Cloud Account (service contract)',
+      tags: ['story_21_15'],
+      () {
+        test('cloud-born without firebaseUid rejects deletion', () async {
+          final registry = DeviceRegistryDatabase(NativeDatabase.memory());
 
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-broken',
-            email: 'broken@test.local',
-            displayName: 'Broken',
-            tier: 'cloudBorn',
-            dbFileName: 'user_acc_broken.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+          await registry.addAccount(
+            DeviceAccountsCompanion.insert(
+              accountId: 'acc-broken',
+              email: 'broken@test.local',
+              displayName: 'Broken',
+              tier: 'cloudBorn',
+              dbFileName: 'user_acc_broken.db',
+              createdAt: DateTime.utc(2026, 1, 1),
+              lastUsedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
-        final service = AccountLifecycleService(
-          registry: registry,
-          databasesPath: '/tmp',
-        );
+          final service = AccountLifecycleService(
+            registry: registry,
+            databasesPath: '/tmp',
+          );
 
-        expect(
-          () => service.deleteCloudAccount('acc-broken'),
-          throwsA(isA<StateError>()),
-        );
+          expect(
+            () => service.deleteCloudAccount('acc-broken'),
+            throwsA(isA<StateError>()),
+          );
 
-        await registry.close();
-      });
-    });
+          await registry.close();
+        });
+      },
+    );
 
     // ─── Cross-story integration ────────────────────────────────
     group('Cross-story integration', () {
       test(
-          'full lifecycle: create → persist session → resolve on restart',
-          () async {
-        final registry = DeviceRegistryDatabase(NativeDatabase.memory());
-        SharedPreferences.setMockInitialValues({});
-        final prefs = await SharedPreferences.getInstance();
-        final sessionService = SessionPersistenceService(
-          prefs: prefs,
-          registry: registry,
-        );
+        'full lifecycle: create → persist session → resolve on restart',
+        () async {
+          final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final sessionService = SessionPersistenceService(
+            prefs: prefs,
+            registry: registry,
+          );
 
-        await registry.addAccount(
-          DeviceAccountsCompanion.insert(
-            accountId: 'acc-lifecycle',
-            email: 'lifecycle@test.local',
-            displayName: 'Lifecycle',
-            tier: 'localBorn',
-            dbFileName: 'user_acc_lifecycle.db',
-            createdAt: DateTime.utc(2026, 1, 1),
-            lastUsedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+          await registry.addAccount(
+            DeviceAccountsCompanion.insert(
+              accountId: 'acc-lifecycle',
+              email: 'lifecycle@test.local',
+              displayName: 'Lifecycle',
+              tier: 'localBorn',
+              dbFileName: 'user_acc_lifecycle.db',
+              createdAt: DateTime.utc(2026, 1, 1),
+              lastUsedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
-        await sessionService.setActiveAccount('acc-lifecycle');
+          await sessionService.setActiveAccount('acc-lifecycle');
 
-        final resolved = await sessionService.resolveActiveAccountId();
-        expect(resolved, 'acc-lifecycle');
+          final resolved = await sessionService.resolveActiveAccountId();
+          expect(resolved, 'acc-lifecycle');
 
-        final account = await registry.findById(resolved!);
-        expect(account!.email, 'lifecycle@test.local');
-        expect(account.dbFileName, 'user_acc_lifecycle.db');
+          final account = await registry.findById(resolved!);
+          expect(account!.email, 'lifecycle@test.local');
+          expect(account.dbFileName, 'user_acc_lifecycle.db');
 
-        await registry.close();
-      });
+          await registry.close();
+        },
+      );
 
       test('account removal + session cleanup falls back', () async {
         final tempDir = await Directory.systemTemp.createTemp('epic21_test_');

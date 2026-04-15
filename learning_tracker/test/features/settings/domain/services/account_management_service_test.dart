@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/test_database.dart';
 
@@ -34,6 +35,8 @@ void main() {
   late AccountManagementService service;
 
   setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
     mockAuthRepo = MockAuthRepository();
     mockFirestore = MockFirebaseFirestore();
     db = createTestDatabase();
@@ -92,7 +95,18 @@ void main() {
       ).thenReturn(mockUsersCollection);
       when(() => mockUsersCollection.doc('test-uid')).thenReturn(mockUserDoc);
 
-      // Mock subcollections as empty
+      // Mock profiles subcollection (queried first for profile-scoped data)
+      final mockProfilesCollection = MockCollectionReference();
+      final mockProfilesSnapshot = MockQuerySnapshot();
+      when(
+        () => mockUserDoc.collection('profiles'),
+      ).thenReturn(mockProfilesCollection);
+      when(
+        () => mockProfilesCollection.get(),
+      ).thenAnswer((_) async => mockProfilesSnapshot);
+      when(() => mockProfilesSnapshot.docs).thenReturn([]);
+
+      // Mock legacy subcollections as empty
       for (final sub in [
         'completions',
         'bookmarks',
