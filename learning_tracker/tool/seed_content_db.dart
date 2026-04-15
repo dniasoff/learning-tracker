@@ -38,6 +38,18 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 
+import 'lib/sequences/arukh_hashulchan_seq.dart';
+import 'lib/sequences/chofetz_chaim_tables.dart';
+import 'lib/sequences/daf_yomi_seq.dart';
+import 'lib/sequences/halakhah_yomit_seq.dart';
+import 'lib/sequences/kitzur_sa_table.dart';
+import 'lib/sequences/mishnah_yomit_seq.dart';
+import 'lib/sequences/nach_yomi_seq.dart';
+import 'lib/sequences/rambam_1c_seq.dart';
+import 'lib/sequences/rambam_3c_seq.dart';
+import 'lib/sequences/tanakh_yomi_data.dart';
+import 'lib/sequences/yerushalmi_yomi_seq.dart';
+
 // ── Configuration ────────────────────────────────────────────────────────
 
 const _curricula = {
@@ -57,8 +69,12 @@ const _batchDelayMs = 50;
 const _backoffBaseMs = 2000;
 const _maxRetries = 3;
 
-// Calendar cycles, learning programs, and test dates are computed at runtime.
-// The seed tool only builds text_cache + seed_metadata.
+// Learning programs and test dates are computed at runtime.
+// Calendar cycles are generated locally (no APIs) and stored in the DB.
+
+/// Date range for calendar cycles (inclusive).
+final _calendarStart = DateTime.utc(2024, 1, 1);
+final _calendarEnd = DateTime.utc(2032, 12, 31);
 
 // ── CLI entry point ──────────────────────────────────────────────────────
 
@@ -186,7 +202,14 @@ Future<void> main(List<String> rawArgs) async {
       textCacheCount = await _countRows(db, 'text_cache');
     }
 
-    const calendarCycleCount = 0;
+    // Phase 4: Calendar cycles (local computation, no APIs)
+    var calendarCycleCount = 0;
+    if (args.mode == _Mode.build) {
+      print('Phase 4: Generating calendar cycles locally...');
+      calendarCycleCount = await _generateCalendarCycles(db);
+    } else {
+      calendarCycleCount = await _countRows(db, 'calendar_cycles');
+    }
 
     // Phase 5: Finalize
     if (args.mode == _Mode.build || args.mode == _Mode.textOnly) {
@@ -500,6 +523,98 @@ String _extractText(dynamic text) {
 
 String _stripHtml(String html) => html.replaceAll(RegExp('<[^>]*>'), '').trim();
 
+// ── Phase 4: Calendar cycles (pure local computation) ───────────────────
+
+int _cyclicIndex(DateTime date, DateTime anchor, int length) {
+  final days = date.toUtc().difference(anchor.toUtc()).inDays;
+  return (days % length + length) % length;
+}
+
+String _fmtDate(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
+/// All 12 calendar program generators — pure date arithmetic.
+final _calendarGens = <(String key, String? Function(DateTime) compute)>[
+  ('daf_yomi', (d) => dafYomiSequence[_cyclicIndex(d, DateTime.utc(2020, 1, 5), dafYomiSequence.length)]),
+  ('daf_a_week', (d) {
+    final weeks = d.toUtc().difference(DateTime.utc(2005, 3, 6)).inDays ~/ 7;
+    return dafYomiSequence[(weeks % dafYomiSequence.length + dafYomiSequence.length) % dafYomiSequence.length];
+  }),
+  ('mishna_yomit', (d) => mishnahYomitSequence[_cyclicIndex(d, DateTime.utc(2027, 9, 21), mishnahYomitSequence.length)]),
+  ('rambam_1_chapter', (d) => rambam1ChapterSequence[_cyclicIndex(d, DateTime.utc(2024, 6, 22), rambam1ChapterSequence.length)]),
+  ('rambam_3_chapters', (d) => rambam3ChaptersSequence[_cyclicIndex(d, DateTime.utc(2025, 3, 5), rambam3ChaptersSequence.length)]),
+  ('halakhah_yomit', (d) => halakhahYomitSequence[_cyclicIndex(d, DateTime.utc(2020, 11, 12), halakhahYomitSequence.length)]),
+  ('arukh_hashulchan_yomi', (d) => arukhHaShulchanSequence[_cyclicIndex(d, DateTime.utc(2020, 5, 29), arukhHaShulchanSequence.length)]),
+  ('nach_yomi', (d) => nachYomiSequence[_cyclicIndex(d, DateTime.utc(2007, 11, 1), nachYomiSequence.length)]),
+  ('yerushalmi_yomi', (d) => yerushalmiyomiSequence[_cyclicIndex(d, DateTime.utc(2022, 11, 14), yerushalmiyomiSequence.length)]),
+  ('tanakh_yomi', (d) {
+    final entry = tanakhYomiData[_fmtDate(d)];
+    return (entry != null && entry.length >= 2) ? entry[1] : null;
+  }),
+  ('chofetz_chaim_daily', (d) {
+    final table = chofetzChaimSimple;
+    final idx = d.difference(DateTime.utc(d.year, 1, 1)).inDays % table.length;
+    final e = table[idx];
+    if (e.length < 4) return null;
+    final name = chofetzChaimSections[e[1] as String] ?? e[1] as String;
+    final begin = e[2] as String;
+    final end = e[3] as String;
+    return begin == end ? 'Chofetz Chaim, $name $begin' : 'Chofetz Chaim, $name $begin-$end';
+  }),
+  ('kitzur_shulchan_aruch_yomi', (d) {
+    final all = <String>[];
+    for (final m in ['Tishrei', 'Cheshvan', 'Kislev', 'Tevet', 'Shvat', 'Adar', 'Nisan', 'Iyyar', 'Sivan', 'Tamuz', 'Av', 'Elul']) {
+      all.addAll(kitzurShulchanAruchTable[m] ?? []);
+    }
+    if (all.isEmpty) return null;
+    final tishrei1 = DateTime.utc(d.year - (d.month < 9 ? 1 : 0), 9, 16);
+    final idx = (d.toUtc().difference(tishrei1).inDays % all.length + all.length) % all.length;
+    final r = all[idx];
+    return r.isEmpty ? null : 'Kitzur Shulchan Aruch $r';
+  }),
+];
+
+Future<int> _generateCalendarCycles(ContentDatabase db) async {
+  final totalDays = _calendarEnd.difference(_calendarStart).inDays + 1;
+  print('    Generating $totalDays days × ${_calendarGens.length} programs locally...');
+
+  var inserted = 0;
+  const batchSize = 100;
+
+  for (var i = 0; i < totalDays; i += batchSize) {
+    await db.transaction(() async {
+      final end = (i + batchSize).clamp(0, totalDays);
+      for (var j = i; j < end; j++) {
+        final d = _calendarStart.add(Duration(days: j));
+        final dateKey = _fmtDate(d);
+        for (final (key, compute) in _calendarGens) {
+          final ref = compute(d);
+          if (ref == null) continue;
+          await db.customInsert(
+            'INSERT OR REPLACE INTO calendar_cycles '
+            '(program_key, date_key, sefaria_ref, display_name) '
+            'VALUES (?, ?, ?, ?)',
+            variables: [
+              Variable.withString(key),
+              Variable.withString(dateKey),
+              Variable.withString(ref),
+              const Variable(''),
+            ],
+          );
+          inserted++;
+        }
+      }
+    });
+    if ((i + batchSize) % 500 < batchSize || i + batchSize >= totalDays) {
+      print('    Calendar: ${(i + batchSize).clamp(0, totalDays)}/$totalDays days');
+    }
+  }
+  print('    Total calendar rows inserted: $inserted');
+  return _countRows(db, 'calendar_cycles');
+}
+
 // ── Phase 5: Finalize ────────────────────────────────────────────────────
 
 Future<String> _computeContentHash(ContentDatabase db) async {
@@ -569,6 +684,7 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     // Verify schema against the Drift class by probing each table.
     final expectedTables = [
       'text_cache',
+      'calendar_cycles',
       'seed_metadata',
     ];
     for (final t in expectedTables) {

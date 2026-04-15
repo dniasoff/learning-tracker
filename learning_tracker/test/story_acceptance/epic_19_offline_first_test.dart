@@ -148,10 +148,9 @@ void main() {
     });
 
     test('AT-19.3.1 ContentDatabase creates core tables', () async {
-      // v3 dropped calendar_cycles, learning_programs, test_dates —
-      // those are now computed at runtime.
       const expected = [
         'text_cache',
+        'calendar_cycles',
         'seed_metadata',
       ];
       for (final t in expected) {
@@ -216,9 +215,12 @@ void main() {
     });
 
     test('AT-19.3.4 LocalCalendarEngine lookup by (programId, date)', () async {
-      // Calendar cycles are now computed by LocalCalendarEngine, not stored
-      // in the ContentDatabase. Verify the engine can resolve entries.
-      final engine = LocalCalendarEngine();
+      // Seed a calendar cycle row, then verify the engine resolves it.
+      await contentDb.customInsert(
+        'INSERT INTO calendar_cycles (program_key, date_key, sefaria_ref, display_name) '
+        "VALUES ('daf_yomi', '2025-01-03', 'Berakhot 2a', '')",
+      );
+      final engine = LocalCalendarEngine(contentDb);
       final hit = await engine.getEntry('daf_yomi', DateTime(2025, 1, 3));
       expect(hit, isNotNull);
       expect(hit!.programId, 'daf_yomi');
@@ -391,10 +393,50 @@ void main() {
 
   // ─── Story 19.4: Local Calendar Engine ───────────────────────────
   group('Story 19.4 — Local Calendar Engine', () {
+    late ContentDatabase calDb;
     late LocalCalendarEngine engine;
 
-    setUp(() {
-      engine = LocalCalendarEngine();
+    setUp(() async {
+      calDb = createTestContentDatabase();
+      engine = LocalCalendarEngine(calDb);
+      // Seed 12 calendar rows for the test date (2026-03-29),
+      // plus 5 days of daf_yomi for range query tests.
+      for (final entry in [
+        ('daf_yomi', 'Berakhot 2a'),
+        ('daf_a_week', 'Berakhot 2a'),
+        ('mishna_yomit', 'Mishnah Berakhot 1:1-2'),
+        ('rambam_1_chapter', 'Mishneh Torah, Foundations of the Torah 1'),
+        ('rambam_3_chapters', 'Mishneh Torah, Foundations of the Torah 1-3'),
+        ('halakhah_yomit', 'Shulchan Arukh, Orach Chayim 1:1-3'),
+        ('arukh_hashulchan_yomi', 'Arukh HaShulchan, Orach Chaim 1:1-8'),
+        ('nach_yomi', 'Joshua 1'),
+        ('yerushalmi_yomi', 'Jerusalem Talmud Berakhot 1'),
+        ('tanakh_yomi', 'Jeremiah 31:32-Jeremiah 32:21'),
+        ('chofetz_chaim_daily', 'Chofetz Chaim, Preface 1-4'),
+        ('kitzur_shulchan_aruch_yomi', 'Kitzur Shulchan Aruch 1:1-4'),
+      ]) {
+        await calDb.customInsert(
+          'INSERT INTO calendar_cycles (program_key, date_key, sefaria_ref, display_name) '
+          'VALUES (?, ?, ?, ?)',
+          variables: [
+            Variable.withString(entry.$1),
+            Variable.withString('2026-03-29'),
+            Variable.withString(entry.$2),
+            const Variable(''),
+          ],
+        );
+      }
+      // Seed 4 more days of daf_yomi for range query tests (Mar 25-28).
+      for (var day = 25; day <= 28; day++) {
+        await calDb.customInsert(
+          'INSERT INTO calendar_cycles (program_key, date_key, sefaria_ref, display_name) '
+          "VALUES ('daf_yomi', '2026-03-${day.toString().padLeft(2, '0')}', 'Berakhot ${day - 23}a', '')",
+        );
+      }
+    });
+
+    tearDown(() async {
+      await calDb.close();
     });
 
     test('formatDateKey zero-pads month and day', () {
@@ -418,7 +460,7 @@ void main() {
       expect(entry, isNotNull);
       expect(entry!.programId, 'daf_yomi');
       expect(entry.todayRef, isNotEmpty);
-      expect(entry.apiSource, 'computed');
+      expect(entry.apiSource, 'local');
 
       // Display names sourced from the registry.
       final def = CalendarProgramRegistry.byId('daf_yomi')!;
@@ -432,7 +474,7 @@ void main() {
       expect(results, hasLength(12));
       for (final entry in results) {
         expect(entry.todayRef, isNotEmpty);
-        expect(entry.apiSource, 'computed');
+        expect(entry.apiSource, 'local');
       }
       final ids = results.map((e) => e.programId).toSet();
       expect(ids, hasLength(12));
@@ -467,16 +509,14 @@ void main() {
     });
 
     test(
-      'AT-19.4.5 todayCalendarProvider resolves from LocalCalendarEngine',
+      'AT-19.4.5 getTodayPrograms returns entries with apiSource=local',
       () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        final result = await container.read(todayCalendarProvider.future);
+        // With 12 seeded rows, getTodayPrograms returns all 12.
+        final result = await engine.getTodayPrograms(DateTime(2026, 3, 29));
         expect(result, hasLength(12));
         expect(
           result.every(
-            (CalendarProgramEntry e) => e.apiSource == 'computed',
+            (CalendarProgramEntry e) => e.apiSource == 'local',
           ),
           isTrue,
         );
@@ -501,7 +541,7 @@ void main() {
       // Entries are computed deterministically from the hardcoded sequence.
       expect(results.first.todayRef, isNotEmpty);
       expect(results.last.todayRef, isNotEmpty);
-      expect(results.every((e) => e.apiSource == 'computed'), isTrue);
+      expect(results.every((e) => e.apiSource == 'local'), isTrue);
     });
 
     test('getEntriesForRange returns empty when program unknown to '
