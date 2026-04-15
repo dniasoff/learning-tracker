@@ -20,8 +20,8 @@ void main() {
 
   group('ProfileProgramDao', () {
     test('setProfileProgram creates association', () async {
-      final programs =
-          await contentDb.contentLearningProgramDao.getAllPrograms();
+      final programs = await contentDb.contentLearningProgramDao
+          .getAllPrograms();
       final program = programs.first;
 
       await db.profileProgramDao.setProfileProgram(
@@ -38,9 +38,7 @@ void main() {
 
     test('setProfileProgram upserts on duplicate', () async {
       final programs = await contentDb.contentLearningProgramDao
-          .getProgramsByCurriculumType(
-        'bavli',
-      );
+          .getProgramsByCurriculumType('bavli');
       expect(programs.length, greaterThanOrEqualTo(2));
 
       await db.profileProgramDao.setProfileProgram(
@@ -66,8 +64,8 @@ void main() {
     });
 
     test('getProgramsForProfile returns all for a profile', () async {
-      final programs =
-          await contentDb.contentLearningProgramDao.getAllPrograms();
+      final programs = await contentDb.contentLearningProgramDao
+          .getAllPrograms();
       final bavli = programs.firstWhere((p) => p.curriculumType == 'bavli');
       final nach = programs.firstWhere((p) => p.curriculumType == 'nach');
 
@@ -88,9 +86,7 @@ void main() {
 
     test('different profiles can have different programs', () async {
       final programs = await contentDb.contentLearningProgramDao
-          .getProgramsByCurriculumType(
-        'bavli',
-      );
+          .getProgramsByCurriculumType('bavli');
 
       await db.profileProgramDao.setProfileProgram(
         profileId: 1,
@@ -116,8 +112,8 @@ void main() {
     });
 
     test('deleteForProfile removes all associations', () async {
-      final programs =
-          await contentDb.contentLearningProgramDao.getAllPrograms();
+      final programs = await contentDb.contentLearningProgramDao
+          .getAllPrograms();
       await db.profileProgramDao.setProfileProgram(
         profileId: 1,
         curriculumType: 'bavli',

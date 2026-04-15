@@ -20,11 +20,10 @@ class XpEvents extends Table {
 
   TextColumn get clientDeviceId => text().nullable()();
 
-  DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {profileId, eventTimestamp, source},
-      ];
+    {profileId, eventTimestamp, source},
+  ];
 }

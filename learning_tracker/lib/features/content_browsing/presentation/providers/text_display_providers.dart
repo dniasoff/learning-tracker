@@ -54,10 +54,8 @@ class ShowNikud extends _$ShowNikud {
 /// Provider for the text download service.
 @Riverpod(keepAlive: true)
 TextDownloadService textDownloadService(Ref ref) {
-  final contentDb = ref.watch(contentDatabaseProvider);
   final userDb = ref.watch(userDatabaseProvider);
   return TextDownloadService(
-    textCacheDao: contentDb.contentTextCacheDao,
     textDownloadStatusDao: userDb.textDownloadStatusDao,
   );
 }

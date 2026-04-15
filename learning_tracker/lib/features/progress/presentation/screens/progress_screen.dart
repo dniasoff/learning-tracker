@@ -18,7 +18,9 @@ class ProgressScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaStreamProvider);
+    final activeCurriculaAsync = ref.watch(
+      dashboardActiveCurriculaStreamProvider,
+    );
     final streakAsync = ref.watch(dashboardStreakProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);

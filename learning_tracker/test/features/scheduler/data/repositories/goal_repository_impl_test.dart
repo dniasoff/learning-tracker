@@ -15,22 +15,26 @@ void main() {
     db = createTestDatabase();
     repo = GoalRepositoryImpl(database: db);
 
-    final trackRow = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final trackRow = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
     trackId = trackRow.id;
 
-    final bavliTrackRow = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'bavli',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final bavliTrackRow = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'bavli',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
     bavliTrackId = bavliTrackRow.id;
   });
 

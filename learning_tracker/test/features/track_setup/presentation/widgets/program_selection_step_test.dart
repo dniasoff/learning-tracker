@@ -8,9 +8,11 @@ void main() {
         'mishnayos, nach', () {
       // These curricula have seeded programs in the DB
       final withPrograms = [
-        CurriculumId.bavli, // 5: daf_yomi, oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_a_week
+        CurriculumId
+            .bavli, // 5: daf_yomi, oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_a_week
         CurriculumId.yerushalmi, // 2: dirshu_kinyan_yerushalmi, yerushalmi_yomi
-        CurriculumId.mishnaBerurah, // 4: dirshu_daf_hayomi_bhalacha, halakhah_yomit, arukh_hashulchan_yomi, kitzur_shulchan_aruch_yomi
+        CurriculumId
+            .mishnaBerurah, // 4: dirshu_daf_hayomi_bhalacha, halakhah_yomit, arukh_hashulchan_yomi, kitzur_shulchan_aruch_yomi
         CurriculumId.mussar, // 2: dirshu_kinyan_chochma, chofetz_chaim_daily
         CurriculumId.mishnayos, // 1: mishnah_yomis
         CurriculumId.nach, // 1: nach_yomi
@@ -25,9 +27,7 @@ void main() {
 
     test('curricula without programs: chumash', () {
       // These curricula have no seeded programs — program step auto-skips
-      final withoutPrograms = [
-        CurriculumId.chumash,
-      ];
+      final withoutPrograms = [CurriculumId.chumash];
 
       for (final c in withoutPrograms) {
         expect(c, isNotNull, reason: '$c should have no programs');

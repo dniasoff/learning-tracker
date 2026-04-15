@@ -145,8 +145,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
   }) async {
     final config =
         await (select(studyDayConfigs)..where(
-              (t) =>
-                  t.trackId.equals(trackId) & t.dayOfWeek.equals(dayOfWeek),
+              (t) => t.trackId.equals(trackId) & t.dayOfWeek.equals(dayOfWeek),
             ))
             .getSingleOrNull();
     return config == null || config.dayType == 'study';
@@ -165,10 +164,9 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
   /// and curriculum from `curriculum_tracks` so callers don't need to
   /// pass them explicitly.
   Future<void> seedDefaultsForTrack({required int trackId}) async {
-    final track =
-        await (select(curriculumTracks)
-              ..where((t) => t.id.equals(trackId)))
-            .getSingleOrNull();
+    final track = await (select(
+      curriculumTracks,
+    )..where((t) => t.id.equals(trackId))).getSingleOrNull();
     if (track == null) {
       throw StateError(
         'Cannot seed study day defaults: curriculum_tracks row $trackId not found',

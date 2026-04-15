@@ -24,13 +24,15 @@ bool _isMilestone(int streak) => _milestoneThresholds.contains(streak);
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -242,7 +244,7 @@ void main() {
     test('AC-2: defaults to study when no config exists', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      final trackId = await _insertTrack(db);
+      await _insertTrack(db);
 
       // No config seeded — isStudyDay should default to true
       final result = await db.studyDayConfigDao.isStudyDay(
@@ -970,7 +972,7 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
-          final trackId = await _insertTrack(db);
+          await _insertTrack(db);
 
           final counts = await db.completionDao.getReviewCountsByItem(
             'mishnayos',
@@ -984,7 +986,7 @@ void main() {
       test('AC-1: returns empty map for item with no completions', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
-        final trackId = await _insertTrack(db);
+        await _insertTrack(db);
 
         final breakdown = await db.completionDao.getStageBreakdownByItem(
           'mishnayos',
@@ -1107,12 +1109,12 @@ void main() {
         await db.studyDayConfigDao.seedDefaults(
           profileId: 1,
           curriculumId: 'mishnayos',
-        trackId: trackId,
+          trackId: trackId,
         );
         await db.studyDayConfigDao.upsertDayConfig(
           profileId: 1,
           curriculumId: 'mishnayos',
-        trackId: trackId,
+          trackId: trackId,
           dayOfWeek: 6,
           dayType: 'review',
         );
@@ -1148,7 +1150,7 @@ void main() {
       test('AC-8: skip leaves defaults (all days = study)', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
-        final trackId = await _insertTrack(db);
+        await _insertTrack(db);
 
         // No config saved — isStudyDay defaults to true
         final isStudy = await db.studyDayConfigDao.isStudyDay(

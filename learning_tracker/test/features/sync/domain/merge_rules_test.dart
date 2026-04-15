@@ -65,10 +65,7 @@ void main() {
 
     test('equal timestamps → false (no flapping)', () {
       final ts = DateTime.utc(2026, 1, 1);
-      expect(
-        remoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts),
-        isFalse,
-      );
+      expect(remoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts), isFalse);
     });
 
     test('older remote → false', () {

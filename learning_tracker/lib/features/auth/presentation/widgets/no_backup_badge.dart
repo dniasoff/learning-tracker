@@ -20,7 +20,8 @@ class NoBackupBadge extends ConsumerWidget {
 
     final theme = Theme.of(context);
     return Tooltip(
-      message: 'This account exists only on this device. '
+      message:
+          'This account exists only on this device. '
           'Tap to back it up to the cloud.',
       child: InkWell(
         onTap: () => _openUpgradeFlow(context),

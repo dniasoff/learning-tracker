@@ -15,17 +15,14 @@ part 'program_calendar_providers.g.dart';
 ///   Input: trackId (int)
 ///   Output: AsyncValue<CalendarPosition>
 @riverpod
-Future<CalendarPosition> programCalendarPosition(
-  Ref ref,
-  int trackId,
-) async {
+Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
 
   // 1. Look up the track
-  final track = await (db.select(db.curriculumTracks)
-        ..where((t) => t.id.equals(trackId)))
-      .getSingleOrNull();
+  final track = await (db.select(
+    db.curriculumTracks,
+  )..where((t) => t.id.equals(trackId))).getSingleOrNull();
   if (track == null) throw StateError('Track $trackId not found');
 
   // 2. Get mock cycle data for this curriculum
@@ -38,16 +35,18 @@ Future<CalendarPosition> programCalendarPosition(
   final currentDay = daysSinceCreation.clamp(1, cycleData.totalDays);
 
   // 4. Get completion count for delta computation
-  final completionCount =
-      await db.completionDao.getAggregateCountByTrack(trackId, profileId);
+  final completionCount = await db.completionDao.getAggregateCountByTrack(
+    trackId,
+    profileId,
+  );
   final delta = completionCount - currentDay;
 
   // 5. Derive status from delta
   final status = delta > 0
       ? CalendarStatus.ahead
       : delta == 0
-          ? CalendarStatus.caughtUp
-          : CalendarStatus.behind;
+      ? CalendarStatus.caughtUp
+      : CalendarStatus.behind;
 
   return CalendarPosition(
     currentDay: currentDay,

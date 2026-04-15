@@ -36,8 +36,7 @@ void main() {
     });
 
     test('extracts ref from Kitzur SA link', () {
-      const link =
-          'https://www.sefaria.org/Kitzur_Shulchan_Arukh.1.1?lang=bi';
+      const link = 'https://www.sefaria.org/Kitzur_Shulchan_Arukh.1.1?lang=bi';
       final ref = extractSefariaRefFromLink(link, 'fallback');
       expect(ref, 'Kitzur_Shulchan_Arukh.1.1');
     });

@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'sync_queue_dao.g.dart';

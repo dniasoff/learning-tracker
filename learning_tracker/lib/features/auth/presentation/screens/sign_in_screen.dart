@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -119,16 +119,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
 
       final registry = ref.read(deviceRegistryProvider);
       final account = await registry.findByEmail(normalized);
-      final isOnline = ref.read(connectivityStreamProvider).maybeWhen(
-            data: (v) => v,
-            orElse: () => true,
-          );
+      final isOnline = ref
+          .read(connectivityStreamProvider)
+          .maybeWhen(data: (v) => v, orElse: () => true);
 
       if (!mounted) return;
       setState(() {
         if (account != null) {
-          final tierLabel =
-              account.tier == 'cloudBorn' ? 'Cloud' : 'Local';
+          final tierLabel = account.tier == 'cloudBorn' ? 'Cloud' : 'Local';
           _registryHint = 'Found on this device ($tierLabel)';
         } else if (isOnline) {
           _registryHint = "Not on this device \u2014 we'll check the cloud";
@@ -168,18 +166,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         // Local-born account on this device → argon2id verification
         final dao = ref.read(userDatabaseProvider).userProfileDao;
         final service = LocalAuthService(dao: dao);
-        final profile = await service.signIn(
-          email: email,
-          password: password,
-        );
+        final profile = await service.signIn(email: email, password: password);
         ref
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
         if (mounted) await _navigateAfterSignIn();
       } else if (account != null && account.tier == 'cloudBorn') {
         // Cloud-born account on this device → try Firebase or cached session
-        final isOnline =
-            await InternetConnectionChecker.instance.hasConnection;
+        final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
           final authRepo = ref.read(authRepositoryProvider);
           await authRepo.signInWithEmail(email, password);
@@ -206,8 +200,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         }
       } else {
         // Not on this device → try Firebase (could be account from another device)
-        final isOnline =
-            await InternetConnectionChecker.instance.hasConnection;
+        final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
           final authRepo = ref.read(authRepositoryProvider);
           await authRepo.signInWithEmail(email, password);
@@ -272,8 +265,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
 
       // Epic 21.8: check 5-account cap for genuinely new accounts
       final registry = ref.read(deviceRegistryProvider);
-      final existingEntry =
-          await registry.findByFirebaseUid(googleUser.uid);
+      final existingEntry = await registry.findByFirebaseUid(googleUser.uid);
       if (existingEntry == null) {
         final accounts = await registry.getAllAccounts();
         if (accounts.length >= kMaxDeviceAccounts) {
@@ -289,8 +281,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       }
 
       // Epic 21.8: collision with local-born account
-      final localMatch =
-          await registry.findByEmail(googleUser.email ?? '');
+      final localMatch = await registry.findByEmail(googleUser.email ?? '');
       if (localMatch != null && localMatch.tier == 'localBorn') {
         if (mounted) {
           _showError(

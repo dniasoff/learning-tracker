@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
+import 'package:learning_tracker/features/auth/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';

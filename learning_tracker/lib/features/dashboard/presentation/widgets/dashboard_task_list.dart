@@ -120,9 +120,7 @@ class DashboardTaskList extends ConsumerWidget {
     final icon = userMode == UserMode.child
         ? Icons.celebration
         : Icons.check_circle;
-    final color = userMode == UserMode.child
-        ? Colors.amber
-        : Colors.green;
+    final color = userMode == UserMode.child ? Colors.amber : Colors.green;
 
     return Card(
       child: Padding(

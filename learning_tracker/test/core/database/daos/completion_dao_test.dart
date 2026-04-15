@@ -9,13 +9,15 @@ void main() {
   setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
     // Insert a track first to satisfy FK constraint on completions.trackId
-    trackId = await database.into(database.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'bavli',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    trackId = await database
+        .into(database.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'bavli',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
   });
 
   tearDown(() async {

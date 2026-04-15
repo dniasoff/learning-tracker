@@ -11,8 +11,8 @@ class SessionPersistenceService {
   SessionPersistenceService({
     required SharedPreferences prefs,
     required DeviceRegistryDatabase registry,
-  })  : _prefs = prefs,
-        _registry = registry;
+  }) : _prefs = prefs,
+       _registry = registry;
 
   final SharedPreferences _prefs;
   final DeviceRegistryDatabase _registry;

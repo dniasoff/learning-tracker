@@ -23,13 +23,15 @@ void main() {
     // Default clock: noon UTC
     clock = () => DateTime.utc(2026, 3, 16, 12, 0, 0);
 
-    final trackRow = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'test',
-        trackType: 'review',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final trackRow = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'test',
+            trackType: 'review',
+            activatedAt: DateTime.now(),
+          ),
+        );
     trackId = trackRow.id;
 
     service = StreakAlertService(

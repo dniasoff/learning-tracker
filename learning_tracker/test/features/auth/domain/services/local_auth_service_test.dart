@@ -116,20 +116,16 @@ void main() {
 
     test('fails with wrong password (InvalidCredentialsException)', () async {
       expect(
-        () => service.signIn(
-          email: 'alice@example.com',
-          password: 'wrong-pass',
-        ),
+        () =>
+            service.signIn(email: 'alice@example.com', password: 'wrong-pass'),
         throwsA(isA<InvalidCredentialsException>()),
       );
     });
 
     test('fails with unknown email (InvalidCredentialsException)', () async {
       expect(
-        () => service.signIn(
-          email: 'bob@example.com',
-          password: 'correct-horse',
-        ),
+        () =>
+            service.signIn(email: 'bob@example.com', password: 'correct-horse'),
         throwsA(isA<InvalidCredentialsException>()),
       );
     });

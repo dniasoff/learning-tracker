@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
@@ -172,7 +172,10 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   }
 
   @override
-  Future<void> initializeDefaults(CurriculumId curriculumId, {required int trackId}) async {
+  Future<void> initializeDefaults(
+    CurriculumId curriculumId, {
+    required int trackId,
+  }) async {
     final existing = await _stageDao.getStageDefinitionsByCurriculum(
       curriculumId.storageKey,
     );
@@ -193,7 +196,10 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   }
 
   @override
-  Future<void> resetToDefaults(CurriculumId curriculumId, {required int trackId}) async {
+  Future<void> resetToDefaults(
+    CurriculumId curriculumId, {
+    required int trackId,
+  }) async {
     await _stageDao.deleteAllForCurriculum(curriculumId.storageKey);
     for (final d in _defaults) {
       await _stageDao.insertStageDefinition(

@@ -10,13 +10,15 @@ void main() {
   setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
     // Insert a track first to satisfy FK constraint on curriculum_scopes.trackId
-    trackId = await database.into(database.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    trackId = await database
+        .into(database.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
   });
 
   tearDown(() async {
@@ -196,13 +198,15 @@ void main() {
 
     test('scopes are isolated by curriculumId', () async {
       // Need a track for bavli too
-      final bavliTrackId = await database.into(database.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now(),
-        ),
-      );
+      final bavliTrackId = await database
+          .into(database.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
 
       await database.curriculumScopeDao.setScopes(
         0,

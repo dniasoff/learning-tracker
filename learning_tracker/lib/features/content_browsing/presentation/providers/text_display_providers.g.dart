@@ -311,7 +311,7 @@ final class TextDownloadServiceProvider
 }
 
 String _$textDownloadServiceHash() =>
-    r'dd245016a3fc4399072561f31350411ca1bbe0cf';
+    r'a987e52b2e5676915260301373156324862e785e';
 
 /// Provider to check if text is downloaded for a curriculum.
 

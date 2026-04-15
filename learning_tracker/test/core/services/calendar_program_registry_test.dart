@@ -21,8 +21,9 @@ void main() {
       });
 
       test('Daily Rambam (3 Chapters) maps to rambam_3_chapters', () {
-        final def =
-            CalendarProgramRegistry.byApiKey('Daily Rambam (3 Chapters)');
+        final def = CalendarProgramRegistry.byApiKey(
+          'Daily Rambam (3 Chapters)',
+        );
         expect(def, isNotNull);
         expect(def!.id, 'rambam_3_chapters');
       });
@@ -73,8 +74,9 @@ void main() {
       });
 
       test('kitzurShulchanAruch maps to kitzur_shulchan_aruch_yomi', () {
-        final def =
-            CalendarProgramRegistry.byHebcalCategory('kitzurShulchanAruch');
+        final def = CalendarProgramRegistry.byHebcalCategory(
+          'kitzurShulchanAruch',
+        );
         expect(def, isNotNull);
         expect(def!.id, 'kitzur_shulchan_aruch_yomi');
       });
@@ -96,10 +98,7 @@ void main() {
         expect(hebcal.length, 3);
         expect(hebcal.any((p) => p.id == 'nach_yomi'), isTrue);
         expect(hebcal.any((p) => p.id == 'chofetz_chaim_daily'), isTrue);
-        expect(
-          hebcal.any((p) => p.id == 'kitzur_shulchan_aruch_yomi'),
-          isTrue,
-        );
+        expect(hebcal.any((p) => p.id == 'kitzur_shulchan_aruch_yomi'), isTrue);
       });
     });
 

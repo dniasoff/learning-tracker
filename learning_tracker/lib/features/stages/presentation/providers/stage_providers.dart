@@ -55,7 +55,11 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
     guardTutorModeWriteFromBool(ref.read(tutorModeProvider));
   }
 
-  Future<void> addStage(String name, int delayDays, {required int trackId}) async {
+  Future<void> addStage(
+    String name,
+    int delayDays, {
+    required int trackId,
+  }) async {
     _guardTutorMode();
     await _repository.addStage(_curriculum, name, delayDays, trackId: trackId);
     ref.invalidate(stageListProvider(_curriculum));

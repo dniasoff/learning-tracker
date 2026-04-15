@@ -15,13 +15,15 @@ void main() {
     database = UserDatabase(NativeDatabase.memory());
     repository = ProgressRepositoryImpl(database: database);
 
-    final trackRow = await database.into(database.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'bavli',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final trackRow = await database
+        .into(database.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'bavli',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
     trackId = trackRow.id;
   });
 

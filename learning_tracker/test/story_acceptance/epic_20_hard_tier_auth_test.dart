@@ -32,7 +32,9 @@ void main() {
     // ─── Story 20.3: DB schema ─────────────────────────────────────
     group('Story 20.3 — v2 schema', () {
       test('UserProfiles has email, firebaseUid, passwordHash, tier', () async {
-        await db.into(db.userProfiles).insert(
+        await db
+            .into(db.userProfiles)
+            .insert(
               UserProfilesCompanion.insert(
                 email: 'cloud@test.local',
                 firebaseUid: const Value('fbuid-1'),
@@ -74,8 +76,7 @@ void main() {
           ),
         );
 
-        final locals =
-            await db.userProfileDao.findByTier(UserTier.localBorn);
+        final locals = await db.userProfileDao.findByTier(UserTier.localBorn);
         expect(locals, hasLength(1));
         expect(locals.first.email, 'b@test.local');
 
@@ -131,10 +132,7 @@ void main() {
           userMode: 'adult',
         );
         expect(
-          () => localAuth.signIn(
-            email: 'alice@test.local',
-            password: 'wrong',
-          ),
+          () => localAuth.signIn(email: 'alice@test.local', password: 'wrong'),
           throwsA(isA<InvalidCredentialsException>()),
         );
       });
@@ -227,70 +225,74 @@ void main() {
         );
         // Ties go local — matches the flapping-free promise.
         final ts = DateTime.utc(2026, 1, 1);
-        expect(
-          remoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts),
-          isFalse,
-        );
+        expect(remoteIsNewer(localUpdatedAt: ts, remoteUpdatedAt: ts), isFalse);
       });
     });
 
     // ─── Story 20.11 gap: completion tee + reducer integration ─────
     group('Story 20.11 — completion tee pipeline', () {
-      test('streak and xp event rows replay through reducers to state',
-          () async {
-        // Simulate what CompletionRepositoryImpl._createCompletion does:
-        // insert a streak + xp event for each completion. Then run the
-        // reducers over what's in the DB.
-        const profileId = 42;
-        final completions = [
-          DateTime.utc(2026, 3, 1),
-          DateTime.utc(2026, 3, 2),
-          DateTime.utc(2026, 3, 3),
-          DateTime.utc(2026, 3, 3), // same-day dupe
-        ];
+      test(
+        'streak and xp event rows replay through reducers to state',
+        () async {
+          // Simulate what CompletionRepositoryImpl._createCompletion does:
+          // insert a streak + xp event for each completion. Then run the
+          // reducers over what's in the DB.
+          const profileId = 42;
+          final completions = [
+            DateTime.utc(2026, 3, 1),
+            DateTime.utc(2026, 3, 2),
+            DateTime.utc(2026, 3, 3),
+            DateTime.utc(2026, 3, 3), // same-day dupe
+          ];
 
-        for (final at in completions) {
-          await db.into(db.streakEvents).insert(
-                StreakEventsCompanion.insert(
-                  profileId: profileId,
-                  eventType: 'completion',
-                  eventTimestamp: at,
-                ),
-                mode: InsertMode.insertOrIgnore,
-              );
-          await db.into(db.xpEvents).insert(
-                XpEventsCompanion.insert(
-                  profileId: profileId,
-                  xpDelta: 10,
-                  source: 'completion',
-                  eventTimestamp: at,
-                ),
-                mode: InsertMode.insertOrIgnore,
-              );
-        }
+          for (final at in completions) {
+            await db
+                .into(db.streakEvents)
+                .insert(
+                  StreakEventsCompanion.insert(
+                    profileId: profileId,
+                    eventType: 'completion',
+                    eventTimestamp: at,
+                  ),
+                  mode: InsertMode.insertOrIgnore,
+                );
+            await db
+                .into(db.xpEvents)
+                .insert(
+                  XpEventsCompanion.insert(
+                    profileId: profileId,
+                    xpDelta: 10,
+                    source: 'completion',
+                    eventTimestamp: at,
+                  ),
+                  mode: InsertMode.insertOrIgnore,
+                );
+          }
 
-        final streakEvents = await (db.select(db.streakEvents)
-              ..where((t) => t.profileId.equals(profileId)))
-            .get();
-        final xpEvents = await (db.select(db.xpEvents)
-              ..where((t) => t.profileId.equals(profileId)))
-            .get();
+          final streakEvents = await (db.select(
+            db.streakEvents,
+          )..where((t) => t.profileId.equals(profileId))).get();
+          final xpEvents = await (db.select(
+            db.xpEvents,
+          )..where((t) => t.profileId.equals(profileId))).get();
 
-        final streakState = reduceStreakEvents(streakEvents);
-        expect(streakState.currentStreak, 3);
-        expect(streakState.longestStreak, 3);
+          final streakState = reduceStreakEvents(streakEvents);
+          expect(streakState.currentStreak, 3);
+          expect(streakState.longestStreak, 3);
 
-        // 3 distinct (profileId, eventTimestamp, source) rows inserted —
-        // the 4th (same-day dupe) was filtered by InsertMode.insertOrIgnore.
-        expect(xpEvents, hasLength(3));
-        expect(reduceXpEvents(xpEvents), 30);
-      });
+          // 3 distinct (profileId, eventTimestamp, source) rows inserted —
+          // the 4th (same-day dupe) was filtered by InsertMode.insertOrIgnore.
+          expect(xpEvents, hasLength(3));
+          expect(reduceXpEvents(xpEvents), 30);
+        },
+      );
 
-      test('idempotent tee: same completion twice → one event row',
-          () async {
+      test('idempotent tee: same completion twice → one event row', () async {
         final at = DateTime.utc(2026, 3, 1);
         for (var i = 0; i < 3; i++) {
-          await db.into(db.streakEvents).insert(
+          await db
+              .into(db.streakEvents)
+              .insert(
                 StreakEventsCompanion.insert(
                   profileId: 99,
                   eventType: 'completion',
@@ -299,9 +301,9 @@ void main() {
                 mode: InsertMode.insertOrIgnore,
               );
         }
-        final rows = await (db.select(db.streakEvents)
-              ..where((t) => t.profileId.equals(99)))
-            .get();
+        final rows = await (db.select(
+          db.streakEvents,
+        )..where((t) => t.profileId.equals(99))).get();
         expect(rows, hasLength(1));
       });
     });
@@ -324,8 +326,7 @@ void main() {
           updatedAt: DateTime.utc(2026, 2, 1),
         );
 
-        final after =
-            await db.userProfileDao.getUserProfileById(profile.id);
+        final after = await db.userProfileDao.getUserProfileById(profile.id);
         expect(after!.tier, 'cloudBorn');
         expect(after.firebaseUid, 'existing-cloud-uid');
         expect(after.passwordHash, isNull);

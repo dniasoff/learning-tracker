@@ -43,13 +43,15 @@ ContentItem _leaf({
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 

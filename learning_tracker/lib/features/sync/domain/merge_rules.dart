@@ -37,9 +37,9 @@ MergeResult<T> lwwMerge<T>({
   }
   return MergeResult(
     winner: local,
-    wasConflict: localUpdatedAt.isBefore(remoteUpdatedAt) ||
-        localUpdatedAt.isAtSameMomentAs(remoteUpdatedAt) &&
-            local != remote,
+    wasConflict:
+        localUpdatedAt.isBefore(remoteUpdatedAt) ||
+        localUpdatedAt.isAtSameMomentAs(remoteUpdatedAt) && local != remote,
   );
 }
 
@@ -53,8 +53,10 @@ DateTime mergeForwardMaxDate(DateTime local, DateTime remote) =>
 
 /// Union-merge for sets of IDs (e.g. completed lesson IDs).
 /// Strictly additive — a sync never removes entries.
-Set<T> mergeForwardUnion<T>(Iterable<T> local, Iterable<T> remote) =>
-    {...local, ...remote};
+Set<T> mergeForwardUnion<T>(Iterable<T> local, Iterable<T> remote) => {
+  ...local,
+  ...remote,
+};
 
 /// Predicate used by the sync engine's pull loops to decide whether
 /// an incoming remote row should overwrite the current local row

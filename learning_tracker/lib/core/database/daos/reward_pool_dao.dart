@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/reward_pool_items.dart';
 import 'package:learning_tracker/core/database/tables/reward_pools.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'reward_pool_dao.g.dart';
 

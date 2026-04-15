@@ -15,11 +15,9 @@ class ContentDbHealthChecker {
   ///
   /// [seedManager] is used to re-extract the seed when corruption is found.
   /// [talker] is used for logging recovery actions.
-  ContentDbHealthChecker({
-    required SeedManager seedManager,
-    Talker? talker,
-  })  : _seedManager = seedManager,
-        _talker = talker;
+  ContentDbHealthChecker({required SeedManager seedManager, Talker? talker})
+    : _seedManager = seedManager,
+      _talker = talker;
 
   final SeedManager _seedManager;
   final Talker? _talker;
@@ -69,11 +67,7 @@ class ContentDbHealthChecker {
       }
       return false;
     } on SqliteException catch (e, st) {
-      _talker?.error(
-        'ContentDbHealthChecker: integrity check threw',
-        e,
-        st,
-      );
+      _talker?.error('ContentDbHealthChecker: integrity check threw', e, st);
       return false;
     } finally {
       db?.dispose();
@@ -92,11 +86,7 @@ class ContentDbHealthChecker {
       _talker?.info('ContentDbHealthChecker: recovery succeeded');
       return true;
     } catch (e, st) {
-      _talker?.error(
-        'ContentDbHealthChecker: recovery FAILED',
-        e,
-        st,
-      );
+      _talker?.error('ContentDbHealthChecker: recovery FAILED', e, st);
       return false;
     }
   }

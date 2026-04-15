@@ -184,7 +184,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         // Date selection — pick a date immediately
         Card(
           child: InkWell(
-            onTap: ref.read(useHebrewDateProvider) ? _pickHebrewDate : _pickGregorianDate,
+            onTap: ref.read(useHebrewDateProvider)
+                ? _pickHebrewDate
+                : _pickGregorianDate,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -369,88 +371,82 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                      // Target percentage slider
-                      Text(
-                        widget.totalItems != null
-                            ? 'Complete ${_targetPercent.round()}% of the material (${(widget.totalItems! * _targetPercent / 100).ceil()} of ${widget.totalItems!} items)'
-                            : 'Complete ${_targetPercent.round()}% of the material',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Slider(
-                        value: _targetPercent,
-                        min: 1,
-                        max: 100,
-                        divisions: 99,
-                        label: '${_targetPercent.round()}%',
-                        onChanged: (v) => setState(() => _targetPercent = v),
-                      ),
-                      const SizedBox(height: 24),
-                      // Unit picker (Amud/Daf) for Bavli/Yerushalmi
-                      if (_showUnitPicker) ...[
-                        Text(
-                          'Learning unit',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(
-                              value: 'amud',
-                              label: Text('Amud'),
-                            ),
-                            ButtonSegment(
-                              value: 'daf',
-                              label: Text('Daf'),
-                            ),
-                          ],
-                          selected: {_learningUnit},
-                          onSelectionChanged: (selected) {
-                            setState(() => _learningUnit = selected.first);
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      // Goal type toggle
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(
-                            value: 'deadline',
-                            label: Text('Deadline'),
-                            icon: Icon(Icons.calendar_today),
-                          ),
-                          ButtonSegment(
-                            value: 'pace',
-                            label: Text('Pace'),
-                            icon: Icon(Icons.speed),
-                          ),
-                          ButtonSegment(
-                            value: 'none',
-                            label: Text('No deadline'),
-                            icon: Icon(Icons.all_inclusive),
-                          ),
-                        ],
-                        selected: {_goalType},
-                        onSelectionChanged: (selected) {
-                          setState(() {
-                            _goalType = selected.first;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Mode-specific content
-                      if (_goalType == 'deadline') _buildDeadlineSection(),
-                      if (_goalType == 'pace') _buildPaceSection(),
-                      if (_goalType == 'none')
-                        Text(
-                          'Learn at your own pace with no time pressure.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
+                  // Target percentage slider
+                  Text(
+                    widget.totalItems != null
+                        ? 'Complete ${_targetPercent.round()}% of the material (${(widget.totalItems! * _targetPercent / 100).ceil()} of ${widget.totalItems!} items)'
+                        : 'Complete ${_targetPercent.round()}% of the material',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ),
+                  Slider(
+                    value: _targetPercent,
+                    min: 1,
+                    max: 100,
+                    divisions: 99,
+                    label: '${_targetPercent.round()}%',
+                    onChanged: (v) => setState(() => _targetPercent = v),
+                  ),
+                  const SizedBox(height: 24),
+                  // Unit picker (Amud/Daf) for Bavli/Yerushalmi
+                  if (_showUnitPicker) ...[
+                    Text(
+                      'Learning unit',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'amud', label: Text('Amud')),
+                        ButtonSegment(value: 'daf', label: Text('Daf')),
+                      ],
+                      selected: {_learningUnit},
+                      onSelectionChanged: (selected) {
+                        setState(() => _learningUnit = selected.first);
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                  // Goal type toggle
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'deadline',
+                        label: Text('Deadline'),
+                        icon: Icon(Icons.calendar_today),
+                      ),
+                      ButtonSegment(
+                        value: 'pace',
+                        label: Text('Pace'),
+                        icon: Icon(Icons.speed),
+                      ),
+                      ButtonSegment(
+                        value: 'none',
+                        label: Text('No deadline'),
+                        icon: Icon(Icons.all_inclusive),
+                      ),
+                    ],
+                    selected: {_goalType},
+                    onSelectionChanged: (selected) {
+                      setState(() {
+                        _goalType = selected.first;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Mode-specific content
+                  if (_goalType == 'deadline') _buildDeadlineSection(),
+                  if (_goalType == 'pace') _buildPaceSection(),
+                  if (_goalType == 'none')
+                    Text(
+                      'Learn at your own pace with no time pressure.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
               ),
+            ),
+          ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _submit,

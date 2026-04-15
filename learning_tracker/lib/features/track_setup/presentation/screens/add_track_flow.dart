@@ -465,7 +465,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
           children: [
             if (steps.length > 1)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: LinearProgressIndicator(
                   value: (_currentIndex + 1) / steps.length,
                   backgroundColor: Theme.of(
@@ -628,7 +631,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         : 'How do you want to review?';
     final headerSubtitle = _isProgramTrack
         ? '${_state.programName} doesn\'t include a review schedule. '
-            'Set one up now or skip.'
+              'Set one up now or skip.'
         : 'Pick a preset or build your own חזרה schedule.';
 
     return _ChazaraInlineSetup(
@@ -650,8 +653,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text("What's your pace or deadline?",
-                  style: theme.textTheme.headlineSmall),
+              Text(
+                "What's your pace or deadline?",
+                style: theme.textTheme.headlineSmall,
+              ),
               const SizedBox(height: 4),
               Text(
                 'Set a goal, or skip for now.',
@@ -775,20 +780,23 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
       CurriculumDefaults.hierarchyConfigs[widget.curriculumId]!;
 
   List<String> get _levelLabels => [
-        _hierarchy.level1Label,
-        if (_hierarchy.level2Label != null) _hierarchy.level2Label!,
-        if (_hierarchy.level3Label != null) _hierarchy.level3Label!,
-        if (_hierarchy.level4Label != null) _hierarchy.level4Label!,
-      ];
+    _hierarchy.level1Label,
+    if (_hierarchy.level2Label != null) _hierarchy.level2Label!,
+    if (_hierarchy.level3Label != null) _hierarchy.level3Label!,
+    if (_hierarchy.level4Label != null) _hierarchy.level4Label!,
+  ];
 
   /// Current drill-down depth (0 = top level showing level 1 items).
-  int get _currentLevel => _breadcrumbs.isEmpty ? 1 : _breadcrumbs.last.level + 1;
+  int get _currentLevel =>
+      _breadcrumbs.isEmpty ? 1 : _breadcrumbs.last.level + 1;
 
   /// Max selectable level (exclude leaf level — no "By Daf/Amud").
   int get _maxSelectableLevel => _hierarchy.maxLevels - 1;
 
   String _labelForLevel(int level) {
-    return level <= _levelLabels.length ? _levelLabels[level - 1] : 'Level $level';
+    return level <= _levelLabels.length
+        ? _levelLabels[level - 1]
+        : 'Level $level';
   }
 
   String? _getItemLevel(ContentItem item, int level) {
@@ -827,7 +835,9 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
     }
     // Implicitly selected via ancestor breadcrumb selection
     for (final crumb in _breadcrumbs) {
-      if (_selections.any((s) => s.level == crumb.level && s.value == crumb.value)) {
+      if (_selections.any(
+        (s) => s.level == crumb.level && s.value == crumb.value,
+      )) {
         return true;
       }
     }
@@ -891,7 +901,9 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   @override
   Widget build(BuildContext context) {
-    final contentAsync = ref.watch(curriculumContentProvider(widget.curriculumId));
+    final contentAsync = ref.watch(
+      curriculumContentProvider(widget.curriculumId),
+    );
     final theme = Theme.of(context);
 
     return Padding(
@@ -982,9 +994,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                 isSelected: _isDirectlySelected(value),
                 canDrill: canDrillDeeper,
                 onCheck: () => _toggleSelection(value),
-                onDrill: canDrillDeeper
-                    ? () => _drillInto(value, items)
-                    : null,
+                onDrill: canDrillDeeper ? () => _drillInto(value, items) : null,
               );
             },
           ),
@@ -996,9 +1006,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: Text(
-              'Continue with $_totalSelectionCount selected',
-            ),
+            child: Text('Continue with $_totalSelectionCount selected'),
           ),
         ],
       ],
@@ -1053,9 +1061,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                 isImplicit: _isSelected(value) && !_isDirectlySelected(value),
                 canDrill: canDrillDeeper,
                 onCheck: () => _toggleSelection(value),
-                onDrill: canDrillDeeper
-                    ? () => _drillInto(value, items)
-                    : null,
+                onDrill: canDrillDeeper ? () => _drillInto(value, items) : null,
               );
             },
           ),
@@ -1107,11 +1113,11 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                   InkWell(
                     onTap: i < _breadcrumbs.length - 1
                         ? () => setState(() {
-                              _breadcrumbs.removeRange(
-                                i + 1,
-                                _breadcrumbs.length,
-                              );
-                            })
+                            _breadcrumbs.removeRange(
+                              i + 1,
+                              _breadcrumbs.length,
+                            );
+                          })
                         : null,
                     child: Text(
                       _breadcrumbs[i].value,
@@ -1359,8 +1365,9 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
       // Typically level2 (Masechta) → level3+level4 leaf (Daf).
       // For 2-level curricula, use level1 → leaves.
       final containerLvl = labels.length >= 3 ? 1 : 0; // 0-indexed
-      final containerLevelLabel =
-          containerLvl < labels.length ? labels[containerLvl] : 'Section';
+      final containerLevelLabel = containerLvl < labels.length
+          ? labels[containerLvl]
+          : 'Section';
       final leafLevelLabel = containerLvl + 1 < labels.length
           ? labels[containerLvl + 1]
           : 'Item';
@@ -1452,8 +1459,10 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Icon(Icons.menu_book,
-                        color: theme.colorScheme.onPrimaryContainer),
+                    Icon(
+                      Icons.menu_book,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -1528,8 +1537,7 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
               Expanded(
                 child: FilledButton(
                   onPressed: _selectedLeaf != null
-                      ? () => widget
-                          .onComplete(_selectedLeaf!.sefariaRef)
+                      ? () => widget.onComplete(_selectedLeaf!.sefariaRef)
                       : null,
                   child: const Text('Start here'),
                 ),
@@ -1566,8 +1574,9 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
           title: Text(leaf.displayNameEn),
           subtitle: Text(leaf.displayNameHe),
           selected: isSelected,
-          selectedTileColor:
-              theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+          selectedTileColor: theme.colorScheme.primaryContainer.withValues(
+            alpha: 0.3,
+          ),
           leading: isSelected
               ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
               : const Icon(Icons.circle_outlined),
@@ -1627,8 +1636,9 @@ class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
     _customDelays = List.of(_presets[_selectedPresetIndex].delays);
   }
 
-  List<int> get _activeDelays =>
-      _selectedPresetIndex >= 0 ? _presets[_selectedPresetIndex].delays : _customDelays;
+  List<int> get _activeDelays => _selectedPresetIndex >= 0
+      ? _presets[_selectedPresetIndex].delays
+      : _customDelays;
 
   void _selectPreset(int index) {
     setState(() {
@@ -1762,14 +1772,8 @@ class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
             ),
           ),
           const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _confirm,
-            child: const Text('Continue'),
-          ),
-          TextButton(
-            onPressed: _skip,
-            child: const Text('Skip (no review)'),
-          ),
+          FilledButton(onPressed: _confirm, child: const Text('Continue')),
+          TextButton(onPressed: _skip, child: const Text('Skip (no review)')),
         ],
       ),
     );
@@ -1779,9 +1783,7 @@ class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
     if (delays.isEmpty) return HebrewTerms.stageLearn;
     final parts = <String>[HebrewTerms.stageLearn];
     for (var i = 0; i < delays.length; i++) {
-      parts.add(
-        '${HebrewTerms.getChazaraStageName(i + 1)} (+${delays[i]}d)',
-      );
+      parts.add('${HebrewTerms.getChazaraStageName(i + 1)} (+${delays[i]}d)');
     }
     return parts.join(' → ');
   }

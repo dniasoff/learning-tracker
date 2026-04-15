@@ -5,8 +5,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/content_browsing/domain/services/content_version_check_service.dart';
@@ -51,13 +51,15 @@ class _MockTrackRepository extends Mock implements TrackRepository {}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -555,12 +557,11 @@ void main() {
     tags: ['story_15_4'],
     () {
       late UserDatabase db;
-      late int trackId;
       late ContentDatabase contentDb;
 
       setUp(() async {
         db = createTestDatabase();
-        trackId = await _insertTrack(db);
+        await _insertTrack(db);
         contentDb = createTestContentDatabase();
       });
 
@@ -571,13 +572,14 @@ void main() {
 
       group('AC: All 18 presets seeded in DB on first launch', () {
         test('18 programs exist after database creation', () async {
-          final programs =
-              await contentDb.contentLearningProgramDao.getAllPrograms();
+          final programs = await contentDb.contentLearningProgramDao
+              .getAllPrograms();
           expect(programs.length, 18);
         });
 
         test('all expected programs are present by name', () async {
-          final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+          final programs = await contentDb.contentLearningProgramDao
+              .getAllPrograms();
           final names = programs.map((p) => p.name).toSet();
           expect(
             names,
@@ -607,7 +609,8 @@ void main() {
 
       group('AC: Preset data includes full stage configuration', () {
         test('every preset has valid JSON stages_config', () async {
-          final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+          final programs = await contentDb.contentLearningProgramDao
+              .getAllPrograms();
           for (final p in programs) {
             final stages = jsonDecode(p.stagesConfig) as List;
             expect(stages, isNotEmpty, reason: '${p.name} has empty stages');
@@ -629,7 +632,8 @@ void main() {
         });
 
         test('programs with tests have valid test_config', () async {
-          final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+          final programs = await contentDb.contentLearningProgramDao
+              .getAllPrograms();
           final withTests = programs.where((p) => p.hasTests);
           for (final p in withTests) {
             final config = jsonDecode(p.testConfig) as Map<String, dynamic>;
@@ -644,7 +648,8 @@ void main() {
 
       group('AC: Profile-program association stored per curriculum', () {
         test('profile can select a program per curriculum', () async {
-          final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+          final programs = await contentDb.contentLearningProgramDao
+              .getAllPrograms();
           final bavli = programs.firstWhere((p) => p.name == 'oraysa');
 
           await db.profileProgramDao.setProfileProgram(
@@ -662,7 +667,8 @@ void main() {
         test(
           'profile can have different programs for different curricula',
           () async {
-            final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+            final programs = await contentDb.contentLearningProgramDao
+                .getAllPrograms();
             final bavli = programs.firstWhere((p) => p.name == 'daf_yomi');
             final nach = programs.firstWhere((p) => p.name == 'nach_yomi');
 
@@ -684,18 +690,16 @@ void main() {
       });
 
       group('AC: Presets queryable by curriculum type', () {
-        test('bavli returns 4 programs', () async {
-          final bavli = await contentDb.contentLearningProgramDao.getProgramsByCurriculumType(
-            'bavli',
-          );
-          expect(bavli.length, 4);
+        test('bavli returns 5 programs', () async {
+          final bavli = await contentDb.contentLearningProgramDao
+              .getProgramsByCurriculumType('bavli');
+          expect(bavli.length, 5);
         });
 
-        test('yerushalmi returns 1 program', () async {
+        test('yerushalmi returns 2 programs', () async {
           final yerushalmi = await contentDb.contentLearningProgramDao
               .getProgramsByCurriculumType('yerushalmi');
-          expect(yerushalmi.length, 1);
-          expect(yerushalmi.first.name, 'dirshu_kinyan_yerushalmi');
+          expect(yerushalmi.length, 2);
         });
 
         test('each curriculum type has at least one program', () async {
@@ -716,7 +720,8 @@ void main() {
 
       group('AC: Preset marked as active/deprecated (not deleted)', () {
         test('all seeded presets are active', () async {
-          final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+          final programs = await contentDb.contentLearningProgramDao
+              .getAllPrograms();
           for (final p in programs) {
             expect(p.isActive, isTrue, reason: '${p.name} not active');
           }
@@ -733,11 +738,10 @@ void main() {
     tags: ['story_15_13'],
     () {
       late UserDatabase db;
-      late int trackId;
 
       setUp(() async {
         db = createTestDatabase();
-        trackId = await _insertTrack(db);
+        await _insertTrack(db);
       });
 
       tearDown(() async {
@@ -1533,12 +1537,11 @@ void main() {
 
   group('Story 15.10 -- Dirshu Test Tracking', tags: ['story_15_10'], () {
     late UserDatabase db;
-    late int trackId;
     late ContentDatabase contentDb;
 
     setUp(() async {
       db = createTestDatabase();
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
       contentDb = createTestContentDatabase();
     });
 
@@ -1555,13 +1558,15 @@ void main() {
 
       test('test dates exist for all 4 Dirshu programs with tests', () async {
         // Get all Dirshu programs that have tests
-        final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+        final programs = await contentDb.contentLearningProgramDao
+            .getAllPrograms();
         final dirshuWithTests = programs.where((p) => p.hasTests).toList();
 
         expect(dirshuWithTests.length, 4);
 
         for (final program in dirshuWithTests) {
-          final dates = await contentDb.contentTestDateDao.getTestDatesForProgram(program.id);
+          final dates = await contentDb.contentTestDateDao
+              .getTestDatesForProgram(program.id);
           expect(
             dates,
             isNotEmpty,
@@ -1647,15 +1652,13 @@ void main() {
             );
 
         // Get a Dirshu program
-        final program = await contentDb.contentLearningProgramDao.getProgramByName(
-          'dirshu_kinyan_torah',
-        );
+        final program = await contentDb.contentLearningProgramDao
+            .getProgramByName('dirshu_kinyan_torah');
         expect(program, isNotNull);
 
         // Get a test date for that program
-        final testDates = await contentDb.contentTestDateDao.getTestDatesForProgram(
-          program!.id,
-        );
+        final testDates = await contentDb.contentTestDateDao
+            .getTestDatesForProgram(program!.id);
         expect(testDates, isNotEmpty);
 
         // Log a score
@@ -1711,9 +1714,8 @@ void main() {
               ),
             );
 
-        final program = await contentDb.contentLearningProgramDao.getProgramByName(
-          'dirshu_kinyan_torah',
-        );
+        final program = await contentDb.contentLearningProgramDao
+            .getProgramByName('dirshu_kinyan_torah');
 
         await db.testScoreDao.insertScore(
           TestScoresCompanion.insert(
@@ -1746,14 +1748,12 @@ void main() {
       test(
         'getNextTestDateForProgram returns earliest future test date',
         () async {
-          final program = await contentDb.contentLearningProgramDao.getProgramByName(
-            'dirshu_kinyan_torah',
-          );
+          final program = await contentDb.contentLearningProgramDao
+              .getProgramByName('dirshu_kinyan_torah');
           expect(program, isNotNull);
 
-          final nextTest = await contentDb.contentTestDateDao.getNextTestDateForProgram(
-            program!.id,
-          );
+          final nextTest = await contentDb.contentTestDateDao
+              .getNextTestDateForProgram(program!.id);
           // Seeded dates are generated from now, so there should be a future one
           expect(nextTest, isNotNull);
           expect(nextTest!.testDate.isAfter(DateTime.now().toUtc()), isTrue);
@@ -1761,7 +1761,8 @@ void main() {
       );
 
       test('getUpcomingTestDates returns all future dates sorted', () async {
-        final upcoming = await contentDb.contentTestDateDao.getUpcomingTestDates();
+        final upcoming = await contentDb.contentTestDateDao
+            .getUpcomingTestDates();
         expect(upcoming, isNotEmpty);
 
         // Verify sorted ascending
@@ -1825,7 +1826,8 @@ void main() {
     group('AC: Test tracking only visible for Dirshu program users', () {
       test('programHasTests returns true for Dirshu test programs', () async {
         const service = TestReminderService();
-        final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+        final programs = await contentDb.contentLearningProgramDao
+            .getAllPrograms();
 
         final dirshuTestPrograms = [
           'dirshu_kinyan_torah',
@@ -1847,7 +1849,8 @@ void main() {
 
       test('programHasTests returns false for non-test programs', () async {
         const service = TestReminderService();
-        final programs = await contentDb.contentLearningProgramDao.getAllPrograms();
+        final programs = await contentDb.contentLearningProgramDao
+            .getAllPrograms();
 
         final noTestPrograms = [
           'oraysa',
@@ -1883,9 +1886,8 @@ void main() {
                 ),
               );
 
-          final dirshu = await contentDb.contentLearningProgramDao.getProgramByName(
-            'dirshu_kinyan_torah',
-          );
+          final dirshu = await contentDb.contentLearningProgramDao
+              .getProgramByName('dirshu_kinyan_torah');
           expect(dirshu, isNotNull);
 
           // Enroll profile in Dirshu program
@@ -1904,16 +1906,14 @@ void main() {
           expect(profileProgram, isNotNull);
 
           // Look up program to check if it has tests
-          final program = await contentDb.contentLearningProgramDao.getProgramById(
-            profileProgram!.programId,
-          );
+          final program = await contentDb.contentLearningProgramDao
+              .getProgramById(profileProgram!.programId);
           expect(program, isNotNull);
           expect(program!.hasTests, isTrue);
 
           // The profile should see test dates for their program
-          final testDates = await contentDb.contentTestDateDao.getTestDatesForProgram(
-            program.id,
-          );
+          final testDates = await contentDb.contentTestDateDao
+              .getTestDatesForProgram(program.id);
           expect(testDates, isNotEmpty);
         },
       );
@@ -2156,7 +2156,12 @@ void main() {
           engine = createEngine();
           // now = Wednesday (3), stages are for Fri/Sat
           final tasks = await engine.generateDailyTasks(
-            ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now),
+            ScheduleConfig(
+              curriculumId: curriculum,
+              trackId: 1,
+              trackLabel: 'Test Track',
+              currentDate: now,
+            ),
           );
 
           final weeklyTasks = tasks
@@ -2208,7 +2213,12 @@ void main() {
 
         engine = createEngine();
         final tasks = await engine.generateDailyTasks(
-          ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now),
+          ScheduleConfig(
+            curriculumId: curriculum,
+            trackId: 1,
+            trackLabel: 'Test Track',
+            currentDate: now,
+          ),
         );
 
         final rollingTasks = tasks
@@ -2277,7 +2287,12 @@ void main() {
 
           engine = createEngine();
           final tasks = await engine.generateDailyTasks(
-            ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now),
+            ScheduleConfig(
+              curriculumId: curriculum,
+              trackId: 1,
+              trackLabel: 'Test Track',
+              currentDate: now,
+            ),
           );
 
           final rollingTasks = tasks
@@ -2646,11 +2661,10 @@ void main() {
 
   group('Story 15.7 -- Enhanced Bulk Mark Tool', tags: ['story_15_7'], () {
     late UserDatabase db;
-    late int trackId;
 
     setUp(() async {
       db = createTestDatabase();
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -2752,12 +2766,11 @@ void main() {
 
   group('Story 15.8 -- Revised Onboarding Flow', tags: ['story_15_8'], () {
     late UserDatabase db;
-    late int trackId;
     late ProfileRepositoryImpl profileRepo;
 
     setUp(() async {
       db = createTestDatabase();
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
       profileRepo = ProfileRepositoryImpl(db);
     });
 
@@ -2970,9 +2983,8 @@ void main() {
               .getProgramForProfileAndCurriculum(0, 'bavli');
           expect(profileProgram, isNotNull);
 
-          final program = await contentDb.contentLearningProgramDao.getProgramById(
-            profileProgram!.programId,
-          );
+          final program = await contentDb.contentLearningProgramDao
+              .getProgramById(profileProgram!.programId);
           expect(program, isNotNull);
           expect(program!.displayName, isNotEmpty);
           expect(program.description, isNotEmpty);
@@ -3549,9 +3561,13 @@ void main() {
       test(
         'set scopes persist and are queryable by profile+curriculum',
         () async {
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-            'Seder Zeraim',
-          ]);
+          await db.curriculumScopeDao.setScopes(
+            1,
+            CurriculumId.mishnayos,
+            trackId,
+            1,
+            ['Seder Zeraim'],
+          );
 
           final values = await db.curriculumScopeDao.getScopeValues(
             1,
@@ -3574,13 +3590,20 @@ void main() {
       );
 
       test('scopes are isolated between profiles', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-          'Seder Zeraim',
-        ]);
-        await db.curriculumScopeDao.setScopes(2, CurriculumId.mishnayos, trackId, 1, [
-          'Seder Moed',
-          'Seder Nezikin',
-        ]);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          ['Seder Zeraim'],
+        );
+        await db.curriculumScopeDao.setScopes(
+          2,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          ['Seder Moed', 'Seder Nezikin'],
+        );
 
         final profile1 = await db.curriculumScopeDao.getScopeValues(
           1,
@@ -3597,13 +3620,20 @@ void main() {
       });
 
       test('scopes are isolated between curricula for same profile', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-          'Seder Zeraim',
-        ]);
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.bavli, trackId, 2, [
-          'Berachos',
-          'Shabbos',
-        ]);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          ['Seder Zeraim'],
+        );
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.bavli,
+          trackId,
+          2,
+          ['Berachos', 'Shabbos'],
+        );
 
         final mishnayos = await db.curriculumScopeDao.getScopes(
           1,
@@ -3621,15 +3651,22 @@ void main() {
       });
 
       test('setScopes replaces existing scopes atomically', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-          'Seder Zeraim',
-        ]);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          ['Seder Zeraim'],
+        );
 
         // Replace with different scope level and values
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 2, [
-          'Berachos',
-          'Shabbos',
-        ]);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          2,
+          ['Berachos', 'Shabbos'],
+        );
 
         final scopes = await db.curriculumScopeDao.getScopes(
           1,
@@ -3649,9 +3686,13 @@ void main() {
     // AC: Scope changes are reflected in filtered content queries
     group('AC: Scope changes reflected in filtered content queries', () {
       test('clearScopes restores full curriculum tracking', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-          'Seder Zeraim',
-        ]);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          ['Seder Zeraim'],
+        );
 
         // Verify scope exists
         expect(
@@ -3675,11 +3716,21 @@ void main() {
       });
 
       test('setScopes with empty list clears scopes', () async {
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-          'Seder Zeraim',
-        ]);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          ['Seder Zeraim'],
+        );
 
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, []);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          [],
+        );
 
         final scopes = await db.curriculumScopeDao.getScopes(
           1,
@@ -3699,9 +3750,13 @@ void main() {
         expect(initial, isEmpty);
 
         // Set scopes
-        await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-          'Seder Zeraim',
-        ]);
+        await db.curriculumScopeDao.setScopes(
+          1,
+          CurriculumId.mishnayos,
+          trackId,
+          1,
+          ['Seder Zeraim'],
+        );
 
         // Next emission: has scope
         final afterSet = await stream.first;
@@ -3736,14 +3791,22 @@ void main() {
           // Simulate the _save() flow: setScopes is transactional — it deletes
           // existing scopes then inserts new ones, ensuring stale scopes don't
           // persist. This is the data-layer prerequisite for provider invalidation.
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-            'Seder Zeraim',
-          ]);
+          await db.curriculumScopeDao.setScopes(
+            1,
+            CurriculumId.mishnayos,
+            trackId,
+            1,
+            ['Seder Zeraim'],
+          );
 
           // Change to different scope
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-            'Seder Moed',
-          ]);
+          await db.curriculumScopeDao.setScopes(
+            1,
+            CurriculumId.mishnayos,
+            trackId,
+            1,
+            ['Seder Moed'],
+          );
 
           final scopes = await db.curriculumScopeDao.getScopes(
             1,
@@ -3758,10 +3821,13 @@ void main() {
       test(
         'clearScopes removes all entries triggering recalculation',
         () async {
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-            'Seder Zeraim',
-            'Seder Moed',
-          ]);
+          await db.curriculumScopeDao.setScopes(
+            1,
+            CurriculumId.mishnayos,
+            trackId,
+            1,
+            ['Seder Zeraim', 'Seder Moed'],
+          );
 
           await db.curriculumScopeDao.clearScopes(1, CurriculumId.mishnayos);
 
@@ -3788,16 +3854,24 @@ void main() {
           expect(emissions.last, isEmpty);
 
           // Set scopes
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-            'Seder Zeraim',
-          ]);
+          await db.curriculumScopeDao.setScopes(
+            1,
+            CurriculumId.mishnayos,
+            trackId,
+            1,
+            ['Seder Zeraim'],
+          );
           await Future<void>.delayed(const Duration(milliseconds: 50));
           expect(emissions.last, hasLength(1));
 
           // Change scopes
-          await db.curriculumScopeDao.setScopes(1, CurriculumId.mishnayos, trackId, 1, [
-            'Seder Moed',
-          ]);
+          await db.curriculumScopeDao.setScopes(
+            1,
+            CurriculumId.mishnayos,
+            trackId,
+            1,
+            ['Seder Moed'],
+          );
           await Future<void>.delayed(const Duration(milliseconds: 50));
           expect(emissions.last, hasLength(1));
           expect(emissions.last.first.scopeValue, 'Seder Moed');

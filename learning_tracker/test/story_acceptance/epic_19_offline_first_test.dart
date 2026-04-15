@@ -81,7 +81,9 @@ void main() {
     });
 
     test('UserDatabase creates with user tables', () async {
-      await userDb.into(userDb.userProfiles).insert(
+      await userDb
+          .into(userDb.userProfiles)
+          .insert(
             UserProfilesCompanion.insert(
               email: 'test@test.local',
               tier: 'cloudBorn',
@@ -97,29 +99,33 @@ void main() {
     });
 
     test('ContentDatabase creates with content tables', () async {
-      final programs =
-          await contentDb.contentLearningProgramDao.getAllPrograms();
+      final programs = await contentDb.contentLearningProgramDao
+          .getAllPrograms();
       expect(programs, isList);
     });
 
-    test('UserProfiles stores local-born account without firebaseUid', () async {
-      await userDb.into(userDb.userProfiles).insert(
-            UserProfilesCompanion.insert(
-              email: 'localonly@test.local',
-              tier: 'localBorn',
-              passwordHash: const Value(r'argon2id$placeholder'),
-              displayName: 'Local User',
-              userMode: 'adult',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
-          );
-      final profile =
-          await userDb.select(userDb.userProfiles).getSingle();
-      expect(profile.email, 'localonly@test.local');
-      expect(profile.firebaseUid, isNull);
-      expect(profile.tier, 'localBorn');
-    });
+    test(
+      'UserProfiles stores local-born account without firebaseUid',
+      () async {
+        await userDb
+            .into(userDb.userProfiles)
+            .insert(
+              UserProfilesCompanion.insert(
+                email: 'localonly@test.local',
+                tier: 'localBorn',
+                passwordHash: const Value(r'argon2id$placeholder'),
+                displayName: 'Local User',
+                userMode: 'adult',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            );
+        final profile = await userDb.select(userDb.userProfiles).getSingle();
+        expect(profile.email, 'localonly@test.local');
+        expect(profile.firebaseUid, isNull);
+        expect(profile.tier, 'localBorn');
+      },
+    );
   });
 
   // ─── Story 19.2b: SeedManager ────────────────────────────────────
@@ -150,8 +156,9 @@ void main() {
         'seed_metadata',
       ];
       for (final t in expected) {
-        final rows =
-            await contentDb.customSelect('PRAGMA table_info($t)').get();
+        final rows = await contentDb
+            .customSelect('PRAGMA table_info($t)')
+            .get();
         expect(rows, isNotEmpty, reason: 'table $t should exist');
       }
     });
@@ -209,8 +216,7 @@ void main() {
       expect(row.englishText, 'eng-42');
     });
 
-    test('AT-19.3.4 CalendarCycles lookup by (programKey, dateKey)',
-        () async {
+    test('AT-19.3.4 CalendarCycles lookup by (programKey, dateKey)', () async {
       await contentDb.transaction(() async {
         for (var day = 1; day <= 5; day++) {
           await contentDb.customInsert(
@@ -219,9 +225,7 @@ void main() {
             'VALUES (?, ?, ?, ?)',
             variables: [
               Variable.withString('daf_yomi'),
-              Variable.withString(
-                '2025-01-${day.toString().padLeft(2, '0')}',
-              ),
+              Variable.withString('2025-01-${day.toString().padLeft(2, '0')}'),
               Variable.withString('Berakhot $day'),
               Variable.withString('Daf Yomi'),
             ],
@@ -229,18 +233,21 @@ void main() {
         }
       });
 
-      final hit = await contentDb.calendarCycleDao
-          .getCycleForProgramAndDate('daf_yomi', '2025-01-03');
+      final hit = await contentDb.calendarCycleDao.getCycleForProgramAndDate(
+        'daf_yomi',
+        '2025-01-03',
+      );
       expect(hit, isNotNull);
       expect(hit!.sefariaRef, 'Berakhot 3');
 
-      final miss = await contentDb.calendarCycleDao
-          .getCycleForProgramAndDate('daf_yomi', '2099-01-01');
+      final miss = await contentDb.calendarCycleDao.getCycleForProgramAndDate(
+        'daf_yomi',
+        '2099-01-01',
+      );
       expect(miss, isNull);
     });
 
-    test('AT-19.3.5 content hash is deterministic across two builds',
-        () async {
+    test('AT-19.3.5 content hash is deterministic across two builds', () async {
       Future<String> buildAndHash(ContentDatabase db) async {
         await db.transaction(() async {
           await db.customInsert(
@@ -332,8 +339,7 @@ void main() {
       final readOnly = ContentDatabase.openReadOnly(dbFile);
       try {
         // Reads still work.
-        final row =
-            await readOnly.contentTextCacheDao.getText('Berakhot 2a');
+        final row = await readOnly.contentTextCacheDao.getText('Berakhot 2a');
         expect(row, isNotNull);
 
         // Writes are rejected by SQLite (query_only pragma).
@@ -356,64 +362,75 @@ void main() {
       }
     });
 
-    test('AT-19.3.6 SeedManager decompresses a gzipped seed on first launch',
-        () async {
-      final tmp = await Directory.systemTemp.createTemp('seed_mgr_test');
-      addTearDown(() async {
+    test(
+      'AT-19.3.6 SeedManager decompresses a gzipped seed on first launch',
+      () async {
+        final tmp = await Directory.systemTemp.createTemp('seed_mgr_test');
+        addTearDown(() async {
+          try {
+            await tmp.delete(recursive: true);
+          } catch (_) {}
+        });
+
+        // Build a small source seed DB on disk with a known version row.
+        final sourcePath = '${tmp.path}/source.db';
+        final source = ContentDatabase(NativeDatabase(File(sourcePath)));
+        await source.customInsert(
+          'INSERT INTO seed_metadata '
+          '(version, built_at, build_id, text_cache_count, calendar_cycle_count) '
+          'VALUES (?, ?, ?, ?, ?)',
+          variables: [
+            Variable.withInt(bundledSeedVersion),
+            Variable.withString('2026-04-11T00:00:00Z'),
+            Variable.withString('seed-test'),
+            Variable.withInt(0),
+            Variable.withInt(0),
+          ],
+        );
+        await source.close();
+
+        // Verify SeedManager's path/backup plumbing without mocking the
+        // Flutter asset bundle: write a pre-seeded content.db into the
+        // target dir and check ensureContentDb returns its path as a
+        // no-op upgrade.
+        final contentDbPath = '${tmp.path}/content.db';
+        File(sourcePath).copySync(contentDbPath);
+
+        final mgr = SeedManager(dbDirectory: tmp.path);
+        final resolved = await mgr.ensureContentDb();
+        expect(resolved, contentDbPath);
+        expect(File(resolved).existsSync(), isTrue);
+
+        // The resolved DB must open and report the expected version.
+        final opened = ContentDatabase(NativeDatabase(File(resolved)));
         try {
-          await tmp.delete(recursive: true);
-        } catch (_) {}
-      });
-
-      // Build a small source seed DB on disk with a known version row.
-      final sourcePath = '${tmp.path}/source.db';
-      final source = ContentDatabase(NativeDatabase(File(sourcePath)));
-      await source.customInsert(
-        'INSERT INTO seed_metadata '
-        '(version, built_at, build_id, text_cache_count, calendar_cycle_count) '
-        'VALUES (?, ?, ?, ?, ?)',
-        variables: [
-          Variable.withInt(bundledSeedVersion),
-          Variable.withString('2026-04-11T00:00:00Z'),
-          Variable.withString('seed-test'),
-          Variable.withInt(0),
-          Variable.withInt(0),
-        ],
-      );
-      await source.close();
-
-      // Verify SeedManager's path/backup plumbing without mocking the
-      // Flutter asset bundle: write a pre-seeded content.db into the
-      // target dir and check ensureContentDb returns its path as a
-      // no-op upgrade.
-      final contentDbPath = '${tmp.path}/content.db';
-      File(sourcePath).copySync(contentDbPath);
-
-      final mgr = SeedManager(dbDirectory: tmp.path);
-      final resolved = await mgr.ensureContentDb();
-      expect(resolved, contentDbPath);
-      expect(File(resolved).existsSync(), isTrue);
-
-      // The resolved DB must open and report the expected version.
-      final opened = ContentDatabase(NativeDatabase(File(resolved)));
-      try {
-        final meta = await opened.seedMetadataDao.getVersion();
-        expect(meta, isNotNull);
-        expect(meta!.version, bundledSeedVersion);
-      } finally {
-        await opened.close();
-      }
-    });
+          final meta = await opened.seedMetadataDao.getVersion();
+          expect(meta, isNotNull);
+          expect(meta!.version, bundledSeedVersion);
+        } finally {
+          await opened.close();
+        }
+      },
+    );
 
     test('learningProgramSeeds exposes api fields for every entry', () {
       expect(learningProgramSeeds, hasLength(18));
       for (final p in learningProgramSeeds) {
-        expect(p.containsKey('api_source'), isTrue,
-            reason: '${p['name']} missing api_source');
-        expect(p.containsKey('api_program_key'), isTrue,
-            reason: '${p['name']} missing api_program_key');
-        expect(p.containsKey('is_calendar_program'), isTrue,
-            reason: '${p['name']} missing is_calendar_program');
+        expect(
+          p.containsKey('api_source'),
+          isTrue,
+          reason: '${p['name']} missing api_source',
+        );
+        expect(
+          p.containsKey('api_program_key'),
+          isTrue,
+          reason: '${p['name']} missing api_program_key',
+        );
+        expect(
+          p.containsKey('is_calendar_program'),
+          isTrue,
+          reason: '${p['name']} missing is_calendar_program',
+        );
       }
     });
   });
@@ -431,21 +448,23 @@ void main() {
       ('mishna_yomit', 'Mishnah_Tamid.2.1-2'),
       ('nach_yomi', 'I_Samuel.1'),
       ('rambam_1_chapter', 'Mishneh_Torah,_Repentance.7'),
-      ('rambam_3_chapters',
-          'Mishneh_Torah,_Leavened_and_Unleavened_Bread.5-7'),
+      ('rambam_3_chapters', 'Mishneh_Torah,_Leavened_and_Unleavened_Bread.5-7'),
       ('daf_a_week', 'Nedarim.75'),
       ('halakhah_yomit', 'Shulchan_Arukh,_Orach_Chayim.168.17-169.2'),
-      ('arukh_hashulchan_yomi',
-          'Arukh_HaShulchan,_Orach_Chaim.277.9-279.1'),
+      ('arukh_hashulchan_yomi', 'Arukh_HaShulchan,_Orach_Chaim.277.9-279.1'),
       ('tanakh_yomi', 'Jeremiah.31.32-32.21'),
-      ('chofetz_chaim_daily',
-          'Chofetz_Chaim,_Part_One,_The_Prohibition_Against_Lashon_Hara,'
-              '_Principle_9.1'),
+      (
+        'chofetz_chaim_daily',
+        'Chofetz_Chaim,_Part_One,_The_Prohibition_Against_Lashon_Hara,'
+            '_Principle_9.1',
+      ),
       ('kitzur_shulchan_aruch_yomi', 'Kitzur_Shulchan_Arukh.118.9-119.2'),
     ];
 
-    Future<void> seedDate(String dateKey,
-        {List<(String, String)>? only}) async {
+    Future<void> seedDate(
+      String dateKey, {
+      List<(String, String)>? only,
+    }) async {
       final rows = only ?? programFixtures;
       for (final (programId, ref) in rows) {
         await contentDb.customInsert(
@@ -517,17 +536,17 @@ void main() {
       expect(ids.contains('chofetz_chaim_daily'), isTrue);
     });
 
-    test('AT-19.4.3 getEntry returns null for missing (programId, date)',
-        () async {
-      await seedDate('2026-03-29');
-      final entry = await engine.getEntry('daf_yomi', DateTime(2099, 1, 1));
-      expect(entry, isNull);
-    });
+    test(
+      'AT-19.4.3 getEntry returns null for missing (programId, date)',
+      () async {
+        await seedDate('2026-03-29');
+        final entry = await engine.getEntry('daf_yomi', DateTime(2099, 1, 1));
+        expect(entry, isNull);
+      },
+    );
 
-    test('getTodayPrograms omits programs with no data for the date',
-        () async {
-      await seedDate('2026-03-29',
-          only: const [('daf_yomi', 'Menachot.77')]);
+    test('getTodayPrograms omits programs with no data for the date', () async {
+      await seedDate('2026-03-29', only: const [('daf_yomi', 'Menachot.77')]);
       final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
       expect(results, hasLength(1));
       expect(results.first.programId, 'daf_yomi');
@@ -545,8 +564,7 @@ void main() {
           Variable.withString(''),
         ],
       );
-      await seedDate('2026-03-29',
-          only: const [('daf_yomi', 'Menachot.77')]);
+      await seedDate('2026-03-29', only: const [('daf_yomi', 'Menachot.77')]);
 
       final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
       expect(results, hasLength(1));
@@ -560,32 +578,34 @@ void main() {
       final results = await service.getTodayPrograms();
       // seedDate uses the current date only; today == DateTime.now so use
       // an explicit getEntry for the known date instead.
-      final entry =
-          await service.getEntry('mishna_yomit', DateTime(2026, 3, 29));
+      final entry = await service.getEntry(
+        'mishna_yomit',
+        DateTime(2026, 3, 29),
+      );
       expect(entry, isNotNull);
       expect(entry!.todayRef, 'Mishnah_Tamid.2.1-2');
       expect(results, isA<List<CalendarProgramEntry>>());
     });
 
-    test('AT-19.4.5 todayCalendarProvider resolves from ContentDatabase',
-        () async {
-      final today = DateTime.now();
-      await seedDate(LocalCalendarEngine.formatDateKey(today));
+    test(
+      'AT-19.4.5 todayCalendarProvider resolves from ContentDatabase',
+      () async {
+        final today = DateTime.now();
+        await seedDate(LocalCalendarEngine.formatDateKey(today));
 
-      final container = ProviderContainer(
-        overrides: [
-          contentDatabaseProvider.overrideWithValue(contentDb),
-        ],
-      );
-      addTearDown(container.dispose);
+        final container = ProviderContainer(
+          overrides: [contentDatabaseProvider.overrideWithValue(contentDb)],
+        );
+        addTearDown(container.dispose);
 
-      final result = await container.read(todayCalendarProvider.future);
-      expect(result, hasLength(12));
-      expect(
-        result.every((CalendarProgramEntry e) => e.apiSource == 'local'),
-        isTrue,
-      );
-    });
+        final result = await container.read(todayCalendarProvider.future);
+        expect(result, hasLength(12));
+        expect(
+          result.every((CalendarProgramEntry e) => e.apiSource == 'local'),
+          isTrue,
+        );
+      },
+    );
 
     test('AT-19.4.6 no Sefaria/Hebcal calendar providers remain in '
         'the provider graph', () async {
@@ -593,10 +613,7 @@ void main() {
       // any reintroduction of network clients here would fail compile.
       // We also verify the provider-service constructor takes exactly
       // one dependency (LocalCalendarEngine) via a runtime construction.
-      expect(
-        () => CalendarProgramService(engine),
-        returnsNormally,
-      );
+      expect(() => CalendarProgramService(engine), returnsNormally);
     });
 
     test('AT-19.4.7 getEntriesForRange returns ordered entries', () async {
@@ -645,10 +662,11 @@ void main() {
         DateTime(2026, 3, 29),
       );
       expect(results, hasLength(3));
-      expect(
-        results.map((e) => e.todayRef).toList(),
-        ['Menachot.25', 'Menachot.27', 'Menachot.29'],
-      );
+      expect(results.map((e) => e.todayRef).toList(), [
+        'Menachot.25',
+        'Menachot.27',
+        'Menachot.29',
+      ]);
     });
 
     test('getEntriesForRange returns empty when program unknown to '
@@ -668,9 +686,13 @@ void main() {
 
       for (final def in CalendarProgramRegistry.programs) {
         final entry = await engine.getEntry(def.id, today);
-        expect(entry, isNotNull,
-            reason: '${def.id} has a fixture but getEntry returned null '
-                '— registry<->seed ID mismatch');
+        expect(
+          entry,
+          isNotNull,
+          reason:
+              '${def.id} has a fixture but getEntry returned null '
+              '— registry<->seed ID mismatch',
+        );
         expect(entry!.programId, def.id);
       }
     });

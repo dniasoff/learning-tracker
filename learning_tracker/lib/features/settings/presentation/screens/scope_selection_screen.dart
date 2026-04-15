@@ -272,12 +272,15 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     final profileId = ref.read(activeProfileIdProvider);
 
     // Look up trackId for this curriculum
-    final track = await (db.select(db.curriculumTracks)
-          ..where((t) =>
-              t.profileId.equals(profileId) &
-              t.curriculumId.equals(widget.curriculumId.storageKey))
-          ..limit(1))
-        .getSingleOrNull();
+    final track =
+        await (db.select(db.curriculumTracks)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(widget.curriculumId.storageKey),
+              )
+              ..limit(1))
+            .getSingleOrNull();
     final trackId = track?.id ?? 0;
 
     if (_selectAll) {

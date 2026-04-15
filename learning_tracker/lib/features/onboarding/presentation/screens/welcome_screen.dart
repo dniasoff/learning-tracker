@@ -27,10 +27,7 @@ class WelcomeScreen extends ConsumerWidget {
     // cold-start first render doesn't flash the offline UI while
     // the checker is still resolving.
     final connectivity = ref.watch(connectivityStreamProvider);
-    final isOnline = connectivity.maybeWhen(
-      data: (v) => v,
-      orElse: () => true,
-    );
+    final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
 
     return Scaffold(
       body: SafeArea(

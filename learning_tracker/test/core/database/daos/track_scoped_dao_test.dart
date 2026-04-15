@@ -15,21 +15,25 @@ void main() {
 
   setUp(() async {
     db = UserDatabase(NativeDatabase.memory());
-    final t1 = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final t1 = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
     track1Id = t1.id;
-    final t2 = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'school',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final t2 = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'school',
+            activatedAt: DateTime.now(),
+          ),
+        );
     track2Id = t2.id;
   });
 
@@ -71,7 +75,10 @@ void main() {
       await insertCompletion(track1Id, 'ref2');
       await insertCompletion(track2Id, 'ref3');
 
-      final count = await db.completionDao.getAggregateCountByTrack(track1Id, 0);
+      final count = await db.completionDao.getAggregateCountByTrack(
+        track1Id,
+        0,
+      );
       expect(count, 2);
     });
 
@@ -238,33 +245,39 @@ void main() {
     test('getScopesByTrack returns only that track scopes', () async {
       // Insert scopes directly to avoid setScopes clearing by curriculum
       final now = DateTime.now().toUtc();
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          curriculumId: 'mishnayos',
-          trackId: track1Id,
-          scopeLevel: 1,
-          scopeValue: 'Seder Zeraim',
-          createdAt: now,
-        ),
-      );
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          curriculumId: 'mishnayos',
-          trackId: track2Id,
-          scopeLevel: 1,
-          scopeValue: 'Seder Moed',
-          createdAt: now,
-        ),
-      );
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          curriculumId: 'mishnayos',
-          trackId: track2Id,
-          scopeLevel: 1,
-          scopeValue: 'Seder Nashim',
-          createdAt: now,
-        ),
-      );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackId: track1Id,
+              scopeLevel: 1,
+              scopeValue: 'Seder Zeraim',
+              createdAt: now,
+            ),
+          );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackId: track2Id,
+              scopeLevel: 1,
+              scopeValue: 'Seder Moed',
+              createdAt: now,
+            ),
+          );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackId: track2Id,
+              scopeLevel: 1,
+              scopeValue: 'Seder Nashim',
+              createdAt: now,
+            ),
+          );
 
       final t1 = await db.curriculumScopeDao.getScopesByTrack(track1Id);
       expect(t1, hasLength(1));

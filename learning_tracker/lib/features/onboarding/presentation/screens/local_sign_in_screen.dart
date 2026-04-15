@@ -126,9 +126,7 @@ class _LocalSignInScreenState extends ConsumerState<LocalSignInScreen> {
                   obscureText: true,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.password],
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Password'),
                   validator: validators.validatePassword,
                   enabled: !_isLoading,
                   onFieldSubmitted: (_) => _canSubmit ? _submit() : null,

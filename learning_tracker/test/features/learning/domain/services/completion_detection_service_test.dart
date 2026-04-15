@@ -29,13 +29,15 @@ void main() {
     mockContentRepo = _MockContentRepository();
     when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
 
-    final trackRow = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: _currId,
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final trackRow = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: _currId,
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
     trackId = trackRow.id;
   });
 

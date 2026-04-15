@@ -149,13 +149,16 @@ class CurriculumActivationService {
 
   /// Look up the curriculum_tracks.id for a curriculum's personal track.
   Future<int> _resolveTrackId(CurriculumId curriculum, int profileId) async {
-    final track = await (_database.select(_database.curriculumTracks)
-          ..where((t) =>
-              t.profileId.equals(profileId) &
-              t.curriculumId.equals(curriculum.storageKey) &
-              t.trackType.equals(TrackType.personal.storageKey))
-          ..limit(1))
-        .getSingleOrNull();
+    final track =
+        await (_database.select(_database.curriculumTracks)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculum.storageKey) &
+                    t.trackType.equals(TrackType.personal.storageKey),
+              )
+              ..limit(1))
+            .getSingleOrNull();
     return track?.id ?? 0;
   }
 

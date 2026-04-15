@@ -15,7 +15,8 @@ class VelocityContent extends StatelessWidget {
     final theme = Theme.of(context);
     final paceStatus = progress.paceStatus;
     final ratio = paceStatus != null && paceStatus.rollingAverage > 0
-        ? paceStatus.rollingAverage / 1.0 // simplified
+        ? paceStatus.rollingAverage /
+              1.0 // simplified
         : 0.0;
 
     return Column(

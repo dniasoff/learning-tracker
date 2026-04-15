@@ -39,24 +39,34 @@ void main() {
       verifyNever(() => mockRouter.replace(any()));
     });
 
-    test('redirects to app intro when onboarding not complete and intro not seen', () async {
-      SharedPreferences.setMockInitialValues({});
+    test(
+      'redirects to app intro when onboarding not complete and intro not seen',
+      () async {
+        SharedPreferences.setMockInitialValues({});
 
-      await authGuard.onNavigation(mockResolver, mockRouter);
+        await authGuard.onNavigation(mockResolver, mockRouter);
 
-      final captured = verify(() => mockRouter.replace(captureAny())).captured;
-      expect(captured.single, isA<AppIntroRoute>());
-      verify(() => mockResolver.next(false)).called(1);
-    });
+        final captured = verify(
+          () => mockRouter.replace(captureAny()),
+        ).captured;
+        expect(captured.single, isA<AppIntroRoute>());
+        verify(() => mockResolver.next(false)).called(1);
+      },
+    );
 
-    test('redirects to welcome when onboarding not complete but intro already seen', () async {
-      SharedPreferences.setMockInitialValues({'intro_seen': true});
+    test(
+      'redirects to welcome when onboarding not complete but intro already seen',
+      () async {
+        SharedPreferences.setMockInitialValues({'intro_seen': true});
 
-      await authGuard.onNavigation(mockResolver, mockRouter);
+        await authGuard.onNavigation(mockResolver, mockRouter);
 
-      final captured = verify(() => mockRouter.replace(captureAny())).captured;
-      expect(captured.single, isA<WelcomeRoute>());
-      verify(() => mockResolver.next(false)).called(1);
-    });
+        final captured = verify(
+          () => mockRouter.replace(captureAny()),
+        ).captured;
+        expect(captured.single, isA<WelcomeRoute>());
+        verify(() => mockResolver.next(false)).called(1);
+      },
+    );
   });
 }

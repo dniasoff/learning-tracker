@@ -38,11 +38,9 @@ class InvalidInputException implements Exception {
 /// v2 doc §4.2. This service is only invoked for accounts with
 /// `tier == localBorn`.
 class LocalAuthService {
-  LocalAuthService({
-    required UserProfileDao dao,
-    PasswordHasher? hasher,
-  })  : _dao = dao,
-        _hasher = hasher ?? PasswordHasher();
+  LocalAuthService({required UserProfileDao dao, PasswordHasher? hasher})
+    : _dao = dao,
+      _hasher = hasher ?? PasswordHasher();
 
   final UserProfileDao _dao;
   final PasswordHasher _hasher;

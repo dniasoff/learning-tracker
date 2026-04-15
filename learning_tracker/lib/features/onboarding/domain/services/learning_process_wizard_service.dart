@@ -4,9 +4,9 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart'
     as content_db;
 import 'package:learning_tracker/core/database/content/daos/learning_program_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 
@@ -171,7 +171,10 @@ class LearningProcessWizardService {
     }
   }
 
-  Future<void> _applyNoReview(WizardResult result, {required int trackId}) async {
+  Future<void> _applyNoReview(
+    WizardResult result, {
+    required int trackId,
+  }) async {
     await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         curriculumId: result.curriculumId.storageKey,

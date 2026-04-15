@@ -66,12 +66,15 @@ Future<void> toggleStudyDay(
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   // Look up trackId for this curriculum
-  final track = await (db.select(db.curriculumTracks)
-        ..where((t) =>
-            t.profileId.equals(profileId) &
-            t.curriculumId.equals(curriculumId.storageKey))
-        ..limit(1))
-      .getSingleOrNull();
+  final track =
+      await (db.select(db.curriculumTracks)
+            ..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculumId.storageKey),
+            )
+            ..limit(1))
+          .getSingleOrNull();
   final trackId = track?.id ?? 0;
   await db.studyDayConfigDao.upsertDayConfig(
     profileId: profileId,

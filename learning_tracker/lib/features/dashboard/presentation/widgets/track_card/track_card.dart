@@ -46,9 +46,7 @@ class TrackCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: curriculumColor, width: 4),
-            ),
+            border: Border(left: BorderSide(color: curriculumColor, width: 4)),
           ),
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -129,9 +127,7 @@ class TrackCard extends StatelessWidget {
   Widget _buildVariantContent() {
     switch (progress.variant) {
       case TrackProgressVariant.programCalendar:
-        return ProgramCalendarContent(
-          calendarPos: progress.calendarPos!,
-        );
+        return ProgramCalendarContent(calendarPos: progress.calendarPos!);
       case TrackProgressVariant.deadlineGoal:
         return DeadlineContent(progress: progress);
       case TrackProgressVariant.velocityGoal:

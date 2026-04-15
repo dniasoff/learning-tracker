@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'learning_order_dao.g.dart';
 

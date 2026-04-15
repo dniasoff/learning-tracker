@@ -285,14 +285,16 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required String curriculumId,
     required String trackType,
   }) async {
-    final track = await (
-      _database.select(_database.curriculumTracks)
-        ..where((t) =>
-            t.profileId.equals(_activeProfileId) &
-            t.curriculumId.equals(curriculumId) &
-            t.trackType.equals(trackType))
-        ..limit(1)
-    ).getSingleOrNull();
+    final track =
+        await (_database.select(_database.curriculumTracks)
+              ..where(
+                (t) =>
+                    t.profileId.equals(_activeProfileId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.trackType.equals(trackType),
+              )
+              ..limit(1))
+            .getSingleOrNull();
     if (track == null) {
       throw StateError(
         'No curriculum track found for profile=$_activeProfileId, '
@@ -331,11 +333,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // duplicates silently; anything else propagates.
     await _appendStreakEvent(profileId: _activeProfileId, at: now);
     if (points > 0) {
-      await _appendXpEvent(
-        profileId: _activeProfileId,
-        delta: points,
-        at: now,
-      );
+      await _appendXpEvent(profileId: _activeProfileId, delta: points, at: now);
     }
 
     // Retrieve the created completion
@@ -354,7 +352,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required DateTime at,
   }) async {
     try {
-      await _database.into(_database.streakEvents).insert(
+      await _database
+          .into(_database.streakEvents)
+          .insert(
             StreakEventsCompanion.insert(
               profileId: profileId,
               eventType: 'completion',
@@ -373,7 +373,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required DateTime at,
   }) async {
     try {
-      await _database.into(_database.xpEvents).insert(
+      await _database
+          .into(_database.xpEvents)
+          .insert(
             XpEventsCompanion.insert(
               profileId: profileId,
               xpDelta: delta,

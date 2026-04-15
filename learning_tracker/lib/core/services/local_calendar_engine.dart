@@ -47,10 +47,7 @@ class LocalCalendarEngine {
     DateTime date,
   ) async {
     final dateKey = formatDateKey(date);
-    final row = await _contentDb.calendarCycleDao.getEntry(
-      programId,
-      dateKey,
-    );
+    final row = await _contentDb.calendarCycleDao.getEntry(programId, dateKey);
     if (row == null) return null;
 
     final def = _resolveDefinition(programId);
@@ -75,8 +72,7 @@ class LocalCalendarEngine {
   Future<List<CalendarProgramEntry>> getTodayPrograms([DateTime? date]) async {
     final effective = date ?? DateTime.now();
     final dateKey = formatDateKey(effective);
-    final rows =
-        await _contentDb.calendarCycleDao.getEntriesForDate(dateKey);
+    final rows = await _contentDb.calendarCycleDao.getEntriesForDate(dateKey);
 
     final entries = <CalendarProgramEntry>[];
     for (final row in rows) {
@@ -129,8 +125,7 @@ class LocalCalendarEngine {
   Future<CalendarProgramEntry?> getProgramForDate(
     String programKey,
     DateTime date,
-  ) =>
-      getEntry(programKey, date);
+  ) => getEntry(programKey, date);
 
   /// Resolve a stored program key to a [CalendarProgramDefinition].
   ///

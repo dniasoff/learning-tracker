@@ -47,13 +47,15 @@ List<ContentItem> _fiveItems() => List.generate(
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -289,14 +291,13 @@ void main() {
 
   group('Story 3.3 -- Progress tracking', tags: ['story_3_3'], () {
     late UserDatabase db;
-    late int trackId;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
 
     setUp(() async {
       db = _db();
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);

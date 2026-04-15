@@ -19,11 +19,10 @@ class StreakEvents extends Table {
   /// Optional device hint for diagnostics. No security bearing.
   TextColumn get clientDeviceId => text().nullable()();
 
-  DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {profileId, eventTimestamp, eventType},
-      ];
+    {profileId, eventTimestamp, eventType},
+  ];
 }

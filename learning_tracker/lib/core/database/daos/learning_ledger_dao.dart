@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'learning_ledger_dao.g.dart';
 
@@ -98,8 +98,7 @@ class LearningLedgerDao extends DatabaseAccessor<UserDatabase>
   ) =>
       (select(learningLedger)
             ..where(
-              (t) =>
-                  t.trackId.equals(trackId) & t.profileId.equals(profileId),
+              (t) => t.trackId.equals(trackId) & t.profileId.equals(profileId),
             )
             ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
           .get();

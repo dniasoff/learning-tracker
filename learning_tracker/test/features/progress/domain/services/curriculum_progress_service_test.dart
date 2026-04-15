@@ -13,13 +13,15 @@ void main() {
   setUp(() async {
     db = createTestDatabase();
 
-    final trackRow = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final trackRow = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
     trackId = trackRow.id;
   });
 

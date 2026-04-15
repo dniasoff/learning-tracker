@@ -41,7 +41,8 @@ enum CurriculumId {
     CurriculumId.mishnaBerurah =>
       '\u05DE\u05E9\u05E0\u05D4 \u05D1\u05E8\u05D5\u05E8\u05D4',
     CurriculumId.chumash => '\u05D7\u05D5\u05DE\u05E9',
-    CurriculumId.mishnehTorah => '\u05DE\u05E9\u05E0\u05D4 \u05EA\u05D5\u05E8\u05D4',
+    CurriculumId.mishnehTorah =>
+      '\u05DE\u05E9\u05E0\u05D4 \u05EA\u05D5\u05E8\u05D4',
     CurriculumId.tanach => '\u05EA\u05E0"\u05DA',
     CurriculumId.nach => '\u05E0"\u05DA',
     CurriculumId.mussar => '\u05DE\u05D5\u05E1\u05E8',

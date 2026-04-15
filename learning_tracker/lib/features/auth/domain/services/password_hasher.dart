@@ -48,18 +48,18 @@ class Argon2idParams {
 /// without touching callers.
 class PasswordHasher {
   PasswordHasher({Argon2idParams? params, Random? rng})
-      : _params = params ?? Argon2idParams.production,
-        _rng = rng ?? Random.secure();
+    : _params = params ?? Argon2idParams.production,
+      _rng = rng ?? Random.secure();
 
   final Argon2idParams _params;
   final Random _rng;
 
   Argon2id _algorithm() => Argon2id(
-        memory: _params.memoryKib,
-        parallelism: _params.parallelism,
-        iterations: _params.iterations,
-        hashLength: _params.hashLengthBytes,
-      );
+    memory: _params.memoryKib,
+    parallelism: _params.parallelism,
+    iterations: _params.iterations,
+    hashLength: _params.hashLengthBytes,
+  );
 
   /// Returns an encoded hash string: `$argon2id$m=..,t=..,p=..$salt$hash`
   /// (our own compact encoding — we control both sides).
@@ -105,17 +105,14 @@ class PasswordHasher {
     );
   }
 
-  List<int> _randomSalt() => List<int>.generate(
-        _params.saltLengthBytes,
-        (_) => _rng.nextInt(256),
-      );
+  List<int> _randomSalt() =>
+      List<int>.generate(_params.saltLengthBytes, (_) => _rng.nextInt(256));
 
   String _encode(List<int> salt, List<int> hash) {
     final p = _params;
     final saltB64 = base64Url.encode(salt);
     final hashB64 = base64Url.encode(hash);
-    final header =
-        'm=${p.memoryKib},t=${p.iterations},p=${p.parallelism}';
+    final header = 'm=${p.memoryKib},t=${p.iterations},p=${p.parallelism}';
     return ['argon2id', header, saltB64, hashB64].join(r'$');
   }
 

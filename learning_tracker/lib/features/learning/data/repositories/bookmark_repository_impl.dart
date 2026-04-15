@@ -166,7 +166,8 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
   @override
   Future<int> syncFromFirestore() async {
-    final remoteBookmarks = await _syncEngine?.fetchBookmarksFromFirestore() ?? [];
+    final remoteBookmarks =
+        await _syncEngine?.fetchBookmarksFromFirestore() ?? [];
     for (final remote in remoteBookmarks) {
       await mergeRemoteBookmark(remote);
     }

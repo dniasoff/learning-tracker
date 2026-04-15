@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:talker/talker.dart';
 

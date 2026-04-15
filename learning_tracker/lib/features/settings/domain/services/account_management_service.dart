@@ -127,21 +127,16 @@ class AccountManagementService {
       ];
 
       // 1. Delete profile-scoped data
-      final profilesSnapshot =
-          await userDocRef.collection('profiles').get();
+      final profilesSnapshot = await userDocRef.collection('profiles').get();
       for (final profileDoc in profilesSnapshot.docs) {
         for (final sub in profileSubcollections) {
-          final subSnapshot =
-              await profileDoc.reference.collection(sub).get();
+          final subSnapshot = await profileDoc.reference.collection(sub).get();
           for (final doc in subSnapshot.docs) {
             await doc.reference.delete();
           }
         }
         // Delete streak/data and active_curricula/data within profile
-        await profileDoc.reference
-            .collection('streak')
-            .doc('data')
-            .delete();
+        await profileDoc.reference.collection('streak').doc('data').delete();
         await profileDoc.reference
             .collection('active_curricula')
             .doc('data')
@@ -151,10 +146,7 @@ class AccountManagementService {
       }
 
       // 2. Delete legacy flat subcollections
-      const legacySubcollections = [
-        ...profileSubcollections,
-        'profile',
-      ];
+      const legacySubcollections = [...profileSubcollections, 'profile'];
 
       for (final sub in legacySubcollections) {
         final snapshot = await userDocRef.collection(sub).get();

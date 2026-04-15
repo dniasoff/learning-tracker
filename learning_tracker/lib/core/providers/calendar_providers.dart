@@ -23,8 +23,9 @@ final calendarProgramServiceProvider = Provider<CalendarProgramService>((ref) {
 
 /// Today's available calendar programs — resolved entirely from the
 /// local [ContentDatabase].
-final todayCalendarProvider =
-    FutureProvider<List<CalendarProgramEntry>>((ref) async {
+final todayCalendarProvider = FutureProvider<List<CalendarProgramEntry>>((
+  ref,
+) async {
   final service = ref.watch(calendarProgramServiceProvider);
   return service.getTodayPrograms();
 });

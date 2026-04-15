@@ -41,9 +41,7 @@ void main() {
     });
 
     test('single completion → streak of 1', () {
-      final state = reduceStreakEvents([
-        _se(at: DateTime.utc(2026, 1, 1, 10)),
-      ]);
+      final state = reduceStreakEvents([_se(at: DateTime.utc(2026, 1, 1, 10))]);
       expect(state.currentStreak, 1);
       expect(state.longestStreak, 1);
     });
@@ -87,8 +85,7 @@ void main() {
       expect(state.currentStreak, 3);
     });
 
-    test('two-device convergence: unioned logs produce identical state',
-        () {
+    test('two-device convergence: unioned logs produce identical state', () {
       // Device A records 1/1, 1/2
       final a = [
         _se(at: DateTime.utc(2026, 1, 1)),
@@ -117,8 +114,10 @@ void main() {
 
     test('negative deltas are honoured (admin adjust)', () {
       expect(
-        reduceXpEvents(
-            [_xpe(delta: 100), _xpe(delta: -30, source: 'admin_adjust')]),
+        reduceXpEvents([
+          _xpe(delta: 100),
+          _xpe(delta: -30, source: 'admin_adjust'),
+        ]),
         70,
       );
     });
@@ -129,14 +128,18 @@ void main() {
       final db = UserDatabase(NativeDatabase.memory());
       addTearDown(db.close);
 
-      await db.into(db.streakEvents).insert(
+      await db
+          .into(db.streakEvents)
+          .insert(
             StreakEventsCompanion.insert(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 1, 1),
             ),
           );
-      await db.into(db.xpEvents).insert(
+      await db
+          .into(db.xpEvents)
+          .insert(
             XpEventsCompanion.insert(
               profileId: 1,
               xpDelta: 10,
@@ -153,13 +156,14 @@ void main() {
       expect(xpRows.first.xpDelta, 10);
     });
 
-    test('unique constraint rejects duplicate (profile, ts, type)',
-        () async {
+    test('unique constraint rejects duplicate (profile, ts, type)', () async {
       final db = UserDatabase(NativeDatabase.memory());
       addTearDown(db.close);
 
       final ts = DateTime.utc(2026, 1, 1, 12);
-      await db.into(db.streakEvents).insert(
+      await db
+          .into(db.streakEvents)
+          .insert(
             StreakEventsCompanion.insert(
               profileId: 1,
               eventType: 'completion',
@@ -167,7 +171,9 @@ void main() {
             ),
           );
       expect(
-        () => db.into(db.streakEvents).insert(
+        () => db
+            .into(db.streakEvents)
+            .insert(
               StreakEventsCompanion.insert(
                 profileId: 1,
                 eventType: 'completion',

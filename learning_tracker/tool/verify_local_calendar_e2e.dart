@@ -184,8 +184,11 @@ Future<void> main() async {
         ],
       );
     }
-    final rangeRows =
-        await dao.getEntriesForRange('daf_yomi', '2026-05-01', '2026-05-07');
+    final rangeRows = await dao.getEntriesForRange(
+      'daf_yomi',
+      '2026-05-01',
+      '2026-05-07',
+    );
     _check(
       'getEntriesForRange → 7 ordered rows',
       rangeRows.length == 7 &&
@@ -212,8 +215,7 @@ Future<void> main() async {
       );
     }
 
-    final todayEntries =
-        await engine.getTodayPrograms(DateTime(2026, 4, 11));
+    final todayEntries = await engine.getTodayPrograms(DateTime(2026, 4, 11));
     _check(
       'engine.getTodayPrograms → 12 entries',
       todayEntries.length == 12,
@@ -232,10 +234,7 @@ Future<void> main() async {
       DateTime(2026, 5, 1),
       DateTime(2026, 5, 7),
     );
-    _check(
-      'engine.getEntriesForRange → 7 entries',
-      rangeEntries.length == 7,
-    );
+    _check('engine.getEntriesForRange → 7 entries', rangeEntries.length == 7);
 
     // 7. CalendarProgramService delegation (19.4 AC-4)
     print('\n[5] CalendarProgramService (thin delegate)');
@@ -246,8 +245,10 @@ Future<void> main() async {
       'service.getTodayPrograms returns a list (empty for real-now)',
       serviceToday.isEmpty || serviceToday.isNotEmpty,
     );
-    final serviceEntry =
-        await service.getEntry('daf_yomi', DateTime(2026, 4, 11));
+    final serviceEntry = await service.getEntry(
+      'daf_yomi',
+      DateTime(2026, 4, 11),
+    );
     _check(
       'service.getEntry delegates correctly',
       serviceEntry != null && serviceEntry.todayRef == 'Menachot.77',

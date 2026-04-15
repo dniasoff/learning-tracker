@@ -129,8 +129,9 @@ void main() {
         ),
       );
 
-      final locals =
-          await database.userProfileDao.findByTier(UserTier.localBorn);
+      final locals = await database.userProfileDao.findByTier(
+        UserTier.localBorn,
+      );
       expect(locals, hasLength(1));
       expect(locals.first.email, 'local@test.local');
     });
@@ -142,8 +143,9 @@ void main() {
         tier: 'cloudBorn',
       );
 
-      final missing = await database.userProfileDao
-          .findLocalBornByEmail('shared@test.local');
+      final missing = await database.userProfileDao.findLocalBornByEmail(
+        'shared@test.local',
+      );
       expect(missing, isNull);
     });
 
@@ -166,8 +168,7 @@ void main() {
         updatedAt: DateTime.utc(2025, 2, 1),
       );
 
-      final upgraded =
-          await database.userProfileDao.getUserProfileById(id);
+      final upgraded = await database.userProfileDao.getUserProfileById(id);
       expect(upgraded!.tier, 'cloudBorn');
       expect(upgraded.firebaseUid, 'new-firebase-uid');
       expect(upgraded.passwordHash, isNull);

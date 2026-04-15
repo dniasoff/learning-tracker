@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -69,13 +69,15 @@ MockFlutterSecureStorage _createMockStorage() {
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -152,7 +154,7 @@ void main() {
     test('parent mode access denied for adult accounts', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
-      final trackId = await _insertTrack(db);
+      await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
           email: 'adult@test.local',
@@ -175,7 +177,7 @@ void main() {
     test('parent mode access allowed for child accounts', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
-      final trackId = await _insertTrack(db);
+      await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
         UserProfilesCompanion.insert(
           email: 'child@test.local',
@@ -689,12 +691,11 @@ void main() {
 
   group('Story 10.3 -- Reward Catalog Management', tags: ['story_10_3'], () {
     late UserDatabase db;
-    late int trackId;
     late RewardService rewardService;
 
     setUp(() async {
       db = createTestDatabase();
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
       final pointsService = PointsService(db);
       rewardService = RewardService(db, pointsService);
     });
@@ -1071,7 +1072,10 @@ void main() {
           ),
         );
       }
-      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey, trackId);
+      await db.pointConfigDao.seedDefaults(
+        CurriculumId.mishnayos.storageKey,
+        trackId,
+      );
     });
 
     tearDown(() => db.close());
@@ -1123,7 +1127,10 @@ void main() {
       await db.pointConfigDao.deleteAllForCurriculum(
         CurriculumId.mishnayos.storageKey,
       );
-      await db.pointConfigDao.seedDefaults(CurriculumId.mishnayos.storageKey, trackId);
+      await db.pointConfigDao.seedDefaults(
+        CurriculumId.mishnayos.storageKey,
+        trackId,
+      );
 
       final configs = await db.pointConfigDao.getConfigsByCurriculum(
         CurriculumId.mishnayos.storageKey,
@@ -1191,7 +1198,10 @@ void main() {
           ),
         );
       }
-      await db.pointConfigDao.seedDefaults(CurriculumId.bavli.storageKey, trackId);
+      await db.pointConfigDao.seedDefaults(
+        CurriculumId.bavli.storageKey,
+        trackId,
+      );
 
       await tester.pumpWidget(
         ProviderScope(

@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -138,9 +138,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
           .get();
 
   /// Get a single track by its ID.
-  Future<CurriculumTrack?> getTrackById(int trackId) =>
-      (select(curriculumTracks)..where((t) => t.id.equals(trackId)))
-          .getSingleOrNull();
+  Future<CurriculumTrack?> getTrackById(int trackId) => (select(
+    curriculumTracks,
+  )..where((t) => t.id.equals(trackId))).getSingleOrNull();
 
   /// Watch all active (non-archived) tracks for a profile.
   Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {
@@ -217,9 +217,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   /// Sets `paceResetDate` to now. Does NOT touch completions or chazara data.
   Future<void> resetPace(int trackId) async {
     await (update(curriculumTracks)..where((t) => t.id.equals(trackId))).write(
-      CurriculumTracksCompanion(
-        paceResetDate: Value(DateTimeFactory.nowUtc()),
-      ),
+      CurriculumTracksCompanion(paceResetDate: Value(DateTimeFactory.nowUtc())),
     );
   }
 
@@ -231,13 +229,13 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     CurriculumId curriculumId, {
     int profileId = 0,
   }) async {
-    final existing = await (select(
-      curriculumTracks,
-    )..where(
-          (t) =>
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.profileId.equals(profileId),
-        )).get();
+    final existing =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId.storageKey) &
+                  t.profileId.equals(profileId),
+            ))
+            .get();
 
     if (existing.isEmpty) {
       await into(curriculumTracks).insert(

@@ -49,12 +49,16 @@ Future<TrackProgress> trackProgress(Ref ref, int trackId) async {
   final variant = resolveVariant(programId: programId, goalType: goalType);
 
   // 5. Load track-scoped completions
-  final completions =
-      await db.completionDao.getCompletionsByTrackAndProfile(trackId, profileId);
+  final completions = await db.completionDao.getCompletionsByTrackAndProfile(
+    trackId,
+    profileId,
+  );
 
   // 6. Count total items (from curriculum-scoped content count)
-  final totalItems =
-      await db.completionDao.getAggregateCountByProfile(track.curriculumId, profileId);
+  final totalItems = await db.completionDao.getAggregateCountByProfile(
+    track.curriculumId,
+    profileId,
+  );
 
   // 7. Build track label
   final trackLabel = '${curriculumId.displayNameHe} (${track.trackType})';
@@ -70,8 +74,9 @@ Future<TrackProgress> trackProgress(Ref ref, int trackId) async {
   switch (variant) {
     case TrackProgressVariant.programCalendar:
       try {
-        calendarPos =
-            await ref.read(programCalendarPositionProvider(trackId).future);
+        calendarPos = await ref.read(
+          programCalendarPositionProvider(trackId).future,
+        );
       } catch (_) {
         calendarPos = const CalendarPosition(
           currentDay: 1,
@@ -94,8 +99,9 @@ Future<TrackProgress> trackProgress(Ref ref, int trackId) async {
           today: now,
         );
       }
-      scopePercentage =
-          totalItems > 0 ? (completions.length / totalItems) * 100 : 0;
+      scopePercentage = totalItems > 0
+          ? (completions.length / totalItems) * 100
+          : 0;
     case TrackProgressVariant.velocityGoal:
       if (goal != null && goal.paceValue != null) {
         final dailyCounts = _buildDailyCounts(completions);
@@ -110,12 +116,14 @@ Future<TrackProgress> trackProgress(Ref ref, int trackId) async {
           today: now,
         );
       }
-      scopePercentage =
-          totalItems > 0 ? (completions.length / totalItems) * 100 : 0;
+      scopePercentage = totalItems > 0
+          ? (completions.length / totalItems) * 100
+          : 0;
     case TrackProgressVariant.momentum:
       momentumStatus = _calculateMomentum(completions, now);
-      scopePercentage =
-          totalItems > 0 ? (completions.length / totalItems) * 100 : 0;
+      scopePercentage = totalItems > 0
+          ? (completions.length / totalItems) * 100
+          : 0;
   }
 
   // 9. Compute chazara status
@@ -177,10 +185,7 @@ int _countLast7Days(List<Completion> completions, DateTime now) {
 }
 
 /// Calculate momentum status for a track with no goal.
-MomentumStatus _calculateMomentum(
-  List<Completion> completions,
-  DateTime now,
-) {
+MomentumStatus _calculateMomentum(List<Completion> completions, DateTime now) {
   final totalCompletions = completions.length;
   final recentCount = _countLast7Days(completions, now);
 
@@ -224,8 +229,9 @@ double _computePersonalAverage(List<Completion> completions, DateTime now) {
   final windowDays = max(trackAge < 14 ? trackAge : 30, 7);
 
   final cutoff = now.subtract(Duration(days: windowDays));
-  final inWindow =
-      completions.where((c) => c.completedAt.isAfter(cutoff)).length;
+  final inWindow = completions
+      .where((c) => c.completedAt.isAfter(cutoff))
+      .length;
 
   return (inWindow / windowDays) * 7;
 }
@@ -276,7 +282,8 @@ ChazaraStatus? _computeChazaraStatus(
       if (prevStageDate == null) break;
 
       final dueDate = prevStageDate.add(Duration(days: stage.delayDays));
-      final isSameDay = now.year == dueDate.year &&
+      final isSameDay =
+          now.year == dueDate.year &&
           now.month == dueDate.month &&
           now.day == dueDate.day;
 

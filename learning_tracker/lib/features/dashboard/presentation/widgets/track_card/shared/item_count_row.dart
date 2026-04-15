@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Shows "{completed} / {total} items complete".
 class ItemCountRow extends StatelessWidget {
-  const ItemCountRow({
-    super.key,
-    required this.completed,
-    required this.total,
-  });
+  const ItemCountRow({super.key, required this.completed, required this.total});
 
   final int completed;
   final int total;

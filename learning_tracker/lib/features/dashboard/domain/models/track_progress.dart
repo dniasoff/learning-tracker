@@ -14,7 +14,12 @@ part 'track_progress.freezed.dart';
 ///   goalType == 'deadline'     --> deadlineGoal (S1)
 ///   goalType == 'pace'         --> velocityGoal (S2, S5)
 ///   otherwise                  --> momentum (S3, S4)
-enum TrackProgressVariant { programCalendar, deadlineGoal, velocityGoal, momentum }
+enum TrackProgressVariant {
+  programCalendar,
+  deadlineGoal,
+  velocityGoal,
+  momentum,
+}
 
 /// Resolves the correct [TrackProgressVariant] from track properties.
 ///

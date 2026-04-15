@@ -16,7 +16,7 @@ class ChazaraStatusLine extends StatelessWidget {
     if (status.isCaughtUp) {
       return Row(
         children: [
-          Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
+          const Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
           const SizedBox(width: 4),
           Text(
             'chazara: caught up',
@@ -29,8 +29,8 @@ class ChazaraStatusLine extends StatelessWidget {
     final color = status.overdue >= 5
         ? theme.colorScheme.error
         : status.overdue > 0
-            ? Colors.amber
-            : theme.colorScheme.onSurfaceVariant;
+        ? Colors.amber
+        : theme.colorScheme.onSurfaceVariant;
 
     final parts = <String>[];
     if (status.dueToday > 0) parts.add('${status.dueToday} due today');

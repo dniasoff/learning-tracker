@@ -40,12 +40,8 @@ class TextDownloadProgress {
 /// in the seed database. Runtime downloading is no longer needed.
 /// The [downloadCurriculum] method is deprecated and will be removed.
 class TextDownloadService {
-  TextDownloadService({
-    required TextDownloadStatusDao textDownloadStatusDao,
-    // textCacheDao removed — ContentDatabase is read-only.
-    // Kept for backward compat with provider signatures.
-    dynamic textCacheDao,
-  }) : _textDownloadStatusDao = textDownloadStatusDao;
+  TextDownloadService({required TextDownloadStatusDao textDownloadStatusDao})
+    : _textDownloadStatusDao = textDownloadStatusDao;
 
   final TextDownloadStatusDao _textDownloadStatusDao;
 

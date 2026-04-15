@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/rewards.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'reward_dao.g.dart';
 

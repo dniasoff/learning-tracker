@@ -47,6 +47,5 @@ class CalendarProgramService {
     String programId,
     DateTime startDate,
     DateTime endDate,
-  ) =>
-      _engine.getEntriesForRange(programId, startDate, endDate);
+  ) => _engine.getEntriesForRange(programId, startDate, endDate);
 }

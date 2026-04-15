@@ -40,9 +40,7 @@ class AccountPickerScreen extends ConsumerWidget {
               // route to WelcomeRoute), but handle gracefully.
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
-                  unawaited(
-                    context.router.replaceAll([const WelcomeRoute()]),
-                  );
+                  unawaited(context.router.replaceAll([const WelcomeRoute()]));
                 }
               });
               return const SizedBox.shrink();
@@ -68,8 +66,8 @@ class AccountPickerScreen extends ConsumerWidget {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: () => context.router
-                                .push(AccountCreationRoute()),
+                            onPressed: () =>
+                                context.router.push(AccountCreationRoute()),
                             icon: const Icon(Icons.add),
                             label: Text(
                               'Add another account '
@@ -141,8 +139,7 @@ class _AccountTile extends ConsumerWidget {
       child: Card(
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor:
-                theme.colorScheme.primary.withValues(alpha: 0.15),
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
             child: Icon(
               isCloud ? Icons.cloud : Icons.phone_android,
               color: theme.colorScheme.primary,
@@ -175,8 +172,11 @@ class _AccountTile extends ConsumerWidget {
                   ),
                   if (isCloud && !hasValidSession) ...[
                     const SizedBox(width: 8),
-                    Icon(Icons.warning_amber,
-                        size: 12, color: theme.colorScheme.error),
+                    Icon(
+                      Icons.warning_amber,
+                      size: 12,
+                      color: theme.colorScheme.error,
+                    ),
                     const SizedBox(width: 2),
                     Text(
                       'Sign in again',
@@ -191,9 +191,8 @@ class _AccountTile extends ConsumerWidget {
           ),
           trailing: isCloud
               ? (hasValidSession
-                  ? const Icon(Icons.chevron_right)
-                  : Icon(Icons.warning_amber,
-                      color: theme.colorScheme.error))
+                    ? const Icon(Icons.chevron_right)
+                    : Icon(Icons.warning_amber, color: theme.colorScheme.error))
               : const Icon(Icons.lock_outline, size: 20),
           onTap: () => _onTap(context, ref, hasValidSession),
         ),
@@ -271,8 +270,7 @@ class _AccountTile extends ConsumerWidget {
             FilledButton(
               onPressed: () async {
                 try {
-                  final dao =
-                      ref.read(userDatabaseProvider).userProfileDao;
+                  final dao = ref.read(userDatabaseProvider).userProfileDao;
                   final service = LocalAuthService(dao: dao);
                   final profile = await service.signIn(
                     email: account.email,
@@ -280,16 +278,18 @@ class _AccountTile extends ConsumerWidget {
                   );
                   final registry = ref.read(deviceRegistryProvider);
                   await registry.updateLastUsed(
-                      account.accountId, DateTime.now());
-                  await registry
-                      .setLastActiveAccountId(account.accountId);
+                    account.accountId,
+                    DateTime.now(),
+                  );
+                  await registry.setLastActiveAccountId(account.accountId);
                   ref
                       .read(authStateProvider.notifier)
                       .setLocalBornSession(profile: profile);
                   if (ctx.mounted) Navigator.of(ctx).pop();
                   if (context.mounted) {
-                    unawaited(context.router
-                        .replaceAll([const AppShellRoute()]));
+                    unawaited(
+                      context.router.replaceAll([const AppShellRoute()]),
+                    );
                   }
                 } on InvalidCredentialsException {
                   setDialogState(() => error = 'Incorrect password');
@@ -307,13 +307,13 @@ class _AccountTile extends ConsumerWidget {
     return await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: Text(isCloud
-                ? 'Remove from device?'
-                : 'Delete account?'),
-            content: Text(isCloud
-                ? 'Your cloud data is safe — you can sign back in anytime.'
-                : 'All learning data will be permanently lost. '
-                    'This cannot be undone.'),
+            title: Text(isCloud ? 'Remove from device?' : 'Delete account?'),
+            content: Text(
+              isCloud
+                  ? 'Your cloud data is safe — you can sign back in anytime.'
+                  : 'All learning data will be permanently lost. '
+                        'This cannot be undone.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -322,8 +322,7 @@ class _AccountTile extends ConsumerWidget {
               FilledButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
                 style: FilledButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(ctx).colorScheme.error,
+                  backgroundColor: Theme.of(ctx).colorScheme.error,
                 ),
                 child: Text(isCloud ? 'Remove' : 'Delete Forever'),
               ),

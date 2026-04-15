@@ -335,8 +335,7 @@ Future<void> _seedProgramsAndTestDates(ContentDatabase db, bool verbose) async {
   for (final td in seeds) {
     final programName = td['program_name'] as String?;
     if (programName == null) continue;
-    final program =
-        programRows.where((p) => p.name == programName).toList();
+    final program = programRows.where((p) => p.name == programName).toList();
     if (program.isEmpty) continue;
     await db.customInsert(
       'INSERT INTO test_dates (program_id, test_date, material_description) '
@@ -363,10 +362,7 @@ typedef _TextResult = ({
   bool rateLimited,
 });
 
-Future<int> _fetchAndInsertTextContent(
-  ContentDatabase db,
-  _Args args,
-) async {
+Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
   final dio = Dio(
     BaseOptions(
       baseUrl: 'https://www.sefaria.org',
@@ -422,8 +418,7 @@ Future<int> _fetchAndInsertTextContent(
   final sw = Stopwatch()..start();
 
   for (var i = 0; i < toFetch.length; i += activeConcurrency) {
-    final batch =
-        toFetch.skip(i).take(activeConcurrency).toList();
+    final batch = toFetch.skip(i).take(activeConcurrency).toList();
 
     final futures = batch.map((leaf) => _fetchWithRetry(dio, leaf.ref, args));
     final results = await Future.wait(futures);
@@ -450,8 +445,10 @@ Future<int> _fetchAndInsertTextContent(
       consecutiveSuccess++;
       if (consecutiveSuccess > 20 &&
           activeConcurrency < _maxConcurrentFetches) {
-        activeConcurrency =
-            (activeConcurrency + 2).clamp(1, _maxConcurrentFetches);
+        activeConcurrency = (activeConcurrency + 2).clamp(
+          1,
+          _maxConcurrentFetches,
+        );
         consecutiveSuccess = 0;
         if (args.verbose) {
           print('    ⚡ Recovered to $activeConcurrency concurrent');
@@ -469,9 +466,11 @@ Future<int> _fetchAndInsertTextContent(
       final elapsed = sw.elapsed;
       final rate = progress > 0 ? elapsed.inSeconds / progress : 0;
       final remaining = (toFetch.length - progress) * rate;
-      print('    Progress: $progress/${toFetch.length} '
-          '(fetched $fetched, errors $errors, '
-          '~${(remaining / 60).toStringAsFixed(0)}m remaining)');
+      print(
+        '    Progress: $progress/${toFetch.length} '
+        '(fetched $fetched, errors $errors, '
+        '~${(remaining / 60).toStringAsFixed(0)}m remaining)',
+      );
     }
 
     await Future<void>.delayed(const Duration(milliseconds: _batchDelayMs));
@@ -484,8 +483,10 @@ Future<int> _fetchAndInsertTextContent(
 
   final total = fetched + errors;
   final errorRate = total == 0 ? 0 : errors / total;
-  print('  Text fetch complete: $fetched ok, $errors errors '
-      '(${(errorRate * 100).toStringAsFixed(2)}%)');
+  print(
+    '  Text fetch complete: $fetched ok, $errors errors '
+    '(${(errorRate * 100).toStringAsFixed(2)}%)',
+  );
   if (errorRate > _textErrorRateThreshold) {
     stderr.writeln(
       '❌ Text fetch error rate ${(errorRate * 100).toStringAsFixed(2)}% '
@@ -499,17 +500,20 @@ Future<int> _fetchAndInsertTextContent(
 }
 
 /// Fetch a single ref with exponential backoff on 429 / transient errors.
-Future<_TextResult> _fetchWithRetry(
-  Dio dio,
-  String ref,
-  _Args args,
-) async {
+Future<_TextResult> _fetchWithRetry(Dio dio, String ref, _Args args) async {
   for (var attempt = 0; attempt < _maxRetries; attempt++) {
     try {
       final texts = await _fetchBothLanguages(dio, ref);
-      return (ref: ref, he: texts.he, en: texts.en, error: false, rateLimited: false);
+      return (
+        ref: ref,
+        he: texts.he,
+        en: texts.en,
+        error: false,
+        rateLimited: false,
+      );
     } on DioException catch (e) {
-      if (e.response?.statusCode == 429 || e.type == DioExceptionType.connectionTimeout) {
+      if (e.response?.statusCode == 429 ||
+          e.type == DioExceptionType.connectionTimeout) {
         final delay = _backoffBaseMs * (1 << attempt); // 2s, 4s, 8s
         if (args.verbose) {
           print('    ⏳ 429 on $ref — backoff ${delay}ms (attempt $attempt)');
@@ -657,8 +661,7 @@ Future<void> _fetchSefariaCalendar(
     // Skip if every Sefaria-sourced program already has a row for
     // this date or later.
     final allCovered = _sefariaCalendarMap.values.every(
-      (programKey) =>
-          (perProgramMax[programKey] ?? '').compareTo(dateKey) >= 0,
+      (programKey) => (perProgramMax[programKey] ?? '').compareTo(dateKey) >= 0,
     );
     if (allCovered) {
       processed++;
@@ -967,8 +970,7 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     final metaColumns = await db
         .customSelect('PRAGMA table_info(seed_metadata)')
         .get();
-    final metaColNames =
-        metaColumns.map((r) => r.read<String>('name')).toSet();
+    final metaColNames = metaColumns.map((r) => r.read<String>('name')).toSet();
     for (final col in ['content_hash', 'min_app_version']) {
       if (!metaColNames.contains(col)) {
         stderr.writeln('❌ Missing column seed_metadata.$col');
@@ -988,11 +990,13 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     final metaCount = await _countRows(db, 'seed_metadata');
 
     // Count calendar programs.
-    final calPrograms = await db.customSelect(
-      'SELECT program_key, COUNT(*) AS c, MIN(date_key) AS min_d, '
-      'MAX(date_key) AS max_d FROM calendar_cycles GROUP BY program_key '
-      'ORDER BY program_key',
-    ).get();
+    final calPrograms = await db
+        .customSelect(
+          'SELECT program_key, COUNT(*) AS c, MIN(date_key) AS min_d, '
+          'MAX(date_key) AS max_d FROM calendar_cycles GROUP BY program_key '
+          'ORDER BY program_key',
+        )
+        .get();
 
     print('  Version:         ${meta.version}');
     print('  Built:           ${meta.builtAt}');
@@ -1006,9 +1010,11 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     print('');
     print('  Calendar programs:');
     for (final row in calPrograms) {
-      print('    ${row.read<String>("program_key").padRight(30)} '
-          '${row.read<int>("c").toString().padLeft(5)} rows  '
-          '${row.read<String>("min_d")} → ${row.read<String>("max_d")}');
+      print(
+        '    ${row.read<String>("program_key").padRight(30)} '
+        '${row.read<int>("c").toString().padLeft(5)} rows  '
+        '${row.read<String>("min_d")} → ${row.read<String>("max_d")}',
+      );
     }
 
     final failures = <String>[];
@@ -1033,13 +1039,12 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
       ..._sefariaCalendarMap.values,
       ..._hebcalCategoryMap.values,
     };
-    final presentPrograms =
-        calPrograms.map((r) => r.read<String>('program_key')).toSet();
+    final presentPrograms = calPrograms
+        .map((r) => r.read<String>('program_key'))
+        .toSet();
     final missingPrograms = expectedPrograms.difference(presentPrograms);
     if (missingPrograms.isNotEmpty && cycleCount > 0) {
-      failures.add(
-        'Missing calendar programs: ${missingPrograms.join(", ")}',
-      );
+      failures.add('Missing calendar programs: ${missingPrograms.join(", ")}');
     }
 
     if (failures.isNotEmpty) {

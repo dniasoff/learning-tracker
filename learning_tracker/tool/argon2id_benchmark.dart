@@ -39,8 +39,22 @@ const _defaultTargetMs = 500; // v2 §4.2 UX ceiling for signup
 const _defaultRuns = 5;
 const _testPassword = 'benchmark-password-42-correct-horse';
 const _testSalt = <int>[
-  0x9f, 0x1e, 0xa4, 0x2b, 0x6c, 0x7d, 0x88, 0x91,
-  0x04, 0x5a, 0xbe, 0xf3, 0x11, 0x22, 0x33, 0x44,
+  0x9f,
+  0x1e,
+  0xa4,
+  0x2b,
+  0x6c,
+  0x7d,
+  0x88,
+  0x91,
+  0x04,
+  0x5a,
+  0xbe,
+  0xf3,
+  0x11,
+  0x22,
+  0x33,
+  0x44,
 ];
 
 class _Params {
@@ -93,13 +107,15 @@ Future<void> main(List<String> args) async {
   stdout.writeln('Epic 20 Story 20.1 — argon2id parameter benchmark');
   stdout.writeln('Target: $targetMs ms per hash (v2 §4.2 UX ceiling)');
   stdout.writeln('Runs per cell: $runs (reporting median)');
-  stdout.writeln('Platform: ${Platform.operatingSystem} '
-      '${Platform.operatingSystemVersion}');
+  stdout.writeln(
+    'Platform: ${Platform.operatingSystem} '
+    '${Platform.operatingSystemVersion}',
+  );
   stdout.writeln('');
   stdout.writeln(
     '| Params                          | Median  | Min    | Max    | Budget |'
-        '\n'
-        '| ------------------------------- | ------- | ------ | ------ | ------ |',
+    '\n'
+    '| ------------------------------- | ------- | ------ | ------ | ------ |',
   );
 
   for (final p in _paramMatrix) {
@@ -128,8 +144,12 @@ Future<void> main(List<String> args) async {
   stdout.writeln('');
   stdout.writeln('Notes:');
   stdout.writeln('  - Dev-laptop numbers are 5-15x faster than API 21 device.');
-  stdout.writeln('  - Multiply medians by ~10 to estimate worst-case on-device.');
-  stdout.writeln('  - Use the highest row that still fits the budget on-device.');
+  stdout.writeln(
+    '  - Multiply medians by ~10 to estimate worst-case on-device.',
+  );
+  stdout.writeln(
+    '  - Use the highest row that still fits the budget on-device.',
+  );
   stdout.writeln('  - Update Argon2idParams.production in');
   stdout.writeln('    lib/features/auth/domain/services/password_hasher.dart');
   stdout.writeln('    once the device run confirms a winning row.');

@@ -25,8 +25,7 @@ final routerProvider = Provider<AppRouter>((ref) {
     authGuard: AuthGuard(),
     restoreGuard: RestoreGuard(
       database: db,
-      hasCloudAccount: () =>
-          ref.read(authStateProvider).isCloudBorn,
+      hasCloudAccount: () => ref.read(authStateProvider).isCloudBorn,
     ),
     profileGuard: ProfileGuard(
       database: db,

@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/profile_programs.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'profile_program_dao.g.dart';
 
@@ -40,14 +40,15 @@ class ProfileProgramDao extends DatabaseAccessor<UserDatabase>
       curriculumType,
     );
     if (existing != null) {
-      await (update(profilePrograms)..where((t) => t.id.equals(existing.id)))
-          .write(
-            ProfileProgramsCompanion(
-              programId: Value(programId),
-              trackingStartDate: Value(trackingStartDate),
-              trackingStartRef: Value(trackingStartRef),
-            ),
-          );
+      await (update(
+        profilePrograms,
+      )..where((t) => t.id.equals(existing.id))).write(
+        ProfileProgramsCompanion(
+          programId: Value(programId),
+          trackingStartDate: Value(trackingStartDate),
+          trackingStartRef: Value(trackingStartRef),
+        ),
+      );
     } else {
       await insertProfileProgram(
         ProfileProgramsCompanion.insert(

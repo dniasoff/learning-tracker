@@ -32,13 +32,15 @@ UserDatabase _createInMemoryDatabase() {
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -50,7 +52,6 @@ void main() {
     tags: ['story_13_1'],
     () {
       late UserDatabase database;
-      late int trackId;
       late MockFirestoreDataSource mockFirestore;
       late MockConnectivityService mockConnectivity;
       late Talker logger;
@@ -59,7 +60,7 @@ void main() {
 
       setUp(() async {
         database = _createInMemoryDatabase();
-        trackId = await _insertTrack(database);
+        await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
         mockConnectivity = MockConnectivityService();
         logger = Talker();

@@ -26,8 +26,7 @@ class UpgradeToCloudScreen extends ConsumerStatefulWidget {
 
 enum _CollisionChoice { none, upload, discard }
 
-class _UpgradeToCloudScreenState
-    extends ConsumerState<UpgradeToCloudScreen> {
+class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _cloudPasswordController = TextEditingController();
@@ -104,8 +103,10 @@ class _UpgradeToCloudScreenState
       return;
     }
     if (_choice == _CollisionChoice.discard && !_discardAcknowledged) {
-      setState(() => _error =
-          'Please acknowledge that local data will be replaced by cloud data.');
+      setState(
+        () => _error =
+            'Please acknowledge that local data will be replaced by cloud data.',
+      );
       return;
     }
 
@@ -224,17 +225,15 @@ class _UpgradeToCloudScreenState
                     decoration: const InputDecoration(
                       labelText: 'Confirm your password',
                     ),
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? 'Password required'
-                        : null,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Password required' : null,
                     enabled: !_isLoading,
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     Text(
                       _error!,
-                      style:
-                          TextStyle(color: theme.colorScheme.error),
+                      style: TextStyle(color: theme.colorScheme.error),
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -365,11 +364,10 @@ class _CollisionBlock extends StatelessWidget {
             theme: theme,
             selected: choice == _CollisionChoice.discard,
             title: 'Keep cloud, discard local',
-            subtitle: 'Sign in to the existing cloud account. Your local-only '
+            subtitle:
+                'Sign in to the existing cloud account. Your local-only '
                 'changes on this device are replaced with cloud data.',
-            onTap: isLoading
-                ? null
-                : () => onChoose(_CollisionChoice.discard),
+            onTap: isLoading ? null : () => onChoose(_CollisionChoice.discard),
           ),
           if (choice != _CollisionChoice.none) ...[
             const SizedBox(height: 16),

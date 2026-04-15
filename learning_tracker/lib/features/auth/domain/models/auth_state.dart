@@ -30,12 +30,12 @@ class AuthUser {
   });
 
   factory AuthUser.fromProfile(UserProfile profile) => AuthUser(
-        profileId: profile.id,
-        email: profile.email,
-        displayName: profile.displayName,
-        userMode: profile.userMode,
-        firebaseUid: profile.firebaseUid,
-      );
+    profileId: profile.id,
+    email: profile.email,
+    displayName: profile.displayName,
+    userMode: profile.userMode,
+    firebaseUid: profile.firebaseUid,
+  );
 
   final int profileId;
   final String email;
@@ -54,20 +54,18 @@ class AuthState {
   });
 
   const AuthState.initializing()
-      : currentUser = null,
-        tier = null,
-        sessionStatus = SessionStatus.initializing;
+    : currentUser = null,
+      tier = null,
+      sessionStatus = SessionStatus.initializing;
 
   const AuthState.signedOut()
-      : currentUser = null,
-        tier = null,
-        sessionStatus = SessionStatus.signedOut;
+    : currentUser = null,
+      tier = null,
+      sessionStatus = SessionStatus.signedOut;
 
-  const AuthState.signedIn({
-    required AuthUser user,
-    required Tier this.tier,
-  })  : currentUser = user,
-        sessionStatus = SessionStatus.signedIn;
+  const AuthState.signedIn({required AuthUser user, required Tier this.tier})
+    : currentUser = user,
+      sessionStatus = SessionStatus.signedIn;
 
   final AuthUser? currentUser;
   final Tier? tier;

@@ -101,7 +101,10 @@ class PointsService {
   }
 
   /// Seed default point configs for a curriculum if none exist.
-  Future<void> ensureDefaultConfigs(String curriculumId, {required int trackId}) async {
+  Future<void> ensureDefaultConfigs(
+    String curriculumId, {
+    required int trackId,
+  }) async {
     final existing = await _database.pointConfigDao.getConfigsByCurriculum(
       curriculumId,
     );

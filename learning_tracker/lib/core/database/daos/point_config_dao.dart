@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'point_config_dao.g.dart';
 

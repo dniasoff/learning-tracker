@@ -335,8 +335,7 @@ class _BackupSyncSection extends ConsumerWidget {
       subtitle: const Text('Upgrade to enable cloud backup and sync'),
       trailing: isLocalAuth
           ? FilledButton.tonal(
-              onPressed: () =>
-                  context.pushRoute(const UpgradeToCloudRoute()),
+              onPressed: () => context.pushRoute(const UpgradeToCloudRoute()),
               child: const Text('Upgrade to Cloud'),
             )
           : null,
@@ -637,8 +636,9 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.15),
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -732,9 +732,7 @@ class _LocalBornProfileRow extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    NoBackupBadge(),
-                  ],
+                  children: [NoBackupBadge()],
                 ),
               ],
             ),

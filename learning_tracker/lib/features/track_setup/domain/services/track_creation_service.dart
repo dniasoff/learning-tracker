@@ -65,14 +65,16 @@ class TrackCreationService {
     }
 
     // 2. Resolve the trackId — activation created the personal track above.
-    final track = await (
-      _database.select(_database.curriculumTracks)
-        ..where((t) =>
-            t.profileId.equals(profileId) &
-            t.curriculumId.equals(curriculum.storageKey) &
-            t.trackType.equals(TrackType.personal.storageKey))
-        ..limit(1)
-    ).getSingleOrNull();
+    final track =
+        await (_database.select(_database.curriculumTracks)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculum.storageKey) &
+                    t.trackType.equals(TrackType.personal.storageKey),
+              )
+              ..limit(1))
+            .getSingleOrNull();
     if (track == null) {
       throw StateError(
         'No curriculum track found after activation for '
@@ -150,9 +152,9 @@ class TrackCreationService {
           result.startingRef!.substring('offset:'.length),
         );
         if (offset != null) {
-          trackingStartDate = DateTime.now()
-              .toUtc()
-              .add(Duration(days: offset));
+          trackingStartDate = DateTime.now().toUtc().add(
+            Duration(days: offset),
+          );
         }
       }
 
@@ -225,7 +227,10 @@ class TrackCreationService {
       curriculumId.storageKey,
     );
     if (existing.isEmpty) {
-      await _database.pointConfigDao.seedDefaults(curriculumId.storageKey, trackId);
+      await _database.pointConfigDao.seedDefaults(
+        curriculumId.storageKey,
+        trackId,
+      );
     }
   }
 }

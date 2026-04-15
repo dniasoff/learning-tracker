@@ -86,6 +86,12 @@ class ContentDatabase extends _$ContentDatabase {
         }
       },
       beforeOpen: (details) async {
+        // Skip upsert when the database was just created — onCreate already
+        // seeded everything. Running _upsertLearningPrograms after onCreate
+        // would INSERT OR REPLACE, assigning new auto-increment IDs and
+        // orphaning test_dates that reference the original IDs.
+        if (details.wasCreated) return;
+
         // Always re-seed learning programs to ensure data is current.
         // Uses INSERT OR REPLACE keyed on `name` so updated seed data
         // (e.g. Oraysa review stages — DNI-201) propagates to existing installs.
@@ -97,16 +103,13 @@ class ContentDatabase extends _$ContentDatabase {
             await _seedLearningPrograms();
           } catch (_) {}
         }
+        // Re-seed test dates referencing the (now-updated) program IDs.
         try {
-          final count = await customSelect(
-            'SELECT COUNT(*) AS c FROM test_dates',
-          ).getSingle();
-          if ((count.read<int>('c')) == 0) {
-            await _seedTestDates();
-          }
-        } catch (_) {
+          await customStatement('DELETE FROM test_dates');
+        } catch (_) {}
+        try {
           await _seedTestDates();
-        }
+        } catch (_) {}
       },
     );
   }

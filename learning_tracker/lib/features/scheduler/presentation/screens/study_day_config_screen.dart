@@ -133,21 +133,23 @@ class StudyDayConfigScreen extends ConsumerWidget {
     final profileId = ref.read(activeProfileIdProvider);
     // Look up trackId then upsert
     (db.select(db.curriculumTracks)
-          ..where((t) =>
-              t.profileId.equals(profileId) &
-              t.curriculumId.equals(curriculumId.storageKey))
+          ..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumId.equals(curriculumId.storageKey),
+          )
           ..limit(1))
         .getSingleOrNull()
         .then((track) {
-      final trackId = track?.id ?? 0;
-      db.studyDayConfigDao.upsertDayConfig(
-        profileId: profileId,
-        curriculumId: curriculumId.storageKey,
-        trackId: trackId,
-        dayOfWeek: dayOfWeek,
-        dayType: newType.storageKey,
-      );
-    });
+          final trackId = track?.id ?? 0;
+          db.studyDayConfigDao.upsertDayConfig(
+            profileId: profileId,
+            curriculumId: curriculumId.storageKey,
+            trackId: trackId,
+            dayOfWeek: dayOfWeek,
+            dayType: newType.storageKey,
+          );
+        });
     ref.invalidate(allDailyTasksProvider);
   }
 }

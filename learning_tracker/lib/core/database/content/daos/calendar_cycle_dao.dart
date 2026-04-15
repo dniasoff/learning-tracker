@@ -19,12 +19,9 @@ class CalendarCycleDao extends DatabaseAccessor<ContentDatabase>
   /// Returns null if no data exists for this (program, date) pair.
   /// Primary query used by [LocalCalendarEngine.getEntry] (Story 19.4 AC-1).
   Future<CalendarCycle?> getEntry(String programId, String dateKey) =>
-      (select(calendarCycles)
-            ..where(
-              (t) =>
-                  t.programKey.equals(programId) &
-                  t.dateKey.equals(dateKey),
-            ))
+      (select(calendarCycles)..where(
+            (t) => t.programKey.equals(programId) & t.dateKey.equals(dateKey),
+          ))
           .getSingleOrNull();
 
   /// Get all program entries for a specific date.
@@ -58,8 +55,7 @@ class CalendarCycleDao extends DatabaseAccessor<ContentDatabase>
   Future<CalendarCycle?> getCycleForProgramAndDate(
     String programKey,
     String dateKey,
-  ) =>
-      getEntry(programKey, dateKey);
+  ) => getEntry(programKey, dateKey);
 
   /// Deprecated: use [getEntriesForDate] instead.
   Future<List<CalendarCycle>> getCyclesForDate(String dateKey) =>
@@ -70,6 +66,5 @@ class CalendarCycleDao extends DatabaseAccessor<ContentDatabase>
     String programKey,
     String startDate,
     String endDate,
-  ) =>
-      getEntriesForRange(programKey, startDate, endDate);
+  ) => getEntriesForRange(programKey, startDate, endDate);
 }

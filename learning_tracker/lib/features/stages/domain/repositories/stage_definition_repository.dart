@@ -33,10 +33,16 @@ abstract class StageDefinitionRepository {
   /// Seeds default stages (Learn, Chazara 1, Chazara 2) if none exist.
   ///
   /// Idempotent — no-op if stages already exist for this curriculum.
-  Future<void> initializeDefaults(CurriculumId curriculumId, {required int trackId});
+  Future<void> initializeDefaults(
+    CurriculumId curriculumId, {
+    required int trackId,
+  });
 
   /// Removes all stages and restores the 3 defaults.
-  Future<void> resetToDefaults(CurriculumId curriculumId, {required int trackId});
+  Future<void> resetToDefaults(
+    CurriculumId curriculumId, {
+    required int trackId,
+  });
 
   /// Returns true if any completions reference the given stage ID.
   Future<bool> hasCompletionsForStage(int stageId);

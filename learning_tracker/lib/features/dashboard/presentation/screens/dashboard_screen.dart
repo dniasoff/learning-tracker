@@ -25,7 +25,9 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaStreamProvider);
+    final activeCurriculaAsync = ref.watch(
+      dashboardActiveCurriculaStreamProvider,
+    );
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final selectedProfileAsync = ref.watch(selectedProfileProvider);
@@ -1103,8 +1105,9 @@ class _EmptyDashboard extends StatelessWidget {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => context.router
-                        .push(TrackManagementHubRoute(startAdding: true)),
+                    onTap: () => context.router.push(
+                      TrackManagementHubRoute(startAdding: true),
+                    ),
                     borderRadius: BorderRadius.circular(26),
                     child: const Center(
                       child: Text(

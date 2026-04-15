@@ -9,13 +9,15 @@ void main() {
 
   setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
-    trackId = await database.into(database.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    trackId = await database
+        .into(database.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
   });
 
   tearDown(() async {
@@ -101,13 +103,15 @@ void main() {
 
     test('countStagesForCurriculum is scoped to curriculum', () async {
       await insertStage(stageOrder: 1);
-      final bavliTrackId = await database.into(database.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now(),
-        ),
-      );
+      final bavliTrackId = await database
+          .into(database.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
       await database.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'bavli',
@@ -140,13 +144,15 @@ void main() {
       'deleteAllForCurriculum removes only that curriculum stages',
       () async {
         await insertStage(stageOrder: 1);
-        final bavliTrackId = await database.into(database.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            curriculumId: 'bavli',
-            trackType: 'personal',
-            activatedAt: DateTime.now(),
-          ),
-        );
+        final bavliTrackId = await database
+            .into(database.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                curriculumId: 'bavli',
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: 'bavli',

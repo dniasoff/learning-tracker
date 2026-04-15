@@ -532,12 +532,14 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         final wizardResult = result.wizardResult;
 
         // Look up the trackId for this track
-        final track = await (db.select(db.curriculumTracks)
-              ..where((t) =>
-                  t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculum.storageKey) &
-                  t.trackType.equals(widget.trackType)))
-            .getSingleOrNull();
+        final track =
+            await (db.select(db.curriculumTracks)..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(curriculum.storageKey) &
+                      t.trackType.equals(widget.trackType),
+                ))
+                .getSingleOrNull();
         final trackId = track?.id ?? 0;
 
         // Delete existing stages and recreate
@@ -623,12 +625,14 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           );
         } else {
           // Look up the trackId for this track
-          final track = await (db.select(db.curriculumTracks)
-                ..where((t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(widget.curriculumId) &
-                    t.trackType.equals(widget.trackType)))
-              .getSingleOrNull();
+          final track =
+              await (db.select(db.curriculumTracks)..where(
+                    (t) =>
+                        t.profileId.equals(profileId) &
+                        t.curriculumId.equals(widget.curriculumId) &
+                        t.trackType.equals(widget.trackType),
+                  ))
+                  .getSingleOrNull();
           final trackId = track?.id ?? 0;
 
           await db

@@ -327,7 +327,12 @@ void main() {
         ),
       ];
 
-      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
+      final config = ScheduleConfig(
+        curriculumId: curriculum,
+        trackId: 1,
+        trackLabel: 'Test Track',
+        currentDate: now,
+      );
 
       final tasks = await engine.generateDailyTasks(config);
 
@@ -482,7 +487,12 @@ void main() {
       contentRepo.items = makeItems(10);
       stageRepo.stages = [];
 
-      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
+      final config = ScheduleConfig(
+        curriculumId: curriculum,
+        trackId: 1,
+        trackLabel: 'Test Track',
+        currentDate: now,
+      );
 
       final tasks = await engine.generateDailyTasks(config);
       expect(tasks, isEmpty);
@@ -492,7 +502,12 @@ void main() {
       contentRepo.items = [];
       stageRepo.stages = threeStages();
 
-      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
+      final config = ScheduleConfig(
+        curriculumId: curriculum,
+        trackId: 1,
+        trackLabel: 'Test Track',
+        currentDate: now,
+      );
 
       final tasks = await engine.generateDailyTasks(config);
       expect(tasks, isEmpty);

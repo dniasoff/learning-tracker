@@ -424,8 +424,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 // Auto-advance past single-option levels on initial load
                 if (!_didInitialAutoAdvance && !isSearchActive) {
                   _didInitialAutoAdvance = true;
-                  if (displayItems.length == 1 &&
-                      !displayItems.first.isLeaf) {
+                  if (displayItems.length == 1 && !displayItems.first.isLeaf) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) _drillDown(displayItems.first);
                     });

@@ -26,13 +26,15 @@ import 'package:learning_tracker/features/track_setup/presentation/screens/track
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -40,12 +42,11 @@ void main() {
   group('Epic 4.1: Track Management - Story Acceptance Tests', () {
     group('AC1: Each curriculum starts with personal track only', () {
       late UserDatabase database;
-      late int trackId;
       late TrackRepository repository;
 
       setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
-        trackId = await _insertTrack(database);
+        await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -75,7 +76,6 @@ void main() {
       'AC2: User can add school track and/or tutor track per curriculum',
       () {
         late UserDatabase database;
-      late int trackId;
         late TrackRepository repository;
 
         setUp(() {
@@ -137,12 +137,11 @@ void main() {
 
     group('AC3: Removing track preserves completion data', () {
       late UserDatabase database;
-      late int trackId;
       late TrackRepository repository;
 
       setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
-        trackId = await _insertTrack(database);
+        await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -207,12 +206,11 @@ void main() {
 
     group('AC4: Track status synced per curriculum', () {
       late UserDatabase database;
-      late int trackId;
       late TrackRepository repository;
 
       setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
-        trackId = await _insertTrack(database);
+        await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 
@@ -308,12 +306,11 @@ void main() {
 
     group('Integration Tests', () {
       late UserDatabase database;
-      late int trackId;
       late TrackRepository repository;
 
       setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
-        trackId = await _insertTrack(database);
+        await _insertTrack(database);
         repository = TrackRepositoryImpl(database: database);
       });
 

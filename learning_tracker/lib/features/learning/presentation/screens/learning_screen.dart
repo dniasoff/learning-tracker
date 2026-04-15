@@ -19,7 +19,9 @@ class LearningScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(dashboardActiveCurriculaStreamProvider);
+    final activeCurriculaAsync = ref.watch(
+      dashboardActiveCurriculaStreamProvider,
+    );
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
@@ -47,8 +49,9 @@ class LearningScreen extends ConsumerWidget {
                 subtitle: 'Add a track to start learning.',
                 icon: Icons.menu_book_outlined,
                 action: FilledButton.icon(
-                  onPressed: () =>
-                      context.router.push(TrackManagementHubRoute(startAdding: true)),
+                  onPressed: () => context.router.push(
+                    TrackManagementHubRoute(startAdding: true),
+                  ),
                   icon: const Icon(Icons.add),
                   label: const Text('Add Track'),
                 ),

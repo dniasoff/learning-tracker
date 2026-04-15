@@ -21,11 +21,7 @@ import 'package:learning_tracker/features/onboarding/domain/validators/auth_vali
 /// button is enabled.
 @RoutePage()
 class LocalSignupScreen extends ConsumerStatefulWidget {
-  const LocalSignupScreen({
-    super.key,
-    this.prefilledName,
-    this.prefilledEmail,
-  });
+  const LocalSignupScreen({super.key, this.prefilledName, this.prefilledEmail});
 
   /// Pre-fills the name field when the user is bounced here from the
   /// cloud signup screen after a connectivity drop. Lets them keep
@@ -107,9 +103,11 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
         unawaited(context.router.push(const OnboardingRoute()));
       }
     } on DuplicateEmailException {
-      setState(() =>
-          _submitError = 'An offline account already exists on this device '
-              'with that email.');
+      setState(
+        () => _submitError =
+            'An offline account already exists on this device '
+            'with that email.',
+      );
     } on InvalidInputException catch (e) {
       setState(() => _submitError = e.reason);
     } catch (e) {
@@ -257,8 +255,7 @@ class _WarningBlock extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: theme.colorScheme.error),
+              Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -280,14 +277,20 @@ class _WarningBlock extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _bullet(theme,
-              'Forget your password → your account and all progress are '
-              'unrecoverable'),
-          _bullet(theme,
-              'Lose or wipe this device → your data cannot be restored'),
-          _bullet(theme,
-              "Want to use the app on another device → you'll need to "
-              'create a new account there'),
+          _bullet(
+            theme,
+            'Forget your password → your account and all progress are '
+            'unrecoverable',
+          ),
+          _bullet(
+            theme,
+            'Lose or wipe this device → your data cannot be restored',
+          ),
+          _bullet(
+            theme,
+            "Want to use the app on another device → you'll need to "
+            'create a new account there',
+          ),
           const SizedBox(height: 12),
           Text(
             'When you connect to the internet later, you can optionally '
@@ -308,10 +311,12 @@ class _WarningBlock extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('• ',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onErrorContainer,
-              )),
+          Text(
+            '• ',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onErrorContainer,
+            ),
+          ),
           Expanded(
             child: Text(
               text,

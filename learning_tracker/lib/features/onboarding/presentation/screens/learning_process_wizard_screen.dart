@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
-import 'package:learning_tracker/core/database/content/content_database.dart' as db;
+import 'package:learning_tracker/core/database/content/content_database.dart'
+    as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -450,9 +451,7 @@ class _CustomRoundState {
   /// Spaced repetition defaults: 1 day, 7 days, 30 days, 60 days, 90 days.
   static _CustomRoundState withDefault(int roundIndex) {
     const defaults = [1, 7, 30, 60, 90];
-    final delay = roundIndex < defaults.length
-        ? defaults[roundIndex]
-        : 90;
+    final delay = roundIndex < defaults.length ? defaults[roundIndex] : 90;
     return _CustomRoundState(delayDays: delay);
   }
 }

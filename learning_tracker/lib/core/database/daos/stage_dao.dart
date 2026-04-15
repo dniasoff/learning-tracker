@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'stage_dao.g.dart';
 

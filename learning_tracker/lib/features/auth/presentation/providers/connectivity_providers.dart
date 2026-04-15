@@ -8,8 +8,9 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 ///
 /// Exposed as a provider so tests can override with a fake that
 /// emits a scripted sequence without touching the network.
-final internetConnectionCheckerProvider =
-    Provider<InternetConnectionChecker>((ref) {
+final internetConnectionCheckerProvider = Provider<InternetConnectionChecker>((
+  ref,
+) {
   final checker = InternetConnectionChecker.createInstance();
   ref.onDispose(checker.dispose);
   return checker;

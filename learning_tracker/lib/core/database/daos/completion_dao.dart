@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'completion_dao.g.dart';
 
@@ -348,8 +348,7 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     int profileId,
   ) =>
       (select(completions)..where(
-            (t) =>
-                t.trackId.equals(trackId) & t.profileId.equals(profileId),
+            (t) => t.trackId.equals(trackId) & t.profileId.equals(profileId),
           ))
           .get();
 

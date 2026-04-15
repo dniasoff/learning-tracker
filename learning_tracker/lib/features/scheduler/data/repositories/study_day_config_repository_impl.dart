@@ -1,7 +1,7 @@
+import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart'
     as db
     show StudyDayConfig;
-import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
@@ -61,7 +61,10 @@ class StudyDayConfigRepositoryImpl implements StudyDayConfigRepository {
   }
 
   @override
-  Future<void> seedDefaults(CurriculumId curriculumId, {required int trackId}) async {
+  Future<void> seedDefaults(
+    CurriculumId curriculumId, {
+    required int trackId,
+  }) async {
     await _dao.seedDefaults(
       profileId: _profileId,
       curriculumId: curriculumId.storageKey,

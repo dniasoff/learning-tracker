@@ -807,10 +807,7 @@ class SyncEngine {
         profileId: profileId,
         curriculumId: curriculumId,
       );
-      if (!remoteIsNewer(
-        localUpdatedAt: localTs,
-        remoteUpdatedAt: remoteTs,
-      )) {
+      if (!remoteIsNewer(localUpdatedAt: localTs, remoteUpdatedAt: remoteTs)) {
         _logger.debug(
           'Skipping study day config for $curriculumId: local is newer',
         );
@@ -1424,10 +1421,8 @@ class SyncEngine {
         await pushStreak({
           'current_count': streak.currentStreak,
           'max_count': streak.maxStreak,
-          'last_completion_date':
-              streak.lastCompletionDate?.toIso8601String(),
-          'grace_used_date':
-              streak.graceUsedDate?.toIso8601String(),
+          'last_completion_date': streak.lastCompletionDate?.toIso8601String(),
+          'grace_used_date': streak.graceUsedDate?.toIso8601String(),
           'grace_period_days': streak.gracePeriodDays,
         });
         _logger.debug('Pushed streak');
@@ -1436,8 +1431,9 @@ class SyncEngine {
       // --- Ledger entries ---
       // LearningLedgerDao has no getAll, so query via the database
       // directly using select on the table.
-      final ledgerEntries =
-          await _database.select(_database.learningLedger).get();
+      final ledgerEntries = await _database
+          .select(_database.learningLedger)
+          .get();
       for (final e in ledgerEntries) {
         await pushLedgerEntry({
           'curriculumId': e.curriculumId,
@@ -1456,8 +1452,8 @@ class SyncEngine {
       _logger.debug('Pushed ${ledgerEntries.length} ledger entries');
 
       // --- Active curricula ---
-      final activeCurricula =
-          await _database.activeCurriculumDao.getActiveCurricula();
+      final activeCurricula = await _database.activeCurriculumDao
+          .getActiveCurricula();
       if (activeCurricula.isNotEmpty) {
         await _firestoreDataSource.pushActiveCurricula(activeCurricula);
         _logger.debug('Pushed ${activeCurricula.length} active curricula');

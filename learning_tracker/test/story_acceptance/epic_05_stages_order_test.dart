@@ -31,13 +31,15 @@ ContentItem _makeItem(String ref, {int sortOrder = 0}) {
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -71,7 +73,12 @@ void main() {
     test('user can add a custom chazara stage', () async {
       await repository.initializeDefaults(curriculum, trackId: trackId);
 
-      final newStage = await repository.addStage(curriculum, 'Chazara 3', 30, trackId: trackId);
+      final newStage = await repository.addStage(
+        curriculum,
+        'Chazara 3',
+        30,
+        trackId: trackId,
+      );
 
       expect(newStage.stageName, 'Chazara 3');
       expect(newStage.delayDays, 30);
@@ -113,13 +120,12 @@ void main() {
 
   group('Story 5.2 -- Custom learning order', () {
     late UserDatabase database;
-    late int trackId;
     late _MockContentRepository mockContent;
     late LearningOrderRepositoryImpl repo;
 
     setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
-      trackId = await _insertTrack(database);
+      await _insertTrack(database);
       mockContent = _MockContentRepository();
       repo = LearningOrderRepositoryImpl(
         database: database,

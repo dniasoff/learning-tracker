@@ -39,9 +39,9 @@ class UpgradeToCloudService {
     PasswordHasher? hasher,
     this.registry,
     this.accountId,
-  })  : _dao = dao,
-        _auth = firebaseAuth,
-        _hasher = hasher ?? PasswordHasher();
+  }) : _dao = dao,
+       _auth = firebaseAuth,
+       _hasher = hasher ?? PasswordHasher();
 
   final UserProfileDao _dao;
   final FirebaseAuth _auth;
@@ -115,10 +115,7 @@ class UpgradeToCloudService {
     required String email,
     required String password,
   }) {
-    return _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    return _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
   /// Wipe the local-born profile on a "discard local" merge choice.

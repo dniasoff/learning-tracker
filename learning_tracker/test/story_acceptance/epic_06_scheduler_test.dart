@@ -32,13 +32,15 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -151,7 +153,12 @@ void main() {
         ),
       );
 
-      final config = ScheduleConfig(curriculumId: curriculum, trackId: 1, trackLabel: 'Test Track', currentDate: now);
+      final config = ScheduleConfig(
+        curriculumId: curriculum,
+        trackId: 1,
+        trackLabel: 'Test Track',
+        currentDate: now,
+      );
 
       final tasks = await engine.generateDailyTasks(config);
 
@@ -240,7 +247,12 @@ void main() {
     test(
       'DailyTaskGenerator.generate returns correctly structured DailyTask items',
       () async {
-        final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
+        final tasks = await generator.generate(
+          curriculum,
+          now,
+          trackId: 1,
+          trackLabel: 'Test',
+        );
         expect(tasks, isNotEmpty);
         for (final task in tasks) {
           expect(task.curriculumId, curriculum);
@@ -286,7 +298,12 @@ void main() {
           ),
         );
 
-        final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
+        final tasks = await generator.generate(
+          curriculum,
+          now,
+          trackId: 1,
+          trackLabel: 'Test',
+        );
 
         final overdueIdx = tasks.indexWhere(
           (t) => t.priority == DailyTaskPriority.overdueChazara,
@@ -341,7 +358,12 @@ void main() {
           ),
         );
 
-        final tasks = await generator.generate(curriculum, now, trackId: 1, trackLabel: 'Test');
+        final tasks = await generator.generate(
+          curriculum,
+          now,
+          trackId: 1,
+          trackLabel: 'Test',
+        );
 
         expect(
           tasks.any(

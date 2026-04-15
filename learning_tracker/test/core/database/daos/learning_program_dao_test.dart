@@ -26,8 +26,9 @@ void main() {
     });
 
     test('getProgramByName finds a specific program', () async {
-      final program =
-          await db.contentLearningProgramDao.getProgramByName('oraysa');
+      final program = await db.contentLearningProgramDao.getProgramByName(
+        'oraysa',
+      );
       expect(program, isNotNull);
       expect(program!.displayName, 'Oraysa');
       expect(program.curriculumType, 'bavli');
@@ -50,8 +51,7 @@ void main() {
     test('getProgramById returns correct program', () async {
       final all = await db.contentLearningProgramDao.getAllPrograms();
       final first = all.first;
-      final found =
-          await db.contentLearningProgramDao.getProgramById(first.id);
+      final found = await db.contentLearningProgramDao.getProgramById(first.id);
       expect(found, isNotNull);
       expect(found!.name, first.name);
     });

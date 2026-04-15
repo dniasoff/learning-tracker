@@ -68,8 +68,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 return _ProfileCard(
                   profile: profile,
                   onTap: () => _selectProfile(profile.id),
-                  onLongPress: () =>
-                      _showManageSheet(profile, profiles.length),
+                  onLongPress: () => _showManageSheet(profile, profiles.length),
                 );
               },
             ),
@@ -155,10 +154,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               ),
               FilledButton(
                 onPressed: ctrl.text.trim().isNotEmpty && err == null
-                    ? () => Navigator.pop(ctx, (
-                        n: ctrl.text.trim(),
-                        m: mode,
-                      ))
+                    ? () => Navigator.pop(ctx, (n: ctrl.text.trim(), m: mode))
                     : null,
                 child: const Text('Create'),
               ),
@@ -201,10 +197,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   // ── Manage (Long-press) ───────────────────────────────────────────────────
 
-  Future<void> _showManageSheet(
-    ProfileModel profile,
-    int profileCount,
-  ) async {
+  Future<void> _showManageSheet(ProfileModel profile, int profileCount) async {
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(

@@ -48,9 +48,9 @@ class MagicLinkService {
     required AuthRepository authRepository,
     required Future<void> Function(User user) onSignedIn,
     AppLinks? appLinks,
-  })  : _authRepository = authRepository,
-        _onSignedIn = onSignedIn,
-        _appLinks = appLinks ?? AppLinks();
+  }) : _authRepository = authRepository,
+       _onSignedIn = onSignedIn,
+       _appLinks = appLinks ?? AppLinks();
 
   final AuthRepository _authRepository;
   final Future<void> Function(User user) _onSignedIn;
@@ -117,8 +117,7 @@ class MagicLinkService {
     }
 
     try {
-      final credential =
-          await _authRepository.signInWithEmailLink(email, link);
+      final credential = await _authRepository.signInWithEmailLink(email, link);
       final user = credential.user;
       if (user != null) {
         // Apply pending display name (if any) before promoting auth state.

@@ -17,8 +17,8 @@ class RestoreGuard extends AutoRouteGuard {
   RestoreGuard({
     required UserDatabase database,
     required bool Function() hasCloudAccount,
-  })  : _database = database,
-        _hasCloudAccount = hasCloudAccount;
+  }) : _database = database,
+       _hasCloudAccount = hasCloudAccount;
 
   final UserDatabase _database;
   final bool Function() _hasCloudAccount;

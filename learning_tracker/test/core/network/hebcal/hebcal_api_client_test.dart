@@ -10,14 +10,13 @@ class _CaptureInterceptor extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     capturedQueryParams = options.queryParameters;
     // Return a fake successful response to avoid actual network call
-    handler.resolve(Response(
-      data: <String, dynamic>{
-        'items': <dynamic>[],
-        'title': 'test',
-      },
-      statusCode: 200,
-      requestOptions: options,
-    ));
+    handler.resolve(
+      Response(
+        data: <String, dynamic>{'items': <dynamic>[], 'title': 'test'},
+        statusCode: 200,
+        requestOptions: options,
+      ),
+    );
   }
 }
 

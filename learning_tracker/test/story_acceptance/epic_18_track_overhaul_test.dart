@@ -30,13 +30,15 @@ class _MockTrackRepository extends Mock implements TrackRepository {}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -63,18 +65,21 @@ void main() {
         expect(AddTrackStep.values.last, AddTrackStep.bulkMark);
       });
 
-      test('AddTrackStep steps are in expected order (program before scope)', () {
-        expect(AddTrackStep.values, [
-          AddTrackStep.curriculum,
-          AddTrackStep.program,
-          AddTrackStep.scope,
-          AddTrackStep.studyDays,
-          AddTrackStep.chazaraSetup,
-          AddTrackStep.goal,
-          AddTrackStep.trackName,
-          AddTrackStep.bulkMark,
-        ]);
-      });
+      test(
+        'AddTrackStep steps are in expected order (program before scope)',
+        () {
+          expect(AddTrackStep.values, [
+            AddTrackStep.curriculum,
+            AddTrackStep.program,
+            AddTrackStep.scope,
+            AddTrackStep.studyDays,
+            AddTrackStep.chazaraSetup,
+            AddTrackStep.goal,
+            AddTrackStep.trackName,
+            AddTrackStep.bulkMark,
+          ]);
+        },
+      );
     },
   );
 
@@ -116,14 +121,13 @@ void main() {
 
       group('AC-6: Points initialization per track', () {
         late UserDatabase db;
-        late int trackId;
         late ContentDatabase contentDb;
         late TrackCreationService service;
         late _MockTrackRepository mockTrackRepo;
 
         setUp(() async {
           db = UserDatabase(NativeDatabase.memory());
-          trackId = await _insertTrack(db);
+          await _insertTrack(db);
           contentDb = createTestContentDatabase();
           mockTrackRepo = _MockTrackRepository();
 
@@ -135,17 +139,18 @@ void main() {
           ).thenAnswer((invocation) async {
             final curriculum =
                 invocation.positionalArguments[0] as CurriculumId;
-            final pId =
-                invocation.namedArguments[#profileId] as int? ?? 0;
+            final pId = invocation.namedArguments[#profileId] as int? ?? 0;
             // Actually create the track so downstream lookups succeed
-            await db.into(db.curriculumTracks).insert(
-              CurriculumTracksCompanion.insert(
-                profileId: Value(pId),
-                curriculumId: curriculum.storageKey,
-                trackType: 'personal',
-                activatedAt: DateTime.now(),
-              ),
-            );
+            await db
+                .into(db.curriculumTracks)
+                .insert(
+                  CurriculumTracksCompanion.insert(
+                    profileId: Value(pId),
+                    curriculumId: curriculum.storageKey,
+                    trackType: 'personal',
+                    activatedAt: DateTime.now(),
+                  ),
+                );
           });
 
           final activationService = CurriculumActivationService(
@@ -373,7 +378,10 @@ void main() {
               pushSettings: (_) async {},
             );
 
-            await repo.initializeDefaults(CurriculumId.mishnayos, trackId: trackId);
+            await repo.initializeDefaults(
+              CurriculumId.mishnayos,
+              trackId: trackId,
+            );
             final stages = await repo.getStagesForCurriculum(
               CurriculumId.mishnayos,
             );
@@ -398,13 +406,15 @@ void main() {
               profileProgramDao: db.profileProgramDao,
             );
 
-            final bavliTrack = await db.into(db.curriculumTracks).insertReturning(
-              CurriculumTracksCompanion.insert(
-                curriculumId: 'bavli',
-                trackType: 'personal',
-                activatedAt: DateTime.now(),
-              ),
-            );
+            final bavliTrack = await db
+                .into(db.curriculumTracks)
+                .insertReturning(
+                  CurriculumTracksCompanion.insert(
+                    curriculumId: 'bavli',
+                    trackType: 'personal',
+                    activatedAt: DateTime.now(),
+                  ),
+                );
 
             await service.applyWizardResult(
               const WizardResult(
@@ -432,13 +442,15 @@ void main() {
             addTearDown(db.close);
             addTearDown(cDb.close);
 
-            final bavliTrack = await db.into(db.curriculumTracks).insertReturning(
-              CurriculumTracksCompanion.insert(
-                curriculumId: 'bavli',
-                trackType: 'personal',
-                activatedAt: DateTime.now(),
-              ),
-            );
+            final bavliTrack = await db
+                .into(db.curriculumTracks)
+                .insertReturning(
+                  CurriculumTracksCompanion.insert(
+                    curriculumId: 'bavli',
+                    trackType: 'personal',
+                    activatedAt: DateTime.now(),
+                  ),
+                );
 
             final service = LearningProcessWizardService(
               stageDao: db.stageDao,

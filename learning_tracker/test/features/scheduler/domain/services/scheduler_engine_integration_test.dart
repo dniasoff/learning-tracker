@@ -40,13 +40,15 @@ void main() {
       const curriculum = CurriculumId.mishnayos;
       final now = DateTime.utc(2026, 3, 15);
 
-      final trackRow = await db.into(db.curriculumTracks).insertReturning(
-        CurriculumTracksCompanion.insert(
-          curriculumId: curriculum.storageKey,
-          trackType: 'personal',
-          activatedAt: DateTime.now(),
-        ),
-      );
+      final trackRow = await db
+          .into(db.curriculumTracks)
+          .insertReturning(
+            CurriculumTracksCompanion.insert(
+              curriculumId: curriculum.storageKey,
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
       trackId = trackRow.id;
 
       // 1. Set up stages

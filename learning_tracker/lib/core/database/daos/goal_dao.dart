@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'goal_dao.g.dart';
 
@@ -52,9 +52,9 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
   // ========== Track-Scoped Queries (Story 20.2) ==========
 
   /// Get the goal for a specific track (single goal per track).
-  Future<Goal?> getGoalByTrack(int trackId) =>
-      (select(goals)..where((t) => t.trackId.equals(trackId)))
-          .getSingleOrNull();
+  Future<Goal?> getGoalByTrack(int trackId) => (select(
+    goals,
+  )..where((t) => t.trackId.equals(trackId))).getSingleOrNull();
 
   /// Get all goals for a specific track.
   Future<List<Goal>> getGoalsByTrack(int trackId) =>

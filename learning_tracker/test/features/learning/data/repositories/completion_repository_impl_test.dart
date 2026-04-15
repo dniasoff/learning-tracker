@@ -30,23 +30,27 @@ void main() {
     mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
 
-    final trackRow = await database.into(database.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    final trackRow = await database
+        .into(database.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
     trackId = trackRow.id;
 
     // Also create a school track for tests that use it
-    await database.into(database.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        curriculumId: 'mishnayos',
-        trackType: 'school',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    await database
+        .into(database.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackType: 'school',
+            activatedAt: DateTime.now(),
+          ),
+        );
 
     repository = CompletionRepositoryImpl(
       database: database,

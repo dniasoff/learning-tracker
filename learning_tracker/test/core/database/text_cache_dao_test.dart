@@ -19,8 +19,9 @@ void main() {
 
   group('ContentTextCacheDao (read-only)', () {
     test('returns null for uncached text', () async {
-      final result =
-          await db.contentTextCacheDao.getText('Mishnah Berakhot 1.1');
+      final result = await db.contentTextCacheDao.getText(
+        'Mishnah Berakhot 1.1',
+      );
       expect(result, isNull);
     });
 

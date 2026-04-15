@@ -42,13 +42,15 @@ Future<void> _noOpPush({
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -57,12 +59,11 @@ void main() {
 
   group('Story 14.1 -- Settings screen', tags: ['story_14_1'], () {
     late UserDatabase db;
-    late int trackId;
     late UserProfileService profileService;
 
     setUp(() async {
       db = createTestDatabase();
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
       profileService = UserProfileService(
         userProfileDao: db.userProfileDao,
         pushUserProfile: _noOpPush,
@@ -641,7 +642,6 @@ void main() {
     late MockAuthRepository mockAuthRepo;
     late MockFirebaseFirestore mockFirestore;
     late UserDatabase db;
-    late int trackId;
     late AccountManagementService service;
 
     setUp(() {

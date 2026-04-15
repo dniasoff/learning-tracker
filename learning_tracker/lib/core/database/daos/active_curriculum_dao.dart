@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
@@ -88,6 +88,4 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
       )..where((t) => t.curriculumId.equals(curriculum.storageKey))).go();
     });
   }
-
-  
 }

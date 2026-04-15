@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
@@ -120,9 +120,9 @@ class CurriculumScopeDao extends DatabaseAccessor<UserDatabase>
       (select(curriculumScopes)..where((t) => t.trackId.equals(trackId))).get();
 
   /// Watch scopes for a specific track.
-  Stream<List<CurriculumScope>> watchScopesByTrack(int trackId) =>
-      (select(curriculumScopes)..where((t) => t.trackId.equals(trackId)))
-          .watch();
+  Stream<List<CurriculumScope>> watchScopesByTrack(int trackId) => (select(
+    curriculumScopes,
+  )..where((t) => t.trackId.equals(trackId))).watch();
 
   /// Clear all scopes for a specific track.
   Future<int> clearScopesForTrack(int trackId) =>

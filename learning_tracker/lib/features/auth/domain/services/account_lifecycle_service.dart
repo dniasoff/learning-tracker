@@ -16,10 +16,10 @@ class AccountLifecycleService {
     required String databasesPath,
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-  })  : _registry = registry,
-        _dbPath = databasesPath,
-        _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _registry = registry,
+       _dbPath = databasesPath,
+       _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
 
   final DeviceRegistryDatabase _registry;
   final String _dbPath;
@@ -124,7 +124,9 @@ class AccountLifecycleService {
     await userDoc.delete();
   }
 
-  Future<void> _deleteCollection(CollectionReference<Map<String, dynamic>> ref) async {
+  Future<void> _deleteCollection(
+    CollectionReference<Map<String, dynamic>> ref,
+  ) async {
     const batchSize = 500;
     QuerySnapshot<Map<String, dynamic>> snapshot;
     do {

@@ -11,13 +11,15 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
-      trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now(),
-        ),
-      );
+      trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
     });
 
     tearDown(() async {

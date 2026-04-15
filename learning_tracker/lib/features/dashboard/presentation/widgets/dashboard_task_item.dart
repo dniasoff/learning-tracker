@@ -24,17 +24,13 @@ class DashboardTaskItem extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () {}, // Navigate to learning screen
         child: Container(
           decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: borderColor, width: 4),
-            ),
+            border: Border(left: BorderSide(color: borderColor, width: 4)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(

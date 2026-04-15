@@ -26,11 +26,9 @@ class SeedManager {
   ///
   /// [dbDirectory] is the path where content.db will be stored
   /// (typically from `getApplicationDocumentsDirectory()`).
-  SeedManager({
-    required String dbDirectory,
-    Talker? talker,
-  })  : _dbDirectory = dbDirectory,
-        _talker = talker;
+  SeedManager({required String dbDirectory, Talker? talker})
+    : _dbDirectory = dbDirectory,
+      _talker = talker;
 
   final String _dbDirectory;
   final Talker? _talker;

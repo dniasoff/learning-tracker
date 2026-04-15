@@ -135,7 +135,12 @@ void main() {
           ],
         );
 
-        final result = await repository.addStage(curriculum, 'Chazara 3', 30, trackId: 1);
+        final result = await repository.addStage(
+          curriculum,
+          'Chazara 3',
+          30,
+          trackId: 1,
+        );
 
         expect(result.stageOrder, 4);
         expect(result.isDefault, false);

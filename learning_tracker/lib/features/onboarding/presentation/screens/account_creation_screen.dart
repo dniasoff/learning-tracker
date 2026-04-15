@@ -8,8 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -133,8 +133,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     // which backend handles the signup. The stream keeps the UI
     // honest (banner/warning); the one-shot prevents stale-stream
     // race conditions at execution time.
-    final isOnline =
-        await InternetConnectionChecker.instance.hasConnection;
+    final isOnline = await InternetConnectionChecker.instance.hasConnection;
 
     if (!isOnline) {
       // Offline path — local-born via argon2id.
@@ -226,11 +225,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
   /// Shown when the one-shot said "online" but Firebase threw
   /// network-request-failed mid-call. Offers to create an offline
   /// account instead or retry.
-  void _showFallbackDialog(
-    String email,
-    String password,
-    String displayName,
-  ) {
+  void _showFallbackDialog(String email, String password, String displayName) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -260,7 +255,6 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     );
   }
 
-
   Future<void> _signUpWithGoogle() async {
     setState(() => _isLoading = true);
     try {
@@ -275,8 +269,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       final registry = ref.read(deviceRegistryProvider);
       final accounts = await registry.getAllAccounts();
       // Only count if this is genuinely a NEW account on this device
-      final existingEntry =
-          await registry.findByFirebaseUid(googleUser.uid);
+      final existingEntry = await registry.findByFirebaseUid(googleUser.uid);
       if (existingEntry == null && accounts.length >= kMaxDeviceAccounts) {
         if (mounted) {
           _showError(
@@ -290,8 +283,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       }
 
       // Epic 21.6: check collision with local-born account
-      final localMatch =
-          await registry.findByEmail(googleUser.email ?? '');
+      final localMatch = await registry.findByEmail(googleUser.email ?? '');
       if (localMatch != null && localMatch.tier == 'localBorn') {
         // Google returned an email matching a local-born account on
         // this device — route to collision/upgrade flow instead of
@@ -307,7 +299,9 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       }
 
       // Promote auth state so SyncEngine activates
-      await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(googleUser);
+      await ref
+          .read(auth_state.authStateProvider.notifier)
+          .promoteToCloud(googleUser);
       if (!mounted) return;
 
       // If onboarding was already completed on this device, skip it.
@@ -392,10 +386,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     // Epic 21.5: watch connectivity to toggle the offline warning
     // block and Google button visibility in real time.
     final connectivity = ref.watch(connectivityStreamProvider);
-    final isOnline = connectivity.maybeWhen(
-      data: (v) => v,
-      orElse: () => true,
-    );
+    final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
 
     return Scaffold(
       body: SafeArea(
@@ -461,8 +452,11 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.cloud_off,
-                                color: Color(0xFFFF6B6B), size: 20),
+                            const Icon(
+                              Icons.cloud_off,
+                              color: Color(0xFFFF6B6B),
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               "You're offline",
@@ -495,9 +489,11 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                                 onChanged: _isLoading
                                     ? null
                                     : (v) => setState(
-                                        () => _offlineAcknowledged = v ?? false),
+                                        () => _offlineAcknowledged = v ?? false,
+                                      ),
                                 side: const BorderSide(
-                                    color: Color(0xFFFF6B6B)),
+                                  color: Color(0xFFFF6B6B),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -709,9 +705,11 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                             color: Colors.black,
                           ),
                         )
-                      : Text(isOnline
-                            ? 'Create Account'
-                            : 'Create Offline Account'),
+                      : Text(
+                          isOnline
+                              ? 'Create Account'
+                              : 'Create Offline Account',
+                        ),
                 ),
 
                 // Google Sign-In section — only shown when online

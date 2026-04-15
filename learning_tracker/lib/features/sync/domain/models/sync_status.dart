@@ -16,6 +16,7 @@ sealed class SyncStatus with _$SyncStatus {
   /// Local-born tier — sync permanently disabled (v2 §4.5).
   /// Previously "no account"; v2 frames this as an immutable tier.
   const factory SyncStatus.localOnly() = SyncStatusLocalOnly;
+
   /// Sync operation is currently in progress.
   const factory SyncStatus.syncing({required DateTime startedAt}) =
       SyncStatusSyncing;

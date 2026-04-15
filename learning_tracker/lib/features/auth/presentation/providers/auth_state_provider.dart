@@ -26,8 +26,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
       final dao = ref.read(userDatabaseProvider).userProfileDao;
-      final profile =
-          await dao.findCloudBornByFirebaseUid(firebaseUser.uid);
+      final profile = await dao.findCloudBornByFirebaseUid(firebaseUser.uid);
       if (profile != null) {
         state = AuthState.signedIn(
           user: AuthUser.fromProfile(profile),
@@ -55,9 +54,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
 
   /// Promote the current session to signed-in (cloud-born).
   /// Invoked from the cloud-born sign-up/sign-in flows.
-  void setCloudBornSession({
-    required UserProfile profile,
-  }) {
+  void setCloudBornSession({required UserProfile profile}) {
     state = AuthState.signedIn(
       user: AuthUser.fromProfile(profile),
       tier: Tier.cloudBorn,
@@ -66,9 +63,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
 
   /// Set the current session to signed-in (local-born).
   /// Invoked from `LocalAuthService.signIn`.
-  void setLocalBornSession({
-    required UserProfile profile,
-  }) {
+  void setLocalBornSession({required UserProfile profile}) {
     state = AuthState.signedIn(
       user: AuthUser.fromProfile(profile),
       tier: Tier.localBorn,

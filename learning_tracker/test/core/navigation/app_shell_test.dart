@@ -103,9 +103,7 @@ void main() {
   late UserDatabase db;
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({
-      'onboarding_complete': true,
-    });
+    SharedPreferences.setMockInitialValues({'onboarding_complete': true});
     db = createTestDatabase();
   });
 

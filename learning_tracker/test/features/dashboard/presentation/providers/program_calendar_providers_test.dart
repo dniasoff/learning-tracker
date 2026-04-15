@@ -105,8 +105,8 @@ void main() {
       CalendarStatus deriveStatus(int delta) => delta > 0
           ? CalendarStatus.ahead
           : delta == 0
-              ? CalendarStatus.caughtUp
-              : CalendarStatus.behind;
+          ? CalendarStatus.caughtUp
+          : CalendarStatus.behind;
 
       test('positive delta -> ahead', () {
         expect(deriveStatus(1), CalendarStatus.ahead);

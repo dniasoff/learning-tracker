@@ -13,27 +13,33 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
-      bavliTrackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now(),
-        ),
-      );
-      mishnayosTrackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          curriculumId: 'mishnayos',
-          trackType: 'personal',
-          activatedAt: DateTime.now(),
-        ),
-      );
-      mbTrackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          curriculumId: 'mishna_berurah',
-          trackType: 'personal',
-          activatedAt: DateTime.now(),
-        ),
-      );
+      bavliTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
+      mishnayosTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
+      mbTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              curriculumId: 'mishna_berurah',
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
     });
 
     tearDown(() async {

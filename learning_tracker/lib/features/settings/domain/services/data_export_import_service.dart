@@ -489,10 +489,12 @@ class DataExportImportService {
             .into(_database.userProfiles)
             .insert(
               UserProfilesCompanion.insert(
-                email: (map['email'] as String?) ??
+                email:
+                    (map['email'] as String?) ??
                     (map['firebaseUid'] as String? ?? ''),
                 firebaseUid: Value(map['firebaseUid'] as String?),
-                tier: (map['tier'] as String?) ??
+                tier:
+                    (map['tier'] as String?) ??
                     ((map['firebaseUid'] as String?) != null
                         ? 'cloudBorn'
                         : 'localBorn'),

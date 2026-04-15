@@ -142,8 +142,7 @@ class CalendarProgramRegistry {
 
   /// Look up a program definition by Hebcal category.
   static CalendarProgramDefinition? byHebcalCategory(String category) {
-    final matches =
-        programs.where((p) => p.hebcalCategory == category);
+    final matches = programs.where((p) => p.hebcalCategory == category);
     return matches.isNotEmpty ? matches.first : null;
   }
 

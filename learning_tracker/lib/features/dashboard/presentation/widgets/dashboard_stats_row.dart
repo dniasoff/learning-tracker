@@ -36,9 +36,7 @@ class DashboardStatsRow extends StatelessWidget {
         Expanded(
           child: _StatIndicator(
             icon: Icons.check_circle_outline,
-            iconColor: allDone
-                ? Colors.green
-                : theme.colorScheme.primary,
+            iconColor: allDone ? Colors.green : theme.colorScheme.primary,
             value: '$completedTasks/$totalTasks',
             label: 'Today',
             valueColor: allDone ? Colors.green : null,
@@ -46,9 +44,7 @@ class DashboardStatsRow extends StatelessWidget {
         ),
         Expanded(
           child: _StatIndicator(
-            icon: userMode == UserMode.child
-                ? Icons.stars
-                : Icons.done_all,
+            icon: userMode == UserMode.child ? Icons.stars : Icons.done_all,
             iconColor: Colors.deepPurple,
             value: userMode == UserMode.child
                 ? '$points Pts'

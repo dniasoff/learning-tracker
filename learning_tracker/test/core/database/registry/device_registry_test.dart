@@ -18,17 +18,16 @@ void main() {
     String tier = 'cloudBorn',
     String? firebaseUid,
     String? dbFileName,
-  }) =>
-      DeviceAccountsCompanion.insert(
-        accountId: id,
-        email: email,
-        displayName: 'User $id',
-        tier: tier,
-        firebaseUid: Value(firebaseUid),
-        createdAt: DateTime.utc(2026, 1, 1),
-        lastUsedAt: DateTime.utc(2026, 1, 1),
-        dbFileName: dbFileName ?? 'user_acc_$id.db',
-      );
+  }) => DeviceAccountsCompanion.insert(
+    accountId: id,
+    email: email,
+    displayName: 'User $id',
+    tier: tier,
+    firebaseUid: Value(firebaseUid),
+    createdAt: DateTime.utc(2026, 1, 1),
+    lastUsedAt: DateTime.utc(2026, 1, 1),
+    dbFileName: dbFileName ?? 'user_acc_$id.db',
+  );
 
   group('DeviceRegistryDatabase', () {
     test('addAccount inserts and getAllAccounts returns it', () async {
@@ -42,17 +41,13 @@ void main() {
 
     test('max 5 accounts enforced', () async {
       for (var i = 1; i <= 5; i++) {
-        await db.addAccount(
-          makeAccount(id: 'a$i', email: 'user$i@test.local'),
-        );
+        await db.addAccount(makeAccount(id: 'a$i', email: 'user$i@test.local'));
       }
       final accounts = await db.getAllAccounts();
       expect(accounts, hasLength(5));
 
       expect(
-        () => db.addAccount(
-          makeAccount(id: 'a6', email: 'user6@test.local'),
-        ),
+        () => db.addAccount(makeAccount(id: 'a6', email: 'user6@test.local')),
         throwsA(isA<MaxAccountsReachedException>()),
       );
 
@@ -61,9 +56,7 @@ void main() {
     });
 
     test('findByEmail is case-insensitive', () async {
-      await db.addAccount(
-        makeAccount(id: 'a1', email: 'Alice@Example.COM'),
-      );
+      await db.addAccount(makeAccount(id: 'a1', email: 'Alice@Example.COM'));
 
       final found = await db.findByEmail('alice@example.com');
       expect(found, isNotNull);
@@ -74,9 +67,7 @@ void main() {
     });
 
     test('findByFirebaseUid returns correct match', () async {
-      await db.addAccount(
-        makeAccount(id: 'a1', firebaseUid: 'fb-uid-1'),
-      );
+      await db.addAccount(makeAccount(id: 'a1', firebaseUid: 'fb-uid-1'));
 
       final found = await db.findByFirebaseUid('fb-uid-1');
       expect(found, isNotNull);
@@ -87,9 +78,7 @@ void main() {
 
     test('removeAccount deletes the row', () async {
       await db.addAccount(makeAccount(id: 'a1'));
-      await db.addAccount(
-        makeAccount(id: 'a2', email: 'b@test.local'),
-      );
+      await db.addAccount(makeAccount(id: 'a2', email: 'b@test.local'));
 
       await db.removeAccount('a1');
       final accounts = await db.getAllAccounts();
@@ -108,12 +97,9 @@ void main() {
     });
 
     test('updateAccountTier changes tier and firebaseUid', () async {
-      await db.addAccount(
-        makeAccount(id: 'a1', tier: 'localBorn'),
-      );
+      await db.addAccount(makeAccount(id: 'a1', tier: 'localBorn'));
 
-      await db.updateAccountTier('a1', 'cloudBorn',
-          firebaseUid: 'new-fb-uid');
+      await db.updateAccountTier('a1', 'cloudBorn', firebaseUid: 'new-fb-uid');
 
       final account = await db.findById('a1');
       expect(account!.tier, 'cloudBorn');
@@ -154,11 +140,13 @@ void main() {
       expect(await db.getLastActiveAccountId(), isNull);
     });
 
-    test('survives DB close and reopen (in-memory is fresh, but API works)',
-        () async {
-      // With in-memory DB this just validates the API contract
-      await db.setLastActiveAccountId('a1');
-      expect(await db.getLastActiveAccountId(), 'a1');
-    });
+    test(
+      'survives DB close and reopen (in-memory is fresh, but API works)',
+      () async {
+        // With in-memory DB this just validates the API contract
+        await db.setLastActiveAccountId('a1');
+        expect(await db.getLastActiveAccountId(), 'a1');
+      },
+    );
   });
 }

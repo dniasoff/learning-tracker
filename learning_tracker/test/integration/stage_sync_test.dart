@@ -7,13 +7,15 @@ import 'package:learning_tracker/features/stages/data/repositories/stage_definit
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -48,7 +50,12 @@ void main() {
 
         pushedSettings.clear();
 
-        final newStage = await repository.addStage(curriculum, 'Chazara 3', 30, trackId: trackId);
+        final newStage = await repository.addStage(
+          curriculum,
+          'Chazara 3',
+          30,
+          trackId: trackId,
+        );
 
         expect(newStage.stageName, 'Chazara 3');
         expect(newStage.stageOrder, 4);

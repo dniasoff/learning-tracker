@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/user_profiles.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'user_profile_dao.g.dart';
 
@@ -11,10 +11,10 @@ extension UserTierX on UserTier {
   String get dbValue => name;
 
   static UserTier fromDb(String value) => switch (value) {
-        'cloudBorn' => UserTier.cloudBorn,
-        'localBorn' => UserTier.localBorn,
-        _ => throw StateError('Unknown tier: $value'),
-      };
+    'cloudBorn' => UserTier.cloudBorn,
+    'localBorn' => UserTier.localBorn,
+    _ => throw StateError('Unknown tier: $value'),
+  };
 }
 
 @DriftAccessor(tables: [UserProfiles])
@@ -28,25 +28,27 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
       (select(userProfiles)..where((t) => t.id.equals(id))).getSingleOrNull();
 
   Future<UserProfile?> getUserProfileByFirebaseUid(String firebaseUid) =>
-      (select(userProfiles)
-            ..where((t) => t.firebaseUid.equals(firebaseUid)))
-          .getSingleOrNull();
+      (select(
+        userProfiles,
+      )..where((t) => t.firebaseUid.equals(firebaseUid))).getSingleOrNull();
 
   /// Find the local-born account matching an email. Returns null if no
   /// local-born row exists with that email (cloud-born rows are ignored).
   Future<UserProfile?> findLocalBornByEmail(String email) =>
-      (select(userProfiles)
-            ..where((t) =>
+      (select(userProfiles)..where(
+            (t) =>
                 t.email.equals(email) &
-                t.tier.equals(UserTier.localBorn.dbValue)))
+                t.tier.equals(UserTier.localBorn.dbValue),
+          ))
           .getSingleOrNull();
 
   /// Find the cloud-born account matching a Firebase UID.
   Future<UserProfile?> findCloudBornByFirebaseUid(String firebaseUid) =>
-      (select(userProfiles)
-            ..where((t) =>
+      (select(userProfiles)..where(
+            (t) =>
                 t.firebaseUid.equals(firebaseUid) &
-                t.tier.equals(UserTier.cloudBorn.dbValue)))
+                t.tier.equals(UserTier.cloudBorn.dbValue),
+          ))
           .getSingleOrNull();
 
   Future<List<UserProfile>> findByTier(UserTier tier) =>
@@ -109,8 +111,9 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
         ),
       );
     } else if (updatedAt.isAfter(existing.updatedAt)) {
-      await (update(userProfiles)..where((t) => t.id.equals(existing.id)))
-          .write(
+      await (update(
+        userProfiles,
+      )..where((t) => t.id.equals(existing.id))).write(
         UserProfilesCompanion(
           displayName: Value(displayName),
           userMode: Value(userMode),

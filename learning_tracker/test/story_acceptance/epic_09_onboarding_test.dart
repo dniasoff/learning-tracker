@@ -41,13 +41,15 @@ class _MockBookmarkRepository extends Mock implements BookmarkRepository {}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      curriculumId: 'mishnayos',
-      trackType: 'personal',
-      activatedAt: DateTime.now(),
-    ),
-  );
+  final row = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          curriculumId: 'mishnayos',
+          trackType: 'personal',
+          activatedAt: DateTime.now(),
+        ),
+      );
   return row.id;
 }
 
@@ -56,13 +58,12 @@ void main() {
 
   group('Story 9.1 -- Welcome flow', tags: ['story_9_1'], () {
     late UserDatabase db;
-    late int trackId;
     late UserProfileService profileService;
     late List<Map<String, String>> firestorePushes;
 
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
       firestorePushes = [];
       profileService = UserProfileService(
         userProfileDao: db.userProfileDao,
@@ -150,11 +151,10 @@ void main() {
 
   group('Story 9.2 -- Curriculum selection', tags: ['story_9_2'], () {
     late UserDatabase db;
-    late int trackId;
 
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
     });
 
     tearDown(() async {
@@ -353,7 +353,7 @@ void main() {
       // Set goal for first, skip second
       await goalRepo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-          trackId: trackId,
+        trackId: trackId,
         targetPercent: 100.0,
         targetDate: DateTime.utc(2027, 6, 15),
       );
@@ -445,7 +445,7 @@ void main() {
     test('goals saved to database and retrievable', () async {
       final goal = await goalRepo.createGoal(
         curriculumId: CurriculumId.chumash,
-          trackId: trackId,
+        trackId: trackId,
         targetPercent: 100.0,
         targetDate: DateTime.utc(2027, 9, 1),
         description: 'Complete Chumash',
@@ -461,7 +461,7 @@ void main() {
       // Create during onboarding
       final goal = await goalRepo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-          trackId: trackId,
+        trackId: trackId,
         targetPercent: 100.0,
         targetDate: DateTime.utc(2027, 6, 15),
       );
@@ -825,7 +825,6 @@ void main() {
     tags: ['story_9_5'],
     () {
       late UserDatabase db;
-      late int trackId;
       late RewardService rewardService;
       late PointsService pointsService;
 

@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/tables/test_scores.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'test_score_dao.g.dart';
 

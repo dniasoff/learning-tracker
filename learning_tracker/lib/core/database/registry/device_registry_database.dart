@@ -30,34 +30,30 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   // ───── DeviceAccounts queries ─────────────────────────────────
 
   /// All accounts ordered by most recently used first.
-  Future<List<DeviceAccount>> getAllAccounts() =>
-      (select(deviceAccounts)
-            ..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)]))
-          .get();
+  Future<List<DeviceAccount>> getAllAccounts() => (select(
+    deviceAccounts,
+  )..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)])).get();
 
   /// Watch the account list (for Riverpod stream).
-  Stream<List<DeviceAccount>> watchAllAccounts() =>
-      (select(deviceAccounts)
-            ..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)]))
-          .watch();
+  Stream<List<DeviceAccount>> watchAllAccounts() => (select(
+    deviceAccounts,
+  )..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)])).watch();
 
   /// Find by email (case-insensitive). Used by sign-in routing.
   Future<DeviceAccount?> findByEmail(String email) =>
       (select(deviceAccounts)
-            ..where(
-                (t) => t.email.lower().equals(email.trim().toLowerCase())))
+            ..where((t) => t.email.lower().equals(email.trim().toLowerCase())))
           .getSingleOrNull();
 
   /// Find by Firebase UID. Used for cloud-born session matching.
-  Future<DeviceAccount?> findByFirebaseUid(String uid) =>
-      (select(deviceAccounts)..where((t) => t.firebaseUid.equals(uid)))
-          .getSingleOrNull();
+  Future<DeviceAccount?> findByFirebaseUid(String uid) => (select(
+    deviceAccounts,
+  )..where((t) => t.firebaseUid.equals(uid))).getSingleOrNull();
 
   /// Find by account ID.
-  Future<DeviceAccount?> findById(String accountId) =>
-      (select(deviceAccounts)
-            ..where((t) => t.accountId.equals(accountId)))
-          .getSingleOrNull();
+  Future<DeviceAccount?> findById(String accountId) => (select(
+    deviceAccounts,
+  )..where((t) => t.accountId.equals(accountId))).getSingleOrNull();
 
   /// Add a new account. Throws [MaxAccountsReachedException] if
   /// the device already has [kMaxDeviceAccounts] accounts.
@@ -70,15 +66,13 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   }
 
   /// Remove an account from the registry (does NOT delete the DB file).
-  Future<int> removeAccount(String accountId) =>
-      (delete(deviceAccounts)
-            ..where((t) => t.accountId.equals(accountId)))
-          .go();
+  Future<int> removeAccount(String accountId) => (delete(
+    deviceAccounts,
+  )..where((t) => t.accountId.equals(accountId))).go();
 
   /// Update the lastUsedAt timestamp for an account.
   Future<void> updateLastUsed(String accountId, DateTime time) =>
-      (update(deviceAccounts)
-            ..where((t) => t.accountId.equals(accountId)))
+      (update(deviceAccounts)..where((t) => t.accountId.equals(accountId)))
           .write(DeviceAccountsCompanion(lastUsedAt: Value(time)));
 
   /// Update tier + firebaseUid after a local→cloud upgrade.
@@ -86,13 +80,13 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
     String accountId,
     String tier, {
     String? firebaseUid,
-  }) =>
-      (update(deviceAccounts)
-            ..where((t) => t.accountId.equals(accountId)))
-          .write(DeviceAccountsCompanion(
-        tier: Value(tier),
-        firebaseUid: Value(firebaseUid),
-      ));
+  }) => (update(deviceAccounts)..where((t) => t.accountId.equals(accountId)))
+      .write(
+        DeviceAccountsCompanion(
+          tier: Value(tier),
+          firebaseUid: Value(firebaseUid),
+        ),
+      );
 
   Future<int> _accountCount() async {
     final count = countAll();
@@ -107,9 +101,9 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
 
   /// Get the last active account ID (or null if not set / cleared).
   Future<String?> getLastActiveAccountId() async {
-    final row = await (select(deviceState)
-          ..where((t) => t.key.equals(_kLastActiveAccountId)))
-        .getSingleOrNull();
+    final row = await (select(
+      deviceState,
+    )..where((t) => t.key.equals(_kLastActiveAccountId))).getSingleOrNull();
     return row?.value;
   }
 
