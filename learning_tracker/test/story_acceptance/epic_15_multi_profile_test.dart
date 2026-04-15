@@ -4,11 +4,11 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/domain/services/content_version_check_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -557,28 +557,25 @@ void main() {
     tags: ['story_15_4'],
     () {
       late UserDatabase db;
-      late ContentDatabase contentDb;
 
       setUp(() async {
         db = createTestDatabase();
         await _insertTrack(db);
-        contentDb = createTestContentDatabase();
       });
 
       tearDown(() async {
         await db.close();
-        await contentDb.close();
       });
 
       group('AC: All 18 presets seeded in DB on first launch', () {
         test('18 programs exist after database creation', () async {
-          final programs = await contentDb.contentLearningProgramDao
+          final programs = await LearningProgramRepository.instance
               .getAllPrograms();
           expect(programs.length, 18);
         });
 
         test('all expected programs are present by name', () async {
-          final programs = await contentDb.contentLearningProgramDao
+          final programs = await LearningProgramRepository.instance
               .getAllPrograms();
           final names = programs.map((p) => p.name).toSet();
           expect(
@@ -609,7 +606,7 @@ void main() {
 
       group('AC: Preset data includes full stage configuration', () {
         test('every preset has valid JSON stages_config', () async {
-          final programs = await contentDb.contentLearningProgramDao
+          final programs = await LearningProgramRepository.instance
               .getAllPrograms();
           for (final p in programs) {
             final stages = jsonDecode(p.stagesConfig) as List;
@@ -632,7 +629,7 @@ void main() {
         });
 
         test('programs with tests have valid test_config', () async {
-          final programs = await contentDb.contentLearningProgramDao
+          final programs = await LearningProgramRepository.instance
               .getAllPrograms();
           final withTests = programs.where((p) => p.hasTests);
           for (final p in withTests) {
@@ -648,7 +645,7 @@ void main() {
 
       group('AC: Profile-program association stored per curriculum', () {
         test('profile can select a program per curriculum', () async {
-          final programs = await contentDb.contentLearningProgramDao
+          final programs = await LearningProgramRepository.instance
               .getAllPrograms();
           final bavli = programs.firstWhere((p) => p.name == 'oraysa');
 
@@ -667,7 +664,7 @@ void main() {
         test(
           'profile can have different programs for different curricula',
           () async {
-            final programs = await contentDb.contentLearningProgramDao
+            final programs = await LearningProgramRepository.instance
                 .getAllPrograms();
             final bavli = programs.firstWhere((p) => p.name == 'daf_yomi');
             final nach = programs.firstWhere((p) => p.name == 'nach_yomi');
@@ -691,13 +688,13 @@ void main() {
 
       group('AC: Presets queryable by curriculum type', () {
         test('bavli returns 5 programs', () async {
-          final bavli = await contentDb.contentLearningProgramDao
+          final bavli = await LearningProgramRepository.instance
               .getProgramsByCurriculumType('bavli');
           expect(bavli.length, 5);
         });
 
         test('yerushalmi returns 2 programs', () async {
-          final yerushalmi = await contentDb.contentLearningProgramDao
+          final yerushalmi = await LearningProgramRepository.instance
               .getProgramsByCurriculumType('yerushalmi');
           expect(yerushalmi.length, 2);
         });
@@ -711,7 +708,7 @@ void main() {
             'mishnayos',
             'nach',
           ]) {
-            final programs = await contentDb.contentLearningProgramDao
+            final programs = await LearningProgramRepository.instance
                 .getProgramsByCurriculumType(type);
             expect(programs, isNotEmpty, reason: '$type has no programs');
           }
@@ -720,7 +717,7 @@ void main() {
 
       group('AC: Preset marked as active/deprecated (not deleted)', () {
         test('all seeded presets are active', () async {
-          final programs = await contentDb.contentLearningProgramDao
+          final programs = await LearningProgramRepository.instance
               .getAllPrograms();
           for (final p in programs) {
             expect(p.isActive, isTrue, reason: '${p.name} not active');
@@ -1537,36 +1534,34 @@ void main() {
 
   group('Story 15.10 -- Dirshu Test Tracking', tags: ['story_15_10'], () {
     late UserDatabase db;
-    late ContentDatabase contentDb;
 
     setUp(() async {
       db = createTestDatabase();
       await _insertTrack(db);
-      contentDb = createTestContentDatabase();
     });
 
     tearDown(() async {
       await db.close();
-      await contentDb.close();
     });
 
     group('AC: Test dates seeded for Dirshu programs', () {
-      test('database has test_dates table with seeded data', () async {
-        final testDates = await contentDb.contentTestDateDao.getAllTestDates();
+      test('generateTestDateSeeds returns non-empty data', () {
+        final testDates = generateTestDateSeeds();
         expect(testDates, isNotEmpty);
       });
 
-      test('test dates exist for all 4 Dirshu programs with tests', () async {
+      test('test dates exist for all 4 Dirshu programs with tests', () {
         // Get all Dirshu programs that have tests
-        final programs = await contentDb.contentLearningProgramDao
-            .getAllPrograms();
+        final programs = LearningProgramRepository.instance.getAllPrograms();
         final dirshuWithTests = programs.where((p) => p.hasTests).toList();
 
         expect(dirshuWithTests.length, 4);
 
+        final seeds = generateTestDateSeeds();
         for (final program in dirshuWithTests) {
-          final dates = await contentDb.contentTestDateDao
-              .getTestDatesForProgram(program.id);
+          final dates = seeds
+              .where((s) => s['program_name'] == program.name)
+              .toList();
           expect(
             dates,
             isNotEmpty,
@@ -1575,13 +1570,14 @@ void main() {
         }
       });
 
-      test('test dates are on Sundays (first Sunday of month)', () async {
-        final testDates = await contentDb.contentTestDateDao.getAllTestDates();
+      test('test dates are on Sundays (first Sunday of month)', () {
+        final testDates = generateTestDateSeeds();
         for (final td in testDates) {
+          final testDate = td['test_date']! as DateTime;
           expect(
-            td.testDate.weekday,
+            testDate.weekday,
             DateTime.sunday,
-            reason: 'Test date ${td.testDate} should be a Sunday',
+            reason: 'Test date $testDate should be a Sunday',
           );
         }
       });
@@ -1652,21 +1648,15 @@ void main() {
             );
 
         // Get a Dirshu program
-        final program = await contentDb.contentLearningProgramDao
+        final program = LearningProgramRepository.instance
             .getProgramByName('dirshu_kinyan_torah');
         expect(program, isNotNull);
 
-        // Get a test date for that program
-        final testDates = await contentDb.contentTestDateDao
-            .getTestDatesForProgram(program!.id);
-        expect(testDates, isNotEmpty);
-
-        // Log a score
+        // Log a score (no test date FK needed since test_dates table removed)
         await db.testScoreDao.insertScore(
           TestScoresCompanion.insert(
             profileId: profileId,
-            programId: program.id,
-            testDateId: Value(testDates.first.id),
+            programId: program!.id,
             scorePercentage: 85,
             createdAt: DateTime.now().toUtc(),
           ),
@@ -1678,7 +1668,6 @@ void main() {
         );
         expect(scores.length, 1);
         expect(scores.first.scorePercentage, 85);
-        expect(scores.first.testDateId, testDates.first.id);
       });
 
       test('score percentage validated in service (0-100)', () {
@@ -1714,7 +1703,7 @@ void main() {
               ),
             );
 
-        final program = await contentDb.contentLearningProgramDao
+        final program = await LearningProgramRepository.instance
             .getProgramByName('dirshu_kinyan_torah');
 
         await db.testScoreDao.insertScore(
@@ -1746,32 +1735,44 @@ void main() {
 
     group('AC: Dashboard card shows next test date', () {
       test(
-        'getNextTestDateForProgram returns earliest future test date',
-        () async {
-          final program = await contentDb.contentLearningProgramDao
+        'generateTestDateSeeds returns future test dates for Dirshu programs',
+        () {
+          final program = LearningProgramRepository.instance
               .getProgramByName('dirshu_kinyan_torah');
           expect(program, isNotNull);
 
-          final nextTest = await contentDb.contentTestDateDao
-              .getNextTestDateForProgram(program!.id);
-          // Seeded dates are generated from now, so there should be a future one
-          expect(nextTest, isNotNull);
-          expect(nextTest!.testDate.isAfter(DateTime.now().toUtc()), isTrue);
+          final seeds = generateTestDateSeeds();
+          final programSeeds = seeds
+              .where((s) => s['program_name'] == program!.name)
+              .toList();
+          expect(programSeeds, isNotEmpty);
+          // Seeds are generated from now, so there should be future dates
+          final testDate = programSeeds.first['test_date']! as DateTime;
+          expect(testDate.isAfter(DateTime.now().toUtc()), isTrue);
         },
       );
 
-      test('getUpcomingTestDates returns all future dates sorted', () async {
-        final upcoming = await contentDb.contentTestDateDao
-            .getUpcomingTestDates();
-        expect(upcoming, isNotEmpty);
+      test('generateTestDateSeeds returns dates sorted ascending per program', () {
+        final seeds = generateTestDateSeeds();
+        expect(seeds, isNotEmpty);
 
-        // Verify sorted ascending
-        for (var i = 1; i < upcoming.length; i++) {
-          expect(
-            upcoming[i].testDate.isAfter(upcoming[i - 1].testDate) ||
-                upcoming[i].testDate.isAtSameMomentAs(upcoming[i - 1].testDate),
-            isTrue,
-          );
+        // Group by program and verify sorted ascending within each group
+        final byProgram = <String, List<DateTime>>{};
+        for (final s in seeds) {
+          final name = s['program_name']! as String;
+          final date = s['test_date']! as DateTime;
+          byProgram.putIfAbsent(name, () => []).add(date);
+        }
+        for (final entry in byProgram.entries) {
+          final dates = entry.value;
+          for (var i = 1; i < dates.length; i++) {
+            expect(
+              dates[i].isAfter(dates[i - 1]) ||
+                  dates[i].isAtSameMomentAs(dates[i - 1]),
+              isTrue,
+              reason: '${entry.key} dates should be ascending',
+            );
+          }
         }
       });
     });
@@ -1826,7 +1827,7 @@ void main() {
     group('AC: Test tracking only visible for Dirshu program users', () {
       test('programHasTests returns true for Dirshu test programs', () async {
         const service = TestReminderService();
-        final programs = await contentDb.contentLearningProgramDao
+        final programs = await LearningProgramRepository.instance
             .getAllPrograms();
 
         final dirshuTestPrograms = [
@@ -1849,7 +1850,7 @@ void main() {
 
       test('programHasTests returns false for non-test programs', () async {
         const service = TestReminderService();
-        final programs = await contentDb.contentLearningProgramDao
+        final programs = await LearningProgramRepository.instance
             .getAllPrograms();
 
         final noTestPrograms = [
@@ -1886,7 +1887,7 @@ void main() {
                 ),
               );
 
-          final dirshu = await contentDb.contentLearningProgramDao
+          final dirshu = await LearningProgramRepository.instance
               .getProgramByName('dirshu_kinyan_torah');
           expect(dirshu, isNotNull);
 
@@ -1906,14 +1907,16 @@ void main() {
           expect(profileProgram, isNotNull);
 
           // Look up program to check if it has tests
-          final program = await contentDb.contentLearningProgramDao
+          final program = LearningProgramRepository.instance
               .getProgramById(profileProgram!.programId);
           expect(program, isNotNull);
           expect(program!.hasTests, isTrue);
 
-          // The profile should see test dates for their program
-          final testDates = await contentDb.contentTestDateDao
-              .getTestDatesForProgram(program.id);
+          // The profile should see test dates for their program via seeds
+          final seeds = generateTestDateSeeds();
+          final testDates = seeds
+              .where((s) => s['program_name'] == program.name)
+              .toList();
           expect(testDates, isNotEmpty);
         },
       );
@@ -2391,23 +2394,20 @@ void main() {
   group('Story 15.6 -- Learning Process Wizard', tags: ['story_15_6'], () {
     late UserDatabase db;
     late int trackId;
-    late ContentDatabase contentDb;
     late LearningProcessWizardService wizardService;
 
     setUp(() async {
       db = createTestDatabase();
       trackId = await _insertTrack(db);
-      contentDb = createTestContentDatabase();
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
-        learningProgramDao: contentDb.contentLearningProgramDao,
+        learningProgramRepo: LearningProgramRepository.instance,
         profileProgramDao: db.profileProgramDao,
       );
     });
 
     tearDown(() async {
       await db.close();
-      await contentDb.close();
     });
 
     group('AC: Presets filtered by curriculum type', () {
@@ -2940,23 +2940,20 @@ void main() {
   group('Story 15.9 -- Program Management in Settings', tags: ['story_15_9'], () {
     late UserDatabase db;
     late int trackId;
-    late ContentDatabase contentDb;
     late LearningProcessWizardService wizardService;
 
     setUp(() async {
       db = createTestDatabase();
       trackId = await _insertTrack(db);
-      contentDb = createTestContentDatabase();
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
-        learningProgramDao: contentDb.contentLearningProgramDao,
+        learningProgramRepo: LearningProgramRepository.instance,
         profileProgramDao: db.profileProgramDao,
       );
     });
 
     tearDown(() async {
       await db.close();
-      await contentDb.close();
     });
 
     group('AC1: Current program displayed per curriculum in settings', () {
@@ -2983,7 +2980,7 @@ void main() {
               .getProgramForProfileAndCurriculum(0, 'bavli');
           expect(profileProgram, isNotNull);
 
-          final program = await contentDb.contentLearningProgramDao
+          final program = await LearningProgramRepository.instance
               .getProgramById(profileProgram!.programId);
           expect(program, isNotNull);
           expect(program!.displayName, isNotEmpty);

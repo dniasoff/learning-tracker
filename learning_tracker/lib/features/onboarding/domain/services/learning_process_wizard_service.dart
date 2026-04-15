@@ -1,13 +1,11 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/content/content_database.dart'
-    as content_db;
-import 'package:learning_tracker/core/database/content/daos/learning_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 
 /// Result of the learning process wizard for a single curriculum.
@@ -55,21 +53,21 @@ class CustomRound {
 class LearningProcessWizardService {
   LearningProcessWizardService({
     required StageDao stageDao,
-    required ContentLearningProgramDao learningProgramDao,
+    required LearningProgramRepository learningProgramRepo,
     required ProfileProgramDao profileProgramDao,
   }) : _stageDao = stageDao,
-       _learningProgramDao = learningProgramDao,
+       _learningProgramRepo = learningProgramRepo,
        _profileProgramDao = profileProgramDao;
 
   final StageDao _stageDao;
-  final ContentLearningProgramDao _learningProgramDao;
+  final LearningProgramRepository _learningProgramRepo;
   final ProfileProgramDao _profileProgramDao;
 
   /// Get active programs filtered by curriculum type.
-  Future<List<content_db.LearningProgram>> getPresetsForCurriculum(
+  List<LearningProgramData> getPresetsForCurriculum(
     CurriculumId curriculumId,
   ) {
-    return _learningProgramDao.getProgramsByCurriculumType(
+    return _learningProgramRepo.getProgramsByCurriculumType(
       curriculumId.storageKey,
     );
   }
@@ -101,7 +99,7 @@ class LearningProcessWizardService {
     required int profileId,
     required int trackId,
   }) async {
-    final program = await _learningProgramDao.getProgramById(result.programId!);
+    final program = _learningProgramRepo.getProgramById(result.programId!);
     if (program == null) return;
 
     // Store the preset association.

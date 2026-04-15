@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/content/content_database.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 
 /// Configuration for test reminders.
 class TestReminderConfig {
@@ -32,6 +32,6 @@ class TestReminderService {
       ..sort();
   }
 
-  /// Checks if a program has tests based on its LearningProgram record.
-  bool programHasTests(LearningProgram program) => program.hasTests;
+  /// Checks if a program has tests based on its LearningProgramData record.
+  bool programHasTests(LearningProgramData program) => program.hasTests;
 }

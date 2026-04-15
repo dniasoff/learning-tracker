@@ -1,26 +1,24 @@
-import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:test/test.dart';
 
 import '../../../helpers/test_database.dart';
 
 void main() {
   late UserDatabase db;
-  late ContentDatabase contentDb;
+  final programRepo = LearningProgramRepository.instance;
 
   setUp(() {
     db = createTestDatabase();
-    contentDb = createTestContentDatabase();
   });
 
   tearDown(() async {
     await db.close();
-    await contentDb.close();
   });
 
   group('ProfileProgramDao', () {
     test('setProfileProgram creates association', () async {
-      final programs = await contentDb.contentLearningProgramDao
+      final programs = programRepo
           .getAllPrograms();
       final program = programs.first;
 
@@ -37,7 +35,7 @@ void main() {
     });
 
     test('setProfileProgram upserts on duplicate', () async {
-      final programs = await contentDb.contentLearningProgramDao
+      final programs = programRepo
           .getProgramsByCurriculumType('bavli');
       expect(programs.length, greaterThanOrEqualTo(2));
 
@@ -64,7 +62,7 @@ void main() {
     });
 
     test('getProgramsForProfile returns all for a profile', () async {
-      final programs = await contentDb.contentLearningProgramDao
+      final programs = programRepo
           .getAllPrograms();
       final bavli = programs.firstWhere((p) => p.curriculumType == 'bavli');
       final nach = programs.firstWhere((p) => p.curriculumType == 'nach');
@@ -85,7 +83,7 @@ void main() {
     });
 
     test('different profiles can have different programs', () async {
-      final programs = await contentDb.contentLearningProgramDao
+      final programs = programRepo
           .getProgramsByCurriculumType('bavli');
 
       await db.profileProgramDao.setProfileProgram(
@@ -112,7 +110,7 @@ void main() {
     });
 
     test('deleteForProfile removes all associations', () async {
-      final programs = await contentDb.contentLearningProgramDao
+      final programs = programRepo
           .getAllPrograms();
       await db.profileProgramDao.setProfileProgram(
         profileId: 1,

@@ -36,11 +36,7 @@ import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
-import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
-
-import 'lib/daf_yomi_sequence.dart';
 
 // ── Configuration ────────────────────────────────────────────────────────
 
@@ -61,33 +57,8 @@ const _batchDelayMs = 50;
 const _backoffBaseMs = 2000;
 const _maxRetries = 3;
 
-/// Date range for calendar cycles (inclusive).
-final _calendarStart = DateTime.utc(2024, 1, 1);
-final _calendarEnd = DateTime.utc(2030, 12, 31);
-
-/// Sefaria calendar_items title.en → CalendarProgramRegistry.id.
-///
-/// Keys MUST match the registry IDs in [CalendarProgramRegistry] so
-/// LocalCalendarEngine.getEntry() can resolve display names via
-/// `CalendarProgramRegistry.byId()` (Story 19.4 T6).
-const _sefariaCalendarMap = {
-  'Daf Yomi': 'daf_yomi',
-  'Daily Mishnah': 'mishna_yomit',
-  'Daily Rambam': 'rambam_1_chapter',
-  'Daily Rambam (3 Chapters)': 'rambam_3_chapters',
-  'Yerushalmi Yomi': 'yerushalmi_yomi',
-  'Daf a Week': 'daf_a_week',
-  'Halakhah Yomit': 'halakhah_yomit',
-  'Arukh HaShulchan Yomi': 'arukh_hashulchan_yomi',
-  'Tanakh Yomi': 'tanakh_yomi',
-};
-
-/// Hebcal category → internal program key.
-const _hebcalCategoryMap = {
-  'nachyomi': 'nach_yomi',
-  'chofetzChaim': 'chofetz_chaim_daily',
-  'kitzurShulchanAruch': 'kitzur_shulchan_aruch_yomi',
-};
+// Calendar cycles, learning programs, and test dates are computed at runtime.
+// The seed tool only builds text_cache + seed_metadata.
 
 // ── CLI entry point ──────────────────────────────────────────────────────
 
@@ -111,7 +82,7 @@ class _Args {
   final bool sizeReport;
 }
 
-enum _Mode { build, validateOnly, textOnly, calendarOnly, programsOnly }
+enum _Mode { build, validateOnly, textOnly }
 
 _Args _parseArgs(List<String> args) {
   var mode = _Mode.build;
@@ -132,9 +103,9 @@ _Args _parseArgs(List<String> args) {
       case '--text-only':
         mode = _Mode.textOnly;
       case '--calendar-only':
-        mode = _Mode.calendarOnly;
+        print('Warning: --calendar-only is deprecated');
       case '--programs-only':
-        mode = _Mode.programsOnly;
+        print('Warning: --programs-only is deprecated');
       case '--curriculum':
         curriculum = args[++i];
       case '--resume':
@@ -202,11 +173,9 @@ Future<void> main(List<String> rawArgs) async {
   await db.customStatement('SELECT 1'); // Force onCreate / schema realisation.
 
   try {
-    // Phase 2: Programs + TestDates
-    if (args.mode == _Mode.build || args.mode == _Mode.programsOnly) {
-      print('Phase 2: Seeding LearningPrograms + TestDates...');
-      await _seedProgramsAndTestDates(db, args.verbose);
-    }
+    // Programs, test dates, and calendar cycles are now computed at
+    // runtime — see LearningProgramRepository, generateTestDateSeeds(),
+    // and LocalCalendarEngine.
 
     // Phase 3: Text content (he + en)
     var textCacheCount = 0;
@@ -217,17 +186,10 @@ Future<void> main(List<String> rawArgs) async {
       textCacheCount = await _countRows(db, 'text_cache');
     }
 
-    // Phase 4: Calendar cycles
-    var calendarCycleCount = 0;
-    if (args.mode == _Mode.build || args.mode == _Mode.calendarOnly) {
-      print('Phase 4: Fetching calendar cycles...');
-      calendarCycleCount = await _fetchAndInsertCalendarCycles(db, args);
-    } else {
-      calendarCycleCount = await _countRows(db, 'calendar_cycles');
-    }
+    const calendarCycleCount = 0;
 
     // Phase 5: Finalize
-    if (args.mode != _Mode.programsOnly || args.mode == _Mode.build) {
+    if (args.mode == _Mode.build || args.mode == _Mode.textOnly) {
       print('Phase 5: Finalizing (content hash, SeedMetadata)...');
     }
     final contentHash = await _computeContentHash(db);
@@ -285,71 +247,6 @@ Future<void> main(List<String> rawArgs) async {
   }
 }
 
-// ── Phase 2: Programs + TestDates ────────────────────────────────────────
-
-Future<void> _seedProgramsAndTestDates(ContentDatabase db, bool verbose) async {
-  // ContentDatabase's onCreate already seeds programs + test dates when the
-  // DB is brand new. For resumed runs, force an upsert so renamed/adjusted
-  // seed data is reflected.
-  for (final program in learningProgramSeeds) {
-    final apiSource = program['api_source'] as String?;
-    final apiKey = program['api_program_key'] as String?;
-    final isCalendar = (program['is_calendar_program'] as bool?) ?? false;
-    final apiSourceSql = apiSource == null ? 'NULL' : '?';
-    final apiKeySql = apiKey == null ? 'NULL' : '?';
-
-    final variables = <Variable<Object>>[
-      Variable.withString(program['name']! as String),
-      Variable.withString(program['display_name']! as String),
-      Variable.withString(program['description']! as String),
-      Variable.withString(program['curriculum_type']! as String),
-      Variable.withBool(program['is_active']! as bool),
-      Variable.withBool(program['has_tests']! as bool),
-      Variable.withString(program['stages_config']! as String),
-      Variable.withString(program['test_config']! as String),
-      Variable.withDateTime(DateTime.now().toUtc()),
-      if (apiSource != null) Variable.withString(apiSource),
-      if (apiKey != null) Variable.withString(apiKey),
-      Variable.withBool(isCalendar),
-    ];
-    await db.customInsert(
-      'INSERT OR REPLACE INTO learning_programs '
-      '(name, display_name, description, curriculum_type, is_active, '
-      'has_tests, stages_config, test_config, created_at, api_source, '
-      'api_program_key, is_calendar_program) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, $apiSourceSql, $apiKeySql, ?)',
-      variables: variables,
-    );
-  }
-
-  final programRows = await db.contentLearningProgramDao.getAllPrograms();
-  print('  LearningPrograms: ${programRows.length} rows');
-
-  // Test dates — 24 months ahead from build date (spec T5).
-  final seeds = generateTestDateSeeds(
-    from: DateTime.now().toUtc(),
-    monthsAhead: 24,
-  );
-  await db.customStatement('DELETE FROM test_dates');
-  var inserted = 0;
-  for (final td in seeds) {
-    final programName = td['program_name'] as String?;
-    if (programName == null) continue;
-    final program = programRows.where((p) => p.name == programName).toList();
-    if (program.isEmpty) continue;
-    await db.customInsert(
-      'INSERT INTO test_dates (program_id, test_date, material_description) '
-      'VALUES (?, ?, ?)',
-      variables: [
-        Variable.withInt(program.first.id),
-        Variable.withDateTime(td['test_date']! as DateTime),
-        Variable.withString(td['material_description'] as String? ?? ''),
-      ],
-    );
-    inserted++;
-  }
-  print('  TestDates: $inserted rows');
-}
 
 // ── Phase 3: Text content ────────────────────────────────────────────────
 
@@ -603,297 +500,16 @@ String _extractText(dynamic text) {
 
 String _stripHtml(String html) => html.replaceAll(RegExp('<[^>]*>'), '').trim();
 
-// ── Phase 4: Calendar cycles ─────────────────────────────────────────────
-
-Future<int> _fetchAndInsertCalendarCycles(
-  ContentDatabase db,
-  _Args args,
-) async {
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: 'https://www.sefaria.org',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-    ),
-  );
-
-  // Sefaria: iterate 1 day at a time.
-  await _fetchSefariaCalendar(db, dio, args);
-
-  // Hebcal: monthly batches.
-  await _fetchHebcalCalendar(db, args);
-
-  dio.close();
-  return _countRows(db, 'calendar_cycles');
-}
-
-Future<void> _fetchSefariaCalendar(
-  ContentDatabase db,
-  Dio dio,
-  _Args args,
-) async {
-  // Resume support: find the max dateKey per program to skip ahead.
-  final perProgramMax = <String, String>{};
-  if (args.resume) {
-    final existing = await db
-        .customSelect(
-          'SELECT program_key, MAX(date_key) AS max_date '
-          'FROM calendar_cycles GROUP BY program_key',
-        )
-        .get();
-    for (final row in existing) {
-      perProgramMax[row.read<String>('program_key')] = row.read<String>(
-        'max_date',
-      );
-    }
-  }
-
-  final totalDays = _calendarEnd.difference(_calendarStart).inDays + 1;
-  var processed = 0;
-
-  for (
-    var d = _calendarStart;
-    !d.isAfter(_calendarEnd);
-    d = d.add(const Duration(days: 1))
-  ) {
-    final dateKey = _formatDate(d);
-
-    // Skip if every Sefaria-sourced program already has a row for
-    // this date or later.
-    final allCovered = _sefariaCalendarMap.values.every(
-      (programKey) => (perProgramMax[programKey] ?? '').compareTo(dateKey) >= 0,
-    );
-    if (allCovered) {
-      processed++;
-      continue;
-    }
-
-    Map<String, dynamic>? json;
-    try {
-      final response = await dio.get<Map<String, dynamic>>(
-        '/api/calendars',
-        queryParameters: {'year': d.year, 'month': d.month, 'day': d.day},
-      );
-      json = response.data;
-    } catch (e) {
-      if (args.verbose) {
-        stderr.writeln('  Sefaria calendar fetch failed for $dateKey: $e');
-      }
-    }
-
-    if (json != null) {
-      final items = (json['calendar_items'] as List<dynamic>?) ?? const [];
-      final rows = <({String program, String ref, String display})>[];
-      for (final raw in items.cast<Map<String, dynamic>>()) {
-        final titleEn =
-            ((raw['title'] as Map<String, dynamic>?)?['en'] as String?) ?? '';
-        final programKey = _sefariaCalendarMap[titleEn];
-        if (programKey == null) continue;
-        final ref = (raw['ref'] as String?) ?? '';
-        if (ref.isEmpty) continue;
-        final display =
-            ((raw['displayValue'] as Map<String, dynamic>?)?['en']
-                as String?) ??
-            '';
-        rows.add((program: programKey, ref: ref, display: display));
-      }
-      if (rows.isNotEmpty) {
-        await db.transaction(() async {
-          for (final r in rows) {
-            await db.customInsert(
-              'INSERT OR REPLACE INTO calendar_cycles '
-              '(program_key, date_key, sefaria_ref, display_name) '
-              'VALUES (?, ?, ?, ?)',
-              variables: [
-                Variable.withString(r.program),
-                Variable.withString(dateKey),
-                Variable.withString(r.ref),
-                Variable.withString(r.display),
-              ],
-            );
-          }
-        });
-      }
-    }
-
-    // Daf Yomi Cycle 15 fallback (post 2027-06-07).
-    if (d.isAfter(DateTime.utc(2027, 6, 7))) {
-      final existing = await db
-          .customSelect(
-            'SELECT 1 FROM calendar_cycles '
-            'WHERE program_key = ? AND date_key = ?',
-            variables: [
-              Variable.withString('daf_yomi'),
-              Variable.withString(dateKey),
-            ],
-          )
-          .getSingleOrNull();
-      if (existing == null) {
-        final fallback = _dafYomiCycle15Ref(d);
-        if (fallback != null) {
-          await db.customInsert(
-            'INSERT OR REPLACE INTO calendar_cycles '
-            '(program_key, date_key, sefaria_ref, display_name) '
-            'VALUES (?, ?, ?, ?)',
-            variables: [
-              Variable.withString('daf_yomi'),
-              Variable.withString(dateKey),
-              Variable.withString(fallback),
-              const Variable(''),
-            ],
-          );
-        }
-      }
-    }
-
-    processed++;
-    if (processed % 100 == 0 || processed == totalDays) {
-      print('    Sefaria calendar: $processed/$totalDays days');
-    }
-    // Rate limit: ~2 req/s.
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-  }
-}
-
-Future<void> _fetchHebcalCalendar(ContentDatabase db, _Args args) async {
-  final hebcalDio = Dio(
-    BaseOptions(
-      baseUrl: 'https://www.hebcal.com',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 60),
-    ),
-  );
-
-  var month = DateTime.utc(_calendarStart.year, _calendarStart.month, 1);
-  var batches = 0;
-  while (!month.isAfter(_calendarEnd)) {
-    final nextMonth = DateTime.utc(month.year, month.month + 1, 1);
-    final lastDay = nextMonth.subtract(const Duration(days: 1));
-    final rangeStart = _formatDate(month);
-    final rangeEnd = _formatDate(
-      lastDay.isBefore(_calendarEnd) ? lastDay : _calendarEnd,
-    );
-
-    try {
-      final response = await hebcalDio.get<Map<String, dynamic>>(
-        '/hebcal',
-        queryParameters: {
-          'v': '1',
-          'cfg': 'json',
-          'start': rangeStart,
-          'end': rangeEnd,
-          'c': 'off',
-          'nyomi': 'on',
-          'dcc': 'on',
-          'dksa': 'on',
-        },
-      );
-      final items = (response.data?['items'] as List<dynamic>?) ?? const [];
-      final rows =
-          <({String program, String dateKey, String ref, String display})>[];
-      for (final raw in items.cast<Map<String, dynamic>>()) {
-        final category = raw['category'] as String?;
-        final programKey = _hebcalCategoryMap[category];
-        if (programKey == null) continue;
-        final date = raw['date'] as String? ?? '';
-        final dateKey = date.length >= 10 ? date.substring(0, 10) : '';
-        if (dateKey.isEmpty) continue;
-        final ref = _extractRefFromHebcalLink(
-          raw['link'] as String?,
-          (raw['memo'] as String?) ?? (raw['title'] as String?) ?? '',
-        );
-        final display = (raw['title'] as String?) ?? '';
-        rows.add((
-          program: programKey,
-          dateKey: dateKey,
-          ref: ref,
-          display: display,
-        ));
-      }
-      if (rows.isNotEmpty) {
-        await db.transaction(() async {
-          for (final r in rows) {
-            await db.customInsert(
-              'INSERT OR REPLACE INTO calendar_cycles '
-              '(program_key, date_key, sefaria_ref, display_name) '
-              'VALUES (?, ?, ?, ?)',
-              variables: [
-                Variable.withString(r.program),
-                Variable.withString(r.dateKey),
-                Variable.withString(r.ref),
-                Variable.withString(r.display),
-              ],
-            );
-          }
-        });
-      }
-    } catch (e) {
-      if (args.verbose) {
-        stderr.writeln('  Hebcal fetch failed for $rangeStart..$rangeEnd: $e');
-      }
-    }
-
-    batches++;
-    if (batches % 12 == 0) {
-      print('    Hebcal: $batches monthly batches processed');
-    }
-    month = nextMonth;
-    // Light rate-limit.
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-  }
-  hebcalDio.close();
-}
-
-/// Daf Yomi Cycle 15 started Berakhot 2a on 2027-06-08 (Cycle 14 ends
-/// 2027-06-07). Hard-coded fallback for dates beyond the Sefaria API.
-String? _dafYomiCycle15Ref(DateTime date) {
-  final cycleStart = DateTime.utc(2027, 6, 8);
-  if (date.isBefore(cycleStart)) return null;
-  final dayIndex = date.difference(cycleStart).inDays;
-  if (dayIndex < 0 || dayIndex >= _dafYomiSequence.length) return null;
-  return _dafYomiSequence[dayIndex];
-}
-
-/// Complete 2,711-entry Daf Yomi cycle sequence imported from
-/// tool/lib/daf_yomi_sequence.dart.
-const List<String> _dafYomiSequence = dafYomiSequence;
-
-String _extractRefFromHebcalLink(String? link, String fallback) {
-  if (link == null || !link.contains('sefaria.org/')) return fallback;
-  try {
-    final uri = Uri.parse(link);
-    final path = uri.path.startsWith('/') ? uri.path.substring(1) : uri.path;
-    return Uri.decodeComponent(path);
-  } catch (_) {
-    return fallback;
-  }
-}
-
 // ── Phase 5: Finalize ────────────────────────────────────────────────────
 
 Future<String> _computeContentHash(ContentDatabase db) async {
   final refs = await db
       .customSelect('SELECT sefaria_ref FROM text_cache ORDER BY sefaria_ref')
       .get();
-  final cycles = await db
-      .customSelect(
-        'SELECT program_key, date_key FROM calendar_cycles '
-        'ORDER BY program_key, date_key',
-      )
-      .get();
-
   final buffer = StringBuffer();
   for (final r in refs) {
     buffer
       ..write(r.read<String>('sefaria_ref'))
-      ..write('\n');
-  }
-  buffer.write('---\n');
-  for (final r in cycles) {
-    buffer
-      ..write(r.read<String>('program_key'))
-      ..write('|')
-      ..write(r.read<String>('date_key'))
       ..write('\n');
   }
   return sha256.convert(utf8.encode(buffer.toString())).toString();
@@ -953,9 +569,6 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     // Verify schema against the Drift class by probing each table.
     final expectedTables = [
       'text_cache',
-      'calendar_cycles',
-      'learning_programs',
-      'test_dates',
       'seed_metadata',
     ];
     for (final t in expectedTables) {
@@ -985,18 +598,7 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     }
 
     final textCount = await _countRows(db, 'text_cache');
-    final cycleCount = await _countRows(db, 'calendar_cycles');
-    final programCount = await _countRows(db, 'learning_programs');
     final metaCount = await _countRows(db, 'seed_metadata');
-
-    // Count calendar programs.
-    final calPrograms = await db
-        .customSelect(
-          'SELECT program_key, COUNT(*) AS c, MIN(date_key) AS min_d, '
-          'MAX(date_key) AS max_d FROM calendar_cycles GROUP BY program_key '
-          'ORDER BY program_key',
-        )
-        .get();
 
     print('  Version:         ${meta.version}');
     print('  Built:           ${meta.builtAt}');
@@ -1004,47 +606,17 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     print('  Content Hash:    ${meta.contentHash}');
     print('  Min App Version: ${meta.minAppVersion}');
     print('  TextCache:       $textCount');
-    print('  CalendarCycles:  $cycleCount');
-    print('  LearningPrograms:$programCount');
     print('  SeedMetadata:    $metaCount');
-    print('');
-    print('  Calendar programs:');
-    for (final row in calPrograms) {
-      print(
-        '    ${row.read<String>("program_key").padRight(30)} '
-        '${row.read<int>("c").toString().padLeft(5)} rows  '
-        '${row.read<String>("min_d")} → ${row.read<String>("max_d")}',
-      );
-    }
 
     final failures = <String>[];
-    if (programCount != 18) {
-      failures.add('LearningPrograms expected 18, got $programCount');
-    }
     if (metaCount != 1) {
       failures.add('SeedMetadata expected 1, got $metaCount');
     }
     if (meta.contentHash.isEmpty) {
       failures.add('SeedMetadata.contentHash is empty');
     }
-    // Only enforce large-content thresholds when a full build has run.
     if (textCount > 0 && textCount < 50000) {
       failures.add('TextCache expected >= 50000, got $textCount');
-    }
-    if (cycleCount > 0 && cycleCount < 10000) {
-      failures.add('CalendarCycles expected >= 10000, got $cycleCount');
-    }
-    // Verify all 12 calendar programs are present.
-    final expectedPrograms = {
-      ..._sefariaCalendarMap.values,
-      ..._hebcalCategoryMap.values,
-    };
-    final presentPrograms = calPrograms
-        .map((r) => r.read<String>('program_key'))
-        .toSet();
-    final missingPrograms = expectedPrograms.difference(presentPrograms);
-    if (missingPrograms.isNotEmpty && cycleCount > 0) {
-      failures.add('Missing calendar programs: ${missingPrograms.join(", ")}');
     }
 
     if (failures.isNotEmpty) {
@@ -1068,11 +640,6 @@ Future<int> _countRows(ContentDatabase db, String table) async {
       .getSingle();
   return row.read<int>('c');
 }
-
-String _formatDate(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-'
-    '${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
 
 void _printSizeReport(String dbPath) {
   print('');

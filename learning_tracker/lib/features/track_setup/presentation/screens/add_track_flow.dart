@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
-import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -74,7 +73,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   /// Whether the selected program defines review/chazara stages.
   bool get _programHasChazara {
     final program = _state.selectedProgram;
-    if (program is! LearningProgram) return false;
+    if (program is! LearningProgramData) return false;
     try {
       final stages = jsonDecode(program.stagesConfig) as List<dynamic>;
       return stages.any(
@@ -176,10 +175,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
 
     // Reload program from DB if we had one
-    LearningProgram? selectedProgram;
+    LearningProgramData? selectedProgram;
     if (programId != null) {
-      final contentDb = ref.read(contentDatabaseProvider);
-      selectedProgram = await contentDb.contentLearningProgramDao
+      selectedProgram = LearningProgramRepository.instance
           .getProgramById(programId);
     }
 
@@ -356,7 +354,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   void _onProgramSelected(
     int? programId,
     String? programName,
-    LearningProgram? program,
+    LearningProgramData? program,
   ) {
     setState(() {
       _state = _state.copyWith(
@@ -574,7 +572,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
     // Program with DEFINED chazara → show read-only
     if (_isProgramTrack && _programHasChazara) {
-      final program = _state.selectedProgram as LearningProgram;
+      final program = _state.selectedProgram as LearningProgramData;
       List<dynamic> stages;
       try {
         stages = jsonDecode(program.stagesConfig) as List<dynamic>;

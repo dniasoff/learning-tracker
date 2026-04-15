@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
-import 'package:learning_tracker/core/database/content/content_database.dart'
-    as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
@@ -28,7 +27,7 @@ class LearningProcessWizardScreen extends StatefulWidget {
   });
 
   final CurriculumId curriculumId;
-  final List<db.LearningProgram> presets;
+  final List<LearningProgramData> presets;
   final bool isChildMode;
   final String? childName;
 
@@ -515,7 +514,7 @@ class _PresetCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final db.LearningProgram preset;
+  final LearningProgramData preset;
   final bool isSelected;
   final VoidCallback onTap;
 

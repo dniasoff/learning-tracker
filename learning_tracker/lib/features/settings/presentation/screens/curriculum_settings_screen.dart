@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/app_constants.dart';
-import 'package:learning_tracker/core/database/content/content_database.dart'
-    as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -103,7 +102,7 @@ class _CurriculumSettingsScreenState
 
   Future<void> _onChangeProgram(BuildContext context) async {
     final wizardService = ref.read(learningProcessWizardServiceProvider);
-    final presets = await wizardService.getPresetsForCurriculum(_curriculum);
+    final presets = wizardService.getPresetsForCurriculum(_curriculum);
 
     if (!context.mounted) return;
 
@@ -188,17 +187,16 @@ class _CurriculumSettingsScreenState
 ///
 /// Returns null if the user has a custom schedule (no preset program).
 final _currentProgramProvider =
-    FutureProvider.family<db.LearningProgram?, CurriculumId>((
+    FutureProvider.family<LearningProgramData?, CurriculumId>((
       ref,
       curriculum,
     ) async {
       final userDb = ref.watch(userDatabaseProvider);
-      final contentDb = ref.watch(contentDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       final profileProgram = await userDb.profileProgramDao
           .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
       if (profileProgram == null) return null;
-      return contentDb.contentLearningProgramDao.getProgramById(
+      return LearningProgramRepository.instance.getProgramById(
         profileProgram.programId,
       );
     });

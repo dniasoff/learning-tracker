@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -57,10 +58,9 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
 final learningProcessWizardServiceProvider =
     Provider<LearningProcessWizardService>((ref) {
       final db = ref.watch(userDatabaseProvider);
-      final contentDb = ref.watch(contentDatabaseProvider);
       return LearningProcessWizardService(
         stageDao: db.stageDao,
-        learningProgramDao: contentDb.contentLearningProgramDao,
+        learningProgramRepo: LearningProgramRepository.instance,
         profileProgramDao: db.profileProgramDao,
       );
     });

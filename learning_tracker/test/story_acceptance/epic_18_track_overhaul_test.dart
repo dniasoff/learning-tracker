@@ -10,10 +10,10 @@ import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
-import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
@@ -23,8 +23,6 @@ import 'package:learning_tracker/features/track_setup/domain/entities/add_track_
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
-
-import '../helpers/test_database.dart';
 
 class _MockTrackRepository extends Mock implements TrackRepository {}
 
@@ -121,14 +119,12 @@ void main() {
 
       group('AC-6: Points initialization per track', () {
         late UserDatabase db;
-        late ContentDatabase contentDb;
         late TrackCreationService service;
         late _MockTrackRepository mockTrackRepo;
 
         setUp(() async {
           db = UserDatabase(NativeDatabase.memory());
           await _insertTrack(db);
-          contentDb = createTestContentDatabase();
           mockTrackRepo = _MockTrackRepository();
 
           when(
@@ -161,7 +157,7 @@ void main() {
 
           final wizardService = LearningProcessWizardService(
             stageDao: db.stageDao,
-            learningProgramDao: contentDb.contentLearningProgramDao,
+            learningProgramRepo: LearningProgramRepository.instance,
             profileProgramDao: db.profileProgramDao,
           );
 
@@ -177,7 +173,6 @@ void main() {
 
         tearDown(() async {
           await db.close();
-          await contentDb.close();
         });
 
         test('creating a track seeds default point_configs '
@@ -396,13 +391,11 @@ void main() {
           'LearningProcessWizardService._applyCustom creates לימוד stage',
           () async {
             final db = UserDatabase(NativeDatabase.memory());
-            final cDb = createTestContentDatabase();
             addTearDown(db.close);
-            addTearDown(cDb.close);
 
             final service = LearningProcessWizardService(
               stageDao: db.stageDao,
-              learningProgramDao: cDb.contentLearningProgramDao,
+              learningProgramRepo: LearningProgramRepository.instance,
               profileProgramDao: db.profileProgramDao,
             );
 
@@ -438,9 +431,7 @@ void main() {
           'LearningProcessWizardService._applyNoReview creates לימוד stage',
           () async {
             final db = UserDatabase(NativeDatabase.memory());
-            final cDb = createTestContentDatabase();
             addTearDown(db.close);
-            addTearDown(cDb.close);
 
             final bavliTrack = await db
                 .into(db.curriculumTracks)
@@ -454,7 +445,7 @@ void main() {
 
             final service = LearningProcessWizardService(
               stageDao: db.stageDao,
-              learningProgramDao: cDb.contentLearningProgramDao,
+              learningProgramRepo: LearningProgramRepository.instance,
               profileProgramDao: db.profileProgramDao,
             );
 
