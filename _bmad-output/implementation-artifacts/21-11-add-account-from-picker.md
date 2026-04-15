@@ -1,6 +1,6 @@
 # Story 21.11: Add Account from Picker (Respects 5-Account Cap)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

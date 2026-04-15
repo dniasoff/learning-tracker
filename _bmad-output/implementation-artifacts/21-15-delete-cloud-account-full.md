@@ -1,6 +1,6 @@
 # Story 21.15: Delete Cloud-Born Account (Full Wipe)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

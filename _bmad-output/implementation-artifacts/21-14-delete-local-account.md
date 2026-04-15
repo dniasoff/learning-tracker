@@ -1,6 +1,6 @@
 # Story 21.14: Delete Local-Born Account
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

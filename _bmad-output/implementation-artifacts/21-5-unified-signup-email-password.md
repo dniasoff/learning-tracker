@@ -1,6 +1,6 @@
 # Story 21.5: Unified Sign-Up Page — Email/Password Path
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

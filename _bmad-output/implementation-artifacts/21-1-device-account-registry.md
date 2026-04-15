@@ -1,6 +1,6 @@
 # Story 21.1: Device Account Registry
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

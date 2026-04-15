@@ -1,5 +1,5 @@
 # generated: 2026-01-05
-# last_updated: 2026-04-14
+# last_updated: 2026-04-15
 # project: learning-tracker
 # project_key: learning-tracker
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-01-05
-last_updated: 2026-04-14
+last_updated: 2026-04-15
 project: learning-tracker
 project_key: learning-tracker
 tracking_system: file-system
@@ -219,21 +219,21 @@ development_status:
   epic-20-retrospective: optional
 
   # Epic 21: Multi-Account Device — Account Switching, Session Management & Deletion (16 stories)
-  epic-21: in-progress
-  21-1-device-account-registry: ready-for-dev
-  21-2-per-account-database-isolation: ready-for-dev
-  21-3-session-auto-resume: ready-for-dev
-  21-4-session-persistence: ready-for-dev
-  21-5-unified-signup-email-password: ready-for-dev
-  21-6-unified-signup-google: ready-for-dev
-  21-7-unified-signin-smart-routing: ready-for-dev
-  21-8-unified-signin-google: ready-for-dev
-  21-9-account-picker-screen: ready-for-dev
-  21-10-signout-to-picker: ready-for-dev
-  21-11-add-account-from-picker: ready-for-dev
-  21-12-upgrade-multi-account: ready-for-dev
-  21-13-remove-cloud-from-device: ready-for-dev
-  21-14-delete-local-account: ready-for-dev
-  21-15-delete-cloud-account-full: ready-for-dev
-  21-16-cloud-function-deletion: ready-for-dev
+  epic-21: done
+  21-1-device-account-registry: done
+  21-2-per-account-database-isolation: done
+  21-3-session-auto-resume: done
+  21-4-session-persistence: done
+  21-5-unified-signup-email-password: done
+  21-6-unified-signup-google: done
+  21-7-unified-signin-smart-routing: done
+  21-8-unified-signin-google: done
+  21-9-account-picker-screen: done
+  21-10-signout-to-picker: done
+  21-11-add-account-from-picker: done
+  21-12-upgrade-multi-account: done
+  21-13-remove-cloud-from-device: done
+  21-14-delete-local-account: done
+  21-15-delete-cloud-account-full: done
+  21-16-cloud-function-deletion: done
   epic-21-retrospective: optional

@@ -8,8 +8,10 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Account picker shown after sign-out when other accounts remain
 /// on the device, or when the user wants to switch accounts.
@@ -334,7 +336,17 @@ class _AccountTile extends ConsumerWidget {
 
   Future<void> _onDismissed(BuildContext context, WidgetRef ref) async {
     final registry = ref.read(deviceRegistryProvider);
-    await registry.removeAccount(account.accountId);
-    // TODO: also delete the user_acc_{id}.db file (21.13/21.14)
+    final docsDir = await getApplicationDocumentsDirectory();
+    final service = AccountLifecycleService(
+      registry: registry,
+      databasesPath: docsDir.path,
+    );
+
+    final isCloud = account.tier == 'cloudBorn';
+    if (isCloud) {
+      await service.removeCloudFromDevice(account.accountId);
+    } else {
+      await service.deleteLocalAccount(account.accountId);
+    }
   }
 }

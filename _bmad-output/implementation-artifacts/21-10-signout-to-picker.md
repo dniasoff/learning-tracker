@@ -1,6 +1,6 @@
 # Story 21.10: Sign-Out Routes to Account Picker
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

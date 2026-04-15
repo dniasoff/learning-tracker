@@ -1,6 +1,6 @@
 # Story 21.16: Firebase Cloud Function — Server-Side Deletion Cleanup
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

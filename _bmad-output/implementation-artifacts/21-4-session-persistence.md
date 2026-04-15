@@ -1,6 +1,6 @@
 # Story 21.4: Session Persistence — SharedPreferences Last-Active Tracking
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

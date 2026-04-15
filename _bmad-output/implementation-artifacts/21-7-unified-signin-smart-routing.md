@@ -1,6 +1,6 @@
 # Story 21.7: Unified Sign-In Page — Smart Credential Routing
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

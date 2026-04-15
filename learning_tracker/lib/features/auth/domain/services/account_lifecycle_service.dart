@@ -16,15 +16,18 @@ class AccountLifecycleService {
     required String databasesPath,
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-  }) : _registry = registry,
-       _dbPath = databasesPath,
-       _auth = auth ?? FirebaseAuth.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance;
+  })  : _registry = registry,
+        _dbPath = databasesPath,
+        _auth = auth,
+        _firestore = firestore;
 
   final DeviceRegistryDatabase _registry;
   final String _dbPath;
-  final FirebaseAuth _auth;
-  final FirebaseFirestore _firestore;
+  final FirebaseAuth? _auth;
+  final FirebaseFirestore? _firestore;
+
+  FirebaseAuth get _firebaseAuth => _auth ?? FirebaseAuth.instance;
+  FirebaseFirestore get _firestoreDb => _firestore ?? FirebaseFirestore.instance;
 
   // ─── 21.13: Remove cloud-born account from device ──────────
 
@@ -91,7 +94,7 @@ class AccountLifecycleService {
     await _deleteFirestoreData(uid);
 
     // Step 2: delete Firebase Auth user — triggers Cloud Function
-    final currentUser = _auth.currentUser;
+    final currentUser = _firebaseAuth.currentUser;
     if (currentUser != null && currentUser.uid == uid) {
       await currentUser.delete();
     }
@@ -104,7 +107,7 @@ class AccountLifecycleService {
   /// Best-effort Firestore subcollection deletion. The Cloud
   /// Function (21.16) catches anything we miss.
   Future<void> _deleteFirestoreData(String uid) async {
-    final userDoc = _firestore.collection('users').doc(uid);
+    final userDoc = _firestoreDb.collection('users').doc(uid);
     const subcollections = [
       'completions',
       'bookmarks',
@@ -132,7 +135,7 @@ class AccountLifecycleService {
     do {
       snapshot = await ref.limit(batchSize).get();
       if (snapshot.docs.isEmpty) break;
-      final batch = _firestore.batch();
+      final batch = _firestoreDb.batch();
       for (final doc in snapshot.docs) {
         batch.delete(doc.reference);
       }

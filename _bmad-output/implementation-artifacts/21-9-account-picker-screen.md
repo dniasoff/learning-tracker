@@ -1,6 +1,6 @@
 # Story 21.9: Account Picker Screen
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

@@ -1,15 +1,18 @@
 import 'dart:async';
 
+import 'package:drift_flutter/drift_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/theme_provider.dart';
@@ -17,6 +20,7 @@ import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecyc
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
 
 void main() {
@@ -53,8 +57,8 @@ void main() {
       // SeedManager handles first-launch extraction, version-driven
       // upgrades, .bak rollback, and corruption recovery.
       String resolvedContentDbPath;
+      final docsDir = await getApplicationDocumentsDirectory();
       try {
-        final docsDir = await getApplicationDocumentsDirectory();
         final seedManager = SeedManager(
           dbDirectory: docsDir.path,
           talker: talker,
@@ -64,6 +68,40 @@ void main() {
       } catch (e, stack) {
         talker.error('SeedManager initialization failed', e, stack);
         rethrow;
+      }
+
+      // Epic 21: Resolve the active account's DB file name BEFORE
+      // building the provider tree. The userDatabaseProvider reads
+      // `activeDbFileName` synchronously, so it must be set here.
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final registry = DeviceRegistryDatabase(
+          driftDatabase(name: 'device_registry'),
+        );
+        final sessionService = SessionPersistenceService(
+          prefs: prefs,
+          registry: registry,
+        );
+        final accountId = await sessionService.resolveActiveAccountId();
+        if (accountId != null) {
+          final account = await registry.findById(accountId);
+          if (account != null) {
+            activeDbFileName = account.dbFileName;
+            talker.info(
+              'Active account resolved: ${account.email} '
+              '(${account.tier}, db=${account.dbFileName})',
+            );
+          }
+        } else {
+          talker.info('No active account — fresh install or all removed');
+        }
+        await registry.close();
+      } catch (e, stack) {
+        talker.error(
+          'Session resolution failed (non-fatal, using default DB)',
+          e,
+          stack,
+        );
       }
 
       final container = ProviderContainer(

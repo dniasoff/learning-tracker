@@ -1,6 +1,6 @@
 # Story 21.3: Session Auto-Resume on App Startup
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

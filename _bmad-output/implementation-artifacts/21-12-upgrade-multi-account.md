@@ -1,6 +1,6 @@
 # Story 21.12: Local → Cloud Upgrade in Multi-Account Context
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

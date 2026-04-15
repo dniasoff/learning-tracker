@@ -1,6 +1,6 @@
 # Story 21.6: Unified Sign-Up Page — Google Sign-In Path
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

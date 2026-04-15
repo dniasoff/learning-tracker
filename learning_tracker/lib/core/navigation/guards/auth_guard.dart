@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:drift_flutter/drift_flutter.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart'
     show kIntroSeen;
@@ -8,14 +10,15 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
     show kOnboardingComplete;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Unified auth/onboarding guard (Epic 20 §4).
+/// Unified auth/onboarding guard (Epic 20 §4, Epic 21 multi-account).
 ///
 /// Collapses the v1 `AuthGuard` + `LocalAuthGuard` pair into a single
 /// guard. Decision tree:
 ///
 /// - Onboarding complete → pass through
 /// - Intro slides not seen → redirect to [AppIntroRoute]
-/// - Intro seen but onboarding incomplete → redirect to [WelcomeRoute]
+/// - Intro seen, onboarding incomplete, accounts on device → [AccountPickerRoute]
+/// - Intro seen, onboarding incomplete, no accounts → [WelcomeRoute]
 ///
 /// Signed-in / signed-out session status is owned by `AuthStateNotifier`,
 /// read downstream by individual screens. This guard only governs the
@@ -34,10 +37,26 @@ class AuthGuard extends AutoRouteGuard {
       resolver.next();
     } else {
       final introSeen = prefs.getBool(kIntroSeen) ?? false;
-      if (introSeen) {
-        unawaited(router.replace(const WelcomeRoute()));
-      } else {
+      if (!introSeen) {
         unawaited(router.replace(const AppIntroRoute()));
+        resolver.next(false);
+        return;
+      }
+
+      // Epic 21: check if accounts exist on the device. If so,
+      // route to the account picker instead of the welcome screen.
+      final registry = DeviceRegistryDatabase(
+        driftDatabase(name: 'device_registry'),
+      );
+      try {
+        final accounts = await registry.getAllAccounts();
+        if (accounts.isNotEmpty) {
+          unawaited(router.replace(const AccountPickerRoute()));
+        } else {
+          unawaited(router.replace(const WelcomeRoute()));
+        }
+      } finally {
+        await registry.close();
       }
       resolver.next(false);
     }

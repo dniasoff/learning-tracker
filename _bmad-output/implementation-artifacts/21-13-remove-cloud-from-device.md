@@ -1,6 +1,6 @@
 # Story 21.13: Remove Cloud-Born Account from Device
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
