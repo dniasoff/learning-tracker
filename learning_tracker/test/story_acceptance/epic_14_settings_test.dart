@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/user_profil
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
@@ -361,7 +362,7 @@ void main() {
         expect((data['bookmarks'] as List).length, equals(1));
         expect((data['learningOrder'] as List).length, equals(1));
         expect((data['activeCurricula'] as List).length, equals(1));
-        expect((data['curriculumTracks'] as List).length, equals(1));
+        expect((data['curriculumTracks'] as List).length, equals(2));
         expect((data['userProfiles'] as List).length, equals(1));
       },
     );
@@ -454,9 +455,9 @@ void main() {
       expect(preview.bookmarkCount, equals(1));
       expect(preview.learningOrderCount, equals(1));
       expect(preview.activeCurriculaCount, equals(1));
-      expect(preview.curriculumTrackCount, equals(1));
+      expect(preview.curriculumTrackCount, equals(2));
       expect(preview.userProfileCount, equals(1));
-      expect(preview.totalRecords, equals(13));
+      expect(preview.totalRecords, equals(14));
       expect(preview.exportedAt, isNot('unknown'));
       expect(preview.appVersion, equals('1.0.0'));
     });
@@ -627,7 +628,7 @@ void main() {
           (await db.activeCurriculumDao.getActiveCurricula()).length,
           equals(1),
         );
-        expect((await db.select(db.curriculumTracks).get()).length, equals(1));
+        expect((await db.select(db.curriculumTracks).get()).length, equals(2));
         expect(
           (await db.userProfileDao.getAllUserProfiles()).length,
           equals(1),
@@ -645,6 +646,7 @@ void main() {
     late AccountManagementService service;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       mockAuthRepo = MockAuthRepository();
       mockFirestore = MockFirebaseFirestore();
       db = createTestDatabase();
@@ -690,6 +692,17 @@ void main() {
         () => mockFirestore.collection('users'),
       ).thenReturn(mockUsersCollection);
       when(() => mockUsersCollection.doc('uid-1')).thenReturn(mockUserDoc);
+
+      // Mock 'profiles' subcollection (profile-scoped data)
+      final mockProfilesCollection = MockCollectionReference();
+      final mockProfilesSnapshot = MockQuerySnapshot();
+      when(
+        () => mockUserDoc.collection('profiles'),
+      ).thenReturn(mockProfilesCollection);
+      when(
+        () => mockProfilesCollection.get(),
+      ).thenAnswer((_) async => mockProfilesSnapshot);
+      when(() => mockProfilesSnapshot.docs).thenReturn([]);
 
       for (final sub in [
         'completions',

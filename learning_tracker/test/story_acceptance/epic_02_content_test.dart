@@ -126,9 +126,9 @@ void main() {
       expect(hierarchyConfigs[CurriculumId.mishnayos]!.maxLevels, 4);
       expect(hierarchyConfigs[CurriculumId.mishnayos]!.level1Label, 'Seder');
 
-      // Bavli: 3 levels
-      expect(hierarchyConfigs[CurriculumId.bavli]!.maxLevels, 3);
-      expect(hierarchyConfigs[CurriculumId.bavli]!.level1Label, 'Masechta');
+      // Bavli: 4 levels (Seder > Masechta > Daf > Amud)
+      expect(hierarchyConfigs[CurriculumId.bavli]!.maxLevels, 4);
+      expect(hierarchyConfigs[CurriculumId.bavli]!.level1Label, 'Seder');
 
       // Chumash: 4 levels
       expect(hierarchyConfigs[CurriculumId.chumash]!.maxLevels, 4);
@@ -655,7 +655,7 @@ void main() {
       addTearDown(() => db.close());
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
-      expect(db.schemaVersion, equals(24));
+      expect(db.schemaVersion, equals(4));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
@@ -664,7 +664,7 @@ void main() {
       final db = createTestDatabase();
       addTearDown(() => db.close());
       // Schema v3 drops these tables.
-      expect(db.schemaVersion, equals(24));
+      expect(db.schemaVersion, equals(4));
     });
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK

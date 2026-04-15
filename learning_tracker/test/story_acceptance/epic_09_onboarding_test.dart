@@ -28,7 +28,9 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/reward
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
 class _MockContentRepository extends Mock implements ContentRepository {}
@@ -327,11 +329,14 @@ void main() {
     testWidgets('goal setup screen shows curriculum name and item count', (
       tester,
     ) async {
+      SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
-        const MaterialApp(
-          home: GoalSetupScreen(
-            curriculumId: CurriculumId.mishnayos,
-            totalItems: 4192,
+        const ProviderScope(
+          child: MaterialApp(
+            home: GoalSetupScreen(
+              curriculumId: CurriculumId.mishnayos,
+              totalItems: 4192,
+            ),
           ),
         ),
       );
@@ -339,10 +344,15 @@ void main() {
 
       // Verify the screen renders with the create goal button
       expect(find.text('Create Goal'), findsOneWidget);
-      // Verify the target slider is present
-      expect(find.text('Target: 100%'), findsOneWidget);
-      // Verify Hebrew date toggle is present
-      expect(find.text('Use Hebrew date'), findsOneWidget);
+      // Verify the target percentage text is present
+      expect(
+        find.text(
+          'Complete 100% of the material (4192 of 4192 items)',
+        ),
+        findsOneWidget,
+      );
+      // Verify the deadline section is shown by default
+      expect(find.text('Tap to choose a date'), findsOneWidget);
     });
 
     test('skip button proceeds without creating a goal', () async {
@@ -369,6 +379,7 @@ void main() {
     testWidgets('Gregorian date picker mode works and shows daily pace', (
       tester,
     ) async {
+      SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -381,21 +392,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Default mode is Gregorian (Hebrew toggle off)
-      expect(find.text('Use Hebrew date'), findsOneWidget);
-      final switchWidget = tester.widget<SwitchListTile>(
-        find.byType(SwitchListTile),
-      );
-      expect(switchWidget.value, isFalse);
+      // Default mode is Deadline (Gregorian by default, useHebrewDate = false)
+      expect(find.text('Tap to choose a date'), findsOneWidget);
 
-      // Tap the calendar IconButton in the date ListTile (not the identical
-      // icon inside the SegmentedButton goal-type selector).
-      await tester.tap(
-        find.descendant(
-          of: find.byType(ListTile),
-          matching: find.byIcon(Icons.calendar_today),
-        ),
-      );
+      // Tap the date Card to open Gregorian picker
+      await tester.tap(find.text('Tap to choose a date'));
       await tester.pumpAndSettle();
 
       // Gregorian date picker dialog should be present
@@ -407,9 +408,13 @@ void main() {
     });
 
     testWidgets('Hebrew date toggle switches picker mode', (tester) async {
+      SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: [
+            useHebrewDateProvider.overrideWithValue(true),
+          ],
+          child: const MaterialApp(
             home: GoalSetupScreen(
               curriculumId: CurriculumId.mishnayos,
               totalItems: 365,
@@ -419,15 +424,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Toggle to Hebrew date mode
-      await tester.tap(find.byType(Switch));
-      await tester.pumpAndSettle();
-
-      // Switch should now be on
-      final switchWidget = tester.widget<SwitchListTile>(
-        find.byType(SwitchListTile),
-      );
-      expect(switchWidget.value, isTrue);
+      // Hebrew date mode is active via provider override.
+      // Tapping the date Card should open the Hebrew date picker
+      // rather than the Gregorian one.
+      expect(find.text('Tap to choose a date'), findsOneWidget);
     });
 
     test('summary shows calculated daily pace after date selection', () {

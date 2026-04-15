@@ -659,7 +659,7 @@ void main() {
           // Act
           await tester.pumpWidget(
             ProviderScope(
-              overrides: [appDatabaseProvider.overrideWithValue(database)],
+              overrides: [userDatabaseProvider.overrideWithValue(database)],
               child: MaterialApp(
                 theme: AppTheme.lightTheme(),
                 home: const CompletionHistoryScreen(curriculumId: 'bavli'),

@@ -70,6 +70,7 @@ void main() {
           logger: logger,
         );
         when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
+        when(() => mockFirestore.isAuthenticated).thenReturn(true);
         syncEngine = SyncEngine(
           database: database,
           firestoreDataSource: mockFirestore,
@@ -242,6 +243,7 @@ void main() {
         logger: logger,
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
+      when(() => mockFirestore.isAuthenticated).thenReturn(true);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -454,6 +456,7 @@ void main() {
         logger: logger,
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
+      when(() => mockFirestore.isAuthenticated).thenReturn(true);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -728,6 +731,7 @@ void main() {
         logger: logger,
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
+      when(() => mockFirestore.isAuthenticated).thenReturn(true);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -869,6 +873,7 @@ void main() {
       verify(() => mockFirestore.fetchProfile()).called(1);
       verify(() => mockFirestore.fetchLedgerEntries()).called(1);
       verify(() => mockFirestore.fetchActiveCurricula()).called(1);
+      verify(() => mockFirestore.isAuthenticated).called(1);
       verifyNoMoreInteractions(mockFirestore);
     });
 

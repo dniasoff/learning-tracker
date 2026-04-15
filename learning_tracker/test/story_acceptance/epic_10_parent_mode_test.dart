@@ -533,7 +533,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentModeScreen()),
         ),
       );
@@ -562,7 +562,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentModeScreen()),
         ),
       );
@@ -590,7 +590,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentModeScreen()),
         ),
       );
@@ -659,7 +659,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            overrides: [userDatabaseProvider.overrideWithValue(db)],
             child: const MaterialApp(home: ParentModeScreen()),
           ),
         );
@@ -857,7 +857,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
               allRewardsProvider.overrideWith((ref) async => rewardModels),
             ],
             child: const MaterialApp(home: RewardCatalogScreen()),
@@ -880,7 +880,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
               allRewardsProvider.overrideWith(
                 (ref) async => rewards.map(RewardModel.fromDriftRow).toList(),
               ),
@@ -928,13 +928,12 @@ void main() {
       );
 
       final rewards = await db.rewardDao.getAllRewards();
+      final rewardModels = rewards.map(RewardModel.fromDriftRow).toList();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            allRewardsStreamProvider.overrideWith(
-              (ref) => Stream.value(rewards),
-            ),
+            userDatabaseProvider.overrideWithValue(db),
+            allRewardsProvider.overrideWith((ref) async => rewardModels),
           ],
           child: const MaterialApp(home: RewardCatalogScreen()),
         ),
@@ -976,14 +975,14 @@ void main() {
       );
       await db.rewardDao.markEarned(id, earnedAt: DateTime.now().toUtc());
 
-      final rewards = await db.rewardDao.getAllRewards();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            allRewardsStreamProvider.overrideWith(
-              (ref) => Stream.value(rewards),
-            ),
+            userDatabaseProvider.overrideWithValue(db),
+            allRewardsProvider.overrideWith((ref) async {
+              final rows = await db.rewardDao.getAllRewards();
+              return rows.map(RewardModel.fromDriftRow).toList();
+            }),
           ],
           child: const MaterialApp(home: RewardCatalogScreen()),
         ),
@@ -1205,7 +1204,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: PointConfigScreen()),
         ),
       );
@@ -1231,7 +1230,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: PointConfigScreen()),
         ),
       );
@@ -1263,7 +1262,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: PointConfigScreen()),
         ),
       );
@@ -1298,7 +1297,7 @@ void main() {
     testWidgets('validation prevents zero or negative values', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: PointConfigScreen()),
         ),
       );
@@ -1474,7 +1473,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentTrackManagementScreen()),
         ),
       );
@@ -1495,7 +1494,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentTrackManagementScreen()),
         ),
       );
@@ -1520,7 +1519,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentTrackManagementScreen()),
         ),
       );
@@ -1546,7 +1545,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(home: ParentTrackManagementScreen()),
         ),
       );
