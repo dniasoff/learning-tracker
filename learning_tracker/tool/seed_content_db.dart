@@ -492,6 +492,9 @@ Future<({String he, String en})> _fetchBothLanguages(
   final encodedRef = Uri.encodeComponent(sefariaRef);
   final response = await dio.get<Map<String, dynamic>>(
     '/api/v3/texts/$encodedRef',
+    queryParameters: {
+      'version': ['english', 'hebrew'],
+    },
   );
   final data = response.data;
   if (data == null) return (he: '', en: '');
