@@ -3,8 +3,8 @@ import 'package:drift/drift.dart';
 /// Pre-computed calendar program cycles for fully offline operation.
 /// Each row maps a date to a Sefaria ref for one calendar program.
 class CalendarCycles extends Table {
-  /// API program key matching LearningPrograms.apiProgramKey
-  /// e.g., 'Daf Yomi', 'Mishnah Yomit', 'Nach Yomi'
+  /// Program key matching CalendarProgramRegistry IDs
+  /// e.g., 'daf_yomi', 'mishna_yomit', 'nach_yomi'
   TextColumn get programKey => text()();
 
   /// Date in 'YYYY-MM-DD' format (ISO 8601)

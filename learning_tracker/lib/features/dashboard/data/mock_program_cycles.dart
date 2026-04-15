@@ -1,7 +1,7 @@
 /// Mock cycle data for known calendar programs.
 ///
-/// Keyed by curriculum type string matching LearningPrograms seed data.
-/// Will be replaced by real calendar computation from CalendarCycles table.
+/// Keyed by curriculum type string matching CalendarProgramRegistry IDs.
+/// Calendar data is now sourced from the pre-computed CalendarCycles table.
 class ProgramCycleData {
   const ProgramCycleData({
     required this.totalDays,
