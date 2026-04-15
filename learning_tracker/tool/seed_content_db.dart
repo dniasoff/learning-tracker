@@ -54,9 +54,12 @@ const _curricula = {
   'mussar': 'mussar.json',
 };
 
-const _maxConcurrentFetches = 5;
-const _batchFlushSize = 100;
+const _maxConcurrentFetches = 20;
+const _batchFlushSize = 200;
 const _textErrorRateThreshold = 0.01; // 1%
+const _batchDelayMs = 50;
+const _backoffBaseMs = 2000;
+const _maxRetries = 3;
 
 /// Date range for calendar cycles (inclusive).
 final _calendarStart = DateTime.utc(2024, 1, 1);
@@ -166,9 +169,10 @@ Future<void> main(List<String> rawArgs) async {
   final args = _parseArgs(rawArgs);
 
   print('🌱 Seed Content DB Builder');
-  print('  Mode:    ${args.mode.name}');
-  print('  Version: ${args.seedVersion}');
-  print('  Output:  ${args.output}');
+  print('  Mode:       ${args.mode.name}');
+  print('  Version:    ${args.seedVersion}');
+  print('  Output:     ${args.output}');
+  print('  Concurrency: $_maxConcurrentFetches');
   print('');
 
   final buildDir = Directory(args.output);
@@ -204,10 +208,10 @@ Future<void> main(List<String> rawArgs) async {
       await _seedProgramsAndTestDates(db, args.verbose);
     }
 
-    // Phase 3: Text content
+    // Phase 3: Text content (he + en)
     var textCacheCount = 0;
     if (args.mode == _Mode.build || args.mode == _Mode.textOnly) {
-      print('Phase 3: Fetching text content from Sefaria...');
+      print('Phase 3: Fetching text content from Sefaria (he, en)...');
       textCacheCount = await _fetchAndInsertTextContent(db, args);
     } else {
       textCacheCount = await _countRows(db, 'text_cache');
@@ -331,7 +335,8 @@ Future<void> _seedProgramsAndTestDates(ContentDatabase db, bool verbose) async {
   for (final td in seeds) {
     final programName = td['program_name'] as String?;
     if (programName == null) continue;
-    final program = programRows.where((p) => p.name == programName).toList();
+    final program =
+        programRows.where((p) => p.name == programName).toList();
     if (program.isEmpty) continue;
     await db.customInsert(
       'INSERT INTO test_dates (program_id, test_date, material_description) '
@@ -349,7 +354,19 @@ Future<void> _seedProgramsAndTestDates(ContentDatabase db, bool verbose) async {
 
 // ── Phase 3: Text content ────────────────────────────────────────────────
 
-Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
+/// Record for a single fetched text (Hebrew + English).
+typedef _TextResult = ({
+  String ref,
+  String he,
+  String en,
+  bool error,
+  bool rateLimited,
+});
+
+Future<int> _fetchAndInsertTextContent(
+  ContentDatabase db,
+  _Args args,
+) async {
   final dio = Dio(
     BaseOptions(
       baseUrl: 'https://www.sefaria.org',
@@ -399,30 +416,18 @@ Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
   var errors = 0;
   final bufferedInserts = <({String ref, String he, String en})>[];
 
-  for (var i = 0; i < toFetch.length; i += _maxConcurrentFetches) {
-    final batch = toFetch.skip(i).take(_maxConcurrentFetches).toList();
+  // Adaptive concurrency: start at max, reduce on 429s, recover over time.
+  var activeConcurrency = _maxConcurrentFetches;
+  var consecutiveSuccess = 0;
+  final sw = Stopwatch()..start();
 
-    final futures = batch.map((leaf) async {
-      try {
-        final texts = await _fetchBothLanguages(dio, leaf.ref);
-        return (ref: leaf.ref, he: texts.he, en: texts.en, error: false);
-      } on DioException catch (e) {
-        if (e.response?.statusCode == 429) {
-          await Future<void>.delayed(const Duration(seconds: 5));
-          try {
-            final texts = await _fetchBothLanguages(dio, leaf.ref);
-            return (ref: leaf.ref, he: texts.he, en: texts.en, error: false);
-          } catch (_) {
-            return (ref: leaf.ref, he: '', en: '', error: true);
-          }
-        }
-        return (ref: leaf.ref, he: '', en: '', error: true);
-      } catch (_) {
-        return (ref: leaf.ref, he: '', en: '', error: true);
-      }
-    });
+  for (var i = 0; i < toFetch.length; i += activeConcurrency) {
+    final batch =
+        toFetch.skip(i).take(activeConcurrency).toList();
 
+    final futures = batch.map((leaf) => _fetchWithRetry(dio, leaf.ref, args));
     final results = await Future.wait(futures);
+
     for (final r in results) {
       if (r.error) {
         errors++;
@@ -433,6 +438,27 @@ Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
       }
     }
 
+    // Adaptive throttling — only trigger on actual rate limits, not 404s.
+    final batchHadRateLimit = results.any((r) => r.rateLimited);
+    if (batchHadRateLimit && activeConcurrency > 5) {
+      activeConcurrency = (activeConcurrency * 0.6).round();
+      consecutiveSuccess = 0;
+      if (args.verbose) {
+        print('    ⚡ Throttled to $activeConcurrency concurrent');
+      }
+    } else {
+      consecutiveSuccess++;
+      if (consecutiveSuccess > 20 &&
+          activeConcurrency < _maxConcurrentFetches) {
+        activeConcurrency =
+            (activeConcurrency + 2).clamp(1, _maxConcurrentFetches);
+        consecutiveSuccess = 0;
+        if (args.verbose) {
+          print('    ⚡ Recovered to $activeConcurrency concurrent');
+        }
+      }
+    }
+
     if (bufferedInserts.length >= _batchFlushSize) {
       await _flushTextBatch(db, bufferedInserts);
       bufferedInserts.clear();
@@ -440,13 +466,15 @@ Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
 
     final progress = fetched + errors;
     if (progress % 500 == 0 || progress == toFetch.length) {
-      print(
-        '    Progress: $progress/${toFetch.length} '
-        '(fetched $fetched, errors $errors)',
-      );
+      final elapsed = sw.elapsed;
+      final rate = progress > 0 ? elapsed.inSeconds / progress : 0;
+      final remaining = (toFetch.length - progress) * rate;
+      print('    Progress: $progress/${toFetch.length} '
+          '(fetched $fetched, errors $errors, '
+          '~${(remaining / 60).toStringAsFixed(0)}m remaining)');
     }
 
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await Future<void>.delayed(const Duration(milliseconds: _batchDelayMs));
   }
 
   if (bufferedInserts.isNotEmpty) {
@@ -456,6 +484,8 @@ Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
 
   final total = fetched + errors;
   final errorRate = total == 0 ? 0 : errors / total;
+  print('  Text fetch complete: $fetched ok, $errors errors '
+      '(${(errorRate * 100).toStringAsFixed(2)}%)');
   if (errorRate > _textErrorRateThreshold) {
     stderr.writeln(
       '❌ Text fetch error rate ${(errorRate * 100).toStringAsFixed(2)}% '
@@ -466,6 +496,41 @@ Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
   }
 
   return _countRows(db, 'text_cache');
+}
+
+/// Fetch a single ref with exponential backoff on 429 / transient errors.
+Future<_TextResult> _fetchWithRetry(
+  Dio dio,
+  String ref,
+  _Args args,
+) async {
+  for (var attempt = 0; attempt < _maxRetries; attempt++) {
+    try {
+      final texts = await _fetchBothLanguages(dio, ref);
+      return (ref: ref, he: texts.he, en: texts.en, error: false, rateLimited: false);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 429 || e.type == DioExceptionType.connectionTimeout) {
+        final delay = _backoffBaseMs * (1 << attempt); // 2s, 4s, 8s
+        if (args.verbose) {
+          print('    ⏳ 429 on $ref — backoff ${delay}ms (attempt $attempt)');
+        }
+        await Future<void>.delayed(Duration(milliseconds: delay));
+        continue;
+      }
+      // Non-retryable HTTP error (404, 500, etc.) — don't throttle.
+      if (args.verbose) {
+        print('    ❌ ${e.response?.statusCode ?? e.type} on $ref');
+      }
+      return (ref: ref, he: '', en: '', error: true, rateLimited: false);
+    } catch (e) {
+      if (args.verbose) {
+        print('    ❌ $e on $ref');
+      }
+      return (ref: ref, he: '', en: '', error: true, rateLimited: false);
+    }
+  }
+  // All retries exhausted — was rate limited.
+  return (ref: ref, he: '', en: '', error: true, rateLimited: true);
 }
 
 Future<void> _flushTextBatch(
@@ -490,6 +555,10 @@ Future<void> _flushTextBatch(
   });
 }
 
+/// Fetch Hebrew + English text for a single Sefaria ref.
+///
+/// The /api/v3/texts endpoint returns all available versions in one call.
+/// We pick the first version for each of he and en.
 Future<({String he, String en})> _fetchBothLanguages(
   Dio dio,
   String sefariaRef,
@@ -588,7 +657,8 @@ Future<void> _fetchSefariaCalendar(
     // Skip if every Sefaria-sourced program already has a row for
     // this date or later.
     final allCovered = _sefariaCalendarMap.values.every(
-      (programKey) => (perProgramMax[programKey] ?? '').compareTo(dateKey) >= 0,
+      (programKey) =>
+          (perProgramMax[programKey] ?? '').compareTo(dateKey) >= 0,
     );
     if (allCovered) {
       processed++;
@@ -647,7 +717,8 @@ Future<void> _fetchSefariaCalendar(
     if (d.isAfter(DateTime.utc(2027, 6, 7))) {
       final existing = await db
           .customSelect(
-            'SELECT 1 FROM calendar_cycles WHERE program_key = ? AND date_key = ?',
+            'SELECT 1 FROM calendar_cycles '
+            'WHERE program_key = ? AND date_key = ?',
             variables: [
               Variable.withString('daf_yomi'),
               Variable.withString(dateKey),
@@ -845,14 +916,17 @@ Future<void> _writeSeedMetadata(
   final buildId = 'seed-$version-${DateTime.now().millisecondsSinceEpoch}';
   await db.customInsert(
     'INSERT INTO seed_metadata '
-    '(version, built_at, build_id, text_cache_count, calendar_cycle_count) '
-    'VALUES (?, ?, ?, ?, ?)',
+    '(version, built_at, build_id, text_cache_count, calendar_cycle_count, '
+    'content_hash, min_app_version) '
+    'VALUES (?, ?, ?, ?, ?, ?, ?)',
     variables: [
       Variable.withInt(version),
       Variable.withString(DateTime.now().toUtc().toIso8601String()),
       Variable.withString(buildId),
       Variable.withInt(textCacheCount),
       Variable.withInt(calendarCycleCount),
+      Variable.withString(contentHash),
+      Variable.withString('1.0.0'),
     ],
   );
   print(
@@ -889,6 +963,19 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
       }
     }
 
+    // Verify seed_metadata has new columns.
+    final metaColumns = await db
+        .customSelect('PRAGMA table_info(seed_metadata)')
+        .get();
+    final metaColNames =
+        metaColumns.map((r) => r.read<String>('name')).toSet();
+    for (final col in ['content_hash', 'min_app_version']) {
+      if (!metaColNames.contains(col)) {
+        stderr.writeln('❌ Missing column seed_metadata.$col');
+        exit(1);
+      }
+    }
+
     final meta = await db.seedMetadataDao.getVersion();
     if (meta == null) {
       stderr.writeln('❌ No SeedMetadata row');
@@ -900,31 +987,61 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     final programCount = await _countRows(db, 'learning_programs');
     final metaCount = await _countRows(db, 'seed_metadata');
 
+    // Count calendar programs.
+    final calPrograms = await db.customSelect(
+      'SELECT program_key, COUNT(*) AS c, MIN(date_key) AS min_d, '
+      'MAX(date_key) AS max_d FROM calendar_cycles GROUP BY program_key '
+      'ORDER BY program_key',
+    ).get();
+
     print('  Version:         ${meta.version}');
     print('  Built:           ${meta.builtAt}');
     print('  Build ID:        ${meta.buildId}');
+    print('  Content Hash:    ${meta.contentHash}');
+    print('  Min App Version: ${meta.minAppVersion}');
     print('  TextCache:       $textCount');
     print('  CalendarCycles:  $cycleCount');
     print('  LearningPrograms:$programCount');
     print('  SeedMetadata:    $metaCount');
+    print('');
+    print('  Calendar programs:');
+    for (final row in calPrograms) {
+      print('    ${row.read<String>("program_key").padRight(30)} '
+          '${row.read<int>("c").toString().padLeft(5)} rows  '
+          '${row.read<String>("min_d")} → ${row.read<String>("max_d")}');
+    }
 
     final failures = <String>[];
-    if (args.mode == _Mode.validateOnly) {
-      // Row-count thresholds (skip in programs-only builds).
-      if (programCount != 18) {
-        failures.add('LearningPrograms expected 18, got $programCount');
-      }
-      if (metaCount != 1) {
-        failures.add('SeedMetadata expected 1, got $metaCount');
-      }
-      // Only enforce large-content thresholds when a full build has run.
-      if (textCount > 0 && textCount < 50000) {
-        failures.add('TextCache expected >= 50000, got $textCount');
-      }
-      if (cycleCount > 0 && cycleCount < 10000) {
-        failures.add('CalendarCycles expected >= 10000, got $cycleCount');
-      }
+    if (programCount != 18) {
+      failures.add('LearningPrograms expected 18, got $programCount');
     }
+    if (metaCount != 1) {
+      failures.add('SeedMetadata expected 1, got $metaCount');
+    }
+    if (meta.contentHash.isEmpty) {
+      failures.add('SeedMetadata.contentHash is empty');
+    }
+    // Only enforce large-content thresholds when a full build has run.
+    if (textCount > 0 && textCount < 50000) {
+      failures.add('TextCache expected >= 50000, got $textCount');
+    }
+    if (cycleCount > 0 && cycleCount < 10000) {
+      failures.add('CalendarCycles expected >= 10000, got $cycleCount');
+    }
+    // Verify all 12 calendar programs are present.
+    final expectedPrograms = {
+      ..._sefariaCalendarMap.values,
+      ..._hebcalCategoryMap.values,
+    };
+    final presentPrograms =
+        calPrograms.map((r) => r.read<String>('program_key')).toSet();
+    final missingPrograms = expectedPrograms.difference(presentPrograms);
+    if (missingPrograms.isNotEmpty && cycleCount > 0) {
+      failures.add(
+        'Missing calendar programs: ${missingPrograms.join(", ")}',
+      );
+    }
+
     if (failures.isNotEmpty) {
       stderr.writeln('❌ Validation failed:');
       for (final f in failures) {

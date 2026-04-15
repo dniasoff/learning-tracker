@@ -406,7 +406,7 @@ void main() {
     });
 
     test('learningProgramSeeds exposes api fields for every entry', () {
-      expect(learningProgramSeeds, hasLength(9));
+      expect(learningProgramSeeds, hasLength(18));
       for (final p in learningProgramSeeds) {
         expect(p.containsKey('api_source'), isTrue,
             reason: '${p['name']} missing api_source');

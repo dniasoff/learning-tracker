@@ -1,9 +1,8 @@
 import 'dart:io';
 
-import 'package:drift/native.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:talker/talker.dart';
 
 /// Exception thrown when the seed database cannot be initialized.
@@ -69,8 +68,9 @@ class SeedManager {
       return _dbPath;
     }
 
-    // Step 3: Check version
-    final installedVersion = await _readInstalledVersion(_dbPath);
+    // Step 3: Check version (uses raw sqlite3 to avoid triggering Drift
+    // migrations on a DB that may be immediately replaced).
+    final installedVersion = _readInstalledVersion(_dbPath);
     if (installedVersion == null || bundledSeedVersion > installedVersion) {
       _talker?.info(
         'SeedManager: Upgrading content DB '
@@ -85,18 +85,21 @@ class SeedManager {
   }
 
   /// Read the installed seed version from an existing content.db.
-  Future<int?> _readInstalledVersion(String dbPath) async {
+  ///
+  /// Uses raw sqlite3 instead of Drift to avoid triggering schema migrations
+  /// on a database that may be immediately replaced.
+  int? _readInstalledVersion(String dbPath) {
+    Database? db;
     try {
-      final db = ContentDatabase(NativeDatabase(File(dbPath)));
-      try {
-        final meta = await db.seedMetadataDao.getVersion();
-        return meta?.version;
-      } finally {
-        await db.close();
-      }
+      db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+      final result = db.select('SELECT version FROM seed_metadata LIMIT 1');
+      if (result.isEmpty) return null;
+      return result.first['version'] as int?;
     } catch (e) {
       _talker?.error('SeedManager: Failed to read seed version', e);
       return null;
+    } finally {
+      db?.dispose();
     }
   }
 
@@ -134,7 +137,7 @@ class SeedManager {
       await _extractSeedDb(_dbPath);
 
       // Step 3: Verify the new database is valid
-      final newVersion = await _readInstalledVersion(_dbPath);
+      final newVersion = _readInstalledVersion(_dbPath);
       if (newVersion == null) {
         throw SeedManagerException('New seed database has no version metadata');
       }

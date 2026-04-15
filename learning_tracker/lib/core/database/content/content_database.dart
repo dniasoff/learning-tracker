@@ -25,8 +25,8 @@ part 'content_database.g.dart';
 /// Tables:
 /// - [TextCache]: ~52K rows of Sefaria text (Hebrew + English)
 /// - [CalendarCycles]: ~30K rows of pre-computed calendar program cycles
-/// - [LearningPrograms]: 9 program presets
-/// - [SeedMetadata]: Version tracking for seed replacement
+/// - [LearningPrograms]: 18 program presets
+/// - [SeedMetadata]: Version tracking for seed replacement (incl. contentHash)
 @DriftDatabase(
   tables: [
     TextCache,
@@ -64,7 +64,7 @@ class ContentDatabase extends _$ContentDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   // In production, this DB is opened from a pre-built seed file so
   // onCreate is never invoked. In tests, NativeDatabase.memory() triggers
@@ -77,6 +77,13 @@ class ContentDatabase extends _$ContentDatabase {
         await m.createAll();
         await _seedLearningPrograms();
         await _seedTestDates();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          // v2: add contentHash + minAppVersion to seed_metadata.
+          await m.addColumn(seedMetadata, seedMetadata.contentHash);
+          await m.addColumn(seedMetadata, seedMetadata.minAppVersion);
+        }
       },
       beforeOpen: (details) async {
         // Always re-seed learning programs to ensure data is current.
