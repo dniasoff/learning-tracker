@@ -490,10 +490,14 @@ Future<({String he, String en})> _fetchBothLanguages(
   String sefariaRef,
 ) async {
   final encodedRef = Uri.encodeComponent(sefariaRef);
+  // Shulchan Arukh default is non-nikkud; request Torat Emet for nikkud.
+  final heVersion = sefariaRef.startsWith('Shulchan Arukh')
+      ? 'hebrew|Torat Emet 363'
+      : 'hebrew';
   final response = await dio.get<Map<String, dynamic>>(
     '/api/v3/texts/$encodedRef',
     queryParameters: {
-      'version': ['english', 'hebrew'],
+      'version': ['english', heVersion],
     },
   );
   final data = response.data;
