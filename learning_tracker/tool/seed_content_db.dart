@@ -407,7 +407,9 @@ Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
     '  Text fetch complete: $fetched ok, $errors errors '
     '(${(errorRate * 100).toStringAsFixed(2)}%)',
   );
-  if (errorRate > _textErrorRateThreshold) {
+  // Only enforce threshold when fetching a meaningful batch (not just retrying
+  // persistent failures on resume).
+  if (errorRate > _textErrorRateThreshold && total > 500) {
     stderr.writeln(
       '❌ Text fetch error rate ${(errorRate * 100).toStringAsFixed(2)}% '
       'exceeds ${(_textErrorRateThreshold * 100).toStringAsFixed(1)}% '
@@ -559,8 +561,8 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
     final e = table[idx];
     if (e.length < 4) return null;
     final name = chofetzChaimSections[e[1] as String] ?? e[1] as String;
-    final begin = e[2] as String;
-    final end = e[3] as String;
+    final begin = '${e[2]}';
+    final end = '${e[3]}';
     return begin == end ? 'Chofetz Chaim, $name $begin' : 'Chofetz Chaim, $name $begin-$end';
   }),
   ('kitzur_shulchan_aruch_yomi', (d) {
