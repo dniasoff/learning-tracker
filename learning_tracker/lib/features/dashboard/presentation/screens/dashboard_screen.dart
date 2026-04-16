@@ -710,13 +710,11 @@ class _CurriculumCard extends ConsumerWidget {
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = (percentage * 100).round();
 
-    // AC-6: Compute per-curriculum task count and next due item
+    // AC-6: Compute per-curriculum task count and today's study item
     final curriculumTasks = allTasks
         .where((t) => t.curriculumId == curriculum)
         .toList();
-    final nextDue = curriculumTasks.isNotEmpty
-        ? curriculumTasks.first.stageName
-        : null;
+    final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
 
     // AC-1: Get pace status
     final paceStatus = paceAsync.asData?.value;
@@ -805,17 +803,41 @@ class _CurriculumCard extends ConsumerWidget {
                   ],
                 ),
                 const Spacer(),
-                // AC-6: Task count
-                if (curriculumTasks.isNotEmpty)
+                // AC-6: Today's study item for this track
+                if (todayTask != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      '${curriculumTasks.length} task${curriculumTasks.length == 1 ? '' : 's'} today${nextDue != null ? ' · $nextDue' : ''}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.4),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TODAY',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: curriculumColor.withValues(alpha: 0.8),
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          todayTask.contentItemSefariaRef,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (curriculumTasks.length > 1)
+                          Text(
+                            '+${curriculumTasks.length - 1} more',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.4),
+                              fontSize: 11,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 FilledButton(
