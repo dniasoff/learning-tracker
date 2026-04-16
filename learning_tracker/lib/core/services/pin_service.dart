@@ -148,6 +148,14 @@ class PinService {
     return hash != null;
   }
 
+  /// Removes the parent PIN and any associated lockout state from secure
+  /// storage. Intended for explicit parent-initiated removal from settings.
+  Future<void> clearParentPin() async {
+    await _secureStorage.delete(key: _parentPinKey);
+    await _secureStorage.delete(key: _parentLockoutKey);
+    await _secureStorage.delete(key: _parentLockoutTimestampKey);
+  }
+
   /// Returns true if a tutor PIN has been set.
   Future<bool> hasTutorPin() async {
     final hash = await _secureStorage.read(key: _tutorPinKey);

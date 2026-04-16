@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -237,6 +238,9 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
+
+            // PARENTAL CONTROLS section — only visible for child-mode accounts.
+            _ParentalControlsSection(user: user),
 
             // App Version
             Center(
@@ -868,6 +872,167 @@ class _UserModeSectionState extends ConsumerState<_UserModeSection> {
         );
       }
     }
+  }
+}
+
+/// Parental controls section — only rendered when the signed-in user is in
+/// child mode. Surfaces tiles to enter parent mode and manage the parent PIN.
+///
+/// The PIN is stored locally via [PinService] (bcrypt hash in secure storage)
+/// and never synced to Firestore.
+class _ParentalControlsSection extends ConsumerStatefulWidget {
+  const _ParentalControlsSection({required this.user});
+
+  final User? user;
+
+  @override
+  ConsumerState<_ParentalControlsSection> createState() =>
+      _ParentalControlsSectionState();
+}
+
+class _ParentalControlsSectionState
+    extends ConsumerState<_ParentalControlsSection> {
+  UserMode? _mode;
+  bool _hasPin = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (widget.user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    final profileService = ref.read(userProfileServiceProvider);
+    final pinService = ref.read(pinServiceProvider);
+    final mode = await profileService.getUserMode(widget.user!.uid);
+    final hasPin = await pinService.hasParentPin();
+    if (mounted) {
+      setState(() {
+        _mode = mode;
+        _hasPin = hasPin;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _removePinConfirmed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove Parent PIN?'),
+        content: const Text(
+          'Parent mode will become accessible without a PIN until a new one '
+          'is set. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    // Re-verify current PIN before removal to prevent a child from wiping it.
+    if (!context.mounted) return;
+    final verified = await context.router.push<bool>(const PinEntryRoute());
+    if (verified != true || !context.mounted) return;
+
+    await ref.read(pinServiceProvider).clearParentPin();
+    if (!mounted) return;
+    setState(() => _hasPin = false);
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Parent PIN removed')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading || _mode != UserMode.child) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionHeader(title: 'PARENTAL CONTROLS'),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                title: const Text('Parent Mode'),
+                subtitle: Text(
+                  _hasPin
+                      ? 'Customize tracks, rewards, and points'
+                      : 'Set a PIN to unlock parent controls',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await context.pushRoute(const ParentModeRoute());
+                  if (mounted) await _load();
+                },
+              ),
+              Divider(height: 1, indent: 56, color: theme.dividerColor),
+              ListTile(
+                leading: Icon(
+                  Icons.pin_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                title: Text(_hasPin ? 'Change Parent PIN' : 'Set Parent PIN'),
+                subtitle: const Text('4-digit PIN, stored on this device'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final route = _hasPin
+                      ? const PinChangeRoute()
+                      : const PinSetupRoute();
+                  final result =
+                      (await context.pushRoute<bool>(route)) ?? false;
+                  if (result && mounted) await _load();
+                },
+              ),
+              if (_hasPin) ...[
+                Divider(height: 1, indent: 56, color: theme.dividerColor),
+                ListTile(
+                  leading: Icon(
+                    Icons.lock_open_outlined,
+                    color: theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    'Remove Parent PIN',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  subtitle: const Text('Requires current PIN to confirm'),
+                  onTap: () => _removePinConfirmed(context),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
   }
 }
 
