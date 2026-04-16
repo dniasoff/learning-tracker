@@ -10,8 +10,12 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+    show kOnboardingComplete;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Account picker shown after sign-out when other accounts remain
 /// on the device, or when the user wants to switch accounts.
@@ -210,15 +214,28 @@ class _AccountTile extends ConsumerWidget {
     final isCloud = account.tier == 'cloudBorn';
 
     if (isCloud && hasValidSession) {
-      // Instant switch — cached Firebase session is valid
+      // Instant switch — cached Firebase session is valid.
+      // Swap the active DB to this account's file BEFORE reading the
+      // profile — the cached userDatabaseProvider still points at the
+      // previous account otherwise (keepAlive).
+      activeDbFileName = account.dbFileName;
+      ref.invalidate(userDatabaseProvider);
+
       final profile = await ref
           .read(userDatabaseProvider)
           .userProfileDao
           .findCloudBornByFirebaseUid(account.firebaseUid!);
       if (profile != null && context.mounted) {
-        final registry = ref.read(deviceRegistryProvider);
-        await registry.updateLastUsed(account.accountId, DateTime.now());
-        await registry.setLastActiveAccountId(account.accountId);
+        final prefs = await SharedPreferences.getInstance();
+        final session = SessionPersistenceService(
+          prefs: prefs,
+          registry: ref.read(deviceRegistryProvider),
+        );
+        await session.setActiveAccount(account.accountId);
+        // Re-assert onboarding-complete so AuthGuard lets AppShellRoute
+        // through; sign-out clears this flag and the picker is the
+        // entry point that restores it.
+        await prefs.setBool(kOnboardingComplete, true);
         ref
             .read(authStateProvider.notifier)
             .setCloudBornSession(profile: profile);
@@ -272,18 +289,25 @@ class _AccountTile extends ConsumerWidget {
             FilledButton(
               onPressed: () async {
                 try {
+                  // Swap to this account's DB first — LocalAuthService
+                  // reads the argon2 hash from the account's own DB,
+                  // not the globally cached one.
+                  activeDbFileName = account.dbFileName;
+                  ref.invalidate(userDatabaseProvider);
+
                   final dao = ref.read(userDatabaseProvider).userProfileDao;
                   final service = LocalAuthService(dao: dao);
                   final profile = await service.signIn(
                     email: account.email,
                     password: controller.text,
                   );
-                  final registry = ref.read(deviceRegistryProvider);
-                  await registry.updateLastUsed(
-                    account.accountId,
-                    DateTime.now(),
+                  final prefs = await SharedPreferences.getInstance();
+                  final session = SessionPersistenceService(
+                    prefs: prefs,
+                    registry: ref.read(deviceRegistryProvider),
                   );
-                  await registry.setLastActiveAccountId(account.accountId);
+                  await session.setActiveAccount(account.accountId);
+                  await prefs.setBool(kOnboardingComplete, true);
                   ref
                       .read(authStateProvider.notifier)
                       .setLocalBornSession(profile: profile);
