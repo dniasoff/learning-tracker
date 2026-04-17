@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
@@ -25,6 +26,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
     show kOnboardingComplete;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 @RoutePage()
 class AccountCreationScreen extends ConsumerStatefulWidget {
@@ -162,9 +164,30 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
       await authRepo.signUp(email, password, displayName);
       final user = ref.read(firebaseAuthProvider).currentUser;
       if (user != null) {
+        // Epic 21: route the new user's profile into a per-account
+        // DB file and register the account so sign-out can find it.
+        final accountId = const Uuid().v4();
+        final dbFileName = 'user_acc_$accountId.db';
+        activeDbFileName = dbFileName;
+        ref.invalidate(userDatabaseProvider);
+
         await ref
             .read(auth_state.authStateProvider.notifier)
             .promoteToCloud(user);
+
+        final prefs = await SharedPreferences.getInstance();
+        final session = SessionPersistenceService(
+          prefs: prefs,
+          registry: ref.read(deviceRegistryProvider),
+        );
+        await session.registerAccount(
+          accountId: accountId,
+          email: email,
+          displayName: displayName,
+          tier: 'cloudBorn',
+          firebaseUid: user.uid,
+          dbFileName: dbFileName,
+        );
       }
       if (mounted) {
         unawaited(context.router.push(const OnboardingRoute()));
@@ -193,6 +216,14 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
   ) async {
     setState(() => _isLoading = true);
     try {
+      // Epic 21: swap to a fresh per-account DB before writing the
+      // local-born profile so each account's data lives in its own
+      // file and the registry entry points at the right DB.
+      final accountId = const Uuid().v4();
+      final dbFileName = 'user_acc_$accountId.db';
+      activeDbFileName = dbFileName;
+      ref.invalidate(userDatabaseProvider);
+
       final dao = ref.read(userDatabaseProvider).userProfileDao;
       final service = LocalAuthService(dao: dao);
       final profile = await service.signUp(
@@ -201,6 +232,20 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
         displayName: displayName,
         userMode: 'adult',
       );
+
+      final prefs = await SharedPreferences.getInstance();
+      final session = SessionPersistenceService(
+        prefs: prefs,
+        registry: ref.read(deviceRegistryProvider),
+      );
+      await session.registerAccount(
+        accountId: accountId,
+        email: email,
+        displayName: displayName,
+        tier: 'localBorn',
+        dbFileName: dbFileName,
+      );
+
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
@@ -298,10 +343,47 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
         return;
       }
 
-      // Promote auth state so SyncEngine activates
-      await ref
-          .read(auth_state.authStateProvider.notifier)
-          .promoteToCloud(googleUser);
+      // Epic 21: register a per-account DB for brand-new Google
+      // accounts. Returning-user flows (existingEntry != null) keep
+      // the existing DB file — the registry row already points at it.
+      if (existingEntry == null) {
+        final accountId = const Uuid().v4();
+        final dbFileName = 'user_acc_$accountId.db';
+        activeDbFileName = dbFileName;
+        ref.invalidate(userDatabaseProvider);
+
+        await ref
+            .read(auth_state.authStateProvider.notifier)
+            .promoteToCloud(googleUser);
+
+        final prefsForReg = await SharedPreferences.getInstance();
+        final session = SessionPersistenceService(
+          prefs: prefsForReg,
+          registry: registry,
+        );
+        await session.registerAccount(
+          accountId: accountId,
+          email: googleUser.email ?? '',
+          displayName: googleUser.displayName ?? '',
+          tier: 'cloudBorn',
+          firebaseUid: googleUser.uid,
+          dbFileName: dbFileName,
+        );
+      } else {
+        // Existing account on this device — swap to its DB and
+        // refresh lastUsedAt so session persistence stays coherent.
+        activeDbFileName = existingEntry.dbFileName;
+        ref.invalidate(userDatabaseProvider);
+        await ref
+            .read(auth_state.authStateProvider.notifier)
+            .promoteToCloud(googleUser);
+        final prefsForReg = await SharedPreferences.getInstance();
+        final session = SessionPersistenceService(
+          prefs: prefsForReg,
+          registry: registry,
+        );
+        await session.setActiveAccount(existingEntry.accountId);
+      }
       if (!mounted) return;
 
       // If onboarding was already completed on this device, skip it.

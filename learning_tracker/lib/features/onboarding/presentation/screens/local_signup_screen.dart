@@ -5,12 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 /// Dedicated local-born signup screen (Epic 20 v2 §4.2).
 ///
@@ -88,14 +92,37 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
       _submitError = null;
     });
     try {
+      // Epic 21: per-account DB + registry entry so sign-out can
+      // route to the picker instead of the welcome screen.
+      final accountId = const Uuid().v4();
+      final dbFileName = 'user_acc_$accountId.db';
+      activeDbFileName = dbFileName;
+      ref.invalidate(userDatabaseProvider);
+
       final dao = ref.read(userDatabaseProvider).userProfileDao;
       final service = LocalAuthService(dao: dao);
+      final email = _emailController.text.trim();
+      final displayName = _nameController.text.trim();
       final profile = await service.signUp(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text,
-        displayName: _nameController.text.trim(),
+        displayName: displayName,
         userMode: 'adult',
       );
+
+      final prefs = await SharedPreferences.getInstance();
+      final session = SessionPersistenceService(
+        prefs: prefs,
+        registry: ref.read(deviceRegistryProvider),
+      );
+      await session.registerAccount(
+        accountId: accountId,
+        email: email,
+        displayName: displayName,
+        tier: 'localBorn',
+        dbFileName: dbFileName,
+      );
+
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);

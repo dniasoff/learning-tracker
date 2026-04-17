@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +26,36 @@ class SessionPersistenceService {
     await _prefs.setString(_key, accountId);
     await _registry.setLastActiveAccountId(accountId);
     await _registry.updateLastUsed(accountId, DateTime.now());
+  }
+
+  /// Insert a freshly created account into the device registry and
+  /// mark it active. Call this right after a successful sign-up
+  /// (cloud-born or local-born) once the per-account DB file has
+  /// been written. The caller is responsible for generating the
+  /// [accountId] and [dbFileName] and for swapping `activeDbFileName`
+  /// to point at the new file before any profile rows are written.
+  Future<void> registerAccount({
+    required String accountId,
+    required String email,
+    required String displayName,
+    required String tier,
+    String? firebaseUid,
+    required String dbFileName,
+  }) async {
+    final now = DateTime.now();
+    await _registry.addAccount(
+      DeviceAccountsCompanion.insert(
+        accountId: accountId,
+        email: email,
+        displayName: displayName,
+        tier: tier,
+        firebaseUid: Value(firebaseUid),
+        dbFileName: dbFileName,
+        createdAt: now,
+        lastUsedAt: now,
+      ),
+    );
+    await setActiveAccount(accountId);
   }
 
   /// Clear the active account (sign-out). The registry entry for
