@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Screen for setting up a 4-digit parent PIN with confirmation.
 ///
@@ -39,9 +40,15 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       return;
     }
 
+    final profileId = ref.read(selectedProfileIdProvider);
+    if (profileId == null) {
+      setState(() => _errorMessage = 'No active profile — cannot set PIN');
+      return;
+    }
+
     try {
       final pinService = ref.read(pinServiceProvider);
-      await pinService.setParentPin(pin);
+      await pinService.setProfilePin(profileId, pin);
       if (mounted) {
         await context.router.maybePop(true);
       }

@@ -46,8 +46,8 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 /// Per-track configuration is delegated to [AddTrackFlow] (Story 18.1).
 enum _ScreenPhase {
   profileCreation,
-  parentPinSetup,
   languageSelection,
+  parentPinSetup,
   calendarPreference,
   addTrack,
   addAnotherPrompt,
@@ -227,12 +227,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _profileName = name;
     ref.read(selectedProfileIdProvider.notifier).select(profile.id);
 
-    // Child profiles get an extra step: the parent sets a 4-digit PIN that
-    // will gate parental controls for this profile.
-    final nextPhase = _isChildMode
-        ? _ScreenPhase.parentPinSetup
-        : _ScreenPhase.languageSelection;
-    setState(() => _phase = nextPhase);
+    setState(() => _phase = _ScreenPhase.languageSelection);
     await _saveState();
   }
 
@@ -277,13 +272,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _firstPin = null;
       _isPinConfirmStep = false;
       _pinError = null;
-      _phase = _ScreenPhase.languageSelection;
+      _phase = _ScreenPhase.calendarPreference;
     });
     await _saveState();
   }
 
   void _onLanguageSelected() {
-    setState(() => _phase = _ScreenPhase.calendarPreference);
+    // Child profiles get an extra step: the parent sets a 4-digit PIN that
+    // gates parental controls for this profile. Adult profiles skip straight
+    // to calendar preference.
+    final nextPhase = _isChildMode
+        ? _ScreenPhase.parentPinSetup
+        : _ScreenPhase.calendarPreference;
+    setState(() => _phase = nextPhase);
     _saveState();
   }
 

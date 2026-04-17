@@ -42,6 +42,7 @@ final routerProvider = Provider<AppRouter>((ref) {
         if (context == null) return Future.value(null);
         return _showPinDialog(context, 'Enter Parent PIN');
       },
+      getProfileId: () => ref.read(selectedProfileIdProvider),
     ),
     tutorPinGuard: TutorPinGuard(
       pinService: pinSvc,

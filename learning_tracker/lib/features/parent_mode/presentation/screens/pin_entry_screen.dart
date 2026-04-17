@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Full-screen PIN entry for accessing parent mode.
 ///
@@ -28,8 +29,12 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   }
 
   Future<void> _checkLockoutStatus() async {
+    final profileId = ref.read(selectedProfileIdProvider);
+    if (profileId == null) return;
     final pinService = ref.read(pinServiceProvider);
-    final remaining = await pinService.getParentLockoutRemainingMinutes();
+    final remaining = await pinService.getProfileLockoutRemainingMinutes(
+      profileId,
+    );
     if (remaining > 0 && mounted) {
       setState(() {
         _isLockedOut = true;
@@ -39,9 +44,14 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   }
 
   Future<void> _onPinEntered(String pin) async {
+    final profileId = ref.read(selectedProfileIdProvider);
+    if (profileId == null) {
+      setState(() => _errorMessage = 'No active profile');
+      return;
+    }
     final pinService = ref.read(pinServiceProvider);
     try {
-      final isValid = await pinService.verifyParentPin(pin);
+      final isValid = await pinService.verifyProfilePin(profileId, pin);
       if (isValid) {
         if (mounted) await context.router.maybePop(true);
       } else {

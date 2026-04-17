@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Screen for changing the parent PIN.
 ///
@@ -38,11 +39,16 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
 
   Future<void> _onPinComplete(String pin) async {
     final pinService = ref.read(pinServiceProvider);
+    final profileId = ref.read(selectedProfileIdProvider);
+    if (profileId == null) {
+      setState(() => _errorMessage = 'No active profile');
+      return;
+    }
 
     switch (_step) {
       case _PinChangeStep.verifyCurrent:
         try {
-          final isValid = await pinService.verifyParentPin(pin);
+          final isValid = await pinService.verifyProfilePin(profileId, pin);
           if (isValid) {
             setState(() {
               _step = _PinChangeStep.enterNew;
@@ -75,7 +81,7 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
           });
           return;
         }
-        await pinService.setParentPin(pin);
+        await pinService.setProfilePin(profileId, pin);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('PIN changed successfully')),

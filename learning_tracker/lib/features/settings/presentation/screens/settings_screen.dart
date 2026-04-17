@@ -522,6 +522,9 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
       await ref
           .read(profileRepositoryProvider)
           .updateProfile(id: profileId, displayName: newName);
+      if (!mounted) return;
+      ref.invalidate(selectedProfileProvider);
+      ref.invalidate(profileListProvider);
     } else if (user != null) {
       await user.updateDisplayName(newName);
       await user.reload();
@@ -778,8 +781,11 @@ class _ParentalControlsSectionState
     }
     final profileService = ref.read(userProfileServiceProvider);
     final pinService = ref.read(pinServiceProvider);
+    final profileId = ref.read(selectedProfileIdProvider);
     final mode = await profileService.getUserMode(widget.user!.uid);
-    final hasPin = await pinService.hasParentPin();
+    final hasPin = profileId == null
+        ? false
+        : await pinService.hasProfilePin(profileId);
     if (mounted) {
       setState(() {
         _mode = mode;
@@ -820,7 +826,9 @@ class _ParentalControlsSectionState
     final verified = await context.router.push<bool>(const PinEntryRoute());
     if (verified != true || !context.mounted) return;
 
-    await ref.read(pinServiceProvider).clearParentPin();
+    final profileId = ref.read(selectedProfileIdProvider);
+    if (profileId == null) return;
+    await ref.read(pinServiceProvider).clearProfilePin(profileId);
     if (!mounted) return;
     setState(() => _hasPin = false);
     if (context.mounted) {
