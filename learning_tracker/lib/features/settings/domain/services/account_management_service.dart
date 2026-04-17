@@ -22,13 +22,18 @@ class AccountManagementService {
   final UserDatabase _database;
   final FirebaseFirestore _firestore;
 
-  /// Signs out the current user.
+  /// Soft sign-out — clears the in-app session so the user sees the
+  /// account picker on next launch, but leaves Firebase's cached
+  /// refresh token in place. That's what lets Epic 21.9 AC2 (tap the
+  /// tile → dashboard in < 200ms) actually work: without a cached
+  /// session the picker would always fall through to the sign-in
+  /// page instead of resuming.
   ///
-  /// Clears the auth session and onboarding flag so the user goes
-  /// through onboarding on next sign-in, but preserves local data
-  /// so they can sign back in and see their data (FR102).
+  /// The hard sign-out (clearing the Firebase token) happens when the
+  /// account is removed or deleted — see
+  /// [AccountLifecycleService.removeCloudFromDevice] /
+  /// [AccountLifecycleService.deleteCloudAccount].
   Future<void> signOut() async {
-    await _authRepository.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(kOnboardingComplete);
     // Clear transient onboarding/add-track state

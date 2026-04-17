@@ -45,6 +45,21 @@ class AccountLifecycleService {
       );
     }
 
+    // If we're removing the Firebase user whose token is currently
+    // cached, clear it — otherwise the picker would still show the
+    // removed account as having a "valid session" via
+    // FirebaseAuth.currentUser on the next launch. Swallow Firebase
+    // init failures so this works in unit tests without a real app.
+    try {
+      final currentUser = _firebaseAuth.currentUser;
+      if (currentUser != null && currentUser.uid == account.firebaseUid) {
+        await _firebaseAuth.signOut();
+      }
+    } catch (_) {
+      // Firebase not initialized (tests, or Firebase init failed at
+      // startup). Nothing to clean up on the auth side.
+    }
+
     _deleteDbFile(account.dbFileName);
     await _registry.removeAccount(accountId);
   }
