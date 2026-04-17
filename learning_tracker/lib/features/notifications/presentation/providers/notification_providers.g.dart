@@ -30,7 +30,7 @@ final class NotificationServiceProvider
         argument: null,
         retry: null,
         name: r'notificationServiceProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -59,7 +59,7 @@ final class NotificationServiceProvider
 }
 
 String _$notificationServiceHash() =>
-    r'cda5ea9d196dce85bee56839a4a0f035021752e3';
+    r'58da87941dbfa08925105dcc4d74091ee38c8593';
 
 /// Manages the daily reminder enabled state.
 
@@ -867,6 +867,9 @@ String _$notificationSchedulerHash() =>
 /// the notification accordingly.
 ///
 /// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+///
+/// Kept alive so that time/enable changes always trigger a reschedule,
+/// even if no UI is watching this provider at the moment.
 
 @ProviderFor(reminderSyncEffect)
 final reminderSyncEffectProvider = ReminderSyncEffectProvider._();
@@ -875,6 +878,9 @@ final reminderSyncEffectProvider = ReminderSyncEffectProvider._();
 /// the notification accordingly.
 ///
 /// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+///
+/// Kept alive so that time/enable changes always trigger a reschedule,
+/// even if no UI is watching this provider at the moment.
 
 final class ReminderSyncEffectProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
@@ -883,13 +889,16 @@ final class ReminderSyncEffectProvider
   /// the notification accordingly.
   ///
   /// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+  ///
+  /// Kept alive so that time/enable changes always trigger a reschedule,
+  /// even if no UI is watching this provider at the moment.
   ReminderSyncEffectProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'reminderSyncEffectProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -909,7 +918,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'99148d17ab9b44e07164fde54abee196ce22c550';
+    r'91dd352771341ee2f05e6bdb4f2a6dfd39c25203';
 
 /// Provides the [StreakAlertService] instance.
 
@@ -968,6 +977,9 @@ String _$streakAlertServiceHash() =>
 /// the streak protection alert.
 ///
 /// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
+///
+/// Kept alive so that time/enable changes always trigger a reschedule,
+/// even if no UI is watching this provider at the moment.
 
 @ProviderFor(streakAlertSyncEffect)
 final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
@@ -976,6 +988,9 @@ final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 /// the streak protection alert.
 ///
 /// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
+///
+/// Kept alive so that time/enable changes always trigger a reschedule,
+/// even if no UI is watching this provider at the moment.
 
 final class StreakAlertSyncEffectProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
@@ -984,13 +999,16 @@ final class StreakAlertSyncEffectProvider
   /// the streak protection alert.
   ///
   /// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
+  ///
+  /// Kept alive so that time/enable changes always trigger a reschedule,
+  /// even if no UI is watching this provider at the moment.
   StreakAlertSyncEffectProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'streakAlertSyncEffectProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -1010,4 +1028,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'568bcc892b8b42c99ea64691d38a15e4dc60567f';
+    r'73fd730261dd54dcb5a9f6455b6e4792458ad7ad';

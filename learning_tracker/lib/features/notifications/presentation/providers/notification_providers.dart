@@ -49,7 +49,7 @@ const int defaultShabbosEndHour = 20;
 const int defaultShabbosEndMinute = 0;
 
 /// Provides the [NotificationService] singleton.
-@riverpod
+@Riverpod(keepAlive: true)
 NotificationService notificationService(Ref ref) {
   return NotificationService();
 }
@@ -376,7 +376,10 @@ NotificationScheduler notificationScheduler(Ref ref) {
 /// the notification accordingly.
 ///
 /// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
-@riverpod
+///
+/// Kept alive so that time/enable changes always trigger a reschedule,
+/// even if no UI is watching this provider at the moment.
+@Riverpod(keepAlive: true)
 Future<void> reminderSyncEffect(Ref ref) async {
   final enabled = ref.watch(reminderEnabledProvider);
   final time = ref.watch(reminderTimeProvider);
@@ -412,7 +415,10 @@ StreakAlertService streakAlertService(Ref ref) {
 /// the streak protection alert.
 ///
 /// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
-@riverpod
+///
+/// Kept alive so that time/enable changes always trigger a reschedule,
+/// even if no UI is watching this provider at the moment.
+@Riverpod(keepAlive: true)
 Future<void> streakAlertSyncEffect(Ref ref) async {
   final enabled = ref.watch(streakAlertEnabledProvider);
   final time = ref.watch(streakAlertTimeProvider);

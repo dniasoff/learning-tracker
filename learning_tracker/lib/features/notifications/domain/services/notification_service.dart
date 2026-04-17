@@ -73,18 +73,22 @@ class NotificationService {
     return result ?? false;
   }
 
-  /// Request notification permission on Android 13+.
+  /// Request notification permission on Android 13+ and exact-alarm permission
+  /// on Android 12+.
   ///
-  /// Returns true if permission was granted.
+  /// Returns true if the POST_NOTIFICATIONS permission was granted (or not
+  /// required). Exact-alarm permission is best-effort — the schedule still
+  /// works at ~windowed accuracy without it.
   Future<bool> requestPermission() async {
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
     if (android != null) {
-      return await android.requestNotificationsPermission() ?? false;
+      final granted = await android.requestNotificationsPermission() ?? false;
+      await android.requestExactAlarmsPermission();
+      return granted;
     }
-    // iOS: request via Darwin implementation
     final ios = _plugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
@@ -125,7 +129,7 @@ class NotificationService {
       body: body,
       scheduledDate: scheduledTime,
       notificationDetails: notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
       payload: dailyReminderPayload,
     );
@@ -161,7 +165,7 @@ class NotificationService {
       body: body,
       scheduledDate: scheduledTime,
       notificationDetails: notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
       payload: streakAlertPayload,
     );

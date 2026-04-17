@@ -36,12 +36,12 @@ class NotificationsScreen extends ConsumerWidget {
               'Get reminded about your daily learning tasks',
             ),
             value: reminderEnabled,
-            onChanged: (_) async {
-              await ref.read(reminderEnabledProvider.notifier).toggle();
-              if (!reminderEnabled) {
+            onChanged: (willEnable) async {
+              if (willEnable) {
                 final service = ref.read(notificationServiceProvider);
                 await service.requestPermission();
               }
+              await ref.read(reminderEnabledProvider.notifier).toggle();
             },
           ),
           ListTile(
@@ -74,7 +74,11 @@ class NotificationsScreen extends ConsumerWidget {
               'Get alerted when your learning streak is at risk',
             ),
             value: streakAlertEnabled,
-            onChanged: (_) async {
+            onChanged: (willEnable) async {
+              if (willEnable) {
+                final service = ref.read(notificationServiceProvider);
+                await service.requestPermission();
+              }
               await ref.read(streakAlertEnabledProvider.notifier).toggle();
             },
           ),
@@ -108,7 +112,11 @@ class NotificationsScreen extends ConsumerWidget {
               'Get notified when you earn reward milestones',
             ),
             value: rewardEnabled,
-            onChanged: (_) async {
+            onChanged: (willEnable) async {
+              if (willEnable) {
+                final service = ref.read(notificationServiceProvider);
+                await service.requestPermission();
+              }
               await ref
                   .read(rewardNotificationEnabledProvider.notifier)
                   .toggle();

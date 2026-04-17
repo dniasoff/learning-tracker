@@ -14,7 +14,7 @@ import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/theme_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
@@ -119,13 +119,21 @@ void main() {
       );
 
       // Initialize notification system (non-fatal).
+      // IMPORTANT: use the provider-owned NotificationService instance so the
+      // plugin initialized here is the same one used for scheduling later.
       try {
         final router = container.read(routerProvider);
+        final notificationService = container.read(notificationServiceProvider);
         final notificationInitializer = NotificationInitializer(
-          service: NotificationService(),
+          service: notificationService,
           router: router,
         );
         await notificationInitializer.initialize();
+        // Kick off the sync effects so scheduled notifications reflect current
+        // preferences immediately on launch — not only when the user opens the
+        // notifications screen.
+        container.read(reminderSyncEffectProvider);
+        container.read(streakAlertSyncEffectProvider);
       } catch (e, stack) {
         talker.error('Notification init failed (non-fatal)', e, stack);
       }
