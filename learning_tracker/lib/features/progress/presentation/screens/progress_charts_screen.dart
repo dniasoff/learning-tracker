@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/completions_bar_chart.dart';
@@ -92,29 +93,47 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   }
 
   Widget _buildCurriculumToggle() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          FilterChip(
-            label: const Text('All'),
-            selected: _curriculum == null,
-            onSelected: (_) => setState(() => _curriculum = null),
-          ),
-          const SizedBox(width: 8),
-          ...CurriculumId.values.map(
-            (c) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text(c.displayNameHe),
-                selected: _curriculum == c,
-                onSelected: (_) =>
-                    setState(() => _curriculum = _curriculum == c ? null : c),
-              ),
-            ),
-          ),
-        ],
+    final activeCurriculaAsync = ref.watch(
+      dashboardActiveCurriculaStreamProvider,
+    );
+    return activeCurriculaAsync.when(
+      loading: () => const SizedBox(
+        height: 40,
+        child: Center(child: LoadingIndicator(message: 'Loading...')),
       ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (activeCurricula) {
+        if (_curriculum != null && !activeCurricula.contains(_curriculum)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _curriculum = null);
+          });
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              FilterChip(
+                label: const Text('All'),
+                selected: _curriculum == null,
+                onSelected: (_) => setState(() => _curriculum = null),
+              ),
+              const SizedBox(width: 8),
+              ...activeCurricula.map(
+                (c) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(c.displayNameHe),
+                    selected: _curriculum == c,
+                    onSelected: (_) => setState(
+                      () => _curriculum = _curriculum == c ? null : c,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
