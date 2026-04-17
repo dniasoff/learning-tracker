@@ -78,8 +78,7 @@ class SettingsScreen extends ConsumerWidget {
                       title: const Text('Manage Tracks'),
                       subtitle: const Text('Add, edit, or archive tracks'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () =>
-                          context.pushRoute(TrackManagementHubRoute()),
+                      onTap: () => context.pushRoute(TrackManagementHubRoute()),
                     ),
                     Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ],
@@ -158,7 +157,9 @@ class SettingsScreen extends ConsumerWidget {
             // LANGUAGE section
             const _SectionHeader(title: 'LANGUAGE'),
             const SizedBox(height: 8),
-            Card(child: Column(children: [_LanguageTile(theme: theme)])),
+            Card(
+              child: Column(children: [_LanguageTile(theme: theme)]),
+            ),
             const SizedBox(height: 24),
 
             // ACCOUNT section
@@ -804,49 +805,6 @@ class _ParentalControlsSectionState
     }
   }
 
-  Future<void> _removePinConfirmed(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove Parent PIN?'),
-        content: const Text(
-          'Parent mode will become accessible without a PIN until a new one '
-          'is set. Continue?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    // Re-verify current PIN before removal to prevent a child from wiping it.
-    if (!context.mounted) return;
-    final verified = await context.router.push<bool>(const PinEntryRoute());
-    if (verified != true || !context.mounted) return;
-
-    final profileId = ref.read(selectedProfileIdProvider);
-    if (profileId == null) return;
-    await ref.read(pinServiceProvider).clearProfilePin(profileId);
-    if (!mounted) return;
-    setState(() => _hasPin = false);
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Parent PIN removed')));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading || !widget.isChildProfile) {
@@ -898,21 +856,6 @@ class _ParentalControlsSectionState
                   if (result && mounted) await _load();
                 },
               ),
-              if (_hasPin) ...[
-                Divider(height: 1, indent: 56, color: theme.dividerColor),
-                ListTile(
-                  leading: Icon(
-                    Icons.lock_open_outlined,
-                    color: theme.colorScheme.error,
-                  ),
-                  title: Text(
-                    'Remove Parent PIN',
-                    style: TextStyle(color: theme.colorScheme.error),
-                  ),
-                  subtitle: const Text('Requires current PIN to confirm'),
-                  onTap: () => _removePinConfirmed(context),
-                ),
-              ],
             ],
           ),
         ),
@@ -1148,9 +1091,7 @@ class _LanguageTile extends ConsumerWidget {
                       ? Icon(Icons.check, color: theme.colorScheme.primary)
                       : null,
                   onTap: () {
-                    ref
-                        .read(languageProvider.notifier)
-                        .setLanguage(entry.key);
+                    ref.read(languageProvider.notifier).setLanguage(entry.key);
                     Navigator.pop(context);
                   },
                 ),

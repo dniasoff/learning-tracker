@@ -223,7 +223,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode/pin-change',
       page: PinChangeRoute.page,
-      guards: [authGuard, childModeGuard, parentPinGuard],
+      guards: [authGuard, childModeGuard],
     ),
     AutoRoute(
       path: '/parent-mode/tracks',
