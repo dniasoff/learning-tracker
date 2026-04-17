@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
@@ -58,7 +59,7 @@ class ManageLearnersScreen extends ConsumerWidget {
     if (result == null) return;
 
     final repo = ref.read(profileRepositoryProvider);
-    await repo.createProfile(
+    final created = await repo.createProfile(
       accountId: 1,
       displayName: result.name,
       mode: result.mode,
@@ -66,6 +67,17 @@ class ManageLearnersScreen extends ConsumerWidget {
     );
     ref.invalidate(profileListProvider);
     ref.invalidate(profileListStreamProvider);
+
+    // Child profiles require a parent PIN so the parent can gate access
+    // to parental controls. Prompt right after creation.
+    if (created.mode == 'child' && context.mounted) {
+      await showParentPinSetupDialog(
+        context,
+        ref,
+        profileId: created.id,
+        profileName: created.displayName,
+      );
+    }
   }
 }
 

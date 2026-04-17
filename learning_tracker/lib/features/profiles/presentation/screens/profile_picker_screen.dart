@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -169,7 +170,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       return;
     }
     try {
-      await repo.createProfile(
+      final created = await repo.createProfile(
         accountId: 1,
         displayName: result.n,
         mode: result.m,
@@ -178,6 +179,16 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       ctrl.dispose();
       // Manually refresh the profile list after creation.
       if (mounted) ref.invalidate(profileListProvider);
+      // Child profiles require a parent PIN so the parent can gate access
+      // to parental controls. Prompt right after creation.
+      if (created.mode == 'child' && mounted) {
+        await showParentPinSetupDialog(
+          context,
+          ref,
+          profileId: created.id,
+          profileName: created.displayName,
+        );
+      }
     } on DuplicateProfileNameException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
