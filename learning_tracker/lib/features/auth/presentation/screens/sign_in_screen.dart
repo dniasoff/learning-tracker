@@ -15,17 +15,18 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
-import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 @RoutePage()
 class SignInScreen extends ConsumerStatefulWidget {
@@ -163,14 +164,32 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       final account = await registry.findByEmail(email);
 
       if (account != null && account.tier == 'localBorn') {
-        // Local-born account on this device → argon2id verification
+        // Local-born account on this device → argon2id verification.
+        // Swap to this account's DB first so the argon2 hash is read
+        // from the correct file — otherwise we verify against whatever
+        // DB was previously active and cross-account data leaks in.
+        activeDbFileName = account.dbFileName;
+        ref.invalidate(userDatabaseProvider);
+
         final dao = ref.read(userDatabaseProvider).userProfileDao;
         final service = LocalAuthService(dao: dao);
         final profile = await service.signIn(email: email, password: password);
+
+        final prefs = await SharedPreferences.getInstance();
+        final session = SessionPersistenceService(
+          prefs: prefs,
+          registry: registry,
+        );
+        await session.setActiveAccount(account.accountId);
+        await prefs.setBool(kOnboardingComplete, true);
+
         ref
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
-        if (mounted) await _navigateAfterSignIn();
+        ref.read(selectedProfileIdProvider.notifier).clear();
+        if (mounted) {
+          unawaited(context.router.replaceAll([const AppShellRoute()]));
+        }
       } else if (account != null && account.tier == 'cloudBorn') {
         // Cloud-born account on this device → try Firebase or cached session
         final isOnline = await InternetConnectionChecker.instance.hasConnection;
@@ -179,19 +198,29 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
           await authRepo.signInWithEmail(email, password);
           if (mounted) await _navigateAfterSignIn();
         } else {
-          // Offline — try cached Firebase session
+          // Offline — try cached Firebase session. Swap to this
+          // account's DB before reading its profile so we never pull
+          // a row from the previously active account's DB.
           final fbUser = FirebaseAuth.instance.currentUser;
           if (fbUser != null && fbUser.uid == account.firebaseUid) {
-            // Cached session still valid → resume instantly
-            ref
-                .read(auth_state.authStateProvider.notifier)
-                .setCloudBornSession(
-                  profile: (await ref
-                      .read(userDatabaseProvider)
-                      .userProfileDao
-                      .findCloudBornByFirebaseUid(fbUser.uid))!,
-                );
-            if (mounted) await _navigateAfterSignIn();
+            activeDbFileName = account.dbFileName;
+            ref.invalidate(userDatabaseProvider);
+
+            final profile = await ref
+                .read(userDatabaseProvider)
+                .userProfileDao
+                .findCloudBornByFirebaseUid(fbUser.uid);
+            if (profile != null) {
+              ref
+                  .read(auth_state.authStateProvider.notifier)
+                  .setCloudBornSession(profile: profile);
+              if (mounted) await _navigateAfterSignIn();
+            } else {
+              _showError(
+                "This account's local data is missing. "
+                'Connect to the internet to restore it.',
+              );
+            }
           } else {
             _showError(
               'This is a cloud account. Connect to the internet to sign in.',
@@ -320,38 +349,69 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     final user = ref.read(firebaseAuthProvider).currentUser;
     if (user == null || !mounted) return;
 
-    // Promote auth state so SyncEngine activates
-    await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(user);
-    if (!mounted) return;
-
-    // If onboarding was already completed on this device, go straight to app.
+    // Epic 21: route this Firebase user into the right per-account DB
+    // BEFORE promoteToCloud writes any profile rows. Otherwise the
+    // placeholder profile lands in whichever DB was previously active
+    // and the new account inherits the prior account's learning data.
+    final registry = ref.read(deviceRegistryProvider);
+    final existingEntry = await registry.findByFirebaseUid(user.uid);
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(kOnboardingComplete) ?? false) {
+    final session = SessionPersistenceService(prefs: prefs, registry: registry);
+
+    if (existingEntry != null) {
+      // Returning account on this device — swap to its DB file.
+      if (activeDbFileName != existingEntry.dbFileName) {
+        activeDbFileName = existingEntry.dbFileName;
+        ref.invalidate(userDatabaseProvider);
+      }
+    } else {
+      // Brand-new account on this device — allocate a fresh DB file
+      // so promoteToCloud can populate it in isolation.
+      final accountId = const Uuid().v4();
+      final dbFileName = 'user_acc_$accountId.db';
+      activeDbFileName = dbFileName;
+      ref.invalidate(userDatabaseProvider);
+
+      await ref
+          .read(auth_state.authStateProvider.notifier)
+          .promoteToCloud(user);
+      if (!mounted) return;
+
+      await session.registerAccount(
+        accountId: accountId,
+        email: user.email ?? '',
+        displayName: user.displayName ?? '',
+        tier: 'cloudBorn',
+        firebaseUid: user.uid,
+        dbFileName: dbFileName,
+      );
+
+      await prefs.setBool(kOnboardingComplete, true);
+      ref.read(selectedProfileIdProvider.notifier).clear();
       if (!mounted) return;
       unawaited(context.router.replaceAll([const AppShellRoute()]));
       return;
     }
 
-    final profileService = ref.read(userProfileServiceProvider);
-    final existingMode = await profileService.getUserMode(user.uid);
+    // Returning account: promote against the now-active DB and mark
+    // this the active account so lastUsedAt + SharedPrefs stay in sync.
+    await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(user);
     if (!mounted) return;
+    await session.setActiveAccount(existingEntry.accountId);
 
-    if (existingMode != null) {
-      final activationService = ref.read(curriculumActivationServiceProvider);
-      final active = await activationService.getActiveCurricula();
-      if (!mounted) return;
-      if (active.isNotEmpty) {
-        // Returning user with existing data — mark onboarding complete
-        // so AuthGuard on AppShellRoute doesn't redirect back.
-        await prefs.setBool(kOnboardingComplete, true);
-        if (!mounted) return;
-        unawaited(context.router.replaceAll([const AppShellRoute()]));
-      } else {
-        unawaited(context.router.replace(const OnboardingRoute()));
-      }
-    } else {
-      unawaited(context.router.push(const OnboardingRoute()));
-    }
+    // Cloud sign-in never lands on onboarding (that's for brand-new users).
+    // Mark onboarding complete and hand off to AppShellRoute — the existing
+    // route guards handle the rest:
+    //   • restoreGuard  → DeviceRestoreRoute for new-device sign-ins
+    //   • profileGuard  → ProfilePickerRoute if 2+ profiles, auto-select if 1
+    await prefs.setBool(kOnboardingComplete, true);
+
+    // Clear any stale profile selection leaked from a prior account
+    // so profileGuard re-evaluates for this account.
+    ref.read(selectedProfileIdProvider.notifier).clear();
+
+    if (!mounted) return;
+    unawaited(context.router.replaceAll([const AppShellRoute()]));
   }
 
   String _mapAuthError(String code) {

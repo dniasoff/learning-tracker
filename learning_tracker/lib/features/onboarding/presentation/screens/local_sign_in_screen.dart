@@ -5,11 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
+import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+    show kOnboardingComplete;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Sign-in screen for existing local-born accounts.
 ///
@@ -51,17 +56,46 @@ class _LocalSignInScreenState extends ConsumerState<LocalSignInScreen> {
       _submitError = null;
     });
     try {
+      final email = _emailController.text.trim();
+
+      // Epic 21: look up the account in the registry and swap to its
+      // DB BEFORE reading the DAO. Without this the argon2 hash is
+      // verified against whatever DB was previously active, either
+      // silently rejecting a correct password or — worse — returning
+      // another account's profile as the signed-in user.
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByEmail(email);
+      if (account == null || account.tier != 'localBorn') {
+        setState(
+          () => _submitError =
+              'No offline account with this email on this device.',
+        );
+        return;
+      }
+
+      activeDbFileName = account.dbFileName;
+      ref.invalidate(userDatabaseProvider);
+
       final dao = ref.read(userDatabaseProvider).userProfileDao;
       final service = LocalAuthService(dao: dao);
       final profile = await service.signIn(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text,
       );
+
+      final prefs = await SharedPreferences.getInstance();
+      final session = SessionPersistenceService(
+        prefs: prefs,
+        registry: registry,
+      );
+      await session.setActiveAccount(account.accountId);
+      await prefs.setBool(kOnboardingComplete, true);
+
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
       if (mounted) {
-        unawaited(context.router.replaceAll([const OnboardingRoute()]));
+        unawaited(context.router.replaceAll([const AppShellRoute()]));
       }
     } on InvalidCredentialsException {
       setState(() => _submitError = 'Incorrect email or password.');
