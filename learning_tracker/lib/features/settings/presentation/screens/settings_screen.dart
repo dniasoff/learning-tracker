@@ -14,13 +14,14 @@ import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/theme_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
-import 'package:learning_tracker/features/settings/presentation/widgets/link_provider_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -144,25 +145,10 @@ class SettingsScreen extends ConsumerWidget {
             const _BackupSyncSection(),
             const SizedBox(height: 24),
 
-            // DATA & PRIVACY section
-            const _SectionHeader(title: 'DATA & PRIVACY'),
+            // LANGUAGE section
+            const _SectionHeader(title: 'LANGUAGE'),
             const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(
-                      Icons.file_upload_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Export Data'),
-                    subtitle: const Text('JSON or CSV format'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _handleExportData(context, ref),
-                  ),
-                ],
-              ),
-            ),
+            Card(child: Column(children: [_LanguageTile(theme: theme)])),
             const SizedBox(height: 24),
 
             // ACCOUNT section
@@ -171,9 +157,6 @@ class SettingsScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  // User Mode
-                  _UserModeSection(user: user),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
                   if (user != null &&
                       user.providerData.any(
                         (info) => info.providerId == 'password',
@@ -186,23 +169,6 @@ class SettingsScreen extends ConsumerWidget {
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () =>
                               _showChangePasswordFlow(context, ref, user),
-                        ),
-                        Divider(
-                          height: 1,
-                          indent: 56,
-                          color: theme.dividerColor,
-                        ),
-                      ],
-                    ),
-                  if (user != null)
-                    Column(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.link),
-                          title: const Text('Link Account'),
-                          subtitle: const Text('Add another sign-in method'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => _showLinkProviderDialog(context, ref),
                         ),
                         Divider(
                           height: 1,
@@ -540,20 +506,30 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
     }
   }
 
-  Future<void> _showEditNameDialog(User user) async {
+  Future<void> _showEditNameDialog({
+    required String initialName,
+    required int? profileId,
+    User? user,
+  }) async {
     final newName = await showDialog<String>(
       context: context,
-      builder: (ctx) => _EditNameDialog(initialName: user.displayName ?? ''),
+      builder: (ctx) => _EditNameDialog(initialName: initialName),
     );
 
     if (newName == null || newName.isEmpty || !mounted) return;
 
-    await user.updateDisplayName(newName);
-    await user.reload();
-    if (!mounted) return;
-    setState(() {
-      _user = FirebaseAuth.instance.currentUser;
-    });
+    if (profileId != null) {
+      await ref
+          .read(profileRepositoryProvider)
+          .updateProfile(id: profileId, displayName: newName);
+    } else if (user != null) {
+      await user.updateDisplayName(newName);
+      await user.reload();
+      if (!mounted) return;
+      setState(() {
+        _user = FirebaseAuth.instance.currentUser;
+      });
+    }
   }
 
   @override
@@ -584,8 +560,17 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
       );
     }
 
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+    final profilesAsync = ref.watch(profileListStreamProvider);
+    final activeProfile = profilesAsync.asData?.value
+        .where((p) => p.id == activeProfileId)
+        .firstOrNull;
+
     final displayName =
-        user.displayName ?? user.email?.split('@').first ?? 'User';
+        activeProfile?.displayName ??
+        user.displayName ??
+        user.email?.split('@').first ??
+        'User';
     final initials = displayName.isNotEmpty
         ? displayName
               .split(' ')
@@ -669,7 +654,11 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
               Icons.edit_outlined,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            onPressed: () => _showEditNameDialog(user),
+            onPressed: () => _showEditNameDialog(
+              initialName: displayName,
+              profileId: activeProfile?.id,
+              user: user,
+            ),
           ),
         ],
       ),
@@ -681,17 +670,25 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
 /// Firebase-user row but reads from [AuthUser] (no Firebase user
 /// exists for local-born accounts) and hides the edit-name button
 /// since that path goes through Firebase.
-class _LocalBornProfileRow extends StatelessWidget {
+class _LocalBornProfileRow extends ConsumerWidget {
   const _LocalBornProfileRow({required this.theme, required this.authUser});
 
   final ThemeData theme;
   final AuthUser authUser;
 
   @override
-  Widget build(BuildContext context) {
-    final displayName = authUser.displayName.isNotEmpty
-        ? authUser.displayName
-        : authUser.email.split('@').first;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+    final profilesAsync = ref.watch(profileListStreamProvider);
+    final activeProfile = profilesAsync.asData?.value
+        .where((p) => p.id == activeProfileId)
+        .firstOrNull;
+
+    final displayName =
+        activeProfile?.displayName ??
+        (authUser.displayName.isNotEmpty
+            ? authUser.displayName
+            : authUser.email.split('@').first);
     final initials = displayName
         .split(' ')
         .take(2)
@@ -744,134 +741,6 @@ class _LocalBornProfileRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Displays current user mode with option to change.
-class _UserModeSection extends ConsumerStatefulWidget {
-  const _UserModeSection({required this.user});
-
-  final User? user;
-
-  @override
-  ConsumerState<_UserModeSection> createState() => _UserModeSectionState();
-}
-
-class _UserModeSectionState extends ConsumerState<_UserModeSection> {
-  UserMode? _currentMode;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMode();
-  }
-
-  Future<void> _loadMode() async {
-    if (widget.user == null) return;
-    final profileService = ref.read(userProfileServiceProvider);
-    final mode = await profileService.getUserMode(widget.user!.uid);
-    if (mounted) {
-      setState(() {
-        _currentMode = mode;
-        _loading = false;
-      });
-    }
-  }
-
-  String _modeDisplayName(UserMode mode) =>
-      mode.name[0].toUpperCase() + mode.name.substring(1);
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.user == null) return const SizedBox.shrink();
-
-    final modeText = _loading
-        ? 'Loading...'
-        : _currentMode != null
-        ? _modeDisplayName(_currentMode!)
-        : 'Not set';
-
-    return ListTile(
-      leading: Icon(
-        _currentMode == UserMode.child ? Icons.child_care : Icons.person,
-      ),
-      title: const Text('User Mode'),
-      subtitle: Text(modeText),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: _loading ? null : () => _showChangeModeConfirmation(context, ref),
-    );
-  }
-
-  Future<void> _showChangeModeConfirmation(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final user = widget.user;
-    if (user == null) return;
-
-    final profileService = ref.read(userProfileServiceProvider);
-    final currentMode = _currentMode ?? UserMode.adult;
-    final newMode = currentMode == UserMode.adult
-        ? UserMode.child
-        : UserMode.adult;
-
-    final implications = newMode == UserMode.child
-        ? 'Switching to Child mode will:\n'
-              '• Enable gamification features (points, rewards)\n'
-              '• Make parent mode available for parental controls\n'
-              '• Show celebratory animations on completions'
-        : 'Switching to Adult mode will:\n'
-              '• Disable gamification popups and animations\n'
-              '• Remove parent mode access\n'
-              '• Show streamlined completion confirmations';
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Switch to ${_modeDisplayName(newMode)} Mode?'),
-        content: Text(implications),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Switch to ${_modeDisplayName(newMode)}'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return;
-
-    try {
-      await profileService.setUserMode(
-        firebaseUid: user.uid,
-        displayName: user.displayName ?? user.email?.split('@').first ?? 'User',
-        mode: newMode,
-      );
-      if (mounted) {
-        setState(() => _currentMode = newMode);
-      }
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Mode changed to ${_modeDisplayName(newMode)}'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to change mode. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }
 
@@ -1036,137 +905,6 @@ class _ParentalControlsSectionState
   }
 }
 
-Future<void> _handleExportData(BuildContext context, WidgetRef ref) async {
-  try {
-    final service = ref.read(dataExportImportServiceProvider);
-    final jsonString = await service.exportData();
-
-    if (!context.mounted) return;
-
-    // Show share dialog with exported data
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Complete'),
-        content: Text(
-          'Exported ${jsonString.length} bytes of data.\n\n'
-          'Use the share button to save the file.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Export failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-}
-
-/// Shows import preview and confirmation dialog.
-/// Called after a JSON file is selected and read.
-Future<bool> showImportConfirmation({
-  required BuildContext context,
-  required WidgetRef ref,
-  required String jsonString,
-}) async {
-  final service = ref.read(dataExportImportServiceProvider);
-
-  try {
-    final preview = service.validateAndPreview(jsonString);
-
-    if (!context.mounted) return false;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Import Data'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Warning: Importing will overwrite all existing data.',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Text('Exported: ${preview.exportedAt}'),
-            Text('Version: ${preview.appVersion}'),
-            const Divider(),
-            Text('Completions: ${preview.completionCount}'),
-            Text('Goals: ${preview.goalCount}'),
-            Text('Stages: ${preview.stageCount}'),
-            Text('Rewards: ${preview.rewardCount}'),
-            Text('Streaks: ${preview.streakCount}'),
-            Text('Point Configs: ${preview.pointConfigCount}'),
-            Text('Bookmarks: ${preview.bookmarkCount}'),
-            Text('Learning Order: ${preview.learningOrderCount}'),
-            Text('Curricula: ${preview.activeCurriculaCount}'),
-            Text('Tracks: ${preview.curriculumTrackCount}'),
-            Text('Profiles: ${preview.userProfileCount}'),
-            const Divider(),
-            Text(
-              'Total records: ${preview.totalRecords}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Import & Overwrite'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return false;
-
-    await service.importData(jsonString);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data imported successfully.')),
-      );
-    }
-    return true;
-  } on FormatException catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invalid file: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-    return false;
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Import failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-    return false;
-  }
-}
-
 Future<void> _showSignOutConfirmation(
   BuildContext context,
   WidgetRef ref,
@@ -1324,12 +1062,88 @@ Future<void> _showChangePasswordFlow(
   }
 }
 
-Future<void> _showLinkProviderDialog(
-  BuildContext context,
-  WidgetRef ref,
-) async {
-  final service = ref.read(accountManagementServiceProvider);
-  await showLinkProviderDialog(context: context, service: service);
+class _LanguageTile extends ConsumerWidget {
+  const _LanguageTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(languageProvider);
+    final label = supportedLanguages[current] ?? current;
+
+    return ListTile(
+      leading: Icon(Icons.language, color: theme.colorScheme.primary),
+      title: const Text('Language'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () => _showLanguagePicker(context, ref, current),
+    );
+  }
+
+  void _showLanguagePicker(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Text(
+                  'Choose Language',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Text(
+                  'Preferred language for content',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              for (final entry in supportedLanguages.entries)
+                ListTile(
+                  title: Text(entry.value),
+                  trailing: current == entry.key
+                      ? Icon(Icons.check, color: theme.colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    ref
+                        .read(languageProvider.notifier)
+                        .setLanguage(entry.key);
+                    Navigator.pop(context);
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _ThemeTile extends ConsumerWidget {
