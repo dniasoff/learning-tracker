@@ -276,10 +276,6 @@ class _DashboardBody extends ConsumerWidget {
             ),
           ),
         ],
-        const SizedBox(height: 24),
-
-        // Recent Activity
-        _RecentActivitySection(activeCurricula: activeCurricula),
       ],
     );
   }
@@ -842,11 +838,7 @@ class _CurriculumCard extends ConsumerWidget {
                   ),
                 FilledButton(
                   onPressed: () {
-                    context.router.push(
-                      CurriculumProgressRoute(
-                        curriculumId: curriculum.storageKey,
-                      ),
-                    );
+                    context.router.navigate(const LearningRoute());
                   },
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 36),
@@ -991,48 +983,6 @@ class _StreakRecoveryBanner extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _RecentActivitySection extends ConsumerWidget {
-  final List<CurriculumId> activeCurricula;
-
-  const _RecentActivitySection({required this.activeCurricula});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    if (activeCurricula.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Activity',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.auto_stories,
-                  color: Colors.deepPurple,
-                ),
-                title: const Text('My Learning Journey'),
-                subtitle: const Text('See your lifetime achievements'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.router.push(LearningJourneyRoute()),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

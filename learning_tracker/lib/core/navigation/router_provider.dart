@@ -94,7 +94,6 @@ class _PinDialogState extends State<_PinDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.title),
       content: PinEntryWidget(
         title: widget.title,
         onPinComplete: (pin) => Navigator.of(context).pop(pin),

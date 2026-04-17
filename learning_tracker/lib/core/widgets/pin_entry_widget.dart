@@ -162,17 +162,23 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
   }
 
   Widget _buildPinEntry(ThemeData theme, bool hasError) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        4,
-        (index) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: _PinDigitField(
-            controller: _controllers[index],
-            focusNode: _focusNodes[index],
-            hasError: hasError,
-            onChanged: (value) => _onDigitChanged(index, value),
+    // FittedBox scales the fixed-width digit row down to fit any parent
+    // (narrow dialogs, small screens) without triggering intrinsic-dimension
+    // errors that LayoutBuilder would cause inside AlertDialog's IntrinsicWidth.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(
+          4,
+          (index) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: _PinDigitField(
+              controller: _controllers[index],
+              focusNode: _focusNodes[index],
+              hasError: hasError,
+              onChanged: (value) => _onDigitChanged(index, value),
+            ),
           ),
         ),
       ),
@@ -182,13 +188,17 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
   Widget _buildErrorMessage(ThemeData theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
         const SizedBox(width: 8),
-        Text(
-          widget.errorMessage!,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.error,
+        Flexible(
+          child: Text(
+            widget.errorMessage!,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+            softWrap: true,
           ),
         ),
         const SizedBox(width: 8),

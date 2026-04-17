@@ -2,10 +2,16 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_track_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart'
+    as tm;
+import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Parent mode screen for managing tracks across all curricula.
 ///
@@ -13,32 +19,71 @@ import 'package:learning_tracker/features/parent_mode/presentation/providers/par
 /// to add school/tutor tracks or remove them (with confirmation).
 /// Personal track is always shown but cannot be removed.
 @RoutePage()
-class ParentTrackManagementScreen extends ConsumerWidget {
+class ParentTrackManagementScreen extends ConsumerStatefulWidget {
   const ParentTrackManagementScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ParentTrackManagementScreen> createState() =>
+      _ParentTrackManagementScreenState();
+}
+
+class _ParentTrackManagementScreenState
+    extends ConsumerState<ParentTrackManagementScreen> {
+  bool _addingTrack = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_addingTrack) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Add Track')),
+        body: AddTrackFlow(
+          profileId: ref.watch(activeProfileIdProvider),
+          isOnboarding: false,
+          isChildMode:
+              ref.watch(dashboardUserModeProvider).value == UserMode.child,
+          onComplete: _onAddTrackComplete,
+          onCancel: () => setState(() => _addingTrack = false),
+        ),
+      );
+    }
+
     final activeCurriculaAsync = ref.watch(parentTrackCurriculaProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Manage Tracks')),
+      appBar: AppBar(title: AppBarTitle(text: l10n.manageTracks)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => setState(() => _addingTrack = true),
+        icon: const Icon(Icons.add),
+        label: Text(l10n.addTrack),
+      ),
       body: SafeArea(
         top: false,
         child: activeCurriculaAsync.when(
           data: (curricula) => curricula.isEmpty
-              ? const Center(child: Text('No active curricula'))
+              ? Center(child: Text(l10n.noActiveCurricula))
               : ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                   itemCount: curricula.length,
                   itemBuilder: (context, index) =>
                       _CurriculumTrackCard(curriculum: curricula[index]),
                 ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) =>
-              Center(child: Text('Error loading curricula: $error')),
+              Center(child: Text(l10n.errorLoadingCurricula(error.toString()))),
         ),
       ),
     );
+  }
+
+  void _onAddTrackComplete(AddTrackResult result) {
+    setState(() => _addingTrack = false);
+    ref.invalidate(parentTrackCurriculaProvider);
+    ref.invalidate(tm.activeTracksProvider);
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.trackCreated(result.label))));
   }
 }
 
@@ -49,132 +94,20 @@ class _CurriculumTrackCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeTracksAsync = ref.watch(activeTracksProvider(curriculum));
+    final localeCode = Localizations.localeOf(context).languageCode;
+    final displayName = localeCode == 'he'
+        ? curriculum.displayNameHe
+        : curriculum.displayNameEn;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              curriculum.displayNameHe,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            activeTracksAsync.when(
-              data: (activeTracks) => Column(
-                children: [
-                  _TrackRow(
-                    curriculum: curriculum,
-                    trackType: TrackType.personal,
-                    isActive: activeTracks.contains(TrackType.personal),
-                    isPersonal: true,
-                  ),
-                  _TrackRow(
-                    curriculum: curriculum,
-                    trackType: TrackType.school,
-                    isActive: activeTracks.contains(TrackType.school),
-                  ),
-                  _TrackRow(
-                    curriculum: curriculum,
-                    trackType: TrackType.tutor,
-                    isActive: activeTracks.contains(TrackType.tutor),
-                  ),
-                ],
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Text('Error: $error'),
-            ),
-          ],
+        child: Text(
+          displayName,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
     );
-  }
-}
-
-class _TrackRow extends ConsumerWidget {
-  final CurriculumId curriculum;
-  final TrackType trackType;
-  final bool isActive;
-  final bool isPersonal;
-
-  const _TrackRow({
-    required this.curriculum,
-    required this.trackType,
-    required this.isActive,
-    this.isPersonal = false,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SwitchListTile(
-      title: Text(trackType.displayNameEn),
-      subtitle: isPersonal
-          ? const Text('Always active')
-          : Text(isActive ? 'Active' : 'Inactive'),
-      value: isActive,
-      onChanged: isPersonal
-          ? null
-          : (value) async {
-              if (value) {
-                await _activateTrack(context, ref);
-              } else {
-                await _deactivateTrack(context, ref);
-              }
-            },
-    );
-  }
-
-  Future<void> _activateTrack(BuildContext context, WidgetRef ref) async {
-    try {
-      final repository = ref.read(trackRepositoryProvider);
-      await repository.activateTrack(curriculum, trackType);
-      ref.invalidate(activeTracksProvider(curriculum));
-    } on Exception catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to activate track: $e')));
-    }
-  }
-
-  Future<void> _deactivateTrack(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Track?'),
-        content: Text(
-          'Removing the ${trackType.displayNameEn} track will hide it from '
-          'the learning view. Completion history will be preserved. '
-          'You can add it back later.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed ?? false) {
-      if (!context.mounted) return;
-      try {
-        final repository = ref.read(trackRepositoryProvider);
-        await repository.deactivateTrack(curriculum, trackType);
-        ref.invalidate(activeTracksProvider(curriculum));
-      } on Exception catch (e) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to remove track: $e')));
-      }
-    }
   }
 }

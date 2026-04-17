@@ -667,6 +667,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading...'**
   String get loading;
+
+  /// No description provided for @manageTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Tracks'**
+  String get manageTracks;
+
+  /// No description provided for @addTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Track'**
+  String get addTrack;
+
+  /// No description provided for @noActiveCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'No active curricula'**
+  String get noActiveCurricula;
+
+  /// No description provided for @errorLoadingCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading curricula: {error}'**
+  String errorLoadingCurricula(String error);
+
+  /// No description provided for @trackCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Track \"{label}\" created'**
+  String trackCreated(String label);
 }
 
 class _AppLocalizationsDelegate

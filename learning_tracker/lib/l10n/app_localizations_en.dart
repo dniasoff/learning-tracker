@@ -302,4 +302,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loading => 'Loading...';
+
+  @override
+  String get manageTracks => 'Manage Tracks';
+
+  @override
+  String get addTrack => 'Add Track';
+
+  @override
+  String get noActiveCurricula => 'No active curricula';
+
+  @override
+  String errorLoadingCurricula(String error) {
+    return 'Error loading curricula: $error';
+  }
+
+  @override
+  String trackCreated(String label) {
+    return 'Track \"$label\" created';
+  }
 }

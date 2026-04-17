@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
@@ -53,6 +54,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     try {
       final isValid = await pinService.verifyProfilePin(profileId, pin);
       if (isValid) {
+        ref.read(routerProvider).parentPinGuard.markAuthenticated(profileId);
         if (mounted) await context.router.maybePop(true);
       } else {
         setState(() => _errorMessage = 'Incorrect PIN');

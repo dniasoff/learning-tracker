@@ -114,5 +114,20 @@
   "notifications": "Notifications",
   "retry": "Retry",
   "error": "Error",
-  "loading": "Loading..."
+  "loading": "Loading...",
+  "manageTracks": "Manage Tracks",
+  "addTrack": "Add Track",
+  "noActiveCurricula": "No active curricula",
+  "errorLoadingCurricula": "Error loading curricula: {error}",
+  "@errorLoadingCurricula": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "trackCreated": "Track \"{label}\" created",
+  "@trackCreated": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  }
 }

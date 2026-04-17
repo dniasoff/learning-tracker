@@ -300,4 +300,23 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get loading => '...טוען';
+
+  @override
+  String get manageTracks => 'ניהול מסלולים';
+
+  @override
+  String get addTrack => 'הוסף מסלול';
+
+  @override
+  String get noActiveCurricula => 'אין תוכניות לימוד פעילות';
+
+  @override
+  String errorLoadingCurricula(String error) {
+    return 'שגיאה בטעינת תוכניות הלימוד: $error';
+  }
+
+  @override
+  String trackCreated(String label) {
+    return 'המסלול \"$label\" נוצר';
+  }
 }

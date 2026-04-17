@@ -245,6 +245,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       if (mounted) _showError('Incorrect password.');
     } on FirebaseAuthException catch (e) {
       if (mounted) _showError(_mapAuthError(e.code));
+    } catch (e) {
+      if (mounted) _showError('Sign-in failed: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -439,9 +441,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override

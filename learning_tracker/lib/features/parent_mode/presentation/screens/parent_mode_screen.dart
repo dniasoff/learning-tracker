@@ -3,19 +3,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_dashboard_providers.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/recent_completions_list.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 @RoutePage()
-class ParentModeScreen extends ConsumerWidget {
+class ParentModeScreen extends ConsumerStatefulWidget {
   const ParentModeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ParentModeScreen> createState() => _ParentModeScreenState();
+}
+
+class _ParentModeScreenState extends ConsumerState<ParentModeScreen> {
+  @override
+  void dispose() {
+    // Force PIN re-entry on the next parent-mode launch. Without this,
+    // the guard caches the authenticated profile for the whole session,
+    // so re-entering parent mode would skip the prompt.
+    ref.read(routerProvider).parentPinGuard.lock();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dashboardAsync = ref.watch(parentDashboardDataProvider);
     final theme = Theme.of(context);
 
@@ -205,10 +219,6 @@ class _DashboardBody extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // View child's learning journey
-          _ViewChildJourneyTile(),
           const SizedBox(height: 16),
 
           // Recent Activity
@@ -497,37 +507,6 @@ class _ActionTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ViewChildJourneyTile extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeProfileId = ref.watch(activeProfileIdProvider);
-
-    return Card(
-      child: ListTile(
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: Colors.deepPurple.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(
-            Icons.auto_stories,
-            color: Colors.deepPurple,
-            size: 24,
-          ),
-        ),
-        title: const Text("View Child's Learning Journey"),
-        subtitle: const Text('See lifetime achievements'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          context.router.push(LearningJourneyRoute(profileId: activeProfileId));
-        },
       ),
     );
   }

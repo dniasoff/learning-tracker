@@ -114,5 +114,20 @@
   "notifications": "התראות",
   "retry": "נסה שוב",
   "error": "שגיאה",
-  "loading": "...טוען"
+  "loading": "...טוען",
+  "manageTracks": "ניהול מסלולים",
+  "addTrack": "הוסף מסלול",
+  "noActiveCurricula": "אין תוכניות לימוד פעילות",
+  "errorLoadingCurricula": "שגיאה בטעינת תוכניות הלימוד: {error}",
+  "@errorLoadingCurricula": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "trackCreated": "המסלול \"{label}\" נוצר",
+  "@trackCreated": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  }
 }
