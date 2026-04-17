@@ -10,16 +10,16 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 /// When only 1 profile exists, it auto-selects that profile.
 class ProfileGuard extends AutoRouteGuard {
   ProfileGuard({
-    required UserDatabase database,
+    required UserDatabase Function() getDatabase,
     required int? Function() getSelectedProfileId,
     required void Function(int) setSelectedProfileId,
     required int Function() getAccountId,
-  }) : _database = database,
+  }) : _getDatabase = getDatabase,
        _getSelectedProfileId = getSelectedProfileId,
        _setSelectedProfileId = setSelectedProfileId,
        _getAccountId = getAccountId;
 
-  final UserDatabase _database;
+  final UserDatabase Function() _getDatabase;
   final int? Function() _getSelectedProfileId;
   final void Function(int) _setSelectedProfileId;
   final int Function() _getAccountId;
@@ -36,7 +36,7 @@ class ProfileGuard extends AutoRouteGuard {
     }
 
     // Check how many profiles exist
-    final profiles = await _database.profileDao.getProfilesByAccount(
+    final profiles = await _getDatabase().profileDao.getProfilesByAccount(
       _getAccountId(),
     );
 

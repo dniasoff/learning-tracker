@@ -7,16 +7,17 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 /// Adult accounts cannot access parent mode — it's designed for a parent
 /// to supervise a child's device.
 class ChildModeGuard extends AutoRouteGuard {
-  ChildModeGuard({required this.database});
+  ChildModeGuard({required UserDatabase Function() getDatabase})
+    : _getDatabase = getDatabase;
 
-  final UserDatabase database;
+  final UserDatabase Function() _getDatabase;
 
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,
     StackRouter router,
   ) async {
-    final profiles = await database.userProfileDao.getAllUserProfiles();
+    final profiles = await _getDatabase().userProfileDao.getAllUserProfiles();
 
     // If no profile exists, default to adult — block parent mode.
     if (profiles.isEmpty) {

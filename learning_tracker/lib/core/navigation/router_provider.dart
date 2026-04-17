@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
@@ -19,22 +20,28 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 /// uses secure storage rather than hard-coded stubs.
 final routerProvider = Provider<AppRouter>((ref) {
   final pinSvc = ref.watch(pinServiceProvider);
-  final db = ref.watch(userDatabaseProvider);
+
+  // Guards resolve the database lazily via getters rather than via a
+  // watched field. Sign-in/signup flows invalidate userDatabaseProvider
+  // to swap per-account DB files mid-flow — if the router watched the
+  // provider, that invalidate would tear down the router, reset its
+  // route state, and bounce brand-new sign-ins back to WelcomeRoute.
+  UserDatabase getDb() => ref.read(userDatabaseProvider);
 
   return AppRouter(
     authGuard: AuthGuard(),
     restoreGuard: RestoreGuard(
-      database: db,
+      getDatabase: getDb,
       hasCloudAccount: () => ref.read(authStateProvider).isCloudBorn,
     ),
     profileGuard: ProfileGuard(
-      database: db,
+      getDatabase: getDb,
       getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
       setSelectedProfileId: (id) =>
           ref.read(selectedProfileIdProvider.notifier).select(id),
       getAccountId: () => ref.read(currentAccountIdProvider),
     ),
-    childModeGuard: ChildModeGuard(database: db),
+    childModeGuard: ChildModeGuard(getDatabase: getDb),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
       promptForPin: () {

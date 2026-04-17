@@ -37,7 +37,7 @@ AppRouter _createAuthenticatedRouter() {
 
   final testDb = createTestDatabase();
   final restoreGuard = RestoreGuard(
-    database: testDb,
+    getDatabase: () => testDb,
     hasCloudAccount: () => false,
   );
   restoreGuard.markRestoreComplete();
@@ -46,12 +46,12 @@ AppRouter _createAuthenticatedRouter() {
     authGuard: AuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
-      database: testDb,
+      getDatabase: () => testDb,
       getSelectedProfileId: () => 1,
       setSelectedProfileId: (_) {},
       getAccountId: () => 1,
     ),
-    childModeGuard: ChildModeGuard(database: testDb),
+    childModeGuard: ChildModeGuard(getDatabase: () => testDb),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,
@@ -71,7 +71,7 @@ AppRouter _createUnauthenticatedRouter() {
 
   final testDb = createTestDatabase();
   final restoreGuard = RestoreGuard(
-    database: testDb,
+    getDatabase: () => testDb,
     hasCloudAccount: () => false,
   );
   restoreGuard.markRestoreComplete();
@@ -80,12 +80,12 @@ AppRouter _createUnauthenticatedRouter() {
     authGuard: AuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
-      database: testDb,
+      getDatabase: () => testDb,
       getSelectedProfileId: () => 1,
       setSelectedProfileId: (_) {},
       getAccountId: () => 1,
     ),
-    childModeGuard: ChildModeGuard(database: testDb),
+    childModeGuard: ChildModeGuard(getDatabase: () => testDb),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,

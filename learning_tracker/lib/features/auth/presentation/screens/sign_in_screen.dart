@@ -386,10 +386,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         dbFileName: dbFileName,
       );
 
-      await prefs.setBool(kOnboardingComplete, true);
+      // Brand-new cloud account has no profile or tracks yet — hand off
+      // to the onboarding flow (profile creation + add track). Onboarding
+      // flips kOnboardingComplete itself when the flow completes, so we
+      // do NOT set it here. Mirrors account_creation_screen's cloud path.
       ref.read(selectedProfileIdProvider.notifier).clear();
       if (!mounted) return;
-      unawaited(context.router.replaceAll([const AppShellRoute()]));
+      unawaited(context.router.replaceAll([const OnboardingRoute()]));
       return;
     }
 

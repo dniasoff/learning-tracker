@@ -15,12 +15,12 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 /// empty, indicating a new-device scenario.
 class RestoreGuard extends AutoRouteGuard {
   RestoreGuard({
-    required UserDatabase database,
+    required UserDatabase Function() getDatabase,
     required bool Function() hasCloudAccount,
-  }) : _database = database,
+  }) : _getDatabase = getDatabase,
        _hasCloudAccount = hasCloudAccount;
 
-  final UserDatabase _database;
+  final UserDatabase Function() _getDatabase;
   final bool Function() _hasCloudAccount;
 
   /// Cache the result so we only check once per session.
@@ -48,8 +48,9 @@ class RestoreGuard extends AutoRouteGuard {
       return;
     }
 
-    final completions = await _database.completionDao.getAllCompletions();
-    final profiles = await _database.userProfileDao.getAllUserProfiles();
+    final db = _getDatabase();
+    final completions = await db.completionDao.getAllCompletions();
+    final profiles = await db.userProfileDao.getAllUserProfiles();
     _isNewDevice = completions.isEmpty && profiles.isEmpty;
 
     if (_isNewDevice!) {

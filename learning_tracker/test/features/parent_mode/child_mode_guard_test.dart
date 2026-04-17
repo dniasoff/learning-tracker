@@ -31,7 +31,7 @@ void main() {
   });
 
   test('no profiles defaults to adult — resolver.next(false)', () async {
-    final guard = ChildModeGuard(database: db);
+    final guard = ChildModeGuard(getDatabase: () => db);
 
     await guard.onNavigation(mockResolver, mockRouter);
 
@@ -52,7 +52,7 @@ void main() {
       ),
     );
 
-    final guard = ChildModeGuard(database: db);
+    final guard = ChildModeGuard(getDatabase: () => db);
 
     await guard.onNavigation(mockResolver, mockRouter);
 
@@ -73,7 +73,7 @@ void main() {
       ),
     );
 
-    final guard = ChildModeGuard(database: db);
+    final guard = ChildModeGuard(getDatabase: () => db);
 
     await guard.onNavigation(mockResolver, mockRouter);
 
