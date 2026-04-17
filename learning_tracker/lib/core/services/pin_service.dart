@@ -32,6 +32,15 @@ class PinService {
   static const _parentLockoutTimestampKey = 'parent_lockout_timestamp';
   static const _tutorLockoutTimestampKey = 'tutor_lockout_timestamp';
 
+  // Per-profile parent PIN key builders. Each child profile can have its own
+  // 4-digit parent PIN — the hash is keyed by profile id in secure storage.
+  static String _profilePinKey(int profileId) =>
+      'profile_${profileId}_parent_pin_hash';
+  static String _profileLockoutKey(int profileId) =>
+      'profile_${profileId}_parent_lockout_count';
+  static String _profileLockoutTimestampKey(int profileId) =>
+      'profile_${profileId}_parent_lockout_timestamp';
+
   /// Sets the parent PIN by hashing it with bcrypt and storing securely.
   ///
   /// The plaintext PIN is never stored.
@@ -154,6 +163,71 @@ class PinService {
     await _secureStorage.delete(key: _parentPinKey);
     await _secureStorage.delete(key: _parentLockoutKey);
     await _secureStorage.delete(key: _parentLockoutTimestampKey);
+  }
+
+  /// Sets a parent PIN linked to a specific child [profileId].
+  ///
+  /// Hashed with bcrypt and written to secure storage keyed by profile id —
+  /// each child profile can have its own PIN. Resets any existing lockout
+  /// state for the profile. Plaintext is never persisted.
+  Future<void> setProfilePin(int profileId, String pin) async {
+    if (pin.length != 4 || !_isNumeric(pin)) {
+      throw ArgumentError('PIN must be exactly 4 numeric digits');
+    }
+    final hash = BCrypt.hashpw(pin, BCrypt.gensalt());
+    await _secureStorage.write(key: _profilePinKey(profileId), value: hash);
+    await _secureStorage.delete(key: _profileLockoutKey(profileId));
+    await _secureStorage.delete(key: _profileLockoutTimestampKey(profileId));
+  }
+
+  /// Verifies [pin] against the hash stored for [profileId].
+  ///
+  /// Increments the per-profile failed-attempt counter and triggers lockout
+  /// after [maxFailedAttempts]. Throws [PinLockoutException] if already
+  /// locked out.
+  Future<bool> verifyProfilePin(int profileId, String pin) async {
+    final timestampKey = _profileLockoutTimestampKey(profileId);
+    if (await _isLockedOut(timestampKey)) {
+      final remaining = await _getRemainingLockoutMinutes(timestampKey);
+      throw PinLockoutException(remaining);
+    }
+
+    final storedHash = await _secureStorage.read(
+      key: _profilePinKey(profileId),
+    );
+    if (storedHash == null) return false;
+
+    final isValid = BCrypt.checkpw(pin, storedHash);
+    if (isValid) {
+      await _secureStorage.delete(key: _profileLockoutKey(profileId));
+      await _secureStorage.delete(key: timestampKey);
+    } else {
+      await _incrementFailedAttempts(
+        _profileLockoutKey(profileId),
+        timestampKey,
+      );
+    }
+    return isValid;
+  }
+
+  /// Returns true if a parent PIN has been set for [profileId].
+  Future<bool> hasProfilePin(int profileId) async {
+    final hash = await _secureStorage.read(key: _profilePinKey(profileId));
+    return hash != null;
+  }
+
+  /// Removes the parent PIN and lockout state for [profileId].
+  Future<void> clearProfilePin(int profileId) async {
+    await _secureStorage.delete(key: _profilePinKey(profileId));
+    await _secureStorage.delete(key: _profileLockoutKey(profileId));
+    await _secureStorage.delete(key: _profileLockoutTimestampKey(profileId));
+  }
+
+  /// Remaining lockout in minutes for [profileId]. Returns 0 if not locked.
+  Future<int> getProfileLockoutRemainingMinutes(int profileId) async {
+    final key = _profileLockoutTimestampKey(profileId);
+    if (!await _isLockedOut(key)) return 0;
+    return _getRemainingLockoutMinutes(key);
   }
 
   /// Returns true if a tutor PIN has been set.

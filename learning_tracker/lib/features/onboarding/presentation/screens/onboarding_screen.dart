@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -44,6 +46,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 /// Per-track configuration is delegated to [AddTrackFlow] (Story 18.1).
 enum _ScreenPhase {
   profileCreation,
+  parentPinSetup,
   languageSelection,
   calendarPreference,
   addTrack,
@@ -224,7 +227,58 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _profileName = name;
     ref.read(selectedProfileIdProvider.notifier).select(profile.id);
 
-    setState(() => _phase = _ScreenPhase.languageSelection);
+    // Child profiles get an extra step: the parent sets a 4-digit PIN that
+    // will gate parental controls for this profile.
+    final nextPhase = _isChildMode
+        ? _ScreenPhase.parentPinSetup
+        : _ScreenPhase.languageSelection;
+    setState(() => _phase = nextPhase);
+    await _saveState();
+  }
+
+  // Parent PIN setup state (child mode only).
+  String? _firstPin;
+  String? _pinError;
+  bool _isPinConfirmStep = false;
+
+  void _onFirstPinEntered(String pin) {
+    setState(() {
+      _firstPin = pin;
+      _isPinConfirmStep = true;
+      _pinError = null;
+    });
+  }
+
+  Future<void> _onConfirmPinEntered(String pin) async {
+    if (pin != _firstPin) {
+      setState(() {
+        _pinError = 'PINs do not match';
+        _isPinConfirmStep = false;
+        _firstPin = null;
+      });
+      return;
+    }
+    final profileId = _createdProfileId;
+    if (profileId == null) return;
+
+    try {
+      await ref.read(pinServiceProvider).setProfilePin(profileId, pin);
+    } on ArgumentError catch (e) {
+      setState(() {
+        _pinError = e.message as String?;
+        _isPinConfirmStep = false;
+        _firstPin = null;
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _firstPin = null;
+      _isPinConfirmStep = false;
+      _pinError = null;
+      _phase = _ScreenPhase.languageSelection;
+    });
     await _saveState();
   }
 
@@ -301,6 +355,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation => 'Add a Learner',
+      _ScreenPhase.parentPinSetup => 'Set Parent PIN',
       _ScreenPhase.languageSelection => 'Choose Language',
       _ScreenPhase.calendarPreference => 'Calendar',
       _ScreenPhase.addTrack => 'Set Up a Track',
@@ -317,6 +372,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: switch (_phase) {
           _ScreenPhase.profileCreation => _buildProfileCreation(theme),
+          _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
           _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
           _ScreenPhase.calendarPreference => _buildCalendarPreference(theme),
           _ScreenPhase.addTrack => _buildAddTrack(),
@@ -374,6 +430,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ? _createProfile
                   : null,
               child: const Text('Continue'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParentPinSetup(ThemeData theme) {
+    final childName = _profileName ?? 'your child';
+    final subtitle = _isPinConfirmStep
+        ? 'Re-enter the PIN to confirm'
+        : 'Set a 4-digit PIN to access parent controls for $childName. '
+              'The PIN is stored only on this device.';
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 24),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            PinEntryWidget(
+              title: _isPinConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
+              errorMessage: _pinError,
+              onPinComplete: _isPinConfirmStep
+                  ? _onConfirmPinEntered
+                  : _onFirstPinEntered,
             ),
           ],
         ),
