@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -13,7 +12,6 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
-import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
@@ -39,6 +37,13 @@ class SettingsScreen extends ConsumerWidget {
     final user = ref.watch(firebaseAuthProvider).currentUser;
     final theme = Theme.of(context);
 
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+    final profilesAsync = ref.watch(profileListStreamProvider);
+    final activeProfile = profilesAsync.asData?.value
+        .where((p) => p.id == activeProfileId)
+        .firstOrNull;
+    final isChildProfile = activeProfile?.mode == 'child';
+
     return Scaffold(
       appBar: AppBar(
         title: const AppBarTitle(text: 'Settings'),
@@ -62,17 +67,22 @@ class SettingsScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  ListTile(
-                    leading: Icon(
-                      Icons.route,
-                      color: theme.colorScheme.primary,
+                  // Child profiles can't manage tracks directly — the parent
+                  // does that from the parent-mode settings screen.
+                  if (!isChildProfile) ...[
+                    ListTile(
+                      leading: Icon(
+                        Icons.route,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: const Text('Manage Tracks'),
+                      subtitle: const Text('Add, edit, or archive tracks'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () =>
+                          context.pushRoute(TrackManagementHubRoute()),
                     ),
-                    title: const Text('Manage Tracks'),
-                    subtitle: const Text('Add, edit, or archive tracks'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.pushRoute(TrackManagementHubRoute()),
-                  ),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
+                    Divider(height: 1, indent: 56, color: theme.dividerColor),
+                  ],
                   _HebrewDateTile(theme: theme),
                   Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
@@ -206,7 +216,10 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // PARENTAL CONTROLS section — only visible for child-mode accounts.
-            _ParentalControlsSection(user: user),
+            _ParentalControlsSection(
+              user: user,
+              isChildProfile: isChildProfile,
+            ),
 
             // App Version
             Center(
@@ -753,9 +766,13 @@ class _LocalBornProfileRow extends ConsumerWidget {
 /// The PIN is stored locally via [PinService] (bcrypt hash in secure storage)
 /// and never synced to Firestore.
 class _ParentalControlsSection extends ConsumerStatefulWidget {
-  const _ParentalControlsSection({required this.user});
+  const _ParentalControlsSection({
+    required this.user,
+    required this.isChildProfile,
+  });
 
   final User? user;
+  final bool isChildProfile;
 
   @override
   ConsumerState<_ParentalControlsSection> createState() =>
@@ -764,7 +781,6 @@ class _ParentalControlsSection extends ConsumerStatefulWidget {
 
 class _ParentalControlsSectionState
     extends ConsumerState<_ParentalControlsSection> {
-  UserMode? _mode;
   bool _hasPin = false;
   bool _loading = true;
 
@@ -775,20 +791,13 @@ class _ParentalControlsSectionState
   }
 
   Future<void> _load() async {
-    if (widget.user == null) {
-      if (mounted) setState(() => _loading = false);
-      return;
-    }
-    final profileService = ref.read(userProfileServiceProvider);
     final pinService = ref.read(pinServiceProvider);
     final profileId = ref.read(selectedProfileIdProvider);
-    final mode = await profileService.getUserMode(widget.user!.uid);
     final hasPin = profileId == null
         ? false
         : await pinService.hasProfilePin(profileId);
     if (mounted) {
       setState(() {
-        _mode = mode;
         _hasPin = hasPin;
         _loading = false;
       });
@@ -840,7 +849,7 @@ class _ParentalControlsSectionState
 
   @override
   Widget build(BuildContext context) {
-    if (_loading || _mode != UserMode.child) {
+    if (_loading || !widget.isChildProfile) {
       return const SizedBox.shrink();
     }
 
@@ -867,7 +876,7 @@ class _ParentalControlsSectionState
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
-                  await context.pushRoute(const ParentModeRoute());
+                  await context.pushRoute(const ParentSettingsRoute());
                   if (mounted) await _load();
                 },
               ),

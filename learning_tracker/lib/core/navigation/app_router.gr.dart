@@ -845,6 +845,22 @@ class ParentModeRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [ParentSettingsScreen]
+class ParentSettingsRoute extends PageRouteInfo<void> {
+  const ParentSettingsRoute({List<PageRouteInfo>? children})
+    : super(ParentSettingsRoute.name, initialChildren: children);
+
+  static const String name = 'ParentSettingsRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const ParentSettingsScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [ParentTrackManagementScreen]
 class ParentTrackManagementRoute extends PageRouteInfo<void> {
   const ParentTrackManagementRoute({List<PageRouteInfo>? children})
