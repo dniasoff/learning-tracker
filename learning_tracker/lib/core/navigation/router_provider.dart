@@ -29,6 +29,7 @@ final routerProvider = Provider<AppRouter>((ref) {
   UserDatabase getDb() => ref.read(userDatabaseProvider);
 
   return AppRouter(
+    navigatorKey: navigatorKey,
     authGuard: AuthGuard(),
     restoreGuard: RestoreGuard(
       getDatabase: getDb,
@@ -65,8 +66,9 @@ final routerProvider = Provider<AppRouter>((ref) {
   );
 });
 
-/// A global navigator key that the app must assign to [MaterialApp.router]
-/// so guards can obtain a [BuildContext] for showing PIN dialogs.
+/// Global navigator key bound to the auto_route root navigator. Guards use
+/// this key's [BuildContext] to show PIN entry dialogs from outside the
+/// widget tree (the guard callback doesn't have its own context).
 final navigatorKey = GlobalKey<NavigatorState>();
 
 /// Shows a modal dialog with a [PinEntryWidget] and returns the entered PIN,

@@ -73,6 +73,7 @@ class AppRouter extends RootStackRouter {
     required this.childModeGuard,
     required this.parentPinGuard,
     required this.tutorPinGuard,
+    super.navigatorKey,
   });
 
   @override
