@@ -1,35 +1,36 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 
-/// Route guard that only allows access for child-mode accounts (FR67).
+/// Route guard that only allows access for child-mode profiles (FR67).
 ///
-/// Adult accounts cannot access parent mode — it's designed for a parent
-/// to supervise a child's device.
+/// Parent mode is designed for a parent to supervise a child on shared
+/// device — so these routes only open when the *active learner profile*
+/// is in child mode. Since Epic 15 (multi-profile) user mode is stored
+/// per-profile on the `profiles` table, not on the legacy singleton
+/// `user_profile` row, so this guard resolves the currently selected
+/// profile via [getSelectedProfileId] and reads its `mode` column.
 class ChildModeGuard extends AutoRouteGuard {
-  ChildModeGuard({required UserDatabase Function() getDatabase})
-    : _getDatabase = getDatabase;
+  ChildModeGuard({
+    required UserDatabase Function() getDatabase,
+    required int? Function() getSelectedProfileId,
+  }) : _getDatabase = getDatabase,
+       _getSelectedProfileId = getSelectedProfileId;
 
   final UserDatabase Function() _getDatabase;
+  final int? Function() _getSelectedProfileId;
 
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,
     StackRouter router,
   ) async {
-    final profiles = await _getDatabase().userProfileDao.getAllUserProfiles();
-
-    // If no profile exists, default to adult — block parent mode.
-    if (profiles.isEmpty) {
+    final profileId = _getSelectedProfileId();
+    if (profileId == null) {
       resolver.next(false);
       return;
     }
 
-    final userMode = UserMode.values.firstWhere(
-      (m) => m.name == profiles.first.userMode,
-      orElse: () => UserMode.adult,
-    );
-
-    resolver.next(userMode == UserMode.child);
+    final profile = await _getDatabase().profileDao.getProfileById(profileId);
+    resolver.next(profile?.mode == 'child');
   }
 }

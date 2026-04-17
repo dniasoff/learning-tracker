@@ -51,7 +51,10 @@ AppRouter _createAuthenticatedRouter() {
       setSelectedProfileId: (_) {},
       getAccountId: () => 1,
     ),
-    childModeGuard: ChildModeGuard(getDatabase: () => testDb),
+    childModeGuard: ChildModeGuard(
+      getDatabase: () => testDb,
+      getSelectedProfileId: () => 1,
+    ),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,
@@ -85,7 +88,10 @@ AppRouter _createUnauthenticatedRouter() {
       setSelectedProfileId: (_) {},
       getAccountId: () => 1,
     ),
-    childModeGuard: ChildModeGuard(getDatabase: () => testDb),
+    childModeGuard: ChildModeGuard(
+      getDatabase: () => testDb,
+      getSelectedProfileId: () => 1,
+    ),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
       promptForPin: () async => null,

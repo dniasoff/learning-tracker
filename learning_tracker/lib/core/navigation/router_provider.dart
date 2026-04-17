@@ -41,7 +41,10 @@ final routerProvider = Provider<AppRouter>((ref) {
           ref.read(selectedProfileIdProvider.notifier).select(id),
       getAccountId: () => ref.read(currentAccountIdProvider),
     ),
-    childModeGuard: ChildModeGuard(getDatabase: getDb),
+    childModeGuard: ChildModeGuard(
+      getDatabase: getDb,
+      getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
+    ),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
       promptForPin: () {
