@@ -44,10 +44,16 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
   @override
   void didUpdateWidget(PinEntryWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Auto-clear digits and return focus to field 1 when an error appears.
-    // This is standard security UX — don't leave failed digits visible.
-    if (widget.errorMessage != null &&
-        oldWidget.errorMessage != widget.errorMessage) {
+    // Clear digits and refocus field 1 when:
+    //  • a new error appears (don't leave failed digits visible — security UX), or
+    //  • the title changes, which callers use to signal a new step
+    //    (e.g. "Enter New PIN" → "Confirm PIN", or "verifyCurrent" →
+    //    "enterNew" in the change-PIN flow).
+    final errorAppeared =
+        widget.errorMessage != null &&
+        oldWidget.errorMessage != widget.errorMessage;
+    final stepChanged = widget.title != oldWidget.title;
+    if (errorAppeared || stepChanged) {
       _clearPin();
     }
   }
