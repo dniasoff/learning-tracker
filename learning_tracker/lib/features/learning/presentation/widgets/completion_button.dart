@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/completi
 import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/reward_milestone_providers.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 /// Button widget for marking a content item as completed.
 ///
@@ -140,8 +141,11 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         ref.invalidate(
           dashboardCompletionPercentageProvider(curriculumEnum.first),
         );
+        ref.invalidate(dashboardLastCompletionProvider(curriculumEnum.first));
       }
       ref.invalidate(dashboardStreakProvider);
+      ref.invalidate(dashboardGlobalPointsProvider);
+      ref.invalidate(allDailyTasksProvider);
 
       // Background: streak alert, rewards
       unawaited(_postCompletionWork(completion));

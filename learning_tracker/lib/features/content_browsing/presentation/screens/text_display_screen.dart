@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
@@ -9,7 +9,9 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/completion_button.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 @RoutePage()
@@ -619,18 +621,74 @@ class _StudyResourcesSection extends StatelessWidget {
 }
 
 /// Mark completion section. Resolves the curriculum + stage for this sefariaRef
-/// by looking it up in today's generated tasks, then delegates to
-/// [CompletionButton] which records the completion and updates progress.
-class _CompletionSection extends ConsumerWidget {
+/// from today's scheduled tasks, then records the completion directly via
+/// [markCompletionUseCaseProvider] and invalidates dashboard providers so
+/// progress, streak, points, and daily tasks all refresh.
+class _CompletionSection extends ConsumerStatefulWidget {
   const _CompletionSection({required this.sefariaRef});
 
   final String sefariaRef;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CompletionSection> createState() => _CompletionSectionState();
+}
+
+class _CompletionSectionState extends ConsumerState<_CompletionSection> {
+  bool _saving = false;
+
+  Future<void> _handleComplete(DailyTask task) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      final useCase = ref.read(markCompletionUseCaseProvider);
+      await useCase(
+        CompletionRequest(
+          curriculumId: task.curriculumId.storageKey,
+          sefariaRef: widget.sefariaRef,
+          stageId: task.stageDefinitionId,
+          trackType: 'personal',
+        ),
+      );
+
+      ref.invalidate(allDailyTasksProvider);
+      ref.invalidate(dashboardStreakProvider);
+      ref.invalidate(dashboardGlobalPointsProvider);
+      ref.invalidate(dashboardCompletionPercentageProvider(task.curriculumId));
+      ref.invalidate(dashboardLastCompletionProvider(task.curriculumId));
+      ref.invalidate(
+        isStageCompletedProvider((
+          sefariaRef: widget.sefariaRef,
+          stageId: task.stageDefinitionId,
+          trackType: 'personal',
+        )),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Marked complete'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e, st) {
+      AppLogger.instance.error('Failed to mark completion', e, st);
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Couldn't save: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
-    final userMode =
-        ref.watch(dashboardUserModeProvider).asData?.value ?? UserMode.adult;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -666,21 +724,21 @@ class _CompletionSection extends ConsumerWidget {
           ],
         ),
         data: (tasks) {
-          final match = tasks.where(
-            (t) => t.contentItemSefariaRef == sefariaRef,
+          final matches = tasks.where(
+            (t) => t.contentItemSefariaRef == widget.sefariaRef,
           );
-          if (match.isEmpty) {
+          if (matches.isEmpty) {
             return Row(
               children: [
                 Icon(
-                  Icons.info_outline,
-                  color: Colors.white.withValues(alpha: 0.5),
+                  Icons.check_circle,
+                  color: Colors.green.withValues(alpha: 0.8),
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Not scheduled for today — open this item from your dashboard to mark it complete.',
+                    'No open stage for today — all caught up on this item.',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.7),
@@ -691,15 +749,50 @@ class _CompletionSection extends ConsumerWidget {
             );
           }
 
-          final task = match.first;
-          return SizedBox(
-            width: double.infinity,
-            child: CompletionButton(
-              curriculumId: task.curriculumId.storageKey,
-              sefariaRef: sefariaRef,
+          final task = matches.first;
+          final isCompletedAsync = ref.watch(
+            isStageCompletedProvider((
+              sefariaRef: widget.sefariaRef,
               stageId: task.stageDefinitionId,
               trackType: 'personal',
-              userMode: userMode,
+            )),
+          );
+          final isDone = isCompletedAsync.asData?.value ?? false;
+
+          return SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: (_saving || isDone)
+                  ? null
+                  : () => _handleComplete(task),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: isDone ? Colors.green.shade700 : null,
+              ),
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      isDone
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      size: 20,
+                    ),
+              label: Text(
+                isDone
+                    ? 'Completed (${task.stageName})'
+                    : 'Mark ${task.stageName} Complete',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           );
         },
