@@ -13,23 +13,42 @@ class StreakCalendar extends StatelessWidget {
     required this.endDate,
   });
 
+  static const _monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final days = <DateTime>[];
+    final months = <_MonthBucket>[];
     var current = startDate;
     while (!current.isAfter(endDate)) {
-      days.add(current);
+      if (months.isEmpty ||
+          months.last.year != current.year ||
+          months.last.month != current.month) {
+        months.add(_MonthBucket(current.year, current.month));
+      }
+      months.last.days.add(current);
       current = current.add(const Duration(days: 1));
     }
 
-    // Pad to start on Monday
-    final firstWeekday = days.first.weekday; // 1=Mon ... 7=Sun
-    final padBefore = firstWeekday - 1;
+    final theme = Theme.of(context);
+    final showYear = months.isNotEmpty && months.first.year != months.last.year;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Day of week headers
+        // Day of week headers (shown once at top)
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -42,24 +61,56 @@ class StreakCalendar extends StatelessWidget {
             _DayLabel('S'),
           ],
         ),
-        const SizedBox(height: 4),
-        // Calendar grid
-        Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: [
-            // Empty padding cells
-            for (var i = 0; i < padBefore; i++)
-              const SizedBox(width: 28, height: 28),
-            // Actual day cells
-            for (final day in days)
-              _DayCell(
-                date: day,
-                isActive: activeDates.contains(day),
-                isToday: _isToday(day),
-              ),
-          ],
-        ),
+        for (var i = 0; i < months.length; i++) ...[
+          SizedBox(height: i == 0 ? 8 : 16),
+          Text(
+            showYear
+                ? '${_monthNames[months[i].month - 1]} ${months[i].year}'
+                : _monthNames[months[i].month - 1],
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _MonthGrid(bucket: months[i], activeDates: activeDates),
+        ],
+      ],
+    );
+  }
+}
+
+class _MonthBucket {
+  final int year;
+  final int month;
+  final List<DateTime> days = [];
+
+  _MonthBucket(this.year, this.month);
+}
+
+class _MonthGrid extends StatelessWidget {
+  final _MonthBucket bucket;
+  final Set<DateTime> activeDates;
+
+  const _MonthGrid({required this.bucket, required this.activeDates});
+
+  @override
+  Widget build(BuildContext context) {
+    final firstWeekday = bucket.days.first.weekday; // 1=Mon ... 7=Sun
+    final padBefore = firstWeekday - 1;
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (var i = 0; i < padBefore; i++)
+          const SizedBox(width: 28, height: 28),
+        for (final day in bucket.days)
+          _DayCell(
+            date: day,
+            isActive: activeDates.contains(day),
+            isToday: _isToday(day),
+          ),
       ],
     );
   }

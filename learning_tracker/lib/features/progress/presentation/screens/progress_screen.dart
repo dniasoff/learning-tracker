@@ -77,10 +77,6 @@ class ProgressScreen extends ConsumerWidget {
                   _QuickAccessSection(
                     onCharts: () =>
                         context.router.push(const ProgressChartsRoute()),
-                    onJourney: () =>
-                        context.router.push(LearningJourneyRoute()),
-                    onHistory: () =>
-                        context.router.push(CompletionHistoryRoute()),
                   ),
                   const SizedBox(height: 20),
                   _CurriculaProgressSection(activeCurricula: activeCurricula),
@@ -222,15 +218,9 @@ class _StatItem extends StatelessWidget {
 }
 
 class _QuickAccessSection extends StatelessWidget {
-  const _QuickAccessSection({
-    required this.onCharts,
-    required this.onJourney,
-    required this.onHistory,
-  });
+  const _QuickAccessSection({required this.onCharts});
 
   final VoidCallback onCharts;
-  final VoidCallback onJourney;
-  final VoidCallback onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -240,35 +230,12 @@ class _QuickAccessSection extends StatelessWidget {
         Text('Detailed Views', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.bar_chart, color: Colors.indigo),
-                title: const Text('Progress Charts'),
-                subtitle: const Text('Completions, trends, streak calendar'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: onCharts,
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: const Icon(
-                  Icons.auto_stories,
-                  color: Colors.deepPurple,
-                ),
-                title: const Text('Learning Journey'),
-                subtitle: const Text('Lifetime achievements & milestones'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: onJourney,
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: const Icon(Icons.history, color: Colors.teal),
-                title: const Text('Completion History'),
-                subtitle: const Text('Detailed log of all completions'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: onHistory,
-              ),
-            ],
+          child: ListTile(
+            leading: const Icon(Icons.bar_chart, color: Colors.indigo),
+            title: const Text('Progress Charts'),
+            subtitle: const Text('Completions, trends, streak calendar'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: onCharts,
           ),
         ),
       ],
