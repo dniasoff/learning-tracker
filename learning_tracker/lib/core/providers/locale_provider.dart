@@ -13,16 +13,18 @@ class AppLocale extends _$AppLocale {
   @override
   Locale build() {
     _load();
-    return const Locale('en');
+    return const Locale('he');
   }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString(_kLocaleKey);
-    if (code != null) {
+    if (code != null && _supported.contains(code)) {
       state = Locale(code);
     }
   }
+
+  static const _supported = {'en', 'he'};
 
   Future<void> setLocale(Locale locale) async {
     state = locale;

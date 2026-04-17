@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
@@ -66,13 +67,12 @@ const _kOnboardingLanguage = 'onboarding_language';
 const kOnboardingComplete = 'onboarding_complete';
 
 /// Supported content languages.
+///
+/// Must stay in sync with `AppLocalizations.supportedLocales` and
+/// [supportedLanguages] in `language_provider.dart`.
 const _supportedLanguages = <String, String>{
-  'he': 'עברית (Hebrew with nikud)',
-  'he_plain': 'עברית (Hebrew without nikud)',
+  'he': 'עברית',
   'en': 'English',
-  'fr': 'Français',
-  'es': 'Español',
-  'it': 'Italiano',
 };
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
@@ -278,6 +278,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _onLanguageSelected() {
+    unawaited(
+      ref
+          .read(appLocaleProvider.notifier)
+          .setLocale(Locale(_selectedLanguage)),
+    );
+
     // Child profiles get an extra step: the parent sets a 4-digit PIN that
     // gates parental controls for this profile. Adult profiles skip straight
     // to calendar preference.
