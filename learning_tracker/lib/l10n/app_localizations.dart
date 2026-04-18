@@ -697,6 +697,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Track \"{label}\" created'**
   String trackCreated(String label);
+
+  /// No description provided for @learner.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner'**
+  String get learner;
+
+  /// No description provided for @learningTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Tracker'**
+  String get learningTracker;
+
+  /// No description provided for @searchContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Search content'**
+  String get searchContent;
+
+  /// No description provided for @errorWithMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String errorWithMessage(String error);
+
+  /// No description provided for @errorLoadingTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading tasks: {error}'**
+  String errorLoadingTasks(String error);
+
+  /// No description provided for @noActiveTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'No active tracks'**
+  String get noActiveTracks;
+
+  /// No description provided for @askGrownUpToAddTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a grown-up to add a learning track.'**
+  String get askGrownUpToAddTrack;
+
+  /// No description provided for @addTrackToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a track to start learning.'**
+  String get addTrackToStart;
+
+  /// No description provided for @todaysTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Tasks'**
+  String get todaysTasks;
+
+  /// No description provided for @viewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View All'**
+  String get viewAll;
+
+  /// No description provided for @myCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'My Curricula'**
+  String get myCurricula;
+
+  /// No description provided for @percentComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% complete'**
+  String percentComplete(int percent);
+
+  /// No description provided for @viewProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'View progress'**
+  String get viewProgress;
+
+  /// No description provided for @markComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark complete'**
+  String get markComplete;
+
+  /// No description provided for @noProjection.
+  ///
+  /// In en, this message translates to:
+  /// **'No projection'**
+  String get noProjection;
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'TODAY'**
+  String get today;
+
+  /// No description provided for @plusNMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String plusNMore(int count);
+
+  /// No description provided for @noTracksYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No tracks yet'**
+  String get noTracksYet;
+
+  /// No description provided for @firstTrackPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first learning track to get started.'**
+  String get firstTrackPrompt;
+
+  /// No description provided for @paceAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ahead'**
+  String paceAhead(int days);
+
+  /// No description provided for @paceBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d behind'**
+  String paceBehind(int days);
+
+  /// No description provided for @paceOnPace.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get paceOnPace;
 }
 
 class _AppLocalizationsDelegate

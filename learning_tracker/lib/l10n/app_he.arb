@@ -129,5 +129,57 @@
     "placeholders": {
       "label": {"type": "String"}
     }
-  }
+  },
+  "learner": "לומד",
+  "learningTracker": "מעקב לימוד",
+  "searchContent": "חיפוש תוכן",
+  "errorWithMessage": "שגיאה: {error}",
+  "@errorWithMessage": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "errorLoadingTasks": "שגיאה בטעינת המשימות: {error}",
+  "@errorLoadingTasks": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "noActiveTracks": "אין מסלולים פעילים",
+  "askGrownUpToAddTrack": "בקשו ממבוגר להוסיף מסלול לימוד.",
+  "addTrackToStart": "הוסיפו מסלול כדי להתחיל ללמוד.",
+  "todaysTasks": "המשימות של היום",
+  "viewAll": "הצג הכל",
+  "myCurricula": "תוכניות הלימוד שלי",
+  "percentComplete": "{percent}% הושלם",
+  "@percentComplete": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "viewProgress": "הצג התקדמות",
+  "markComplete": "סמן כהושלם",
+  "noProjection": "אין תחזית",
+  "today": "היום",
+  "plusNMore": "+{count} נוספים",
+  "@plusNMore": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "noTracksYet": "עדיין אין מסלולים",
+  "firstTrackPrompt": "הוסיפו את מסלול הלימוד הראשון כדי להתחיל.",
+  "paceAhead": "{days} ימים מקדימה",
+  "@paceAhead": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "paceBehind": "{days} ימים באיחור",
+  "@paceBehind": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "paceOnPace": "בקצב"
 }

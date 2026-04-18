@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class LearningScreen extends ConsumerWidget {
@@ -28,14 +29,15 @@ class LearningScreen extends ConsumerWidget {
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const AppBarTitle(text: 'Learn'),
+        title: AppBarTitle(text: l10n.learn),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            tooltip: 'Search content',
+            tooltip: l10n.searchContent,
             onPressed: () => context.router.push(const CurriculumListRoute()),
           ),
         ],
@@ -44,14 +46,15 @@ class LearningScreen extends ConsumerWidget {
         top: false,
         child: activeCurriculaAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) =>
+              Center(child: Text(l10n.errorWithMessage(e.toString()))),
           data: (activeCurricula) {
             if (activeCurricula.isEmpty) {
               return EmptyState(
-                message: 'No active tracks',
+                message: l10n.noActiveTracks,
                 subtitle: isChildMode
-                    ? 'Ask a grown-up to add a learning track.'
-                    : 'Add a track to start learning.',
+                    ? l10n.askGrownUpToAddTrack
+                    : l10n.addTrackToStart,
                 icon: Icons.menu_book_outlined,
                 action: isChildMode
                     ? null
@@ -60,7 +63,7 @@ class LearningScreen extends ConsumerWidget {
                           TrackManagementHubRoute(startAdding: true),
                         ),
                         icon: const Icon(Icons.add),
-                        label: const Text('Add Track'),
+                        label: Text(l10n.addTrack),
                       ),
               );
             }
@@ -114,6 +117,7 @@ class _DailyTasksSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,8 +125,8 @@ class _DailyTasksSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Today's Tasks", style: theme.textTheme.titleMedium),
-            TextButton(onPressed: onViewAll, child: const Text('View All')),
+            Text(l10n.todaysTasks, style: theme.textTheme.titleMedium),
+            TextButton(onPressed: onViewAll, child: Text(l10n.viewAll)),
           ],
         ),
         const SizedBox(height: 8),
@@ -136,7 +140,7 @@ class _DailyTasksSection extends ConsumerWidget {
           error: (e, _) => Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('Error loading tasks: $e'),
+              child: Text(l10n.errorLoadingTasks(e.toString())),
             ),
           ),
           data: (tasks) {
@@ -157,12 +161,12 @@ class _DailyTasksSection extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'All caught up!',
+                              l10n.allCaughtUp,
                               style: theme.textTheme.titleSmall,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'No tasks remaining for today.',
+                              l10n.noTasksRemaining,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -202,7 +206,7 @@ class _DailyTasksSection extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 8),
                     child: TextButton(
                       onPressed: onViewAll,
-                      child: Text('${tasks.length - 5} more tasks...'),
+                      child: Text(l10n.moreTasks(tasks.length - 5)),
                     ),
                   ),
               ],
@@ -222,11 +226,12 @@ class _CurriculaSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('My Curricula', style: theme.textTheme.titleMedium),
+        Text(l10n.myCurricula, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         ...activeCurricula.map(
           (curriculum) => _CurriculumTile(curriculum: curriculum),
@@ -244,6 +249,11 @@ class _CurriculumTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final localeCode = Localizations.localeOf(context).languageCode;
+    final displayName = localeCode == 'he'
+        ? curriculum.displayNameHe
+        : curriculum.displayNameEn;
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
@@ -276,10 +286,7 @@ class _CurriculumTile extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      curriculum.displayNameHe,
-                      style: theme.textTheme.titleSmall,
-                    ),
+                    Text(displayName, style: theme.textTheme.titleSmall),
                     const SizedBox(height: 6),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
@@ -296,7 +303,7 @@ class _CurriculumTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${(percentage * 100).toStringAsFixed(0)}% complete',
+                      l10n.percentComplete((percentage * 100).round()),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -310,7 +317,7 @@ class _CurriculumTile extends ConsumerWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.bar_chart, size: 20),
-                    tooltip: 'View progress',
+                    tooltip: l10n.viewProgress,
                     onPressed: () {
                       context.router.push(
                         CurriculumProgressRoute(

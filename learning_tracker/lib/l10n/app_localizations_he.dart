@@ -319,4 +319,82 @@ class AppLocalizationsHe extends AppLocalizations {
   String trackCreated(String label) {
     return 'המסלול \"$label\" נוצר';
   }
+
+  @override
+  String get learner => 'לומד';
+
+  @override
+  String get learningTracker => 'מעקב לימוד';
+
+  @override
+  String get searchContent => 'חיפוש תוכן';
+
+  @override
+  String errorWithMessage(String error) {
+    return 'שגיאה: $error';
+  }
+
+  @override
+  String errorLoadingTasks(String error) {
+    return 'שגיאה בטעינת המשימות: $error';
+  }
+
+  @override
+  String get noActiveTracks => 'אין מסלולים פעילים';
+
+  @override
+  String get askGrownUpToAddTrack => 'בקשו ממבוגר להוסיף מסלול לימוד.';
+
+  @override
+  String get addTrackToStart => 'הוסיפו מסלול כדי להתחיל ללמוד.';
+
+  @override
+  String get todaysTasks => 'המשימות של היום';
+
+  @override
+  String get viewAll => 'הצג הכל';
+
+  @override
+  String get myCurricula => 'תוכניות הלימוד שלי';
+
+  @override
+  String percentComplete(int percent) {
+    return '$percent% הושלם';
+  }
+
+  @override
+  String get viewProgress => 'הצג התקדמות';
+
+  @override
+  String get markComplete => 'סמן כהושלם';
+
+  @override
+  String get noProjection => 'אין תחזית';
+
+  @override
+  String get today => 'היום';
+
+  @override
+  String plusNMore(int count) {
+    return '+$count נוספים';
+  }
+
+  @override
+  String get noTracksYet => 'עדיין אין מסלולים';
+
+  @override
+  String get firstTrackPrompt => 'הוסיפו את מסלול הלימוד הראשון כדי להתחיל.';
+
+  @override
+  String paceAhead(int days) {
+    return '$days ימים מקדימה';
+  }
+
+  @override
+  String paceBehind(int days) {
+    return '$days ימים באיחור';
+  }
+
+  @override
+  String get paceOnPace => 'בקצב';
 }

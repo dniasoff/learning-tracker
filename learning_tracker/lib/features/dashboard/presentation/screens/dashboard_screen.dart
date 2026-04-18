@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/profiles/presentation/widgets/profile_
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
@@ -33,6 +34,7 @@ class DashboardScreen extends ConsumerWidget {
     final selectedProfileAsync = ref.watch(selectedProfileProvider);
     final profileName = selectedProfileAsync.asData?.value?.displayName;
     final profileAvatar = selectedProfileAsync.asData?.value?.avatarIndex;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -42,9 +44,9 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: const Text(
-          'Learning Tracker',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          l10n.learningTracker,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         actions: [
           IconButton(
@@ -58,7 +60,7 @@ class DashboardScreen extends ConsumerWidget {
                 context.router.replace(const ProfilePickerRoute());
               },
               icon: ProfileAvatar(avatarIndex: profileAvatar, radius: 16),
-              tooltip: 'Switch profile',
+              tooltip: l10n.switchProfile,
             ),
         ],
       ),
@@ -66,7 +68,8 @@ class DashboardScreen extends ConsumerWidget {
         top: false,
         child: activeCurriculaAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Error: $e')),
+          error: (e, s) =>
+              Center(child: Text(l10n.errorWithMessage(e.toString()))),
           data: (activeCurricula) {
             final userMode = userModeAsync.asData?.value ?? UserMode.adult;
             final streakData = streakAsync.asData?.value;
@@ -112,19 +115,20 @@ class _DashboardBody extends ConsumerWidget {
     this.profileName,
   });
 
-  String _greeting() {
+  String _greeting(AppLocalizations l10n) {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return l10n.goodMorning;
+    if (hour < 17) return l10n.goodAfternoon;
+    return l10n.goodEvening;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
-    final name = profileName ?? 'Learner';
+    final name = profileName ?? l10n.learner;
     final now = DateTime.now();
 
     // Compute overall completion percentage
@@ -150,7 +154,7 @@ class _DashboardBody extends ConsumerWidget {
           ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
       return _EmptyDashboard(
         name: name,
-        greeting: _greeting(),
+        greeting: _greeting(l10n),
         isChildMode: isChildMode,
       );
     }
@@ -160,7 +164,7 @@ class _DashboardBody extends ConsumerWidget {
       children: [
         // Greeting header
         Text(
-          '${_greeting()},',
+          '${_greeting(l10n)},',
           style: theme.textTheme.headlineSmall?.copyWith(
             color: Colors.white.withValues(alpha: 0.7),
           ),
@@ -213,7 +217,7 @@ class _DashboardBody extends ConsumerWidget {
                 icon: Icons.local_fire_department,
                 iconColor: Colors.orange,
                 value: '$currentStreak',
-                label: 'STREAK',
+                label: l10n.streak,
               ),
             ),
             Expanded(
@@ -221,7 +225,7 @@ class _DashboardBody extends ConsumerWidget {
                 icon: Icons.check_circle,
                 iconColor: theme.colorScheme.primary,
                 value: '$avgCompletion%',
-                label: 'DONE',
+                label: l10n.done,
               ),
             ),
             Expanded(
@@ -229,7 +233,7 @@ class _DashboardBody extends ConsumerWidget {
                 icon: Icons.auto_stories,
                 iconColor: Colors.deepPurple,
                 value: '$totalPoints',
-                label: userMode == UserMode.child ? 'POINTS' : 'PAGES',
+                label: userMode == UserMode.child ? l10n.points : l10n.pages,
               ),
             ),
           ],
@@ -261,7 +265,7 @@ class _DashboardBody extends ConsumerWidget {
         // AC-1, 2, 6: Active Curricula with pace data
         if (activeCurricula.isNotEmpty) ...[
           Text(
-            'Active Curricula',
+            l10n.activeCurricula,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -358,6 +362,7 @@ class _TodaysLearningSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,7 +371,7 @@ class _TodaysLearningSection extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Today's Learning",
+              l10n.todaysLearning,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -385,7 +390,7 @@ class _TodaysLearningSection extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${tasks.length} remaining',
+                    l10n.remaining(tasks.length),
                     style: TextStyle(
                       color: theme.colorScheme.primary,
                       fontSize: 12,
@@ -406,7 +411,7 @@ class _TodaysLearningSection extends ConsumerWidget {
             ),
           ),
           error: (e, _) => _ErrorRetry(
-            message: 'Error loading tasks: $e',
+            message: l10n.errorLoadingTasks(e.toString()),
             onRetry: () => ref.invalidate(allDailyTasksProvider),
           ),
           data: (tasks) {
@@ -427,12 +432,12 @@ class _TodaysLearningSection extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'All caught up!',
+                              l10n.allCaughtUp,
                               style: theme.textTheme.titleSmall,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'No tasks remaining for today.',
+                              l10n.noTasksRemaining,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -461,7 +466,7 @@ class _TodaysLearningSection extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 4),
                     child: TextButton(
                       onPressed: onViewAll,
-                      child: Text('${tasks.length - 5} more tasks...'),
+                      child: Text(l10n.moreTasks(tasks.length - 5)),
                     ),
                   ),
               ],
@@ -482,6 +487,11 @@ class _TaskItemCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final localeCode = Localizations.localeOf(context).languageCode;
+    final curriculumName = localeCode == 'he'
+        ? task.curriculumId.displayNameHe
+        : task.curriculumId.displayNameEn;
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
 
     return Card(
@@ -510,7 +520,7 @@ class _TaskItemCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${task.curriculumId.displayNameHe}: ${task.contentItemSefariaRef}',
+                      '$curriculumName: ${task.contentItemSefariaRef}',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
@@ -539,7 +549,7 @@ class _TaskItemCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  task.isOverdue ? 'Overdue' : task.stageName,
+                  task.isOverdue ? l10n.overdue : task.stageName,
                   style: TextStyle(
                     color: task.isOverdue ? Colors.orange : curriculumColor,
                     fontSize: 10,
@@ -624,6 +634,7 @@ class _QuickCompleteButtonState extends ConsumerState<_QuickCompleteButton>
       );
     }
 
+    final l10n = AppLocalizations.of(context)!;
     return IconButton(
       onPressed: _onQuickComplete,
       icon: Icon(
@@ -631,7 +642,7 @@ class _QuickCompleteButtonState extends ConsumerState<_QuickCompleteButton>
         color: Colors.white.withValues(alpha: 0.4),
         size: 24,
       ),
-      tooltip: 'Mark complete',
+      tooltip: l10n.markComplete,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
     );
@@ -652,6 +663,7 @@ class _DailyProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -660,7 +672,7 @@ class _DailyProgressBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'DAILY PROGRESS',
+              l10n.dailyProgress,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -704,6 +716,11 @@ class _CurriculumCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final localeCode = Localizations.localeOf(context).languageCode;
+    final displayName = localeCode == 'he'
+        ? curriculum.displayNameHe
+        : curriculum.displayNameEn;
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
@@ -740,7 +757,7 @@ class _CurriculumCard extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        curriculum.displayNameHe,
+                        displayName,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -795,7 +812,7 @@ class _CurriculumCard extends ConsumerWidget {
                       )
                     else if (paceStatus != null)
                       Text(
-                        'No projection',
+                        l10n.noProjection,
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.white.withValues(alpha: 0.3),
@@ -813,7 +830,7 @@ class _CurriculumCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'TODAY',
+                          l10n.today,
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w700,
@@ -833,7 +850,7 @@ class _CurriculumCard extends ConsumerWidget {
                         ),
                         if (curriculumTasks.length > 1)
                           Text(
-                            '+${curriculumTasks.length - 1} more',
+                            l10n.plusNMore(curriculumTasks.length - 1),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: Colors.white.withValues(alpha: 0.4),
                               fontSize: 11,
@@ -851,7 +868,7 @@ class _CurriculumCard extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     textStyle: const TextStyle(fontSize: 13),
                   ),
-                  child: const Text('Continue Learning'),
+                  child: Text(l10n.continueLearning),
                 ),
               ],
             ),
@@ -932,6 +949,7 @@ class _ErrorRetry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -942,7 +960,7 @@ class _ErrorRetry extends StatelessWidget {
             TextButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
@@ -958,6 +976,7 @@ class _StreakRecoveryBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final recoveryAsync = ref.watch(dashboardStreakRecoveryProvider);
     return recoveryAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -976,7 +995,7 @@ class _StreakRecoveryBanner extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'You missed 1 day but your ${info.currentStreak}-day streak is safe!',
+                      l10n.streakRecovery(info.currentStreak),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.orange,
                         fontWeight: FontWeight.w600,
@@ -1007,6 +1026,7 @@ class _EmptyDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     const green = Color(0xFF4ADE80);
 
     return Center(
@@ -1052,7 +1072,7 @@ class _EmptyDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'No tracks yet',
+              l10n.noTracksYet,
               style: theme.textTheme.titleLarge?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -1060,9 +1080,7 @@ class _EmptyDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              isChildMode
-                  ? 'Ask a grown-up to add a learning track.'
-                  : 'Add your first learning track to get started.',
+              isChildMode ? l10n.askGrownUpToAddTrack : l10n.firstTrackPrompt,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.white.withValues(alpha: 0.6),
@@ -1095,10 +1113,10 @@ class _EmptyDashboard extends StatelessWidget {
                         TrackManagementHubRoute(startAdding: true),
                       ),
                       borderRadius: BorderRadius.circular(26),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          'Add Track',
-                          style: TextStyle(
+                          l10n.addTrack,
+                          style: const TextStyle(
                             color: Colors.black,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

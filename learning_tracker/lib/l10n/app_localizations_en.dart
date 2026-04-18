@@ -321,4 +321,83 @@ class AppLocalizationsEn extends AppLocalizations {
   String trackCreated(String label) {
     return 'Track \"$label\" created';
   }
+
+  @override
+  String get learner => 'Learner';
+
+  @override
+  String get learningTracker => 'Learning Tracker';
+
+  @override
+  String get searchContent => 'Search content';
+
+  @override
+  String errorWithMessage(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String errorLoadingTasks(String error) {
+    return 'Error loading tasks: $error';
+  }
+
+  @override
+  String get noActiveTracks => 'No active tracks';
+
+  @override
+  String get askGrownUpToAddTrack => 'Ask a grown-up to add a learning track.';
+
+  @override
+  String get addTrackToStart => 'Add a track to start learning.';
+
+  @override
+  String get todaysTasks => 'Today\'s Tasks';
+
+  @override
+  String get viewAll => 'View All';
+
+  @override
+  String get myCurricula => 'My Curricula';
+
+  @override
+  String percentComplete(int percent) {
+    return '$percent% complete';
+  }
+
+  @override
+  String get viewProgress => 'View progress';
+
+  @override
+  String get markComplete => 'Mark complete';
+
+  @override
+  String get noProjection => 'No projection';
+
+  @override
+  String get today => 'TODAY';
+
+  @override
+  String plusNMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get noTracksYet => 'No tracks yet';
+
+  @override
+  String get firstTrackPrompt =>
+      'Add your first learning track to get started.';
+
+  @override
+  String paceAhead(int days) {
+    return '${days}d ahead';
+  }
+
+  @override
+  String paceBehind(int days) {
+    return '${days}d behind';
+  }
+
+  @override
+  String get paceOnPace => 'OK';
 }

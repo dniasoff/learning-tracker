@@ -129,5 +129,57 @@
     "placeholders": {
       "label": {"type": "String"}
     }
-  }
+  },
+  "learner": "Learner",
+  "learningTracker": "Learning Tracker",
+  "searchContent": "Search content",
+  "errorWithMessage": "Error: {error}",
+  "@errorWithMessage": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "errorLoadingTasks": "Error loading tasks: {error}",
+  "@errorLoadingTasks": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "noActiveTracks": "No active tracks",
+  "askGrownUpToAddTrack": "Ask a grown-up to add a learning track.",
+  "addTrackToStart": "Add a track to start learning.",
+  "todaysTasks": "Today's Tasks",
+  "viewAll": "View All",
+  "myCurricula": "My Curricula",
+  "percentComplete": "{percent}% complete",
+  "@percentComplete": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "viewProgress": "View progress",
+  "markComplete": "Mark complete",
+  "noProjection": "No projection",
+  "today": "TODAY",
+  "plusNMore": "+{count} more",
+  "@plusNMore": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "noTracksYet": "No tracks yet",
+  "firstTrackPrompt": "Add your first learning track to get started.",
+  "paceAhead": "{days}d ahead",
+  "@paceAhead": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "paceBehind": "{days}d behind",
+  "@paceBehind": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "paceOnPace": "OK"
 }
