@@ -1,6 +1,8 @@
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 /// Initializes the notification system at app startup.
 ///
@@ -14,6 +16,15 @@ class NotificationInitializer {
   /// Initialize timezone data and notification plugin.
   Future<void> initialize() async {
     tz.initializeTimeZones();
+    // Without setLocalLocation, tz.local defaults to UTC and every
+    // zonedSchedule fires at the wrong wall-clock time for the user.
+    try {
+      final name = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(name));
+    } catch (_) {
+      // Platform query failed — leave tz.local as UTC rather than crash.
+      // Reminders will fire at UTC wall-clock in this fallback.
+    }
 
     await service.initialize(onNotificationTap: _handleNotificationTap);
   }
