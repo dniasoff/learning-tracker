@@ -117,7 +117,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
   Color _passwordStrengthColor(double strength) {
     if (strength < 0.4) return const Color(0xFFD64045);
     if (strength < 0.7) return const Color(0xFFF4A261);
-    return const Color(0xFF4ADE80);
+    return const Color(0xFFC9A961);
   }
 
   Future<void> _signUpWithEmail() async {
@@ -753,7 +753,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                             TextSpan(
                               text: 'Terms of Service',
                               style: const TextStyle(
-                                color: Color(0xFF4ADE80),
+                                color: Color(0xFFC9A961),
                                 decoration: TextDecoration.underline,
                               ),
                               recognizer: TapGestureRecognizer()..onTap = () {},
@@ -762,7 +762,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                             TextSpan(
                               text: 'Privacy Policy',
                               style: const TextStyle(
-                                color: Color(0xFF4ADE80),
+                                color: Color(0xFFC9A961),
                                 decoration: TextDecoration.underline,
                               ),
                               recognizer: TapGestureRecognizer()..onTap = () {},
@@ -845,7 +845,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                         TextSpan(
                           text: 'Sign In',
                           style: const TextStyle(
-                            color: Color(0xFF4ADE80),
+                            color: Color(0xFFC9A961),
                             fontWeight: FontWeight.w600,
                           ),
                           recognizer: TapGestureRecognizer()

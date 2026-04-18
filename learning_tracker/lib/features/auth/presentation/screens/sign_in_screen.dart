@@ -55,7 +55,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   late final Animation<double> _formFade;
   late final Animation<double> _bottomFade;
 
-  static const _green = Color(0xFF4ADE80);
+  static const _green = Color(0xFFC9A961);
 
   @override
   void initState() {
@@ -456,7 +456,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: const Color(0xFF0B1A2E),
       body: Stack(
         children: [
           // Animated background particles
@@ -681,7 +681,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                       : Icons.info_outline,
                   size: 14,
                   color: _registryHint!.startsWith('Found')
-                      ? const Color(0xFF4ADE80)
+                      ? const Color(0xFFC9A961)
                       : Colors.white.withValues(alpha: 0.4),
                 ),
                 const SizedBox(width: 6),
@@ -691,7 +691,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                     style: TextStyle(
                       fontSize: 12,
                       color: _registryHint!.startsWith('Found')
-                          ? const Color(0xFF4ADE80)
+                          ? const Color(0xFFC9A961)
                           : Colors.white.withValues(alpha: 0.4),
                     ),
                   ),
@@ -868,8 +868,8 @@ class _SignInGlowButtonState extends State<_SignInGlowButton>
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xFF4ADE80);
-    const greenDark = Color(0xFF22C55E);
+    const green = Color(0xFFC9A961);
+    const greenDark = Color(0xFFA88A4A);
 
     return AnimatedBuilder(
       animation: _glowController,
@@ -940,7 +940,7 @@ class _GoogleSignInButton extends StatelessWidget {
       height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        color: const Color(0xFF1A1A1A),
+        color: const Color(0xFF172A44),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Material(
@@ -991,7 +991,7 @@ class _SignInParticlePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final random = Random(77);
-    const color = Color(0xFF4ADE80);
+    const color = Color(0xFFC9A961);
 
     for (var i = 0; i < 20; i++) {
       final baseX = random.nextDouble() * size.width;
