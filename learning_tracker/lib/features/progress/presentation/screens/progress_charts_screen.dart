@@ -40,7 +40,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
         start: today.subtract(const Duration(days: 29)),
         end: today,
       ),
-      ChartTimeRange.allTime => (start: DateTime(2020, 1, 1), end: today),
+      ChartTimeRange.allTime => (start: DateTime(2024, 1, 1), end: today),
     };
   }
 

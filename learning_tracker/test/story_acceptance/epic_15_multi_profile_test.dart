@@ -4,7 +4,6 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/seed/test_date_seeds.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -32,8 +31,6 @@ import 'package:learning_tracker/features/stages/domain/models/schedule_type.dar
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
     as domain;
 import 'package:learning_tracker/features/stages/domain/services/stage_validator.dart';
-import 'package:learning_tracker/features/test_tracking/domain/services/test_reminder_service.dart';
-import 'package:learning_tracker/features/test_tracking/domain/services/test_score_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -406,15 +403,6 @@ void main() {
                 updatedAt: DateTime.now().toUtc(),
               ),
             );
-            await db.rewardDao.insertReward(
-              RewardsCompanion.insert(
-                profileId: Value(pid),
-                title: 'Test Reward',
-                description: 'A test reward',
-                pointsThreshold: 100,
-              ),
-            );
-
             // Verify data exists
             expect(
               (await (db.select(
@@ -448,12 +436,6 @@ void main() {
             expect(
               (await (db.select(
                 db.goals,
-              )..where((t) => t.profileId.equals(pid))).get()).length,
-              0,
-            );
-            expect(
-              (await (db.select(
-                db.rewards,
               )..where((t) => t.profileId.equals(pid))).get()).length,
               0,
             );
@@ -1295,30 +1277,10 @@ void main() {
             mode: 'child',
           );
 
-          await db.rewardDao.insertReward(
-            RewardsCompanion.insert(
-              profileId: Value(p1.id),
-              title: 'P1 Reward',
-              description: 'desc',
-              pointsThreshold: 100,
-            ),
-          );
-          await db.rewardDao.insertReward(
-            RewardsCompanion.insert(
-              profileId: Value(p2.id),
-              title: 'P2 Reward',
-              description: 'desc',
-              pointsThreshold: 200,
-            ),
-          );
-
-          final p1Rewards = await db.rewardDao.getRewardsByProfile(p1.id);
-          expect(p1Rewards.length, 1);
-          expect(p1Rewards.first.title, 'P1 Reward');
-
-          final p2Rewards = await db.rewardDao.getRewardsByProfile(p2.id);
-          expect(p2Rewards.length, 1);
-          expect(p2Rewards.first.title, 'P2 Reward');
+          // Rewards removed from V1 — this subtest was a reward-isolation
+          // assertion. Profile isolation is still tested by the other
+          // per-table checks in this group (completions, bookmarks, goals).
+          expect(p1.id, isNot(p2.id));
         });
 
         test('active curricula are isolated between profiles', () async {
@@ -1531,403 +1493,6 @@ void main() {
       });
     },
   );
-
-  group('Story 15.10 -- Dirshu Test Tracking', tags: ['story_15_10'], () {
-    late UserDatabase db;
-
-    setUp(() async {
-      db = createTestDatabase();
-      await _insertTrack(db);
-    });
-
-    tearDown(() async {
-      await db.close();
-    });
-
-    group('AC: Test dates seeded for Dirshu programs', () {
-      test('generateTestDateSeeds returns non-empty data', () {
-        final testDates = generateTestDateSeeds();
-        expect(testDates, isNotEmpty);
-      });
-
-      test('test dates exist for all 4 Dirshu programs with tests', () {
-        // Get all Dirshu programs that have tests
-        final programs = LearningProgramRepository.instance.getAllPrograms();
-        final dirshuWithTests = programs.where((p) => p.hasTests).toList();
-
-        expect(dirshuWithTests.length, 4);
-
-        final seeds = generateTestDateSeeds();
-        for (final program in dirshuWithTests) {
-          final dates = seeds
-              .where((s) => s['program_name'] == program.name)
-              .toList();
-          expect(
-            dates,
-            isNotEmpty,
-            reason: '${program.name} should have seeded test dates',
-          );
-        }
-      });
-
-      test('test dates are on Sundays (first Sunday of month)', () {
-        final testDates = generateTestDateSeeds();
-        for (final td in testDates) {
-          final testDate = td['test_date']! as DateTime;
-          expect(
-            testDate.weekday,
-            DateTime.sunday,
-            reason: 'Test date $testDate should be a Sunday',
-          );
-        }
-      });
-
-      test('generateTestDateSeeds produces dates for 12 months', () {
-        final seeds = generateTestDateSeeds(
-          from: DateTime.utc(2026, 1, 1),
-          monthsAhead: 12,
-        );
-        // 4 programs * ~12 months
-        expect(seeds.length, greaterThanOrEqualTo(44));
-      });
-    });
-
-    group('AC: Reminders configurable (default: 1 week + 1 day before)', () {
-      test('default reminder config has 7-day and 1-day reminders', () {
-        const config = TestReminderConfig();
-        expect(config.enabled, isTrue);
-        expect(config.reminderDaysBefore, [7, 1]);
-      });
-
-      test('getReminderDates returns correct dates for future test', () {
-        const service = TestReminderService();
-        final testDate = DateTime.now().toUtc().add(const Duration(days: 30));
-        final reminders = service.getReminderDates(testDate);
-
-        expect(reminders.length, 2);
-        // 7 days before
-        expect(reminders[0].difference(testDate).inDays, -7);
-        // 1 day before
-        expect(reminders[1].difference(testDate).inDays, -1);
-      });
-
-      test('disabled config returns no reminders', () {
-        const service = TestReminderService();
-        final testDate = DateTime.now().toUtc().add(const Duration(days: 30));
-        final reminders = service.getReminderDates(
-          testDate,
-          config: const TestReminderConfig(enabled: false),
-        );
-        expect(reminders, isEmpty);
-      });
-
-      test('custom reminder days are respected', () {
-        const service = TestReminderService();
-        final testDate = DateTime.now().toUtc().add(const Duration(days: 30));
-        final reminders = service.getReminderDates(
-          testDate,
-          config: const TestReminderConfig(reminderDaysBefore: [14, 3]),
-        );
-        expect(reminders.length, 2);
-      });
-    });
-
-    group('AC: Score logging with percentage input', () {
-      test('can insert and retrieve a test score', () async {
-        // Create a profile first
-        final profileId = await db
-            .into(db.profiles)
-            .insert(
-              ProfilesCompanion.insert(
-                accountId: 1,
-                displayName: 'Test User',
-                mode: 'adult',
-                createdAt: DateTime.now().toUtc(),
-                updatedAt: DateTime.now().toUtc(),
-              ),
-            );
-
-        // Get a Dirshu program
-        final program = LearningProgramRepository.instance.getProgramByName(
-          'dirshu_kinyan_torah',
-        );
-        expect(program, isNotNull);
-
-        // Log a score (no test date FK needed since test_dates table removed)
-        await db.testScoreDao.insertScore(
-          TestScoresCompanion.insert(
-            profileId: profileId,
-            programId: program!.id,
-            scorePercentage: 85,
-            createdAt: DateTime.now().toUtc(),
-          ),
-        );
-
-        final scores = await db.testScoreDao.getScoresByProfileAndProgram(
-          profileId,
-          program.id,
-        );
-        expect(scores.length, 1);
-        expect(scores.first.scorePercentage, 85);
-      });
-
-      test('score percentage validated in service (0-100)', () {
-        const service = TestScoreService();
-        expect(service.isValidScore(0), isTrue);
-        expect(service.isValidScore(100), isTrue);
-        expect(service.isValidScore(50), isTrue);
-        expect(service.isValidScore(-1), isFalse);
-        expect(service.isValidScore(101), isFalse);
-      });
-
-      test('scores are profile-scoped', () async {
-        final p1Id = await db
-            .into(db.profiles)
-            .insert(
-              ProfilesCompanion.insert(
-                accountId: 1,
-                displayName: 'User 1',
-                mode: 'adult',
-                createdAt: DateTime.now().toUtc(),
-                updatedAt: DateTime.now().toUtc(),
-              ),
-            );
-        final p2Id = await db
-            .into(db.profiles)
-            .insert(
-              ProfilesCompanion.insert(
-                accountId: 1,
-                displayName: 'User 2',
-                mode: 'adult',
-                createdAt: DateTime.now().toUtc(),
-                updatedAt: DateTime.now().toUtc(),
-              ),
-            );
-
-        final program = await LearningProgramRepository.instance
-            .getProgramByName('dirshu_kinyan_torah');
-
-        await db.testScoreDao.insertScore(
-          TestScoresCompanion.insert(
-            profileId: p1Id,
-            programId: program!.id,
-            scorePercentage: 90,
-            createdAt: DateTime.now().toUtc(),
-          ),
-        );
-        await db.testScoreDao.insertScore(
-          TestScoresCompanion.insert(
-            profileId: p2Id,
-            programId: program.id,
-            scorePercentage: 75,
-            createdAt: DateTime.now().toUtc(),
-          ),
-        );
-
-        final p1Scores = await db.testScoreDao.getScoresByProfile(p1Id);
-        final p2Scores = await db.testScoreDao.getScoresByProfile(p2Id);
-
-        expect(p1Scores.length, 1);
-        expect(p1Scores.first.scorePercentage, 90);
-        expect(p2Scores.length, 1);
-        expect(p2Scores.first.scorePercentage, 75);
-      });
-    });
-
-    group('AC: Dashboard card shows next test date', () {
-      test(
-        'generateTestDateSeeds returns future test dates for Dirshu programs',
-        () {
-          final program = LearningProgramRepository.instance.getProgramByName(
-            'dirshu_kinyan_torah',
-          );
-          expect(program, isNotNull);
-
-          final seeds = generateTestDateSeeds();
-          final programSeeds = seeds
-              .where((s) => s['program_name'] == program!.name)
-              .toList();
-          expect(programSeeds, isNotEmpty);
-          // Seeds are generated from now, so there should be future dates
-          final testDate = programSeeds.first['test_date']! as DateTime;
-          expect(testDate.isAfter(DateTime.now().toUtc()), isTrue);
-        },
-      );
-
-      test(
-        'generateTestDateSeeds returns dates sorted ascending per program',
-        () {
-          final seeds = generateTestDateSeeds();
-          expect(seeds, isNotEmpty);
-
-          // Group by program and verify sorted ascending within each group
-          final byProgram = <String, List<DateTime>>{};
-          for (final s in seeds) {
-            final name = s['program_name']! as String;
-            final date = s['test_date']! as DateTime;
-            byProgram.putIfAbsent(name, () => []).add(date);
-          }
-          for (final entry in byProgram.entries) {
-            final dates = entry.value;
-            for (var i = 1; i < dates.length; i++) {
-              expect(
-                dates[i].isAfter(dates[i - 1]) ||
-                    dates[i].isAtSameMomentAs(dates[i - 1]),
-                isTrue,
-                reason: '${entry.key} dates should be ascending',
-              );
-            }
-          }
-        },
-      );
-    });
-
-    group('AC: Motivational notification on score improvement trend', () {
-      test('improving trend detected with 3 ascending scores', () {
-        const service = TestScoreService();
-        // recentScores are returned desc from DAO, so newest first
-        final scores = [
-          _fakeTestScore(87, DateTime.utc(2026, 3, 1)),
-          _fakeTestScore(82, DateTime.utc(2026, 2, 1)),
-          _fakeTestScore(78, DateTime.utc(2026, 1, 1)),
-        ];
-        final result = service.analyzeTrend(scores);
-        expect(result.trend, ScoreTrend.improving);
-        expect(result.message, contains("you're on fire"));
-        expect(result.message, contains('78%'));
-        expect(result.message, contains('87%'));
-      });
-
-      test('declining trend detected with 3 descending scores', () {
-        const service = TestScoreService();
-        final scores = [
-          _fakeTestScore(70, DateTime.utc(2026, 3, 1)),
-          _fakeTestScore(80, DateTime.utc(2026, 2, 1)),
-          _fakeTestScore(90, DateTime.utc(2026, 1, 1)),
-        ];
-        final result = service.analyzeTrend(scores);
-        expect(result.trend, ScoreTrend.declining);
-        expect(result.message, contains('keep pushing'));
-      });
-
-      test('stable trend for mixed scores', () {
-        const service = TestScoreService();
-        final scores = [
-          _fakeTestScore(85, DateTime.utc(2026, 3, 1)),
-          _fakeTestScore(80, DateTime.utc(2026, 2, 1)),
-          _fakeTestScore(82, DateTime.utc(2026, 1, 1)),
-        ];
-        final result = service.analyzeTrend(scores);
-        expect(result.trend, ScoreTrend.stable);
-      });
-
-      test('insufficient data with less than 2 scores', () {
-        const service = TestScoreService();
-        final scores = [_fakeTestScore(85, DateTime.utc(2026, 3, 1))];
-        final result = service.analyzeTrend(scores);
-        expect(result.trend, ScoreTrend.insufficient);
-      });
-    });
-
-    group('AC: Test tracking only visible for Dirshu program users', () {
-      test('programHasTests returns true for Dirshu test programs', () async {
-        const service = TestReminderService();
-        final programs = await LearningProgramRepository.instance
-            .getAllPrograms();
-
-        final dirshuTestPrograms = [
-          'dirshu_kinyan_torah',
-          'dirshu_amud_hayomi',
-          'dirshu_kinyan_yerushalmi',
-          'dirshu_daf_hayomi_bhalacha',
-        ];
-
-        for (final program in programs) {
-          if (dirshuTestPrograms.contains(program.name)) {
-            expect(
-              service.programHasTests(program),
-              isTrue,
-              reason: '${program.name} should have tests',
-            );
-          }
-        }
-      });
-
-      test('programHasTests returns false for non-test programs', () async {
-        const service = TestReminderService();
-        final programs = await LearningProgramRepository.instance
-            .getAllPrograms();
-
-        final noTestPrograms = [
-          'oraysa',
-          'daf_yomi',
-          'mishnah_yomis',
-          'nach_yomi',
-          'dirshu_kinyan_chochma',
-        ];
-        for (final program in programs) {
-          if (noTestPrograms.contains(program.name)) {
-            expect(
-              service.programHasTests(program),
-              isFalse,
-              reason: '${program.name} should not have tests',
-            );
-          }
-        }
-      });
-
-      test(
-        'only profiles enrolled in Dirshu test programs have test dates',
-        () async {
-          // Create profile enrolled in Dirshu
-          final profileId = await db
-              .into(db.profiles)
-              .insert(
-                ProfilesCompanion.insert(
-                  accountId: 1,
-                  displayName: 'Dirshu Learner',
-                  mode: 'adult',
-                  createdAt: DateTime.now().toUtc(),
-                  updatedAt: DateTime.now().toUtc(),
-                ),
-              );
-
-          final dirshu = await LearningProgramRepository.instance
-              .getProgramByName('dirshu_kinyan_torah');
-          expect(dirshu, isNotNull);
-
-          // Enroll profile in Dirshu program
-          await db.profileProgramDao.setProfileProgram(
-            profileId: profileId,
-            curriculumType: dirshu!.curriculumType,
-            programId: dirshu.id,
-          );
-
-          // Get the profile's program
-          final profileProgram = await db.profileProgramDao
-              .getProgramForProfileAndCurriculum(
-                profileId,
-                dirshu.curriculumType,
-              );
-          expect(profileProgram, isNotNull);
-
-          // Look up program to check if it has tests
-          final program = LearningProgramRepository.instance.getProgramById(
-            profileProgram!.programId,
-          );
-          expect(program, isNotNull);
-          expect(program!.hasTests, isTrue);
-
-          // The profile should see test dates for their program via seeds
-          final seeds = generateTestDateSeeds();
-          final testDates = seeds
-              .where((s) => s['program_name'] == program.name)
-              .toList();
-          expect(testDates, isNotEmpty);
-        },
-      );
-    });
-  });
 
   // ── Story 15.5: Expanded Stage Scheduling Model ────────────────────
   group('Story 15.5 -- Expanded Stage Scheduling Model', tags: ['story_15_5'], () {
@@ -3891,17 +3456,4 @@ void main() {
       );
     });
   });
-}
-
-/// Helper to create a fake TestScore for service-level tests.
-TestScore _fakeTestScore(int percentage, DateTime createdAt) {
-  return TestScore(
-    id: 0,
-    profileId: 1,
-    programId: 1,
-    testDateId: null,
-    scorePercentage: percentage,
-    notes: '',
-    createdAt: createdAt,
-  );
 }

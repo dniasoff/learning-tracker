@@ -8,7 +8,6 @@ import 'package:learning_tracker/features/auth/domain/services/local_auth_servic
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 import 'package:learning_tracker/features/sync/domain/reducers/streak_reducer.dart';
-import 'package:learning_tracker/features/sync/domain/reducers/xp_reducer.dart';
 
 /// End-to-end story acceptance tests for Epic 20 — v2 hard-tier
 /// auth refactor. Covers the contract promised by the v2 architecture
@@ -231,62 +230,6 @@ void main() {
 
     // ─── Story 20.11 gap: completion tee + reducer integration ─────
     group('Story 20.11 — completion tee pipeline', () {
-      test(
-        'streak and xp event rows replay through reducers to state',
-        () async {
-          // Simulate what CompletionRepositoryImpl._createCompletion does:
-          // insert a streak + xp event for each completion. Then run the
-          // reducers over what's in the DB.
-          const profileId = 42;
-          final completions = [
-            DateTime.utc(2026, 3, 1),
-            DateTime.utc(2026, 3, 2),
-            DateTime.utc(2026, 3, 3),
-            DateTime.utc(2026, 3, 3), // same-day dupe
-          ];
-
-          for (final at in completions) {
-            await db
-                .into(db.streakEvents)
-                .insert(
-                  StreakEventsCompanion.insert(
-                    profileId: profileId,
-                    eventType: 'completion',
-                    eventTimestamp: at,
-                  ),
-                  mode: InsertMode.insertOrIgnore,
-                );
-            await db
-                .into(db.xpEvents)
-                .insert(
-                  XpEventsCompanion.insert(
-                    profileId: profileId,
-                    xpDelta: 10,
-                    source: 'completion',
-                    eventTimestamp: at,
-                  ),
-                  mode: InsertMode.insertOrIgnore,
-                );
-          }
-
-          final streakEvents = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(profileId))).get();
-          final xpEvents = await (db.select(
-            db.xpEvents,
-          )..where((t) => t.profileId.equals(profileId))).get();
-
-          final streakState = reduceStreakEvents(streakEvents);
-          expect(streakState.currentStreak, 3);
-          expect(streakState.longestStreak, 3);
-
-          // 3 distinct (profileId, eventTimestamp, source) rows inserted —
-          // the 4th (same-day dupe) was filtered by InsertMode.insertOrIgnore.
-          expect(xpEvents, hasLength(3));
-          expect(reduceXpEvents(xpEvents), 30);
-        },
-      );
-
       test('idempotent tee: same completion twice → one event row', () async {
         final at = DateTime.utc(2026, 3, 1);
         for (var i = 0; i < 3; i++) {

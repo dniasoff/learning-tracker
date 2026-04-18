@@ -36,28 +36,12 @@ class ParentSettingsScreen extends ConsumerWidget {
                       "Add, edit, or archive your child's tracks",
                     ),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.pushRoute(
-                      const ParentTrackManagementRoute(),
-                    ),
-                  ),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  ListTile(
-                    leading: Icon(
-                      Icons.card_giftcard,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Rewards'),
-                    subtitle: const Text('Configure the reward catalog'),
-                    trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
-                        context.pushRoute(const RewardCatalogRoute()),
+                        context.pushRoute(const ParentTrackManagementRoute()),
                   ),
                   Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ListTile(
-                    leading: Icon(
-                      Icons.tune,
-                      color: theme.colorScheme.primary,
-                    ),
+                    leading: Icon(Icons.tune, color: theme.colorScheme.primary),
                     title: const Text('Point Configuration'),
                     subtitle: const Text(
                       'Set how many points activities are worth',

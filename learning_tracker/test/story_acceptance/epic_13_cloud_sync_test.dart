@@ -265,7 +265,6 @@ void main() {
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchLedgerEntries(),
       ).thenAnswer((_) async => []);
@@ -280,7 +279,6 @@ void main() {
       verify(() => mockFirestore.fetchBookmarks()).called(1);
       verify(() => mockFirestore.fetchSettings()).called(1);
       verify(() => mockFirestore.fetchGoals()).called(1);
-      verify(() => mockFirestore.fetchRewards()).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
       verify(() => mockFirestore.fetchLedgerEntries()).called(1);
@@ -496,9 +494,6 @@ void main() {
         () => mockFirestore.listenToGoals(),
       ).thenAnswer((_) => goals ?? Stream.value([]));
       when(
-        () => mockFirestore.listenToRewards(),
-      ).thenAnswer((_) => rewards ?? Stream.value([]));
-      when(
         () => mockFirestore.listenToActiveCurricula(),
       ).thenAnswer((_) => Stream.value([]));
       when(
@@ -516,7 +511,6 @@ void main() {
 
         verify(() => mockFirestore.listenToCompletions()).called(1);
         verify(() => mockFirestore.listenToGoals()).called(1);
-        verify(() => mockFirestore.listenToRewards()).called(1);
         verify(() => mockFirestore.listenToSettings()).called(1);
 
         // Detach listeners (background)
@@ -675,7 +669,6 @@ void main() {
       verify(() => mockFirestore.listenToSettings()).called(1);
       verify(() => mockFirestore.listenToStreak()).called(1);
       verify(() => mockFirestore.listenToGoals()).called(1);
-      verify(() => mockFirestore.listenToRewards()).called(1);
     });
 
     test('listeners not attached while offline', () async {
@@ -709,7 +702,6 @@ void main() {
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchLedgerEntries(),
       ).thenAnswer((_) async => []);
@@ -766,7 +758,6 @@ void main() {
       verify(() => mockFirestore.fetchBookmarks()).called(1);
       verify(() => mockFirestore.fetchSettings()).called(1);
       verify(() => mockFirestore.fetchGoals()).called(1);
-      verify(() => mockFirestore.fetchRewards()).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
     });
@@ -807,19 +798,6 @@ void main() {
           },
         ],
       );
-      when(() => mockFirestore.fetchRewards()).thenAnswer(
-        (_) async => [
-          {
-            'title': 'First Steps',
-            'description': 'Complete 10 items',
-            'points_threshold': 10,
-            'is_earned': true,
-            'earned_at': '2026-02-09T12:00:00.000Z',
-            'created_at': '2026-02-09T12:00:00.000Z',
-            'updated_at': '2026-02-09T12:00:00.000Z',
-          },
-        ],
-      );
       when(
         () => mockFirestore.fetchLedgerEntries(),
       ).thenAnswer((_) async => []);
@@ -836,11 +814,6 @@ void main() {
       final goals = await database.goalDao.getAllGoals();
       expect(goals, hasLength(1));
       expect(goals.first.description, 'finish by pesach');
-
-      final rewards = await database.rewardDao.getAllRewards();
-      expect(rewards, hasLength(1));
-      expect(rewards.first.title, 'First Steps');
-      expect(rewards.first.isEarned, isTrue);
 
       final profiles = await database.userProfileDao.getAllUserProfiles();
       expect(profiles, hasLength(1));
@@ -868,7 +841,6 @@ void main() {
       verify(() => mockFirestore.fetchBookmarks()).called(1);
       verify(() => mockFirestore.fetchSettings()).called(1);
       verify(() => mockFirestore.fetchGoals()).called(1);
-      verify(() => mockFirestore.fetchRewards()).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
       verify(() => mockFirestore.fetchLedgerEntries()).called(1);
@@ -930,7 +902,6 @@ void main() {
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchRewards()).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchLedgerEntries(),
       ).thenAnswer((_) async => []);

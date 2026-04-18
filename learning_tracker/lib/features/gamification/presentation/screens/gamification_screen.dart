@@ -6,10 +6,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
-import 'package:learning_tracker/features/gamification/presentation/widgets/earned_rewards_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
-import 'package:learning_tracker/features/gamification/presentation/widgets/reward_progress_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -47,7 +44,6 @@ class GamificationScreen extends ConsumerWidget {
           onRefresh: () async {
             ref.invalidate(dashboardStreakProvider);
             ref.invalidate(streakCalendarProvider);
-            ref.invalidate(allRewardsStreamProvider);
           },
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -95,28 +91,6 @@ class GamificationScreen extends ConsumerWidget {
 
               // Points display
               PointsDisplayWidget(userMode: userMode),
-              const SizedBox(height: 20),
-
-              // Reward progress
-              Text(
-                'Next Reward',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              RewardProgressWidget(userMode: userMode),
-              const SizedBox(height: 24),
-
-              // Earned rewards
-              Text(
-                'Earned Rewards',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              EarnedRewardsWidget(userMode: userMode),
             ],
           ),
         ),

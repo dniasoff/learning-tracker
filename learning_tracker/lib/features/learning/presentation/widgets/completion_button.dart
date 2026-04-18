@@ -7,15 +7,12 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/reward_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/points_popup.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/features/notifications/presentation/providers/reward_milestone_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 /// Button widget for marking a content item as completed.
@@ -102,17 +99,6 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       ),
     );
 
-    // Show points popup non-blocking (child mode only)
-    if (widget.userMode == UserMode.child && mounted) {
-      unawaited(
-        showPointsPopup(
-          context: context,
-          points: optimisticPts,
-          userMode: widget.userMode,
-        ),
-      );
-    }
-
     widget.onCompleted?.call();
 
     // --- Background persistence (fire-and-forget with error rollback) ---
@@ -181,26 +167,6 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
   Future<void> _postCompletionWork(dynamic completion) async {
     try {
       await ref.read(streakAlertServiceProvider).onCompletionRecorded();
-
-      final rewardService = ref.read(rewardServiceProvider);
-      final newlyEarned = await checkAndAwardRewards(
-        rewardService,
-        userMode: widget.userMode,
-      );
-
-      if (newlyEarned.isNotEmpty && mounted) {
-        final rewardNotifEnabled = ref.read(rewardNotificationEnabledProvider);
-        final shabbosQuiet = ref.read(isShabbosQuietActiveProvider);
-        if (rewardNotifEnabled && !shabbosQuiet) {
-          final milestoneService = ref.read(
-            rewardMilestoneNotificationServiceProvider,
-          );
-          await milestoneService.notifyNewRewards(
-            newlyEarned: newlyEarned,
-            userMode: widget.userMode,
-          );
-        }
-      }
     } catch (e) {
       // Background work failure shouldn't crash the app
       AppLogger.instance.error('Post-completion work failed', e);

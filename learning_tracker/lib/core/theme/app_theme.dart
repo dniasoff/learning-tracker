@@ -116,8 +116,7 @@ class AppTheme {
     TextStyle? head(TextStyle? base) =>
         base?.copyWith(color: onSurface, fontWeight: FontWeight.w700);
     TextStyle? body(TextStyle? base) => base?.copyWith(color: onSurface);
-    TextStyle? subtle(TextStyle? base) =>
-        base?.copyWith(color: onSurfaceMuted);
+    TextStyle? subtle(TextStyle? base) => base?.copyWith(color: onSurfaceMuted);
 
     return TextTheme(
       displayLarge: head(serif.displayLarge),
@@ -127,7 +126,9 @@ class AppTheme {
       headlineMedium: head(serif.headlineMedium),
       headlineSmall: head(serif.headlineSmall),
       titleLarge: head(serif.titleLarge),
-      titleMedium: body(sans.titleMedium)?.copyWith(fontWeight: FontWeight.w600),
+      titleMedium: body(
+        sans.titleMedium,
+      )?.copyWith(fontWeight: FontWeight.w600),
       titleSmall: body(sans.titleSmall)?.copyWith(fontWeight: FontWeight.w600),
       bodyLarge: body(sans.bodyLarge),
       bodyMedium: body(sans.bodyMedium),
@@ -218,9 +219,7 @@ class AppTheme {
           backgroundColor: accent,
           foregroundColor: heritageNavy,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -233,9 +232,7 @@ class AppTheme {
           backgroundColor: accent,
           foregroundColor: heritageNavy,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -255,9 +252,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: heritageInk,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           side: const BorderSide(color: heritageNavyOutline),
           textStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
         ),
@@ -307,10 +302,7 @@ class AppTheme {
           return const IconThemeData(color: heritageInkMuted);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final base = GoogleFonts.inter(
-            fontSize: 12,
-            letterSpacing: 0.2,
-          );
+          final base = GoogleFonts.inter(fontSize: 12, letterSpacing: 0.2);
           if (states.contains(WidgetState.selected)) {
             return base.copyWith(color: accent, fontWeight: FontWeight.w600);
           }
@@ -323,8 +315,10 @@ class AppTheme {
         backgroundColor: heritageNavyCard,
         selectedColor: accent,
         labelStyle: GoogleFonts.inter(color: heritageInk, fontSize: 13),
-        secondaryLabelStyle:
-            GoogleFonts.inter(color: heritageNavy, fontSize: 13),
+        secondaryLabelStyle: GoogleFonts.inter(
+          color: heritageNavy,
+          fontSize: 13,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
           side: const BorderSide(color: heritageNavyOutline),
@@ -393,10 +387,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      drawerTheme: const DrawerThemeData(
-        backgroundColor: heritageNavy,
-      ),
+      drawerTheme: const DrawerThemeData(backgroundColor: heritageNavy),
     );
   }
-
 }

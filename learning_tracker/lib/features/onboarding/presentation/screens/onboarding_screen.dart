@@ -70,10 +70,7 @@ const kOnboardingComplete = 'onboarding_complete';
 ///
 /// Must stay in sync with `AppLocalizations.supportedLocales` and
 /// [supportedLanguages] in `language_provider.dart`.
-const _supportedLanguages = <String, String>{
-  'he': 'עברית',
-  'en': 'English',
-};
+const _supportedLanguages = <String, String>{'he': 'עברית', 'en': 'English'};
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _selectedLanguage = 'en';
@@ -279,9 +276,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _onLanguageSelected() {
     unawaited(
-      ref
-          .read(appLocaleProvider.notifier)
-          .setLocale(Locale(_selectedLanguage)),
+      ref.read(appLocaleProvider.notifier).setLocale(Locale(_selectedLanguage)),
     );
 
     // Child profiles get an extra step: the parent sets a 4-digit PIN that

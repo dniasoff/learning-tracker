@@ -10,8 +10,6 @@ import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_date_header.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/day_type_indicator.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/satisfaction_cue_widget.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_milestone_overlay.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -195,18 +193,6 @@ class _DashboardBody extends ConsumerWidget {
 
         // Streak recovery banner
         _StreakRecoveryBanner(currentStreak: currentStreak),
-
-        // AC-3: Streak milestone celebration
-        if (isMilestone(currentStreak))
-          StreakMilestoneOverlay(
-            streak: currentStreak,
-            userMode: userMode,
-            onDismiss: () {},
-          ),
-
-        // AC-5: Adult mode satisfaction cue
-        if (userMode == UserMode.adult)
-          SatisfactionCueWidget(currentStreak: currentStreak),
 
         const SizedBox(height: 12),
 
@@ -622,7 +608,11 @@ class _QuickCompleteButtonState extends ConsumerState<_QuickCompleteButton>
       ref.invalidate(dashboardLastCompletionProvider(widget.task.curriculumId));
       await _scaleController.forward();
     } catch (e, st) {
-      AppLogger.instance.error('Failed to mark completion from dashboard', e, st);
+      AppLogger.instance.error(
+        'Failed to mark completion from dashboard',
+        e,
+        st,
+      );
       if (mounted) {
         setState(() => _completing = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1081,11 +1071,7 @@ class _EmptyDashboard extends StatelessWidget {
                 ),
                 border: Border.all(color: accent.withValues(alpha: 0.3)),
               ),
-              child: Icon(
-                Icons.menu_book_rounded,
-                color: accent,
-                size: 40,
-              ),
+              child: Icon(Icons.menu_book_rounded, color: accent, size: 40),
             ),
             const SizedBox(height: 24),
             Text(

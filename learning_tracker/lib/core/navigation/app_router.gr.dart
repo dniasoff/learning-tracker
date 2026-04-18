@@ -989,22 +989,6 @@ class ProgressRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [RewardCatalogScreen]
-class RewardCatalogRoute extends PageRouteInfo<void> {
-  const RewardCatalogRoute({List<PageRouteInfo>? children})
-    : super(RewardCatalogRoute.name, initialChildren: children);
-
-  static const String name = 'RewardCatalogRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const RewardCatalogScreen();
-    },
-  );
-}
-
-/// generated route for
 /// [SchedulerScreen]
 class SchedulerRoute extends PageRouteInfo<void> {
   const SchedulerRoute({List<PageRouteInfo>? children})

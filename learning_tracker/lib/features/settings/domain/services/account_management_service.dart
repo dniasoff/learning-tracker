@@ -189,16 +189,12 @@ class AccountManagementService {
       await _database.delete(_database.learningLedger).go();
       await _database.delete(_database.learningOrder).go();
       await _database.delete(_database.goals).go();
-      await _database.delete(_database.rewards).go();
-      await _database.delete(_database.rewardPoolItems).go();
-      await _database.delete(_database.rewardPools).go();
       await _database.delete(_database.streaks).go();
       await _database.delete(_database.pointConfigs).go();
       await _database.delete(_database.stageDefinitions).go();
       await _database.delete(_database.studyDayConfigs).go();
       await _database.delete(_database.curriculumScopes).go();
       await _database.delete(_database.profilePrograms).go();
-      await _database.delete(_database.testScores).go();
       await _database.delete(_database.textDownloadStatuses).go();
       // Parent tables
       await _database.delete(_database.curriculumTracks).go();

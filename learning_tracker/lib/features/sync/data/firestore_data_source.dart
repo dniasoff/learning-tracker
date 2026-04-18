@@ -8,7 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/profiles/{profileId}/bookmarks/{curriculumId}_{trackType}` - Bookmarks (LWW)
 /// - `users/{uid}/profiles/{profileId}/settings/{curriculumId}` - Settings (LWW)
 /// - `users/{uid}/profiles/{profileId}/goals/{id}` - Goals (LWW)
-/// - `users/{uid}/profiles/{profileId}/rewards/{id}` - Rewards (LWW)
 /// - `users/{uid}/profiles/{profileId}/streak/data` - Streak (single doc)
 /// - `users/{uid}/profiles/{profileId}/active_curricula/data` - Active curricula
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
@@ -345,55 +344,11 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
-  // ========== Reward Operations ==========
-
-  /// Fetch all rewards from Firestore with pagination.
-  Future<List<Map<String, dynamic>>> fetchRewards({
-    int pageSize = defaultPageSize,
-  }) async {
-    final collection = _profileScopedDoc?.collection('rewards');
-    if (collection == null) return [];
-
-    return _fetchPaginated(collection, pageSize: pageSize);
-  }
-
-  /// Push a reward to Firestore (last-write-wins).
-  Future<void> pushReward(Map<String, dynamic> rewardData) async {
-    final collection = _profileScopedDoc?.collection('rewards');
-    if (collection == null) {
-      throw Exception('User not authenticated');
-    }
-
-    final id = rewardData['id']?.toString();
-    if (id == null) {
-      throw Exception('Reward must have an id');
-    }
-
-    await collection.doc(id).set({
-      ...rewardData,
-      'updated_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
   // ========== Goal Listener ==========
 
   /// Listen to real-time goal updates.
   Stream<List<Map<String, dynamic>>> listenToGoals() {
     final collection = _profileScopedDoc?.collection('goals');
-    if (collection == null) {
-      return Stream.value([]);
-    }
-
-    return collection.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    });
-  }
-
-  // ========== Reward Listener ==========
-
-  /// Listen to real-time reward updates.
-  Stream<List<Map<String, dynamic>>> listenToRewards() {
-    final collection = _profileScopedDoc?.collection('rewards');
     if (collection == null) {
       return Stream.value([]);
     }

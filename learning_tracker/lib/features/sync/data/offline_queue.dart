@@ -77,13 +77,6 @@ class OfflineQueue {
     _logger.info('Queued goal for offline sync');
   }
 
-  /// Enqueue a reward operation.
-  Future<void> enqueueReward(Map<String, dynamic> reward) async {
-    final payload = jsonEncode(reward);
-    await _queue.enqueue('reward', payload);
-    _logger.info('Queued reward for offline sync');
-  }
-
   /// Enqueue a ledger entry operation.
   Future<void> enqueueLedgerEntry(Map<String, dynamic> entry) async {
     final payload = jsonEncode(entry);
@@ -184,9 +177,6 @@ class OfflineQueue {
               break;
             case 'goal':
               await _firestoreDataSource.pushGoal(payload);
-              break;
-            case 'reward':
-              await _firestoreDataSource.pushReward(payload);
               break;
             case 'ledger_entry':
               await _firestoreDataSource.pushLedgerEntry(payload);

@@ -41,9 +41,13 @@ class StreakCalendar extends StatelessWidget {
       months.last.days.add(current);
       current = current.add(const Duration(days: 1));
     }
+    // Most recent month first, so users see the latest activity at the top.
+    final orderedMonths = months.reversed.toList();
 
     final theme = Theme.of(context);
-    final showYear = months.isNotEmpty && months.first.year != months.last.year;
+    final showYear =
+        orderedMonths.isNotEmpty &&
+        orderedMonths.first.year != orderedMonths.last.year;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,19 +65,19 @@ class StreakCalendar extends StatelessWidget {
             _DayLabel('S'),
           ],
         ),
-        for (var i = 0; i < months.length; i++) ...[
+        for (var i = 0; i < orderedMonths.length; i++) ...[
           SizedBox(height: i == 0 ? 8 : 16),
           Text(
             showYear
-                ? '${_monthNames[months[i].month - 1]} ${months[i].year}'
-                : _monthNames[months[i].month - 1],
+                ? '${_monthNames[orderedMonths[i].month - 1]} ${orderedMonths[i].year}'
+                : _monthNames[orderedMonths[i].month - 1],
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 6),
-          _MonthGrid(bucket: months[i], activeDates: activeDates),
+          _MonthGrid(bucket: orderedMonths[i], activeDates: activeDates),
         ],
       ],
     );

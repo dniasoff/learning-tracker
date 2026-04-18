@@ -11,7 +11,6 @@ void main() {
     List<Map<String, dynamic>> completions = const [],
     List<Map<String, dynamic>> goals = const [],
     List<Map<String, dynamic>> stageDefinitions = const [],
-    List<Map<String, dynamic>> rewards = const [],
     List<Map<String, dynamic>> streaks = const [],
     List<Map<String, dynamic>> pointConfigs = const [],
     List<Map<String, dynamic>> bookmarks = const [],
@@ -27,7 +26,6 @@ void main() {
       'completions': completions,
       'goals': goals,
       'stageDefinitions': stageDefinitions,
-      'rewards': rewards,
       'streaks': streaks,
       'pointConfigs': pointConfigs,
       'bookmarks': bookmarks,
@@ -60,21 +58,15 @@ void main() {
         goals: [
           {'id': 1},
         ],
-        rewards: [
-          {'id': 1},
-          {'id': 2},
-          {'id': 3},
-        ],
       );
 
       final preview = service.validateAndPreview(jsonStr);
 
       expect(preview.completionCount, 2);
       expect(preview.goalCount, 1);
-      expect(preview.rewardCount, 3);
       expect(preview.stageCount, 0);
       expect(preview.streakCount, 0);
-      expect(preview.totalRecords, 6);
+      expect(preview.totalRecords, 3);
       expect(preview.exportedAt, '2026-01-01T00:00:00.000Z');
       expect(preview.appVersion, '1.0.0');
     });
@@ -177,9 +169,6 @@ void main() {
         stageDefinitions: [
           {'id': 1},
         ],
-        rewards: [
-          {'id': 1},
-        ],
         streaks: [
           {'id': 1},
         ],
@@ -204,7 +193,7 @@ void main() {
       );
 
       final preview = service.validateAndPreview(jsonStr);
-      expect(preview.totalRecords, 11);
+      expect(preview.totalRecords, 10);
     });
   });
 }

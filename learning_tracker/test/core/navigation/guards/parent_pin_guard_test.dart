@@ -60,33 +60,30 @@ void main() {
       verify(() => mockResolver.next(true)).called(1);
     });
 
-    test(
-      'blocks navigation and triggers PIN prompt when PIN is set',
-      () async {
-        var promptCalled = false;
+    test('blocks navigation and triggers PIN prompt when PIN is set', () async {
+      var promptCalled = false;
 
-        when(
-          () => mockPinService.hasProfilePin(testProfileId),
-        ).thenAnswer((_) async => true);
-        when(
-          () => mockPinService.verifyProfilePin(testProfileId, any()),
-        ).thenAnswer((_) async => false);
+      when(
+        () => mockPinService.hasProfilePin(testProfileId),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockPinService.verifyProfilePin(testProfileId, any()),
+      ).thenAnswer((_) async => false);
 
-        final guard = ParentPinGuard(
-          pinService: mockPinService,
-          promptForPin: () async {
-            promptCalled = true;
-            return '0000';
-          },
-          getProfileId: () => testProfileId,
-        );
+      final guard = ParentPinGuard(
+        pinService: mockPinService,
+        promptForPin: () async {
+          promptCalled = true;
+          return '0000';
+        },
+        getProfileId: () => testProfileId,
+      );
 
-        await guard.onNavigation(mockResolver, mockRouter);
+      await guard.onNavigation(mockResolver, mockRouter);
 
-        expect(promptCalled, isTrue);
-        verify(() => mockResolver.next(false)).called(1);
-      },
-    );
+      expect(promptCalled, isTrue);
+      verify(() => mockResolver.next(false)).called(1);
+    });
 
     test('allows navigation after successful PIN prompt', () async {
       when(

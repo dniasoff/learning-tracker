@@ -9,7 +9,6 @@ class ImportPreview {
     required this.completionCount,
     required this.goalCount,
     required this.stageCount,
-    required this.rewardCount,
     required this.streakCount,
     required this.pointConfigCount,
     required this.bookmarkCount,
@@ -24,7 +23,6 @@ class ImportPreview {
   final int completionCount;
   final int goalCount;
   final int stageCount;
-  final int rewardCount;
   final int streakCount;
   final int pointConfigCount;
   final int bookmarkCount;
@@ -39,7 +37,6 @@ class ImportPreview {
       completionCount +
       goalCount +
       stageCount +
-      rewardCount +
       streakCount +
       pointConfigCount +
       bookmarkCount +
@@ -65,7 +62,6 @@ class DataExportImportService {
     'completions',
     'goals',
     'stageDefinitions',
-    'rewards',
     'streaks',
     'pointConfigs',
     'bookmarks',
@@ -80,7 +76,6 @@ class DataExportImportService {
     final completions = await _database.completionDao.getAllCompletions();
     final goals = await _database.goalDao.getAllGoals();
     final stages = await _database.stageDao.getAllStageDefinitions();
-    final rewards = await _database.rewardDao.getAllRewards();
     final streaks = await _database.streakDao.getStreak();
     final pointConfigs = await _database.select(_database.pointConfigs).get();
     final bookmarks = await _database.bookmarkDao.getAllBookmarks();
@@ -137,22 +132,6 @@ class DataExportImportService {
               'stageName': s.stageName,
               'delayDays': s.delayDays,
               'isDefault': s.isDefault,
-            },
-          )
-          .toList(),
-      'rewards': rewards
-          .map(
-            (r) => {
-              'id': r.id,
-              'title': r.title,
-              'description': r.description,
-              'pointsThreshold': r.pointsThreshold,
-              'isRevealed': r.isRevealed,
-              'isEarned': r.isEarned,
-              'earnedAt': r.earnedAt?.toIso8601String(),
-              'createdAt': r.createdAt.toIso8601String(),
-              'updatedAt': r.updatedAt.toIso8601String(),
-              'curriculumId': r.curriculumId,
             },
           )
           .toList(),
@@ -266,7 +245,6 @@ class DataExportImportService {
       completionCount: (data['completions'] as List).length,
       goalCount: (data['goals'] as List).length,
       stageCount: (data['stageDefinitions'] as List).length,
-      rewardCount: (data['rewards'] as List).length,
       streakCount: (data['streaks'] as List).length,
       pointConfigCount: (data['pointConfigs'] as List).length,
       bookmarkCount: (data['bookmarks'] as List).length,
@@ -294,7 +272,6 @@ class DataExportImportService {
       await _database.delete(_database.completions).go();
       await _database.delete(_database.goals).go();
       await _database.delete(_database.stageDefinitions).go();
-      await _database.delete(_database.rewards).go();
       await _database.delete(_database.streaks).go();
       await _database.delete(_database.pointConfigs).go();
       await _database.delete(_database.bookmarks).go();
@@ -357,30 +334,6 @@ class DataExportImportService {
                 stageName: map['stageName'] as String,
                 delayDays: map['delayDays'] as int,
                 isDefault: Value(map['isDefault'] as bool? ?? false),
-              ),
-            );
-      }
-
-      // Import rewards
-      for (final r in data['rewards'] as List) {
-        final map = r as Map<String, dynamic>;
-        await _database
-            .into(_database.rewards)
-            .insert(
-              RewardsCompanion.insert(
-                title: map['title'] as String,
-                description: map['description'] as String,
-                pointsThreshold: map['pointsThreshold'] as int,
-                isRevealed: Value(map['isRevealed'] as bool? ?? false),
-                isEarned: Value(map['isEarned'] as bool? ?? false),
-                earnedAt: Value(
-                  map['earnedAt'] != null
-                      ? DateTime.parse(map['earnedAt'] as String)
-                      : null,
-                ),
-                createdAt: Value(DateTime.parse(map['createdAt'] as String)),
-                updatedAt: Value(DateTime.parse(map['updatedAt'] as String)),
-                curriculumId: Value(map['curriculumId'] as String?),
               ),
             );
       }

@@ -51,7 +51,6 @@ class SyncEngine {
   StreamSubscription<List<Map<String, dynamic>>>? _settingsSubscription;
   StreamSubscription<Map<String, dynamic>?>? _streakSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _goalsSubscription;
-  StreamSubscription<List<Map<String, dynamic>>>? _rewardsSubscription;
   StreamSubscription<List<String>>? _activeCurriculaSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _ledgerSubscription;
 
@@ -81,7 +80,6 @@ class SyncEngine {
   bool _mergingSettings = false;
   bool _mergingStreak = false;
   bool _mergingGoals = false;
-  bool _mergingRewards = false;
   bool _mergingActiveCurricula = false;
   bool _mergingLedgerEntries = false;
 
@@ -178,11 +176,6 @@ class SyncEngine {
       onError: _handleListenerError,
     );
 
-    _rewardsSubscription = _firestoreDataSource.listenToRewards().listen(
-      _onRewardsUpdate,
-      onError: _handleListenerError,
-    );
-
     _activeCurriculaSubscription = _firestoreDataSource
         .listenToActiveCurricula()
         .listen(_onActiveCurriculaUpdate, onError: _handleListenerError);
@@ -208,7 +201,6 @@ class SyncEngine {
     await _settingsSubscription?.cancel();
     await _streakSubscription?.cancel();
     await _goalsSubscription?.cancel();
-    await _rewardsSubscription?.cancel();
     await _activeCurriculaSubscription?.cancel();
     await _ledgerSubscription?.cancel();
 
@@ -217,7 +209,6 @@ class SyncEngine {
     _settingsSubscription = null;
     _streakSubscription = null;
     _goalsSubscription = null;
-    _rewardsSubscription = null;
     _activeCurriculaSubscription = null;
     _ledgerSubscription = null;
   }
@@ -251,7 +242,6 @@ class SyncEngine {
         _firestoreDataSource.fetchBookmarks(),
         _firestoreDataSource.fetchSettings(),
         _firestoreDataSource.fetchGoals(),
-        _firestoreDataSource.fetchRewards(),
         _firestoreDataSource.fetchStreak(),
         _firestoreDataSource.fetchProfile(),
         _firestoreDataSource.fetchLedgerEntries(),
@@ -260,17 +250,15 @@ class SyncEngine {
       final bookmarks = results[1] as List<Map<String, dynamic>>;
       final settings = results[2] as List<Map<String, dynamic>>;
       final goals = results[3] as List<Map<String, dynamic>>;
-      final rewards = results[4] as List<Map<String, dynamic>>;
-      final streak = results[5] as Map<String, dynamic>?;
-      final profile = results[6] as Map<String, dynamic>?;
-      final ledgerEntries = results[7] as List<Map<String, dynamic>>;
+      final streak = results[4] as Map<String, dynamic>?;
+      final profile = results[5] as Map<String, dynamic>?;
+      final ledgerEntries = results[6] as List<Map<String, dynamic>>;
 
       // Merge with local database
       await _mergeCompletions(completions);
       await _mergeBookmarks(bookmarks);
       await _mergeSettings(settings);
       await _mergeGoals(goals);
-      await _mergeRewards(rewards);
       if (streak != null) await _mergeStreak(streak);
       if (profile != null) await _mergeProfile(profile);
       await _mergeLedgerEntries(ledgerEntries);
@@ -519,33 +507,6 @@ class SyncEngine {
       _trackPushError(e);
       _logger.warning('Failed to push goal, queuing for later', e);
       await _offlineQueue.enqueueGoal(goal);
-      await _emitPendingStatus();
-    }
-  }
-
-  /// Push a reward to Firestore after local write.
-  Future<void> pushReward(Map<String, dynamic> reward) async {
-    if (!_isOnline || _pushSuppressed) {
-      await _offlineQueue.enqueueReward(reward);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushReward(reward);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed reward to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push reward, queuing for later', e);
-      await _offlineQueue.enqueueReward(reward);
       await _emitPendingStatus();
     }
   }
@@ -872,48 +833,6 @@ class SyncEngine {
     }
   }
 
-  /// Merge rewards from Firestore (last-write-wins per D4).
-  ///
-  /// For each remote reward, upsert into local DB. Rewards that are
-  /// earned remotely but not locally get updated.
-  Future<void> _mergeRewards(List<Map<String, dynamic>> remoteRewards) async {
-    _logger.debug('Merging ${remoteRewards.length} rewards from Firestore');
-
-    for (final remote in remoteRewards) {
-      try {
-        final title = remote['title'] as String?;
-        final description = remote['description'] as String? ?? '';
-        final pointsThreshold = remote['points_threshold'] as int?;
-        final isRevealed = remote['is_revealed'] as bool? ?? false;
-        final isEarned = remote['is_earned'] as bool? ?? false;
-        final earnedAt = _parseTimestamp(remote['earned_at']);
-        final createdAt = _parseTimestamp(remote['created_at']);
-        final updatedAt = _parseTimestamp(remote['updated_at']);
-        final curriculumId = remote['curriculum_id'] as String?;
-
-        if (title == null || pointsThreshold == null || createdAt == null) {
-          _logger.warning('Skipping invalid remote reward: $remote');
-          continue;
-        }
-
-        await _database.rewardDao.upsertReward(
-          title: title,
-          description: description,
-          pointsThreshold: pointsThreshold,
-          isRevealed: isRevealed,
-          isEarned: isEarned,
-          earnedAt: earnedAt,
-          createdAt: createdAt,
-          updatedAt: updatedAt,
-          curriculumId: curriculumId,
-        );
-      } catch (e) {
-        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge reward: $e');
-      }
-    }
-  }
-
   /// Merge streak from Firestore (last-write-wins per D4).
   ///
   /// Streak is a precomputed cache in Firestore. Locally, streak can be
@@ -1055,18 +974,6 @@ class SyncEngine {
       await _mergeGoals(goals);
     } finally {
       _mergingGoals = false;
-    }
-  }
-
-  Future<void> _onRewardsUpdate(List<Map<String, dynamic>> rewards) async {
-    if (_mergingRewards) return;
-    _mergingRewards = true;
-    _consecutiveListenerErrors = 0;
-    try {
-      _logger.debug('Received ${rewards.length} rewards from listener');
-      await _mergeRewards(rewards);
-    } finally {
-      _mergingRewards = false;
     }
   }
 
@@ -1397,23 +1304,6 @@ class SyncEngine {
         });
       }
       _logger.debug('Pushed ${goals.length} goals');
-
-      // --- Rewards ---
-      final rewards = await _database.rewardDao.getAllRewards();
-      for (final r in rewards) {
-        await pushReward({
-          'title': r.title,
-          'description': r.description,
-          'points_threshold': r.pointsThreshold,
-          'is_revealed': r.isRevealed,
-          'is_earned': r.isEarned,
-          'earned_at': r.earnedAt?.toIso8601String(),
-          'created_at': r.createdAt.toIso8601String(),
-          'updated_at': r.updatedAt.toIso8601String(),
-          'curriculum_id': r.curriculumId,
-        });
-      }
-      _logger.debug('Pushed ${rewards.length} rewards');
 
       // --- Streak ---
       final streak = await _database.streakDao.getStreak();

@@ -75,10 +75,7 @@ class ParentPinGuard extends AutoRouteGuard {
     }
 
     try {
-      final verified = await pinService.verifyProfilePin(
-        profileId,
-        enteredPin,
-      );
+      final verified = await pinService.verifyProfilePin(profileId, enteredPin);
       if (verified) _authenticatedProfileId = profileId;
       resolver.next(verified);
     } on PinLockoutException {

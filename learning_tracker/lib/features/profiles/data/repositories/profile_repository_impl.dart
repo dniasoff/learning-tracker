@@ -131,9 +131,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(_db.goals)..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
-        _db.rewards,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
         _db.stageDefinitions,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
@@ -162,12 +159,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
         _db.profilePrograms,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.rewardPools,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.testScores,
       )..where((t) => t.profileId.equals(id))).go();
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);
