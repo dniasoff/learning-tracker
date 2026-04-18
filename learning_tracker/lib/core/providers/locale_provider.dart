@@ -13,7 +13,7 @@ class AppLocale extends _$AppLocale {
   @override
   Locale build() {
     _load();
-    return const Locale('he');
+    return const Locale('en');
   }
 
   Future<void> _load() async {

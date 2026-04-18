@@ -76,7 +76,7 @@ const _supportedLanguages = <String, String>{
 };
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  String _selectedLanguage = 'he';
+  String _selectedLanguage = 'en';
   var _phase = _ScreenPhase.profileCreation;
 
   // Profile creation state
