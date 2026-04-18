@@ -8,14 +8,16 @@ part of 'parent_track_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provides the list of active curricula as [CurriculumId] enums
-/// for the parent track management screen.
+/// Provides the list of active curricula as [CurriculumId] enums for the
+/// currently active profile. Scoped so each profile (parent, child, etc.)
+/// sees only its own curricula in parent-mode track management.
 
 @ProviderFor(parentTrackCurricula)
 final parentTrackCurriculaProvider = ParentTrackCurriculaProvider._();
 
-/// Provides the list of active curricula as [CurriculumId] enums
-/// for the parent track management screen.
+/// Provides the list of active curricula as [CurriculumId] enums for the
+/// currently active profile. Scoped so each profile (parent, child, etc.)
+/// sees only its own curricula in parent-mode track management.
 
 final class ParentTrackCurriculaProvider
     extends
@@ -27,8 +29,9 @@ final class ParentTrackCurriculaProvider
     with
         $FutureModifier<List<CurriculumId>>,
         $FutureProvider<List<CurriculumId>> {
-  /// Provides the list of active curricula as [CurriculumId] enums
-  /// for the parent track management screen.
+  /// Provides the list of active curricula as [CurriculumId] enums for the
+  /// currently active profile. Scoped so each profile (parent, child, etc.)
+  /// sees only its own curricula in parent-mode track management.
   ParentTrackCurriculaProvider._()
     : super(
         from: null,
@@ -56,4 +59,4 @@ final class ParentTrackCurriculaProvider
 }
 
 String _$parentTrackCurriculaHash() =>
-    r'dec24d2fb4f782d0c92f2958d964bdca78790c13';
+    r'4eaa3641fdc8417d38ca5e71e398e3afd817049d';

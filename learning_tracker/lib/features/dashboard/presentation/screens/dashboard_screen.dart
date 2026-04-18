@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
@@ -613,9 +614,24 @@ class _QuickCompleteButtonState extends ConsumerState<_QuickCompleteButton>
         ),
       );
       ref.invalidate(allDailyTasksProvider);
+      ref.invalidate(dashboardStreakProvider);
+      ref.invalidate(dashboardGlobalPointsProvider);
+      ref.invalidate(
+        dashboardCompletionPercentageProvider(widget.task.curriculumId),
+      );
+      ref.invalidate(dashboardLastCompletionProvider(widget.task.curriculumId));
       await _scaleController.forward();
-    } catch (_) {
-      if (mounted) setState(() => _completing = false);
+    } catch (e, st) {
+      AppLogger.instance.error('Failed to mark completion from dashboard', e, st);
+      if (mounted) {
+        setState(() => _completing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Couldn't save: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

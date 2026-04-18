@@ -307,7 +307,7 @@ final class SkippedTasksProvider
   }
 }
 
-String _$skippedTasksHash() => r'eccd398a10ef025cfd702e8af63e0c77e067b940';
+String _$skippedTasksHash() => r'60881d1f3735d1d9774489183f5acebf28e1a6c3';
 
 /// Holds the set of sefaria refs skipped (dismissed) today.
 ///
@@ -585,4 +585,4 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'a0bccb119a409d44fc0ec9e189f7f7113d40c97b';
+String _$allDailyTasksHash() => r'8e958c1bfb3ab5cc6ff500e5583b2de218e94a82';

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -87,27 +90,31 @@ const _previouslySkippedRefsKey = 'skipped_tasks_previous_refs';
 class SkippedTasks extends _$SkippedTasks {
   @override
   Set<String> build() {
-    _loadFromPrefs();
+    unawaited(_loadFromPrefs());
     return {};
   }
 
   Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = ref.read(clockProvider);
-    final todayStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    final storedDate = prefs.getString(_skippedDateKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final today = ref.read(clockProvider);
+      final todayStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final storedDate = prefs.getString(_skippedDateKey);
 
-    if (storedDate == todayStr) {
-      final refs = prefs.getStringList(_skippedRefsKey) ?? [];
-      state = refs.toSet();
-    } else {
-      // Date changed — archive yesterday's skips, clear today's
-      final yesterdayRefs = prefs.getStringList(_skippedRefsKey) ?? [];
-      await prefs.setStringList(_previouslySkippedRefsKey, yesterdayRefs);
-      await prefs.setString(_skippedDateKey, todayStr);
-      await prefs.setStringList(_skippedRefsKey, []);
-      state = {};
+      if (storedDate == todayStr) {
+        final refs = prefs.getStringList(_skippedRefsKey) ?? [];
+        state = refs.toSet();
+      } else {
+        // Date changed — archive yesterday's skips, clear today's
+        final yesterdayRefs = prefs.getStringList(_skippedRefsKey) ?? [];
+        await prefs.setStringList(_previouslySkippedRefsKey, yesterdayRefs);
+        await prefs.setString(_skippedDateKey, todayStr);
+        await prefs.setStringList(_skippedRefsKey, []);
+        state = {};
+      }
+    } catch (e, st) {
+      AppLogger.instance.error('Failed to load skipped tasks', e, st);
     }
   }
 
@@ -209,9 +216,10 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
     profileId,
   );
-  final activeCurricula = activeKeys
-      .map((key) => CurriculumId.values.where((c) => c.storageKey == key).first)
-      .toList();
+  final activeCurricula = <CurriculumId>[
+    for (final key in activeKeys)
+      ...CurriculumId.values.where((c) => c.storageKey == key).take(1),
+  ];
 
   // Look up earliest goal deadline and pace settings per curriculum.
   final goalDeadlines = <CurriculumId, DateTime>{};
