@@ -24,7 +24,6 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/app_in
 import 'package:learning_tracker/features/onboarding/presentation/screens/local_sign_in_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/local_signup_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
@@ -82,9 +81,6 @@ class AppRouter extends RootStackRouter {
 
   @override
   List<AutoRoute> get routes => [
-    // Splash (branded, runs once on cold start before handing off to the shell)
-    AutoRoute(path: '/splash', page: SplashRoute.page, initial: true),
-
     // Unauthenticated routes
     AutoRoute(path: '/intro', page: AppIntroRoute.page),
     AutoRoute(path: '/sign-in', page: SignInRoute.page),
