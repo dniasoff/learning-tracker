@@ -147,11 +147,8 @@ class AppTheme {
     required bool isChildMode,
     Color accent = heritageGold,
   }) {
-    if (isChildMode) {
-      // Child mode: always warm parchment, regardless of system brightness —
-      // kids shouldn't be staring at a dark scholarly interface.
-      return _parchmentTheme(accent: accent);
-    }
+    // Child and adult share the same heritage styling — brightness alone
+    // decides navy (dark) vs parchment (light).
     if (brightness == Brightness.dark) {
       return _navyTheme(accent: accent);
     }
