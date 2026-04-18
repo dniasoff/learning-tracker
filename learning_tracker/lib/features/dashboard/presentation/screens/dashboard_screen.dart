@@ -146,7 +146,13 @@ class _DashboardBody extends ConsumerWidget {
     final totalPoints = globalPointsAsync.asData?.value ?? 0;
 
     if (activeCurricula.isEmpty) {
-      return _EmptyDashboard(name: name, greeting: _greeting());
+      final isChildMode =
+          ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
+      return _EmptyDashboard(
+        name: name,
+        greeting: _greeting(),
+        isChildMode: isChildMode,
+      );
     }
 
     return ListView(
@@ -990,8 +996,13 @@ class _StreakRecoveryBanner extends ConsumerWidget {
 class _EmptyDashboard extends StatelessWidget {
   final String name;
   final String greeting;
+  final bool isChildMode;
 
-  const _EmptyDashboard({required this.name, required this.greeting});
+  const _EmptyDashboard({
+    required this.name,
+    required this.greeting,
+    required this.isChildMode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1049,52 +1060,56 @@ class _EmptyDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your first learning track to get started.',
+              isChildMode
+                  ? 'Ask a grown-up to add a learning track.'
+                  : 'Add your first learning track to get started.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.white.withValues(alpha: 0.6),
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(26),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: green.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => context.router.push(
-                      TrackManagementHubRoute(startAdding: true),
-                    ),
+            if (!isChildMode) ...[
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(26),
-                    child: const Center(
-                      child: Text(
-                        'Add Track',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: green.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.router.push(
+                        TrackManagementHubRoute(startAdding: true),
+                      ),
+                      borderRadius: BorderRadius.circular(26),
+                      child: const Center(
+                        child: Text(
+                          'Add Track',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

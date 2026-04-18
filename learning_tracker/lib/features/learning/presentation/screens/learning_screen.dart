@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
@@ -25,6 +26,8 @@ class LearningScreen extends ConsumerWidget {
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
+    final isChildMode =
+        ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
 
     return Scaffold(
       appBar: AppBar(
@@ -46,15 +49,19 @@ class LearningScreen extends ConsumerWidget {
             if (activeCurricula.isEmpty) {
               return EmptyState(
                 message: 'No active tracks',
-                subtitle: 'Add a track to start learning.',
+                subtitle: isChildMode
+                    ? 'Ask a grown-up to add a learning track.'
+                    : 'Add a track to start learning.',
                 icon: Icons.menu_book_outlined,
-                action: FilledButton.icon(
-                  onPressed: () => context.router.push(
-                    TrackManagementHubRoute(startAdding: true),
-                  ),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Track'),
-                ),
+                action: isChildMode
+                    ? null
+                    : FilledButton.icon(
+                        onPressed: () => context.router.push(
+                          TrackManagementHubRoute(startAdding: true),
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Track'),
+                      ),
               );
             }
 
