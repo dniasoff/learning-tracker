@@ -81,6 +81,9 @@ class AppRouter extends RootStackRouter {
 
   @override
   List<AutoRoute> get routes => [
+    // Splash (branded, runs once on cold start before handing off to the shell)
+    AutoRoute(path: '/splash', page: SplashRoute.page, initial: true),
+
     // Unauthenticated routes
     AutoRoute(path: '/intro', page: AppIntroRoute.page),
     AutoRoute(path: '/sign-in', page: SignInRoute.page),
