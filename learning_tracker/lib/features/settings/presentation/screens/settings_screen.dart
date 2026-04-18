@@ -83,23 +83,6 @@ class SettingsScreen extends ConsumerWidget {
                     Divider(height: 1, indent: 56, color: theme.dividerColor),
                   ],
                   _HebrewDateTile(theme: theme),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  ListTile(
-                    leading: Icon(
-                      Icons.notifications_active_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Daily Reminder'),
-                    subtitle: const Text('Receive daily study prompts'),
-                    trailing: Switch(
-                      value: true,
-                      onChanged: (value) {
-                        context.pushRoute(const NotificationsRoute());
-                      },
-                      activeTrackColor: theme.colorScheme.primary,
-                    ),
-                    onTap: () => context.pushRoute(const NotificationsRoute()),
-                  ),
                 ],
               ),
             ),
@@ -128,20 +111,6 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: const Text('Push, email and sound'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.pushRoute(const NotificationsRoute()),
-                  ),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  ListTile(
-                    leading: Icon(
-                      Icons.local_fire_department,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Streak Alerts'),
-                    subtitle: const Text('Never lose your learning streak'),
-                    trailing: Switch(
-                      value: true,
-                      onChanged: (value) {},
-                      activeTrackColor: theme.colorScheme.primary,
-                    ),
                   ),
                 ],
               ),
