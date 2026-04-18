@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Persistent flag — once set, intro slides are never shown again on this device.
@@ -26,8 +28,8 @@ class _AppIntroScreenState extends State<AppIntroScreen>
   late final AnimationController _pulseController;
   late final AnimationController _iconController;
 
-  static const _green = Color(0xFF4ADE80);
-  static const _greenDark = Color(0xFF22C55E);
+  static const _gold = AppTheme.heritageGold;
+  static const _goldSoft = Color(0xFFE0C27A);
   final _pages = const <_IntroPageData>[
     _IntroPageData(
       icon: Icons.auto_stories_rounded,
@@ -36,8 +38,8 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       subtitle:
           'Track every daf, perek, and halacha across all major '
           'Torah curricula — Mishnayos, Bavli, Yerushalmi, and more.',
-      gradientColors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
-      accentColor: Color(0xFF4ADE80),
+      gradientColors: [AppTheme.heritageGoldMuted, AppTheme.heritageGold],
+      accentColor: AppTheme.heritageGold,
     ),
     _IntroPageData(
       icon: Icons.insights_rounded,
@@ -46,8 +48,8 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       subtitle:
           'Visualize your learning with beautiful charts, streak '
           'tracking, and milestone celebrations as you grow.',
-      gradientColors: [Color(0xFF1B6B5A), Color(0xFF4ADE80)],
-      accentColor: Color(0xFF4ADE80),
+      gradientColors: [AppTheme.heritageGoldMuted, AppTheme.heritageGold],
+      accentColor: AppTheme.heritageGold,
     ),
     _IntroPageData(
       icon: Icons.schedule_rounded,
@@ -56,8 +58,8 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       subtitle:
           'Set personalized learning goals, get daily reminders, '
           'and stay on pace to complete your learning on time.',
-      gradientColors: [Color(0xFFE8C519), Color(0xFFF4D03F)],
-      accentColor: Color(0xFFE8C519),
+      gradientColors: [AppTheme.heritageGold, AppTheme.heritageGoldSoft],
+      accentColor: AppTheme.heritageGoldSoft,
     ),
     _IntroPageData(
       icon: Icons.people_rounded,
@@ -66,8 +68,8 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       subtitle:
           'Whether you learn alone, with a chavrusa, or in a class — '
           'track personal, school, and tutor assignments all in one place.',
-      gradientColors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
-      accentColor: Color(0xFF4ADE80),
+      gradientColors: [AppTheme.heritageGoldMuted, AppTheme.heritageGold],
+      accentColor: AppTheme.heritageGold,
     ),
   ];
 
@@ -133,7 +135,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
     final pageData = _pages[_currentPage];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: AppTheme.heritageNavy,
       body: Stack(
         children: [
           // Animated particle background
@@ -296,7 +298,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
                         onTap: _nextPage,
                         label: isLast ? 'Get Started' : 'Continue',
                         gradientColors: isLast
-                            ? [_greenDark, _green]
+                            ? const [_gold, _goldSoft]
                             : pageData.gradientColors,
                         glowColor: pageData.accentColor,
                         showArrow: !isLast,
@@ -474,7 +476,7 @@ class _IntroPage extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1A1A1A),
+                              color: AppTheme.heritageNavyCard,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: data.accentColor.withValues(alpha: 0.15),
@@ -568,20 +570,20 @@ class _IntroPage extends StatelessWidget {
                       Text(
                         data.title,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: GoogleFonts.playfairDisplay(
+                          color: AppTheme.heritageInk,
                           fontSize: 32,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           height: 1.15,
-                          letterSpacing: -0.5,
+                          letterSpacing: 0.2,
                         ),
                       ),
                       const SizedBox(height: 18),
                       Text(
                         data.subtitle,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.55),
+                        style: GoogleFonts.inter(
+                          color: AppTheme.heritageInkMuted,
                           fontSize: 15,
                           height: 1.6,
                           letterSpacing: 0.1,
@@ -677,8 +679,8 @@ class _GlowingButtonState extends State<_GlowingButton>
                   children: [
                     Text(
                       widget.label,
-                      style: const TextStyle(
-                        color: Colors.black,
+                      style: GoogleFonts.inter(
+                        color: AppTheme.heritageNavy,
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.3,
@@ -688,7 +690,7 @@ class _GlowingButtonState extends State<_GlowingButton>
                       const SizedBox(width: 8),
                       const Icon(
                         Icons.arrow_forward_rounded,
-                        color: Colors.black,
+                        color: AppTheme.heritageNavy,
                         size: 20,
                       ),
                     ],
