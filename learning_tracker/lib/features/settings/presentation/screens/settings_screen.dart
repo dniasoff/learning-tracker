@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
@@ -803,6 +804,7 @@ class _ParentalControlsSectionState
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
+                  ref.read(routerProvider).parentPinGuard.lock();
                   await context.pushRoute(const ParentSettingsRoute());
                   if (mounted) await _load();
                 },
