@@ -166,13 +166,13 @@ class _DashboardBody extends ConsumerWidget {
         Text(
           '${_greeting(l10n)},',
           style: theme.textTheme.headlineSmall?.copyWith(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         Text(
           name,
           style: theme.textTheme.headlineMedium?.copyWith(
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1027,7 +1027,8 @@ class _EmptyDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    const green = Color(0xFF4ADE80);
+    final accent = theme.colorScheme.primary;
+    final onSurface = theme.colorScheme.onSurface;
 
     return Center(
       child: Padding(
@@ -1038,13 +1039,13 @@ class _EmptyDashboard extends StatelessWidget {
             Text(
               '$greeting,',
               style: theme.textTheme.headlineSmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: onSurface.withValues(alpha: 0.7),
               ),
             ),
             Text(
               name,
               style: theme.textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
+                color: onSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1058,15 +1059,15 @@ class _EmptyDashboard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    green.withValues(alpha: 0.2),
-                    green.withValues(alpha: 0.05),
+                    accent.withValues(alpha: 0.2),
+                    accent.withValues(alpha: 0.05),
                   ],
                 ),
-                border: Border.all(color: green.withValues(alpha: 0.3)),
+                border: Border.all(color: accent.withValues(alpha: 0.3)),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.menu_book_rounded,
-                color: green,
+                color: accent,
                 size: 40,
               ),
             ),
@@ -1074,7 +1075,7 @@ class _EmptyDashboard extends StatelessWidget {
             Text(
               l10n.noTracksYet,
               style: theme.textTheme.titleLarge?.copyWith(
-                color: Colors.white,
+                color: onSurface,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1083,7 +1084,7 @@ class _EmptyDashboard extends StatelessWidget {
               isChildMode ? l10n.askGrownUpToAddTrack : l10n.firstTrackPrompt,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
             ),
@@ -1091,40 +1092,12 @@ class _EmptyDashboard extends StatelessWidget {
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
-                height: 52,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(26),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF22C55E), Color(0xFF4ADE80)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: green.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                child: FilledButton.icon(
+                  onPressed: () => context.router.push(
+                    TrackManagementHubRoute(startAdding: true),
                   ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => context.router.push(
-                        TrackManagementHubRoute(startAdding: true),
-                      ),
-                      borderRadius: BorderRadius.circular(26),
-                      child: Center(
-                        child: Text(
-                          l10n.addTrack,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.addTrack),
                 ),
               ),
             ],
