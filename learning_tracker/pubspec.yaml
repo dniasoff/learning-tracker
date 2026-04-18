@@ -86,6 +86,9 @@ dependencies:
   cryptography: ^2.9.0
   internet_connection_checker: ^3.0.1
 
+  # Typography (Playfair Display headlines + Inter body for Mesorah Heritage theme)
+  google_fonts: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
