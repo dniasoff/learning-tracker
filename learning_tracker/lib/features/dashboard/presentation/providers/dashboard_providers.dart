@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
@@ -70,6 +71,11 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
 }
 
 /// Per-curriculum completion percentage, scoped to active profile.
+///
+/// Formula: `completions.length / (totalLeafItems * totalStages)`.
+/// Every stage completion nudges the bar, and the denominator is the
+/// scoped total leaf items (not items touched) so the bar never regresses
+/// when a new item is started.
 @riverpod
 Future<double> dashboardCompletionPercentage(
   Ref ref,
@@ -84,28 +90,11 @@ Future<double> dashboardCompletionPercentage(
   );
   if (stages.isEmpty) return 0.0;
 
-  // Count unique content items that completed ALL stages
-  final totalStages = stages.length;
-  final completionsByRef = <String, Set<int>>{};
-  for (final c in completions) {
-    completionsByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
-  }
+  final totalItems = await ref.watch(scopedItemCountProvider(curriculum).future);
+  final denominator = totalItems * stages.length;
+  if (denominator == 0) return 0.0;
 
-  // We need total items count — use completions + content for now
-  // For a proper count we'd need content items, but that's a feature import.
-  // Instead, count items that have at least one completion vs items fully done.
-  if (completionsByRef.isEmpty) return 0.0;
-
-  var fullyCompleted = 0;
-  for (final stages in completionsByRef.values) {
-    if (stages.length >= totalStages) fullyCompleted++;
-  }
-
-  // This is a simplified metric: completed items / items touched
-  // For the dashboard, we show progress of items that have been started
-  return completionsByRef.isNotEmpty
-      ? fullyCompleted / completionsByRef.length
-      : 0.0;
+  return (completions.length / denominator).clamp(0.0, 1.0);
 }
 
 /// Per-curriculum last completion timestamp, scoped to active profile.
