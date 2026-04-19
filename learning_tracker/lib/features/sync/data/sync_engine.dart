@@ -245,6 +245,7 @@ class SyncEngine {
         _firestoreDataSource.fetchStreak(),
         _firestoreDataSource.fetchProfile(),
         _firestoreDataSource.fetchLedgerEntries(),
+        _firestoreDataSource.fetchActiveCurricula(),
       ]);
       final completions = results[0] as List<Map<String, dynamic>>;
       final bookmarks = results[1] as List<Map<String, dynamic>>;
@@ -253,6 +254,7 @@ class SyncEngine {
       final streak = results[4] as Map<String, dynamic>?;
       final profile = results[5] as Map<String, dynamic>?;
       final ledgerEntries = results[6] as List<Map<String, dynamic>>;
+      final activeCurricula = results[7] as List<String>;
 
       // Merge with local database
       await _mergeCompletions(completions);
@@ -262,6 +264,7 @@ class SyncEngine {
       if (streak != null) await _mergeStreak(streak);
       if (profile != null) await _mergeProfile(profile);
       await _mergeLedgerEntries(ledgerEntries);
+      await _mergeActiveCurricula(activeCurricula);
 
       _logger.info('Pull-on-launch completed successfully');
       final syncedAt = DateTime.now().toUtc();
@@ -850,8 +853,9 @@ class SyncEngine {
 
   /// Merge active curricula from Firestore.
   ///
-  /// Replaces local active curricula with the remote list. This ensures
-  /// cross-device curriculum activation stays in sync.
+  /// Activates any remote curriculum not yet present locally, scoped to the
+  /// syncing profile. Does not deactivate — deactivation flows through the
+  /// repository so user intent is preserved.
   Future<void> _mergeActiveCurricula(List<String> remoteCurricula) async {
     _logger.debug(
       'Merging ${remoteCurricula.length} active curricula from Firestore',
@@ -859,10 +863,10 @@ class SyncEngine {
     if (remoteCurricula.isEmpty) return;
 
     try {
+      final profileId = _firestoreDataSource.profileId;
       final localCurricula = await _database.activeCurriculumDao
-          .getActiveCurricula();
+          .getActiveCurriculaByProfile(profileId);
 
-      // Activate curricula that are remote but not local
       for (final curriculumKey in remoteCurricula) {
         if (!localCurricula.contains(curriculumKey)) {
           final curriculumId = CurriculumId.values
@@ -872,7 +876,10 @@ class SyncEngine {
                 orElse: () => null,
               );
           if (curriculumId != null) {
-            await _database.activeCurriculumDao.activate(curriculumId);
+            await _database.activeCurriculumDao.activateByProfile(
+              curriculumId,
+              profileId,
+            );
           }
         }
       }
@@ -1341,9 +1348,9 @@ class SyncEngine {
       }
       _logger.debug('Pushed ${ledgerEntries.length} ledger entries');
 
-      // --- Active curricula ---
+      // --- Active curricula (scoped to the syncing profile) ---
       final activeCurricula = await _database.activeCurriculumDao
-          .getActiveCurricula();
+          .getActiveCurriculaByProfile(_firestoreDataSource.profileId);
       if (activeCurricula.isNotEmpty) {
         await _firestoreDataSource.pushActiveCurricula(activeCurricula);
         _logger.debug('Pushed ${activeCurricula.length} active curricula');
