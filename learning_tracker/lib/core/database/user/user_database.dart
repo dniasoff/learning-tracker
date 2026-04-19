@@ -112,18 +112,21 @@ class UserDatabase extends _$UserDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // v2 → v3: Epic 20 hard-tier auth refactor.
+        // v2 → v3: Epic 23 (DNI-223) hard-tier auth refactor.
         // Drops the anonymous-localUid schema and rebuilds UserProfiles
         // with email + passwordHash + tier. Pre-launch data is wiped —
         // any user must re-sign-up post-upgrade.
+        // Originally filed in Linear as "Epic 20"; renamed to Epic 23
+        // on 2026-04-19 to resolve the DNI-210 / DNI-223 numbering
+        // collision.
         if (from < 3) {
           await m.deleteTable('user_profiles');
           await m.createTable(userProfiles);
         }
-        // v3 → v4: Epic 20 story 20.11 event log for streaks + XP.
-        // Append-only tables; no backfill — existing state tables
-        // remain authoritative until a synthetic "initial state"
-        // event is written per profile in a follow-up.
+        // v3 → v4: Epic 23 event log for streaks + XP (see v2 spec §4.1
+        // conflict resolution). Append-only tables; no backfill —
+        // existing state tables remain authoritative until a synthetic
+        // "initial state" event is written per profile in a follow-up.
         if (from < 4) {
           await m.createTable(streakEvents);
           await m.createTable(xpEvents);
