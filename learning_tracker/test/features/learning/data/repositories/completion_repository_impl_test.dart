@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -56,6 +57,7 @@ void main() {
       database: database,
       syncEngine: mockSyncEngine,
       contentRepository: mockContentRepository,
+      streakService: StreakService(database),
     );
 
     // Default: no content items (bookmark advance is a no-op)
@@ -244,6 +246,42 @@ void main() {
       expect(completions.length, 3);
       expect(completions.map((c) => c.sefariaRef).toList(), refs);
       verify(() => mockSyncEngine.pushCompletion(any())).called(3);
+    });
+  });
+
+  group('streak integration', () {
+    test('updates cached streak table on first completion', () async {
+      // Streak table empty before any completion
+      expect(await database.streakDao.getStreak(), isNull);
+
+      await repository.markComplete(
+        const CompletionRequest(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Mishnah Berachot 1:1',
+          stageId: 1,
+          trackType: 'personal',
+        ),
+      );
+
+      final streak = await database.streakDao.getStreak();
+      expect(streak, isNotNull);
+      expect(streak!.currentStreak, 1);
+      expect(streak.maxStreak, 1);
+    });
+
+    test('duplicate completion does not double-increment streak', () async {
+      const request = CompletionRequest(
+        curriculumId: 'mishnayos',
+        sefariaRef: 'Mishnah Berachot 1:1',
+        stageId: 1,
+        trackType: 'personal',
+      );
+
+      await repository.markComplete(request);
+      await repository.markComplete(request); // idempotent path
+
+      final streak = await database.streakDao.getStreak();
+      expect(streak!.currentStreak, 1);
     });
   });
 

@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -19,6 +20,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
+  final StreakService? _streakService;
   final int _activeProfileId;
 
   CompletionRepositoryImpl({
@@ -27,12 +29,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required ContentRepository contentRepository,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
+    StreakService? streakService,
     int activeProfileId = 0,
   }) : _database = database,
        _syncEngine = syncEngine,
        _contentRepository = contentRepository,
        _bookmarkRepository = bookmarkRepository,
        _completionDetectionService = completionDetectionService,
+       _streakService = streakService,
        _activeProfileId = activeProfileId;
 
   @override
@@ -90,6 +94,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
       // 5. Create completion record
       final created = await _createCompletion(request: request, points: points);
+
+      // 6. Update cached streak table so the dashboard reflects the new
+      //    streak immediately — the streak_events log alone only updates
+      //    state when the reducer replays it (sync path).
+      await _streakService?.recordCompletion(created.completedAt);
+
       return (completion: created, isNew: true);
     });
 
@@ -180,6 +190,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
       request: request,
       points: points,
     );
+
+    await _streakService?.recordCompletion(completion.completedAt);
 
     await _advanceBookmark(
       curriculumId: request.curriculumId,
