@@ -5,22 +5,9 @@ An open-source Android app that helps Torah learners stay on track across multip
 <!-- Screenshots coming soon -->
 <!-- ![Learning Tracker](docs/images/screenshots.png) -->
 
-## Table of Contents
-
-- [The Problem](#the-problem)
-- [What Learning Tracker Does](#what-learning-tracker-does)
-- [Supported Curricula](#supported-curricula)
-- [Key Features](#key-features)
-- [Getting Started](#getting-started)
-- [Contributing](#contributing)
-- [Documentation](#documentation)
-- [Roadmap](#roadmap)
-- [Attribution](#attribution)
-- [License](#license)
-
 ## The Problem
 
-Learning Torah at scale means juggling multiple subjects, each with their own review cycles and progress markers. You need to remember where you are in Gemara, which Mishna Berurah simanim need chazara, and whether you're on pace to finish by your deadline — across school, tutoring, and personal learning.
+Learning Torah at scale means juggling multiple subjects, each with their own review cycles and progress markers. You need to remember where you are in Gemara, which Mishna Berurah simanim need chazara, and whether you're on pace to finish by your deadline.
 
 Most people use spreadsheets, paper lists, or memory. It works until it doesn't.
 
@@ -35,59 +22,55 @@ It supports two modes from a single app:
 
 ## Supported Curricula
 
-All text is sourced from the [Sefaria](https://www.sefaria.org/) API with Hebrew and English display.
+All text is sourced from the [Sefaria](https://www.sefaria.org/) API, bundled with the app at build time so the app works fully offline.
 
-| Curriculum | What's Included |
-|---|---|
-| **Mishnayos** | All 4,192 mishnayos across 6 sedarim |
-| **Gemara Bavli** | ~2,711 dapim, full Shas |
-| **Gemara Yerushalmi** | Full Talmud Yerushalmi |
-| **Mishna Berurah** | 697 simanim |
-| **Chumash** | 5,845 pesukim across all 5 chumashim |
-| **Nach** | Full Tanach |
-| **Mussar** | Multi-sefer library of mussar works |
-| **Halacha** | Halachic works |
+| Curriculum | Category | What's Included |
+|---|---|---|
+| **Mishnayos** | Oral Law | 4,192 mishnayos across 6 sedarim |
+| **Gemara Bavli** | Oral Law | ~2,711 dapim, full Shas |
+| **Gemara Yerushalmi** | Oral Law | Full Talmud Yerushalmi |
+| **Mishna Berurah** | Law Codes | 697 simanim |
+| **Mishneh Torah** | Law Codes | Maimonides' 14-book code of Jewish law |
+| **Chumash** | Biblical | 5,845 pesukim across the Five Books |
+| **Nach** | Biblical | Prophets and Writings |
+| **Tanach** | Biblical | Full Hebrew Bible as one curriculum |
+| **Mussar** | Ethics | Multi-sefer library of mussar works |
 
-Activate only what you need. Scope each curriculum to specific sedarim, masechtos, or sefarim — you track only what you're actually learning.
+Activate only what you need. Scope each curriculum to specific sedarim, masechtos, or sefarim.
 
 ## Key Features
 
-### Smart Daily Scheduling
+### Smart daily scheduling
 
 Set a completion deadline (Gregorian or Hebrew calendar) and the scheduler calculates your optimal daily load. It merges all your active curricula into one unified daily task list. No-deadline mode is available for self-paced learning.
 
-### Flexible Chazara Cycles
+### Flexible chazara cycles
 
-Define your own review schedule per curriculum. The default is learn > chazara 1 (+1 day) > chazara 2 (+7 days), but you control the number of stages, their names, and the timing between them.
+Define your own review schedule per curriculum. The default is learn → chazara 1 (+1 day) → chazara 2 (+7 days), but you control the number of stages, their names, and the timing.
 
-### Multi-Track Learning
+### Multiple tracks per curriculum
 
-Run up to three parallel tracks per curriculum — personal, school, and tutor — each with its own bookmark and scope. A child might learn one masechta at school and a different one with a tutor, and the app keeps them separate.
+Run multiple independent tracks within a curriculum — a global program like Daf Yomi in one track, a personal deep-dive in another — each with its own bookmark, scope, and goals.
 
-### Lifetime Learning Ledger
+### Lifetime learning ledger
 
-Every masechta, seder, or sefer you complete is permanently recorded. The ledger tracks your nth siyum on each unit and survives track deletion or curriculum changes. Your achievements are never lost.
+Every masechta, seder, or sefer you complete is permanently recorded. The ledger tracks your nth siyum on each unit and survives track deletion or curriculum changes.
 
-### My Learning Journey
+### Parent mode
 
-A dedicated screen showing your lifetime achievements across all curricula. See how far you've come ("12 of 63 masechtos"), toggle between chronological and grouped views, and celebrate milestones like completing an entire seder.
+PIN-protected. Manage reward catalogs, configure point values, view analytics, and oversee your child's learning.
 
-### Parent and Tutor Modes
-
-- **Parent mode** (PIN-protected): Manage reward catalogs, configure point values, view analytics, and oversee your child's learning.
-- **Tutor mode** (PIN-protected, read-only): View completion history, chazara queues, and progress breakdowns for any student.
-
-### Multi-Device Sync
+### Multi-device sync
 
 Sign in with email or Google. Your data syncs across devices with offline-first operation — completions queue locally and push when you're back online.
 
-### Dirshu Test Tracking
+### Dirshu test tracking
 
 Track test dates, record scores, set reminders, and view performance trends.
 
 ## Getting Started
 
-### What You Need
+### Requirements
 
 - Flutter SDK 3.38.6+ (stable channel)
 - Android SDK (API 21+)
@@ -99,13 +82,8 @@ Track test dates, record scores, set reminders, and view performance trends.
 git clone https://github.com/dniasoff/learning-tracker.git
 cd learning-tracker/learning_tracker
 
-# Install dependencies
 flutter pub get
-
-# Generate required code (Drift, Freezed, Riverpod, AutoRoute)
 dart run build_runner build --delete-conflicting-outputs
-
-# Run the app
 flutter run
 ```
 
@@ -118,45 +96,45 @@ make ci               # Full CI suite (from repo root)
 make help             # See all available commands
 ```
 
+For detailed setup, workflow, testing, and troubleshooting, see the **[Developer Handbook](docs/developer-handbook.md)**.
+
 ## Contributing
 
-Learning Tracker is open source and welcomes contributors of all experience levels.
-
-### Where to Start
+Learning Tracker is open source. Contributors of all experience levels are welcome.
 
 1. **Browse open issues** — look for `good first issue` or `help wanted` labels.
-2. **Read the quick references** — the [Architecture Quick Reference](_bmad-output/planning-artifacts/architecture-quick-reference.md) covers all the key decisions in one document. The [Testing Quick Reference](_bmad-output/planning-artifacts/testing-quick-reference.md) explains the TDD workflow.
+2. **Read the docs** — start at [`docs/index.md`](docs/index.md). The [Developer Handbook](docs/developer-handbook.md) covers everything from domain concepts to common tasks.
 3. **Pick something and dig in** — the codebase is organized by feature (auth, learning, scheduler, gamification, etc.), so you can focus on one area without understanding the entire app.
 
-### Development Workflow
+Development workflow:
 
 ```bash
-# Branch from dev
 git checkout -b feature/your-feature dev
-
-# Verify everything passes before submitting
-make ci
-
+make ci                     # verify before submitting
 # Open a PR against dev
 ```
 
-Coding standards are documented in [coding-standards.md](coding-standards.md). The project uses story-based TDD — run `make test-story-X.Y` to validate individual stories.
+Coding standards live in [`coding-standards.md`](coding-standards.md). The project uses story-based TDD — run `make test-story-X.Y` to validate individual stories.
 
 ## Documentation
 
-Detailed planning and design documents are in `_bmad-output/planning-artifacts/`:
+All documentation is under [`docs/`](docs/). Start at [`docs/index.md`](docs/index.md).
 
-- **[Architecture Quick Reference](_bmad-output/planning-artifacts/architecture-quick-reference.md)** — key decisions, patterns, and data models
-- **[UX Patterns Quick Reference](_bmad-output/planning-artifacts/ux-patterns-quick-reference.md)** — design system, navigation, and accessibility
-- **[Testing Quick Reference](_bmad-output/planning-artifacts/testing-quick-reference.md)** — TDD workflow and test patterns
-- **[Full PRD](_bmad-output/planning-artifacts/prd.md)** — complete product requirements
-- **[Full Architecture](_bmad-output/planning-artifacts/architecture.md)** — all architectural decisions in detail
+- [Project Overview](docs/project-overview.md)
+- [Developer Handbook](docs/developer-handbook.md)
+- [Architecture](docs/architecture.md)
+- [Data Models](docs/data-models.md)
+- [Project Status](docs/linear-status.md)
+- [Full PRD](docs/planning/prd.md)
 
 ## Roadmap
 
-- **Tutor and school companion app** — a separate app for tutors and schools to manage students, assign curricula, and track progress across classrooms. The current app already supports tutor and school tracks per learner; the companion app will provide the management side.
 - **iOS support**
 - **Additional curricula** as the Sefaria content library expands
+- **Dashboard & Progress Redesign** (Epic 20) — per-track isolation across the dashboard, progress screen, and charts
+- **Offline-First Architecture v2** — hard-tier auth refactor to simplify the offline-first model
+
+Parked ideas and cut features are documented under [`docs/_archive/`](docs/_archive/README.md).
 
 ## Attribution
 
@@ -164,4 +142,4 @@ Torah text content provided by [Sefaria](https://www.sefaria.org/).
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+MIT. See [`LICENSE`](LICENSE).

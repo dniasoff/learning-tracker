@@ -1,10 +1,18 @@
-# Refinery Context (mt)
+# Learning Tracker
 
-> **Recovery**: Run `gt prime` after compaction, clear, or new session
+See [`docs/index.md`](docs/index.md) for the full documentation index and read-in-order path for contributors.
 
-Full context is injected by `gt prime` at session start.
+## Quick links
 
-## Quick Reference
+- **[Developer Handbook](docs/developer-handbook.md)** — setup, workflow, coding standards, domain concepts.
+- **[Architecture](docs/architecture.md)** — current-state architecture.
+- **[Project Status](docs/linear-status.md)** — epic and story status.
+- **[Archive](docs/_archive/README.md)** — parked and superseded material; do not treat as active.
 
-- Check MQ: `gt mq list`
-- Process next: `gt mq process`
+## Repo layout
+
+- `docs/` — all canonical documentation.
+- `learning_tracker/` — Flutter application.
+- `tool/` — build and sync scripts.
+- `hooks/` — git hooks.
+- `_bmad/` — BMAD workflow definitions (outputs now write into `docs/`, not `_bmad-output/`).

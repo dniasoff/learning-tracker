@@ -24,7 +24,7 @@ date: 2026-03-18
 
 ## Architecture at a Glance
 
-The Learning Tracker application follows a **feature-first Clean Architecture** pattern built with Flutter. The codebase is organized into a shared core layer and 17 feature modules, each internally structured with data, domain, and presentation layers. State management uses Riverpod, persistence uses Drift (SQLite), and cloud sync uses Firebase.
+The Learning Tracker application follows a **feature-first Clean Architecture** pattern built with Flutter. The codebase is organized into a shared core layer and 18 feature modules, each internally structured with data, domain, and presentation layers. State management uses Riverpod, persistence uses Drift (SQLite), and cloud sync uses Firebase.
 
 ---
 
@@ -90,10 +90,13 @@ The core layer (`lib/core/`) provides shared infrastructure that all feature mod
 ### Database
 
 - **ORM:** Drift (SQLite)
-- **Schema:** 22 tables, 22 DAOs, current schema version 15
+- **Three-database split:** User DB (read-write, 23 tables, schema v4) + Content DB (read-only, 3 tables: TextCache, CalendarCycles, SeedMetadata; schema v3) + Device Registry DB (2 tables: DeviceAccounts, DeviceState; schema v1). See [`planning/two-database-architecture.md`](planning/two-database-architecture.md).
+  - **Content DB** (Epic 19) — read-only seed shipped as `assets/db/content.db.gz`, decompressed on first launch.
+  - **User DB** (Epic 19) — per-account file (`user_acc_<id>.db`). Each account on the device gets its own DB file.
+  - **Device Registry DB** (Epic 21) — single workspace-level DB tracking up to 5 accounts on a device and the last active account.
 - **Profile scoping:** All user-facing tables include `profileId` in their primary keys, enabling multi-profile isolation
 - **Append-only tables:** `completions` and `learning_ledger` are append-only for data integrity and audit trails
-- **Migrations:** Incremental migration strategy from v1 through v15
+- **Migrations:** User DB is at v4 — v2→v3 hard-tier auth refactor (Epic 23), v3→v4 StreakEvents/XpEvents audit tables
 
 ### Navigation
 
@@ -106,7 +109,7 @@ The core layer (`lib/core/`) provides shared infrastructure that all feature mod
 | Service | Purpose |
 |---|---|
 | PinService | bcrypt hashing via flutter_secure_storage, 5-attempt lockout with 15-min cooldown |
-| TrackService | Manages personal/school/tutor track assignments |
+| TrackService | Manages Personal track assignments (single track type in the shipped product) |
 | DuplicatePreventionService | Idempotent completion enforcement |
 | CrossCurriculumAggregator | Aggregates metrics across all 9 curricula |
 | DailyScheduleComposer | Assembles the daily task list from scheduler output |
@@ -132,7 +135,7 @@ The core layer (`lib/core/`) provides shared infrastructure that all feature mod
 
 ## Feature Modules
 
-The application contains 17 feature modules. Each follows the same internal layering:
+The application contains 18 feature modules. Each follows the same internal layering:
 
 ```
 lib/features/<feature>/
@@ -170,7 +173,8 @@ lib/features/<feature>/
 | 14 | **stages** | Stage definitions with 3 schedule types, max 10 stages, protected Learn stage, 2-pass reordering |
 | 15 | **sync** | Hybrid push/pull, Firestore profile-scoped collections, merge guards, offline queue (max 5 retries) |
 | 16 | **test_tracking** | Test score trend analysis, test reminder scheduling |
-| 17 | **tutor_mode** | Read-only mode, TutorDashboardAggregator (completion history, chazara queue, pace info) |
+| 17 | **track_setup** | Track management hub, track detail and editing screens |
+| 18 | **tutor_mode** | PIN-protected read-only mode for tutors, TutorDashboardAggregator. Fully wired; not actively promoted in v1 roadmap — see [`_archive/scrapped-ideas/tutor-mode-epic-11.md`](_archive/scrapped-ideas/tutor-mode-epic-11.md). |
 
 ---
 
@@ -395,9 +399,10 @@ Stage progression enforces a strict sequential order:
 
 ### Enumerations
 
-- **CurriculumId:** 9 values representing distinct learning curricula
-- **TrackType:** `personal`, `school`, `tutor`
+- **CurriculumId:** 9 values — `mishnayos`, `bavli`, `yerushalmi`, `mishna_berurah`, `mishneh_torah`, `chumash`, `nach`, `tanach`, `mussar`.
+- **TrackType:** `personal` (mandatory), `school`, `tutor`. `personal` is the default user-facing flow. `school` and `tutor` are activated by parents via the parent-mode track management screen. See [`_archive/scrapped-ideas/school-and-tutor-tracks.md`](_archive/scrapped-ideas/school-and-tutor-tracks.md) for history.
 - **UserMode:** `child`, `adult`
+- **UserTier:** `cloudBorn`, `localBorn` (Epic 23 hard-tier auth)
 
 ---
 
@@ -450,11 +455,13 @@ Firebase Authentication handles account-level auth with email/password and Googl
 
 ## Database Schema
 
-- **22 tables** managed by Drift ORM across **22 DAOs**
-- **Current schema version:** 15 (with incremental migrations from v1)
+- **User DB:** 23 tables, 20 DAOs, current schema version **4** (v2 was the last pre-split schema; v3 shipped the hard-tier auth refactor in Epic 23; v4 added event-log tables)
+- **Content DB:** 3 read-only tables (TextCache ~52K rows, CalendarCycles ~35K rows, SeedMetadata), schema v3. Shipped as `assets/db/content.db.gz` and upgraded atomically on app update.
+- **Device Registry DB:** 2 tables (DeviceAccounts, DeviceState), schema v1. Tracks up to 5 accounts on a device and the last active account.
 - **Profile isolation:** `profileId` is part of the primary key on all user-facing tables
 - **Append-only tables:** `completions` and `learning_ledger` are never updated or deleted, preserving a full audit trail of learning activity
-- **Cascade deletes:** Profile deletion cascades across 11 dependent tables
+- **Cascade deletes:** Profile deletion cascades across dependent tables
+- See [`planning/two-database-architecture.md`](planning/two-database-architecture.md) for the detailed design
 
 ---
 

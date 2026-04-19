@@ -1,56 +1,46 @@
 ---
 title: "Learning Tracker - Project Overview"
 description: "Entry point for understanding the Learning Tracker project: a multi-curriculum Torah learning tracker built with Flutter and Dart."
-date: 2026-03-18
+date: 2026-04-19
 ---
 
 # Learning Tracker - Project Overview
 
-## How to Use This Document
+## How to use this document
 
-This document serves as the entry point for understanding the Learning Tracker project. Start here to learn about the tech stack, architecture, feature modules, and supported curricula. For navigating all project documentation, visit the [Documentation Index](./index.md).
+Start here to learn about the tech stack, architecture, feature modules, and supported curricula. For the full doc index, see [`index.md`](./index.md). For a hands-on guide, see the [Developer Handbook](./developer-handbook.md).
 
-## Table of Contents
-
-- [Executive Summary](#executive-summary)
-- [Tech Stack](#tech-stack)
-- [Architecture Overview](#architecture-overview)
-- [Feature Modules](#feature-modules)
-- [Supported Curricula](#supported-curricula)
-- [Project Status](#project-status)
-- [Links to Other Docs](#links-to-other-docs)
-
-## Executive Summary
+## Executive summary
 
 Learning Tracker is a multi-curriculum Torah learning tracker for Android, built with Flutter and Dart. It provides daily study management with smart scheduling, chazara (review) cycles, progress tracking, and gamification. The app supports two user modes: a gamified, parent-managed experience for children and a self-directed mode for adults.
 
-The app covers nine Torah curricula sourced from Sefaria, with Hebrew and English display. Core capabilities include adaptive daily scheduling, multi-stage review cycles, offline-first data with cloud sync, and a lifetime learning ledger. Parent and tutor modes offer PIN-protected dashboards for analytics and reward management.
+The app covers nine Torah curricula sourced from Sefaria, with Hebrew and English display. Core capabilities include adaptive daily scheduling, multi-stage review cycles, offline-first data with cloud sync, and a lifetime learning ledger. A PIN-protected parent dashboard handles analytics and reward management.
 
-**Codebase:** ~366 source files, 182 test files, 17 feature modules.
+**Codebase snapshot:** ~366 source files, 182 test files, 18 feature modules.
 
-## Tech Stack
+## Tech stack
 
 | Category | Technology | Version / Notes |
 |---|---|---|
-| Framework | Flutter | 3.29.4+ |
+| Framework | Flutter | 3.38.6+ |
 | Language | Dart | 3.10.8+ |
 | State Management | Riverpod | 3.x with code generation |
 | Navigation | auto_route | 11.x (type-safe, code generated) |
-| Database | Drift (SQLite ORM) | 2.31+, 22 tables |
-| Backend | Firebase | Auth + Cloud Firestore + Firebase Storage |
+| Local DB | Drift (SQLite ORM) | Three databases: User DB (23 tables, schema v4) + Content DB (3 tables, read-only, v3) + Device Registry DB (2 tables, v1) |
+| Backend | Firebase | Auth + Cloud Firestore + Storage |
 | Data Classes | Freezed | Immutable models |
-| HTTP | dio | 5.9+ (Sefaria API) |
-| Logging | Talker suite | -- |
-| Testing | mocktail, flutter_test | -- |
+| HTTP | dio | 5.9+ (Sefaria API, dev-time only) |
+| Logging | Talker suite | — |
+| Testing | mocktail, flutter_test | — |
 | Calendar | kosher_dart | Hebrew date support |
 | Security | flutter_secure_storage, bcrypt | PIN hashing |
-| Charts | fl_chart | -- |
+| Charts | fl_chart | — |
 | Notifications | flutter_local_notifications | Shabbos/Yom Tov quiet mode |
 | Code Generation | build_runner | drift, auto_route, freezed, riverpod, json_serializable |
 
-## Architecture Overview
+## Architecture overview
 
-The project follows **feature-first Clean Architecture** with 17 feature modules. Each module organizes code into three layers:
+Feature-first Clean Architecture with 18 feature modules. Each module has three layers:
 
 ```text
 feature/
@@ -59,7 +49,7 @@ feature/
   presentation/  # Screens, widgets, providers
 ```
 
-### Key Architecture Decisions
+### Key architecture decisions
 
 | ID | Decision |
 |---|---|
@@ -70,89 +60,83 @@ feature/
 | D5 | User mode enum (child/adult) with feature flags |
 | D7 | Separate `learning_order` table (content kept immutable) |
 | D8 | Per-curriculum points + global streak |
+| D-TWODB | Two databases: read-only Content DB + read-write User DB (Epic 19) |
 
-### Architecture Patterns
+### Patterns
 
 - **Repository pattern** with nullable returns (P2)
 - **Curriculum-scoped Riverpod family providers** (P3)
+- **Flat Firestore collections** with deterministic IDs (P4)
 - **UTC storage with local display** (P5)
-- **Offline-first** with push-on-write, pull-on-launch, and foreground listeners (D4)
+- **Offline-first** with push-on-write, pull-on-launch, foreground listeners (D4)
 
-## Feature Modules
-
-The app organizes its functionality into 17 feature modules:
+## Feature modules
 
 | Module | Description |
 |---|---|
-| **auth** | Handles Firebase Auth (email/password + Google Sign-In) |
-| **content_browsing** | Browses and displays curriculum content from Sefaria (Hebrew/English) |
-| **dashboard** | Presents the main dashboard with daily tasks and curriculum summaries |
-| **gamification** | Manages per-curriculum points, global streak, and mystery rewards |
-| **learning** | Drives the core learning flow with completion tracking and stage progression |
-| **learning_order** | Controls the sequence and ordering of learning items per curriculum |
-| **notifications** | Delivers local notifications with Shabbos/Yom Tov quiet mode |
-| **onboarding** | Guides user setup, curriculum selection, and initial configuration |
-| **parent_mode** | Provides a PIN-protected analytics and reward management dashboard for parents |
-| **profiles** | Supports multi-profile management (up to 10 learner profiles per account) |
+| **auth** | Firebase Auth (email/password + Google Sign-In) |
+| **content_browsing** | Browses and displays curriculum content from bundled Sefaria assets |
+| **dashboard** | Main dashboard with daily tasks and cross-curriculum summaries |
+| **gamification** | Per-curriculum points, global streak, mystery rewards |
+| **learning** | Core learning flow with completion tracking and stage progression |
+| **learning_order** | Sequence and ordering of learning items per curriculum |
+| **notifications** | Local notifications with Shabbos/Yom Tov quiet mode |
+| **onboarding** | User setup, curriculum selection, initial configuration |
+| **parent_mode** | PIN-protected analytics and reward management for parents |
+| **profiles** | Multi-profile management (up to 10 learner profiles per account) |
 | **progress** | Tracks and visualizes learning progress across curricula |
-| **scheduler** | Generates smart daily schedules with adaptive pacing and deadline tracking |
-| **settings** | Manages app preferences, data export/import, and account settings |
-| **stages** | Defines and configures multi-stage review cycles (Learn, Chazara 1, Chazara 2, up to 10 stages) |
-| **sync** | Handles offline queue, cloud sync (push/pull), and conflict resolution |
-| **test_tracking** | Tracks test results and performance analytics |
-| **tutor_mode** | Provides a PIN-protected read-only dashboard for tutors |
+| **scheduler** | Smart daily schedules with adaptive pacing and deadline tracking |
+| **settings** | App preferences, data export/import, account settings |
+| **stages** | Multi-stage review cycles (Learn, Chazara 1..N, up to 10 stages) |
+| **sync** | Offline queue, cloud sync (push/pull), conflict resolution |
+| **test_tracking** | Test results and performance analytics |
+| **track_setup** | Track management hub and track detail screens for configuring and editing tracks |
+| **tutor_mode** | PIN-protected read-only dashboard for tutors (shipped, not actively promoted in v1 roadmap) |
 
-### Schedule Types
+### Schedule types
 
-The scheduler supports three modes:
+- **Delay-based** — review after a configurable number of days.
+- **Friday/Shabbos Review** — weekly consolidation layered on top of delay-based chazara.
+- **Shabbos Review** — same, single review day.
 
-- **Delay-based** -- review after a configurable number of days
-- **Weekly** -- review on specific days of the week
-- **Rolling window** -- review within a sliding time window
+## Supported curricula
 
-## Supported Curricula
+Nine Torah curricula, all sourced from Sefaria. Content is bundled at build time and shipped in the APK — no runtime API calls.
 
-Nine Torah curricula are supported, all sourced from Sefaria. The following table shows each curriculum and its approximate item count:
+| Curriculum | `CurriculumId` | Category | Items |
+|---|---|---|---|
+| **Mishnayos** | `mishnayos` | Oral Law | 4,192 mishnayos across 6 sedarim |
+| **Gemara Bavli** | `bavli` | Oral Law | ~2,711 dapim, full Shas |
+| **Gemara Yerushalmi** | `yerushalmi` | Oral Law | Full Talmud Yerushalmi |
+| **Mishna Berurah** | `mishna_berurah` | Law Codes | 697 simanim |
+| **Mishneh Torah** | `mishneh_torah` | Law Codes | Maimonides' 14-book code of Jewish law |
+| **Chumash** | `chumash` | Biblical | 5,845 pesukim across the Five Books |
+| **Nach** | `nach` | Biblical | Prophets + Writings |
+| **Tanach** | `tanach` | Biblical | Full Hebrew Bible as a single curriculum |
+| **Mussar** | `mussar` | Ethics | Multi-sefer library of mussar works |
 
-| Curriculum | Items |
-|---|---|
-| **Mishnayos** | 4,192 mishnayos across 6 sedarim |
-| **Gemara Bavli** | ~2,711 dapim, full Shas |
-| **Gemara Yerushalmi** | Full Talmud Yerushalmi |
-| **Mishna Berurah** | 697 simanim |
-| **Chumash** | 5,845 pesukim across all 5 chumashim |
-| **Nach** | Full Tanach |
-| **Mussar** | Multi-sefer library of mussar works |
-| **Halacha** | Halachic works |
-| **Torah** | Torah text |
+Users activate only the curricula they need and scope each to specific sedarim, masechtos, or sefarim.
 
-All curricula support Hebrew and English display via the Sefaria API. Users activate only the curricula they need and scope each one to specific sedarim, masechtos, or sefarim.
+## Project status
 
-## Project Status
-
-**As of 2026-03-18** (from Linear):
+**As of 2026-04-19** — sourced from [`docs/linear-status.md`](./linear-status.md), which is the canonical epic/story status document.
 
 | Metric | Value |
 |---|---|
-| Total Epics | 15 |
-| Total Stories | 89 |
-| Done | 86 |
-| In Review | 3 (Epic 14: Settings) |
-| Not Started | Epic 15: Multi-Profile (no stories yet) |
+| Epics delivered (production) | 1–14, 16, 19, 21, 23 |
+| Epics in review | 18 (Onboarding & Track Management Overhaul — all 12 stories in review) |
+| Epics in design / backlog | 20 (dashboard redesign, 12 stories canceled pending re-scope), 22 (catch-up & amnesty, 22 stories planned) |
+| Total stories shipped | 100+ |
 
-Overall completion: **~97% of defined stories**.
-
-## Links to Other Docs
-
-For a complete listing, visit the [Documentation Index](./index.md).
+## Links
 
 | Document | Path |
 |---|---|
-| Product Brief | [Product Brief](./A-Product-Brief) |
-| Trigger Map | [Trigger Map](./B-Trigger-Map) |
-| Platform Requirements | [Platform Requirements](./C-Platform-Requirements) |
-| Scenarios | [Scenarios](./C-Scenarios) |
-| Design System | [Design System](./D-Design-System) |
-| PRD | [PRD](./E-PRD) |
-| Testing | [Testing](./F-Testing) |
-| Product Development | [Product Development](./G-Product-Development) |
+| Documentation index | [`index.md`](./index.md) |
+| Developer handbook | [`developer-handbook.md`](./developer-handbook.md) |
+| Architecture (current state) | [`architecture.md`](./architecture.md) |
+| Architecture (design intent) | [`planning/architecture-design.md`](./planning/architecture-design.md) |
+| Data models | [`data-models.md`](./data-models.md) |
+| Testing guide | [`testing-guide.md`](./testing-guide.md) |
+| Linear status | [`linear-status.md`](./linear-status.md) |
+| Parked ideas | [`_archive/README.md`](./_archive/README.md) |

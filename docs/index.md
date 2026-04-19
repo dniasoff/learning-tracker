@@ -1,119 +1,118 @@
 ---
-title: "Learning Tracker - Documentation Index"
-description: "Master navigation hub for all Learning Tracker project documentation."
-date: 2026-03-18
-generated_scan_level: "Exhaustive"
-generated_mode: "Initial Scan"
+title: "Learning Tracker — Documentation Index"
+description: "Entry point for every doc in this repository. Read-in-order path for new contributors."
+date: 2026-04-19
 ---
 
-# Learning Tracker - Documentation Index
+# Learning Tracker — Documentation Index
 
-## How to Navigate
+All project documentation lives under `docs/`. Nothing canonical lives outside it.
 
-This page serves as the master navigation hub for all project documentation. Documents fall into four groups:
+## Read in this order
 
-- **Generated Docs** provide comprehensive analysis of the codebase, architecture, and components.
-- **Planning Docs** contain the original product requirements, architecture decisions, and UX patterns.
-- **Standards** define coding rules, project setup, and contribution guidelines.
-- **WDS Docs** hold design system artifacts, scenarios, and development planning materials.
+1. **[Project Overview](project-overview.md)** — 5 min. What the app is, the tech stack, feature modules, curricula, project status.
+2. **[Developer Handbook](developer-handbook.md)** — 30 min. Domain concepts (Chazara, Tracks, Programs), architecture mental models, setup, Make targets, testing, coding standards, troubleshooting.
+3. **[Architecture](architecture.md)** — Current-state architecture generated from code. Reference while writing a feature.
+4. **[Data Models](data-models.md)** — Three-database schema (User DB 23 tables, Content DB 3 tables, Device Registry DB 2 tables), ER diagram, DAO operations, Firestore collections.
+5. **[Testing Guide](testing-guide.md)** — Test architecture, fixtures, mocks, gotchas.
+6. **[Project Status](linear-status.md)** — Current epic and story status.
 
-Start with the [Project Overview](./project-overview.md) for an executive summary, then explore the sections below based on your needs.
+For domain-specific deep dives, see the flows and planning sections below.
 
-## Table of Contents
+## Reference docs
 
-- [Project Overview](#project-overview)
-- [Generated Docs](#generated-docs)
-- [Planning Docs](#planning-docs)
-- [Standards](#standards)
-- [WDS Docs](#wds-docs)
-- [Getting Started](#getting-started)
-- [Project Status](#project-status)
+- [Project Overview](project-overview.md)
+- [Developer Handbook](developer-handbook.md)
+- [Architecture (current state)](architecture.md)
+- [Data Models](data-models.md)
+- [Component Inventory](component-inventory.md)
+- [Source Tree Analysis](source-tree-analysis.md)
+- [Testing Guide](testing-guide.md)
+- [Privacy Policy](privacy-policy.md)
 
-## Project Overview
+## Planning and design (`planning/`)
 
-- **Type:** Monolith (single Flutter app)
-- **Primary Language:** Dart 3.10.8+
-- **Framework:** Flutter 3.29.4+
-- **Architecture:** Feature-first Clean Architecture (17 feature modules)
-- **Database:** Drift (SQLite ORM) — 22 tables, schema v15
-- **Backend:** Firebase Auth + Cloud Firestore
-- **State Management:** Riverpod 3.x with code generation
+Active planning artifacts — the design intent and the rationale behind the current code.
 
-### Quick Reference
+- [PRD](planning/prd.md)
+- [Architecture — Design Intent](planning/architecture-design.md) — comprehensive design-level doc
+- [Architecture Quick Reference](planning/architecture-quick-reference.md)
+- [Offline-First Architecture v2](planning/architecture-offline-v2.md) — current direction for the auth refactor (Epic 20 b)
+- [Two-Database Architecture](planning/two-database-architecture.md) — Content DB + User DB split (Epic 19)
+- [Epics](planning/epics.md) — detailed epic + story breakdowns
+- [v1 Developer Roadmap](planning/v1-developer-roadmap.md)
+- [Calendar Cycle Computation Analysis](planning/calendar-cycle-analysis.md)
+- [Catch-up & Amnesty Scenarios](planning/catchup-and-amnesty-scenarios.md)
+- [Upgrade Flow — UX Spec](planning/ux-upgrade-flow-spec.md)
+- [Upgrade Flow — Visual Design](planning/ux-upgrade-flow-visual.md)
+- [UX Patterns Quick Reference](planning/ux-patterns-quick-reference.md)
+- [Testing Quick Reference](planning/testing-quick-reference.md)
+- [Research](planning/research/)
 
-- **Entry Point:** `lib/main.dart` → AppShell (4-tab bottom nav)
-- **Source Files:** ~366 Dart files in `lib/`
-- **Test Files:** 182 files, 531+ tests
-- **Features:** 17 modules following data/domain/presentation layers
-- **Curricula:** 9 Torah learning curricula (Mishnayos, Bavli, Yerushalmi, Mishna Berurah, Chumash, Torah, Tanach, Nach, Mussar)
+## Flows (`flows/`)
 
-## Generated Docs
+Feature-flow documentation — how a specific user flow works end-to-end.
 
-These documents provide a comprehensive analysis of the codebase, generated from an exhaustive scan.
+- [Add Track Flow](flows/add-track-flow.md)
+- [Dashboard Redesign Analysis](flows/dashboard-redesign-analysis.md)
 
-- [Project Overview](./project-overview.md) — Executive summary, tech stack, feature modules, and project status
-- [Architecture](./architecture.md) — Architecture decisions (D1-D8), patterns (P1-P6), Mermaid diagrams, and security model
-- [Data Models](./data-models.md) — 22-table database schema, ER diagram, DAO operations, and Firestore collections
-- [Source Tree Analysis](./source-tree-analysis.md) — Annotated directory structure, entry points, and critical paths
-- [Component Inventory](./component-inventory.md) — 45 screens, 59 widgets, Riverpod providers, navigation, and theme
-- [Development Guide](./development-guide.md) — Setup instructions, Make targets, testing strategy, coding standards, and CI/CD
-- [Testing Guide](./testing-guide.md) — Test architecture, how to write tests, fixtures, mocks, and known gotchas
-- [Project Status (Linear)](./linear-status.md) — Epic breakdown, story status, and upcoming work from Linear
+## Scenarios (`scenarios/`)
 
-## Planning Docs
+UX scenario specifications driving upcoming epics.
 
-Original planning artifacts live in `_bmad-output/planning-artifacts/`.
+- [Dashboard Redesign Set](scenarios/dashboard-redesign-set/) — Epic 20 (a)
+- [Evolution Set](scenarios/evolution/) — Catch-up, amnesty, pause, cycle boundary (Epic 22)
+- [Stitch Prompts](scenarios/stitch-prompts/) — AI-generated UI design prompts
 
-- [Full PRD](../_bmad-output/planning-artifacts/prd.md) — Complete product requirements document
-- [Full Architecture](../_bmad-output/planning-artifacts/architecture.md) — Detailed architectural decisions and rationale
-- [Architecture Quick Reference](../_bmad-output/planning-artifacts/architecture-quick-reference.md) — Key architecture decisions at a glance
-- [UX Patterns Quick Reference](../_bmad-output/planning-artifacts/ux-patterns-quick-reference.md) — Design system and navigation patterns
-- [Testing Quick Reference](../_bmad-output/planning-artifacts/testing-quick-reference.md) — TDD workflow and test patterns
+## Stories (`stories/`)
 
-## Standards
+Story-level implementation specs, produced before each story is coded.
 
-- [Coding Standards](../coding-standards.md) — Cast-iron rules, Clean Code principles, and XP practices
-- [Project README](../README.md) — Project overview, getting started, and contributing guidelines
-- [App README](../learning_tracker/README.md) — Tech stack, test structure, and CI/CD configuration
+- [Implementation Artifacts](stories/implementation/) — one file per shipped or in-flight story (Epics 1, 16, 18, 19, 21)
 
-## WDS Docs
+## Status (`status/`)
 
-Design and development planning materials live in `docs/`.
+Machine-readable project status files, managed by BMAD workflows.
 
-- [Product Brief](./A-Product-Brief/) — Product context and goals
-- [Trigger Map](./B-Trigger-Map/) — User psychology mapping
-- [Platform Requirements](./C-Platform-Requirements/) — Platform specifications
-- [Scenarios](./C-Scenarios/) — UX scenarios and user journeys
-- [Design System](./D-Design-System/) — Design tokens and component definitions
-- [PRD](./E-PRD/) — Detailed requirements documents
-- [Testing](./F-Testing/) — Test planning and strategy
-- [Product Development](./G-Product-Development/) — Development artifacts and tracking
+- [`sprint-status.yaml`](status/sprint-status.yaml) — per-epic per-story status (source of truth)
+- [`linear-mapping.yaml`](status/linear-mapping.yaml) — Linear ticket ID mapping
+- [`bmm-workflow-status.yaml`](status/bmm-workflow-status.yaml) — BMAD workflow state
+- [`wds-workflow-status.yaml`](status/wds-workflow-status.yaml) — WDS workflow state
 
-## Getting Started
+## QA (`qa/`)
+
+- [Testing methodology and per-epic test plans](qa/legacy/)
+
+## Archive (`_archive/`)
+
+Parked, superseded, and historical material. Not active reference.
+
+- [Archive README](_archive/README.md) — index of everything here and why
+- Scrapped ideas: [School/Tutor tracks](_archive/scrapped-ideas/school-and-tutor-tracks.md), [Tutor Mode (parked)](_archive/scrapped-ideas/tutor-mode-epic-11.md), [Tutor Companion App](_archive/scrapped-ideas/tutor-companion-app.md), [Epic 15 originals](_archive/scrapped-ideas/epic-15-multi-profile-original-stories.md)
+- Superseded: original architecture v1, early UX spec, early component spec, January product brief
+- Historical QA: epic-1 QA report, Epic 2 QA checklist, Epic 4 retrospective, DNI-122 coverage report
+- Tooling notes: AGENTS, VALIDATION_NOTES, app_flow, project-scan
+
+## Outside `docs/`
+
+- [`README.md`](../README.md) — the repo's public front page (features, install, contribute).
+- [`coding-standards.md`](../coding-standards.md) — enforced coding rules.
+- [`CLAUDE.md`](../CLAUDE.md) — pointer for AI agents; they should come to this index.
+- [`LICENSE`](../LICENSE) — MIT.
+
+## Getting started
 
 ```bash
-# Clone and set up
 git clone https://github.com/dniasoff/learning-tracker.git
 cd learning-tracker/learning_tracker
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
-
-# Run the app
 flutter run
 
-# Run tests
-make ci                    # Full CI suite (analyze + format + tests)
-make test-story-X.Y        # Individual story test
-make test-epic-N            # All stories in epic
+# Tests
+make ci                    # full local CI
+make test-story-X.Y        # individual story
+make test-epic-N           # all stories in an epic
 ```
 
-## Project Status
-
-Data sourced from Linear as of 2026-03-18.
-
-| Metric | Value |
-|---|---|
-| Epics | 15 |
-| Stories | 89 |
-| Done | 86 |
-| In Review | 3 (Epic 14: Settings) |
+See the [Developer Handbook](developer-handbook.md) for the full setup and workflow.
