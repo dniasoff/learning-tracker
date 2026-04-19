@@ -13,7 +13,6 @@ import 'package:learning_tracker/features/learning/presentation/providers/optimi
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 /// Button widget for marking a content item as completed.
 ///
@@ -131,7 +130,10 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       }
       ref.invalidate(dashboardStreakProvider);
       ref.invalidate(dashboardGlobalPointsProvider);
-      ref.invalidate(allDailyTasksProvider);
+      // Today's plan is snapshotted per local day — we don't invalidate
+      // allDailyTasksProvider on completion. The task card reads completion
+      // state from isStageCompletedProvider so the UI still reflects the
+      // mark-done, and new items are not pulled into today's list.
 
       // Background: streak alert, rewards
       unawaited(_postCompletionWork(completion));

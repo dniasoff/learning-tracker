@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/curriculum_scope_dao.dart';
+import 'package:learning_tracker/core/database/daos/daily_plan_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_ledger_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
@@ -21,6 +22,7 @@ import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
+import 'package:learning_tracker/core/database/tables/daily_plans.dart';
 import 'package:learning_tracker/core/database/tables/goals.dart';
 import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
@@ -54,6 +56,7 @@ part 'user_database.g.dart';
     PointConfigs,
     StudyDayConfigs,
     Completions,
+    DailyPlans,
     LearningLedger,
     Bookmarks,
     LearningOrder,
@@ -67,6 +70,7 @@ part 'user_database.g.dart';
     ActiveCurriculumDao,
     CurriculumScopeDao,
     CompletionDao,
+    DailyPlanDao,
     LearningLedgerDao,
     GoalDao,
     PointConfigDao,
@@ -87,7 +91,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -115,6 +119,12 @@ class UserDatabase extends _$UserDatabase {
           await m.deleteTable('reward_pool_items');
           await m.deleteTable('xp_events');
           await m.deleteTable('test_scores');
+        }
+        // v5 → v6: daily_plans snapshot table — today's task list is
+        // materialized once per local day; completions no longer regenerate
+        // the plan.
+        if (from < 6) {
+          await m.createTable(dailyPlans);
         }
       },
     );

@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_content_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
@@ -29,6 +31,7 @@ DateTime clock(Ref ref) => DateTime.now().toUtc();
 @riverpod
 SchedulerEngine schedulerEngine(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
 
   // Use scope-aware content: returns scoped content if scopes are set,
   // otherwise returns full curriculum content.
@@ -43,6 +46,7 @@ SchedulerEngine schedulerEngine(Ref ref) {
     completionRepository: SchedulerCompletionRepositoryImpl(
       completionDao: db.completionDao,
       stageDao: db.stageDao,
+      profileId: profileId,
     ),
     stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
     learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
@@ -199,20 +203,74 @@ Future<PaceStatus?> paceStatus(
   );
 }
 
-/// All daily tasks across active curricula, filtered by skipped items.
+/// Repository that snapshots today's plan to DB so completions don't
+/// trigger regeneration.
+@riverpod
+DailyPlanRepository dailyPlanRepository(Ref ref) {
+  final db = ref.watch(userDatabaseProvider);
+  return DailyPlanRepository(db);
+}
+
+/// All daily tasks across active curricula.
 ///
-/// Previously-skipped tasks receive an `overdueChazara`-level priority
-/// boost so they appear near the top of the list.
+/// The raw plan is snapshotted to the `daily_plans` table on the first
+/// read of each local day and served back verbatim on subsequent reads.
+/// Completions do **not** regenerate the plan — today's list is a
+/// contract. Skipped-task filtering and previously-skipped priority
+/// boosting are applied at read time.
 @riverpod
 Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final generator = ref.watch(dailyTaskGeneratorProvider);
+  final planRepo = ref.watch(dailyPlanRepositoryProvider);
   final skipped = ref.watch(skippedTasksProvider);
   final previouslySkipped = await ref.watch(
     previouslySkippedRefsProvider.future,
   );
-
   final profileId = ref.watch(activeProfileIdProvider);
+  final now = ref.watch(clockProvider);
+
+  final tasks = await planRepo.getOrSnapshotPlan(
+    profileId: profileId,
+    now: now,
+    buildPlan: () => _buildFreshPlan(
+      db: db,
+      generator: generator,
+      profileId: profileId,
+      now: now,
+    ),
+  );
+
+  // Apply read-time filters: skipped-today removed, previously-skipped boosted.
+  final filtered = tasks
+      .where((t) => !skipped.contains(t.contentItemSefariaRef))
+      .toList();
+
+  if (previouslySkipped.isEmpty) {
+    filtered.sort((a, b) => a.priority.index.compareTo(b.priority.index));
+    return filtered;
+  }
+
+  return filtered.map((task) {
+    if (previouslySkipped.contains(task.contentItemSefariaRef) &&
+        task.priority != DailyTaskPriority.overdueChazara) {
+      return task.copyWith(
+        priority: DailyTaskPriority.overdueChazara,
+        reason: '${task.reason} (previously skipped)',
+      );
+    }
+    return task;
+  }).toList()..sort((a, b) => a.priority.index.compareTo(b.priority.index));
+}
+
+/// Runs the scheduler across all active curricula to produce a fresh plan.
+/// Called only when no snapshot exists for the current local day.
+Future<List<DailyTask>> _buildFreshPlan({
+  required UserDatabase db,
+  required DailyTaskGenerator generator,
+  required int profileId,
+  required DateTime now,
+}) async {
   final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
     profileId,
   );
@@ -221,7 +279,6 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
       ...CurriculumId.values.where((c) => c.storageKey == key).take(1),
   ];
 
-  // Look up earliest goal deadline and pace settings per curriculum.
   final goalDeadlines = <CurriculumId, DateTime>{};
   final pacePerDayMap = <CurriculumId, double>{};
   for (final curriculum in activeCurricula) {
@@ -233,7 +290,6 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
       if (goal.goalType == 'pace' &&
           goal.paceValue != null &&
           goal.paceUnit != null) {
-        // Pace-based goal: convert to daily rate
         final dailyRate = PaceCalculator.paceToDaily(
           goal.paceValue!,
           goal.paceUnit!,
@@ -251,8 +307,6 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     }
   }
 
-  // Look up study day config per curriculum
-  final now = ref.watch(clockProvider);
   final isStudyDayMap = <CurriculumId, bool>{};
   final studyDaysPerWeekMap = <CurriculumId, int>{};
   for (final curriculum in activeCurricula) {
@@ -268,27 +322,12 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
         );
   }
 
-  final tasks = await generator.generateAll(
+  return generator.generateAll(
     activeCurricula,
     now,
-    skippedRefs: skipped,
     goalDeadlines: goalDeadlines,
     pacePerDayMap: pacePerDayMap,
     isStudyDayMap: isStudyDayMap,
     studyDaysPerWeekMap: studyDaysPerWeekMap,
   );
-
-  // Priority boost: previously-skipped tasks get overdueChazara priority
-  if (previouslySkipped.isEmpty) return tasks;
-
-  return tasks.map((task) {
-    if (previouslySkipped.contains(task.contentItemSefariaRef) &&
-        task.priority != DailyTaskPriority.overdueChazara) {
-      return task.copyWith(
-        priority: DailyTaskPriority.overdueChazara,
-        reason: '${task.reason} (previously skipped)',
-      );
-    }
-    return task;
-  }).toList()..sort((a, b) => a.priority.index.compareTo(b.priority.index));
 }

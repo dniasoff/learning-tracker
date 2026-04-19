@@ -534,18 +534,80 @@ final class PaceStatusFamily extends $Family
   String toString() => r'paceStatusProvider';
 }
 
-/// All daily tasks across active curricula, filtered by skipped items.
+/// Repository that snapshots today's plan to DB so completions don't
+/// trigger regeneration.
+
+@ProviderFor(dailyPlanRepository)
+final dailyPlanRepositoryProvider = DailyPlanRepositoryProvider._();
+
+/// Repository that snapshots today's plan to DB so completions don't
+/// trigger regeneration.
+
+final class DailyPlanRepositoryProvider
+    extends
+        $FunctionalProvider<
+          DailyPlanRepository,
+          DailyPlanRepository,
+          DailyPlanRepository
+        >
+    with $Provider<DailyPlanRepository> {
+  /// Repository that snapshots today's plan to DB so completions don't
+  /// trigger regeneration.
+  DailyPlanRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dailyPlanRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dailyPlanRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<DailyPlanRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  DailyPlanRepository create(Ref ref) {
+    return dailyPlanRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DailyPlanRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DailyPlanRepository>(value),
+    );
+  }
+}
+
+String _$dailyPlanRepositoryHash() =>
+    r'ea6412ceadb21065b6e8a962b1b0ea3276be1bed';
+
+/// All daily tasks across active curricula.
 ///
-/// Previously-skipped tasks receive an `overdueChazara`-level priority
-/// boost so they appear near the top of the list.
+/// The raw plan is snapshotted to the `daily_plans` table on the first
+/// read of each local day and served back verbatim on subsequent reads.
+/// Completions do **not** regenerate the plan — today's list is a
+/// contract. Skipped-task filtering and previously-skipped priority
+/// boosting are applied at read time.
 
 @ProviderFor(allDailyTasks)
 final allDailyTasksProvider = AllDailyTasksProvider._();
 
-/// All daily tasks across active curricula, filtered by skipped items.
+/// All daily tasks across active curricula.
 ///
-/// Previously-skipped tasks receive an `overdueChazara`-level priority
-/// boost so they appear near the top of the list.
+/// The raw plan is snapshotted to the `daily_plans` table on the first
+/// read of each local day and served back verbatim on subsequent reads.
+/// Completions do **not** regenerate the plan — today's list is a
+/// contract. Skipped-task filtering and previously-skipped priority
+/// boosting are applied at read time.
 
 final class AllDailyTasksProvider
     extends
@@ -555,10 +617,13 @@ final class AllDailyTasksProvider
           FutureOr<List<DailyTask>>
         >
     with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
-  /// All daily tasks across active curricula, filtered by skipped items.
+  /// All daily tasks across active curricula.
   ///
-  /// Previously-skipped tasks receive an `overdueChazara`-level priority
-  /// boost so they appear near the top of the list.
+  /// The raw plan is snapshotted to the `daily_plans` table on the first
+  /// read of each local day and served back verbatim on subsequent reads.
+  /// Completions do **not** regenerate the plan — today's list is a
+  /// contract. Skipped-task filtering and previously-skipped priority
+  /// boosting are applied at read time.
   AllDailyTasksProvider._()
     : super(
         from: null,
@@ -585,4 +650,4 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'8e958c1bfb3ab5cc6ff500e5583b2de218e94a82';
+String _$allDailyTasksHash() => r'f67504e73e371b61d4c6d0125785d17f97248ae5';
