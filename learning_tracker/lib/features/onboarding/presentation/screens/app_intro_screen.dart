@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -28,48 +27,46 @@ class _AppIntroScreenState extends State<AppIntroScreen>
   late final AnimationController _pulseController;
   late final AnimationController _iconController;
 
-  static const _gold = AppTheme.heritageGold;
-  static const _goldSoft = Color(0xFFE0C27A);
   final _pages = const <_IntroPageData>[
     _IntroPageData(
-      icon: Icons.auto_stories_rounded,
-      secondaryIcon: Icons.menu_book_rounded,
-      title: 'Your Torah\nLearning Journey',
+      icon: Icons.menu_book_rounded,
+      title: '9 Curricula, One App',
       subtitle:
-          'Track every daf, perek, and halacha across all major '
-          'Torah curricula — Mishnayos, Bavli, Yerushalmi, and more.',
-      gradientColors: [AppTheme.heritageGoldMuted, AppTheme.heritageGold],
-      accentColor: AppTheme.heritageGold,
+          'From Biblical texts and Oral Law to Law Codes and Ethics. All your learning, sourced from Sefaria and available offline.',
+      bgColor: Color(0xFFE8D7C3),
+      titleColor: AppTheme.heritageInk,
+      subtitleColor: AppTheme.heritageInkMuted,
+      iconColor: Color(0xFF4A5F8F),
     ),
     _IntroPageData(
-      icon: Icons.insights_rounded,
-      secondaryIcon: Icons.trending_up_rounded,
-      title: 'Smart Progress\nTracking',
+      icon: Icons.update_rounded,
+      title: 'Never Forget\na Mishna',
       subtitle:
-          'Visualize your learning with beautiful charts, streak '
-          'tracking, and milestone celebrations as you grow.',
-      gradientColors: [AppTheme.heritageGoldMuted, AppTheme.heritageGold],
-      accentColor: AppTheme.heritageGold,
+          'Our intelligent chazara engine schedules reviews based on your pace. Spaced repetition ensures your learning stays with you forever.',
+      bgColor: Color(0xFFD4E4F7),
+      titleColor: AppTheme.heritageInk,
+      subtitleColor: AppTheme.heritageInkMuted,
+      iconColor: Color(0xFF4A5F8F),
     ),
     _IntroPageData(
-      icon: Icons.schedule_rounded,
-      secondaryIcon: Icons.notifications_active_rounded,
-      title: 'Pace-Based\nGoals & Reminders',
+      icon: Icons.trending_up_rounded,
+      title: 'Master Your\nLearning at Scale',
       subtitle:
-          'Set personalized learning goals, get daily reminders, '
-          'and stay on pace to complete your learning on time.',
-      gradientColors: [AppTheme.heritageGold, AppTheme.heritageGoldSoft],
-      accentColor: AppTheme.heritageGoldSoft,
+          'Juggling Mishnah, Talmud, and Bible is hard. We turn large-scale learning goals into a clear daily plan tailored to you.',
+      bgColor: Color(0xFFF5E6D3),
+      titleColor: AppTheme.heritageInk,
+      subtitleColor: AppTheme.heritageInkMuted,
+      iconColor: Color(0xFFC99B3D),
     ),
     _IntroPageData(
-      icon: Icons.people_rounded,
-      secondaryIcon: Icons.emoji_events_rounded,
-      title: 'Learn Together,\nGrow Together',
+      icon: Icons.school_rounded,
+      title: 'Designed for Every\nScholar',
       subtitle:
-          'Whether you learn alone, with a chavrusa, or in a class — '
-          'track personal, school, and tutor assignments all in one place.',
-      gradientColors: [AppTheme.heritageGoldMuted, AppTheme.heritageGold],
-      accentColor: AppTheme.heritageGold,
+          'Choose Child Mode for a gamified journey with points and rewards, or Adult Mode for clean, scholarly progress tracking.',
+      bgColor: Color(0xFFE6D4F0),
+      titleColor: AppTheme.heritageInk,
+      subtitleColor: AppTheme.heritageInkMuted,
+      iconColor: Color(0xFF8B6BA8),
     ),
   ];
 
@@ -138,43 +135,6 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       backgroundColor: AppTheme.heritageNavy,
       body: Stack(
         children: [
-          // Animated particle background
-          AnimatedBuilder(
-            animation: _particleController,
-            builder: (context, _) => CustomPaint(
-              size: MediaQuery.of(context).size,
-              painter: _ParticlePainter(
-                progress: _particleController.value,
-                color: pageData.accentColor,
-              ),
-            ),
-          ),
-
-          // Top gradient orb
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, _) {
-              final pulse = 0.4 + _pulseController.value * 0.2;
-              return Positioned(
-                top: -120,
-                right: -80,
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        pageData.accentColor.withValues(alpha: pulse * 0.15),
-                        pageData.accentColor.withValues(alpha: 0),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-
           // Content
           SafeArea(
             child: Column(
@@ -198,18 +158,16 @@ class _AppIntroScreenState extends State<AppIntroScreen>
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: pageData.accentColor.withValues(alpha: 0.1),
+                            color: pageData.iconColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: pageData.accentColor.withValues(
-                                alpha: 0.2,
-                              ),
+                              color: pageData.iconColor.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Text(
-                            '${_currentPage + 1} / ${_pages.length}',
+                            '${_currentPage + 1} of ${_pages.length}',
                             style: TextStyle(
-                              color: pageData.accentColor,
+                              color: pageData.iconColor,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -269,18 +227,15 @@ class _AppIntroScreenState extends State<AppIntroScreen>
                             height: 8,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(4),
-                              gradient: isActive
-                                  ? LinearGradient(
-                                      colors: pageData.gradientColors,
-                                    )
-                                  : null,
                               color: isActive
-                                  ? null
-                                  : Colors.white.withValues(alpha: 0.15),
+                                  ? pageData.iconColor
+                                  : AppTheme.heritageInkMuted.withValues(
+                                      alpha: 0.2,
+                                    ),
                               boxShadow: isActive
                                   ? [
                                       BoxShadow(
-                                        color: pageData.accentColor.withValues(
+                                        color: pageData.iconColor.withValues(
                                           alpha: 0.4,
                                         ),
                                         blurRadius: 8,
@@ -296,11 +251,8 @@ class _AppIntroScreenState extends State<AppIntroScreen>
                       // Continue / Get Started button
                       _GlowingButton(
                         onTap: _nextPage,
-                        label: isLast ? 'Get Started' : 'Continue',
-                        gradientColors: isLast
-                            ? const [_gold, _goldSoft]
-                            : pageData.gradientColors,
-                        glowColor: pageData.accentColor,
+                        label: isLast ? 'Get Started 🚀' : 'Next',
+                        bgColor: pageData.iconColor,
                         showArrow: !isLast,
                       ),
                       const SizedBox(height: 16),
@@ -321,19 +273,21 @@ class _AppIntroScreenState extends State<AppIntroScreen>
 class _IntroPageData {
   const _IntroPageData({
     required this.icon,
-    required this.secondaryIcon,
     required this.title,
     required this.subtitle,
-    required this.gradientColors,
-    required this.accentColor,
+    required this.bgColor,
+    required this.titleColor,
+    required this.subtitleColor,
+    required this.iconColor,
   });
 
   final IconData icon;
-  final IconData secondaryIcon;
   final String title;
   final String subtitle;
-  final List<Color> gradientColors;
-  final Color accentColor;
+  final Color bgColor;
+  final Color titleColor;
+  final Color subtitleColor;
+  final Color iconColor;
 }
 
 // -- Single intro page --
@@ -354,392 +308,157 @@ class _IntroPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         children: [
-          const Spacer(flex: 1),
+          const Spacer(),
 
-          // Animated illustration area
-          AnimatedBuilder(
-            animation: Listenable.merge([iconAnimation, pulseAnimation]),
-            builder: (context, _) {
-              final iconScale = CurvedAnimation(
-                parent: iconAnimation,
-                curve: Curves.easeOutBack,
-              ).value;
-              final pulse = pulseAnimation.value;
-
-              return SizedBox(
-                height: 240,
-                width: 240,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Outer rotating ring
-                    Transform.rotate(
-                      angle: pulseAnimation.value * pi * 0.1,
-                      child: Container(
-                        width: 220 + pulse * 10,
-                        height: 220 + pulse * 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: data.accentColor.withValues(
-                              alpha: 0.06 + pulse * 0.04,
-                            ),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Middle ring with dashed effect
-                    Transform.rotate(
-                      angle: -pulseAnimation.value * pi * 0.05,
-                      child: Container(
-                        width: 180 + pulse * 6,
-                        height: 180 + pulse * 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: data.accentColor.withValues(
-                              alpha: 0.08 + pulse * 0.05,
-                            ),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Glow background
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            data.accentColor.withValues(
-                              alpha: 0.12 + pulse * 0.06,
-                            ),
-                            data.accentColor.withValues(alpha: 0),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Inner circle with icon
-                    Transform.scale(
-                      scale: iconScale,
-                      child: Container(
-                        width: 110,
-                        height: 110,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              data.gradientColors[0].withValues(alpha: 0.15),
-                              data.gradientColors[1].withValues(alpha: 0.08),
-                            ],
-                          ),
-                          border: Border.all(
-                            color: data.accentColor.withValues(alpha: 0.25),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: data.accentColor.withValues(alpha: 0.2),
-                              blurRadius: 30,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          data.icon,
-                          size: 48,
-                          color: data.accentColor,
-                        ),
-                      ),
-                    ),
-
-                    // Floating secondary icon (top-right)
-                    Positioned(
-                      top: 20,
-                      right: 20,
-                      child: Transform.scale(
-                        scale: iconScale * 0.9,
-                        child: Transform.translate(
-                          offset: Offset(0, sin(pulse * pi) * 6),
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: AppTheme.heritageNavyCard,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: data.accentColor.withValues(alpha: 0.15),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: data.accentColor.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  blurRadius: 12,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              data.secondaryIcon,
-                              size: 22,
-                              color: data.accentColor.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Floating accent dot (bottom-left)
-                    Positioned(
-                      bottom: 30,
-                      left: 15,
-                      child: Transform.translate(
-                        offset: Offset(
-                          sin(pulse * pi * 1.5) * 4,
-                          cos(pulse * pi) * 5,
-                        ),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: data.gradientColors,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: data.accentColor.withValues(alpha: 0.3),
-                                blurRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.star_rounded,
-                            size: 18,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          const Spacer(flex: 1),
-
-          // Title
-          AnimatedBuilder(
-            animation: iconAnimation,
-            builder: (context, _) {
-              final fade = CurvedAnimation(
-                parent: iconAnimation,
-                curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
-              ).value;
-              final slide = Tween<double>(begin: 30, end: 0)
-                  .animate(
-                    CurvedAnimation(
+          // Card with pastel background
+          Container(
+            decoration: BoxDecoration(
+              color: data.bgColor,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                AnimatedBuilder(
+                  animation: iconAnimation,
+                  builder: (context, _) {
+                    final scale = CurvedAnimation(
                       parent: iconAnimation,
-                      curve: const Interval(
-                        0.2,
-                        0.8,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    ),
-                  )
-                  .value;
+                      curve: Curves.easeOutBack,
+                    ).value;
+                    return Transform.scale(
+                      scale: scale,
+                      child: Icon(data.icon, size: 80, color: data.iconColor),
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
 
-              return Transform.translate(
-                offset: Offset(0, slide),
-                child: Opacity(
-                  opacity: fade,
-                  child: Column(
-                    children: [
-                      Text(
+                // Title
+                AnimatedBuilder(
+                  animation: iconAnimation,
+                  builder: (context, _) {
+                    final fade = CurvedAnimation(
+                      parent: iconAnimation,
+                      curve: const Interval(0.3, 0.8, curve: Curves.easeOut),
+                    ).value;
+                    return Opacity(
+                      opacity: fade,
+                      child: Text(
                         data.title,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.playfairDisplay(
-                          color: AppTheme.heritageInk,
-                          fontSize: 32,
+                          color: data.titleColor,
+                          fontSize: 28,
                           fontWeight: FontWeight.w700,
-                          height: 1.15,
-                          letterSpacing: 0.2,
+                          height: 1.2,
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Text(
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Subtitle
+                AnimatedBuilder(
+                  animation: iconAnimation,
+                  builder: (context, _) {
+                    final fade = CurvedAnimation(
+                      parent: iconAnimation,
+                      curve: const Interval(0.4, 0.9, curve: Curves.easeOut),
+                    ).value;
+                    return Opacity(
+                      opacity: fade,
+                      child: Text(
                         data.subtitle,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
-                          color: AppTheme.heritageInkMuted,
+                          color: data.subtitleColor,
                           fontSize: 15,
                           height: 1.6,
-                          letterSpacing: 0.1,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
+              ],
+            ),
           ),
 
-          const Spacer(flex: 2),
+          const Spacer(),
         ],
       ),
     );
   }
 }
 
-// -- Glowing CTA button --
+// -- CTA button --
 
-class _GlowingButton extends StatefulWidget {
+class _GlowingButton extends StatelessWidget {
   const _GlowingButton({
     required this.onTap,
     required this.label,
-    required this.gradientColors,
-    required this.glowColor,
+    required this.bgColor,
     this.showArrow = false,
   });
 
   final VoidCallback onTap;
   final String label;
-  final List<Color> gradientColors;
-  final Color glowColor;
+  final Color bgColor;
   final bool showArrow;
 
   @override
-  State<_GlowingButton> createState() => _GlowingButtonState();
-}
-
-class _GlowingButtonState extends State<_GlowingButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _glowController;
-
-  @override
-  void initState() {
-    super.initState();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _glowController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _glowController,
-      builder: (context, _) {
-        final glow = 0.25 + _glowController.value * 0.25;
-        return Container(
-          height: 58,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(29),
-            gradient: LinearGradient(colors: widget.gradientColors),
-            boxShadow: [
-              BoxShadow(
-                color: widget.glowColor.withValues(alpha: glow),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-                spreadRadius: -4,
-              ),
-              BoxShadow(
-                color: widget.glowColor.withValues(alpha: glow * 0.3),
-                blurRadius: 40,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: bgColor,
+        boxShadow: [
+          BoxShadow(
+            color: bgColor.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onTap,
-              borderRadius: BorderRadius.circular(29),
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.label,
-                      style: GoogleFonts.inter(
-                        color: AppTheme.heritageNavy,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    if (widget.showArrow) ...[
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: AppTheme.heritageNavy,
-                        size: 20,
-                      ),
-                    ],
-                  ],
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(28),
+          child: Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
+                if (showArrow) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ],
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
-}
-
-// -- Particle painter for floating dots --
-
-class _ParticlePainter extends CustomPainter {
-  _ParticlePainter({required this.progress, required this.color});
-
-  final double progress;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final random = Random(42);
-
-    for (var i = 0; i < 30; i++) {
-      final baseX = random.nextDouble() * size.width;
-      final baseY = random.nextDouble() * size.height;
-      final speed = 0.3 + random.nextDouble() * 0.7;
-      final phase = random.nextDouble() * 2 * pi;
-
-      final x = baseX + sin(progress * 2 * pi * speed + phase) * 20;
-      final y = baseY + cos(progress * 2 * pi * speed * 0.7 + phase) * 15;
-
-      final radius = 1.0 + random.nextDouble() * 2.0;
-      final alpha =
-          (0.08 + random.nextDouble() * 0.12) *
-          (0.5 + sin(progress * 2 * pi + phase) * 0.5);
-
-      canvas.drawCircle(
-        Offset(x, y),
-        radius,
-        Paint()..color = color.withValues(alpha: alpha),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ParticlePainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.color != color;
 }
