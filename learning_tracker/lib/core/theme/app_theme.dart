@@ -312,7 +312,10 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final base = GoogleFonts.inter(fontSize: 12, letterSpacing: 0.2);
           if (states.contains(WidgetState.selected)) {
-            return base.copyWith(color: childPrimary, fontWeight: FontWeight.w600);
+            return base.copyWith(
+              color: childPrimary,
+              fontWeight: FontWeight.w600,
+            );
           }
           return base.copyWith(color: childTextMuted);
         }),

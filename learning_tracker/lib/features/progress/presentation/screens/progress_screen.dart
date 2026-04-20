@@ -110,8 +110,9 @@ class _ChildProgressView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalPercentage =
-        totalUniqueUnits > 0 ? (totalCompletions / totalUniqueUnits * 100) : 0.0;
+    final totalPercentage = totalUniqueUnits > 0
+        ? (totalCompletions / totalUniqueUnits * 100)
+        : 0.0;
     final allMilestones = <MilestoneAchievement>[];
     if (journey != null) {
       for (final curr in journey!.curricula) {
@@ -155,8 +156,7 @@ class _ChildProgressView extends StatelessWidget {
           siyumCount: allMilestones
               .where((m) => m.type == 'curriculum_complete')
               .length,
-          onViewAll: () =>
-              context.router.push(const GamificationRoute()),
+          onViewAll: () => context.router.push(const GamificationRoute()),
         ),
         const SizedBox(height: 20),
         _CurriculaMasterySection(activeCurricula: activeCurricula),
@@ -164,8 +164,7 @@ class _ChildProgressView extends StatelessWidget {
         if (allMilestones.isNotEmpty)
           _RecentAchievementsRow(
             milestones: allMilestones,
-            onSeeAll: () =>
-                context.router.push(const GamificationRoute()),
+            onSeeAll: () => context.router.push(const GamificationRoute()),
           ),
       ],
     );
@@ -201,8 +200,8 @@ class _AdultProgressView extends StatelessWidget {
                 Text(
                   'Overview',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -293,10 +292,7 @@ class _CompletionRingWidget extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      'Complete',
-                      style: theme.textTheme.labelMedium,
-                    ),
+                    Text('Complete', style: theme.textTheme.labelMedium),
                   ],
                 ),
               ],
@@ -353,9 +349,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white70,
-            ),
+            style: theme.textTheme.labelSmall?.copyWith(color: Colors.white70),
             textAlign: TextAlign.center,
           ),
           if (sublabel != null) ...[
@@ -374,10 +368,7 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _SiyumBanner extends StatelessWidget {
-  const _SiyumBanner({
-    required this.siyumCount,
-    required this.onViewAll,
-  });
+  const _SiyumBanner({required this.siyumCount, required this.onViewAll});
 
   final int siyumCount;
   final VoidCallback onViewAll;
@@ -416,10 +407,7 @@ class _SiyumBanner extends StatelessWidget {
               ],
             ),
           ),
-          TextButton(
-            onPressed: onViewAll,
-            child: const Text('View All'),
-          ),
+          TextButton(onPressed: onViewAll, child: const Text('View All')),
         ],
       ),
     );
@@ -451,10 +439,7 @@ class _RecentAchievementsRow extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton(
-              onPressed: onSeeAll,
-              child: const Text('See All'),
-            ),
+            TextButton(onPressed: onSeeAll, child: const Text('See All')),
           ],
         ),
         const SizedBox(height: 8),
@@ -601,8 +586,7 @@ class _QuickAccessSection extends StatelessWidget {
             title: const Text('Progress Charts'),
             subtitle: const Text('Completions, trends, streak calendar'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () =>
-                context.router.push(const ProgressChartsRoute()),
+            onTap: () => context.router.push(const ProgressChartsRoute()),
           ),
         ),
       ],
