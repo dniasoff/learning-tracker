@@ -114,12 +114,13 @@ Persist for the lifetime of the app process.
 
 | Guard | Role |
 |---|---|
-| `AuthGuard` | Requires authenticated Firebase user |
-| `ProfileGuard` | Requires active learner profile |
-| `RestoreGuard` | Blocks navigation during device restore |
-| `ChildModeGuard` | Restricts access in child mode |
-| `ParentPinGuard` | PIN challenge for parent-only screens |
-| `TutorPinGuard` | PIN challenge for tutor-only screens |
+| `AuthGuard` | Unified onboarding + multi-account gate. Routes to `AppIntroRoute` (intro not seen), `AccountPickerRoute` (accounts on device), or `WelcomeRoute` (first launch). Epic 23 collapsed the old Firebase-only `AuthGuard` and the short-lived `LocalAuthGuard` into this single guard. |
+| `ProfileGuard` | Requires an active learner profile |
+| `RestoreGuard` | Blocks navigation during device-restore flow |
+| `ChildModeGuard` | Restricts access to screens not permitted inside child mode |
+| `PinGuard` | Base class for PIN verification (used by the two below) |
+| `ParentPinGuard` | PIN challenge for parent-mode screens |
+| `TutorPinGuard` | PIN challenge for tutor-mode screens |
 
 **Total routes:** 40+
 
@@ -352,13 +353,13 @@ Each curriculum receives a distinct color for visual differentiation across card
 | Bavli | Purple | `#8B4789` |
 | Yerushalmi | Green | `#2ECC71` |
 | Mishna Berurah | Orange | `#E67E22` |
+| Mishneh Torah | Brown | `#8D6E63` |
 | Chumash | Red | `#E74C3C` |
-| Torah | Red | `#E74C3C` |
-| Tanach | Teal | `#1ABC9C` |
 | Nach | Teal | `#1ABC9C` |
+| Tanach | Deep Teal | `#0E9384` |
 | Mussar | Violet | `#9B59B6` |
 
-> **Note:** Chumash and Torah share the same Red color. Tanach and Nach share the same Teal color.
+> **Note:** Nach and Tanach share the teal family; verify exact values in `lib/core/theme/` before copying into new widgets. **Mishneh Torah** (Maimonides' legal code) is a distinct curriculum — do not confuse with Chumash/Torah.
 
 ### Track-Type Colors
 

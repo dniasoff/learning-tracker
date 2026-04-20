@@ -45,7 +45,7 @@ learning_tracker/
 │   │   ├── theme/                # Material 3 theme, bidirectional typography
 │   │   ├── utils/                # DateUtils (UTC/P5), HebrewUtils, HebrewCalendarUtils
 │   │   └── widgets/              # 11 reusable widgets
-│   └── features/                 # Feature modules (243 files, 17 features)
+│   └── features/                 # Feature modules (18 features: auth, content_browsing, dashboard, gamification, learning, learning_order, notifications, onboarding, parent_mode, profiles, progress, scheduler, settings, stages, sync, test_tracking, track_setup, tutor_mode)
 │       ├── auth/                 # Firebase Auth (5 files)
 │       ├── content_browsing/     # Content hierarchy browsing (18 files)
 │       ├── dashboard/            # Main dashboard (6 files)
@@ -111,7 +111,13 @@ Navigation is managed by `auto_route` with nested tab routing. Guards control ac
 
 ### `lib/core/database/` (69 files)
 
-The persistence layer is built on Drift (SQLite ORM). It contains 22 tables and 22 corresponding DAOs. The database is at schema version 15 with migration support. Key tables include: `profiles`, `completions`, `curriculum_tracks`, `active_curricula`, `learning_programs`, `streaks`, `rewards`, `bookmarks`, `goals`, `test_dates`, and `test_scores`.
+The persistence layer is built on Drift (SQLite ORM) and split across **three databases** (Epic 19 + Epic 21):
+
+- **User DB** — schema v4, 23 tables, 20 DAOs, read-write, per-account file.
+- **Content DB** — schema v3, 3 tables (`text_cache`, `calendar_cycles`, `seed_metadata`), read-only, bundled seed.
+- **Device Registry DB** — schema v1, 2 tables (`device_accounts`, `device_state`), workspace-level.
+
+Key User DB tables include: `user_profiles`, `profiles`, `completions`, `curriculum_tracks`, `active_curricula`, `streaks`, `streak_events`, `xp_events`, `rewards`, `bookmarks`, `goals`, `test_scores`. See `docs/data-models.md` for the full table inventory.
 
 ### `lib/features/learning/` (29 files) -- Most Complex
 
@@ -208,7 +214,7 @@ grep -rl 'Provider' lib/core/providers/
 
 All DAOs live in `lib/core/database/daos/`. Each DAO file corresponds to a table and follows the naming convention `<entity>_dao.dart` (e.g., `completion_dao.dart`, `streak_dao.dart`). The generated query code is in the matching `.g.dart` file.
 
-The 22 DAOs are:
+The 20 User DB DAOs are:
 
 - `active_curriculum_dao`, `bookmark_dao`, `completion_dao`, `content_download_status_dao`
 - `curriculum_scope_dao`, `goal_dao`, `learning_ledger_dao`, `learning_order_dao`

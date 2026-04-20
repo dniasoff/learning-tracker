@@ -1,212 +1,160 @@
 ---
 title: "Project Status (Linear)"
-description: "Comprehensive project status derived from Linear ticket data for the learning-tracker project."
-date: 2026-03-18
+description: "Canonical epic and story status, reconciled against local sprint-status.yaml and linear-mapping.yaml."
+date: 2026-04-19
 ---
 
 # Project Status (Linear)
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Epic Summary Table](#epic-summary-table)
-- [Epic Details](#epic-details)
-  - [Epic 1: Foundation and Infrastructure](#epic-1-foundation-and-infrastructure)
-  - [Epic 2: Content Import and Browsing](#epic-2-content-import-and-browsing)
-  - [Epic 3: Core Learning Cycle](#epic-3-core-learning-cycle)
-  - [Epic 4: Multi-Track Learning](#epic-4-multi-track-learning)
-  - [Epic 5: Configurable Stages and Learning Order](#epic-5-configurable-stages-and-learning-order)
-  - [Epic 6: Smart Scheduler](#epic-6-smart-scheduler)
-  - [Epic 7: Dashboard and Progress](#epic-7-dashboard-and-progress)
-  - [Epic 8: Gamification and Engagement](#epic-8-gamification-and-engagement)
-  - [Epic 9: Onboarding Flow](#epic-9-onboarding-flow)
-  - [Epic 10: Parent Mode](#epic-10-parent-mode)
-  - [Epic 11: Tutor Mode](#epic-11-tutor-mode)
-  - [Epic 12: Notifications](#epic-12-notifications)
-  - [Epic 13: Cloud Sync](#epic-13-cloud-sync)
-  - [Epic 14: Settings](#epic-14-settings)
-  - [Epic 15: Multi-Profile and Learning Program System](#epic-15-multi-profile-and-learning-program-system)
-- [Items In Review](#items-in-review)
-- [Upcoming Work](#upcoming-work)
-- [How to Sync](#how-to-sync)
-
 ## Overview
 
 - **Team:** DNI (Dniasoff)
-- **Project:** learning-tracker
-- **Last synced:** 2026-03-18
-- **Total:** 15 epics, 89 stories
-- **Status:** 86 Done, 3 In Review, 0 Blocked
+- **Linear project:** learning-tracker
+- **Status sources:**
+  - Machine-readable: [`docs/status/sprint-status.yaml`](status/sprint-status.yaml) (updated 2026-04-15)
+  - Linear ID mapping: [`docs/status/linear-mapping.yaml`](status/linear-mapping.yaml) (managed by `tool/linear-sync.sh`)
+  - Detailed epic breakdowns: [`docs/planning/epics.md`](planning/epics.md)
+- **Last reconciled:** 2026-04-19
 
-## Epic Summary Table
+This document is the narrative summary. `sprint-status.yaml` is the machine-readable source of truth — if the two disagree, trust the YAML.
 
-| Epic | Title | Stories | Done | In Review |
-|------|-------|---------|------|-----------|
-| 1 | Foundation and Infrastructure | 12 | 12 | 0 |
-| 2 | Content Import and Browsing | 6 | 6 | 0 |
-| 3 | Core Learning Cycle | 3 | 3 | 0 |
-| 4 | Multi-Track Learning | 3 | 3 | 0 |
-| 5 | Configurable Stages and Learning Order | 2 | 2 | 0 |
-| 6 | Smart Scheduler | 5 | 5 | 0 |
-| 7 | Dashboard and Progress | 3 | 3 | 0 |
-| 8 | Gamification and Engagement | 4 | 4 | 0 |
-| 9 | Onboarding Flow | 5 | 5 | 0 |
-| 10 | Parent Mode | 5 | 5 | 0 |
-| 11 | Tutor Mode | 2 | 2 | 0 |
-| 12 | Notifications | 4 | 4 | 0 |
-| 13 | Cloud Sync | 4 | 4 | 0 |
-| 14 | Settings | 3 | 0 | 3 |
-| 15 | Multi-Profile and Learning Program System | 0 | 0 | 0 |
+## Epic summary
 
-## Epic Details
+| Epic | Title | Stories | Status |
+|---|---|---|---|
+| 1 | Foundation & Infrastructure | 12 | Done |
+| 2 | Content Import & Browsing | 5 | Done |
+| 3 | Core Learning Cycle | 3 | Done |
+| 4 | Multi-Track Learning | 3 | Done |
+| 5 | Configurable Stages & Learning Order | 2 | Done |
+| 6 | Smart Scheduler | 5 | Done |
+| 7 | Dashboard & Progress | 3 | Done |
+| 8 | Gamification & Engagement | 3 | Done |
+| 9 | Onboarding Flow | 5 | Done |
+| 10 | Parent Mode | 6 | Done |
+| 11 | Tutor Mode | 4 | Done — **deprioritized**, see [archive](_archive/scrapped-ideas/tutor-mode-epic-11.md) |
+| 12 | Notifications | 3 | Done |
+| 13 | Cloud Sync | 3 | Done |
+| 14 | Settings | 4 | Done |
+| 15 | (Multi-Profile & Learning Program) | — | Absorbed into Epics 18 & 21 — see [archive](_archive/scrapped-ideas/epic-15-multi-profile-original-stories.md) |
+| 16 | Onboarding-to-Dashboard Perfect Flow | 6 | Done |
+| 17 | V1 Roadmap Phase 1: Foundation & Onboarding | 0 | Linear-tracked umbrella, no discrete stories |
+| 18 | Onboarding & Track Management Overhaul | 12 | In progress (all 12 in review) |
+| 19 | Offline-First Architecture & Two-Database Split | 13 | Done |
+| 20 | Dashboard & Progress Redesign — Multi-Track Isolation | 12 | All 12 stories canceled 2026-04-15; UI redesign not yet re-scoped |
+| 21 | Multi-Account Device — Account Switching, Session Management & Deletion | 16 | Done |
+| 22 | Catch-up & Amnesty System | 22 planned | Backlog (design complete) |
+| 23 | Offline-First Architecture v2 — Hard-Tier Auth Refactor | 0 | Done (completed 2026-04-15) |
 
-### Epic 1: Foundation and Infrastructure
+## Epic details
 
-- **Tickets:** DNI-1 through DNI-12
-- **Stories:** 12 | **Done:** 12 | **In Review:** 0
+### Epic 1 — Foundation & Infrastructure (DNI-5)
+Flutter project init, Drift schema and DAOs, Firebase Auth + Firestore, Sefaria client, auto_route shell, Riverpod, Talker, CI/CD, sync engine foundation, theme, security infrastructure (bcrypt, secure storage), Hebrew calendar utilities. All 12 stories done.
 
-This epic covers the full project bootstrap: Flutter project initialization, Drift database schema and DAOs, Firebase Auth and Firestore integration, the Sefaria API client, navigation shell with auto_route, Riverpod state management, Talker logging, CI/CD and testing infrastructure, sync engine foundation, theme and core UI, security infrastructure (bcrypt, secure storage), and Hebrew calendar utilities.
+### Epic 2 — Content Import & Browsing (DNI-6)
+Sefaria content import pipeline, hierarchical browser, text display (Hebrew/English), curriculum activation, bundled-content JSON + dev seed script. 5 stories done. Epic 2 retrospective complete.
 
-**Key architecture decisions:**
+### Epic 3 — Core Learning Cycle (DNI-7)
+Mark completion (single item), completion history & stage progression, bookmark management. 3 stories done. The completions table uses `sefariaRef` (String), not `content_item_id`.
 
-- Drift serves as the local-first database layer with typed DAOs for each domain.
-- Riverpod provides dependency injection and reactive state management throughout the app.
-- auto_route handles declarative navigation with a shell-based layout.
-- Talker centralizes structured logging for debugging and diagnostics.
-- Security infrastructure uses bcrypt for PIN hashing and flutter_secure_storage for sensitive data.
+### Epic 4 — Multi-Track Learning (DNI-8)
+Track management, track assignment & duplicate prevention, track-specific progress views. 3 stories done. Retrospective: `docs/_archive/epic-qa-reports/epic-4-retrospective-2026-03-12.md`.
 
-### Epic 2: Content Import and Browsing
+### Epic 5 — Configurable Stages & Learning Order (DNI-9)
+Stage definition configuration, drag-and-drop learning order. 2 stories done.
 
-- **Tickets:** DNI-75 through DNI-80
-- **Stories:** 6 | **Done:** 6 | **In Review:** 0
+### Epic 6 — Smart Scheduler (DNI-10)
+Parametric scheduler engine, daily task generation, goal management (per-curriculum deadlines), pace tracking, cross-curriculum daily schedule composer. 5 stories done. Three schedule types: **delay**, **Friday/Shabbos Review**, **Shabbos Review**.
 
-This epic covers the Sefaria content import pipeline, content hierarchy browsing, text display (Hebrew/English), and curriculum activation.
+### Epic 7 — Dashboard & Progress (DNI-11)
+Cross-curriculum dashboard, per-curriculum progress views, progress charts and statistics. 3 stories done.
 
-**Key architecture decisions:**
+### Epic 8 — Gamification & Engagement (DNI-12)
+Points system, streak tracking, mystery rewards. 3 stories done.
 
-- DNI-79 introduces a major architectural shift from runtime import to dev-time bundled JSON assets. Content is now pre-processed at build time and shipped as local assets, eliminating runtime dependency on external APIs.
-- DNI-80 adds one-time text download with a nikud (vowelization) toggle, allowing users to choose pointed or unpointed Hebrew text.
+### Epic 9 — Onboarding Flow (DNI-13)
+Welcome & user mode selection, curriculum selection, per-curriculum goal setup, bulk mark prior completions, initial rewards setup (child mode). 5 stories done.
 
-### Epic 3: Core Learning Cycle
+### Epic 10 — Parent Mode (DNI-14)
+PIN setup & auth, parent dashboard, reward management CRUD, point value configuration, track management, parent analytics. 6 stories done.
 
-- **Tickets:** DNI-81 through DNI-83
-- **Stories:** 3 | **Done:** 3 | **In Review:** 0
+### Epic 11 — Tutor Mode (DNI-15) — deprioritized
+PIN setup & auth, tutor dashboard, completion history views, chazara due & progress views. 4 stories done — but the feature has been deprioritized as of 2026-04-19. Code remains functional; no new investment. See [`_archive/scrapped-ideas/tutor-mode-epic-11.md`](_archive/scrapped-ideas/tutor-mode-epic-11.md).
 
-This epic covers marking completion per-stage per-track, the completion log and history, and bookmark management.
+### Epic 12 — Notifications (DNI-16)
+Daily learning reminders, streak protection alerts, reward milestone notifications. 3 stories done. Shabbos/Yom Tov quiet mode via kosher_dart zmanim.
 
-**Key architecture decisions:**
+### Epic 13 — Cloud Sync (DNI-17)
+Push-on-write, pull-on-launch, foreground real-time listeners. 3 stories done.
 
-- The completions table uses `sefariaRef` (String) as its key rather than `content_item_id`, enabling direct linkage to canonical Sefaria references regardless of local content structure.
+### Epic 14 — Settings (DNI-18)
+General settings, notification preferences, data export/import, account management. 4 stories done.
 
-### Epic 4: Multi-Track Learning
+### Epic 15 — (was Multi-Profile & Learning Program)
+No Linear epic. 14 design stories were drafted in early March; the work was absorbed by Epics 18 and 21 with different numbering. The original story files are archived under [`_archive/superseded/epic-15-stories/`](_archive/superseded/epic-15-stories/). See [`_archive/scrapped-ideas/epic-15-multi-profile-original-stories.md`](_archive/scrapped-ideas/epic-15-multi-profile-original-stories.md) for the mapping.
 
-- **Tickets:** DNI-84 through DNI-86
-- **Stories:** 3 | **Done:** 3 | **In Review:** 0
+### Epic 16 — Onboarding-to-Dashboard Perfect Flow (DNI-128)
+Pace-based goal mode, study day configuration, dashboard pace/progress integration, per-item review count display, onboarding goal & study day steps, dashboard polish. 6 stories done.
 
-This epic covers support for concurrent learning tracks, allowing users to study multiple curricula simultaneously with independent progress tracking per track.
+### Epic 17 — V1 Roadmap Phase 1 (DNI-154)
+An umbrella epic with no discrete stories. Used as a roadmap placeholder.
 
-### Epic 5: Configurable Stages and Learning Order
+### Epic 18 — Onboarding & Track Management Overhaul (DNI-128) — **in progress**
+12 stories, all currently in review:
+- 18.1 Extract reusable add-track flow
+- 18.2 Slim global onboarding
+- 18.3 Track management hub
+- 18.4 Hebrew terms, chazara, curriculum names
+- 18.5 Track editing from Settings
+- 18.6 Child mode onboarding post-setup rewards
+- 18.7 Navigation state cleanup
+- 18.8 Instant mark complete
+- 18.9 Prevent duplicate profile names
+- 18.10 Add/delete profile from profile picker
+- 18.11 Fix edit profile button in Settings
+- 18.12 Delete account redirects to Welcome
 
-- **Tickets:** DNI-87 through DNI-88
-- **Stories:** 2 | **Done:** 2 | **In Review:** 0
+Story specs: [`docs/stories/implementation/18-*.md`](stories/implementation/).
 
-This epic covers configurable learning stages and customizable learning order, letting users and administrators define which stages apply to each curriculum and in what sequence content is presented.
+### Epic 19 — Offline-First Architecture & Two-Database Split (DNI-182) — **done**
+13 stories delivered. Split the monolithic database into a read-only Content DB (bundled as `assets/seed.db.gz`, 4 tables) and a read-write User DB (22 tables, schema v15). Local calendar engine removes runtime dependency on Sefaria/Hebcal. Startup hardened to ~140ms with zero network calls.
 
-### Epic 6: Smart Scheduler
+> **Tech debt flag:** Stories 19.5 (local-first auth abstraction) and 19.7 (optional account creation in Settings) implement the anonymous-localUid auth model. That model has since been superseded by the hard-tier cloud-born/local-born design in [`planning/architecture-offline-v2.md`](planning/architecture-offline-v2.md). Epic 20 (b) is the refactor. Epic 19 all other stories (two-DB split, seed DB, calendar engine, startup hardening, SyncEngine conditional activation, content DB resilience, E2E testing) remain canonical.
 
-- **Tickets:** DNI-89 through DNI-93
-- **Stories:** 5 | **Done:** 5 | **In Review:** 0
+### Epic 20 — Dashboard & Progress Redesign — Multi-Track Isolation (DNI-210) — **backlog**
+12 stories, all backlog. Per-track scoping of DAOs, domain models, providers; per-track scheduler; dashboard stats row + unified task list; 4 track-card variants; recovery actions; redesigned progress and track-detail screens; charts with track filter; Learning Journey rework. Scenario specs: [`docs/scenarios/dashboard-redesign-set/`](scenarios/dashboard-redesign-set/).
 
-This epic covers the parametric scheduler engine, daily task generation, goal management, pace tracking, and the cross-curriculum daily schedule composer.
+### Epic 21 — Multi-Account Device — Account Switching, Session Management & Deletion (DNI-238) — **done**
+16 stories delivered. Device account registry, per-account database isolation, session auto-resume and persistence, unified sign-up (email/password + Google), smart sign-in routing, account picker, sign-out to picker, multi-account upgrade, and the full deletion path (local, cloud, and cloud function). Story specs: [`docs/stories/implementation/21-*.md`](stories/implementation/).
 
-**Key architecture decisions:**
+### Epic 22 — Catch-up & Amnesty System (DNI-255) — **backlog, design complete**
+22 stories planned across 14 groups covering rescope v2, amnesty primitive, pause mechanism, catch-up sheets (self-paced + program), review debt, multi-track triage, setup seeding, cycle boundary, and a notification rewrite. Scenario-level specs at [`docs/scenarios/evolution/`](scenarios/evolution/); scenarios at [`docs/planning/catchup-and-amnesty-scenarios.md`](planning/catchup-and-amnesty-scenarios.md).
 
-- The scheduler supports three schedule types: **delay** (fixed interval between reviews), **weekly** (recurring on specific days), and **rolling** (continuous progression through material).
-- The cross-curriculum composer merges tasks from all active tracks into a single prioritized daily schedule.
+### Epic 23 — Offline-First Architecture v2 — Hard-Tier Auth Refactor (DNI-223) — **done**
+Completed 2026-04-15. Dropped `AppAuthState` sealed hierarchy, added `passwordHash` + `tier` columns, made signup mandatory at first launch, tier-gated SyncEngine. Originally filed as "Epic 20" — renamed to Epic 23 on 2026-04-19 to resolve the numbering collision with DNI-210 (Dashboard Redesign). Canonical design doc: [`planning/architecture-offline-v2.md`](planning/architecture-offline-v2.md).
 
-### Epic 7: Dashboard and Progress
+## In review right now
 
-- **Tickets:** DNI-94 through DNI-96
-- **Stories:** 3 | **Done:** 3 | **In Review:** 0
+From `sprint-status.yaml` (2026-04-15):
 
-This epic covers the main dashboard, progress visualization, and streak/statistics displays, providing users with an at-a-glance view of their learning activity and achievements.
+- All 12 stories of Epic 18.
 
-### Epic 8: Gamification and Engagement
+Recent git history (last 40 commits) shows active theme, onboarding, notifications, parent-mode, and auth work — consistent with Epic 18 in review and Epic 21 recently completed.
 
-- **Tickets:** DNI-97 through DNI-100
-- **Stories:** 4 | **Done:** 4 | **In Review:** 0
+## Upcoming work (ordered by priority)
 
-This epic covers achievement badges, streak rewards, milestone celebrations, and engagement mechanics that motivate consistent learning habits.
+1. **Epic 18 finalization** — bring the 12 in-review stories to done.
+2. **Epic 20 — Dashboard & Progress Redesign** — 12 stories, per-track isolation. Unblocked now that Epic 23 (v2 auth refactor) has shipped.
+3. **Epic 22 — Catch-up & Amnesty System** — 22 stories planned; ready to start breaking out.
 
-### Epic 9: Onboarding Flow
-
-- **Tickets:** DNI-101 through DNI-104, DNI-108
-- **Stories:** 5 | **Done:** 5 | **In Review:** 0
-
-This epic covers the first-run onboarding experience, including account creation, curriculum selection, initial schedule configuration, and guided app introduction.
-
-### Epic 10: Parent Mode
-
-- **Tickets:** DNI-109 through DNI-113
-- **Stories:** 5 | **Done:** 5 | **In Review:** 0
-
-This epic covers the parent dashboard, child progress monitoring, PIN-protected access, notification preferences for parents, and parental controls for managing the learning experience.
-
-### Epic 11: Tutor Mode
-
-- **Tickets:** DNI-114 through DNI-115
-- **Stories:** 2 | **Done:** 2 | **In Review:** 0
-
-This epic covers tutor-facing views for monitoring student progress and a lightweight interface for tutors to review assigned material and track student completion.
-
-### Epic 12: Notifications
-
-- **Tickets:** DNI-116 through DNI-119
-- **Stories:** 4 | **Done:** 4 | **In Review:** 0
-
-This epic covers local push notifications for daily reminders, streak-at-risk alerts, milestone celebrations, and configurable notification preferences.
-
-### Epic 13: Cloud Sync
-
-- **Tickets:** DNI-120 through DNI-123
-- **Stories:** 4 | **Done:** 4 | **In Review:** 0
-
-This epic covers push-on-write with offline queuing, pull-on-launch merge, real-time foreground listeners, and new device data restore.
-
-**Key architecture decisions:**
-
-- The sync engine uses a hybrid push/pull model (per design document D4): writes push immediately when online and queue locally when offline; reads pull on app launch and merge with local state; real-time listeners keep the foreground session current.
-- New device restore reconstructs the full local database from the cloud source of truth.
-
-### Epic 14: Settings
-
-- **Tickets:** DNI-105 through DNI-107
-- **Stories:** 3 | **Done:** 0 | **In Review:** 3
-
-This epic covers general settings and user profile, data export and import, and account management. All three stories are currently in review.
-
-### Epic 15: Multi-Profile and Learning Program System
-
-- **Tickets:** None defined
-- **Stories:** 0 | **Done:** 0 | **In Review:** 0
-
-This epic covers multi-profile support and the learning program system. No stories are defined yet; this represents the next phase of development.
-
-## Items In Review
-
-- **DNI-105** (14.1): General Settings and User Profile
-- **DNI-106** (14.2): Data Export and Import
-- **DNI-107** (14.3): Account Management
-
-## Upcoming Work
-
-- **Epic 15:** Multi-Profile and Learning Program System (no stories defined yet)
-- **Roadmap items:** iOS support, tutor/school companion app, additional curricula
-
-## How to Sync
+## How to sync
 
 ```bash
-# Sync Linear tickets to local cache
+# Refresh Linear ticket cache
 ./tool/linear-sync.sh
-# Cache location: ~/.local/share/linear-sync/dniasoff/learning-tracker/
+
+# Cache location
+~/.local/share/linear-sync/dniasoff/learning-tracker/
 ```
+
+Status YAML files live in [`docs/status/`](status/) and are managed by BMAD workflows. Do not hand-edit `linear-mapping.yaml`.

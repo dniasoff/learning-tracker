@@ -1,259 +1,186 @@
-# Torah Learning Tracker
+# Learning Tracker — Flutter App
 
-[![CI](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/YOUR_ORG/YOUR_REPO/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_ORG/YOUR_REPO)
+Multi-curriculum Torah learning tracker for daily study management. Part of the [learning-tracker](../README.md) project — see the root README for the product overview.
 
-Multi-curriculum Torah learning tracker for daily study management. Supports Mishnayos, Gemara Bavli, Talmud Yerushalmi, Mishna Berurah, and Chumash.
+This sub-repo is the Flutter application. For project-wide docs, start at [`docs/index.md`](../docs/index.md).
 
 ## Features
 
-- **5 Curricula**: Mishnayos, Bavli, Yerushalmi, Mishna Berurah, Chumash
-- **Multi-stage Learning**: Learn → Chazara 1 → Chazara 2 (customizable)
-- **User Modes**: Child (gamified, parent-managed) & Adult (self-directed)
-- **Smart Scheduling**: Automated daily task generation with pace tracking
-- **Multi-track**: Personal, school, and tutor tracks
-- **Offline-first**: Full functionality offline with cloud sync
+- **9 Curricula**: Mishnayos, Gemara Bavli, Talmud Yerushalmi, Mishna Berurah, Mishneh Torah, Chumash, Nach, Tanach, Mussar
+- **Multi-stage Learning**: Learn → Chazara 1 → Chazara 2 (configurable up to 10 stages per curriculum)
+- **User Modes**: Child (gamified, parent-managed) and Adult (self-directed)
+- **Smart Scheduling**: Per-track daily task generation with pace tracking
+- **Multi-track**: `personal` (default), `school`, `tutor` (parent-activated)
+- **Offline-first**: Full functionality without network; cloud sync for `cloudBorn` accounts
 
 ## Tech Stack
 
-- **Framework**: Flutter 3.29.4, Dart 3.10.8
-- **State Management**: Riverpod 3.x
+- **Framework**: Flutter 3.38.6+ / Dart 3.10.8+
+- **State Management**: Riverpod 3.x (with code generation)
 - **Navigation**: auto_route 11.x
-- **Database**: drift (SQLite ORM)
-- **Backend**: Firebase Auth + Firestore
+- **Databases**: Drift (SQLite) — three databases: User DB v4, Content DB v3, Device Registry DB v1
+- **Backend**: Firebase Auth + Firestore + Storage (tier-gated for `cloudBorn` users)
+- **Calendar**: kosher_dart (Hebrew dates)
 - **Logging**: Talker
-- **Testing**: mocktail, integration_test
+- **Testing**: mocktail, flutter_test, integration_test
 
 ## Getting Started
 
 ### Prerequisites
 
-- Flutter SDK 3.29.4+
+- Flutter SDK 3.38.6+
 - Dart SDK 3.10.8+
-- Android Studio / VS Code
+- Android Studio or VS Code
 - Git
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_ORG/YOUR_REPO.git
-cd YOUR_REPO/learning_tracker
+git clone https://github.com/dniasoff/learning-tracker.git
+cd learning-tracker/learning_tracker
 
-# Install dependencies
 flutter pub get
-
-# Run code generation (for drift, auto_route, freezed, riverpod)
 dart run build_runner build --delete-conflicting-outputs
-
-# Run the app
 flutter run
 ```
 
 ## Development
 
-### Running Tests
+### Running tests
 
 ```bash
-# Run all unit and widget tests
-flutter test
+# From repo root — story-based acceptance suite
+make ci                       # full local CI
+make test-story-X.Y           # individual story
+make test-epic-N              # all stories in an epic
 
-# Run tests with coverage
-flutter test --coverage
-
-# Run specific test file
-flutter test test/core/database/app_database_test.dart
-
-# Run integration tests (requires Android emulator or device)
-flutter test integration_test
+# From learning_tracker/ — raw Flutter commands
+flutter test                   # unit + widget tests
+flutter test --coverage        # with coverage
+flutter test integration_test  # integration tests (needs emulator)
 ```
 
-### Code Quality
+### Code quality
 
 ```bash
-# Format code
 dart format .
-
-# Analyze code
-dart analyze
-
-# Check for unused files
-dart run dependency_validator
+dart analyze --fatal-infos
 ```
 
-### Pre-commit Hook
-
-Install the pre-commit hook to automatically check formatting and analysis before each commit:
+### Pre-commit hook
 
 ```bash
-# From repository root
-cd ..  # Go to repo root if in learning_tracker/
+# From repo root
 cp hooks/pre-commit .git/hooks/
 chmod +x .git/hooks/pre-commit
 ```
 
-The hook runs:
-- `dart format --set-exit-if-changed .`
-- `dart analyze --fatal-infos`
+Runs `dart format --set-exit-if-changed` and `dart analyze --fatal-infos`.
 
-### Code Generation
-
-This project uses code generation for:
-- **drift**: Database DAOs and queries
-- **auto_route**: Navigation routing
-- **freezed**: Immutable data classes
-- **riverpod**: Provider code generation
-
-Run code generation after modifying annotated files:
+### Code generation
 
 ```bash
-# Watch mode (auto-regenerate on file changes)
-dart run build_runner watch --delete-conflicting-outputs
-
-# One-time generation
+# One-shot
 dart run build_runner build --delete-conflicting-outputs
+
+# Watch mode
+dart run build_runner watch --delete-conflicting-outputs
 ```
+
+Generators used: drift, auto_route, freezed, riverpod_generator, json_serializable.
 
 ## Testing
 
-### Test Structure
+### Structure
 
-```
+```text
 test/
 ├── mocks/              # Shared mock repositories and services (mocktail)
-├── fixtures/           # Test data factories (content, completion, curriculum)
+├── fixtures/           # Test data factories
 ├── helpers/            # Test utilities (in-memory database helper)
 ├── core/               # Core infrastructure tests
-└── features/           # Feature-specific tests
+├── features/           # Feature-specific tests
+├── story_acceptance/   # Per-epic acceptance suites (file per epic)
+├── integration/        # End-to-end flows
+└── golden/             # UI snapshot tests
 
-integration_test/       # End-to-end tests on real devices/emulators
+integration_test/       # On-device end-to-end tests
 ```
 
-### Test Patterns
+### Coverage targets
 
-**Unit Tests**: Test business logic in isolation with mocks
-```dart
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:learning_tracker/test/mocks/mock_repositories.dart';
-
-void main() {
-  late MockAuthRepository mockRepo;
-
-  setUp(() {
-    mockRepo = MockAuthRepository();
-  });
-
-  test('example test', () async {
-    when(() => mockRepo.getCurrentUser()).thenAnswer((_) async => null);
-    // ... test logic
-  });
-}
-```
-
-**Widget Tests**: Test UI components
-```dart
-testWidgets('displays curriculum card', (tester) async {
-  await tester.pumpWidget(MyWidget());
-  expect(find.text('Mishnayos'), findsOneWidget);
-});
-```
-
-**Integration Tests**: Test complete flows
-```dart
-testWidgets('user can sign in and mark completion', (tester) async {
-  app.main();
-  await tester.pumpAndSettle();
-  // ... interaction logic
-});
-```
-
-### Coverage Goals
-
-- Core (`lib/core/`): ≥80%
-- Domain (`lib/features/*/domain/`): ≥80%
-- Data (`lib/features/*/data/`): ≥70%
-- Presentation (`lib/features/*/presentation/`): ≥60%
+| Layer | Target |
+|---|---|
+| `lib/core/` | ≥ 80% |
+| `lib/features/*/domain/` | ≥ 80% |
+| `lib/features/*/data/` | ≥ 70% |
+| `lib/features/*/presentation/` | ≥ 60% |
 
 ## CI/CD
 
-### GitHub Actions
+GitHub Actions pipelines:
 
-**CI Workflow** (runs on every PR to main):
-- Format check (`dart format --set-exit-if-changed`)
-- Static analysis (`dart analyze --fatal-infos`)
-- Unit and widget tests (`flutter test --coverage`)
-- Integration tests (Android emulator)
-- Coverage upload to Codecov
+- **CI** (every PR to `dev`): format check, static analysis, unit/widget tests, coverage upload.
+- **Build** (manual trigger): signed release APK.
 
-**Build Workflow** (manual trigger):
-- Builds signed release APK
-- Uploads APK as artifact
-
-### Running CI Locally
-
-Simulate CI checks before pushing:
-
-```bash
-# Format check
-dart format --set-exit-if-changed .
-
-# Analysis
-dart analyze --fatal-infos
-
-# Tests
-flutter test --coverage
-
-# Integration tests (requires emulator)
-flutter test integration_test
-```
+Simulate locally with `make ci` from the repo root.
 
 ## Architecture
 
-See [architecture documentation](../_bmad-output/planning-artifacts/architecture-quick-reference.md) for detailed architecture decisions, patterns, and project structure.
+See [`docs/architecture.md`](../docs/architecture.md) for the current-state architecture, and [`docs/planning/architecture-quick-reference.md`](../docs/planning/architecture-quick-reference.md) for key decisions and patterns.
 
-**Key Patterns**:
-- **D1**: Generic 4-level content hierarchy (single table for all curricula)
-- **D2**: Firebase Auth with email/password + Google Sign-In
-- **D4**: Hybrid push/pull sync with foreground listeners
-- **P2**: Nullable returns for repository pattern
-- **P3**: Curriculum-scoped Riverpod family providers
-- **P5**: UTC storage, local display for dates
+Key patterns:
 
-## Project Structure
+- **D1** — Generic 4-level content hierarchy (single table for all curricula)
+- **D4** — Hybrid push/pull sync with foreground listeners (tier-gated per v2)
+- **P2** — Nullable returns for repository pattern
+- **P3** — Curriculum-scoped and track-scoped Riverpod family providers
+- **P5** — UTC storage, local display for dates
 
-```
+## Project structure
+
+```text
 lib/
 ├── core/               # Cross-cutting concerns
-│   ├── database/       # Drift database, DAOs, tables
-│   ├── navigation/     # auto_route, guards
-│   ├── network/        # Sefaria API client, connectivity
+│   ├── database/       # Drift: User DB, Content DB, Device Registry DB
+│   ├── navigation/     # auto_route + guards
+│   ├── network/        # Sefaria client (dev-time), connectivity
 │   ├── providers/      # Core Riverpod providers
 │   └── services/       # Cross-curriculum services
-└── features/           # Feature modules
-    ├── auth/           # Authentication
-    ├── content/        # Content browsing, import
-    ├── learning/       # Mark completion, history
-    ├── scheduler/      # Smart scheduling, daily tasks
-    └── ...
+└── features/           # 18 feature modules
+    ├── auth/
+    ├── content_browsing/
+    ├── dashboard/
+    ├── gamification/
+    ├── learning/
+    ├── learning_order/
+    ├── notifications/
+    ├── onboarding/
+    ├── parent_mode/
+    ├── profiles/
+    ├── progress/
+    ├── scheduler/
+    ├── settings/
+    ├── stages/
+    ├── sync/
+    ├── test_tracking/
+    ├── track_setup/
+    └── tutor_mode/
 ```
 
 ## Contributing
 
-1. Create a feature branch from `main`
-2. Make your changes
-3. Ensure tests pass: `flutter test`
-4. Ensure code quality: `dart analyze && dart format .`
-5. Create a pull request to `main`
-
-CI must pass before merge.
+1. Branch from `dev`.
+2. `make ci` must pass before opening a PR.
+3. PR against `dev`.
 
 ## License
 
-[Add license information]
+MIT — see [`../LICENSE`](../LICENSE).
 
 ## Resources
 
-- [Architecture Quick Reference](../_bmad-output/planning-artifacts/architecture-quick-reference.md)
-- [Testing Quick Reference](../_bmad-output/planning-artifacts/testing-quick-reference.md)
-- [Project Context](../_bmad/bmm/data/project-context-template.md)
+- [Documentation index](../docs/index.md)
+- [Developer handbook](../docs/developer-handbook.md)
+- [Architecture quick reference](../docs/planning/architecture-quick-reference.md)
+- [Testing quick reference](../docs/planning/testing-quick-reference.md)

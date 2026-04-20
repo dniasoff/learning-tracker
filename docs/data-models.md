@@ -1,15 +1,18 @@
 ---
 title: "Data Models & Database Schema"
-description: "Complete reference for all Drift/SQLite tables, Firestore collections, DAO operations, sync strategies, and querying patterns in the Learning Tracker application."
-date: 2026-03-18
+description: "Complete reference for all Drift/SQLite tables (User DB, Content DB, Device Registry DB), Firestore collections, DAO operations, sync strategies, and querying patterns."
+date: 2026-04-19
 ---
 
 # Data Models & Database Schema
 
-**Database:** Drift (SQLite ORM)
-**Schema Version:** 15
-**Tables:** 22
-**DAOs:** 22
+**ORM:** Drift (SQLite)
+
+**Three databases:**
+
+- **User DB** — schema v4, 23 tables, 20 DAOs. Read-write. Per-account file (`user_acc_<id>.db`).
+- **Content DB** — schema v3, 3 tables (TextCache, CalendarCycles, SeedMetadata). Read-only, bundled as `assets/db/content.db.gz`.
+- **Device Registry DB** — schema v1, 2 tables (DeviceAccounts, DeviceState). Workspace-level; tracks up to 5 accounts per device.
 
 ---
 
