@@ -3,16 +3,18 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
-/// Provider for CurriculumActivationService
+/// Provider for CurriculumActivationService, scoped to the active profile.
 final curriculumActivationServiceProvider =
     Provider<CurriculumActivationService>((ref) {
       final database = ref.watch(userDatabaseProvider);
       final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
       final trackRepository = ref.watch(trackRepositoryProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
 
       final isTutorMode = ref.watch(tutorModeProvider);
 
@@ -20,27 +22,28 @@ final curriculumActivationServiceProvider =
         database: database,
         pushActiveCurricula: firestoreDataSource?.pushActiveCurricula,
         trackRepository: trackRepository,
+        profileId: profileId,
         isTutorMode: isTutorMode,
       );
     });
 
-/// Provider for list of active curricula (as enums)
+/// Provider for list of active curricula (as enums), scoped to active profile.
 final activeCurriculaProvider = FutureProvider<List<CurriculumId>>((ref) async {
   final service = ref.watch(curriculumActivationServiceProvider);
   return service.getActiveCurricula();
 });
 
-/// Stream provider for watching active curricula changes
+/// Stream provider for watching active curricula changes for the active profile.
 final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((
   ref,
 ) async* {
   final database = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
 
   await for (final storageKeys
-      in database.activeCurriculumDao.watchActiveCurricula()) {
-    // Map each storage key to a CurriculumId, skipping unknown keys with a
-    // warning rather than crashing. This handles the case where a curriculum
-    // was removed from the enum but still exists in an old database.
+      in database.activeCurriculumDao.watchActiveCurriculaByProfile(
+    profileId,
+  )) {
     final curricula = storageKeys
         .map<CurriculumId?>((key) {
           final matches = CurriculumId.values.where((c) => c.storageKey == key);
@@ -58,11 +61,12 @@ final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((
   }
 });
 
-/// Provider for checking if a specific curriculum is active
+/// Provider for checking if a specific curriculum is active for the profile.
 final isCurriculumActiveProvider = FutureProvider.family<bool, CurriculumId>((
   ref,
   curriculum,
 ) async {
   final database = ref.watch(userDatabaseProvider);
-  return database.activeCurriculumDao.isActive(curriculum);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return database.activeCurriculumDao.isActiveForProfile(curriculum, profileId);
 });

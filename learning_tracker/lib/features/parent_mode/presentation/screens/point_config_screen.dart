@@ -29,7 +29,9 @@ final _pointConfigDataProvider = FutureProvider<List<_CurriculumPointData>>((
   ref,
 ) async {
   final db = ref.watch(userDatabaseProvider);
-  final activeCurricula = await db.activeCurriculumDao.getActiveCurricula();
+  final profileId = ref.watch(activeProfileIdProvider);
+  final activeCurricula = await db.activeCurriculumDao
+      .getActiveCurriculaByProfile(profileId);
 
   final result = <_CurriculumPointData>[];
   for (final activeId in activeCurricula) {

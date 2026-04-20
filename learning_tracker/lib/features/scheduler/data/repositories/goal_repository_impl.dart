@@ -10,10 +10,15 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 class GoalRepositoryImpl implements GoalRepository {
   final UserDatabase _database;
   final SyncEngine? _syncEngine;
+  final int _profileId;
 
-  GoalRepositoryImpl({required UserDatabase database, SyncEngine? syncEngine})
-    : _database = database,
-      _syncEngine = syncEngine;
+  GoalRepositoryImpl({
+    required UserDatabase database,
+    SyncEngine? syncEngine,
+    int profileId = 0,
+  }) : _database = database,
+       _syncEngine = syncEngine,
+       _profileId = profileId;
 
   @override
   Future<GoalEntity> createGoal({
@@ -33,6 +38,7 @@ class GoalRepositoryImpl implements GoalRepository {
 
       final id = await _database.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: drift.Value(_profileId),
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           targetPercent: drift.Value(targetPercent),
@@ -64,8 +70,9 @@ class GoalRepositoryImpl implements GoalRepository {
 
   @override
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async {
-    final goals = await _database.goalDao.getGoalsByCurriculum(
+    final goals = await _database.goalDao.getGoalsByCurriculumAndProfile(
       curriculumId.storageKey,
+      _profileId,
     );
     return goals.map(_toEntity).toList();
   }
@@ -93,6 +100,7 @@ class GoalRepositoryImpl implements GoalRepository {
       await _database.goalDao.updateGoal(
         GoalsCompanion(
           id: drift.Value(goalId),
+          profileId: drift.Value(existing.profileId),
           curriculumId: drift.Value(existing.curriculumId),
           trackId: drift.Value(existing.trackId),
           targetPercent: drift.Value(targetPercent ?? existing.targetPercent),

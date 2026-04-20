@@ -205,17 +205,32 @@ String _$dashboardActiveCurriculaStreamHash() =>
     r'9689fa138119b78a0b3bf8ad2013549a05ca3d37';
 
 /// Per-curriculum completion percentage, scoped to active profile.
+///
+/// Formula: `completions.length / (totalLeafItems * totalStages)`.
+/// Every stage completion nudges the bar, and the denominator is the
+/// scoped total leaf items (not items touched) so the bar never regresses
+/// when a new item is started.
 
 @ProviderFor(dashboardCompletionPercentage)
 final dashboardCompletionPercentageProvider =
     DashboardCompletionPercentageFamily._();
 
 /// Per-curriculum completion percentage, scoped to active profile.
+///
+/// Formula: `completions.length / (totalLeafItems * totalStages)`.
+/// Every stage completion nudges the bar, and the denominator is the
+/// scoped total leaf items (not items touched) so the bar never regresses
+/// when a new item is started.
 
 final class DashboardCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
   /// Per-curriculum completion percentage, scoped to active profile.
+  ///
+  /// Formula: `completions.length / (totalLeafItems * totalStages)`.
+  /// Every stage completion nudges the bar, and the denominator is the
+  /// scoped total leaf items (not items touched) so the bar never regresses
+  /// when a new item is started.
   DashboardCompletionPercentageProvider._({
     required DashboardCompletionPercentageFamily super.from,
     required CurriculumId super.argument,
@@ -261,9 +276,14 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'f5c524f5179db498c518be07428baf8b31368067';
+    r'6efa6cddbea645766b524e1d84d9cbfb5e710297';
 
 /// Per-curriculum completion percentage, scoped to active profile.
+///
+/// Formula: `completions.length / (totalLeafItems * totalStages)`.
+/// Every stage completion nudges the bar, and the denominator is the
+/// scoped total leaf items (not items touched) so the bar never regresses
+/// when a new item is started.
 
 final class DashboardCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
@@ -277,6 +297,11 @@ final class DashboardCompletionPercentageFamily extends $Family
       );
 
   /// Per-curriculum completion percentage, scoped to active profile.
+  ///
+  /// Formula: `completions.length / (totalLeafItems * totalStages)`.
+  /// Every stage completion nudges the bar, and the denominator is the
+  /// scoped total leaf items (not items touched) so the bar never regresses
+  /// when a new item is started.
 
   DashboardCompletionPercentageProvider call(CurriculumId curriculum) =>
       DashboardCompletionPercentageProvider._(argument: curriculum, from: this);
@@ -370,12 +395,12 @@ final class DashboardLastCompletionFamily extends $Family
   String toString() => r'dashboardLastCompletionProvider';
 }
 
-/// Streak data provider (P6 compliant — uses core DB DAO).
+/// Streak data provider, scoped to the active profile.
 
 @ProviderFor(dashboardStreak)
 final dashboardStreakProvider = DashboardStreakProvider._();
 
-/// Streak data provider (P6 compliant — uses core DB DAO).
+/// Streak data provider, scoped to the active profile.
 
 final class DashboardStreakProvider
     extends
@@ -387,7 +412,7 @@ final class DashboardStreakProvider
     with
         $FutureModifier<({int currentStreak, int maxStreak})>,
         $StreamProvider<({int currentStreak, int maxStreak})> {
-  /// Streak data provider (P6 compliant — uses core DB DAO).
+  /// Streak data provider, scoped to the active profile.
   DashboardStreakProvider._()
     : super(
         from: null,
@@ -414,7 +439,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'94c107a627b4f45a010eb12d223d1a503a10b1e1';
+String _$dashboardStreakHash() => r'57d98ffb0171ffdee4b35d132f16c664e828f662';
 
 /// Global points total, scoped to active profile.
 
@@ -500,7 +525,7 @@ final class DashboardStreakRecoveryProvider
 }
 
 String _$dashboardStreakRecoveryHash() =>
-    r'48e813bbd75a6daf89530b387bea8a862f26ac20';
+    r'bfebf452c2b4cd58f84e837462d19f78d8a5a75a';
 
 /// Per-curriculum pace status for the dashboard.
 ///

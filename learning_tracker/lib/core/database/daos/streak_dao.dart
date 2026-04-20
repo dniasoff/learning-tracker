@@ -6,27 +6,51 @@ part 'streak_dao.g.dart';
 
 /// DAO for the streaks table.
 ///
-/// Manages the single-row global streak record.
+/// Each profile on an account owns its own streak row, keyed by profileId.
 @DriftAccessor(tables: [Streaks])
 class StreakDao extends DatabaseAccessor<UserDatabase> with _$StreakDaoMixin {
   StreakDao(super.db);
 
-  /// Get the current streak record, or null if none exists.
-  Future<Streak?> getStreak() => (select(streaks)..limit(1)).getSingleOrNull();
+  /// Get the streak record for a specific profile, or null if none exists.
+  Future<Streak?> getStreakByProfile(int profileId) =>
+      (select(streaks)
+            ..where((t) => t.profileId.equals(profileId))
+            ..limit(1))
+          .getSingleOrNull();
 
-  /// Watch the current streak record for reactive UI updates.
-  Stream<Streak?> watchStreak() =>
-      (select(streaks)..limit(1)).watchSingleOrNull();
+  /// Watch the streak record for a specific profile.
+  Stream<Streak?> watchStreakByProfile(int profileId) =>
+      (select(streaks)
+            ..where((t) => t.profileId.equals(profileId))
+            ..limit(1))
+          .watchSingleOrNull();
 
-  /// Upsert the streak record. Creates if not exists, updates if exists.
-  Future<void> upsertStreak(StreaksCompanion entry) async {
-    final existing = await getStreak();
+  /// Upsert the streak record for a specific profile.
+  Future<void> upsertStreakByProfile(
+    int profileId,
+    StreaksCompanion entry,
+  ) async {
+    final existing = await getStreakByProfile(profileId);
     if (existing == null) {
-      await into(streaks).insert(entry);
+      await into(streaks).insert(entry.copyWith(profileId: Value(profileId)));
     } else {
       await (update(
         streaks,
       )..where((t) => t.id.equals(existing.id))).write(entry);
     }
   }
+
+  /// Legacy accessor — returns the streak for the default profile (id 0).
+  /// Kept only for code paths that have not yet been threaded with a profileId
+  /// (data export, legacy tests). Prefer [getStreakByProfile].
+  Future<Streak?> getStreak() => getStreakByProfile(0);
+
+  /// Legacy stream — watches the default profile (id 0). Prefer
+  /// [watchStreakByProfile].
+  Stream<Streak?> watchStreak() => watchStreakByProfile(0);
+
+  /// Legacy upsert — writes to the default profile (id 0). Prefer
+  /// [upsertStreakByProfile].
+  Future<void> upsertStreak(StreaksCompanion entry) =>
+      upsertStreakByProfile(0, entry);
 }

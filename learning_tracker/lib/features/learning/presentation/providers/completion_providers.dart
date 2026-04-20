@@ -66,7 +66,7 @@ CompletionRepository completionRepository(Ref ref) {
     contentRepository: contentRepository,
     bookmarkRepository: bookmarkRepository,
     completionDetectionService: detectionService,
-    streakService: StreakService(database),
+    streakService: StreakService(database, profileId: profileId),
     activeProfileId: profileId,
   );
 }

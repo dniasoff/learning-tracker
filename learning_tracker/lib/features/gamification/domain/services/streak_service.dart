@@ -3,39 +3,33 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 
-/// Service for computing and managing global learning streaks.
+/// Service for computing and managing per-profile learning streaks.
 ///
-/// A streak represents consecutive days with at least one completion
-/// across any curriculum. Uses local timezone for day boundaries per FR109.
-///
-/// Supports a 1-day grace period: if the user misses exactly 1 day and
-/// hasn't used grace within the last 7 days, the streak is preserved.
+/// A streak represents consecutive days with at least one completion for
+/// a single profile. Each profile on the account has its own independent
+/// streak row — nothing is shared across profiles.
 class StreakService {
   final UserDatabase _db;
+  final int _profileId;
 
-  StreakService(this._db);
+  StreakService(this._db, {int profileId = 0}) : _profileId = profileId;
 
   /// Record a completion and update the streak accordingly.
-  ///
-  /// Called on every completion event. Only the first completion of the
-  /// day triggers a streak increment. Supports streak recovery via
-  /// a 1-day grace period.
   Future<Streak> recordCompletion(DateTime completionDateUtc) async {
-    final existing = await _db.streakDao.getStreak();
+    final existing = await _db.streakDao.getStreakByProfile(_profileId);
     final completionLocalDate = DateUtils.extractLocalDate(completionDateUtc);
 
     if (existing == null) {
-      // First ever completion
       final companion = StreaksCompanion.insert(
+        profileId: Value(_profileId),
         currentStreak: const Value(1),
         maxStreak: const Value(1),
         lastCompletionDate: Value(completionDateUtc),
       );
-      await _db.streakDao.upsertStreak(companion);
-      return (await _db.streakDao.getStreak())!;
+      await _db.streakDao.upsertStreakByProfile(_profileId, companion);
+      return (await _db.streakDao.getStreakByProfile(_profileId))!;
     }
 
-    // Already completed today — no change
     if (existing.lastCompletionDate != null &&
         DateUtils.isSameLocalDay(
           existing.lastCompletionDate!,
@@ -44,7 +38,6 @@ class StreakService {
       return existing;
     }
 
-    // Check if this is a consecutive day
     final lastLocalDate = existing.lastCompletionDate != null
         ? DateUtils.extractLocalDate(existing.lastCompletionDate!)
         : null;
@@ -56,14 +49,11 @@ class StreakService {
         : null;
 
     if (dayGap == 1) {
-      // Consecutive day — increment
       newStreak = existing.currentStreak + 1;
     } else if (dayGap == 2 && _canUseGrace(existing, completionLocalDate)) {
-      // Missed exactly 1 day — use grace period to preserve streak
       newStreak = existing.currentStreak + 1;
       newGraceUsedDate = completionDateUtc;
     } else {
-      // Gap of 2+ days (or grace already used recently) — reset to 1
       newStreak = 1;
     }
 
@@ -71,8 +61,10 @@ class StreakService {
         ? newStreak
         : existing.maxStreak;
 
-    await _db.streakDao.upsertStreak(
+    await _db.streakDao.upsertStreakByProfile(
+      _profileId,
       StreaksCompanion(
+        profileId: Value(_profileId),
         currentStreak: Value(newStreak),
         maxStreak: Value(newMax),
         lastCompletionDate: Value(completionDateUtc),
@@ -82,10 +74,9 @@ class StreakService {
       ),
     );
 
-    return (await _db.streakDao.getStreak())!;
+    return (await _db.streakDao.getStreakByProfile(_profileId))!;
   }
 
-  /// Check whether grace can be used: not used within the last 7 days.
   bool _canUseGrace(Streak existing, DateTime todayLocal) {
     if (existing.graceUsedDate == null) return true;
     final graceLocal = DateUtils.extractLocalDate(existing.graceUsedDate!);
@@ -95,7 +86,7 @@ class StreakService {
   /// Get streak recovery info — whether the current streak was recently
   /// saved by the grace period.
   Future<StreakRecoveryInfo> getRecoveryInfo() async {
-    final streak = await _db.streakDao.getStreak();
+    final streak = await _db.streakDao.getStreakByProfile(_profileId);
     if (streak == null) {
       return const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0);
     }
@@ -117,21 +108,20 @@ class StreakService {
     );
   }
 
-  /// Get the current streak data.
-  Future<Streak?> getStreak() => _db.streakDao.getStreak();
+  Future<Streak?> getStreak() => _db.streakDao.getStreakByProfile(_profileId);
 
-  /// Watch the current streak data for reactive UI updates.
-  Stream<Streak?> watchStreak() => _db.streakDao.watchStreak();
+  Stream<Streak?> watchStreak() =>
+      _db.streakDao.watchStreakByProfile(_profileId);
 
-  /// Get a map of dates with learning activity within a date range.
-  ///
-  /// Returns a set of local dates that had at least one completion.
-  /// Used for calendar view in Epic 7.
+  /// Get a map of dates with learning activity within a date range,
+  /// scoped to this profile.
   Future<Set<DateTime>> getStreakCalendar({
     required DateTime startUtc,
     required DateTime endUtc,
   }) async {
-    final completions = await _db.completionDao.getAllCompletions();
+    final completions = await _db.completionDao.getCompletionsByProfile(
+      _profileId,
+    );
     final activeDates = <DateTime>{};
 
     for (final completion in completions) {

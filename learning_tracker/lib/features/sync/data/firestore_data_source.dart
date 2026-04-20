@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/profiles/{profileId}/goals/{id}` - Goals (LWW)
 /// - `users/{uid}/profiles/{profileId}/streak/data` - Streak (single doc)
 /// - `users/{uid}/profiles/{profileId}/active_curricula/data` - Active curricula
+/// - `users/{uid}/profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state (LWW)
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
 class FirestoreDataSource {
   FirestoreDataSource({
@@ -410,6 +411,52 @@ class FirestoreDataSource {
         return curricula.cast<String>();
       }
       return [];
+    });
+  }
+
+  // ========== Curriculum Tracks Operations ==========
+
+  /// Get curriculum-tracks subcollection reference (profile-scoped).
+  CollectionReference<Map<String, dynamic>>? get _curriculumTracksCollection {
+    return _profileScopedDoc?.collection('curriculum_tracks');
+  }
+
+  /// Push a curriculum track to Firestore (LWW, keyed by curriculumId_trackType).
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {
+    final collection = _curriculumTracksCollection;
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final curriculumId = trackData['curriculum_id'];
+    final trackType = trackData['track_type'];
+    final docId = '${curriculumId}_$trackType';
+
+    await collection.doc(docId).set({
+      ...trackData,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch all curriculum tracks from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchCurriculumTracks({
+    int pageSize = defaultPageSize,
+  }) async {
+    final collection = _curriculumTracksCollection;
+    if (collection == null) return [];
+
+    return _fetchPaginated(collection, pageSize: pageSize);
+  }
+
+  /// Listen to real-time curriculum-track updates.
+  Stream<List<Map<String, dynamic>>> listenToCurriculumTracks() {
+    final collection = _curriculumTracksCollection;
+    if (collection == null) {
+      return Stream.value([]);
+    }
+
+    return collection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
     });
   }
 

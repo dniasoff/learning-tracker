@@ -4,6 +4,7 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/shabbos_time_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -408,7 +409,12 @@ Future<void> reminderSyncEffect(Ref ref) async {
 StreakAlertService streakAlertService(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
   final notifService = ref.watch(notificationServiceProvider);
-  return StreakAlertService(db: db, notificationService: notifService);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return StreakAlertService(
+    db: db,
+    notificationService: notifService,
+    profileId: profileId,
+  );
 }
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel

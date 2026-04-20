@@ -9,18 +9,24 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [BookmarkRepository] using Drift database and sync engine.
+///
+/// Scoped to a single profile so bookmarks on the same curriculum+track
+/// are independent across profiles on the account.
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final UserDatabase _database;
   final SyncEngine? _syncEngine;
   final ContentRepository _contentRepository;
+  final int _profileId;
 
   BookmarkRepositoryImpl({
     required UserDatabase database,
     required SyncEngine? syncEngine,
     required ContentRepository contentRepository,
+    int profileId = 0,
   }) : _database = database,
        _syncEngine = syncEngine,
-       _contentRepository = contentRepository;
+       _contentRepository = contentRepository,
+       _profileId = profileId;
 
   @override
   Future<BookmarkEntity?> getBookmark({
@@ -28,9 +34,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     required TrackType trackType,
   }) async {
     final bookmark = await _database.bookmarkDao
-        .getBookmarkByCurriculumAndTrack(
+        .getBookmarkByCurriculumTrackAndProfile(
           curriculumId.storageKey,
           trackType.storageKey,
+          _profileId,
         );
 
     if (bookmark == null) return null;
@@ -46,20 +53,20 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
 
-    // Check if bookmark exists
     final existing = await _database.bookmarkDao
-        .getBookmarkByCurriculumAndTrack(
+        .getBookmarkByCurriculumTrackAndProfile(
           curriculumId.storageKey,
           trackType.storageKey,
+          _profileId,
         );
 
     final BookmarkEntity bookmark;
 
     if (existing != null) {
-      // Update existing bookmark
       await _database.bookmarkDao.updateBookmark(
         BookmarksCompanion(
           id: drift.Value(existing.id),
+          profileId: drift.Value(_profileId),
           curriculumId: drift.Value(curriculumId.storageKey),
           trackType: drift.Value(trackType.storageKey),
           sefariaRef: drift.Value(sefariaRef),
@@ -74,9 +81,9 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         updatedAt: now,
       );
     } else {
-      // Create new bookmark
       await _database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: drift.Value(_profileId),
           curriculumId: curriculumId.storageKey,
           trackType: trackType.storageKey,
           sefariaRef: sefariaRef,
@@ -92,7 +99,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       );
     }
 
-    // Sync to Firestore
     await _syncBookmark(bookmark);
 
     return bookmark;
@@ -104,11 +110,11 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     required TrackType trackType,
     required String completedSefariaRef,
   }) async {
-    // Get current bookmark
     final bookmark = await _database.bookmarkDao
-        .getBookmarkByCurriculumAndTrack(
+        .getBookmarkByCurriculumTrackAndProfile(
           curriculumId.storageKey,
           trackType.storageKey,
+          _profileId,
         );
 
     if (bookmark == null) {
@@ -274,9 +280,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     );
 
     if (local == null) {
-      // No local bookmark, just insert remote
+      // No local bookmark for this profile, insert remote scoped to it
       await _database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: drift.Value(_profileId),
           curriculumId: remote.curriculumId.storageKey,
           trackType: remote.trackType.storageKey,
           sefariaRef: remote.sefariaRef,
@@ -284,18 +291,15 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
         ),
       );
     } else {
-      // Compare timestamps: remote wins if newer.
-      // Use upsertBookmark which handles the id lookup internally,
-      // avoiding an extra round-trip to the database.
       if (remote.updatedAt.isAfter(local.updatedAt)) {
-        await _database.bookmarkDao.upsertBookmark(
+        await _database.bookmarkDao.upsertBookmarkByProfile(
+          profileId: _profileId,
           curriculumId: remote.curriculumId.storageKey,
           trackType: remote.trackType.storageKey,
           sefariaRef: remote.sefariaRef,
           updatedAt: remote.updatedAt,
         );
       }
-      // else: local is newer or same, keep local
     }
   }
 }

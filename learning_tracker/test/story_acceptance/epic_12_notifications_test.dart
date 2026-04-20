@@ -134,6 +134,7 @@ void main() {
       alertService = StreakAlertService(
         db: db,
         notificationService: mockService,
+        profileId: 0,
         clock: () => DateTime.utc(2026, 3, 16, 12, 0, 0),
       );
 

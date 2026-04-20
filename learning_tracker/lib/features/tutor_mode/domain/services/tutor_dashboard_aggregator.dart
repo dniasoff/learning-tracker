@@ -78,17 +78,24 @@ class TutorPaceInfo {
 }
 
 /// Read-only aggregator that computes tutor dashboard data from existing providers.
+///
+/// Scoped to a single profile so tutor dashboards never mix data across
+/// profiles on the same account.
 class TutorDashboardAggregator {
   final UserDatabase _db;
+  final int _profileId;
 
-  TutorDashboardAggregator(this._db);
+  TutorDashboardAggregator(this._db, {int profileId = 0})
+    : _profileId = profileId;
 
   /// Compute the full tutor dashboard data snapshot.
   Future<TutorDashboardData> compute({
     required DateTime now,
     required List<DailyTask> allTasks,
   }) async {
-    final activeKeys = await _db.activeCurriculumDao.getActiveCurricula();
+    final activeKeys = await _db.activeCurriculumDao.getActiveCurriculaByProfile(
+      _profileId,
+    );
     final activeCurricula = activeKeys
         .map<CurriculumId?>((key) {
           final matches = CurriculumId.values.where((c) => c.storageKey == key);
@@ -100,10 +107,8 @@ class TutorDashboardAggregator {
     // Completion history — only fetch today's completions for the dashboard display
     final startOfDay = DateUtils.startOfLocalDay(now);
     final endOfDay = DateUtils.endOfLocalDay(now);
-    final todayCompletions = await _db.completionDao.getCompletionsByDateRange(
-      startOfDay,
-      endOfDay,
-    );
+    final todayCompletions = await _db.completionDao
+        .getCompletionsByDateRangeAndProfile(startOfDay, endOfDay, _profileId);
     final sortedCompletions = [...todayCompletions]
       ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
 
@@ -114,7 +119,10 @@ class TutorDashboardAggregator {
     final paceInfo = <CurriculumId, TutorPaceInfo>{};
     for (final curriculum in activeCurricula) {
       final curriculumCompletions = await _db.completionDao
-          .getCompletionsByCurriculum(curriculum.storageKey);
+          .getCompletionsByCurriculumAndProfile(
+            curriculum.storageKey,
+            _profileId,
+          );
       paceInfo[curriculum] = await _computePaceInfo(
         curriculum,
         curriculumCompletions,
@@ -188,7 +196,10 @@ class TutorDashboardAggregator {
         .where((c) => c.trackType == TrackType.personal.storageKey)
         .toList();
 
-    final goals = await _db.goalDao.getGoalsByCurriculum(curriculum.storageKey);
+    final goals = await _db.goalDao.getGoalsByCurriculumAndProfile(
+      curriculum.storageKey,
+      _profileId,
+    );
     PaceStatus? paceStatus;
 
     if (goals.isNotEmpty && goals.first.targetDate != null) {

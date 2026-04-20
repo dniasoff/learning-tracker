@@ -95,6 +95,16 @@ class OfflineQueue {
     );
   }
 
+  /// Enqueue a curriculum-track operation.
+  Future<void> enqueueCurriculumTrack(Map<String, dynamic> track) async {
+    final payload = jsonEncode(track);
+    await _queue.enqueue('curriculum_track', payload);
+    _logger.info(
+      'Queued curriculum track for offline sync: '
+      '${track['curriculum_id']}_${track['track_type']}',
+    );
+  }
+
   /// Flush queued operations to Firestore.
   ///
   /// If [batchSize] is provided, only processes that many items per flush
@@ -183,6 +193,9 @@ class OfflineQueue {
               break;
             case 'curriculum_import_metadata':
               await _firestoreDataSource.pushCurriculumImportMetadata(payload);
+              break;
+            case 'curriculum_track':
+              await _firestoreDataSource.pushCurriculumTrack(payload);
               break;
             default:
               _logger.warning(

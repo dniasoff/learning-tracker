@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutor_mode/domain/services/tutor_dashboard_aggregator.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -8,7 +9,8 @@ part 'tutor_dashboard_providers.g.dart';
 @riverpod
 TutorDashboardAggregator tutorDashboardAggregator(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
-  return TutorDashboardAggregator(db);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return TutorDashboardAggregator(db, profileId: profileId);
 }
 
 @riverpod

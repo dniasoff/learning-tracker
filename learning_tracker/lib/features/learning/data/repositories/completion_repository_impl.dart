@@ -45,9 +45,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // Returns a record indicating whether the completion was newly created.
     final (:completion, :isNew) = await _database.transaction(() async {
       // 1. Get existing completions for this item (single query for both
-      //    stage validation and duplicate check)
+      //    stage validation and duplicate check) — scoped to active profile
+      //    so profiles cannot block each other's stage progression.
       final completions = await _database.completionDao
-          .getCompletionsForContent(request.sefariaRef);
+          .getCompletionsForContentAndProfile(
+            request.sefariaRef,
+            _activeProfileId,
+          );
 
       // 2. Check for duplicate (idempotent)
       final existing = completions
@@ -213,12 +217,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required int stageId,
     required String trackType,
   }) async {
-    // Get all stages for this curriculum (ordered by stageOrder)
-    final completions = await _database.completionDao.getCompletionsForContent(
-      sefariaRef,
-    );
+    // Get completions scoped to the active profile — stage progression
+    // must not be blocked by another profile's history for the same item.
+    final completions = await _database.completionDao
+        .getCompletionsForContentAndProfile(sefariaRef, _activeProfileId);
 
-    // Filter to this track type
     final trackCompletions = completions
         .where((c) => c.trackType == trackType)
         .toList();
@@ -251,20 +254,20 @@ class CompletionRepositoryImpl implements CompletionRepository {
     }
   }
 
-  /// Check if this exact completion already exists (for idempotency).
+  /// Check if this exact completion already exists (for idempotency),
+  /// scoped to the active profile.
   Future<Completion?> _getExistingCompletion({
     required String sefariaRef,
     required int stageId,
     required String trackType,
   }) async {
-    final completions = await _database.completionDao.getCompletionsForContent(
-      sefariaRef,
-    );
+    final completions = await _database.completionDao
+        .getCompletionsForContentAndProfile(sefariaRef, _activeProfileId);
 
     final matches = completions.where(
       (c) => c.stageId == stageId && c.trackType == trackType,
     );
-    return matches.isEmpty ? null : matches.first; // null if not found
+    return matches.isEmpty ? null : matches.first;
   }
 
   /// Calculate points for completing this stage.
@@ -401,9 +404,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
       return;
     }
 
-    // Fallback: direct DAO access (no Firestore sync)
+    // Fallback: direct DAO access scoped to active profile (no Firestore sync)
     final bookmark = await _database.bookmarkDao
-        .getBookmarkByCurriculumAndTrack(curriculumId, trackType);
+        .getBookmarkByCurriculumTrackAndProfile(
+          curriculumId,
+          trackType,
+          _activeProfileId,
+        );
 
     if (bookmark == null) {
       final nextSefariaRef = await _getNextItemId(
@@ -414,6 +421,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       if (nextSefariaRef != null) {
         await _database.bookmarkDao.insertBookmark(
           BookmarksCompanion.insert(
+            profileId: drift.Value(_activeProfileId),
             curriculumId: curriculumId,
             sefariaRef: nextSefariaRef,
             trackType: trackType,
@@ -431,6 +439,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         await _database.bookmarkDao.updateBookmark(
           BookmarksCompanion(
             id: drift.Value(bookmark.id),
+            profileId: drift.Value(bookmark.profileId),
             curriculumId: drift.Value(bookmark.curriculumId),
             trackType: drift.Value(bookmark.trackType),
             sefariaRef: drift.Value(nextSefariaRef),
@@ -491,8 +500,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<List<Completion>> getCompletionsByCurriculum(
     String curriculumId,
   ) async {
-    return await _database.completionDao.getCompletionsByCurriculum(
+    return await _database.completionDao.getCompletionsByCurriculumAndProfile(
       curriculumId,
+      _activeProfileId,
     );
   }
 
@@ -500,7 +510,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<List<Completion>> getCompletionsForContentItem(
     String sefariaRef,
   ) async {
-    return await _database.completionDao.getCompletionsForContent(sefariaRef);
+    return await _database.completionDao.getCompletionsForContentAndProfile(
+      sefariaRef,
+      _activeProfileId,
+    );
   }
 
   @override
@@ -509,9 +522,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required int stageId,
     required String trackType,
   }) async {
-    final completions = await _database.completionDao.getCompletionsForContent(
-      sefariaRef,
-    );
+    final completions = await _database.completionDao
+        .getCompletionsForContentAndProfile(sefariaRef, _activeProfileId);
 
     return completions.any(
       (c) => c.stageId == stageId && c.trackType == trackType,

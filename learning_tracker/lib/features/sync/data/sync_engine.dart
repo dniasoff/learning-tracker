@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
@@ -53,6 +54,7 @@ class SyncEngine {
   StreamSubscription<List<Map<String, dynamic>>>? _goalsSubscription;
   StreamSubscription<List<String>>? _activeCurriculaSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _ledgerSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _curriculumTracksSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
@@ -82,6 +84,7 @@ class SyncEngine {
   bool _mergingGoals = false;
   bool _mergingActiveCurricula = false;
   bool _mergingLedgerEntries = false;
+  bool _mergingCurriculumTracks = false;
 
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
@@ -184,6 +187,10 @@ class SyncEngine {
       _onLedgerUpdate,
       onError: _handleListenerError,
     );
+
+    _curriculumTracksSubscription = _firestoreDataSource
+        .listenToCurriculumTracks()
+        .listen(_onCurriculumTracksUpdate, onError: _handleListenerError);
   }
 
   /// Detach foreground listeners (on app background).
@@ -203,6 +210,7 @@ class SyncEngine {
     await _goalsSubscription?.cancel();
     await _activeCurriculaSubscription?.cancel();
     await _ledgerSubscription?.cancel();
+    await _curriculumTracksSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
@@ -211,6 +219,7 @@ class SyncEngine {
     _goalsSubscription = null;
     _activeCurriculaSubscription = null;
     _ledgerSubscription = null;
+    _curriculumTracksSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -246,6 +255,7 @@ class SyncEngine {
         _firestoreDataSource.fetchProfile(),
         _firestoreDataSource.fetchLedgerEntries(),
         _firestoreDataSource.fetchActiveCurricula(),
+        _firestoreDataSource.fetchCurriculumTracks(),
       ]);
       final completions = results[0] as List<Map<String, dynamic>>;
       final bookmarks = results[1] as List<Map<String, dynamic>>;
@@ -255,6 +265,7 @@ class SyncEngine {
       final profile = results[5] as Map<String, dynamic>?;
       final ledgerEntries = results[6] as List<Map<String, dynamic>>;
       final activeCurricula = results[7] as List<String>;
+      final curriculumTracks = results[8] as List<Map<String, dynamic>>;
 
       // Merge with local database
       await _mergeCompletions(completions);
@@ -265,6 +276,7 @@ class SyncEngine {
       if (profile != null) await _mergeProfile(profile);
       await _mergeLedgerEntries(ledgerEntries);
       await _mergeActiveCurricula(activeCurricula);
+      await _mergeCurriculumTracks(curriculumTracks);
 
       _logger.info('Pull-on-launch completed successfully');
       final syncedAt = DateTime.now().toUtc();
@@ -554,17 +566,22 @@ class SyncEngine {
           continue;
         }
 
-        final exists = await _database.completionDao.completionExists(
+        final profileId =
+            remote['profile_id'] as int? ?? _firestoreDataSource.profileId;
+
+        final exists = await _database.completionDao.completionExistsByProfile(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: trackType,
           completedAt: completedAt,
+          profileId: profileId,
         );
 
         if (!exists) {
           await _database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: Value(profileId),
               curriculumId: curriculumId,
               sefariaRef: sefariaRef,
               stageId: stageId,
@@ -889,6 +906,99 @@ class SyncEngine {
     }
   }
 
+  /// Merge curriculum tracks from Firestore.
+  ///
+  /// Upserts each remote track row keyed by (profileId, curriculumId,
+  /// trackType) so track activation, deactivation, and archival state all
+  /// round-trip across devices. Unknown curriculum/track keys are skipped.
+  Future<void> _mergeCurriculumTracks(
+    List<Map<String, dynamic>> remoteTracks,
+  ) async {
+    _logger.debug(
+      'Merging ${remoteTracks.length} curriculum tracks from Firestore',
+    );
+    if (remoteTracks.isEmpty) return;
+
+    final profileId = _firestoreDataSource.profileId;
+
+    for (final remote in remoteTracks) {
+      try {
+        final curriculumKey = remote['curriculum_id'] as String?;
+        final trackTypeKey = remote['track_type'] as String?;
+        final isActive = remote['is_active'] as bool? ?? true;
+        final activatedAt = _parseTimestamp(remote['activated_at']);
+        final deactivatedAt = _parseTimestamp(remote['deactivated_at']);
+        final archivedAt = _parseTimestamp(remote['archived_at']);
+        final paceResetDate = _parseTimestamp(remote['pace_reset_date']);
+
+        if (curriculumKey == null ||
+            trackTypeKey == null ||
+            activatedAt == null) {
+          _logger.warning('Skipping invalid remote curriculum track: $remote');
+          continue;
+        }
+
+        final curriculumId = CurriculumId.values
+            .cast<CurriculumId?>()
+            .firstWhere(
+              (c) => c!.storageKey == curriculumKey,
+              orElse: () => null,
+            );
+        final trackType = TrackType.values.cast<TrackType?>().firstWhere(
+          (t) => t!.storageKey == trackTypeKey,
+          orElse: () => null,
+        );
+        if (curriculumId == null || trackType == null) {
+          _logger.warning(
+            'Skipping curriculum track with unknown key: $remote',
+          );
+          continue;
+        }
+
+        final existing =
+            await (_database.select(_database.curriculumTracks)..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(curriculumKey) &
+                      t.trackType.equals(trackTypeKey),
+                ))
+                .getSingleOrNull();
+
+        if (existing == null) {
+          await _database
+              .into(_database.curriculumTracks)
+              .insert(
+                CurriculumTracksCompanion.insert(
+                  profileId: Value(profileId),
+                  curriculumId: curriculumKey,
+                  trackType: trackTypeKey,
+                  isActive: Value(isActive),
+                  activatedAt: activatedAt,
+                  deactivatedAt: Value(deactivatedAt),
+                  archivedAt: Value(archivedAt),
+                  paceResetDate: Value(paceResetDate),
+                ),
+              );
+        } else {
+          await (_database.update(
+            _database.curriculumTracks,
+          )..where((t) => t.id.equals(existing.id))).write(
+            CurriculumTracksCompanion(
+              isActive: Value(isActive),
+              activatedAt: Value(activatedAt),
+              deactivatedAt: Value(deactivatedAt),
+              archivedAt: Value(archivedAt),
+              paceResetDate: Value(paceResetDate),
+            ),
+          );
+        }
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+        _logger.warning('Failed to merge curriculum track: $e');
+      }
+    }
+  }
+
   /// Merge profile from Firestore (last-write-wins per D4).
   Future<void> _mergeProfile(Map<String, dynamic> remoteProfile) async {
     _logger.debug('Merging profile from Firestore');
@@ -1009,6 +1119,22 @@ class SyncEngine {
       await _mergeLedgerEntries(ledgerEntries);
     } finally {
       _mergingLedgerEntries = false;
+    }
+  }
+
+  Future<void> _onCurriculumTracksUpdate(
+    List<Map<String, dynamic>> tracks,
+  ) async {
+    if (_mergingCurriculumTracks) return;
+    _mergingCurriculumTracks = true;
+    _consecutiveListenerErrors = 0;
+    try {
+      _logger.debug(
+        'Received ${tracks.length} curriculum tracks from listener',
+      );
+      await _mergeCurriculumTracks(tracks);
+    } finally {
+      _mergingCurriculumTracks = false;
     }
   }
 
@@ -1313,7 +1439,9 @@ class SyncEngine {
       _logger.debug('Pushed ${goals.length} goals');
 
       // --- Streak ---
-      final streak = await _database.streakDao.getStreak();
+      final streak = await _database.streakDao.getStreakByProfile(
+        _firestoreDataSource.profileId,
+      );
       if (streak != null) {
         await pushStreak({
           'current_count': streak.currentStreak,

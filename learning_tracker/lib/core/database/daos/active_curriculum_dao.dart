@@ -53,12 +53,46 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
     );
   }
 
-  /// Check if a curriculum is currently active
+  /// Check if a curriculum is currently active (legacy — any profile).
   Future<bool> isActive(CurriculumId curriculum) async {
     final query = select(activeCurricula)
       ..where((t) => t.curriculumId.equals(curriculum.storageKey));
     final result = await query.getSingleOrNull();
     return result != null;
+  }
+
+  /// Check if a curriculum is currently active for a specific profile.
+  Future<bool> isActiveForProfile(CurriculumId curriculum, int profileId) async {
+    final query = select(activeCurricula)
+      ..where(
+        (t) =>
+            t.curriculumId.equals(curriculum.storageKey) &
+            t.profileId.equals(profileId),
+      );
+    final result = await query.getSingleOrNull();
+    return result != null;
+  }
+
+  /// Deactivate a curriculum for a specific profile.
+  Future<void> deactivateByProfile(
+    CurriculumId curriculum,
+    int profileId,
+  ) async {
+    await transaction(() async {
+      final activeForProfile = await getActiveCurriculaByProfile(profileId);
+      if (activeForProfile.length <= 1) {
+        throw StateError(
+          'Cannot deactivate the last active curriculum for this profile',
+        );
+      }
+
+      await (delete(activeCurricula)..where(
+            (t) =>
+                t.curriculumId.equals(curriculum.storageKey) &
+                t.profileId.equals(profileId),
+          ))
+          .go();
+    });
   }
 
   /// Activate a curriculum (idempotent)

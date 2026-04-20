@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -16,7 +17,8 @@ part 'gamification_screen.g.dart';
 @riverpod
 Future<Set<DateTime>> streakCalendar(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
-  final streakService = StreakService(db);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final streakService = StreakService(db, profileId: profileId);
   final now = DateTime.now().toUtc();
   final thirtyDaysAgo = now.subtract(const Duration(days: 30));
   return streakService.getStreakCalendar(startUtc: thirtyDaysAgo, endUtc: now);

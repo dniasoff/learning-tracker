@@ -55,7 +55,7 @@ final class ParentDashboardAggregatorProvider
 }
 
 String _$parentDashboardAggregatorHash() =>
-    r'30b574e70ffad1846ae57b2d84fa7eff9e7dc6f2';
+    r'4997577b5029876400c8e53da4b47c2422c6ca81';
 
 @ProviderFor(parentDashboardData)
 final parentDashboardDataProvider = ParentDashboardDataProvider._();

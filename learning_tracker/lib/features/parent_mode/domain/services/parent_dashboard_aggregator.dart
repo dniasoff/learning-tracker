@@ -66,21 +66,26 @@ class EngagementMetrics {
 
 /// Read-only aggregator that computes parent dashboard analytics from existing data.
 ///
-/// Does not create new data models — aggregates completions, streaks, points, and pace.
+/// Scoped to a single profile so the parent view always reflects the
+/// currently viewed child, never a mix across profiles on the account.
 class ParentDashboardAggregator {
   final UserDatabase _db;
+  final int _profileId;
 
-  ParentDashboardAggregator(this._db);
+  ParentDashboardAggregator(this._db, {int profileId = 0})
+    : _profileId = profileId;
 
   /// Compute the full dashboard data snapshot.
   ///
   /// [now] defaults to the current time; pass explicitly for testability.
   Future<ParentDashboardData> compute({DateTime? now}) async {
     now ??= DateTime.now();
-    final completions = await _db.completionDao.getAllCompletions();
-    final streak = await _db.streakDao.getStreak();
+    final completions = await _db.completionDao.getCompletionsByProfile(
+      _profileId,
+    );
+    final streak = await _db.streakDao.getStreakByProfile(_profileId);
     final activeCurriculaKeys = await _db.activeCurriculumDao
-        .getActiveCurricula();
+        .getActiveCurriculaByProfile(_profileId);
 
     final activeCurricula = activeCurriculaKeys
         .map<CurriculumId?>((key) {
@@ -142,9 +147,11 @@ class ParentDashboardAggregator {
 
   /// Compute completion percentage for a curriculum.
   Future<double> computeCompletionPercentage(CurriculumId curriculum) async {
-    final completions = await _db.completionDao.getCompletionsByCurriculum(
-      curriculum.storageKey,
-    );
+    final completions = await _db.completionDao
+        .getCompletionsByCurriculumAndProfile(
+          curriculum.storageKey,
+          _profileId,
+        );
     final stages = await _db.stageDao.getStageDefinitionsByCurriculum(
       curriculum.storageKey,
     );
@@ -191,7 +198,10 @@ class ParentDashboardAggregator {
     List<Completion> completions,
     DateTime now,
   ) async {
-    final goals = await _db.goalDao.getGoalsByCurriculum(curriculum.storageKey);
+    final goals = await _db.goalDao.getGoalsByCurriculumAndProfile(
+      curriculum.storageKey,
+      _profileId,
+    );
     if (goals.isEmpty) return PaceStatusType.onPace;
 
     final goal = goals.first;

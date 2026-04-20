@@ -4,25 +4,32 @@ import 'package:learning_tracker/features/progress/domain/models/chart_data.dart
 
 /// Service for aggregating completion data into chart-ready structures.
 ///
-/// All date operations use local timezone for day boundaries.
+/// All reads are scoped to a single profile so charts never mix data
+/// across profiles on the same account.
 class ChartDataService {
   final UserDatabase _db;
+  final int _profileId;
 
-  ChartDataService(this._db);
+  ChartDataService(this._db, {int profileId = 0}) : _profileId = profileId;
+
+  Future<List<Completion>> _loadCompletions(String? curriculumId) {
+    if (curriculumId != null) {
+      return _db.completionDao.getCompletionsByCurriculumAndProfile(
+        curriculumId,
+        _profileId,
+      );
+    }
+    return _db.completionDao.getCompletionsByProfile(_profileId);
+  }
 
   /// Get daily completion counts within a date range.
-  ///
-  /// Returns one entry per day in the range, with zero for inactive days.
   Future<List<DailyCompletionData>> getDailyCompletions({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
   }) async {
-    final completions = curriculumId != null
-        ? await _db.completionDao.getCompletionsByCurriculum(curriculumId)
-        : await _db.completionDao.getAllCompletions();
+    final completions = await _loadCompletions(curriculumId);
 
-    // Count completions per local date
     final counts = <DateTime, int>{};
     for (final c in completions) {
       final localDate = _extractLocalDate(c.completedAt);
@@ -31,7 +38,6 @@ class ChartDataService {
       }
     }
 
-    // Fill in all days in range (zero for gaps)
     final result = <DailyCompletionData>[];
     var current = startDate;
     while (!current.isAfter(endDate)) {
@@ -45,18 +51,13 @@ class ChartDataService {
   }
 
   /// Get cumulative progress over time.
-  ///
-  /// Returns monotonically increasing totals from the first completion date.
   Future<List<CumulativeProgressPoint>> getCumulativeProgress({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
   }) async {
-    final completions = curriculumId != null
-        ? await _db.completionDao.getCompletionsByCurriculum(curriculumId)
-        : await _db.completionDao.getAllCompletions();
+    final completions = await _loadCompletions(curriculumId);
 
-    // Count completions per local date
     final dailyCounts = <DateTime, int>{};
     for (final c in completions) {
       final localDate = _extractLocalDate(c.completedAt);
@@ -65,7 +66,6 @@ class ChartDataService {
       }
     }
 
-    // Count completions before start date for initial cumulative
     var cumulativeBeforeStart = 0;
     for (final c in completions) {
       final localDate = _extractLocalDate(c.completedAt);
@@ -74,7 +74,6 @@ class ChartDataService {
       }
     }
 
-    // Build cumulative series
     final result = <CumulativeProgressPoint>[];
     var runningTotal = cumulativeBeforeStart;
     var current = startDate;
@@ -88,36 +87,32 @@ class ChartDataService {
   }
 
   /// Get target line points for a curriculum's goal.
-  ///
-  /// Returns null if no goal exists for the curriculum.
   Future<List<TargetLinePoint>?> getTargetLine({
     required String curriculumId,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final goals = await _db.goalDao.getGoalsByCurriculum(curriculumId);
+    final goals = await _db.goalDao.getGoalsByCurriculumAndProfile(
+      curriculumId,
+      _profileId,
+    );
     if (goals.isEmpty) return null;
 
     final goal = goals.first;
     if (goal.targetDate == null) return null;
 
-    // Get total completions at goal start to calculate baseline
-    final completions = await _db.completionDao.getCompletionsByCurriculum(
-      curriculumId,
-    );
+    final completions = await _db.completionDao
+        .getCompletionsByCurriculumAndProfile(curriculumId, _profileId);
     final baselineCount = completions
         .where((c) => _extractLocalDate(c.completedAt).isBefore(goal.createdAt))
         .length;
 
-    // Linear interpolation from goal start to target date
     final goalStart = _extractLocalDate(goal.createdAt);
     final goalEnd = _extractLocalDate(goal.targetDate!);
     final totalDays = goalEnd.difference(goalStart).inDays;
     if (totalDays <= 0) return null;
 
-    // We need a target total — use targetPercent * total items
-    // For now approximate with completions count as proxy
-    final targetTotal = completions.length; // Best available approximation
+    final targetTotal = completions.length;
 
     final result = <TargetLinePoint>[];
     var current = startDate;
@@ -133,8 +128,6 @@ class ChartDataService {
   }
 
   /// Get daily points earned for points-over-time chart.
-  ///
-  /// Only returns data when userMode is child. Returns null for adult mode.
   Future<List<DailyPointsData>?> getDailyPoints({
     required DateTime startDate,
     required DateTime endDate,
@@ -143,9 +136,7 @@ class ChartDataService {
   }) async {
     if (userMode == UserMode.adult) return null;
 
-    final completions = curriculumId != null
-        ? await _db.completionDao.getCompletionsByCurriculum(curriculumId)
-        : await _db.completionDao.getAllCompletions();
+    final completions = await _loadCompletions(curriculumId);
 
     final pointsByDate = <DateTime, int>{};
     for (final c in completions) {
@@ -167,12 +158,14 @@ class ChartDataService {
     return result;
   }
 
-  /// Get streak calendar data — set of dates with activity.
+  /// Get streak calendar data — set of dates with activity for this profile.
   Future<Set<DateTime>> getStreakCalendar({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final completions = await _db.completionDao.getAllCompletions();
+    final completions = await _db.completionDao.getCompletionsByProfile(
+      _profileId,
+    );
     final activeDates = <DateTime>{};
 
     for (final c in completions) {
@@ -185,7 +178,6 @@ class ChartDataService {
     return activeDates;
   }
 
-  /// Extract local date (midnight) from a DateTime.
   static DateTime _extractLocalDate(DateTime dt) {
     final local = dt.toLocal();
     return DateTime(local.year, local.month, local.day);

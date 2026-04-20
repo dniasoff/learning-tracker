@@ -199,6 +199,63 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
         .write(const CurriculumTracksCompanion(archivedAt: Value(null)));
   }
 
+  /// Get every track row for a profile (active, inactive, or archived).
+  ///
+  /// Used by the sync engine to push the full per-profile track state to
+  /// Firestore — listeners and pull-on-launch rely on seeing deactivations
+  /// and archivals, not just current activations.
+  Future<List<CurriculumTrack>> getAllForProfile(int profileId) => (select(
+    curriculumTracks,
+  )..where((t) => t.profileId.equals(profileId))).get();
+
+  /// Upsert a track row from a remote sync payload keyed by the
+  /// (profileId, curriculumId, trackType) composite. Replaces the current
+  /// state fields with the remote values.
+  Future<void> upsertFromSync({
+    required int profileId,
+    required CurriculumId curriculumId,
+    required TrackType trackType,
+    required bool isActive,
+    required DateTime activatedAt,
+    DateTime? deactivatedAt,
+    DateTime? archivedAt,
+    DateTime? paceResetDate,
+  }) async {
+    final existing = await (select(curriculumTracks)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.curriculumId.equals(curriculumId.storageKey) &
+              t.trackType.equals(trackType.storageKey),
+        ))
+        .getSingleOrNull();
+
+    if (existing == null) {
+      await into(curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: Value(profileId),
+          curriculumId: curriculumId.storageKey,
+          trackType: trackType.storageKey,
+          isActive: Value(isActive),
+          activatedAt: activatedAt,
+          deactivatedAt: Value(deactivatedAt),
+          archivedAt: Value(archivedAt),
+          paceResetDate: Value(paceResetDate),
+        ),
+      );
+    } else {
+      await (update(curriculumTracks)..where((t) => t.id.equals(existing.id)))
+          .write(
+            CurriculumTracksCompanion(
+              isActive: Value(isActive),
+              activatedAt: Value(activatedAt),
+              deactivatedAt: Value(deactivatedAt),
+              archivedAt: Value(archivedAt),
+              paceResetDate: Value(paceResetDate),
+            ),
+          );
+    }
+  }
+
   /// Count active (non-archived) tracks for a profile.
   Future<int> countActiveTracksForProfile(int profileId) async {
     final tracks =

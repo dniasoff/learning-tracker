@@ -21,7 +21,8 @@ part 'progress_providers.g.dart';
 @riverpod
 ProgressRepository progressRepository(Ref ref) {
   final database = ref.watch(userDatabaseProvider);
-  return ProgressRepositoryImpl(database: database);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return ProgressRepositoryImpl(database: database, profileId: profileId);
 }
 
 /// Provider for track breakdown by curriculum, scoped to the active profile.

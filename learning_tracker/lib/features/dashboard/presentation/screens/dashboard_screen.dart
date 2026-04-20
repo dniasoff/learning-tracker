@@ -3,15 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_date_header.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/day_type_indicator.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -484,11 +481,7 @@ class _TaskItemCard extends ConsumerWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          context.router.push(
-            TextDisplayRoute(sefariaRef: task.contentItemSefariaRef),
-          );
-        },
+        onTap: () => context.router.push(const SchedulerRoute()),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
@@ -544,113 +537,10 @@ class _TaskItemCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
-              // AC-1: Quick-complete button
-              _QuickCompleteButton(task: task),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-/// AC-1: Quick-complete icon button that marks a task done from the dashboard.
-class _QuickCompleteButton extends ConsumerStatefulWidget {
-  const _QuickCompleteButton({required this.task});
-  final DailyTask task;
-
-  @override
-  ConsumerState<_QuickCompleteButton> createState() =>
-      _QuickCompleteButtonState();
-}
-
-class _QuickCompleteButtonState extends ConsumerState<_QuickCompleteButton>
-    with SingleTickerProviderStateMixin {
-  bool _completing = false;
-  late final AnimationController _scaleController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-  }
-
-  @override
-  void dispose() {
-    _scaleController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _onQuickComplete() async {
-    if (_completing) return;
-    setState(() => _completing = true);
-
-    try {
-      final useCase = ref.read(markCompletionUseCaseProvider);
-      await useCase(
-        CompletionRequest(
-          curriculumId: widget.task.curriculumId.storageKey,
-          sefariaRef: widget.task.contentItemSefariaRef,
-          stageId: widget.task.stageDefinitionId,
-          trackType: 'personal',
-        ),
-      );
-      ref.invalidate(allDailyTasksProvider);
-      ref.invalidate(dashboardStreakProvider);
-      ref.invalidate(dashboardGlobalPointsProvider);
-      ref.invalidate(
-        dashboardCompletionPercentageProvider(widget.task.curriculumId),
-      );
-      ref.invalidate(dashboardLastCompletionProvider(widget.task.curriculumId));
-      await _scaleController.forward();
-    } catch (e, st) {
-      AppLogger.instance.error(
-        'Failed to mark completion from dashboard',
-        e,
-        st,
-      );
-      if (mounted) {
-        setState(() => _completing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Couldn't save: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (_completing) {
-      return ScaleTransition(
-        scale: CurvedAnimation(parent: _scaleController, curve: Curves.easeOut),
-        child: Icon(
-          Icons.check_circle,
-          color: theme.colorScheme.primary,
-          size: 28,
-        ),
-      );
-    }
-
-    final l10n = AppLocalizations.of(context)!;
-    return IconButton(
-      onPressed: _onQuickComplete,
-      icon: Icon(
-        Icons.check_circle_outline,
-        color: Colors.white.withValues(alpha: 0.4),
-        size: 24,
-      ),
-      tooltip: l10n.markComplete,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
     );
   }
 }

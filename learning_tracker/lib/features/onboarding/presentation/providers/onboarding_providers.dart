@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -37,7 +38,8 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
 /// Provider for GoalRepository used during onboarding goal setup.
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   final db = ref.watch(userDatabaseProvider);
-  return GoalRepositoryImpl(database: db);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return GoalRepositoryImpl(database: db, profileId: profileId);
 });
 
 /// Provider for BulkPriorCompletionService used during onboarding.

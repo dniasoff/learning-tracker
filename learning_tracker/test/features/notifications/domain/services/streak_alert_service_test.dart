@@ -37,6 +37,7 @@ void main() {
     service = StreakAlertService(
       db: db,
       notificationService: mockNotificationService,
+      profileId: 0,
       clock: clock,
     );
 

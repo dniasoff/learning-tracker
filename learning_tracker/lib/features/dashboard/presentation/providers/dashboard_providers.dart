@@ -116,11 +116,12 @@ Future<DateTime?> dashboardLastCompletion(
   return latest;
 }
 
-/// Streak data provider (P6 compliant — uses core DB DAO).
+/// Streak data provider, scoped to the active profile.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
-  return db.streakDao.watchStreak().map((streak) {
+  final profileId = ref.watch(activeProfileIdProvider);
+  return db.streakDao.watchStreakByProfile(profileId).map((streak) {
     if (streak == null) return (currentStreak: 0, maxStreak: 0);
     return (currentStreak: streak.currentStreak, maxStreak: streak.maxStreak);
   });
@@ -139,7 +140,8 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 @riverpod
 Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
-  final streakService = StreakService(db);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final streakService = StreakService(db, profileId: profileId);
   return streakService.getRecoveryInfo();
 }
 
