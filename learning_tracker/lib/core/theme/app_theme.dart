@@ -45,6 +45,18 @@ class AppTheme {
   /// Default accent kept for backward compatibility with existing call sites.
   static const Color defaultAccentColor = heritageGold;
 
+  /// Child mode exclusive colors
+  static const Color childBackground = Color(0xFF1A1F3E);
+  static const Color childSurface = Color(0xFF232849);
+  static const Color childCard = Color(0xFF2A3060);
+  static const Color childOutline = Color(0xFF3A4080);
+  static const Color childPrimary = Color(0xFF4A6CF7);
+  static const Color childStreakAccent = Color(0xFFE8445A);
+  static const Color childPointsAccent = Color(0xFF2D5BE3);
+  static const Color childTrophyAccent = Color(0xFFF5A623);
+  static const Color childText = Color(0xFFF5EDD8);
+  static const Color childTextMuted = Color(0xFFB8AC8C);
+
   // ---------------------------------------------------------------------------
   // Curriculum / track colors (unchanged — domain-level semantic colors)
   // ---------------------------------------------------------------------------
@@ -90,17 +102,11 @@ class AppTheme {
   }
 
   static const Color trackPersonal = Color(0xFF4A90E2);
-  static const Color trackSchool = Color(0xFF2ECC71);
-  static const Color trackTutor = Color(0xFFE67E22);
 
   static Color getTrackColor(TrackType trackType) {
     switch (trackType) {
       case TrackType.personal:
         return trackPersonal;
-      case TrackType.school:
-        return trackSchool;
-      case TrackType.tutor:
-        return trackTutor;
     }
   }
 
@@ -148,7 +154,9 @@ class AppTheme {
     required bool isChildMode,
     Color accent = heritageGold,
   }) {
-    // Single heritage palette — navy regardless of brightness.
+    if (isChildMode) {
+      return _childTheme(accent: accent);
+    }
     return _navyTheme(accent: accent);
   }
 
@@ -157,6 +165,239 @@ class AppTheme {
       _navyTheme(accent: accent);
   static ThemeData lightTheme([Color accent = heritageGold]) =>
       _navyTheme(accent: accent);
+
+  // ---------------------------------------------------------------------------
+  // Child (playful, gamified) theme — vibrant colors, animated feedback
+  // ---------------------------------------------------------------------------
+
+  static ThemeData _childTheme({required Color accent}) {
+    final textTheme = _buildTextTheme(childText, childTextMuted);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.dark(
+        primary: childPrimary,
+        onPrimary: childBackground,
+        primaryContainer: childPrimary.withValues(alpha: 0.18),
+        onPrimaryContainer: childPrimary,
+        secondary: childStreakAccent,
+        onSecondary: childBackground,
+        secondaryContainer: childStreakAccent.withValues(alpha: 0.15),
+        onSecondaryContainer: childStreakAccent,
+        tertiary: childText,
+        onTertiary: childBackground,
+        tertiaryContainer: childCard,
+        onTertiaryContainer: childText,
+        error: _errorColor,
+        onError: Colors.white,
+        surface: childSurface,
+        onSurface: childText,
+        onSurfaceVariant: childTextMuted,
+        outline: childOutline,
+        shadow: Colors.black.withValues(alpha: 0.6),
+      ),
+      scaffoldBackgroundColor: childBackground,
+      textTheme: textTheme,
+      appBarTheme: AppBarTheme(
+        backgroundColor: childBackground,
+        foregroundColor: childText,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.playfairDisplay(
+          color: childText,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+        iconTheme: const IconThemeData(color: childText),
+      ),
+      cardTheme: CardThemeData(
+        color: childCard,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: childOutline, width: 1),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: childPrimary,
+          foregroundColor: childBackground,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: childPrimary,
+          foregroundColor: childBackground,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: childPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: childText,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          side: const BorderSide(color: childOutline),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: childCard,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: childOutline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: childOutline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: childPrimary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: _errorColor),
+        ),
+        labelStyle: GoogleFonts.inter(color: childTextMuted),
+        hintStyle: GoogleFonts.inter(
+          color: childTextMuted.withValues(alpha: 0.7),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: childSurface,
+        selectedItemColor: childPrimary,
+        unselectedItemColor: childTextMuted,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: childSurface,
+        indicatorColor: childPrimary.withValues(alpha: 0.16),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: childPrimary);
+          }
+          return const IconThemeData(color: childTextMuted);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final base = GoogleFonts.inter(fontSize: 12, letterSpacing: 0.2);
+          if (states.contains(WidgetState.selected)) {
+            return base.copyWith(color: childPrimary, fontWeight: FontWeight.w600);
+          }
+          return base.copyWith(color: childTextMuted);
+        }),
+        elevation: 0,
+      ),
+      dividerColor: childOutline,
+      chipTheme: ChipThemeData(
+        backgroundColor: childCard,
+        selectedColor: childPrimary,
+        labelStyle: GoogleFonts.inter(color: childText, fontSize: 13),
+        secondaryLabelStyle: GoogleFonts.inter(
+          color: childBackground,
+          fontSize: 13,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: const BorderSide(color: childOutline),
+        ),
+        side: BorderSide.none,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return childPrimary;
+            return childCard;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return childBackground;
+            return childText;
+          }),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return childPrimary;
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(childBackground),
+        side: const BorderSide(color: childTextMuted),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return childPrimary;
+          return childTextMuted;
+        }),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return childPrimary;
+          return childTextMuted;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return childPrimary.withValues(alpha: 0.3);
+          }
+          return childOutline;
+        }),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: childPrimary,
+        linearTrackColor: childOutline,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: childSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: childOutline),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: childSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: childCard,
+        contentTextStyle: GoogleFonts.inter(color: childText),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      drawerTheme: const DrawerThemeData(backgroundColor: childBackground),
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Navy (scholarly dark) theme — used by adult + dark brightness.
