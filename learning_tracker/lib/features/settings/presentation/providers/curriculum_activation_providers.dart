@@ -18,6 +18,7 @@ final curriculumActivationServiceProvider =
       return CurriculumActivationService(
         database: database,
         pushActiveCurricula: firestoreDataSource?.pushActiveCurricula,
+        pushCurriculumTrack: firestoreDataSource?.pushCurriculumTrack,
         trackRepository: trackRepository,
         profileId: profileId,
       );

@@ -13,15 +13,18 @@ class CurriculumActivationService {
   CurriculumActivationService({
     required UserDatabase database,
     required Future<void> Function(List<String>)? pushActiveCurricula,
+    required Future<void> Function(Map<String, dynamic>)? pushCurriculumTrack,
     required TrackRepository trackRepository,
     int profileId = 0,
   }) : _database = database,
        _pushActiveCurricula = pushActiveCurricula,
+       _pushCurriculumTrack = pushCurriculumTrack,
        _trackRepository = trackRepository,
        _profileId = profileId;
 
   final UserDatabase _database;
   final Future<void> Function(List<String>)? _pushActiveCurricula;
+  final Future<void> Function(Map<String, dynamic>)? _pushCurriculumTrack;
   final TrackRepository _trackRepository;
   final int _profileId;
 
@@ -50,7 +53,7 @@ class CurriculumActivationService {
 
   /// Activate a curriculum for the active profile.
   Future<void> activate(CurriculumId curriculum) async {
-await _database.activeCurriculumDao.activateByProfile(
+    await _database.activeCurriculumDao.activateByProfile(
       curriculum,
       _profileId,
     );
@@ -72,7 +75,7 @@ await _database.activeCurriculumDao.activateByProfile(
     CurriculumId curriculum,
     int profileId,
   ) async {
-await _database.activeCurriculumDao.activateByProfile(
+    await _database.activeCurriculumDao.activateByProfile(
       curriculum,
       profileId,
     );
@@ -91,7 +94,7 @@ await _database.activeCurriculumDao.activateByProfile(
 
   /// Deactivate a curriculum for the active profile.
   Future<void> deactivate(CurriculumId curriculum) async {
-await _database.activeCurriculumDao.deactivateByProfile(
+    await _database.activeCurriculumDao.deactivateByProfile(
       curriculum,
       _profileId,
     );
@@ -100,7 +103,7 @@ await _database.activeCurriculumDao.deactivateByProfile(
 
   /// Toggle a curriculum on or off for the active profile.
   Future<void> toggle(CurriculumId curriculum) async {
-await _database.transaction(() async {
+    await _database.transaction(() async {
       final isActive = await _database.activeCurriculumDao.isActiveForProfile(
         curriculum,
         _profileId,
@@ -160,8 +163,27 @@ await _database.transaction(() async {
       final activeCurricula = await _database.activeCurriculumDao
           .getActiveCurriculaByProfile(_profileId);
       await _pushActiveCurricula?.call(activeCurricula);
+      await _syncTracksToFirestore();
     } catch (e) {
       // Silent fail for offline/auth issues — local DB is source of truth
+    }
+  }
+
+  Future<void> _syncTracksToFirestore() async {
+    if (_pushCurriculumTrack == null) return;
+    final tracks = await _database.trackDao.getAllForProfile(_profileId);
+    for (final track in tracks) {
+      await _pushCurriculumTrack.call({
+        'profile_id': track.profileId,
+        'track_id': track.id,
+        'curriculum_id': track.curriculumId,
+        'track_type': track.trackType,
+        'is_active': track.isActive,
+        'activated_at': track.activatedAt.toIso8601String(),
+        'deactivated_at': track.deactivatedAt?.toIso8601String(),
+        'archived_at': track.archivedAt?.toIso8601String(),
+        'pace_reset_date': track.paceResetDate?.toIso8601String(),
+      });
     }
   }
 }

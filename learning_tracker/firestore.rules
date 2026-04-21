@@ -3,6 +3,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
     // Deny all access by default
     match /{document=**} {
       allow read, write: if false;
@@ -10,26 +18,30 @@ service cloud.firestore {
 
     // User-scoped data: only the authenticated user can access their own data
     match /users/{uid} {
-
-      // Helper: request is from the document owner
-      function isOwner() {
-        return request.auth != null && request.auth.uid == uid;
-      }
-
       // Account-level profile document
       match /profile/{docId} {
-        allow read, write: if isOwner();
+        allow read, write: if isOwner(uid);
       }
 
       // Account-level learner profiles (the actual learner rows — one per
       // member of this account). Doc id is the local profile id as string.
       match /learner_profiles/{profileId} {
-        allow read, write: if isOwner();
+        allow read, write: if isOwner(uid);
       }
 
       // Profile-scoped data lives under learner_profiles subcollections.
+      // Track-centric schema supports:
+      // - tracks/{trackId}
+      // - tracks/{trackId}/config/{scope|stage_plan|study_days|goal}
+      // - completions/{completionId}
+      // - learning_ledger/{entryId}
+      // - bookmarks/{trackId}
+      // - daily_plan/{yyyy-mm-dd}
+      // - projections/{active_curricula|streak|progress_summary}
+      //
+      // Legacy collections remain readable/writable for migration safety.
       match /learner_profiles/{profileId}/{document=**} {
-        allow read, write: if isOwner();
+        allow read, write: if isOwner(uid);
       }
 
       // Legacy path kept denied by omission (users/{uid}/profiles/{profileId}/...)

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 @RoutePage()
 class ProfilePickerScreen extends ConsumerStatefulWidget {
@@ -68,7 +71,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 final profile = profiles[index];
                 return _ProfileCard(
                   profile: profile,
-                  onTap: () => _selectProfile(profile.id),
+                  onTap: () => unawaited(_selectProfile(profile.id)),
                   onLongPress: () => _showManageSheet(profile, profiles.length),
                 );
               },
@@ -81,9 +84,17 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   // ── Select Profile ─────────────────────────────────────────────────────────
 
-  void _selectProfile(int profileId) {
+  Future<void> _selectProfile(int profileId) async {
     ref.read(selectedProfileIdProvider.notifier).select(profileId);
-    context.router.replaceAll([const AppShellRoute()]);
+    // Recreate SyncEngine with the selected profile id and pull once so
+    // profile-scoped tracks/progress are available immediately on AppShell.
+    ref.invalidate(syncEngineProvider);
+    final syncEngine = ref.read(syncEngineProvider);
+    if (syncEngine != null) {
+      await syncEngine.pullOnLaunch();
+    }
+    if (!mounted) return;
+    await context.router.replaceAll([const AppShellRoute()]);
   }
 
   // ── Add Profile ───────────────────────────────────────────────────────────

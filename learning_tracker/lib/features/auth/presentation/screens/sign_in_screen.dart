@@ -409,8 +409,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     }
     if (!mounted) return;
 
-    ref.read(selectedProfileIdProvider.notifier).clear();
-
     // Decide onboarding vs app-shell by whether the cloud account has
     // any learner profiles. This is the single source of truth — local
     // data freshly pulled from Firestore — so new-device restores of
@@ -444,6 +442,25 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       if (!mounted) return;
       unawaited(context.router.replaceAll([const OnboardingRoute()]));
       return;
+    }
+
+    // If exactly one profile exists, select it immediately and re-pull
+    // profile-scoped Firestore data (tracks/completions/etc) with the
+    // correct profileId instead of the bootstrap default (0).
+    final profiles = await ref
+        .read(userDatabaseProvider)
+        .profileDao
+        .getProfilesByAccount(1);
+    if (profiles.length == 1) {
+      ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
+      ref.invalidate(syncEngineProvider);
+      final selectedSyncEngine = ref.read(syncEngineProvider);
+      if (selectedSyncEngine != null) {
+        await selectedSyncEngine.pullOnLaunch();
+      }
+    } else {
+      // Multiple profiles: user chooses in profile picker.
+      ref.read(selectedProfileIdProvider.notifier).clear();
     }
 
     await prefs.setBool(kOnboardingComplete, true);
