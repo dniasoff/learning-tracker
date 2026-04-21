@@ -28,61 +28,83 @@ class ProgressScreen extends ConsumerWidget {
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
     final profileId = ref.watch(activeProfileIdProvider);
     final journeyAsync = ref.watch(journeyViewModelProvider(profileId));
+    final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Progress')),
-      body: SafeArea(
-        top: false,
-        child: activeCurriculaAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-          data: (activeCurricula) {
-            if (activeCurricula.isEmpty) {
-              return const EmptyState(
-                message: 'No progress yet',
-                subtitle: 'Start learning to see your progress here.',
-                icon: Icons.trending_up_outlined,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              AppTheme.brandBlueSoft.withValues(alpha: 0.2),
+              AppTheme.brandCream,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: activeCurriculaAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (activeCurricula) {
+              if (activeCurricula.isEmpty) {
+                return const EmptyState(
+                  message: 'No progress yet',
+                  subtitle: 'Start learning to see your progress here.',
+                  icon: Icons.trending_up_outlined,
+                );
+              }
+
+              final userMode = userModeAsync.asData?.value ?? UserMode.adult;
+              final streakData = streakAsync.asData?.value;
+              final currentStreak = userMode == UserMode.child
+                  ? (streakData?.currentStreak ?? 0)
+                  : 0;
+              final maxStreak = userMode == UserMode.child
+                  ? (streakData?.maxStreak ?? 0)
+                  : 0;
+              final totalPoints = globalPointsAsync.asData?.value ?? 0;
+              final journey = journeyAsync.asData?.value;
+            final overviewStats = overviewStatsAsync.asData?.value;
+            final totalCompletions =
+                overviewStats?.totalCompletions ?? journey?.totalCompletions ?? 0;
+            final totalUniqueUnits =
+                overviewStats?.totalUniqueItems ?? journey?.totalUniqueUnits ?? 0;
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(dashboardActiveCurriculaStreamProvider);
+                  if (userMode == UserMode.child) {
+                    ref.invalidate(dashboardStreakProvider);
+                    ref.invalidate(dashboardGlobalPointsProvider);
+                  }
+                ref.invalidate(progressOverviewStatsProvider);
+                  ref.invalidate(journeyViewModelProvider(profileId));
+                  for (final c in activeCurricula) {
+                    ref.invalidate(dashboardCompletionPercentageProvider(c));
+                  }
+                },
+                child: userMode == UserMode.child
+                    ? _ChildProgressView(
+                        currentStreak: currentStreak,
+                        maxStreak: maxStreak,
+                        totalCompletions: totalCompletions,
+                        totalUniqueUnits: totalUniqueUnits,
+                        totalPoints: totalPoints,
+                        activeCurricula: activeCurricula,
+                        journey: journey,
+                      )
+                    : _AdultProgressView(
+                        totalCompletions: totalCompletions,
+                        totalUniqueUnits: totalUniqueUnits,
+                        activeCurricula: activeCurricula,
+                      ),
               );
-            }
-
-            final userMode = userModeAsync.asData?.value ?? UserMode.adult;
-            final streakData = streakAsync.asData?.value;
-            final currentStreak = streakData?.currentStreak ?? 0;
-            final maxStreak = streakData?.maxStreak ?? 0;
-            final totalPoints = globalPointsAsync.asData?.value ?? 0;
-            final journey = journeyAsync.asData?.value;
-            final totalCompletions = journey?.totalCompletions ?? 0;
-            final totalUniqueUnits = journey?.totalUniqueUnits ?? 0;
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(dashboardActiveCurriculaStreamProvider);
-                ref.invalidate(dashboardStreakProvider);
-                ref.invalidate(dashboardGlobalPointsProvider);
-                ref.invalidate(journeyViewModelProvider(profileId));
-                for (final c in activeCurricula) {
-                  ref.invalidate(dashboardCompletionPercentageProvider(c));
-                }
-              },
-              child: userMode == UserMode.child
-                  ? _ChildProgressView(
-                      currentStreak: currentStreak,
-                      maxStreak: maxStreak,
-                      totalCompletions: totalCompletions,
-                      totalUniqueUnits: totalUniqueUnits,
-                      totalPoints: totalPoints,
-                      activeCurricula: activeCurricula,
-                      journey: journey,
-                    )
-                  : _AdultProgressView(
-                      currentStreak: currentStreak,
-                      maxStreak: maxStreak,
-                      totalCompletions: totalCompletions,
-                      totalUniqueUnits: totalUniqueUnits,
-                      activeCurricula: activeCurricula,
-                    ),
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -173,15 +195,11 @@ class _ChildProgressView extends StatelessWidget {
 
 class _AdultProgressView extends StatelessWidget {
   const _AdultProgressView({
-    required this.currentStreak,
-    required this.maxStreak,
     required this.totalCompletions,
     required this.totalUniqueUnits,
     required this.activeCurricula,
   });
 
-  final int currentStreak;
-  final int maxStreak;
   final int totalCompletions;
   final int totalUniqueUnits;
   final List<CurriculumId> activeCurricula;
@@ -208,15 +226,6 @@ class _AdultProgressView extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _StatItem(
-                        icon: Icons.local_fire_department,
-                        iconColor: Colors.orange,
-                        value: '$currentStreak',
-                        label: 'Day Streak',
-                        sublabel: 'Best: $maxStreak',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatItem(
                         icon: Icons.check_circle,
                         iconColor: Theme.of(context).colorScheme.primary,
                         value: '$totalCompletions',
@@ -231,6 +240,14 @@ class _AdultProgressView extends StatelessWidget {
                         label: 'Units Done',
                       ),
                     ),
+                    Expanded(
+                      child: _StatItem(
+                        icon: Icons.menu_book,
+                        iconColor: Colors.teal,
+                        value: '${activeCurricula.length}',
+                        label: 'Active Tracks',
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -238,7 +255,7 @@ class _AdultProgressView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        _QuickAccessSection(),
+        const _QuickAccessSection(),
         const SizedBox(height: 20),
         _CurriculaMasterySection(activeCurricula: activeCurricula),
       ],
@@ -276,7 +293,7 @@ class _CompletionRingWidget extends StatelessWidget {
                   child: CircularProgressIndicator(
                     value: percentage / 100,
                     strokeWidth: 12,
-                    valueColor: AlwaysStoppedAnimation<Color>(
+                    valueColor: const AlwaysStoppedAnimation<Color>(
                       AppTheme.childPrimary,
                     ),
                     backgroundColor: AppTheme.childOutline,
@@ -332,8 +349,19 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [backgroundColor, backgroundColor.withValues(alpha: 0.82)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: backgroundColor.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -380,8 +408,10 @@ class _SiyumBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.childTrophyAccent,
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [AppTheme.childTrophyAccent, AppTheme.brandGoldDeep],
+        ),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
@@ -600,14 +630,12 @@ class _StatItem extends StatelessWidget {
     required this.iconColor,
     required this.value,
     required this.label,
-    this.sublabel,
   });
 
   final IconData icon;
   final Color iconColor;
   final String value;
   final String label;
-  final String? sublabel;
 
   @override
   Widget build(BuildContext context) {
@@ -630,13 +658,6 @@ class _StatItem extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
-        if (sublabel != null)
-          Text(
-            sublabel!,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
       ],
     );
   }

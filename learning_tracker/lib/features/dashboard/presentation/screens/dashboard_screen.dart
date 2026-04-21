@@ -60,38 +60,53 @@ class DashboardScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: SafeArea(
-        top: false,
-        child: activeCurriculaAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) =>
-              Center(child: Text(l10n.errorWithMessage(e.toString()))),
-          data: (activeCurricula) {
-            final userMode = userModeAsync.asData?.value ?? UserMode.adult;
-            final streakData = streakAsync.asData?.value;
-            final currentStreak = streakData?.currentStreak ?? 0;
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              AppTheme.brandBlueSoft.withValues(alpha: 0.22),
+              AppTheme.brandCream,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: activeCurriculaAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) =>
+                Center(child: Text(l10n.errorWithMessage(e.toString()))),
+            data: (activeCurricula) {
+              final userMode = userModeAsync.asData?.value ?? UserMode.adult;
+              final streakData = streakAsync.asData?.value;
+              final currentStreak = userMode == UserMode.child
+                  ? (streakData?.currentStreak ?? 0)
+                  : 0;
 
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(dashboardActiveCurriculaStreamProvider);
-                ref.invalidate(dashboardUserModeProvider);
-                ref.invalidate(dashboardStreakProvider);
-                ref.invalidate(dashboardGlobalPointsProvider);
-                ref.invalidate(allDailyTasksProvider);
-                for (final c in activeCurricula) {
-                  ref.invalidate(dashboardCompletionPercentageProvider(c));
-                  ref.invalidate(dashboardLastCompletionProvider(c));
-                  ref.invalidate(dashboardPaceStatusProvider(c));
-                }
-              },
-              child: _DashboardBody(
-                activeCurricula: activeCurricula,
-                userMode: userMode,
-                currentStreak: currentStreak,
-                profileName: profileName,
-              ),
-            );
-          },
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(dashboardActiveCurriculaStreamProvider);
+                  ref.invalidate(dashboardUserModeProvider);
+                  ref.invalidate(dashboardStreakProvider);
+                  ref.invalidate(dashboardGlobalPointsProvider);
+                  ref.invalidate(allDailyTasksProvider);
+                  for (final c in activeCurricula) {
+                    ref.invalidate(dashboardCompletionPercentageProvider(c));
+                    ref.invalidate(dashboardLastCompletionProvider(c));
+                    ref.invalidate(dashboardPaceStatusProvider(c));
+                  }
+                },
+                child: _DashboardBody(
+                  activeCurricula: activeCurricula,
+                  userMode: userMode,
+                  currentStreak: currentStreak,
+                  profileName: profileName,
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -118,6 +133,13 @@ class _DashboardBody extends ConsumerWidget {
     return l10n.goodEvening;
   }
 
+  String _formatPercent(double fraction) {
+    final percent = fraction * 100;
+    if (percent > 0 && percent < 0.1) return '<0.1%';
+    if (percent < 1) return '${percent.toStringAsFixed(1)}%';
+    return '${percent.round()}%';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -139,11 +161,11 @@ class _DashboardBody extends ConsumerWidget {
         loadedCount++;
       }
     }
-    final avgCompletion = loadedCount > 0
-        ? (totalCompletion / loadedCount * 100).round()
-        : 0;
+    final avgCompletion = loadedCount > 0 ? (totalCompletion / loadedCount) : 0.0;
+    final avgCompletionDisplay = _formatPercent(avgCompletion);
 
     final totalPoints = globalPointsAsync.asData?.value ?? 0;
+    final tasksToday = dailyTasksAsync.asData?.value.length ?? 0;
 
     if (activeCurricula.isEmpty) {
       final isChildMode =
@@ -158,26 +180,48 @@ class _DashboardBody extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Greeting header
-        Text(
-          '${_greeting(l10n)},',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.brandBlue, AppTheme.brandBlueBright],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.brandBlue.withValues(alpha: 0.25),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_greeting(l10n)},',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.86),
+                ),
+              ),
+              Text(
+                name,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              DefaultTextStyle(
+                style: theme.textTheme.bodySmall!.copyWith(
+                  color: Colors.white.withValues(alpha: 0.86),
+                ),
+                child: DashboardDateHeader(date: now),
+              ),
+            ],
           ),
         ),
-        Text(
-          name,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-
-        // AC-3: English + Hebrew date header
-        DashboardDateHeader(date: now),
-
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
 
         // AC-4: Day type indicator
         dailyTasksAsync.when(
@@ -189,39 +233,62 @@ class _DashboardBody extends ConsumerWidget {
         const SizedBox(height: 20),
 
         // Streak recovery banner
-        _StreakRecoveryBanner(currentStreak: currentStreak),
-
-        const SizedBox(height: 12),
+        if (userMode == UserMode.child) ...[
+          _StreakRecoveryBanner(currentStreak: currentStreak),
+          const SizedBox(height: 12),
+        ],
 
         // Stats row
-        Row(
-          children: [
-            Expanded(
-              child: _StatCircle(
-                icon: Icons.local_fire_department,
-                iconColor: Colors.orange,
-                value: '$currentStreak',
-                label: l10n.streak,
+        if (userMode == UserMode.child)
+          Row(
+            children: [
+              Expanded(
+                child: _StatCircle(
+                  icon: Icons.local_fire_department,
+                  iconColor: Colors.orange,
+                  value: '$currentStreak',
+                  label: l10n.streak,
+                ),
               ),
-            ),
-            Expanded(
-              child: _StatCircle(
-                icon: Icons.check_circle,
-                iconColor: theme.colorScheme.primary,
-                value: '$avgCompletion%',
-                label: l10n.done,
+              Expanded(
+                child: _StatCircle(
+                  icon: Icons.check_circle,
+                  iconColor: theme.colorScheme.primary,
+                  value: avgCompletionDisplay,
+                  label: l10n.done,
+                ),
               ),
-            ),
-            Expanded(
-              child: _StatCircle(
-                icon: Icons.auto_stories,
-                iconColor: Colors.deepPurple,
-                value: '$totalPoints',
-                label: userMode == UserMode.child ? l10n.points : l10n.pages,
+              Expanded(
+                child: _StatCircle(
+                  icon: Icons.auto_stories,
+                  iconColor: Colors.deepPurple,
+                  value: '$totalPoints',
+                  label: l10n.points,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: _StatCircle(
+                  icon: Icons.check_circle,
+                  iconColor: theme.colorScheme.primary,
+                  value: avgCompletionDisplay,
+                  label: l10n.done,
+                ),
+              ),
+              Expanded(
+                child: _StatCircle(
+                  icon: Icons.today,
+                  iconColor: Colors.teal,
+                  value: '$tasksToday',
+                  label: l10n.todaysTasks,
+                ),
+              ),
+            ],
+          ),
         const SizedBox(height: 24),
 
         // AC-5: Today's Learning section (actual task items)
@@ -291,6 +358,7 @@ class _StatCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bg = iconColor.withValues(alpha: 0.12);
     return Column(
       children: [
         Container(
@@ -298,7 +366,7 @@ class _StatCircle extends StatelessWidget {
           height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: iconColor.withValues(alpha: 0.1),
+            color: bg,
             border: Border.all(
               color: iconColor.withValues(alpha: 0.3),
               width: 2,
@@ -313,7 +381,7 @@ class _StatCircle extends StatelessWidget {
                 value,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppTheme.brandInk,
                 ),
               ),
             ],
@@ -322,10 +390,10 @@ class _StatCircle extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           label,
-          style: TextStyle(
+          style: theme.textTheme.labelSmall?.copyWith(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: theme.colorScheme.onSurfaceVariant,
             letterSpacing: 1,
           ),
         ),
@@ -502,7 +570,7 @@ class _TaskItemCard extends ConsumerWidget {
                     Text(
                       '$curriculumName: ${task.contentItemSefariaRef}',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white,
+                        color: theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -512,7 +580,7 @@ class _TaskItemCard extends ConsumerWidget {
                     Text(
                       task.stageName,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -572,7 +640,7 @@ class _DailyProgressBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurfaceVariant,
                 letterSpacing: 1,
               ),
             ),
@@ -591,7 +659,7 @@ class _DailyProgressBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 8,
-            backgroundColor: Colors.white.withValues(alpha: 0.1),
+            backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.25),
             valueColor: AlwaysStoppedAnimation<Color>(
               theme.colorScheme.primary,
             ),
@@ -609,6 +677,13 @@ class _CurriculumCard extends ConsumerWidget {
 
   const _CurriculumCard({required this.curriculum, required this.allTasks});
 
+  String _formatPercent(double fraction) {
+    final percent = fraction * 100;
+    if (percent > 0 && percent < 0.1) return '<0.1%';
+    if (percent < 1) return '${percent.toStringAsFixed(1)}%';
+    return '${percent.round()}%';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -623,7 +698,7 @@ class _CurriculumCard extends ConsumerWidget {
     );
     final paceAsync = ref.watch(dashboardPaceStatusProvider(curriculum));
     final percentage = completionAsync.asData?.value ?? 0.0;
-    final pctDisplay = (percentage * 100).round();
+    final pctDisplay = _formatPercent(percentage);
 
     // AC-6: Compute per-curriculum task count and today's study item
     final curriculumTasks = allTasks
@@ -687,7 +762,7 @@ class _CurriculumCard extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      '$pctDisplay%',
+                      pctDisplay,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -703,7 +778,7 @@ class _CurriculumCard extends ConsumerWidget {
                         ),
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.4),
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       )
                     else if (paceStatus != null)
@@ -711,7 +786,7 @@ class _CurriculumCard extends ConsumerWidget {
                         l10n.noProjection,
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: theme.colorScheme.onSurfaceVariant,
                           fontStyle: FontStyle.italic,
                         ),
                       ),
@@ -738,7 +813,7 @@ class _CurriculumCard extends ConsumerWidget {
                         Text(
                           todayTask.contentItemSefariaRef,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: theme.colorScheme.onSurface,
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 1,
@@ -748,7 +823,7 @@ class _CurriculumCard extends ConsumerWidget {
                           Text(
                             l10n.plusNMore(curriculumTasks.length - 1),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.4),
+                              color: theme.colorScheme.onSurfaceVariant,
                               fontSize: 11,
                             ),
                           ),

@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const kIntroSeen = 'intro_seen';
@@ -29,40 +30,44 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       title: '9 Curricula, One App',
       subtitle:
           'From Biblical texts and Oral Law to Law Codes and Ethics. All your learning, sourced from Sefaria and available offline.',
-      bgColor: Color(0xFFE8D7C3),
-      titleColor: Color(0xFF2B2520),
-      subtitleColor: Color(0xFF6B6159),
-      iconColor: Color(0xFF4A5F8F),
+      bgColor: Color(0xFFEFF3FF),
+      titleColor: AppTheme.brandInk,
+      subtitleColor: AppTheme.brandInkMuted,
+      iconColor: AppTheme.brandBlue,
+      chipText: 'Intro 2: The Curricula',
     ),
     _IntroPageData(
       icon: Icons.update_rounded,
       title: 'Never Forget\na Mishna',
       subtitle:
           'Our intelligent chazara engine schedules reviews based on your pace. Spaced repetition ensures your learning stays with you forever.',
-      bgColor: Color(0xFFD4E4F7),
-      titleColor: Color(0xFF2B2520),
-      subtitleColor: Color(0xFF6B6159),
-      iconColor: Color(0xFF4A5F8F),
+      bgColor: Color(0xFFEBF3FF),
+      titleColor: AppTheme.brandInk,
+      subtitleColor: AppTheme.brandInkMuted,
+      iconColor: AppTheme.brandBlueBright,
+      chipText: 'Intro 3: Smart Review',
     ),
     _IntroPageData(
       icon: Icons.trending_up_rounded,
       title: 'Master Your\nLearning at Scale',
       subtitle:
           'Juggling Mishnah, Talmud, and Bible is hard. We turn large-scale learning goals into a clear daily plan tailored to you.',
-      bgColor: Color(0xFFF5E6D3),
-      titleColor: Color(0xFF2B2520),
-      subtitleColor: Color(0xFF6B6159),
-      iconColor: Color(0xFFC99B3D),
+      bgColor: Color(0xFFF8F2E6),
+      titleColor: AppTheme.brandInk,
+      subtitleColor: AppTheme.brandInkMuted,
+      iconColor: AppTheme.brandGoldDeep,
+      chipText: 'Intro 1: Our Mission',
     ),
     _IntroPageData(
       icon: Icons.school_rounded,
       title: 'Designed for Every\nScholar',
       subtitle:
           'Choose Child Mode for a gamified journey with points and rewards, or Adult Mode for clean, scholarly progress tracking.',
-      bgColor: Color(0xFFE6D4F0),
-      titleColor: Color(0xFF2B2520),
-      subtitleColor: Color(0xFF6B6159),
-      iconColor: Color(0xFF8B6BA8),
+      bgColor: Color(0xFFF4EEFF),
+      titleColor: AppTheme.brandInk,
+      subtitleColor: AppTheme.brandInkMuted,
+      iconColor: AppTheme.curriculumMussar,
+      chipText: 'Intro 4: Your Mode',
     ),
   ];
 
@@ -116,49 +121,39 @@ class _AppIntroScreenState extends State<AppIntroScreen>
     final pageData = _pages[_currentPage];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F0),
+      backgroundColor: AppTheme.brandCream,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: Container(
-                      key: ValueKey(_currentPage),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.menu_book,
+                        color: pageData.iconColor,
+                        size: 18,
                       ),
-                      decoration: BoxDecoration(
-                        color: pageData.iconColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: pageData.iconColor.withValues(alpha: 0.2),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Aleph Bright',
+                        style: GoogleFonts.inter(
+                          color: AppTheme.brandBlue,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: Text(
-                        '${_currentPage + 1} of ${_pages.length}',
-                        style: TextStyle(
-                          color: pageData.iconColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
                   if (!isLast)
                     TextButton(
                       onPressed: _skip,
-                      child: const Text(
+                      child: Text(
                         'Skip',
-                        style: TextStyle(
-                          color: Color(0xFF999999),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppTheme.brandBlue.withValues(alpha: 0.7),
                         ),
                       ),
                     )
@@ -198,7 +193,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
                           borderRadius: BorderRadius.circular(4),
                           color: isActive
                               ? pageData.iconColor
-                              : const Color(0xFFDDD9D0),
+                              : AppTheme.brandOutline,
                         ),
                       );
                     }),
@@ -207,7 +202,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
                   _GlowingButton(
                     onTap: _nextPage,
                     label: isLast ? 'Get Started 🚀' : 'Next',
-                    bgColor: pageData.iconColor,
+                    bgColor: AppTheme.brandBlueBright,
                     showArrow: !isLast,
                   ),
                 ],
@@ -229,6 +224,7 @@ class _IntroPageData {
     required this.titleColor,
     required this.subtitleColor,
     required this.iconColor,
+    required this.chipText,
   });
 
   final IconData icon;
@@ -238,6 +234,7 @@ class _IntroPageData {
   final Color titleColor;
   final Color subtitleColor;
   final Color iconColor;
+  final String chipText;
 }
 
 class _IntroPage extends StatelessWidget {
@@ -248,49 +245,114 @@ class _IntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: size.width * 0.06),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
-          SizedBox(height: size.height * 0.02),
+          const SizedBox(height: 10),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
                 color: data.bgColor,
-                borderRadius: BorderRadius.circular(32),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  width: 1.6,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.brandBlue.withValues(alpha: 0.08),
+                    blurRadius: 26,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
                     flex: 2,
-                    child: AnimatedBuilder(
-                      animation: iconAnimation,
-                      builder: (context, _) {
-                        final scale = CurvedAnimation(
-                          parent: iconAnimation,
-                          curve: Curves.elasticOut,
-                        ).value;
-                        return Transform.scale(
-                          scale: scale,
-                          child: Icon(
-                            data.icon,
-                            size: 140,
-                            color: data.iconColor,
-                          ),
-                        );
-                      },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.78),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              top: 12,
+                              right: 14,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: data.iconColor.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  data.chipText,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: data.iconColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Center(
+                              child: AnimatedBuilder(
+                                animation: iconAnimation,
+                                builder: (context, _) {
+                                  final scale = CurvedAnimation(
+                                    parent: iconAnimation,
+                                    curve: Curves.elasticOut,
+                                  ).value;
+                                  return Transform.scale(
+                                    scale: 0.7 + (scale * 0.3),
+                                    child: Container(
+                                      width: 116,
+                                      height: 116,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            data.iconColor.withValues(
+                                              alpha: 0.22,
+                                            ),
+                                            Colors.white,
+                                          ],
+                                        ),
+                                        border: Border.all(
+                                          color: data.iconColor.withValues(
+                                            alpha: 0.22,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        data.icon,
+                                        size: 56,
+                                        color: data.iconColor,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   Expanded(
                     flex: 1,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 28,
-                        vertical: 20,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(28, 2, 28, 18),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
@@ -312,15 +374,15 @@ class _IntroPage extends StatelessWidget {
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.playfairDisplay(
                                     color: data.titleColor,
-                                    fontSize: 32,
+                                    fontSize: 36,
                                     fontWeight: FontWeight.w700,
-                                    height: 1.15,
+                                    height: 1.1,
                                   ),
                                 ),
                               );
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           AnimatedBuilder(
                             animation: iconAnimation,
                             builder: (context, _) {
@@ -340,7 +402,7 @@ class _IntroPage extends StatelessWidget {
                                   style: GoogleFonts.inter(
                                     color: data.subtitleColor,
                                     fontSize: 14,
-                                    height: 1.5,
+                                    height: 1.45,
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
@@ -355,7 +417,7 @@ class _IntroPage extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: size.height * 0.02),
+          const SizedBox(height: 10),
         ],
       ),
     );

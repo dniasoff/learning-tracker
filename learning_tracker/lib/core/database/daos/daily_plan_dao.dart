@@ -59,6 +59,17 @@ class DailyPlanDao extends DatabaseAccessor<UserDatabase>
     });
   }
 
+  /// Remove all snapshot rows for a single local day/profile pair.
+  Future<void> deletePlanForDay({
+    required int profileId,
+    required DateTime planDate,
+  }) {
+    return (delete(dailyPlans)..where(
+          (t) => t.profileId.equals(profileId) & t.planDate.equals(planDate),
+        ))
+        .go();
+  }
+
   /// Remove plan entries older than [olderThan]. Keeps the table bounded
   /// without requiring a background job — call opportunistically.
   Future<void> deleteOlderThan(DateTime olderThan) {

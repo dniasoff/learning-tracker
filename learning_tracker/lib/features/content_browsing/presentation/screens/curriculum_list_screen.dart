@@ -32,24 +32,17 @@ class CurriculumListScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF172A44),
+              color: AppTheme.brandCreamCard,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppTheme.brandOutline),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.search,
-                  color: Colors.white.withValues(alpha: 0.3),
-                  size: 20,
-                ),
+                Icon(Icons.search, color: AppTheme.brandInkMuted, size: 20),
                 const SizedBox(width: 12),
                 Text(
                   'Search curricula...',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: 15,
-                  ),
+                  style: TextStyle(color: AppTheme.brandInkMuted, fontSize: 15),
                 ),
               ],
             ),
@@ -62,7 +55,7 @@ class CurriculumListScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.4),
+              color: AppTheme.brandInkMuted,
               letterSpacing: 1.5,
             ),
           ),
@@ -84,7 +77,7 @@ class CurriculumListScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.4),
+              color: AppTheme.brandInkMuted,
               letterSpacing: 1.5,
             ),
           ),
@@ -186,7 +179,7 @@ class _CurriculumCard extends ConsumerWidget {
                           fontFamily: 'Noto Sans Hebrew',
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppTheme.brandInk,
                         ),
                         textDirection: TextDirection.rtl,
                       ),
@@ -196,7 +189,7 @@ class _CurriculumCard extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: AppTheme.brandInkMuted,
                         ),
                       ),
                     ],
@@ -209,7 +202,7 @@ class _CurriculumCard extends ConsumerWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: AppTheme.brandCreamSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -226,7 +219,7 @@ class _CurriculumCard extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: AppTheme.brandInk,
                           ),
                         ),
                       ],
@@ -245,7 +238,7 @@ class _CurriculumCard extends ConsumerWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8C519).withValues(alpha: 0.2),
+                      color: AppTheme.brandGoldSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -253,7 +246,7 @@ class _CurriculumCard extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFE8C519),
+                        color: AppTheme.brandGoldDeep,
                       ),
                     ),
                   ),
@@ -266,7 +259,7 @@ class _CurriculumCard extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: percentage,
                   minHeight: 4,
-                  backgroundColor: Colors.white.withValues(alpha: 0.1),
+                  backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.5),
                   valueColor: AlwaysStoppedAnimation<Color>(curriculumColor),
                 ),
               ),
@@ -279,7 +272,7 @@ class _CurriculumCard extends ConsumerWidget {
                     '$containerCount ${_getContainerLabel(curriculum)}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: AppTheme.brandInkMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -290,7 +283,7 @@ class _CurriculumCard extends ConsumerWidget {
                     '$leafCount ${_getLeafLabel(curriculum)}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: AppTheme.brandInkMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -333,9 +326,9 @@ class _RecentActivityPlaceholder extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF172A44),
+        color: AppTheme.brandCreamCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: AppTheme.brandOutline),
       ),
       child: Row(
         children: [
@@ -343,12 +336,12 @@ class _RecentActivityPlaceholder extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFE8C519).withValues(alpha: 0.15),
+              color: AppTheme.brandGoldSoft,
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.history,
-              color: Color(0xFFE8C519),
+              color: AppTheme.brandGoldDeep,
               size: 20,
             ),
           ),
@@ -362,16 +355,13 @@ class _RecentActivityPlaceholder extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                    color: AppTheme.brandInk,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Your recent completions will appear below',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.4),
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.brandInkMuted),
                 ),
               ],
             ),

@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -115,9 +116,9 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
   }
 
   Color _passwordStrengthColor(double strength) {
-    if (strength < 0.4) return const Color(0xFFD64045);
-    if (strength < 0.7) return const Color(0xFFF4A261);
-    return const Color(0xFFC9A961);
+    if (strength < 0.4) return AppTheme.brandCoralDeep;
+    if (strength < 0.7) return AppTheme.brandGoldDeep;
+    return AppTheme.brandBlueBright;
   }
 
   Future<void> _signUpWithEmail() async {
@@ -487,13 +488,13 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                       onPressed: () => context.router.maybePop(),
                       icon: const Icon(Icons.arrow_back_ios, size: 20),
                       style: IconButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppTheme.brandInk,
                       ),
                     ),
                     Text(
                       'Create Account',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: AppTheme.brandInk,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -503,7 +504,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                 Text(
                   'Create Account',
                   style: theme.textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
+                    color: AppTheme.brandInk,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -511,7 +512,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                 Text(
                   'Join thousands learning Torah daily',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: AppTheme.brandInkMuted,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -523,10 +524,10 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0x33FF6B6B),
+                      color: AppTheme.brandCoralSoft.withValues(alpha: 0.55),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: const Color(0xFFFF6B6B).withValues(alpha: 0.4),
+                        color: AppTheme.brandCoral.withValues(alpha: 0.6),
                       ),
                     ),
                     child: Column(
@@ -536,14 +537,14 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                           children: [
                             const Icon(
                               Icons.cloud_off,
-                              color: Color(0xFFFF6B6B),
+                              color: AppTheme.brandCoral,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               "You're offline",
                               style: theme.textTheme.titleSmall?.copyWith(
-                                color: const Color(0xFFFF6B6B),
+                                color: AppTheme.brandCoralDeep,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -557,7 +558,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                           '  \u2022 Forget your password = account lost\n\n'
                           'You can upgrade to cloud later from Settings.',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: AppTheme.brandInkMuted,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -574,7 +575,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                                         () => _offlineAcknowledged = v ?? false,
                                       ),
                                 side: const BorderSide(
-                                  color: Color(0xFFFF6B6B),
+                                  color: AppTheme.brandCoral,
                                 ),
                               ),
                             ),
@@ -583,7 +584,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                               child: Text(
                                 'I understand — no backup, no recovery',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: AppTheme.brandInkMuted,
                                 ),
                               ),
                             ),
@@ -603,7 +604,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Enter your full name',
                   ),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppTheme.brandInk),
                   textInputAction: TextInputAction.next,
                   validator: _validateDisplayName,
                   enabled: !_isLoading,
@@ -618,7 +619,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                   decoration: const InputDecoration(
                     hintText: 'name@example.com',
                   ),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppTheme.brandInk),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   validator: _validateEmail,
@@ -638,13 +639,13 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: AppTheme.brandInkMuted,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppTheme.brandInk),
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.next,
                   validator: _validatePassword,
@@ -708,7 +709,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                         _obscureConfirmPassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: AppTheme.brandInkMuted,
                       ),
                       onPressed: () => setState(
                         () =>
@@ -716,7 +717,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                       ),
                     ),
                   ),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppTheme.brandInk),
                   obscureText: _obscureConfirmPassword,
                   textInputAction: TextInputAction.done,
                   validator: _validateConfirmPassword,
@@ -745,7 +746,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                       child: RichText(
                         text: TextSpan(
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
+                            color: AppTheme.brandInkMuted,
                             fontSize: 13,
                           ),
                           children: [
@@ -753,7 +754,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                             TextSpan(
                               text: 'Terms of Service',
                               style: const TextStyle(
-                                color: Color(0xFFC9A961),
+                                color: AppTheme.brandBlueBright,
                                 decoration: TextDecoration.underline,
                               ),
                               recognizer: TapGestureRecognizer()..onTap = () {},
@@ -762,7 +763,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                             TextSpan(
                               text: 'Privacy Policy',
                               style: const TextStyle(
-                                color: Color(0xFFC9A961),
+                                color: AppTheme.brandBlueBright,
                                 decoration: TextDecoration.underline,
                               ),
                               recognizer: TapGestureRecognizer()..onTap = () {},
@@ -799,28 +800,20 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                   const SizedBox(height: 24),
                   Row(
                     children: [
-                      Expanded(
-                        child: Divider(
-                          color: Colors.white.withValues(alpha: 0.1),
-                        ),
-                      ),
+                      Expanded(child: Divider(color: AppTheme.brandOutline)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'OR SIGN UP WITH',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.4),
+                            color: AppTheme.brandInkMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.5,
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: Divider(
-                          color: Colors.white.withValues(alpha: 0.1),
-                        ),
-                      ),
+                      Expanded(child: Divider(color: AppTheme.brandOutline)),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -837,7 +830,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                   child: RichText(
                     text: TextSpan(
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: AppTheme.brandInkMuted,
                         fontSize: 14,
                       ),
                       children: [
@@ -845,7 +838,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                         TextSpan(
                           text: 'Sign In',
                           style: const TextStyle(
-                            color: Color(0xFFC9A961),
+                            color: AppTheme.brandBlueBright,
                             fontWeight: FontWeight.w600,
                           ),
                           recognizer: TapGestureRecognizer()
@@ -872,7 +865,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     return Text(
       text,
       style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.7),
+        color: AppTheme.brandInkMuted,
         fontSize: 13,
         fontWeight: FontWeight.w500,
       ),
@@ -890,7 +883,7 @@ class _StrengthBar extends StatelessWidget {
     return Container(
       height: 4,
       decoration: BoxDecoration(
-        color: active ? color : Colors.white.withValues(alpha: 0.1),
+        color: active ? color : AppTheme.brandOutline.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(2),
       ),
     );

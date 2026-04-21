@@ -207,7 +207,7 @@ class _DayToggleTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isStudy
                         ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                        : Colors.white.withValues(alpha: 0.06),
+                        : theme.colorScheme.outline.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(

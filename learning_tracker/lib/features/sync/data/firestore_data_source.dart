@@ -3,14 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 /// Handles all Firestore read/write operations for sync.
 ///
-/// Collection structure (profile-scoped per story 15.11):
-/// - `users/{uid}/profiles/{profileId}/completions/{autoId}` - Completions (append-only)
-/// - `users/{uid}/profiles/{profileId}/bookmarks/{curriculumId}_{trackType}` - Bookmarks (LWW)
-/// - `users/{uid}/profiles/{profileId}/settings/{curriculumId}` - Settings (LWW)
-/// - `users/{uid}/profiles/{profileId}/goals/{id}` - Goals (LWW)
-/// - `users/{uid}/profiles/{profileId}/streak/data` - Streak (single doc)
-/// - `users/{uid}/profiles/{profileId}/active_curricula/data` - Active curricula
-/// - `users/{uid}/profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state (LWW)
+/// Collection structure (profile-scoped):
+/// - `users/{uid}/learner_profiles/{profileId}/completions/{autoId}` - Completions (append-only)
+/// - `users/{uid}/learner_profiles/{profileId}/bookmarks/{curriculumId}_{trackType}` - Bookmarks (LWW)
+/// - `users/{uid}/learner_profiles/{profileId}/settings/{curriculumId}` - Settings (LWW)
+/// - `users/{uid}/learner_profiles/{profileId}/goals/{id}` - Goals (LWW)
+/// - `users/{uid}/learner_profiles/{profileId}/streak/data` - Streak (single doc)
+/// - `users/{uid}/learner_profiles/{profileId}/active_curricula/data` - Active curricula
+/// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state (LWW)
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
 class FirestoreDataSource {
   FirestoreDataSource({
@@ -22,6 +22,8 @@ class FirestoreDataSource {
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  bool _profilePathChecked = false;
+  bool _legacyProfilesMigrated = false;
 
   /// The active profile ID for Firestore path scoping.
   final int profileId;
@@ -40,14 +42,26 @@ class FirestoreDataSource {
   }
 
   /// Get the profile-scoped base document reference.
-  /// All profile-scoped data lives under `users/{uid}/profiles/{profileId}/`.
+  /// All profile-scoped data lives under
+  /// `users/{uid}/learner_profiles/{profileId}/`.
   DocumentReference<Map<String, dynamic>>? get _profileScopedDoc {
+    return _userDoc?.collection('learner_profiles').doc(profileId.toString());
+  }
+
+  /// Legacy profile-scoped path used by older builds.
+  DocumentReference<Map<String, dynamic>>? get _legacyProfileScopedDoc {
     return _userDoc?.collection('profiles').doc(profileId.toString());
   }
 
   /// Get profile subcollection reference (account-level, not profile-scoped).
   DocumentReference<Map<String, dynamic>>? get _profileDoc {
     return _userDoc?.collection('profile').doc('data');
+  }
+
+  /// Account-level collection of learner profiles (not profile-scoped).
+  /// One doc per learner profile; doc id is the local profile id as a string.
+  CollectionReference<Map<String, dynamic>>? get _learnerProfilesCollection {
+    return _userDoc?.collection('learner_profiles');
   }
 
   /// Get completions subcollection reference (profile-scoped).
@@ -68,6 +82,115 @@ class FirestoreDataSource {
   /// Get streak document reference (profile-scoped).
   DocumentReference<Map<String, dynamic>>? get _streakDoc {
     return _profileScopedDoc?.collection('streak').doc('data');
+  }
+
+  Future<void> _ensureProfilePathReady() async {
+    if (_profilePathChecked) return;
+    _profilePathChecked = true;
+
+    await _migrateAllLegacyProfilesIfNeeded();
+
+    final target = _profileScopedDoc;
+    final legacy = _legacyProfileScopedDoc;
+    if (target == null || legacy == null) return;
+
+    final legacySnapshot = await legacy.get();
+    if (!legacySnapshot.exists) {
+      return;
+    }
+
+    final targetSnapshot = await target.get();
+    if (!targetSnapshot.exists) {
+      await target.set({
+        ...?legacySnapshot.data(),
+        'id': profileId,
+        'migrated_from_profiles': true,
+        'migrated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
+    const subcollections = [
+      'completions',
+      'bookmarks',
+      'settings',
+      'goals',
+      'streak',
+      'active_curricula',
+      'curriculum_tracks',
+      'learning_ledger',
+      'curriculum_imports',
+    ];
+
+    for (final sub in subcollections) {
+      final legacyCol = legacy.collection(sub);
+      final targetCol = target.collection(sub);
+      final docs = await legacyCol.get();
+      if (docs.docs.isEmpty) continue;
+
+      for (final doc in docs.docs) {
+        await targetCol.doc(doc.id).set(doc.data(), SetOptions(merge: true));
+      }
+      for (final doc in docs.docs) {
+        await doc.reference.delete();
+      }
+    }
+
+    await legacy.delete().catchError((_) {});
+  }
+
+  Future<void> _migrateAllLegacyProfilesIfNeeded() async {
+    if (_legacyProfilesMigrated) return;
+    _legacyProfilesMigrated = true;
+
+    final userDoc = _userDoc;
+    if (userDoc == null) return;
+
+    final legacyProfiles = await userDoc.collection('profiles').get();
+    if (legacyProfiles.docs.isEmpty) return;
+
+    const subcollections = [
+      'completions',
+      'bookmarks',
+      'settings',
+      'goals',
+      'streak',
+      'active_curricula',
+      'curriculum_tracks',
+      'learning_ledger',
+      'curriculum_imports',
+    ];
+
+    for (final legacy in legacyProfiles.docs) {
+      final profileDocId = legacy.id;
+      final profileIntId = int.tryParse(profileDocId);
+      final target = userDoc.collection('learner_profiles').doc(profileDocId);
+
+      final targetSnapshot = await target.get();
+      if (!targetSnapshot.exists) {
+        await target.set({
+          ...legacy.data(),
+          if (profileIntId != null) 'id': profileIntId,
+          'migrated_from_profiles': true,
+          'migrated_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      for (final sub in subcollections) {
+        final legacyCol = legacy.reference.collection(sub);
+        final targetCol = target.collection(sub);
+        final docs = await legacyCol.get();
+        if (docs.docs.isEmpty) continue;
+
+        for (final doc in docs.docs) {
+          await targetCol.doc(doc.id).set(doc.data(), SetOptions(merge: true));
+        }
+        for (final doc in docs.docs) {
+          await doc.reference.delete();
+        }
+      }
+
+      await legacy.reference.delete().catchError((_) {});
+    }
   }
 
   // ========== Profile Operations ==========
@@ -94,10 +217,53 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
+  // ========== Learner Profile Operations ==========
+
+  /// Fetch all learner profiles for the current cloud account.
+  /// Used on sign-in / new-device restore to rebuild the local profiles
+  /// table so the profile picker has something to show.
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async {
+    await _migrateAllLegacyProfilesIfNeeded();
+    final collection = _learnerProfilesCollection;
+    if (collection == null) return const [];
+
+    final snapshot = await collection.get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return {...data, 'id': int.tryParse(doc.id) ?? data['id']};
+    }).toList();
+  }
+
+  /// Push a learner profile to Firestore (LWW by updated_at).
+  Future<void> pushLearnerProfile(Map<String, dynamic> profileData) async {
+    final collection = _learnerProfilesCollection;
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final id = profileData['id'];
+    if (id == null) {
+      throw ArgumentError('Learner profile must include id');
+    }
+
+    await collection.doc(id.toString()).set({
+      ...profileData,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Delete a learner profile from Firestore.
+  Future<void> deleteLearnerProfile(int profileId) async {
+    final collection = _learnerProfilesCollection;
+    if (collection == null) return;
+    await collection.doc(profileId.toString()).delete();
+  }
+
   // ========== Completions Operations ==========
 
   /// Push a completion to Firestore (append-only).
   Future<void> pushCompletion(Map<String, dynamic> completionData) async {
+    await _ensureProfilePathReady();
     final collection = _completionsCollection;
     if (collection == null) {
       throw Exception('User not authenticated');
@@ -116,6 +282,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchCompletions({
     int pageSize = defaultPageSize,
   }) async {
+    await _ensureProfilePathReady();
     final collection = _completionsCollection;
     if (collection == null) return [];
 
@@ -177,6 +344,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchLedgerEntries({
     int pageSize = defaultPageSize,
   }) async {
+    await _ensureProfilePathReady();
     final collection = _ledgerCollection;
     if (collection == null) return [];
 
@@ -202,6 +370,7 @@ class FirestoreDataSource {
 
   /// Push a bookmark to Firestore (last-write-wins with UTC timestamp).
   Future<void> pushBookmark(Map<String, dynamic> bookmarkData) async {
+    await _ensureProfilePathReady();
     final collection = _bookmarksCollection;
     if (collection == null) {
       throw Exception('User not authenticated');
@@ -222,6 +391,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchBookmarks({
     int pageSize = defaultPageSize,
   }) async {
+    await _ensureProfilePathReady();
     final collection = _bookmarksCollection;
     if (collection == null) return [];
 
@@ -244,6 +414,7 @@ class FirestoreDataSource {
 
   /// Push settings to Firestore (last-write-wins with UTC timestamp).
   Future<void> pushSettings(Map<String, dynamic> settingsData) async {
+    await _ensureProfilePathReady();
     final collection = _settingsCollection;
     if (collection == null) {
       throw Exception('User not authenticated');
@@ -263,6 +434,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchSettings({
     int pageSize = defaultPageSize,
   }) async {
+    await _ensureProfilePathReady();
     final collection = _settingsCollection;
     if (collection == null) return [];
 
@@ -285,6 +457,7 @@ class FirestoreDataSource {
 
   /// Fetch streak data from Firestore.
   Future<Map<String, dynamic>?> fetchStreak() async {
+    await _ensureProfilePathReady();
     final doc = _streakDoc;
     if (doc == null) return null;
 
@@ -294,6 +467,7 @@ class FirestoreDataSource {
 
   /// Push streak data to Firestore (last-write-wins).
   Future<void> pushStreak(Map<String, dynamic> streakData) async {
+    await _ensureProfilePathReady();
     final doc = _streakDoc;
     if (doc == null) {
       throw Exception('User not authenticated');
@@ -321,6 +495,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchGoals({
     int pageSize = defaultPageSize,
   }) async {
+    await _ensureProfilePathReady();
     final collection = _profileScopedDoc?.collection('goals');
     if (collection == null) return [];
 
@@ -329,6 +504,7 @@ class FirestoreDataSource {
 
   /// Push a goal to Firestore (last-write-wins).
   Future<void> pushGoal(Map<String, dynamic> goalData) async {
+    await _ensureProfilePathReady();
     final collection = _profileScopedDoc?.collection('goals');
     if (collection == null) {
       throw Exception('User not authenticated');
@@ -368,6 +544,7 @@ class FirestoreDataSource {
 
   /// Push active curricula list to Firestore.
   Future<void> pushActiveCurricula(List<String> activeCurricula) async {
+    await _ensureProfilePathReady();
     final doc = _activeCurriculaDoc;
     if (doc == null) {
       throw Exception('User not authenticated');
@@ -381,6 +558,7 @@ class FirestoreDataSource {
 
   /// Fetch active curricula list from Firestore.
   Future<List<String>> fetchActiveCurricula() async {
+    await _ensureProfilePathReady();
     final doc = _activeCurriculaDoc;
     if (doc == null) return [];
 
@@ -423,6 +601,7 @@ class FirestoreDataSource {
 
   /// Push a curriculum track to Firestore (LWW, keyed by curriculumId_trackType).
   Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {
+    await _ensureProfilePathReady();
     final collection = _curriculumTracksCollection;
     if (collection == null) {
       throw Exception('User not authenticated');
@@ -442,6 +621,7 @@ class FirestoreDataSource {
   Future<List<Map<String, dynamic>>> fetchCurriculumTracks({
     int pageSize = defaultPageSize,
   }) async {
+    await _ensureProfilePathReady();
     final collection = _curriculumTracksCollection;
     if (collection == null) return [];
 
@@ -469,6 +649,7 @@ class FirestoreDataSource {
   Future<void> pushCurriculumImportMetadata(
     Map<String, dynamic> metadata,
   ) async {
+    await _ensureProfilePathReady();
     final collection = _profileScopedDoc?.collection('curriculum_imports');
     if (collection == null) {
       throw Exception('User not authenticated');
@@ -485,6 +666,7 @@ class FirestoreDataSource {
   Future<Map<String, dynamic>?> fetchCurriculumImportMetadata(
     String curriculumId,
   ) async {
+    await _ensureProfilePathReady();
     final collection = _profileScopedDoc?.collection('curriculum_imports');
     if (collection == null) return null;
 

@@ -155,7 +155,7 @@ class _ContentHierarchyScreenState
                     child: Icon(
                       Icons.chevron_right,
                       size: 16,
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Expanded(
@@ -187,13 +187,15 @@ class _ContentHierarchyScreenState
                         Icon(
                           Icons.inbox_outlined,
                           size: 48,
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(height: 12),
                         Text(
                           'No content available',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.4),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],

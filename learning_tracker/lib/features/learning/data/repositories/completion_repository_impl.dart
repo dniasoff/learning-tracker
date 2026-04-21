@@ -41,6 +41,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   @override
   Future<Completion> markComplete(CompletionRequest request) async {
+    final isChildProfile = await _isChildProfile();
+
     // Perform DB operations in a single transaction for atomicity.
     // Returns a record indicating whether the completion was newly created.
     final (:completion, :isNew) = await _database.transaction(() async {
@@ -91,18 +93,26 @@ class CompletionRepositoryImpl implements CompletionRepository {
       }
 
       // 4. Calculate points for this stage
-      final points = await _calculatePoints(
-        curriculumId: request.curriculumId,
-        stageOrder: request.stageId,
-      );
+      final points = isChildProfile
+          ? await _calculatePoints(
+              curriculumId: request.curriculumId,
+              stageOrder: request.stageId,
+            )
+          : 0;
 
       // 5. Create completion record
-      final created = await _createCompletion(request: request, points: points);
+      final created = await _createCompletion(
+        request: request,
+        points: points,
+        isChildProfile: isChildProfile,
+      );
 
       // 6. Update cached streak table so the dashboard reflects the new
       //    streak immediately — the streak_events log alone only updates
       //    state when the reducer replays it (sync path).
-      await _streakService?.recordCompletion(created.completedAt);
+      if (isChildProfile) {
+        await _streakService?.recordCompletion(created.completedAt);
+      }
 
       return (completion: created, isNew: true);
     });
@@ -141,6 +151,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     BulkCompletionRequest request,
   ) async {
     // Perform all operations in a single transaction
+    final isChildProfile = await _isChildProfile();
     return await _database.transaction(() async {
       final completions = <Completion>[];
 
@@ -157,6 +168,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         // will be handled by Drift's transaction management
         final completion = await _markCompleteSingleInTransaction(
           singleRequest,
+          isChildProfile: isChildProfile,
         );
         completions.add(completion);
       }
@@ -167,8 +179,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Internal method to mark a single completion within an existing transaction.
   Future<Completion> _markCompleteSingleInTransaction(
-    CompletionRequest request,
-  ) async {
+    CompletionRequest request, {
+    required bool isChildProfile,
+  }) async {
     // Same logic as markComplete but assumes we're already in a transaction
     await _validateStageProgression(
       sefariaRef: request.sefariaRef,
@@ -185,17 +198,22 @@ class CompletionRepositoryImpl implements CompletionRepository {
       return existing;
     }
 
-    final points = await _calculatePoints(
-      curriculumId: request.curriculumId,
-      stageOrder: request.stageId,
-    );
+    final points = isChildProfile
+        ? await _calculatePoints(
+            curriculumId: request.curriculumId,
+            stageOrder: request.stageId,
+          )
+        : 0;
 
     final completion = await _createCompletion(
       request: request,
       points: points,
+      isChildProfile: isChildProfile,
     );
 
-    await _streakService?.recordCompletion(completion.completedAt);
+    if (isChildProfile) {
+      await _streakService?.recordCompletion(completion.completedAt);
+    }
 
     await _advanceBookmark(
       curriculumId: request.curriculumId,
@@ -323,6 +341,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<Completion> _createCompletion({
     required CompletionRequest request,
     required int points,
+    required bool isChildProfile,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
     final trackId = await _resolveTrackId(
@@ -332,6 +351,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
     final id = await _database.completionDao.insertCompletion(
       CompletionsCompanion.insert(
+        profileId: drift.Value(_activeProfileId),
         curriculumId: request.curriculumId,
         sefariaRef: request.sefariaRef,
         stageId: request.stageId,
@@ -345,7 +365,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // Tee the completion into the append-only streak event log
     // so the streak reducer can derive state independent of the
     // cached Streaks table. Unique keys swallow duplicates silently.
-    await _appendStreakEvent(profileId: _activeProfileId, at: now);
+    if (isChildProfile) {
+      await _appendStreakEvent(profileId: _activeProfileId, at: now);
+    }
 
     // Retrieve the created completion
     final completion = await _database.completionDao.getCompletionById(id);
@@ -376,6 +398,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
     } catch (_) {
       // Defensive: never let a telemetry tee block the primary write.
     }
+  }
+
+  /// True when the active profile is child mode.
+  Future<bool> _isChildProfile() async {
+    final profile = await _database.profileDao.getProfileById(_activeProfileId);
+    return profile?.mode == 'child';
   }
 
   /// Advance the bookmark to the next item in learning order.
@@ -525,8 +553,42 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final completions = await _database.completionDao
         .getCompletionsForContentAndProfile(sefariaRef, _activeProfileId);
 
-    return completions.any(
-      (c) => c.stageId == stageId && c.trackType == trackType,
-    );
+    final trackCompletions = completions
+        .where((c) => c.trackType == trackType)
+        .toList();
+    if (trackCompletions.isEmpty) return false;
+
+    // Fast path: exact stage id/order match.
+    if (trackCompletions.any((c) => c.stageId == stageId)) return true;
+
+    // Backward-compat: some rows store stage definition id, while newer rows
+    // store stage order directly. Resolve both representations to stage order.
+    final stageOrderByCurriculum = <String, Map<int, int>>{};
+    final knownOrdersByCurriculum = <String, Set<int>>{};
+
+    for (final completion in trackCompletions) {
+      final curriculumId = completion.curriculumId;
+      if (!stageOrderByCurriculum.containsKey(curriculumId)) {
+        final stages = await _database.stageDao.getStageDefinitionsByCurriculum(
+          curriculumId,
+        );
+        stageOrderByCurriculum[curriculumId] = {
+          for (final s in stages) s.id: s.stageOrder,
+        };
+        knownOrdersByCurriculum[curriculumId] = {
+          for (final s in stages) s.stageOrder,
+        };
+      }
+
+      final knownOrders = knownOrdersByCurriculum[curriculumId]!;
+      final idToOrder = stageOrderByCurriculum[curriculumId]!;
+      final normalizedStage =
+          knownOrders.contains(completion.stageId)
+              ? completion.stageId
+              : idToOrder[completion.stageId];
+      if (normalizedStage == stageId) return true;
+    }
+
+    return false;
   }
 }

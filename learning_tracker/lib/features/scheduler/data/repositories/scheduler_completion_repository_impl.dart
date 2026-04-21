@@ -34,17 +34,27 @@ class SchedulerCompletionRepositoryImpl
     );
 
     final stageOrderMap = {for (final s in stages) s.id: s.stageOrder};
+    final knownStageOrders = {for (final s in stages) s.stageOrder};
+
+    int? resolveStageOrder(int rawStageId) {
+      // Newer writes may store stageOrder directly; older writes may store
+      // stage definition id. Accept both for backward compatibility.
+      if (knownStageOrders.contains(rawStageId)) return rawStageId;
+      return stageOrderMap[rawStageId];
+    }
 
     return completions
-        .where((c) => stageOrderMap.containsKey(c.stageId))
-        .map(
-          (c) => SchedulerCompletion(
+        .map((c) {
+          final stageOrder = resolveStageOrder(c.stageId);
+          if (stageOrder == null) return null;
+          return SchedulerCompletion(
             sefariaRef: c.sefariaRef,
-            stageOrder: stageOrderMap[c.stageId]!,
+            stageOrder: stageOrder,
             trackType: c.trackType,
             completedAt: c.completedAt,
-          ),
-        )
+          );
+        })
+        .whereType<SchedulerCompletion>()
         .toList();
   }
 }

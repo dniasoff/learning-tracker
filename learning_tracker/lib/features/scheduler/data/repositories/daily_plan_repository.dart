@@ -44,6 +44,28 @@ class DailyPlanRepository {
     return rows.map(_rowToTask).toList();
   }
 
+  /// Forces regeneration for today's plan by clearing the existing snapshot.
+  Future<List<DailyTask>> rebuildPlan({
+    required int profileId,
+    required DateTime now,
+    required Future<List<DailyTask>> Function() buildPlan,
+  }) async {
+    final planDate = DateUtils.extractLocalDate(now);
+    await _db.dailyPlanDao.deletePlanForDay(
+      profileId: profileId,
+      planDate: planDate,
+    );
+
+    final freshTasks = await buildPlan();
+    await _persistPlan(
+      profileId: profileId,
+      planDate: planDate,
+      tasks: freshTasks,
+      now: now,
+    );
+    return freshTasks;
+  }
+
   Future<void> _persistPlan({
     required int profileId,
     required DateTime planDate,

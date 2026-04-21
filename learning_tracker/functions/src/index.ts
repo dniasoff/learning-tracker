@@ -24,7 +24,7 @@ async function deleteCollection(ref: admin.firestore.CollectionReference): Promi
  * Cascades the deletion to all Firestore data under `users/{uid}`.
  *
  * Collection structure:
- *   users/{uid}/profiles/{profileId}/{subcollection}/...
+ *   users/{uid}/learner_profiles/{profileId}/{subcollection}/...
  *   users/{uid}/profile/data          (account-level)
  *   users/{uid}/streak/current        (legacy flat)
  *   users/{uid}/{subcollection}/...   (legacy flat)
@@ -35,8 +35,8 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
 
   const userDocRef = db.collection("users").doc(uid);
 
-  // --- 1. Delete profile-scoped subcollections ---
-  const profilesSnapshot = await userDocRef.collection("profiles").get();
+  // --- 1. Delete profile-scoped subcollections (canonical path) ---
+  const profilesSnapshot = await userDocRef.collection("learner_profiles").get();
 
   const profileSubcollections = [
     "completions",
@@ -47,6 +47,7 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
     "learning_ledger",
     "active_curricula",
     "curriculum_imports",
+    "curriculum_tracks",
   ];
 
   for (const profileDoc of profilesSnapshot.docs) {
@@ -63,6 +64,19 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
     await profileDoc.ref.delete();
   }
 
+  // Legacy cleanup: old profile-scoped path users/{uid}/profiles/{profileId}
+  const legacyProfilesSnapshot = await userDocRef.collection("profiles").get();
+  for (const profileDoc of legacyProfilesSnapshot.docs) {
+    for (const sub of profileSubcollections) {
+      await deleteCollection(profileDoc.ref.collection(sub));
+    }
+    await profileDoc.ref.collection("streak").doc("data").delete()
+      .catch(() => { /* may not exist */ });
+    await profileDoc.ref.collection("active_curricula").doc("data").delete()
+      .catch(() => { /* may not exist */ });
+    await profileDoc.ref.delete().catch(() => { /* may not exist */ });
+  }
+
   // --- 2. Delete legacy flat subcollections (pre-profile-scoping) ---
   const legacySubcollections = [
     "completions",
@@ -74,6 +88,8 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
     "active_curricula",
     "curriculum_imports",
     "profile",
+    "learner_profiles",
+    "profiles",
   ];
 
   for (const sub of legacySubcollections) {

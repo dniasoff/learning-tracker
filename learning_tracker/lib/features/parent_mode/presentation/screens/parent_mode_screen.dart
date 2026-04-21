@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_dashboard_providers.dart';
@@ -318,11 +319,7 @@ class _EngagementTile extends StatelessWidget {
                 ],
               ),
             ),
-            Container(
-              width: 1,
-              height: 40,
-              color: Colors.white.withValues(alpha: 0.1),
-            ),
+            Container(width: 1, height: 40, color: theme.colorScheme.outline),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
@@ -422,14 +419,7 @@ class _ParentCurriculumCard extends StatelessWidget {
   }
 
   Color _getCurriculumColor(CurriculumId id) {
-    return switch (id) {
-      CurriculumId.mishnayos => const Color(0xFF4A90E2),
-      CurriculumId.bavli => const Color(0xFF8B4789),
-      CurriculumId.yerushalmi => const Color(0xFF2ECC71),
-      CurriculumId.mishnaBerurah => const Color(0xFFE67E22),
-      CurriculumId.chumash => const Color(0xFFE74C3C),
-      _ => const Color(0xFF4ADE80),
-    };
+    return AppTheme.getCurriculumColor(id);
   }
 }
 

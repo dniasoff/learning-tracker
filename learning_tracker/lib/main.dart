@@ -16,7 +16,6 @@ import 'package:learning_tracker/features/auth/domain/services/session_persisten
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/theme_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -158,7 +157,6 @@ class LearningTrackerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appRouter = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(appLocaleProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
@@ -170,11 +168,7 @@ class LearningTrackerApp extends ConsumerWidget {
           brightness: Brightness.light,
           isChildMode: isChildMode,
         ),
-        darkTheme: AppTheme.themeFor(
-          brightness: Brightness.dark,
-          isChildMode: isChildMode,
-        ),
-        themeMode: themeMode,
+        themeMode: ThemeMode.light,
         debugShowCheckedModeBanner: false,
         routerConfig: appRouter.config(),
         locale: locale,

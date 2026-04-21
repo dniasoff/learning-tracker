@@ -3,71 +3,98 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 
-/// Material 3 theme for the Torah learning app — "Mesorah Heritage" palette.
+/// Material 3 theme for the Torah learning app — "Aleph Bright" palette.
 ///
-/// Two axes:
-/// - Brightness: light / dark (user preference, via ThemeMode)
-/// - Audience: adult (scholarly navy+gold) / child (warm parchment)
+/// Light-only palette matching the v1 screenshots: cream background, deep
+/// royal blue primary, warm coral streak accent, and gold trophy accent.
 class AppTheme {
   AppTheme._();
 
   // ---------------------------------------------------------------------------
-  // Mesorah Heritage palette
+  // Aleph Bright palette
   // ---------------------------------------------------------------------------
 
-  /// Primary gold — accents, CTAs, highlights. Used in both adult and child.
-  static const Color heritageGold = Color(0xFFC9A961);
-  static const Color heritageGoldMuted = Color(0xFFA88A4A);
-  static const Color heritageGoldSoft = Color(0xFFE8C519);
+  /// Deep royal blue — extracted from provided screenshots.
+  static const Color brandBlue = Color(0xFF1038A0);
+  static const Color brandBlueBright = Color(0xFF2050D0);
+  static const Color brandBlueDeep = Color(0xFF002080);
+  static const Color brandBlueSoft = Color(0xFFD6DBEC);
 
-  /// Deep scholarly navy — adult dark-mode base.
-  static const Color heritageNavy = Color(0xFF0B1A2E);
-  static const Color heritageNavySurface = Color(0xFF12243D);
-  static const Color heritageNavyCard = Color(0xFF172A44);
-  static const Color heritageNavyOutline = Color(0xFF22385A);
+  /// Coral / warm red — streak accent, warnings, highlights.
+  static const Color brandCoral = Color(0xFFF86868);
+  static const Color brandCoralSoft = Color(0xFFF8C0C0);
+  static const Color brandCoralDeep = Color(0xFFD64045);
 
-  /// Warm parchment — child-mode base and adult light-mode base.
-  static const Color heritageParchment = Color(0xFFF5EBD5);
-  static const Color heritageParchmentSurface = Color(0xFFFBF4E3);
-  static const Color heritageParchmentCard = Color(0xFFFFFDF6);
-  static const Color heritageParchmentOutline = Color(0xFFE3D4AE);
+  /// Gold / amber — trophy, rewards, achievements.
+  static const Color brandGold = Color(0xFFF8D8B8);
+  static const Color brandGoldSoft = Color(0xFFF8E0B8);
+  static const Color brandGoldDeep = Color(0xFFC9A961);
 
-  /// Off-white on navy for body copy that's easy on the eye.
-  static const Color heritageInk = Color(0xFFF5EDD8);
-  static const Color heritageInkMuted = Color(0xFFB8AC8C);
+  /// Cream / parchment backgrounds and cards.
+  static const Color brandCream = Color(0xFFEDEDF0);
+  static const Color brandCreamCard = Color(0xFFFDFDFC);
+  static const Color brandCreamSoft = Color(0xFFEBE4E8);
+  static const Color brandOutline = Color(0xFFD6DBEC);
+  static const Color brandOutlineMuted = Color(0xFFB6AFB9);
 
-  /// Dark ink for use on parchment.
-  static const Color heritageDarkInk = Color(0xFF1F1A10);
-  static const Color heritageDarkInkMuted = Color(0xFF6A5F48);
+  /// Ink (text on light surfaces).
+  static const Color brandInk = Color(0xFF1D1E21);
+  static const Color brandInkMuted = Color(0xFF404669);
+  static const Color brandInkSoft = Color(0xFF9B96AB);
 
   static const Color _errorColor = Color(0xFFD64045);
 
   /// Default accent kept for backward compatibility with existing call sites.
-  static const Color defaultAccentColor = heritageGold;
-
-  /// Child mode exclusive colors
-  static const Color childBackground = Color(0xFF1A1F3E);
-  static const Color childSurface = Color(0xFF232849);
-  static const Color childCard = Color(0xFF2A3060);
-  static const Color childOutline = Color(0xFF3A4080);
-  static const Color childPrimary = Color(0xFF4A6CF7);
-  static const Color childStreakAccent = Color(0xFFE8445A);
-  static const Color childPointsAccent = Color(0xFF2D5BE3);
-  static const Color childTrophyAccent = Color(0xFFF5A623);
-  static const Color childText = Color(0xFFF5EDD8);
-  static const Color childTextMuted = Color(0xFFB8AC8C);
+  static const Color defaultAccentColor = brandBlue;
 
   // ---------------------------------------------------------------------------
-  // Curriculum / track colors (unchanged — domain-level semantic colors)
+  // Legacy aliases — kept for compatibility with existing widgets that
+  // reference older names. All map to the new light palette.
+  // ---------------------------------------------------------------------------
+
+  static const Color heritageGold = brandGold;
+  static const Color heritageGoldMuted = brandGoldDeep;
+  static const Color heritageGoldSoft = brandGoldSoft;
+
+  static const Color heritageNavy = brandCream;
+  static const Color heritageNavySurface = brandCreamSoft;
+  static const Color heritageNavyCard = brandCreamCard;
+  static const Color heritageNavyOutline = brandOutline;
+
+  static const Color heritageParchment = brandCream;
+  static const Color heritageParchmentSurface = brandCreamSoft;
+  static const Color heritageParchmentCard = brandCreamCard;
+  static const Color heritageParchmentOutline = brandOutline;
+
+  static const Color heritageInk = brandInk;
+  static const Color heritageInkMuted = brandInkMuted;
+
+  static const Color heritageDarkInk = brandInk;
+  static const Color heritageDarkInkMuted = brandInkMuted;
+
+  /// Child mode aliases — reuse brand palette so UI stays consistent.
+  static const Color childBackground = brandCream;
+  static const Color childSurface = brandCreamSoft;
+  static const Color childCard = brandCreamCard;
+  static const Color childOutline = brandOutline;
+  static const Color childPrimary = brandBlue;
+  static const Color childStreakAccent = brandCoral;
+  static const Color childPointsAccent = brandBlueBright;
+  static const Color childTrophyAccent = brandGold;
+  static const Color childText = brandInk;
+  static const Color childTextMuted = brandInkMuted;
+
+  // ---------------------------------------------------------------------------
+  // Curriculum / track colors
   // ---------------------------------------------------------------------------
 
   static const Color curriculumMishna = Color(0xFF2D8C46);
   static const Color curriculumBavli = Color(0xFF1B6B5A);
-  static const Color curriculumYerushalmi = Color(0xFF2980B9);
-  static const Color curriculumMishnaBerurah = Color(0xFFE67E22);
-  static const Color curriculumChumash = Color(0xFF5A7A2E);
-  static const Color curriculumNach = Color(0xFF1ABC9C);
-  static const Color curriculumMussar = Color(0xFF9B59B6);
+  static const Color curriculumYerushalmi = brandBlueBright;
+  static const Color curriculumMishnaBerurah = brandGold;
+  static const Color curriculumChumash = brandCoral;
+  static const Color curriculumNach = Color(0xFF0EA5A0);
+  static const Color curriculumMussar = Color(0xFF7C3AED);
 
   static Color getCurriculumColor(CurriculumId curriculum) {
     switch (curriculum) {
@@ -82,9 +109,9 @@ class AppTheme {
       case CurriculumId.chumash:
         return curriculumChumash;
       case CurriculumId.mishnehTorah:
-        return const Color(0xFF8E44AD);
+        return const Color(0xFF7C3AED);
       case CurriculumId.tanach:
-        return const Color(0xFF1ABC9C);
+        return const Color(0xFF0EA5A0);
       case CurriculumId.nach:
         return curriculumNach;
       case CurriculumId.mussar:
@@ -101,7 +128,7 @@ class AppTheme {
         : defaultAccentColor;
   }
 
-  static const Color trackPersonal = Color(0xFF4A90E2);
+  static const Color trackPersonal = brandBlue;
 
   static Color getTrackColor(TrackType trackType) {
     switch (trackType) {
@@ -114,15 +141,14 @@ class AppTheme {
   // Typography
   // ---------------------------------------------------------------------------
 
-  /// Serif display/headline for the heritage feel. Falls back gracefully.
-  static TextTheme _buildTextTheme(Color onSurface, Color onSurfaceMuted) {
+  static TextTheme _buildTextTheme() {
     final serif = GoogleFonts.playfairDisplayTextTheme();
     final sans = GoogleFonts.interTextTheme();
 
     TextStyle? head(TextStyle? base) =>
-        base?.copyWith(color: onSurface, fontWeight: FontWeight.w700);
-    TextStyle? body(TextStyle? base) => base?.copyWith(color: onSurface);
-    TextStyle? subtle(TextStyle? base) => base?.copyWith(color: onSurfaceMuted);
+        base?.copyWith(color: brandInk, fontWeight: FontWeight.w700);
+    TextStyle? body(TextStyle? base) => base?.copyWith(color: brandInk);
+    TextStyle? subtle(TextStyle? base) => base?.copyWith(color: brandInkMuted);
 
     return TextTheme(
       displayLarge: head(serif.displayLarge),
@@ -146,314 +172,76 @@ class AppTheme {
   }
 
   // ---------------------------------------------------------------------------
-  // Public factory: pick a theme by (brightness, audience).
+  // Public factory
   // ---------------------------------------------------------------------------
 
   static ThemeData themeFor({
-    required Brightness brightness,
-    required bool isChildMode,
-    Color accent = heritageGold,
+    Brightness brightness = Brightness.light,
+    bool isChildMode = false,
+    Color accent = brandBlue,
   }) {
-    if (isChildMode) {
-      return _childTheme(accent: accent);
-    }
-    return _navyTheme(accent: accent);
+    return _lightTheme(accent: accent);
   }
 
-  /// Back-compat: keep old entry points working.
-  static ThemeData darkTheme([Color accent = heritageGold]) =>
-      _navyTheme(accent: accent);
-  static ThemeData lightTheme([Color accent = heritageGold]) =>
-      _navyTheme(accent: accent);
+  /// Back-compat entry points.
+  static ThemeData lightTheme([Color accent = brandBlue]) =>
+      _lightTheme(accent: accent);
+  static ThemeData darkTheme([Color accent = brandBlue]) =>
+      _lightTheme(accent: accent);
 
   // ---------------------------------------------------------------------------
-  // Child (playful, gamified) theme — vibrant colors, animated feedback
+  // Light theme — matches Aleph Bright screenshots
   // ---------------------------------------------------------------------------
 
-  static ThemeData _childTheme({required Color accent}) {
-    final textTheme = _buildTextTheme(childText, childTextMuted);
+  static ThemeData _lightTheme({required Color accent}) {
+    final textTheme = _buildTextTheme();
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      colorScheme: ColorScheme.dark(
-        primary: childPrimary,
-        onPrimary: childBackground,
-        primaryContainer: childPrimary.withValues(alpha: 0.18),
-        onPrimaryContainer: childPrimary,
-        secondary: childStreakAccent,
-        onSecondary: childBackground,
-        secondaryContainer: childStreakAccent.withValues(alpha: 0.15),
-        onSecondaryContainer: childStreakAccent,
-        tertiary: childText,
-        onTertiary: childBackground,
-        tertiaryContainer: childCard,
-        onTertiaryContainer: childText,
-        error: _errorColor,
-        onError: Colors.white,
-        surface: childSurface,
-        onSurface: childText,
-        onSurfaceVariant: childTextMuted,
-        outline: childOutline,
-        shadow: Colors.black.withValues(alpha: 0.6),
-      ),
-      scaffoldBackgroundColor: childBackground,
-      textTheme: textTheme,
-      appBarTheme: AppBarTheme(
-        backgroundColor: childBackground,
-        foregroundColor: childText,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: GoogleFonts.playfairDisplay(
-          color: childText,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
-        iconTheme: const IconThemeData(color: childText),
-      ),
-      cardTheme: CardThemeData(
-        color: childCard,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: childOutline, width: 1),
-        ),
-        margin: EdgeInsets.zero,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          elevation: 0,
-          backgroundColor: childPrimary,
-          foregroundColor: childBackground,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: childPrimary,
-          foregroundColor: childBackground,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: childPrimary,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: childText,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          side: const BorderSide(color: childOutline),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: childCard,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: childOutline),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: childOutline),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: childPrimary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: _errorColor),
-        ),
-        labelStyle: GoogleFonts.inter(color: childTextMuted),
-        hintStyle: GoogleFonts.inter(
-          color: childTextMuted.withValues(alpha: 0.7),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: childSurface,
-        selectedItemColor: childPrimary,
-        unselectedItemColor: childTextMuted,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: childSurface,
-        indicatorColor: childPrimary.withValues(alpha: 0.16),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: childPrimary);
-          }
-          return const IconThemeData(color: childTextMuted);
-        }),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final base = GoogleFonts.inter(fontSize: 12, letterSpacing: 0.2);
-          if (states.contains(WidgetState.selected)) {
-            return base.copyWith(
-              color: childPrimary,
-              fontWeight: FontWeight.w600,
-            );
-          }
-          return base.copyWith(color: childTextMuted);
-        }),
-        elevation: 0,
-      ),
-      dividerColor: childOutline,
-      chipTheme: ChipThemeData(
-        backgroundColor: childCard,
-        selectedColor: childPrimary,
-        labelStyle: GoogleFonts.inter(color: childText, fontSize: 13),
-        secondaryLabelStyle: GoogleFonts.inter(
-          color: childBackground,
-          fontSize: 13,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-          side: const BorderSide(color: childOutline),
-        ),
-        side: BorderSide.none,
-      ),
-      segmentedButtonTheme: SegmentedButtonThemeData(
-        style: ButtonStyle(
-          backgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return childPrimary;
-            return childCard;
-          }),
-          foregroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return childBackground;
-            return childText;
-          }),
-        ),
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return childPrimary;
-          return Colors.transparent;
-        }),
-        checkColor: WidgetStateProperty.all(childBackground),
-        side: const BorderSide(color: childTextMuted),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      ),
-      radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return childPrimary;
-          return childTextMuted;
-        }),
-      ),
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return childPrimary;
-          return childTextMuted;
-        }),
-        trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return childPrimary.withValues(alpha: 0.3);
-          }
-          return childOutline;
-        }),
-      ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: childPrimary,
-        linearTrackColor: childOutline,
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: childSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: childOutline),
-        ),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: childSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: childCard,
-        contentTextStyle: GoogleFonts.inter(color: childText),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      drawerTheme: const DrawerThemeData(backgroundColor: childBackground),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Navy (scholarly dark) theme — used by adult + dark brightness.
-  // ---------------------------------------------------------------------------
-
-  static ThemeData _navyTheme({required Color accent}) {
-    final textTheme = _buildTextTheme(heritageInk, heritageInkMuted);
-
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      colorScheme: ColorScheme.dark(
+      brightness: Brightness.light,
+      colorScheme: ColorScheme.light(
         primary: accent,
-        onPrimary: heritageNavy,
-        primaryContainer: accent.withValues(alpha: 0.18),
-        onPrimaryContainer: accent,
-        secondary: heritageGoldMuted,
-        onSecondary: heritageNavy,
-        secondaryContainer: heritageGoldMuted.withValues(alpha: 0.15),
-        onSecondaryContainer: heritageGoldMuted,
-        tertiary: heritageInk,
-        onTertiary: heritageNavy,
-        tertiaryContainer: heritageNavyCard,
-        onTertiaryContainer: heritageInk,
+        onPrimary: Colors.white,
+        primaryContainer: brandBlueSoft,
+        onPrimaryContainer: brandBlueDeep,
+        secondary: brandCoral,
+        onSecondary: Colors.white,
+        secondaryContainer: brandCoralSoft,
+        onSecondaryContainer: brandCoralDeep,
+        tertiary: brandGold,
+        onTertiary: Colors.white,
+        tertiaryContainer: brandGoldSoft,
+        onTertiaryContainer: brandGoldDeep,
         error: _errorColor,
         onError: Colors.white,
-        surface: heritageNavySurface,
-        onSurface: heritageInk,
-        onSurfaceVariant: heritageInkMuted,
-        outline: heritageNavyOutline,
-        shadow: Colors.black.withValues(alpha: 0.6),
+        surface: brandCreamCard,
+        onSurface: brandInk,
+        onSurfaceVariant: brandInkMuted,
+        outline: brandOutline,
+        outlineVariant: brandOutlineMuted,
+        shadow: Colors.black.withValues(alpha: 0.08),
       ),
-      scaffoldBackgroundColor: heritageNavy,
+      scaffoldBackgroundColor: brandCream,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
-        backgroundColor: heritageNavy,
-        foregroundColor: heritageInk,
+        backgroundColor: brandCream,
+        foregroundColor: brandInk,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: GoogleFonts.playfairDisplay(
-          color: heritageInk,
+          color: brandInk,
           fontSize: 18,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
         ),
-        iconTheme: const IconThemeData(color: heritageInk),
+        iconTheme: const IconThemeData(color: brandInk),
       ),
       cardTheme: CardThemeData(
-        color: heritageNavyCard,
+        color: brandCreamCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: heritageNavyOutline, width: 1),
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: brandOutline, width: 1),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -461,26 +249,30 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: accent,
-          foregroundColor: heritageNavy,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
           textStyle: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: accent,
-          foregroundColor: heritageNavy,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
           textStyle: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
       ),
@@ -488,84 +280,84 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: accent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: heritageInk,
+          foregroundColor: brandInk,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          side: const BorderSide(color: heritageNavyOutline),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w500),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          side: const BorderSide(color: brandOutline),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: heritageNavyCard,
+        fillColor: brandCreamCard,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: heritageNavyOutline),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: brandOutline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: heritageNavyOutline),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: brandOutline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: accent, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _errorColor),
         ),
-        labelStyle: GoogleFonts.inter(color: heritageInkMuted),
-        hintStyle: GoogleFonts.inter(
-          color: heritageInkMuted.withValues(alpha: 0.7),
-        ),
+        labelStyle: GoogleFonts.inter(color: brandInkMuted),
+        hintStyle: GoogleFonts.inter(color: brandInkSoft),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: heritageNavySurface,
+        backgroundColor: brandCreamCard,
         selectedItemColor: accent,
-        unselectedItemColor: heritageInkMuted,
+        unselectedItemColor: brandInkMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: heritageNavySurface,
-        indicatorColor: accent.withValues(alpha: 0.16),
+        backgroundColor: brandCreamCard,
+        indicatorColor: brandBlueSoft,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: accent);
           }
-          return const IconThemeData(color: heritageInkMuted);
+          return const IconThemeData(color: brandInkMuted);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final base = GoogleFonts.inter(fontSize: 12, letterSpacing: 0.2);
           if (states.contains(WidgetState.selected)) {
             return base.copyWith(color: accent, fontWeight: FontWeight.w600);
           }
-          return base.copyWith(color: heritageInkMuted);
+          return base.copyWith(color: brandInkMuted);
         }),
         elevation: 0,
       ),
-      dividerColor: heritageNavyOutline,
+      dividerColor: brandOutline,
       chipTheme: ChipThemeData(
-        backgroundColor: heritageNavyCard,
+        backgroundColor: brandCreamSoft,
         selectedColor: accent,
-        labelStyle: GoogleFonts.inter(color: heritageInk, fontSize: 13),
+        labelStyle: GoogleFonts.inter(color: brandInk, fontSize: 13),
         secondaryLabelStyle: GoogleFonts.inter(
-          color: heritageNavy,
+          color: Colors.white,
           fontSize: 13,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-          side: const BorderSide(color: heritageNavyOutline),
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: brandOutline),
         ),
         side: BorderSide.none,
       ),
@@ -573,11 +365,11 @@ class AppTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) return accent;
-            return heritageNavyCard;
+            return brandCreamCard;
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return heritageNavy;
-            return heritageInk;
+            if (states.contains(WidgetState.selected)) return Colors.white;
+            return brandInk;
           }),
         ),
       ),
@@ -586,52 +378,52 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) return accent;
           return Colors.transparent;
         }),
-        checkColor: WidgetStateProperty.all(heritageNavy),
-        side: const BorderSide(color: heritageInkMuted),
+        checkColor: WidgetStateProperty.all(Colors.white),
+        side: const BorderSide(color: brandInkMuted),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return accent;
-          return heritageInkMuted;
+          return brandInkMuted;
         }),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return accent;
-          return heritageInkMuted;
+          return brandInkMuted;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return accent.withValues(alpha: 0.3);
           }
-          return heritageNavyOutline;
+          return brandOutline;
         }),
       ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: accent,
-        linearTrackColor: heritageNavyOutline,
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: brandBlue,
+        linearTrackColor: brandOutline,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: heritageNavySurface,
+        backgroundColor: brandCreamCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: heritageNavyOutline),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: brandOutline),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: heritageNavySurface,
+        backgroundColor: brandCreamCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: heritageNavyCard,
-        contentTextStyle: GoogleFonts.inter(color: heritageInk),
+        backgroundColor: brandInk,
+        contentTextStyle: GoogleFonts.inter(color: Colors.white),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      drawerTheme: const DrawerThemeData(backgroundColor: heritageNavy),
+      drawerTheme: const DrawerThemeData(backgroundColor: brandCream),
     );
   }
 }

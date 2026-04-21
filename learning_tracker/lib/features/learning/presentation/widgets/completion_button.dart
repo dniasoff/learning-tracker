@@ -74,9 +74,11 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       trackType: widget.trackType,
     );
 
-    // Capture streak before completion (already cached, instant)
-    final streakData = ref.read(dashboardStreakProvider).value;
-    final streakBefore = streakData?.currentStreak ?? 0;
+    final isChildProfile = widget.userMode == UserMode.child;
+    // Capture streak only for child profiles.
+    final streakBefore = isChildProfile
+        ? (ref.read(dashboardStreakProvider).value?.currentStreak ?? 0)
+        : null;
 
     // --- Optimistic UI update (synchronous, < 1ms) ---
     ref.read(optimisticCompletionStateProvider.notifier).add(optKey);
@@ -93,7 +95,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         progressBefore: 0,
         progressAfter: 0,
         streakBefore: streakBefore,
-        streakAfter: streakBefore + 1,
+        streakAfter: streakBefore == null ? null : streakBefore + 1,
         userMode: widget.userMode,
       ),
     );
@@ -101,12 +103,12 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
     widget.onCompleted?.call();
 
     // --- Background persistence (fire-and-forget with error rollback) ---
-    unawaited(_persistCompletion(optKey, streakBefore));
+    unawaited(_persistCompletion(optKey));
   }
 
   /// Persists the completion to DB in the background.
   /// On failure, rolls back the optimistic state and shows a retry snackbar.
-  Future<void> _persistCompletion(String optKey, int streakBefore) async {
+  Future<void> _persistCompletion(String optKey) async {
     try {
       final useCase = ref.read(markCompletionUseCaseProvider);
       final request = CompletionRequest(
@@ -128,15 +130,19 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         );
         ref.invalidate(dashboardLastCompletionProvider(curriculumEnum.first));
       }
-      ref.invalidate(dashboardStreakProvider);
-      ref.invalidate(dashboardGlobalPointsProvider);
+      if (widget.userMode == UserMode.child) {
+        ref.invalidate(dashboardStreakProvider);
+        ref.invalidate(dashboardGlobalPointsProvider);
+      }
       // Today's plan is snapshotted per local day — we don't invalidate
       // allDailyTasksProvider on completion. The task card reads completion
       // state from isStageCompletedProvider so the UI still reflects the
       // mark-done, and new items are not pulled into today's list.
 
       // Background: streak alert, rewards
-      unawaited(_postCompletionWork(completion));
+      if (widget.userMode == UserMode.child) {
+        unawaited(_postCompletionWork(completion));
+      }
     } catch (e) {
       // --- Rollback optimistic state ---
       ref.read(optimisticCompletionStateProvider.notifier).remove(optKey);

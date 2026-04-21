@@ -442,7 +442,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'57d98ffb0171ffdee4b35d132f16c664e828f662';
+String _$dashboardStreakHash() => r'4fbb3e1335ecc23f05d8adfc295ddac0ae482658';
 
 /// Global points total, scoped to active profile.
 
@@ -481,7 +481,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'f2b80312a8c532c7fe3570037a703e773b51c7cb';
+    r'80339f89a44a01285030b260fa253b3b1547c3f7';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
@@ -528,7 +528,7 @@ final class DashboardStreakRecoveryProvider
 }
 
 String _$dashboardStreakRecoveryHash() =>
-    r'bfebf452c2b4cd58f84e837462d19f78d8a5a75a';
+    r'11004b11503d33a6f71f1940d1023eb23413c885';
 
 /// Per-curriculum pace status for the dashboard.
 ///

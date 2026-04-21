@@ -245,6 +245,62 @@ final class AggregateCountFamily extends $Family
   String toString() => r'aggregateCountProvider';
 }
 
+/// Live progress snapshot derived directly from completion rows.
+///
+/// Unlike journey milestones, this updates on every completion and is used
+/// for immediate progress feedback in the Progress screen.
+
+@ProviderFor(progressOverviewStats)
+final progressOverviewStatsProvider = ProgressOverviewStatsProvider._();
+
+/// Live progress snapshot derived directly from completion rows.
+///
+/// Unlike journey milestones, this updates on every completion and is used
+/// for immediate progress feedback in the Progress screen.
+
+final class ProgressOverviewStatsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProgressOverviewStats>,
+          ProgressOverviewStats,
+          FutureOr<ProgressOverviewStats>
+        >
+    with
+        $FutureModifier<ProgressOverviewStats>,
+        $FutureProvider<ProgressOverviewStats> {
+  /// Live progress snapshot derived directly from completion rows.
+  ///
+  /// Unlike journey milestones, this updates on every completion and is used
+  /// for immediate progress feedback in the Progress screen.
+  ProgressOverviewStatsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'progressOverviewStatsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$progressOverviewStatsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ProgressOverviewStats> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ProgressOverviewStats> create(Ref ref) {
+    return progressOverviewStats(ref);
+  }
+}
+
+String _$progressOverviewStatsHash() =>
+    r'2054ce1841d0005f4af1841c80b19a3b71b8ff7b';
+
 /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
 ///
 /// Aggregates content hierarchy, completions, and stage definitions into

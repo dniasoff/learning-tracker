@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -25,6 +26,7 @@ import 'package:learning_tracker/features/onboarding/domain/validators/auth_vali
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -55,7 +57,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   late final Animation<double> _formFade;
   late final Animation<double> _bottomFade;
 
-  static const _green = Color(0xFFC9A961);
+  static const _green = AppTheme.brandBlueBright;
 
   @override
   void initState() {
@@ -366,9 +368,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         activeDbFileName = existingEntry.dbFileName;
         ref.invalidate(userDatabaseProvider);
       }
+      await ref
+          .read(auth_state.authStateProvider.notifier)
+          .promoteToCloud(user);
+      if (!mounted) return;
+      await session.setActiveAccount(existingEntry.accountId);
     } else {
-      // Brand-new account on this device — allocate a fresh DB file
-      // so promoteToCloud can populate it in isolation.
+      // Account not on this device — could be brand-new, or an existing
+      // cloud account signing in on a new device. Allocate a fresh DB file
+      // and register the account either way; we decide where to route
+      // after pulling from Firestore and seeing whether profiles exist.
       final accountId = const Uuid().v4();
       final dbFileName = 'user_acc_$accountId.db';
       activeDbFileName = dbFileName;
@@ -387,34 +396,40 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         firebaseUid: user.uid,
         dbFileName: dbFileName,
       );
+    }
 
-      // Brand-new cloud account has no profile or tracks yet — hand off
-      // to the onboarding flow (profile creation + add track). Onboarding
-      // flips kOnboardingComplete itself when the flow completes, so we
-      // do NOT set it here. Mirrors account_creation_screen's cloud path.
-      ref.read(selectedProfileIdProvider.notifier).clear();
+    // Sync profiles from Firestore into local DB before navigating.
+    // Invalidate the sync engine so it picks up the just-swapped DB +
+    // auth state, then pull synchronously so the next route decision
+    // sees the real profile count rather than an empty local table.
+    ref.invalidate(syncEngineProvider);
+    final syncEngine = ref.read(syncEngineProvider);
+    if (syncEngine != null) {
+      await syncEngine.pullOnLaunch();
+    }
+    if (!mounted) return;
+
+    ref.read(selectedProfileIdProvider.notifier).clear();
+
+    // Decide onboarding vs app-shell by whether the cloud account has
+    // any learner profiles. This is the single source of truth — local
+    // data freshly pulled from Firestore — so new-device restores of
+    // an existing cloud account land straight in the profile picker.
+    final profileCount = await ref
+        .read(userDatabaseProvider)
+        .profileDao
+        .countProfilesForAccount(1);
+
+    if (profileCount == 0) {
+      // Brand-new cloud account (nothing in Firestore either) — run
+      // through onboarding to create the first profile + pick tracks.
+      // Onboarding flips kOnboardingComplete when it finishes.
       if (!mounted) return;
       unawaited(context.router.replaceAll([const OnboardingRoute()]));
       return;
     }
 
-    // Returning account: promote against the now-active DB and mark
-    // this the active account so lastUsedAt + SharedPrefs stay in sync.
-    await ref.read(auth_state.authStateProvider.notifier).promoteToCloud(user);
-    if (!mounted) return;
-    await session.setActiveAccount(existingEntry.accountId);
-
-    // Cloud sign-in never lands on onboarding (that's for brand-new users).
-    // Mark onboarding complete and hand off to AppShellRoute — the existing
-    // route guards handle the rest:
-    //   • restoreGuard  → DeviceRestoreRoute for new-device sign-ins
-    //   • profileGuard  → ProfilePickerRoute if 2+ profiles, auto-select if 1
     await prefs.setBool(kOnboardingComplete, true);
-
-    // Clear any stale profile selection leaked from a prior account
-    // so profileGuard re-evaluates for this account.
-    ref.read(selectedProfileIdProvider.notifier).clear();
-
     if (!mounted) return;
     unawaited(context.router.replaceAll([const AppShellRoute()]));
   }
@@ -456,7 +471,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1A2E),
+      backgroundColor: AppTheme.brandCream,
       body: Stack(
         children: [
           // Animated background particles
@@ -535,7 +550,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                             icon: const Icon(
                               Icons.arrow_back_ios,
                               size: 20,
-                              color: Colors.white,
+                              color: AppTheme.brandInk,
                             ),
                           ),
                         ),
@@ -622,7 +637,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
             const Text(
               'Welcome Back',
               style: TextStyle(
-                color: Colors.white,
+                color: AppTheme.brandInk,
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 height: 1.2,
@@ -633,7 +648,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
             Text(
               'Sign in to continue your learning journey',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
+                color: AppTheme.brandInkMuted,
                 fontSize: 15,
                 height: 1.4,
               ),
@@ -657,11 +672,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
             hintText: 'name@example.com',
             prefixIcon: Icon(
               Icons.email_outlined,
-              color: Colors.white.withValues(alpha: 0.4),
+              color: AppTheme.brandInkMuted,
               size: 20,
             ),
           ),
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppTheme.brandInk),
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           validator: _validateEmail,
@@ -681,8 +696,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                       : Icons.info_outline,
                   size: 14,
                   color: _registryHint!.startsWith('Found')
-                      ? const Color(0xFFC9A961)
-                      : Colors.white.withValues(alpha: 0.4),
+                      ? AppTheme.brandGoldDeep
+                      : AppTheme.brandInkMuted,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -691,8 +706,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                     style: TextStyle(
                       fontSize: 12,
                       color: _registryHint!.startsWith('Found')
-                          ? const Color(0xFFC9A961)
-                          : Colors.white.withValues(alpha: 0.4),
+                          ? AppTheme.brandGoldDeep
+                          : AppTheme.brandInkMuted,
                     ),
                   ),
                 ),
@@ -710,7 +725,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
             hintText: 'Enter your password',
             prefixIcon: Icon(
               Icons.lock_outline,
-              color: Colors.white.withValues(alpha: 0.4),
+              color: AppTheme.brandInkMuted,
               size: 20,
             ),
             suffixIcon: IconButton(
@@ -718,14 +733,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                 _obscurePassword
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
-                color: Colors.white.withValues(alpha: 0.4),
+                color: AppTheme.brandInkMuted,
                 size: 20,
               ),
               onPressed: () =>
                   setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppTheme.brandInk),
           obscureText: _obscurePassword,
           textInputAction: TextInputAction.done,
           validator: _validatePassword,
@@ -766,24 +781,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         // OR divider
         Row(
           children: [
-            Expanded(
-              child: Divider(color: Colors.white.withValues(alpha: 0.08)),
-            ),
+            Expanded(child: Divider(color: AppTheme.brandOutline)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'OR CONTINUE WITH',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.35),
+                  color: AppTheme.brandInkMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.0,
                 ),
               ),
             ),
-            Expanded(
-              child: Divider(color: Colors.white.withValues(alpha: 0.08)),
-            ),
+            Expanded(child: Divider(color: AppTheme.brandOutline)),
           ],
         ),
         const SizedBox(height: 24),
@@ -796,16 +807,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         Center(
           child: RichText(
             text: TextSpan(
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
-                fontSize: 14,
-              ),
+              style: TextStyle(color: AppTheme.brandInkMuted, fontSize: 14),
               children: [
                 const TextSpan(text: "Don't have an account? "),
                 TextSpan(
                   text: 'Get started',
                   style: const TextStyle(
-                    color: _green,
+                    color: AppTheme.brandBlueBright,
                     fontWeight: FontWeight.w600,
                   ),
                   recognizer: TapGestureRecognizer()
@@ -827,7 +835,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     return Text(
       text,
       style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.7),
+        color: AppTheme.brandInkMuted,
         fontSize: 13,
         fontWeight: FontWeight.w500,
       ),
@@ -868,8 +876,8 @@ class _SignInGlowButtonState extends State<_SignInGlowButton>
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xFFC9A961);
-    const greenDark = Color(0xFFA88A4A);
+    const green = AppTheme.brandBlueBright;
+    const greenDark = AppTheme.brandBlue;
 
     return AnimatedBuilder(
       animation: _glowController,
@@ -906,13 +914,13 @@ class _SignInGlowButtonState extends State<_SignInGlowButton>
                         width: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: Colors.black,
+                          color: Colors.white,
                         ),
                       )
                     : const Text(
                         'Sign In',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.3,
@@ -940,8 +948,8 @@ class _GoogleSignInButton extends StatelessWidget {
       height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        color: const Color(0xFF172A44),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: AppTheme.brandCreamCard,
+        border: Border.all(color: AppTheme.brandOutline),
       ),
       child: Material(
         color: Colors.transparent,
@@ -955,20 +963,20 @@ class _GoogleSignInButton extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppTheme.brandBlueSoft,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
                   Icons.g_mobiledata,
                   size: 22,
-                  color: Colors.white,
+                  color: AppTheme.brandBlue,
                 ),
               ),
               const SizedBox(width: 12),
               Text(
                 'Sign in with Google',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppTheme.brandInk,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
@@ -991,7 +999,7 @@ class _SignInParticlePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final random = Random(77);
-    const color = Color(0xFFC9A961);
+    const color = AppTheme.brandBlueBright;
 
     for (var i = 0; i < 20; i++) {
       final baseX = random.nextDouble() * size.width;

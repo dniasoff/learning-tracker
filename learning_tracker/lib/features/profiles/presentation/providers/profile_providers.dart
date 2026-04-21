@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'profile_providers.g.dart';
@@ -17,7 +18,8 @@ int currentAccountId(Ref ref) => 1;
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
-  return ProfileRepositoryImpl(db);
+  final syncEngine = ref.watch(syncEngineProvider);
+  return ProfileRepositoryImpl(db, syncEngine: syncEngine);
 }
 
 /// The currently selected profile ID. Null means no profile selected yet.

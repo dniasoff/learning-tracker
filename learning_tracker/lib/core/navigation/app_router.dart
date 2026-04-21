@@ -179,7 +179,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/gamification',
       page: GamificationRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, childModeGuard],
     ),
     AutoRoute(
       path: '/notifications',

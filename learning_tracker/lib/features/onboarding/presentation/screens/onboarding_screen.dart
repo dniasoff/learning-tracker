@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -371,17 +372,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return Scaffold(
       appBar: showAppBar ? AppBar(title: AppBarTitle(text: appBarTitle)) : null,
-      body: SafeArea(
-        child: switch (_phase) {
-          _ScreenPhase.profileCreation => _buildProfileCreation(theme),
-          _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
-          _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
-          _ScreenPhase.calendarPreference => _buildCalendarPreference(theme),
-          _ScreenPhase.addTrack => _buildAddTrack(),
-          _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),
-          _ScreenPhase.handoff => _buildHandoff(theme),
-          _ScreenPhase.done => _buildDone(theme),
-        },
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              AppTheme.brandBlueSoft.withValues(alpha: 0.2),
+              AppTheme.brandCream,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: switch (_phase) {
+            _ScreenPhase.profileCreation => _buildProfileCreation(theme),
+            _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
+            _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
+            _ScreenPhase.calendarPreference => _buildCalendarPreference(theme),
+            _ScreenPhase.addTrack => _buildAddTrack(),
+            _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),
+            _ScreenPhase.handoff => _buildHandoff(theme),
+            _ScreenPhase.done => _buildDone(theme),
+          },
+        ),
       ),
     );
   }
@@ -395,45 +409,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       top: false,
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              prompt,
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                border: const OutlineInputBorder(),
-                errorText: _nameError,
-              ),
-              textCapitalization: TextCapitalization.words,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 24),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'adult', label: Text('Adult')),
-                ButtonSegment(value: 'child', label: Text('Child')),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  prompt,
+                  style: theme.textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    border: const OutlineInputBorder(),
+                    errorText: _nameError,
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 24),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'adult', label: Text('Adult')),
+                    ButtonSegment(value: 'child', label: Text('Child')),
+                  ],
+                  selected: {_profileMode},
+                  onSelectionChanged: (value) {
+                    setState(() => _profileMode = value.first);
+                  },
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed:
+                      _nameController.text.trim().isNotEmpty &&
+                          _nameError == null
+                      ? _createProfile
+                      : null,
+                  child: const Text('Continue'),
+                ),
               ],
-              selected: {_profileMode},
-              onSelectionChanged: (value) {
-                setState(() => _profileMode = value.first);
-              },
             ),
-            const Spacer(),
-            FilledButton(
-              onPressed:
-                  _nameController.text.trim().isNotEmpty && _nameError == null
-                  ? _createProfile
-                  : null,
-              child: const Text('Continue'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -450,26 +470,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       top: false,
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 24),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 24),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                PinEntryWidget(
+                  title: _isPinConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
+                  errorMessage: _pinError,
+                  onPinComplete: _isPinConfirmStep
+                      ? _onConfirmPinEntered
+                      : _onFirstPinEntered,
+                ),
+              ],
             ),
-            const SizedBox(height: 32),
-            PinEntryWidget(
-              title: _isPinConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
-              errorMessage: _pinError,
-              onPinComplete: _isPinConfirmStep
-                  ? _onConfirmPinEntered
-                  : _onFirstPinEntered,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -508,9 +533,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Card(
-                  elevation: isSelected ? 4 : 1,
+                  elevation: isSelected ? 3 : 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
                       color: isSelected
                           ? theme.colorScheme.primary
@@ -520,7 +545,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   child: InkWell(
                     onTap: () => setState(() => _selectedLanguage = entry.key),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(

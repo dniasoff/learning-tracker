@@ -41,8 +41,12 @@ class ProfileGuard extends AutoRouteGuard {
     );
 
     if (profiles.isEmpty) {
-      // No profiles yet — proceed (onboarding will handle)
-      resolver.next();
+      // An account must always have at least one profile. Zero profiles
+      // means either a fresh cloud sign-in where sync hasn't populated
+      // yet, or a user whose profiles were removed — route them to the
+      // picker so they can add one, never let them into AppShell.
+      unawaited(router.replace(const ProfilePickerRoute()));
+      resolver.next(false);
       return;
     }
 

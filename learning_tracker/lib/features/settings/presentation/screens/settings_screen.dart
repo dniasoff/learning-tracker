@@ -18,7 +18,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/theme_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
@@ -53,165 +52,172 @@ class SettingsScreen extends ConsumerWidget {
           onPressed: () => context.router.maybePop(),
         ),
       ),
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          children: [
-            // User Profile Section
-            _UserProfileSection(user: user),
-            const SizedBox(height: 24),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
+              theme.scaffoldBackgroundColor,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            children: [
+              // User Profile Section
+              _UserProfileSection(user: user),
+              const SizedBox(height: 24),
 
-            // LEARNING section
-            const _SectionHeader(title: 'LEARNING'),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  // Child profiles can't manage tracks directly — the parent
-                  // does that from the parent-mode settings screen.
-                  if (!isChildProfile) ...[
+              // LEARNING section
+              const _SectionHeader(title: 'LEARNING'),
+              const SizedBox(height: 8),
+              Card(
+                child: Column(
+                  children: [
+                    // Child profiles can't manage tracks directly — the parent
+                    // does that from the parent-mode settings screen.
+                    if (!isChildProfile) ...[
+                      ListTile(
+                        leading: Icon(
+                          Icons.route,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: const Text('Manage Tracks'),
+                        subtitle: const Text('Add, edit, or archive tracks'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.pushRoute(TrackManagementHubRoute()),
+                      ),
+                      Divider(height: 1, indent: 56, color: theme.dividerColor),
+                    ],
+                    _HebrewDateTile(theme: theme),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // NOTIFICATIONS section
+              const _SectionHeader(title: 'NOTIFICATIONS'),
+              const SizedBox(height: 8),
+              Card(
+                child: Column(
+                  children: [
                     ListTile(
                       leading: Icon(
-                        Icons.route,
+                        Icons.notifications_outlined,
                         color: theme.colorScheme.primary,
                       ),
-                      title: const Text('Manage Tracks'),
-                      subtitle: const Text('Add, edit, or archive tracks'),
+                      title: const Text('Notification Settings'),
+                      subtitle: const Text('Push, email and sound'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.pushRoute(TrackManagementHubRoute()),
+                      onTap: () =>
+                          context.pushRoute(const NotificationsRoute()),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // BACKUP & SYNC section (DNI-188)
+              const _SectionHeader(title: 'BACKUP & SYNC'),
+              const SizedBox(height: 8),
+              const _BackupSyncSection(),
+              const SizedBox(height: 24),
+
+              // LANGUAGE section
+              const _SectionHeader(title: 'LANGUAGE'),
+              const SizedBox(height: 8),
+              Card(
+                child: Column(children: [_LanguageTile(theme: theme)]),
+              ),
+              const SizedBox(height: 24),
+
+              // ACCOUNT section
+              const _SectionHeader(title: 'ACCOUNT'),
+              const SizedBox(height: 8),
+              Card(
+                child: Column(
+                  children: [
+                    if (user != null &&
+                        user.providerData.any(
+                          (info) => info.providerId == 'password',
+                        ))
+                      Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.lock_outline),
+                            title: const Text('Change Password'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () =>
+                                _showChangePasswordFlow(context, ref, user),
+                          ),
+                          Divider(
+                            height: 1,
+                            indent: 56,
+                            color: theme.dividerColor,
+                          ),
+                        ],
+                      ),
+                    ListTile(
+                      leading: Icon(
+                        Icons.logout,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        'Sign Out',
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
+                      onTap: () => _showSignOutConfirmation(context, ref),
                     ),
                     Divider(height: 1, indent: 56, color: theme.dividerColor),
+                    ListTile(
+                      leading: Icon(
+                        Icons.delete_forever,
+                        color: theme.colorScheme.error,
+                      ),
+                      title: Text(
+                        'Delete Account',
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
+                      onTap: () => _showDeleteAccountFlow(context, ref, user),
+                    ),
                   ],
-                  _HebrewDateTile(theme: theme),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // APPEARANCE section
-            const _SectionHeader(title: 'APPEARANCE'),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(children: [_ThemeTile(theme: theme)]),
-            ),
-            const SizedBox(height: 24),
-
-            // NOTIFICATIONS section
-            const _SectionHeader(title: 'NOTIFICATIONS'),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(
-                      Icons.notifications_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: const Text('Notification Settings'),
-                    subtitle: const Text('Push, email and sound'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.pushRoute(const NotificationsRoute()),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // BACKUP & SYNC section (DNI-188)
-            const _SectionHeader(title: 'BACKUP & SYNC'),
-            const SizedBox(height: 8),
-            const _BackupSyncSection(),
-            const SizedBox(height: 24),
-
-            // LANGUAGE section
-            const _SectionHeader(title: 'LANGUAGE'),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(children: [_LanguageTile(theme: theme)]),
-            ),
-            const SizedBox(height: 24),
-
-            // ACCOUNT section
-            const _SectionHeader(title: 'ACCOUNT'),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  if (user != null &&
-                      user.providerData.any(
-                        (info) => info.providerId == 'password',
-                      ))
-                    Column(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.lock_outline),
-                          title: const Text('Change Password'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () =>
-                              _showChangePasswordFlow(context, ref, user),
-                        ),
-                        Divider(
-                          height: 1,
-                          indent: 56,
-                          color: theme.dividerColor,
-                        ),
-                      ],
-                    ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.logout,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: Text(
-                      'Sign Out',
-                      style: TextStyle(color: theme.colorScheme.primary),
-                    ),
-                    onTap: () => _showSignOutConfirmation(context, ref),
-                  ),
-                  Divider(height: 1, indent: 56, color: theme.dividerColor),
-                  ListTile(
-                    leading: Icon(
-                      Icons.delete_forever,
-                      color: theme.colorScheme.error,
-                    ),
-                    title: Text(
-                      'Delete Account',
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                    onTap: () => _showDeleteAccountFlow(context, ref, user),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // PARENTAL CONTROLS section — only visible for child-mode accounts.
-            _ParentalControlsSection(
-              user: user,
-              isChildProfile: isChildProfile,
-            ),
-
-            // App Version
-            Center(
-              child: Text(
-                'Torah Tracker v$_appVersion',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                'Handcrafted with care',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(height: 24),
+
+              // PARENTAL CONTROLS section — only visible for child-mode accounts.
+              _ParentalControlsSection(
+                user: user,
+                isChildProfile: isChildProfile,
+              ),
+
+              // App Version
+              Center(
+                child: Text(
+                  'Torah Tracker v$_appVersion',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  'Handcrafted with care',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );
@@ -447,14 +453,15 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         title,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.primary.withValues(alpha: 0.9),
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
         ),
       ),
@@ -566,88 +573,87 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
               .join()
         : '?';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-            child: Text(
-              initials,
-              style: TextStyle(
-                color: theme.colorScheme.primary,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+              child: Text(
+                initials,
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (user.email != null)
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    user.email!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    displayName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.15,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'SELF-LEARNER',
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
+                  if (user.email != null)
+                    Text(
+                      user.email!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    // Epic 20.8: no-backup badge for local-born users.
-                    // Tier-gated inside the widget — cloud-born users
-                    // don't see it.
-                    const NoBackupBadge(),
-                  ],
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.15,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'SELF-LEARNER',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      const NoBackupBadge(),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.edit_outlined,
-              color: theme.colorScheme.onSurfaceVariant,
+            IconButton(
+              icon: Icon(
+                Icons.edit_outlined,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              onPressed: () => _showEditNameDialog(
+                initialName: displayName,
+                profileId: activeProfile?.id,
+                user: user,
+              ),
             ),
-            onPressed: () => _showEditNameDialog(
-              initialName: displayName,
-              profileId: activeProfile?.id,
-              user: user,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1071,93 +1077,6 @@ class _LanguageTile extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _ThemeTile extends ConsumerWidget {
-  const _ThemeTile({required this.theme});
-
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-
-    String label;
-    IconData icon;
-    switch (themeMode) {
-      case ThemeMode.dark:
-        label = 'Dark';
-        icon = Icons.dark_mode_outlined;
-      case ThemeMode.light:
-        label = 'Light';
-        icon = Icons.light_mode_outlined;
-      case ThemeMode.system:
-        label = 'System';
-        icon = Icons.brightness_auto_outlined;
-    }
-
-    return ListTile(
-      leading: Icon(icon, color: theme.colorScheme.primary),
-      title: const Text('Theme'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right),
-        ],
-      ),
-      onTap: () => _showThemePicker(context, ref, themeMode),
-    );
-  }
-
-  void _showThemePicker(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeMode current,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Text(
-              'Choose Theme',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            for (final option in [
-              (ThemeMode.light, 'Light', Icons.light_mode_outlined),
-              (ThemeMode.dark, 'Dark', Icons.dark_mode_outlined),
-              (ThemeMode.system, 'System', Icons.brightness_auto_outlined),
-            ])
-              ListTile(
-                leading: Icon(option.$3),
-                title: Text(option.$2),
-                trailing: current == option.$1
-                    ? Icon(
-                        Icons.check,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () {
-                  ref.read(themeModeProvider.notifier).setThemeMode(option.$1);
-                  Navigator.pop(context);
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
     );
   }
 }

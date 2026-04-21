@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -11,6 +12,9 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
@@ -51,7 +55,6 @@ class TextDisplayScreen extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 /// Loading view with spinner and message.
@@ -180,7 +183,7 @@ class _TextContentView extends StatelessWidget {
           child: LinearProgressIndicator(
             value: 0.15,
             minHeight: 3,
-            backgroundColor: Colors.white.withValues(alpha: 0.05),
+            backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.5),
             valueColor: AlwaysStoppedAnimation<Color>(
               theme.colorScheme.primary,
             ),
@@ -199,11 +202,9 @@ class _TextContentView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF172A44),
+                      color: AppTheme.brandCreamCard,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                      ),
+                      border: Border.all(color: AppTheme.brandOutline),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -216,7 +217,7 @@ class _TextContentView extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.white.withValues(alpha: 0.4),
+                                color: AppTheme.brandInkMuted,
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -243,11 +244,9 @@ class _TextContentView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF172A44),
+                      color: AppTheme.brandCreamCard,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                      ),
+                      border: Border.all(color: AppTheme.brandOutline),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,7 +256,7 @@ class _TextContentView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.4),
+                            color: AppTheme.brandInkMuted,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -282,10 +281,8 @@ class _TextContentView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF12243D),
-            border: Border(
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
-            ),
+            color: AppTheme.brandCreamCard,
+            border: Border(top: BorderSide(color: AppTheme.brandOutline)),
           ),
           child: _CompletionSection(sefariaRef: sefariaRef),
         ),
@@ -320,7 +317,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         CompletionRequest(
           curriculumId: task.curriculumId.storageKey,
           sefariaRef: widget.sefariaRef,
-          stageId: task.stageDefinitionId,
+          stageId: task.stageOrder,
           trackType: 'personal',
         ),
       );
@@ -330,6 +327,16 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       ref.invalidate(dashboardGlobalPointsProvider);
       ref.invalidate(dashboardCompletionPercentageProvider(task.curriculumId));
       ref.invalidate(dashboardLastCompletionProvider(task.curriculumId));
+      ref.invalidate(progressOverviewStatsProvider);
+      final profileId = ref.read(activeProfileIdProvider);
+      ref.invalidate(journeyViewModelProvider(profileId));
+      ref.invalidate(
+        isStageCompletedProvider((
+          sefariaRef: widget.sefariaRef,
+          stageId: task.stageOrder,
+          trackType: 'personal',
+        )),
+      );
       ref.invalidate(
         isStageCompletedProvider((
           sefariaRef: widget.sefariaRef,
@@ -337,6 +344,10 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           trackType: 'personal',
         )),
       );
+
+      if (mounted) {
+        setState(() => _saving = false);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -365,104 +376,100 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
 
     return dailyTasksAsync.when(
-        loading: () => const SizedBox(
-          height: 44,
-          child: Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+      loading: () => const SizedBox(
+        height: 44,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
-        error: (e, _) => Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Unable to load completion context: $e',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.7),
+      ),
+      error: (e, _) => Row(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Unable to load completion context: $e',
+              style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
+            ),
+          ),
+        ],
+      ),
+      data: (tasks) {
+        final matches = tasks.where(
+          (t) => t.contentItemSefariaRef == widget.sefariaRef,
+        );
+        if (matches.isEmpty) {
+          return Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Colors.green.withValues(alpha: 0.8),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'No open stage for today — all caught up on this item.',
+                  style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
                 ),
               ),
-            ),
-          ],
-        ),
-        data: (tasks) {
-          final matches = tasks.where(
-            (t) => t.contentItemSefariaRef == widget.sefariaRef,
+            ],
           );
-          if (matches.isEmpty) {
-            return Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.green.withValues(alpha: 0.8),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'No open stage for today — all caught up on this item.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.7),
+        }
+
+        final task = matches.first;
+        final isCompletedByOrderAsync = ref.watch(
+          isStageCompletedProvider((
+            sefariaRef: widget.sefariaRef,
+            stageId: task.stageOrder,
+            trackType: 'personal',
+          )),
+        );
+        final isCompletedByDefinitionIdAsync = ref.watch(
+          isStageCompletedProvider((
+            sefariaRef: widget.sefariaRef,
+            stageId: task.stageDefinitionId,
+            trackType: 'personal',
+          )),
+        );
+        final isDone =
+            (isCompletedByOrderAsync.asData?.value ?? false) ||
+            (isCompletedByDefinitionIdAsync.asData?.value ?? false);
+
+        return SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: (_saving || isDone) ? null : () => _handleComplete(task),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: isDone ? Colors.green.shade700 : null,
+            ),
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
                     ),
+                  )
+                : Icon(
+                    isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+                    size: 20,
                   ),
-                ),
-              ],
-            );
-          }
-
-          final task = matches.first;
-          final isCompletedAsync = ref.watch(
-            isStageCompletedProvider((
-              sefariaRef: widget.sefariaRef,
-              stageId: task.stageDefinitionId,
-              trackType: 'personal',
-            )),
-          );
-          final isDone = isCompletedAsync.asData?.value ?? false;
-
-          return SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: (_saving || isDone)
-                  ? null
-                  : () => _handleComplete(task),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: isDone ? Colors.green.shade700 : null,
-              ),
-              icon: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Icon(
-                      isDone
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      size: 20,
-                    ),
-              label: Text(
-                isDone
-                    ? 'Completed (${task.stageName})'
-                    : 'Mark ${task.stageName} Complete',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            label: Text(
+              isDone
+                  ? 'Completed (${task.stageName})'
+                  : 'Mark ${task.stageName} Complete',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
-          );
-        },
-      );
+          ),
+        );
+      },
+    );
   }
 }

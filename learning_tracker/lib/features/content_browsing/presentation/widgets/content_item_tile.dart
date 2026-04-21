@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -73,7 +74,7 @@ class ContentItemTile extends ConsumerWidget {
   void _showStageBreakdown(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF172A44),
+      backgroundColor: AppTheme.brandCreamCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -209,7 +210,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: AppTheme.brandOutline,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -220,16 +221,13 @@ class _StageBreakdownSheet extends ConsumerWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppTheme.brandInk,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             'Review History',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
+            style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
           ),
           const SizedBox(height: 16),
           breakdownAsync.when(
@@ -237,7 +235,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
               if (breakdown.isEmpty) {
                 return Text(
                   'No completions yet.',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+                  style: TextStyle(color: AppTheme.brandInkMuted),
                 );
               }
               return FutureBuilder<Map<int, String>>(

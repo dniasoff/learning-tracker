@@ -17,6 +17,16 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'progress_providers.g.dart';
 
+class ProgressOverviewStats {
+  final int totalCompletions;
+  final int totalUniqueItems;
+
+  const ProgressOverviewStats({
+    required this.totalCompletions,
+    required this.totalUniqueItems,
+  });
+}
+
 /// Provider for the progress repository instance.
 @riverpod
 ProgressRepository progressRepository(Ref ref) {
@@ -61,6 +71,25 @@ Future<int> aggregateCount(Ref ref, String curriculumId) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.completionDao.getAggregateCountByProfile(curriculumId, profileId);
+}
+
+/// Live progress snapshot derived directly from completion rows.
+///
+/// Unlike journey milestones, this updates on every completion and is used
+/// for immediate progress feedback in the Progress screen.
+@riverpod
+Future<ProgressOverviewStats> progressOverviewStats(Ref ref) async {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final completions = await db.completionDao.getCompletionsByProfile(profileId);
+  final uniqueItems = <String>{};
+  for (final c in completions) {
+    uniqueItems.add('${c.curriculumId}:${c.sefariaRef}');
+  }
+  return ProgressOverviewStats(
+    totalCompletions: completions.length,
+    totalUniqueItems: uniqueItems.length,
+  );
 }
 
 /// Provider that fetches completions for a single curriculum via

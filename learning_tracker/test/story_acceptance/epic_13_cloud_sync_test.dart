@@ -268,6 +268,9 @@ void main() {
       when(
         () => mockFirestore.fetchLedgerEntries(),
       ).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchLearnerProfiles(),
+      ).thenAnswer((_) async => []);
     }
 
     test('pull fetches all user data collections from Firestore', () async {
@@ -708,6 +711,9 @@ void main() {
       when(
         () => mockFirestore.fetchActiveCurricula(),
       ).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchLearnerProfiles(),
+      ).thenAnswer((_) async => []);
     }
 
     setUp(() async {
@@ -907,6 +913,9 @@ void main() {
       ).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchActiveCurricula(),
+      ).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchLearnerProfiles(),
       ).thenAnswer((_) async => []);
 
       final result1 = await restoreService.restore();

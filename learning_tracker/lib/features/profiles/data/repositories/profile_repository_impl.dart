@@ -2,14 +2,32 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [ProfileRepository] using Drift database.
+///
+/// When a [SyncEngine] is provided (cloud-born accounts), create / update /
+/// delete operations are mirrored to Firestore so learner profiles survive
+/// re-install and sync across devices. Local-born accounts pass null and
+/// the repo stays local-only.
 class ProfileRepositoryImpl implements ProfileRepository {
   final UserDatabase _db;
+  final SyncEngine? _syncEngine;
 
-  ProfileRepositoryImpl(this._db);
+  ProfileRepositoryImpl(this._db, {SyncEngine? syncEngine})
+    : _syncEngine = syncEngine;
 
   static const int maxProfilesPerAccount = 10;
+
+  Map<String, dynamic> _toFirestorePayload(ProfileModel profile) => {
+    'id': profile.id,
+    'account_id': profile.accountId,
+    'display_name': profile.displayName,
+    'mode': profile.mode,
+    'avatar_index': profile.avatarIndex,
+    'created_at': profile.createdAt.toIso8601String(),
+    'updated_at': profile.updatedAt.toIso8601String(),
+  };
 
   @override
   Future<List<ProfileModel>> getProfilesByAccount(int accountId) async {
@@ -58,7 +76,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       ),
     );
 
-    return ProfileModel(
+    final model = ProfileModel(
       id: id,
       accountId: accountId,
       displayName: trimmedName,
@@ -67,6 +85,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       createdAt: now,
       updatedAt: now,
     );
+
+    await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    return model;
   }
 
   @override
@@ -110,7 +131,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
     );
 
     final updated = await _db.profileDao.getProfileById(id);
-    return ProfileModel.fromDriftRow(updated!);
+    final model = ProfileModel.fromDriftRow(updated!);
+    await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    return model;
   }
 
   @override
@@ -163,6 +186,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);
     });
+
+    await _syncEngine?.deleteLearnerProfile(id);
   }
 
   @override

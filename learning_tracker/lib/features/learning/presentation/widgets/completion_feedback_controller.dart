@@ -66,7 +66,7 @@ class CompletionFeedbackController extends ChangeNotifier {
       case CompletionFeedbackPhase.pointsPopup:
         _phase = CompletionFeedbackPhase.progressFill;
       case CompletionFeedbackPhase.progressFill:
-        if (_data!.isStreakIncrement) {
+        if (_data!.userMode == UserMode.child && _data!.isStreakIncrement) {
           _phase = CompletionFeedbackPhase.streakBump;
         } else {
           _phase = CompletionFeedbackPhase.idle;

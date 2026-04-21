@@ -103,6 +103,7 @@ class SyncEngine {
     setOnlineState(online);
 
     await pullOnLaunch();
+    await _backfillLearnerProfilesIfNeeded();
   }
 
   /// Dispose resources and detach listeners.
@@ -256,6 +257,7 @@ class SyncEngine {
         _firestoreDataSource.fetchLedgerEntries(),
         _firestoreDataSource.fetchActiveCurricula(),
         _firestoreDataSource.fetchCurriculumTracks(),
+        _firestoreDataSource.fetchLearnerProfiles(),
       ]);
       final completions = results[0] as List<Map<String, dynamic>>;
       final bookmarks = results[1] as List<Map<String, dynamic>>;
@@ -266,6 +268,12 @@ class SyncEngine {
       final ledgerEntries = results[6] as List<Map<String, dynamic>>;
       final activeCurricula = results[7] as List<String>;
       final curriculumTracks = results[8] as List<Map<String, dynamic>>;
+      final learnerProfiles = results[9] as List<Map<String, dynamic>>;
+
+      // Merge learner profiles FIRST — other rows (completions, bookmarks,
+      // goals, streaks, etc.) reference profile_id, so they need the
+      // target rows to exist before foreign-key-style lookups run.
+      await _mergeLearnerProfiles(learnerProfiles);
 
       // Merge with local database
       await _mergeCompletions(completions);
@@ -496,6 +504,44 @@ class SyncEngine {
       _logger.warning('Failed to push profile, queuing for later', e);
       await _offlineQueue.enqueueProfile(profile);
       await _emitPendingStatus();
+    }
+  }
+
+  /// Push a learner profile (profiles table) to Firestore.
+  /// Best-effort: offline or failed pushes log; the local row is authoritative
+  /// and the next successful pullOnLaunch reconciles against Firestore.
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
+    if (!_isOnline || _pushSuppressed) {
+      _logger.debug('Skipping learner profile push (offline or suppressed)');
+      return;
+    }
+
+    try {
+      final payload = await _enrichLearnerProfilePayload(profile);
+      await _firestoreDataSource.pushLearnerProfile(payload);
+      _consecutivePushPermissionErrors = 0;
+      _logger.debug('Pushed learner profile to Firestore');
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
+      _logger.warning('Failed to push learner profile', e);
+    }
+  }
+
+  /// Delete a learner profile from Firestore.
+  Future<void> deleteLearnerProfile(int profileId) async {
+    if (!_isOnline || _pushSuppressed) {
+      _logger.debug('Skipping learner profile delete (offline or suppressed)');
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.deleteLearnerProfile(profileId);
+      _consecutivePushPermissionErrors = 0;
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
+      _logger.warning('Failed to delete learner profile', e);
     }
   }
 
@@ -1027,6 +1073,227 @@ class SyncEngine {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _logger.warning('Failed to merge profile: $e');
     }
+  }
+
+  /// Merge learner profiles (profiles table) from Firestore.
+  /// Upserts each remote row into the local profiles table preserving its
+  /// remote id so profile-scoped data (completions, bookmarks, …) keyed by
+  /// profile_id resolves consistently across devices.
+  Future<void> _mergeLearnerProfiles(
+    List<Map<String, dynamic>> remoteProfiles,
+  ) async {
+    _logger.debug('Merging ${remoteProfiles.length} learner profiles');
+
+    for (final remote in remoteProfiles) {
+      try {
+        final id = remote['id'] as int?;
+        final accountId = remote['account_id'] as int?;
+        final displayName = remote['display_name'] as String?;
+        final mode = remote['mode'] as String?;
+        final avatarIndex = remote['avatar_index'] as int? ?? 0;
+        final createdAt = _parseTimestamp(remote['created_at']);
+        final updatedAt = _parseTimestamp(remote['updated_at']);
+
+        if (id == null ||
+            accountId == null ||
+            displayName == null ||
+            mode == null ||
+            createdAt == null ||
+            updatedAt == null) {
+          _logger.warning('Skipping invalid remote learner profile: $remote');
+          continue;
+        }
+
+        final existing = await _database.profileDao.getProfileById(id);
+        if (existing == null) {
+          await _database
+              .into(_database.profiles)
+              .insertOnConflictUpdate(
+                ProfilesCompanion.insert(
+                  id: Value(id),
+                  accountId: accountId,
+                  displayName: displayName,
+                  mode: mode,
+                  avatarIndex: Value(avatarIndex),
+                  createdAt: createdAt,
+                  updatedAt: updatedAt,
+                ),
+              );
+        } else if (updatedAt.isAfter(existing.updatedAt)) {
+          await (_database.update(
+            _database.profiles,
+          )..where((t) => t.id.equals(id))).write(
+            ProfilesCompanion(
+              displayName: Value(displayName),
+              mode: Value(mode),
+              avatarIndex: Value(avatarIndex),
+              updatedAt: Value(updatedAt),
+            ),
+          );
+        }
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+        _logger.warning('Failed to merge learner profile: $e');
+      }
+    }
+  }
+
+  /// Backfill learner profiles to Firestore when local rows exist but
+  /// the account-level `learner_profiles` collection is missing entries.
+  ///
+  /// This heals accounts created before learner-profile Firestore rules
+  /// were deployed, so signing in on a second device can recover profiles.
+  Future<void> _backfillLearnerProfilesIfNeeded() async {
+    if (!_isOnline || !_firestoreDataSource.isAuthenticated) return;
+
+    try {
+      final remoteProfiles = await _firestoreDataSource.fetchLearnerProfiles();
+      final remoteIds = remoteProfiles
+          .map((p) => p['id'])
+          .whereType<int>()
+          .toSet();
+
+      final localProfiles = await _database.select(_database.profiles).get();
+      if (localProfiles.isEmpty) return;
+
+      var pushed = 0;
+      for (final profile in localProfiles) {
+        if (remoteIds.contains(profile.id)) continue;
+
+        await pushLearnerProfile({
+          'id': profile.id,
+          'account_id': profile.accountId,
+          'display_name': profile.displayName,
+          'mode': profile.mode,
+          'avatar_index': profile.avatarIndex,
+          'created_at': profile.createdAt.toIso8601String(),
+          'updated_at': profile.updatedAt.toIso8601String(),
+        });
+        pushed++;
+      }
+
+      if (pushed > 0) {
+        _logger.info('Backfilled $pushed learner profile(s) to Firestore');
+      }
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — best-effort backfill path
+      _logger.warning('Learner profile backfill skipped: $e');
+    }
+  }
+
+  /// Enrich learner profile payload with user-visible snapshot data so
+  /// account-level `learner_profiles` docs contain profile settings and
+  /// progress metadata for quick inspection and restore UX.
+  Future<Map<String, dynamic>> _enrichLearnerProfilePayload(
+    Map<String, dynamic> profile,
+  ) async {
+    final profileId = profile['id'] as int?;
+    if (profileId == null) return profile;
+    final mode = (profile['mode'] as String?)?.toLowerCase();
+    final isChildProfile = mode == 'child';
+
+    final activeCurricula = await _database.activeCurriculumDao
+        .getActiveCurriculaByProfile(profileId);
+
+    final stageRows = await (_database.select(_database.stageDefinitions)
+          ..where((t) => t.profileId.equals(profileId)))
+        .get();
+    final pointRows = await (_database.select(_database.pointConfigs)
+          ..where((t) => t.profileId.equals(profileId)))
+        .get();
+    final studyDayRows = await (_database.select(_database.studyDayConfigs)
+          ..where((t) => t.profileId.equals(profileId)))
+        .get();
+
+    final curriculumSettings = <String, Map<String, dynamic>>{};
+    for (final row in stageRows) {
+      final cfg = curriculumSettings.putIfAbsent(
+        row.curriculumId,
+        () => <String, dynamic>{
+          'stages': <Map<String, dynamic>>[],
+          'points_by_stage': <String, int>{},
+          'study_day_config': <String, String>{},
+        },
+      );
+      (cfg['stages'] as List<Map<String, dynamic>>).add({
+        'track_id': row.trackId,
+        'stage_order': row.stageOrder,
+        'stage_name': row.stageName,
+        'delay_days': row.delayDays,
+        'schedule_type': row.scheduleType,
+        'days_of_week': row.daysOfWeek,
+        'rolling_window_size': row.rollingWindowSize,
+      });
+    }
+    for (final row in pointRows) {
+      final cfg = curriculumSettings.putIfAbsent(
+        row.curriculumId,
+        () => <String, dynamic>{
+          'stages': <Map<String, dynamic>>[],
+          'points_by_stage': <String, int>{},
+          'study_day_config': <String, String>{},
+        },
+      );
+      (cfg['points_by_stage'] as Map<String, int>)[
+            row.stageOrder.toString()
+          ] =
+          row.points;
+    }
+    for (final row in studyDayRows) {
+      final cfg = curriculumSettings.putIfAbsent(
+        row.curriculumId,
+        () => <String, dynamic>{
+          'stages': <Map<String, dynamic>>[],
+          'points_by_stage': <String, int>{},
+          'study_day_config': <String, String>{},
+        },
+      );
+      (cfg['study_day_config'] as Map<String, String>)[
+            row.dayOfWeek.toString()
+          ] =
+          row.dayType;
+    }
+
+    final totalCompletionsExpr = _database.completions.id.count();
+    final completionStats = await (_database.selectOnly(_database.completions)
+          ..addColumns([totalCompletionsExpr])
+          ..where(_database.completions.profileId.equals(profileId)))
+        .getSingle();
+    final lastCompletion = await (_database.select(_database.completions)
+          ..where((t) => t.profileId.equals(profileId))
+          ..orderBy([(t) => OrderingTerm.desc(t.completedAt)])
+          ..limit(1))
+        .getSingleOrNull();
+
+    final enriched = <String, dynamic>{
+      ...profile,
+      'active_curricula': activeCurricula,
+      'progress_summary': {
+        'total_completions': completionStats.read(totalCompletionsExpr) ?? 0,
+        'last_completion_at': lastCompletion?.completedAt.toIso8601String(),
+      },
+      'settings_snapshot': curriculumSettings,
+    };
+
+    // Handbook alignment: gamification payload is child-mode only.
+    if (isChildProfile) {
+      final streak = await _database.streakDao.getStreakByProfile(profileId);
+      final totalPointsExpr = _database.completions.points.sum();
+      final totalPointsRow = await (_database.selectOnly(_database.completions)
+            ..addColumns([totalPointsExpr])
+            ..where(_database.completions.profileId.equals(profileId)))
+          .getSingle();
+      final totalPoints = totalPointsRow.read(totalPointsExpr) ?? 0;
+
+      enriched['gamification_summary'] = {
+        'total_points': totalPoints,
+        'current_streak': streak?.currentStreak ?? 0,
+        'max_streak': streak?.maxStreak ?? 0,
+        'last_completion_date': streak?.lastCompletionDate?.toIso8601String(),
+      };
+    }
+
+    return enriched;
   }
 
   // ========== Listener Callbacks ==========

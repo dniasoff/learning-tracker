@@ -118,6 +118,11 @@ Future<DateTime?> dashboardLastCompletion(
 /// Streak data provider, scoped to the active profile.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
+  final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
+  if (userMode != UserMode.child) {
+    return Stream.value((currentStreak: 0, maxStreak: 0));
+  }
+
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.streakDao.watchStreakByProfile(profileId).map((streak) {
@@ -129,6 +134,9 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
 /// Global points total, scoped to active profile.
 @riverpod
 Future<int> dashboardGlobalPoints(Ref ref) async {
+  final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
+  if (userMode != UserMode.child) return 0;
+
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao.getCompletionsByProfile(profileId);
@@ -138,6 +146,11 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 /// Streak recovery info — whether the streak was just saved by grace period.
 @riverpod
 Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
+  final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
+  if (userMode != UserMode.child) {
+    return const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0);
+  }
+
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final streakService = StreakService(db, profileId: profileId);

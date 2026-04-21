@@ -129,10 +129,13 @@ class AccountManagementService {
         'learning_ledger',
         'active_curricula',
         'curriculum_imports',
+        'curriculum_tracks',
       ];
 
-      // 1. Delete profile-scoped data
-      final profilesSnapshot = await userDocRef.collection('profiles').get();
+      // 1. Delete profile-scoped data (canonical learner_profiles path)
+      final profilesSnapshot = await userDocRef
+          .collection('learner_profiles')
+          .get();
       for (final profileDoc in profilesSnapshot.docs) {
         for (final sub in profileSubcollections) {
           final subSnapshot = await profileDoc.reference.collection(sub).get();
@@ -150,8 +153,30 @@ class AccountManagementService {
         await profileDoc.reference.delete();
       }
 
+      // Legacy cleanup: remove any old users/{uid}/profiles/{profileId} docs.
+      final legacyProfiles = await userDocRef.collection('profiles').get();
+      for (final profileDoc in legacyProfiles.docs) {
+        for (final sub in profileSubcollections) {
+          final subSnapshot = await profileDoc.reference.collection(sub).get();
+          for (final doc in subSnapshot.docs) {
+            await doc.reference.delete();
+          }
+        }
+        await profileDoc.reference.collection('streak').doc('data').delete();
+        await profileDoc.reference
+            .collection('active_curricula')
+            .doc('data')
+            .delete();
+        await profileDoc.reference.delete();
+      }
+
       // 2. Delete legacy flat subcollections
-      const legacySubcollections = [...profileSubcollections, 'profile'];
+      const legacySubcollections = [
+        ...profileSubcollections,
+        'profile',
+        'learner_profiles',
+        'profiles',
+      ];
 
       for (final sub in legacySubcollections) {
         final snapshot = await userDocRef.collection(sub).get();

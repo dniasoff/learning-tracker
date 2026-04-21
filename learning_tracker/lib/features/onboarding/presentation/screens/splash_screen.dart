@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -43,164 +44,199 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFECEAE8),
+      backgroundColor: AppTheme.brandCream,
       body: Stack(
         children: [
-          // Main content centered
-          Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Top decorative icon
-                  Opacity(
-                    opacity: 0.4,
-                    child: Icon(
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white,
+                    AppTheme.brandBlueSoft.withValues(alpha: 0.22),
+                    AppTheme.brandCream,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: -72,
+            left: -32,
+            child: _SoftOrb(
+              diameter: 220,
+              color: AppTheme.brandBlueSoft.withValues(alpha: 0.45),
+            ),
+          ),
+          Positioned(
+            bottom: -84,
+            right: -20,
+            child: _SoftOrb(
+              diameter: 190,
+              color: AppTheme.brandCoralSoft.withValues(alpha: 0.55),
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
                       Icons.menu_book_rounded,
-                      size: 48,
-                      color: AppTheme.heritageNavy.withValues(alpha: 0.5),
+                      size: 38,
+                      color: AppTheme.brandBlue.withValues(alpha: 0.35),
                     ),
-                  ),
-
-                  const SizedBox(height: 60),
-
-                  // White rounded square container with app logo
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                    const SizedBox(height: 48),
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        final scale = 0.96 + (_pulseController.value * 0.06);
+                        return Transform.scale(scale: scale, child: child);
+                      },
+                      child: Container(
+                        width: 144,
+                        height: 144,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(34),
+                          border: Border.all(
+                            color: AppTheme.brandOutline.withValues(alpha: 0.5),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.brandBlue.withValues(alpha: 0.08),
+                              blurRadius: 28,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Image.asset(
-                        'assets/images/app_logo.png',
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.contain,
+                        child: Center(
+                          child: Image.asset(
+                            'assets/images/app_logo.png',
+                            width: 88,
+                            height: 88,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 60),
-
-                  // "READY FOR ADVENTURE?" button
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                    const SizedBox(height: 52),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.brandCreamSoft,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppTheme.brandCoralSoft),
+                      ),
+                      child: Text(
+                        'READY FOR ADVENTURE?',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.brandCoralDeep,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.9,
+                        ),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE5D9),
-                      borderRadius: BorderRadius.circular(20),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: 210,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          value: 0.35 + (_pulseController.value * 0.5),
+                          minHeight: 11,
+                          color: AppTheme.brandBlueBright,
+                          backgroundColor: AppTheme.brandBlueSoft,
+                        ),
+                      ),
                     ),
-                    child: Text(
-                      'READY FOR ADVENTURE?',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: const Color(0xFFD97B6D),
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.8,
-                          ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'LOADING WISDOM...',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.brandBlue.withValues(alpha: 0.55),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.4,
+                      ),
                     ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Loading bar - pulsing blue progress
-                  Container(
-                    width: 140,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, _) {
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            width: 140 * _pulseController.value,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2D5A7B),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Loading text
-                  Text(
-                    'LOADING WISDOM...',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.heritageNavy.withValues(alpha: 0.4),
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-
-          // Close button (top right)
           Positioned(
-            top: 36,
-            right: 20,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: const Color(0xFFFF6B6B),
-              shape: const CircleBorder(),
-              onPressed: _navigateNext,
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 18,
+            top: 52,
+            right: 22,
+            child: InkWell(
+              onTap: _navigateNext,
+              borderRadius: BorderRadius.circular(20),
+              child: Ink(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: AppTheme.brandCoral,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ),
-
-          // Left floating star (bottom left)
           const Positioned(
-            bottom: 80,
-            left: 24,
-            child: Opacity(
-              opacity: 0.3,
-              child: Icon(
-                Icons.star_rounded,
-                size: 32,
-                color: AppTheme.heritageNavy,
-              ),
+            left: 26,
+            bottom: 124,
+            child: Icon(
+              Icons.star_rounded,
+              color: AppTheme.brandGold,
+              size: 22,
             ),
           ),
-
-          // Right floating chat bubble (bottom right)
-          const Positioned(
-            bottom: 60,
+          Positioned(
             right: 28,
-            child: Opacity(
-              opacity: 0.25,
+            bottom: 94,
+            child: Transform.rotate(
+              angle: math.pi / 10,
               child: Icon(
                 Icons.chat_bubble_rounded,
-                size: 36,
-                color: AppTheme.heritageNavy,
+                color: AppTheme.brandCoral.withValues(alpha: 0.25),
+                size: 30,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SoftOrb extends StatelessWidget {
+  const _SoftOrb({required this.diameter, required this.color});
+
+  final double diameter;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: diameter,
+        height: diameter,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color, color.withValues(alpha: 0.0)],
+          ),
+        ),
       ),
     );
   }
