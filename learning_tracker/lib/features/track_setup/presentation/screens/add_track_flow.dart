@@ -17,7 +17,6 @@ import 'package:learning_tracker/features/track_setup/domain/services/track_crea
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/program_selection_step.dart';
-import 'package:learning_tracker/features/track_setup/presentation/widgets/track_label_step.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kAddTrackStep = 'add_track_step';
@@ -107,9 +106,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     if (!_isProgramTrack) {
       steps.add(AddTrackStep.goal);
     }
-
-    // Track name — always shown. Program: auto-fill from program name.
-    steps.add(AddTrackStep.trackName);
 
     // Bulk mark / starting position — only for program tracks
     if (_isProgramTrack) {
@@ -382,18 +378,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   void _onGoalComplete(GoalFormResult? result) {
     setState(() => _state = _state.copyWith(goalResult: result));
-    _goToNextStep();
-  }
-
-  void _onTrackLabelComplete(String label) {
-    setState(() => _state = _state.copyWith(trackLabel: label));
-    // Track name is the last step for self-paced tracks — finish directly.
-    // Program tracks still have the starting-position step after this.
-    if (_isProgramTrack) {
-      _goToNextStep();
-    } else {
-      _finishFlow();
-    }
+    _finishFlow();
   }
 
   Future<void> _onStartingPositionComplete(String? startingRef) async {
@@ -404,7 +389,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   Future<void> _finishFlow() async {
     final result = AddTrackResult(
       curriculumId: _state.curriculumId!,
-      label: _state.trackLabel ?? _state.curriculumId!.displayNameHe,
+      label: _getSmartDefault(),
       programId: _state.programId,
       programName: _state.programName,
       scopeSelections: _state.scopeSelections,
@@ -500,10 +485,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       AddTrackStep.studyDays => _buildStudyDaysStep(),
       AddTrackStep.chazaraSetup => _buildChazaraStep(),
       AddTrackStep.goal => _buildGoalStep(),
-      AddTrackStep.trackName => TrackLabelStep(
-        defaultLabel: _getSmartDefault(),
-        onComplete: _onTrackLabelComplete,
-      ),
+      AddTrackStep.trackName => const SizedBox.shrink(),
       AddTrackStep.bulkMark => _buildScreen8(),
     };
   }
