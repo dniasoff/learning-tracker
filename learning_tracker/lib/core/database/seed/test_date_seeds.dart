@@ -14,7 +14,6 @@ List<Map<String, Object>> generateTestDateSeeds({
     'dirshu_kinyan_torah',
     'dirshu_amud_hayomi',
     'dirshu_kinyan_yerushalmi',
-    'dirshu_daf_hayomi_bhalacha',
   ];
 
   for (final programName in dirshuPrograms) {

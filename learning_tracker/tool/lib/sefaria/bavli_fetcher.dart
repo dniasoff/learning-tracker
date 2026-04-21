@@ -69,14 +69,40 @@ class BavliFetcher extends SefariaFetcherBase {
         ),
       );
 
+      // The Sefaria shape API over-reports amudim: it includes 1-3 phantom
+      // amudim beyond the actual last daf (Steinsaltz/Koren pagination
+      // artifacts). We cap at the known last daf per masechta.
+      final maxAmud = _lastDaf[title];
+      final maxAmudIdx = maxAmud != null
+          ? ((maxAmud.daf - 2) * 2 + (maxAmud.amud == 'b' ? 1 : 0))
+          : amudCount - 1;
+
+      // Some masechtos (Tamid) start after daf 2. Use the explicit table;
+      // all other masechtos start at daf 2a (index 0).
+      final firstAmud = _firstDaf[title];
+      final startAmudIdx = firstAmud != null
+          ? ((firstAmud.daf - 2) * 2 + (firstAmud.amud == 'b' ? 1 : 0))
+          : 0;
+
       // Generate daf/amud entries. Bavli starts at daf 2a.
       for (var amudIdx = 0; amudIdx < amudCount; amudIdx++) {
+        // Skip amudim before the known first daf.
+        if (amudIdx < startAmudIdx) continue;
+
+        // Skip amudim beyond the known last daf.
+        if (amudIdx > maxAmudIdx) continue;
+
         final dafNum = (amudIdx ~/ 2) + 2; // Starts at daf 2
         final amud = amudIdx.isEven ? 'a' : 'b';
         final dafRef = '$dafNum$amud';
 
+        // Skip known mid-masechta gaps (amudim that Sefaria lacks).
+        if (_skipAmudim.contains('$title $dafRef')) continue;
+
         // Add daf container for first amud of each daf.
-        if (amud == 'a') {
+        // For the very first amud (which may be 'b' if 'a' was skipped),
+        // or any amud 'a', emit the daf container.
+        if (amud == 'a' || amudIdx == startAmudIdx) {
           items.add(
             ContentItem(
               curriculumId: curriculumId,
@@ -171,4 +197,59 @@ class BavliFetcher extends SefariaFetcherBase {
 
     return '${hundreds[h]}${tens[t]}${ones[o]}';
   }
+
+  /// Mid-masechta amudim that don't exist on Sefaria's text API.
+  static const _skipAmudim = <String>{
+    'Nazir 33b',
+  };
+
+  /// Known first daf for masechtos that don't start at 2a.
+  static const _firstDaf = <String, ({int daf, String amud})>{
+    'Tamid': (daf: 25, amud: 'b'),
+  };
+
+  /// Known last daf per masechta in the standard Vilna Shas.
+  ///
+  /// The Sefaria shape API over-reports amudim by 1-3 beyond these
+  /// (Steinsaltz/Koren pagination artifacts that don't have text).
+  static const _lastDaf = <String, ({int daf, String amud})>{
+    'Berakhot': (daf: 64, amud: 'a'),
+    'Shabbat': (daf: 157, amud: 'b'),
+    'Eruvin': (daf: 105, amud: 'a'),
+    'Pesachim': (daf: 121, amud: 'b'),
+    'Shekalim': (daf: 22, amud: 'a'),
+    'Yoma': (daf: 88, amud: 'a'),
+    'Sukkah': (daf: 56, amud: 'b'),
+    'Beitzah': (daf: 40, amud: 'b'),
+    'Rosh Hashanah': (daf: 35, amud: 'a'),
+    'Taanit': (daf: 31, amud: 'a'),
+    'Megillah': (daf: 32, amud: 'a'),
+    'Moed Katan': (daf: 29, amud: 'a'),
+    'Chagigah': (daf: 27, amud: 'a'),
+    'Yevamot': (daf: 122, amud: 'b'),
+    'Ketubot': (daf: 112, amud: 'b'),
+    'Nedarim': (daf: 91, amud: 'b'),
+    'Nazir': (daf: 66, amud: 'b'),
+    'Sotah': (daf: 49, amud: 'b'),
+    'Gittin': (daf: 90, amud: 'b'),
+    'Kiddushin': (daf: 82, amud: 'b'),
+    'Bava Kamma': (daf: 119, amud: 'b'),
+    'Bava Metzia': (daf: 119, amud: 'a'),
+    'Bava Batra': (daf: 176, amud: 'b'),
+    'Sanhedrin': (daf: 113, amud: 'b'),
+    'Makkot': (daf: 24, amud: 'b'),
+    'Shevuot': (daf: 49, amud: 'b'),
+    'Avodah Zarah': (daf: 76, amud: 'b'),
+    'Horayot': (daf: 14, amud: 'a'),
+    'Zevachim': (daf: 120, amud: 'b'),
+    'Menachot': (daf: 110, amud: 'a'),
+    'Chullin': (daf: 142, amud: 'a'),
+    'Bekhorot': (daf: 61, amud: 'a'),
+    'Arakhin': (daf: 34, amud: 'a'),
+    'Temurah': (daf: 34, amud: 'a'),
+    'Keritot': (daf: 28, amud: 'b'),
+    'Meilah': (daf: 22, amud: 'a'),
+    'Tamid': (daf: 33, amud: 'b'),
+    'Niddah': (daf: 73, amud: 'a'),
+  };
 }

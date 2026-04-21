@@ -567,8 +567,6 @@ void main() {
               'dirshu_kinyan_torah',
               'dirshu_amud_hayomi',
               'dirshu_kinyan_yerushalmi',
-              'dirshu_daf_hayomi_bhalacha',
-              'dirshu_kinyan_chochma',
               'daf_yomi',
               'mishnah_yomis',
               'nach_yomi',

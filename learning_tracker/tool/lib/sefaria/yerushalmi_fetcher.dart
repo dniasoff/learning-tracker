@@ -54,9 +54,15 @@ class YerushalmiFetcher extends SefariaFetcherBase {
       for (var chapterIdx = 0; chapterIdx < chapters.length; chapterIdx++) {
         final chapterNum = chapterIdx + 1;
         final chapterData = chapters[chapterIdx];
+        // When chapters[i] is a list, each element is the segment count
+        // for that halacha. We need to track per-halacha counts to skip
+        // halakhot with 0 segments.
+        final halachaSegments = chapterData is List
+            ? chapterData.cast<num>().map((n) => n.toInt()).toList()
+            : <int>[];
         final halachaCount = chapterData is num
             ? chapterData.toInt()
-            : (chapterData is List ? chapterData.length : 0);
+            : halachaSegments.length;
 
         // Add chapter/daf container.
         items.add(
@@ -74,6 +80,11 @@ class YerushalmiFetcher extends SefariaFetcherBase {
 
         // Add individual halachot (leaf nodes).
         for (var halachaNum = 1; halachaNum <= halachaCount; halachaNum++) {
+          // Skip halakhot with 0 segments (missing content on Sefaria).
+          if (halachaSegments.isNotEmpty &&
+              halachaSegments[halachaNum - 1] == 0) {
+            continue;
+          }
           items.add(
             ContentItem(
               curriculumId: curriculumId,

@@ -47,6 +47,10 @@ class MishnaFetcher extends SefariaFetcherBase {
         );
       }
 
+      // Sefaria shape titles already include "Mishnah" (e.g.,
+      // "Mishnah Berakhot") and "Pirkei Avot" — use as-is.
+      final refPrefix = title;
+
       // Add masechta container.
       items.add(
         ContentItem(
@@ -55,7 +59,7 @@ class MishnaFetcher extends SefariaFetcherBase {
           level2: title,
           displayNameHe: heTitle,
           displayNameEn: title,
-          sefariaRef: 'Mishnah $title',
+          sefariaRef: refPrefix,
           sortOrder: sortOrder++,
           isLeaf: false,
         ),
@@ -75,7 +79,7 @@ class MishnaFetcher extends SefariaFetcherBase {
             level3: perekNum.toString(),
             displayNameHe: '\u05E4\u05E8\u05E7 $perekNum',
             displayNameEn: 'Chapter $perekNum',
-            sefariaRef: 'Mishnah $title $perekNum',
+            sefariaRef: '$refPrefix $perekNum',
             sortOrder: sortOrder++,
             isLeaf: false,
           ),
@@ -92,7 +96,7 @@ class MishnaFetcher extends SefariaFetcherBase {
               level4: mishnaNum.toString(),
               displayNameHe: '$heTitle $perekNum:$mishnaNum',
               displayNameEn: '$title $perekNum:$mishnaNum',
-              sefariaRef: 'Mishnah $title $perekNum.$mishnaNum',
+              sefariaRef: '$refPrefix $perekNum.$mishnaNum',
               sortOrder: sortOrder++,
               isLeaf: true,
             ),

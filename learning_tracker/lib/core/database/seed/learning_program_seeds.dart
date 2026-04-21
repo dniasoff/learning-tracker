@@ -44,9 +44,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
-    'api_source': null,
-    'api_program_key': null,
-    'is_calendar_program': false,
+    'api_source': 'local',
+    'api_program_key': 'Dirshu Kinyan Torah',
+    'is_calendar_program': true,
   },
   {
     'name': 'dirshu_amud_hayomi',
@@ -63,9 +63,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
-    'api_source': null,
-    'api_program_key': null,
-    'is_calendar_program': false,
+    'api_source': 'local',
+    'api_program_key': 'Dirshu Amud HaYomi',
+    'is_calendar_program': true,
   },
   {
     'name': 'dirshu_kinyan_yerushalmi',
@@ -82,44 +82,9 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
-    'api_source': null,
-    'api_program_key': null,
-    'is_calendar_program': false,
-  },
-  {
-    'name': 'dirshu_daf_hayomi_bhalacha',
-    'display_name': 'Dirshu Daf HaYomi B\'Halacha',
-    'description': 'Mishna Berurah study with review and bimonthly tests.',
-    'curriculum_type': 'mishna_berurah',
-    'is_active': true,
-    'has_tests': true,
-    'stages_config':
-        '['
-        '{"stage":"learn","label":"לימוד","frequency":"daily"},'
-        '{"stage":"review","label":"חזרה","delay_days":7}'
-        ']',
-    'test_config': '{"frequency":"bimonthly","type":"written"}',
-    'api_source': null,
-    'api_program_key': null,
-    'is_calendar_program': false,
-  },
-  {
-    'name': 'dirshu_kinyan_chochma',
-    'display_name': 'Dirshu Kinyan Chochma',
-    'description': 'Mussar study with structured review cycles.',
-    'curriculum_type': 'mussar',
-    'is_active': true,
-    'has_tests': false,
-    'stages_config':
-        '['
-        '{"stage":"learn","label":"לימוד","frequency":"daily"},'
-        '{"stage":"chazara_1","label":"חזרה א׳","delay_days":1},'
-        '{"stage":"chazara_2","label":"חזרה ב׳","delay_days":7}'
-        ']',
-    'test_config': '{}',
-    'api_source': null,
-    'api_program_key': null,
-    'is_calendar_program': false,
+    'api_source': 'local',
+    'api_program_key': 'Dirshu Kinyan Yerushalmi',
+    'is_calendar_program': true,
   },
   {
     'name': 'daf_yomi',

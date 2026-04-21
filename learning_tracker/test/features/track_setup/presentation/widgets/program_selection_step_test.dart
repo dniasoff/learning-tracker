@@ -12,8 +12,8 @@ void main() {
             .bavli, // 5: daf_yomi, oraysa, dirshu_kinyan_torah, dirshu_amud_hayomi, daf_a_week
         CurriculumId.yerushalmi, // 2: dirshu_kinyan_yerushalmi, yerushalmi_yomi
         CurriculumId
-            .mishnaBerurah, // 4: dirshu_daf_hayomi_bhalacha, halakhah_yomit, arukh_hashulchan_yomi, kitzur_shulchan_aruch_yomi
-        CurriculumId.mussar, // 2: dirshu_kinyan_chochma, chofetz_chaim_daily
+            .mishnaBerurah, // 3: halakhah_yomit, arukh_hashulchan_yomi, kitzur_shulchan_aruch_yomi
+        CurriculumId.mussar, // 1: chofetz_chaim_daily
         CurriculumId.mishnayos, // 1: mishnah_yomis
         CurriculumId.nach, // 1: nach_yomi
         CurriculumId.mishnehTorah, // 2: rambam_1_chapter, rambam_3_chapters

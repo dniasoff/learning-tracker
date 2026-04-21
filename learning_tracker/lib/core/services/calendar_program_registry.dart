@@ -107,6 +107,31 @@ class CalendarProgramRegistry {
       apiKey: 'Tanakh Yomi',
       curriculumType: 'tanach',
     ),
+    // Dirshu programs (calendar-linked)
+    CalendarProgramDefinition(
+      id: 'dirshu_kinyan_torah',
+      displayNameEn: 'Dirshu Kinyan Torah',
+      displayNameHe: 'דרשו קנין תורה',
+      apiSource: 'local',
+      apiKey: 'Dirshu Kinyan Torah',
+      curriculumType: 'bavli',
+    ),
+    CalendarProgramDefinition(
+      id: 'dirshu_amud_hayomi',
+      displayNameEn: 'Dirshu Amud HaYomi',
+      displayNameHe: 'דרשו עמוד היומי',
+      apiSource: 'local',
+      apiKey: 'Dirshu Amud HaYomi',
+      curriculumType: 'bavli',
+    ),
+    CalendarProgramDefinition(
+      id: 'dirshu_kinyan_yerushalmi',
+      displayNameEn: 'Dirshu Kinyan Yerushalmi',
+      displayNameHe: 'דרשו קנין ירושלמי',
+      apiSource: 'local',
+      apiKey: 'Dirshu Kinyan Yerushalmi',
+      curriculumType: 'yerushalmi',
+    ),
     // Hebcal programs
     CalendarProgramDefinition(
       id: 'chofetz_chaim_daily',

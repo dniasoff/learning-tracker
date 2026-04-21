@@ -38,6 +38,7 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 
+import 'lib/sequences/amud_hayomi_seq.dart';
 import 'lib/sequences/arukh_hashulchan_seq.dart';
 import 'lib/sequences/chofetz_chaim_tables.dart';
 import 'lib/sequences/daf_yomi_seq.dart';
@@ -627,6 +628,33 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
         )],
   ),
   (
+    'dirshu_kinyan_torah',
+    (d) =>
+        dafYomiSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2020, 1, 5),
+          dafYomiSequence.length,
+        )],
+  ),
+  (
+    'dirshu_amud_hayomi',
+    (d) =>
+        amudHayomiSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2023, 10, 15),
+          amudHayomiSequence.length,
+        )],
+  ),
+  (
+    'dirshu_kinyan_yerushalmi',
+    (d) =>
+        yerushalmiyomiSequence[_cyclicIndex(
+          d,
+          DateTime.utc(2022, 11, 14),
+          yerushalmiyomiSequence.length,
+        )],
+  ),
+  (
     'tanakh_yomi',
     (d) {
       final entry = tanakhYomiData[_fmtDate(d)];
@@ -642,9 +670,10 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
       final e = table[idx];
       if (e.length < 4) return null;
       final name = chofetzChaimSections[e[1] as String] ?? e[1] as String;
-      final begin = '${e[2]}';
-      final end = '${e[3]}';
-      return begin == end
+      final begin = e[2]?.toString();
+      final end = e[3]?.toString();
+      if (begin == null || begin.isEmpty) return null;
+      return (end == null || end.isEmpty || begin == end)
           ? 'Chofetz Chaim, $name $begin'
           : 'Chofetz Chaim, $name $begin-$end';
     },
