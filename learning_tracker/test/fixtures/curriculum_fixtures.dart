@@ -25,13 +25,11 @@ class CurriculumFixtures {
       CurriculumId.values.map((c) => c.storageKey).toList();
 }
 
-/// Track type constants for testing
+/// Track type constants for testing. V1 has one track type.
 class TrackTypeFixtures {
   static const String personal = 'personal';
-  static const String school = 'school';
-  static const String tutor = 'tutor';
 
-  static List<String> get allTrackTypes => [personal, school, tutor];
+  static List<String> get allTrackTypes => [personal];
 }
 
 /// Stage constants for testing

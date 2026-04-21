@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Reusable PIN entry widget for parent and tutor mode authentication.
+/// Reusable PIN entry widget for parent-mode authentication.
 ///
 /// Accepts exactly 4 numeric digits with visual feedback for each digit.
 /// Shows error states and lockout countdown timer.

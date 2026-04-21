@@ -4,11 +4,10 @@ import 'package:learning_tracker/core/services/pin_service.dart';
 
 /// Abstract base class for PIN-protected route guards.
 ///
-/// Subclasses provide the specific [pinType] ('parent' or 'tutor') and a
-/// dialog prompt function.  The guard checks whether a PIN is set; if no PIN
-/// has been configured it allows access (the user should set one in settings).
-/// Otherwise it prompts the user and allows access only on successful
-/// verification.
+/// Subclasses provide a dialog prompt function. The guard checks whether a
+/// parent PIN is set; if no PIN has been configured it pushes the setup
+/// screen. Otherwise it prompts the user and allows access only on
+/// successful verification.
 abstract class PinGuard extends AutoRouteGuard {
   PinGuard({required this.pinService, required this.promptForPin});
 
@@ -19,25 +18,17 @@ abstract class PinGuard extends AutoRouteGuard {
   /// Returns the entered PIN string, or `null` if the user cancelled.
   final Future<String?> Function() promptForPin;
 
-  /// Identifies which PIN type this guard protects ('parent' or 'tutor').
-  String get pinType;
-
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,
     StackRouter router,
   ) async {
-    final hasPinSet = pinType == 'parent'
-        ? await pinService.hasParentPin()
-        : await pinService.hasTutorPin();
+    final hasPinSet = await pinService.hasParentPin();
 
     if (!hasPinSet) {
       // No PIN configured — push the setup screen and await result.
       // If setup succeeds (pops with true), re-attempt navigation.
-      final setupRoute = pinType == 'tutor'
-          ? const TutorPinSetupRoute()
-          : const PinSetupRoute();
-      final result = await router.push<bool>(setupRoute);
+      final result = await router.push<bool>(const PinSetupRoute());
       resolver.next(result ?? false);
       return;
     }
@@ -50,9 +41,7 @@ abstract class PinGuard extends AutoRouteGuard {
     }
 
     try {
-      final verified = pinType == 'parent'
-          ? await pinService.verifyParentPin(enteredPin)
-          : await pinService.verifyTutorPin(enteredPin);
+      final verified = await pinService.verifyParentPin(enteredPin);
       resolver.next(verified);
     } on PinLockoutException {
       resolver.next(false);

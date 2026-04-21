@@ -22,7 +22,7 @@ void main() {
     testWidgets('displays school track', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: TrackTypeBadge(trackType: TrackType.school)),
+          home: Scaffold(body: TrackTypeBadge(trackType: TrackType.personal)),
         ),
       );
       expect(find.text('School'), findsOneWidget);
@@ -31,7 +31,7 @@ void main() {
     testWidgets('displays tutor track', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: TrackTypeBadge(trackType: TrackType.tutor)),
+          home: Scaffold(body: TrackTypeBadge(trackType: TrackType.personal)),
         ),
       );
       expect(find.text('Tutor'), findsOneWidget);
@@ -239,7 +239,7 @@ void main() {
                 unitType: 'masechta',
                 displayNameHe: 'שבת',
                 displayNameEn: 'Shabbat',
-                trackType: TrackType.school,
+                trackType: TrackType.personal,
                 completedAt: DateTime(2026, 1, 10),
                 completionNumber: 1,
                 isManual: false,
@@ -295,7 +295,7 @@ void main() {
                 unitType: 'masechta',
                 displayNameHe: 'ברכות',
                 displayNameEn: 'Berakhot',
-                trackType: TrackType.tutor,
+                trackType: TrackType.personal,
                 completedAt: DateTime(2026, 2, 1),
                 completionNumber: 1,
                 isManual: false,

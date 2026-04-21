@@ -15,9 +15,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Parent mode screen for managing tracks across all curricula.
 ///
-/// Shows each active curriculum with its current tracks, allowing the parent
-/// to add school/tutor tracks or remove them (with confirmation).
-/// Personal track is always shown but cannot be removed.
+/// Shows each active curriculum with its (personal) track. Track addition is
+/// retained for forward compatibility; v1 only uses personal tracks.
 @RoutePage()
 class ParentTrackManagementScreen extends ConsumerStatefulWidget {
   const ParentTrackManagementScreen({super.key});

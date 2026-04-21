@@ -13,7 +13,6 @@ import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
@@ -33,7 +32,6 @@ class MockPinService extends Mock implements PinService {}
 AppRouter _createAuthenticatedRouter() {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
-  when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
 
   final testDb = createTestDatabase();
   final restoreGuard = RestoreGuard(
@@ -59,10 +57,6 @@ AppRouter _createAuthenticatedRouter() {
       pinService: mockPinService,
       promptForPin: () async => null,
       getProfileId: () => 1,
-    ),
-    tutorPinGuard: TutorPinGuard(
-      pinService: mockPinService,
-      promptForPin: () async => null,
     ),
   );
 }
@@ -70,7 +64,6 @@ AppRouter _createAuthenticatedRouter() {
 AppRouter _createUnauthenticatedRouter() {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
-  when(() => mockPinService.hasTutorPin()).thenAnswer((_) async => false);
 
   final testDb = createTestDatabase();
   final restoreGuard = RestoreGuard(
@@ -96,10 +89,6 @@ AppRouter _createUnauthenticatedRouter() {
       pinService: mockPinService,
       promptForPin: () async => null,
       getProfileId: () => 1,
-    ),
-    tutorPinGuard: TutorPinGuard(
-      pinService: mockPinService,
-      promptForPin: () async => null,
     ),
   );
 }

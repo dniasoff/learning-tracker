@@ -222,7 +222,7 @@ void main() {
 
       final bookmark2 = await repository.setBookmark(
         curriculumId: CurriculumId.bavli,
-        trackType: TrackType.school,
+        trackType: TrackType.personal,
         sefariaRef: _ref1,
       );
       expect(bookmark2.firestoreId, 'bavli_school');

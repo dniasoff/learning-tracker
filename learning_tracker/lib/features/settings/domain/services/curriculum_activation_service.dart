@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
-import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Service for managing curriculum activation/deactivation.
 ///
@@ -16,7 +15,6 @@ class CurriculumActivationService {
     required Future<void> Function(List<String>)? pushActiveCurricula,
     required TrackRepository trackRepository,
     int profileId = 0,
-    this.isTutorMode = false,
   }) : _database = database,
        _pushActiveCurricula = pushActiveCurricula,
        _trackRepository = trackRepository,
@@ -26,9 +24,6 @@ class CurriculumActivationService {
   final Future<void> Function(List<String>)? _pushActiveCurricula;
   final TrackRepository _trackRepository;
   final int _profileId;
-
-  /// Whether tutor mode is active (read-only).
-  final bool isTutorMode;
 
   /// Initialize default active curricula for this profile if none exist.
   Future<void> initialize() async {
@@ -55,8 +50,7 @@ class CurriculumActivationService {
 
   /// Activate a curriculum for the active profile.
   Future<void> activate(CurriculumId curriculum) async {
-    guardTutorModeWriteFromBool(isTutorMode);
-    await _database.activeCurriculumDao.activateByProfile(
+await _database.activeCurriculumDao.activateByProfile(
       curriculum,
       _profileId,
     );
@@ -78,8 +72,7 @@ class CurriculumActivationService {
     CurriculumId curriculum,
     int profileId,
   ) async {
-    guardTutorModeWriteFromBool(isTutorMode);
-    await _database.activeCurriculumDao.activateByProfile(
+await _database.activeCurriculumDao.activateByProfile(
       curriculum,
       profileId,
     );
@@ -98,8 +91,7 @@ class CurriculumActivationService {
 
   /// Deactivate a curriculum for the active profile.
   Future<void> deactivate(CurriculumId curriculum) async {
-    guardTutorModeWriteFromBool(isTutorMode);
-    await _database.activeCurriculumDao.deactivateByProfile(
+await _database.activeCurriculumDao.deactivateByProfile(
       curriculum,
       _profileId,
     );
@@ -108,8 +100,7 @@ class CurriculumActivationService {
 
   /// Toggle a curriculum on or off for the active profile.
   Future<void> toggle(CurriculumId curriculum) async {
-    guardTutorModeWriteFromBool(isTutorMode);
-    await _database.transaction(() async {
+await _database.transaction(() async {
       final isActive = await _database.activeCurriculumDao.isActiveForProfile(
         curriculum,
         _profileId,

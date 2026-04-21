@@ -16,7 +16,7 @@ void main() {
     await database.close();
   });
 
-  group('TrackDao', () {
+  group('TrackDao (v1 — personal only)', () {
     test('getActiveTracks returns empty list initially', () async {
       final tracks = await database.trackDao.getActiveTracks(
         CurriculumId.bavli,
@@ -24,7 +24,7 @@ void main() {
       expect(tracks, isEmpty);
     });
 
-    test('activateTrack creates a new active track', () async {
+    test('activateTrack creates a new active personal track', () async {
       await database.trackDao.activateTrack(
         CurriculumId.bavli,
         TrackType.personal,
@@ -52,30 +52,6 @@ void main() {
       expect(tracks, hasLength(1));
     });
 
-    test('deactivateTrack sets isActive to false', () async {
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-
-      await database.trackDao.deactivateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-
-      final isActive = await database.trackDao.isTrackActive(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-      expect(isActive, isFalse);
-
-      // Track record still exists
-      final allTracks = await database.trackDao.getAllTracks(
-        CurriculumId.bavli,
-      );
-      expect(allTracks, hasLength(1));
-    });
-
     test('deactivateTrack throws for personal track', () async {
       await database.trackDao.activateTrack(
         CurriculumId.bavli,
@@ -91,69 +67,12 @@ void main() {
       );
     });
 
-    test('deactivateTrack does nothing for non-existent track', () async {
-      // Should not throw
-      await database.trackDao.deactivateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-
-      final tracks = await database.trackDao.getAllTracks(CurriculumId.bavli);
-      expect(tracks, isEmpty);
-    });
-
-    test('reactivating a deactivated track works', () async {
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-      await database.trackDao.deactivateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-
-      final isActive = await database.trackDao.isTrackActive(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-      expect(isActive, isTrue);
-    });
-
     test('isTrackActive returns false for non-existent track', () async {
       final isActive = await database.trackDao.isTrackActive(
         CurriculumId.bavli,
-        TrackType.tutor,
-      );
-      expect(isActive, isFalse);
-    });
-
-    test('getAllTracks returns both active and inactive tracks', () async {
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
         TrackType.personal,
       );
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-      await database.trackDao.deactivateTrack(
-        CurriculumId.bavli,
-        TrackType.school,
-      );
-
-      final allTracks = await database.trackDao.getAllTracks(
-        CurriculumId.bavli,
-      );
-      expect(allTracks, hasLength(2));
-
-      final activeTracks = await database.trackDao.getActiveTracks(
-        CurriculumId.bavli,
-      );
-      expect(activeTracks, hasLength(1));
+      expect(isActive, isFalse);
     });
 
     test('initializeDefaultTracks creates personal track', () async {

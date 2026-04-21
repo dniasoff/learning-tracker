@@ -151,7 +151,7 @@ void main() {
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berakhot 1:1',
           stageId: 1,
-          trackType: TrackType.school.storageKey,
+          trackType: TrackType.personal.storageKey,
           completedAt: DateTime.now().toUtc(),
         ),
       );
@@ -166,7 +166,7 @@ void main() {
       expect(result!.curriculumId, 'mishnayos');
       expect(result.sefariaRef, 'Mishnah Berakhot 1:1');
       expect(result.stageId, 1);
-      expect(result.trackType, TrackType.school.storageKey);
+      expect(result.trackType, TrackType.personal.storageKey);
     });
   });
 }

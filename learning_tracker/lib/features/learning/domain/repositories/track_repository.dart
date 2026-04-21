@@ -3,13 +3,13 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 
 /// Repository interface for track management operations.
 ///
-/// Handles activation/deactivation of optional tracks (school, tutor) per
-/// curriculum. Personal track is always present and cannot be removed.
+/// V1 uses one track per curriculum (`personal`). The API is kept as a list
+/// for parity with legacy data and for forward compatibility.
 abstract class TrackRepository {
   /// Get all active tracks for a curriculum.
   ///
-  /// A freshly activated curriculum returns only [TrackType.personal].
-  /// After activating school/tutor tracks, they appear in this list.
+  /// In v1 this always returns `[TrackType.personal]` for an activated
+  /// curriculum.
   Future<List<TrackType>> getActiveTracks(CurriculumId curriculumId);
 
   /// Activate a track for a curriculum.

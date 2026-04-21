@@ -48,7 +48,7 @@ void main() {
         .insert(
           CurriculumTracksCompanion.insert(
             curriculumId: 'mishnayos',
-            trackType: 'school',
+            trackType: 'personal',
             activatedAt: DateTime.now(),
           ),
         );
@@ -168,10 +168,10 @@ void main() {
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: 1,
-          trackType: 'school',
+          trackType: 'personal',
         ),
       );
-      expect(chavrusaCompletion.trackType, 'school');
+      expect(chavrusaCompletion.trackType, 'personal');
     });
 
     test(

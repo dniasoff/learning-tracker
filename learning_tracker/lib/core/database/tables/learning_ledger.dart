@@ -14,7 +14,7 @@ class LearningLedger extends Table {
   TextColumn get unitIdentifier => text()(); // level1 or level2 value
   TextColumn get unitDisplayNameHe => text()();
   TextColumn get unitDisplayNameEn => text()();
-  TextColumn get trackType => text()(); // personal/school/tutor
+  TextColumn get trackType => text()(); // v1: always 'personal'
   IntColumn get trackId => integer().nullable().references(
     CurriculumTracks,
     #id,

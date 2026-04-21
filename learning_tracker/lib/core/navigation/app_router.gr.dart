@@ -1037,6 +1037,22 @@ class SignInRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [SplashScreen]
+class SplashRoute extends PageRouteInfo<void> {
+  const SplashRoute({List<PageRouteInfo>? children})
+    : super(SplashRoute.name, initialChildren: children);
+
+  static const String name = 'SplashRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const SplashScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [StudyDayConfigScreen]
 class StudyDayConfigRoute extends PageRouteInfo<StudyDayConfigRouteArgs> {
   StudyDayConfigRoute({
@@ -1274,86 +1290,6 @@ class TrackManagementHubRouteArgs {
 
   @override
   int get hashCode => key.hashCode ^ startAdding.hashCode;
-}
-
-/// generated route for
-/// [TutorDashboardScreen]
-class TutorDashboardRoute extends PageRouteInfo<void> {
-  const TutorDashboardRoute({List<PageRouteInfo>? children})
-    : super(TutorDashboardRoute.name, initialChildren: children);
-
-  static const String name = 'TutorDashboardRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const TutorDashboardScreen();
-    },
-  );
-}
-
-/// generated route for
-/// [TutorModeScreen]
-class TutorModeRoute extends PageRouteInfo<void> {
-  const TutorModeRoute({List<PageRouteInfo>? children})
-    : super(TutorModeRoute.name, initialChildren: children);
-
-  static const String name = 'TutorModeRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const TutorModeScreen();
-    },
-  );
-}
-
-/// generated route for
-/// [TutorPinChangeScreen]
-class TutorPinChangeRoute extends PageRouteInfo<void> {
-  const TutorPinChangeRoute({List<PageRouteInfo>? children})
-    : super(TutorPinChangeRoute.name, initialChildren: children);
-
-  static const String name = 'TutorPinChangeRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const TutorPinChangeScreen();
-    },
-  );
-}
-
-/// generated route for
-/// [TutorPinEntryScreen]
-class TutorPinEntryRoute extends PageRouteInfo<void> {
-  const TutorPinEntryRoute({List<PageRouteInfo>? children})
-    : super(TutorPinEntryRoute.name, initialChildren: children);
-
-  static const String name = 'TutorPinEntryRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const TutorPinEntryScreen();
-    },
-  );
-}
-
-/// generated route for
-/// [TutorPinSetupScreen]
-class TutorPinSetupRoute extends PageRouteInfo<void> {
-  const TutorPinSetupRoute({List<PageRouteInfo>? children})
-    : super(TutorPinSetupRoute.name, initialChildren: children);
-
-  static const String name = 'TutorPinSetupRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const TutorPinSetupScreen();
-    },
-  );
 }
 
 /// generated route for

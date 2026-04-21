@@ -7,7 +7,6 @@ import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
@@ -54,14 +53,6 @@ final routerProvider = Provider<AppRouter>((ref) {
         return _showPinDialog(context, 'Enter Parent PIN');
       },
       getProfileId: () => ref.read(selectedProfileIdProvider),
-    ),
-    tutorPinGuard: TutorPinGuard(
-      pinService: pinSvc,
-      promptForPin: () {
-        final context = navigatorKey.currentContext;
-        if (context == null) return Future.value(null);
-        return _showPinDialog(context, 'Enter Tutor PIN');
-      },
     ),
   );
 });

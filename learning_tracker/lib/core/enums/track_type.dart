@@ -1,16 +1,11 @@
 /// Identifies the type of learning track.
 ///
-/// Each curriculum can have multiple active tracks. Personal track is
-/// always present and cannot be removed. School and tutor tracks are optional.
+/// V1 ships with a single track type — `personal` — per the developer
+/// handbook. Earlier designs had school and tutor variants; those were
+/// scrapped before v1.
 enum TrackType {
-  /// Personal learning track (always active, cannot be removed)
-  personal('personal'),
-
-  /// School-based learning track (optional)
-  school('school'),
-
-  /// Tutor-supervised learning track (optional)
-  tutor('tutor');
+  /// Personal learning track — the only track type in v1.
+  personal('personal');
 
   const TrackType(this.storageKey);
 
@@ -28,7 +23,5 @@ enum TrackType {
   /// Display name in English.
   String get displayNameEn => switch (this) {
     TrackType.personal => 'Personal',
-    TrackType.school => 'School',
-    TrackType.tutor => 'Tutor',
   };
 }

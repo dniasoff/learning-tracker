@@ -6,7 +6,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/learning_
 /// Permission rules:
 /// - Adult profile → can self-mark (markedBy = own profileId)
 /// - Child profile → CANNOT self-mark (rejected with error)
-/// - Parent/tutor mode → can mark for any child profile
+/// - Parent mode → can mark for any child profile
 class ManualCompletionUseCase {
   final LearningLedgerRepository _repository;
   final int _activeProfileId;

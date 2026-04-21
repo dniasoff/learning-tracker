@@ -61,27 +61,30 @@ final class CrossCurriculumAggregatorProvider
 String _$crossCurriculumAggregatorHash() =>
     r'1819b08e0b5c27a2886dc5d9196d1db55ba9384f';
 
-/// Provider for the user mode, resolved from the database.
+/// Provider for the active profile's user mode, resolved from the
+/// [Profiles] table.
 ///
-/// Defaults to [UserMode.adult] if no profile exists.
-/// P6 compliant: uses only core database, no feature imports.
+/// Defaults to [UserMode.adult] if no profile row is found. This is what
+/// gates child-only gamification UI (points, streaks, celebrations).
 
 @ProviderFor(dashboardUserMode)
 final dashboardUserModeProvider = DashboardUserModeProvider._();
 
-/// Provider for the user mode, resolved from the database.
+/// Provider for the active profile's user mode, resolved from the
+/// [Profiles] table.
 ///
-/// Defaults to [UserMode.adult] if no profile exists.
-/// P6 compliant: uses only core database, no feature imports.
+/// Defaults to [UserMode.adult] if no profile row is found. This is what
+/// gates child-only gamification UI (points, streaks, celebrations).
 
 final class DashboardUserModeProvider
     extends
         $FunctionalProvider<AsyncValue<UserMode>, UserMode, FutureOr<UserMode>>
     with $FutureModifier<UserMode>, $FutureProvider<UserMode> {
-  /// Provider for the user mode, resolved from the database.
+  /// Provider for the active profile's user mode, resolved from the
+  /// [Profiles] table.
   ///
-  /// Defaults to [UserMode.adult] if no profile exists.
-  /// P6 compliant: uses only core database, no feature imports.
+  /// Defaults to [UserMode.adult] if no profile row is found. This is what
+  /// gates child-only gamification UI (points, streaks, celebrations).
   DashboardUserModeProvider._()
     : super(
         from: null,
@@ -107,7 +110,7 @@ final class DashboardUserModeProvider
   }
 }
 
-String _$dashboardUserModeHash() => r'764afdb87c03bf200cfe2657dd1eb9c106b0ac9a';
+String _$dashboardUserModeHash() => r'fff9df75b1a75bdff8789d1bcd89456dcefac42e';
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 

@@ -140,7 +140,7 @@ void main() {
 
       await offlineQueue.enqueueBookmark({
         'curriculum_id': 'bavli',
-        'track_type': 'school',
+        'track_type': 'personal',
       });
 
       final syncedCount = await offlineQueue.flush();

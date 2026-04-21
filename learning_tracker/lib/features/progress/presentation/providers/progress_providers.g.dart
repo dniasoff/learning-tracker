@@ -59,7 +59,7 @@ final class ProgressRepositoryProvider
 }
 
 String _$progressRepositoryHash() =>
-    r'c6f1ae20db9d3912441660fa17cf687e205758b7';
+    r'94d461758ffc9ecb6e10559f92a5f5ab8a3a8435';
 
 /// Provider for track breakdown by curriculum, scoped to the active profile.
 ///

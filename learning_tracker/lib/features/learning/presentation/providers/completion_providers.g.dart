@@ -112,7 +112,7 @@ final class MarkCompletionUseCaseProvider
 }
 
 String _$markCompletionUseCaseHash() =>
-    r'44d14e46ef4c8b36462f5659b50a82f25388466d';
+    r'7c6f7f668bbff279db3e68350d013052584fc534';
 
 /// Provides the bulk mark completion use case.
 
@@ -165,7 +165,7 @@ final class BulkMarkCompletionUseCaseProvider
 }
 
 String _$bulkMarkCompletionUseCaseHash() =>
-    r'0146990a6fca1fd2750bd84cfcd48172f91f24de';
+    r'cb0d52d29734909aba5219d6bd2c67f6149de9ef';
 
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.

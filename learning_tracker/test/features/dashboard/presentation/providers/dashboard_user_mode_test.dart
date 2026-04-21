@@ -1,0 +1,76 @@
+import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+
+Future<int> _insertProfile(
+  UserDatabase db, {
+  required String mode,
+  int accountId = 1,
+}) async {
+  final now = DateTime.now().toUtc();
+  return db
+      .into(db.profiles)
+      .insert(
+        ProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'test-$mode',
+          mode: mode,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+}
+
+ProviderContainer _makeContainer(UserDatabase db) {
+  return ProviderContainer(
+    overrides: [userDatabaseProvider.overrideWithValue(db)],
+  );
+}
+
+void main() {
+  group('dashboardUserModeProvider', () {
+    late UserDatabase db;
+
+    setUp(() {
+      db = UserDatabase(NativeDatabase.memory());
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('returns child when active profile mode is child', () async {
+      final profileId = await _insertProfile(db, mode: 'child');
+      final container = _makeContainer(db);
+      addTearDown(container.dispose);
+      container.read(selectedProfileIdProvider.notifier).select(profileId);
+
+      final mode = await container.read(dashboardUserModeProvider.future);
+      expect(mode, UserMode.child);
+    });
+
+    test('returns adult when active profile mode is adult', () async {
+      final profileId = await _insertProfile(db, mode: 'adult');
+      final container = _makeContainer(db);
+      addTearDown(container.dispose);
+      container.read(selectedProfileIdProvider.notifier).select(profileId);
+
+      final mode = await container.read(dashboardUserModeProvider.future);
+      expect(mode, UserMode.adult);
+    });
+
+    test('defaults to adult when no profile row exists', () async {
+      final container = _makeContainer(db);
+      addTearDown(container.dispose);
+      container.read(selectedProfileIdProvider.notifier).select(9999);
+
+      final mode = await container.read(dashboardUserModeProvider.future);
+      expect(mode, UserMode.adult);
+    });
+  });
+}

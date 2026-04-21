@@ -132,8 +132,8 @@ void main() {
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 5)],
         trackBreakdown: {
           TrackType.personal: 3,
-          TrackType.school: 2,
-          TrackType.tutor: 0,
+          TrackType.personal: 2,
+          TrackType.personal: 0,
         },
       );
 
@@ -154,8 +154,8 @@ void main() {
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 2)],
         trackBreakdown: {
           TrackType.personal: 2,
-          TrackType.school: 0,
-          TrackType.tutor: 0,
+          TrackType.personal: 0,
+          TrackType.personal: 0,
         },
         subLevels: [
           HierarchyLevelProgress(
@@ -168,8 +168,8 @@ void main() {
             ],
             trackBreakdown: {
               TrackType.personal: 2,
-              TrackType.school: 0,
-              TrackType.tutor: 0,
+              TrackType.personal: 0,
+              TrackType.personal: 0,
             },
           ),
           HierarchyLevelProgress(
@@ -182,8 +182,8 @@ void main() {
             ],
             trackBreakdown: {
               TrackType.personal: 0,
-              TrackType.school: 0,
-              TrackType.tutor: 0,
+              TrackType.personal: 0,
+              TrackType.personal: 0,
             },
           ),
         ],

@@ -224,12 +224,9 @@ void main() {
       );
     });
 
-    test('TrackType has 3 values', () {
-      expect(TrackType.values, hasLength(3));
-      expect(
-        TrackType.values.map((t) => t.storageKey),
-        containsAll(['personal', 'school', 'tutor']),
-      );
+    test('TrackType has 1 value (v1: personal only)', () {
+      expect(TrackType.values, hasLength(1));
+      expect(TrackType.values.map((t) => t.storageKey), ['personal']);
     });
 
     test('UserMode has 2 values', () {

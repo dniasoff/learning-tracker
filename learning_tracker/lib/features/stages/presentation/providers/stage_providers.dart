@@ -5,7 +5,6 @@ import 'package:learning_tracker/features/stages/data/repositories/stage_definit
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
-import 'package:learning_tracker/features/tutor_mode/domain/tutor_mode_provider.dart';
 
 /// Provider for [StageDefinitionRepository], scoped per [CurriculumId].
 final stageDefinitionRepositoryProvider =
@@ -51,16 +50,11 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   StageDefinitionRepository get _repository =>
       ref.read(stageDefinitionRepositoryProvider(_curriculum));
 
-  void _guardTutorMode() {
-    guardTutorModeWriteFromBool(ref.read(tutorModeProvider));
-  }
-
   Future<void> addStage(
     String name,
     int delayDays, {
     required int trackId,
   }) async {
-    _guardTutorMode();
     await _repository.addStage(_curriculum, name, delayDays, trackId: trackId);
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(
@@ -69,7 +63,6 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   }
 
   Future<void> updateStage(int id, {String? name, int? delayDays}) async {
-    _guardTutorMode();
     await _repository.updateStage(id, name: name, delayDays: delayDays);
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(
@@ -78,7 +71,6 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   }
 
   Future<void> deleteStage(int id) async {
-    _guardTutorMode();
     await _repository.deleteStage(id);
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(
@@ -87,7 +79,6 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   }
 
   Future<void> reorderStages(List<int> orderedIds) async {
-    _guardTutorMode();
     await _repository.reorderStages(_curriculum, orderedIds);
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(
@@ -96,7 +87,6 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   }
 
   Future<void> resetToDefaults({required int trackId}) async {
-    _guardTutorMode();
     await _repository.resetToDefaults(_curriculum, trackId: trackId);
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(

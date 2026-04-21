@@ -104,12 +104,26 @@ dev_dependencies:
   auto_route_generator: ^10.4.0
   drift_dev: ^2.31.0
 
+  # App Icon Generation
+  flutter_launcher_icons: ^0.14.2
+
   # Testing
   test: ^1.26.0
   mocktail: ^1.0.4
 
   # Story 19.3: Seed Content DB build tool
   crypto: ^3.0.6
+
+flutter_launcher_icons:
+  image_path: "assets/images/app_logo.png"
+  image_path_android: "assets/images/app_logo.png"
+  image_path_ios: "assets/images/app_logo.png"
+  android:
+    generate: true
+    image_path: "assets/images/app_logo.png"
+    notification_icon_background_color: "#ffffff"
+  ios:
+    generate: true
 
 flutter:
   generate: true

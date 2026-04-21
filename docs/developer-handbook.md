@@ -57,12 +57,12 @@ Learning Tracker turns large-scale learning goals into a clear daily plan. You c
 
 ### Jewish learning concepts
 
-| Term | Hebrew | Meaning |
-| --- | --- | --- |
-| **Chazara** | חזרה | Review. You don't read something once — you review it on a structured cycle to retain it. This is the app's core scheduling challenge. |
-| **Sefaria** | — | An [open-source library](https://www.sefaria.org) of Jewish texts. The app's content source — every learnable item has a `sefariaRef`. |
-| **Shabbos / Shabbat** | שבת | The Jewish Sabbath. Many learners use Shabbos as a weekly review day. |
-| **Siyum** | סיום | Completion celebration — finishing an entire unit. Tracked in the learning ledger. |
+| Term                  | Hebrew | Meaning                                                                                                                                |
+| --------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chazara**           | חזרה   | Review. You don't read something once — you review it on a structured cycle to retain it. This is the app's core scheduling challenge. |
+| **Sefaria**           | —      | An [open-source library](https://www.sefaria.org) of Jewish texts. The app's content source — every learnable item has a `sefariaRef`. |
+| **Shabbos / Shabbat** | שבת    | The Jewish Sabbath. Many learners use Shabbos as a weekly review day.                                                                  |
+| **Siyum**             | סיום   | Completion celebration — finishing an entire unit. Tracked in the learning ledger.                                                     |
 
 **Programs** (Daf Yomi, Dirshu, Oraysa) are global study schedules where thousands of people learn the same material on the same day, following a fixed calendar.
 
@@ -99,18 +99,18 @@ A **track** is the atomic unit of the app. Everything hangs off it.
 
 A track is a named, independent learning instance within a curriculum. It represents one context in which a person is learning one body of text.
 
-| Property | Description |
-| --- | --- |
-| **Type** | `personal` (default, mandatory), `school` or `tutor` (optional, parent-activated). |
-| **Label** | User-provided name (e.g., "Daf Yomi", "My Mishnayos"). |
-| **Curriculum** | Which body of text this track covers. |
-| **Scope** | Optional subset (e.g., only Masechta Berachos within Bavli). |
-| **Program** | Optional global calendar (e.g., Daf Yomi). |
-| **Bookmark** | Current position in the learning sequence. |
-| **Goals** | Deadline, target completion percentage, study days. |
-| **Stage definitions** | Chazara (review) schedule configuration. |
-| **Points** | Accumulated score (child mode only). |
-| **Streak** | Consecutive-day learning counter. |
+| Property              | Description                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| **Type**              | `personal` (default, mandatory), `school` or `tutor` (optional, parent-activated). |
+| **Label**             | User-provided name (e.g., "Daf Yomi", "My Mishnayos").                             |
+| **Curriculum**        | Which body of text this track covers.                                              |
+| **Scope**             | Optional subset (e.g., only Masechta Berachos within Bavli).                       |
+| **Program**           | Optional global calendar (e.g., Daf Yomi).                                         |
+| **Bookmark**          | Current position in the learning sequence.                                         |
+| **Goals**             | Deadline, target completion percentage, study days.                                |
+| **Stage definitions** | Chazara (review) schedule configuration.                                           |
+| **Points**            | Accumulated score (child mode only).                                               |
+| **Streak**            | Consecutive-day learning counter.                                                  |
 
 A user can have multiple tracks within the same curriculum, distinguished by label. Content items can appear in multiple tracks simultaneously; each track independently schedules its own chazara.
 
@@ -120,33 +120,33 @@ A user can have multiple tracks within the same curriculum, distinguished by lab
 
 A **program** is a global, calendar-based study schedule shared by learners worldwide. Optionally attached to a track.
 
-| Program | Curriculum | Description |
-| --- | --- | --- |
-| **Daf Yomi** | Bavli | One folio page of Talmud per day. ~7.5 years. The most widely followed. |
-| **Dirshu** | Mishna Berurah | Structured study with periodic tests. |
-| **Oraysa** | Bavli | Alternative Talmud study program. |
+| Program      | Curriculum     | Description                                                             |
+| ------------ | -------------- | ----------------------------------------------------------------------- |
+| **Daf Yomi** | Bavli          | One folio page of Talmud per day. ~7.5 years. The most widely followed. |
+| **Dirshu**   | Mishna Berurah | Structured study with periodic tests.                                   |
+| **Oraysa**   | Bavli          | Alternative Talmud study program.                                       |
 
-Programs define *what* to learn each day. Users can layer the app's chazara system on top. Program calendars are bundled with the app.
+Programs define _what_ to learn each day. Users can layer the app's chazara system on top. Program calendars are bundled with the app.
 
 ### Scheduling and chazara
 
 Each track has configurable **stages**. The default:
 
-| Stage | Name | Delay |
-| --- | --- | --- |
-| 0 | Learn | — |
-| 1 | Chazara 1 | 1 day after Learn |
-| 2 | Chazara 2 | 7 days after Chazara 1 |
+| Stage | Name      | Delay                  |
+| ----- | --------- | ---------------------- |
+| 0     | Learn     | —                      |
+| 1     | Chazara 1 | 1 day after Learn      |
+| 2     | Chazara 2 | 7 days after Chazara 1 |
 
 Users customize per curriculum: add stages (up to 10), rename, adjust delays.
 
 **Schedule types** (one per curriculum):
 
-| Type | How it works |
-| --- | --- |
-| **Delay** | Review item X days after the previous stage. Classic spaced repetition. Core engine. |
-| **Friday/Shabbos Review** | Weekly consolidation layered on top of delay-based chazara. |
-| **Shabbos Review** | Same idea, single review day. |
+| Type                      | How it works                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| **Delay**                 | Review item X days after the previous stage. Classic spaced repetition. Core engine. |
+| **Friday/Shabbos Review** | Weekly consolidation layered on top of delay-based chazara.                          |
+| **Shabbos Review**        | Same idea, single review day.                                                        |
 
 Priority when the scheduler builds a day's tasks:
 
@@ -157,13 +157,13 @@ Priority when the scheduler builds a day's tasks:
 
 ### Adult mode vs child mode
 
-| Aspect | Adult | Child |
-| --- | --- | --- |
-| **Configuration** | Self-managed | Parent-managed (PIN-protected) |
-| **Gamification** | None | Points, streaks, mystery rewards, celebrations |
-| **UI tone** | Clean, minimal | Animated, playful |
-| **Completion feedback** | Subtle snackbar | Points popup, celebration |
-| **Parent dashboard** | N/A | PIN-protected analytics and reward management |
+| Aspect                  | Adult           | Child                                          |
+| ----------------------- | --------------- | ---------------------------------------------- |
+| **Configuration**       | Self-managed    | Parent-managed (PIN-protected)                 |
+| **Gamification**        | None            | Points, streaks, mystery rewards, celebrations |
+| **UI tone**             | Clean, minimal  | Animated, playful                              |
+| **Completion feedback** | Subtle snackbar | Points popup, celebration                      |
+| **Parent dashboard**    | N/A             | PIN-protected analytics and reward management  |
 
 ### Daily tracking loop
 
@@ -226,25 +226,25 @@ Required files:
 
 Services used:
 
-| Service | Purpose |
-| --- | --- |
-| Firebase Auth | Email/password + Google Sign-In |
-| Cloud Firestore | Cloud sync |
-| Firebase Storage | Remote content delivery |
+| Service          | Purpose                             |
+| ---------------- | ----------------------------------- |
+| Firebase Auth    | Email/password + Google Sign-In     |
+| Cloud Firestore  | Cloud sync                          |
+| Firebase Storage | Remote content delivery             |
 | Firebase Hosting | Firestore security rules deployment |
 
 Local development falls back to bundled content if Firebase is unavailable.
 
 ### Key Make targets
 
-| Target | Description |
-| --- | --- |
-| `make test-story-X.Y` | Run one story's tests (e.g., `make test-story-1.1`). |
-| `make test-epic-N` | Run all stories in an epic. |
-| `make test-all-stories` | Full acceptance suite. |
-| `make analyze` | `dart analyze --fatal-infos`. |
-| `make format-check` | `dart format` dry-run. |
-| `make ci` | Analyze + format + all stories (full CI locally). |
+| Target                  | Description                                          |
+| ----------------------- | ---------------------------------------------------- |
+| `make test-story-X.Y`   | Run one story's tests (e.g., `make test-story-1.1`). |
+| `make test-epic-N`      | Run all stories in an epic.                          |
+| `make test-all-stories` | Full acceptance suite.                               |
+| `make analyze`          | `dart analyze --fatal-infos`.                        |
+| `make format-check`     | `dart format` dry-run.                               |
+| `make ci`               | Analyze + format + all stories (full CI locally).    |
 
 ### Code generation
 

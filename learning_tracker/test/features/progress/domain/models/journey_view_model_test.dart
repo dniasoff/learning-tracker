@@ -66,14 +66,14 @@ void main() {
         unitType: 'masechta',
         displayNameHe: 'שבת',
         displayNameEn: 'Shabbat',
-        trackType: TrackType.school,
+        trackType: TrackType.personal,
         completedAt: DateTime(2026, 3, 15),
         completionNumber: 1,
         isManual: true,
       );
 
       expect(completion.unitIdentifier, 'Shabbat');
-      expect(completion.trackType, TrackType.school);
+      expect(completion.trackType, TrackType.personal);
       expect(completion.isManual, isTrue);
       expect(completion.completionNumber, 1);
     });

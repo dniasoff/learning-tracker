@@ -4,8 +4,8 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 
 /// A segmented progress bar showing completion breakdown by track type.
 ///
-/// Displays a horizontal bar divided into colored segments, each representing
-/// the proportion of completions from a specific track (personal, school, tutor).
+/// V1 has one track type (`personal`), so this collapses to a single-color
+/// bar; the widget is kept in this shape for forward compatibility.
 class TrackProgressBar extends StatelessWidget {
   const TrackProgressBar({
     super.key,

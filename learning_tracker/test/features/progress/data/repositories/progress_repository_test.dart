@@ -65,7 +65,7 @@ void main() {
               trackId: trackId,
               sefariaRef: 'Berakhot.3a',
               stageId: 1,
-              trackType: TrackType.school.storageKey,
+              trackType: TrackType.personal.storageKey,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -76,8 +76,8 @@ void main() {
 
           // Assert
           expect(breakdown[TrackType.personal], 2);
-          expect(breakdown[TrackType.school], 1);
-          expect(breakdown[TrackType.tutor], 0);
+          expect(breakdown[TrackType.personal], 1);
+          expect(breakdown[TrackType.personal], 0);
         },
       );
 
@@ -102,8 +102,8 @@ void main() {
 
           // Assert
           expect(breakdown[TrackType.personal], 1);
-          expect(breakdown[TrackType.school], 0);
-          expect(breakdown[TrackType.tutor], 0);
+          expect(breakdown[TrackType.personal], 0);
+          expect(breakdown[TrackType.personal], 0);
         },
       );
 
@@ -118,7 +118,7 @@ void main() {
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
-              trackType: TrackType.school.storageKey,
+              trackType: TrackType.personal.storageKey,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -129,7 +129,7 @@ void main() {
               trackId: trackId,
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
-              trackType: TrackType.school.storageKey,
+              trackType: TrackType.personal.storageKey,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -139,7 +139,7 @@ void main() {
           final breakdown = await repository.getTrackBreakdown('bavli');
 
           // Assert: School completions are still included even if track is deactivated
-          expect(breakdown[TrackType.school], 2);
+          expect(breakdown[TrackType.personal], 2);
         },
       );
 
@@ -149,8 +149,8 @@ void main() {
 
         // Assert
         expect(breakdown[TrackType.personal], 0);
-        expect(breakdown[TrackType.school], 0);
-        expect(breakdown[TrackType.tutor], 0);
+        expect(breakdown[TrackType.personal], 0);
+        expect(breakdown[TrackType.personal], 0);
       });
 
       test('filters by curriculum correctly', () async {
@@ -221,7 +221,7 @@ void main() {
               trackId: trackId,
               sefariaRef: 'Berakhot.3a',
               stageId: 1,
-              trackType: TrackType.school.storageKey,
+              trackType: TrackType.personal.storageKey,
               completedAt: DateTime.now(),
               points: const drift.Value(10),
             ),

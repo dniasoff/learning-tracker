@@ -2994,12 +2994,12 @@ void main() {
         unitType: 'masechta',
         displayNameHe: 'שבת',
         displayNameEn: 'Shabbat',
-        trackType: TrackType.school,
+        trackType: TrackType.personal,
         completedAt: DateTime(2026, 3, 15),
         completionNumber: 1,
         isManual: false,
       );
-      expect(completion.trackType, TrackType.school);
+      expect(completion.trackType, TrackType.personal);
       expect(completion.trackType.displayNameEn, 'School');
     });
 

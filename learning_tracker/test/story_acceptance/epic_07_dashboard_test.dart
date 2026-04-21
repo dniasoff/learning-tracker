@@ -654,17 +654,17 @@ void main() {
         await insertCompletion(
           sefariaRef: 'x',
           stageId: s.id,
-          trackType: 'school',
+          trackType: 'personal',
         ),
         await insertCompletion(
           sefariaRef: 'x',
           stageId: s.id,
-          trackType: 'tutor',
+          trackType: 'personal',
         ),
         await insertCompletion(
           sefariaRef: 'x',
           stageId: s.id,
-          trackType: 'tutor',
+          trackType: 'personal',
         ),
       ];
 
@@ -678,8 +678,8 @@ void main() {
 
       final tb = result.hierarchyLevels[0].trackBreakdown;
       expect(tb[TrackType.personal], equals(1));
-      expect(tb[TrackType.school], equals(1));
-      expect(tb[TrackType.tutor], equals(2));
+      expect(tb[TrackType.personal], equals(1));
+      expect(tb[TrackType.personal], equals(2));
     });
 
     test(
@@ -765,13 +765,13 @@ void main() {
         await insertCompletion(
           sefariaRef: 'M_B_1',
           stageId: ch1.id,
-          trackType: 'school',
+          trackType: 'personal',
         ),
         await insertCompletion(sefariaRef: 'M_B_2', stageId: learn.id),
         await insertCompletion(
           sefariaRef: 'M_S_1',
           stageId: learn.id,
-          trackType: 'tutor',
+          trackType: 'personal',
         ),
       ];
 

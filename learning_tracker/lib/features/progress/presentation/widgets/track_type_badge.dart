@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 
-/// Small chip displaying the track type (personal/school/tutor) with color.
+/// Small chip displaying the track type (v1: always `personal`) with color.
 class TrackTypeBadge extends StatelessWidget {
   const TrackTypeBadge({super.key, required this.trackType});
 

@@ -5,7 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'pin_service.g.dart';
 
-/// Service for managing parent and tutor PINs with secure storage and bcrypt hashing.
+/// Service for managing parent PINs with secure storage and bcrypt hashing.
 ///
 /// PINs are device-local only and never synced to Firestore.
 /// All PINs are hashed with bcrypt before storage - plaintext is never persisted.
@@ -26,11 +26,8 @@ class PinService {
 
   // Storage keys for PINs
   static const _parentPinKey = 'parent_pin_hash';
-  static const _tutorPinKey = 'tutor_pin_hash';
   static const _parentLockoutKey = 'parent_lockout_count';
-  static const _tutorLockoutKey = 'tutor_lockout_count';
   static const _parentLockoutTimestampKey = 'parent_lockout_timestamp';
-  static const _tutorLockoutTimestampKey = 'tutor_lockout_timestamp';
 
   // Per-profile parent PIN key builders. Each child profile can have its own
   // 4-digit parent PIN — the hash is keyed by profile id in secure storage.
@@ -56,23 +53,6 @@ class PinService {
     // Reset lockout state when PIN is changed
     await _secureStorage.delete(key: _parentLockoutKey);
     await _secureStorage.delete(key: _parentLockoutTimestampKey);
-  }
-
-  /// Sets the tutor PIN by hashing it with bcrypt and storing securely.
-  ///
-  /// The plaintext PIN is never stored.
-  /// Resets any existing lockout state when a new PIN is set.
-  Future<void> setTutorPin(String pin) async {
-    if (pin.length != 4 || !_isNumeric(pin)) {
-      throw ArgumentError('PIN must be exactly 4 numeric digits');
-    }
-
-    final hash = BCrypt.hashpw(pin, BCrypt.gensalt());
-    await _secureStorage.write(key: _tutorPinKey, value: hash);
-
-    // Reset lockout state when PIN is changed
-    await _secureStorage.delete(key: _tutorLockoutKey);
-    await _secureStorage.delete(key: _tutorLockoutTimestampKey);
   }
 
   /// Verifies the parent PIN against the stored hash.
@@ -107,44 +87,6 @@ class PinService {
       await _incrementFailedAttempts(
         _parentLockoutKey,
         _parentLockoutTimestampKey,
-      );
-    }
-
-    return isValid;
-  }
-
-  /// Verifies the tutor PIN against the stored hash.
-  ///
-  /// Returns true if the PIN is correct, false otherwise.
-  /// Increments failed attempt counter and triggers lockout after max attempts.
-  /// Resets failed attempt counter on successful verification.
-  ///
-  /// Throws [PinLockoutException] if currently locked out.
-  Future<bool> verifyTutorPin(String pin) async {
-    // Check lockout first
-    if (await _isLockedOut(_tutorLockoutTimestampKey)) {
-      final remainingMinutes = await _getRemainingLockoutMinutes(
-        _tutorLockoutTimestampKey,
-      );
-      throw PinLockoutException(remainingMinutes);
-    }
-
-    final storedHash = await _secureStorage.read(key: _tutorPinKey);
-    if (storedHash == null) {
-      return false; // No PIN set
-    }
-
-    final isValid = BCrypt.checkpw(pin, storedHash);
-
-    if (isValid) {
-      // Reset lockout counter on successful verification
-      await _secureStorage.delete(key: _tutorLockoutKey);
-      await _secureStorage.delete(key: _tutorLockoutTimestampKey);
-    } else {
-      // Increment failed attempts
-      await _incrementFailedAttempts(
-        _tutorLockoutKey,
-        _tutorLockoutTimestampKey,
       );
     }
 
@@ -230,12 +172,6 @@ class PinService {
     return _getRemainingLockoutMinutes(key);
   }
 
-  /// Returns true if a tutor PIN has been set.
-  Future<bool> hasTutorPin() async {
-    final hash = await _secureStorage.read(key: _tutorPinKey);
-    return hash != null;
-  }
-
   /// Returns the remaining lockout time in minutes for parent PIN.
   ///
   /// Returns 0 if not locked out.
@@ -244,16 +180,6 @@ class PinService {
       return 0;
     }
     return await _getRemainingLockoutMinutes(_parentLockoutTimestampKey);
-  }
-
-  /// Returns the remaining lockout time in minutes for tutor PIN.
-  ///
-  /// Returns 0 if not locked out.
-  Future<int> getTutorLockoutRemainingMinutes() async {
-    if (!await _isLockedOut(_tutorLockoutTimestampKey)) {
-      return 0;
-    }
-    return await _getRemainingLockoutMinutes(_tutorLockoutTimestampKey);
   }
 
   // Private helper methods

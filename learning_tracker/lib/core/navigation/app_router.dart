@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
@@ -24,6 +23,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/app_in
 import 'package:learning_tracker/features/onboarding/presentation/screens/local_sign_in_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/local_signup_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
@@ -48,11 +48,6 @@ import 'package:learning_tracker/features/sync/presentation/screens/device_resto
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
-import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_dashboard_screen.dart';
-import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_mode_screen.dart';
-import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_pin_change_screen.dart';
-import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_pin_entry_screen.dart';
-import 'package:learning_tracker/features/tutor_mode/presentation/screens/tutor_pin_setup_screen.dart';
 
 part 'app_router.gr.dart';
 
@@ -63,7 +58,6 @@ class AppRouter extends RootStackRouter {
   final ProfileGuard profileGuard;
   final ChildModeGuard childModeGuard;
   final ParentPinGuard parentPinGuard;
-  final TutorPinGuard tutorPinGuard;
 
   AppRouter({
     required this.authGuard,
@@ -71,7 +65,6 @@ class AppRouter extends RootStackRouter {
     required this.profileGuard,
     required this.childModeGuard,
     required this.parentPinGuard,
-    required this.tutorPinGuard,
     super.navigatorKey,
   });
 
@@ -80,6 +73,9 @@ class AppRouter extends RootStackRouter {
 
   @override
   List<AutoRoute> get routes => [
+    // Splash screen (initial route)
+    AutoRoute(path: '/splash', page: SplashRoute.page, initial: true),
+
     // Unauthenticated routes
     AutoRoute(path: '/intro', page: AppIntroRoute.page),
     AutoRoute(path: '/sign-in', page: SignInRoute.page),
@@ -224,31 +220,6 @@ class AppRouter extends RootStackRouter {
       path: '/parent-mode/tracks',
       page: ParentTrackManagementRoute.page,
       guards: [authGuard, childModeGuard, parentPinGuard],
-    ),
-    AutoRoute(
-      path: '/tutor-mode',
-      page: TutorModeRoute.page,
-      guards: [authGuard, tutorPinGuard],
-    ),
-    AutoRoute(
-      path: '/tutor-mode/pin-setup',
-      page: TutorPinSetupRoute.page,
-      guards: [authGuard],
-    ),
-    AutoRoute(
-      path: '/tutor-mode/pin-entry',
-      page: TutorPinEntryRoute.page,
-      guards: [authGuard],
-    ),
-    AutoRoute(
-      path: '/tutor-mode/pin-change',
-      page: TutorPinChangeRoute.page,
-      guards: [authGuard, tutorPinGuard],
-    ),
-    AutoRoute(
-      path: '/tutor-mode/dashboard',
-      page: TutorDashboardRoute.page,
-      guards: [authGuard, tutorPinGuard],
     ),
     AutoRoute(
       path: '/study-days/:curriculumId',

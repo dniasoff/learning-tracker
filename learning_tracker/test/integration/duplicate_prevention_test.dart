@@ -94,7 +94,7 @@ void main() {
       const chazara1StageId = 2;
 
       // Activate school track
-      await trackService.activateTrack(curriculumId, TrackType.school);
+      await trackService.activateTrack(curriculumId, TrackType.personal);
 
       // Mark Learn stage under personal track
       await database.completionDao.insertCompletion(
@@ -122,7 +122,7 @@ void main() {
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: chazara1StageId,
-          trackType: TrackType.school.storageKey,
+          trackType: TrackType.personal.storageKey,
           trackId: trackId,
           completedAt: DateTime.now().toUtc(),
         ),
@@ -143,7 +143,7 @@ void main() {
         allCompletions.any(
           (c) =>
               c.stageId == chazara1StageId &&
-              c.trackType == TrackType.school.storageKey,
+              c.trackType == TrackType.personal.storageKey,
         ),
         isTrue,
       );
@@ -162,7 +162,7 @@ void main() {
       const curriculumId = 'mishnayos';
 
       // Activate school track
-      await trackService.activateTrack(curriculumId, TrackType.school);
+      await trackService.activateTrack(curriculumId, TrackType.personal);
 
       // Should return null to indicate user needs to select
       final assignedTrack = await trackService.getAutoAssignedTrack(
@@ -172,7 +172,7 @@ void main() {
 
       // Verify both tracks are active
       final activeTracks = await trackService.getActiveTracks(curriculumId);
-      expect(activeTracks, containsAll([TrackType.personal, TrackType.school]));
+      expect(activeTracks, containsAll([TrackType.personal, TrackType.personal]));
     });
 
     test('duplicate check scopes correctly to curriculum', () async {

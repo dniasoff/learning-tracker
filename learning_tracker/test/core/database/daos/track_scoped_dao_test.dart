@@ -30,7 +30,7 @@ void main() {
         .insertReturning(
           CurriculumTracksCompanion.insert(
             curriculumId: 'mishnayos',
-            trackType: 'school',
+            trackType: 'personal',
             activatedAt: DateTime.now(),
           ),
         );
@@ -403,7 +403,7 @@ void main() {
           unitIdentifier: 'Shabbos',
           unitDisplayNameHe: 'שבת',
           unitDisplayNameEn: 'Shabbos',
-          trackType: 'school',
+          trackType: 'personal',
           trackId: Value(track2Id),
           completedAt: now,
           completionNumber: 1,

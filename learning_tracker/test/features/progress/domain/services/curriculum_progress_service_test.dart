@@ -195,19 +195,19 @@ void main() {
           db,
           sefariaRef: 'ref1',
           stageId: stage.id,
-          trackType: 'school',
+          trackType: 'personal',
         ),
         await insertCompletion(
           db,
           sefariaRef: 'ref1',
           stageId: stage.id,
-          trackType: 'school',
+          trackType: 'personal',
         ),
         await insertCompletion(
           db,
           sefariaRef: 'ref1',
           stageId: stage.id,
-          trackType: 'tutor',
+          trackType: 'personal',
         ),
       ];
 
@@ -221,8 +221,8 @@ void main() {
 
       final seder = result.hierarchyLevels[0];
       expect(seder.trackBreakdown[TrackType.personal], 1);
-      expect(seder.trackBreakdown[TrackType.school], 2);
-      expect(seder.trackBreakdown[TrackType.tutor], 1);
+      expect(seder.trackBreakdown[TrackType.personal], 2);
+      expect(seder.trackBreakdown[TrackType.personal], 1);
     });
 
     test('overall stats categorize items correctly', () async {

@@ -2,9 +2,9 @@ import 'package:drift/drift.dart';
 
 /// Curriculum tracks table — stores track activation state per curriculum.
 ///
-/// Each curriculum starts with personal track only. School and tutor tracks
-/// can be activated/deactivated per curriculum. Deactivating a track hides
-/// it but preserves completion data.
+/// V1 uses a single track per curriculum (`personal`). The [trackType]
+/// column is retained for historical rows and future use but should always
+/// be `'personal'` for new writes.
 class CurriculumTracks extends Table {
   /// Auto-increment primary key for FK references from other tables.
   IntColumn get id => integer().autoIncrement()();

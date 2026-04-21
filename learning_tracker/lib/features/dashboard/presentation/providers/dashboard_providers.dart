@@ -20,19 +20,18 @@ CrossCurriculumAggregator crossCurriculumAggregator(Ref ref) {
   return CrossCurriculumAggregator();
 }
 
-/// Provider for the user mode, resolved from the database.
+/// Provider for the active profile's user mode, resolved from the
+/// [Profiles] table.
 ///
-/// Defaults to [UserMode.adult] if no profile exists.
-/// P6 compliant: uses only core database, no feature imports.
+/// Defaults to [UserMode.adult] if no profile row is found. This is what
+/// gates child-only gamification UI (points, streaks, celebrations).
 @riverpod
 Future<UserMode> dashboardUserMode(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
-  final profiles = await db.userProfileDao.getAllUserProfiles();
-  if (profiles.isEmpty) return UserMode.adult;
-  return UserMode.values.firstWhere(
-    (m) => m.name == profiles.first.userMode,
-    orElse: () => UserMode.adult,
-  );
+  final profileId = ref.watch(activeProfileIdProvider);
+  final profile = await db.profileDao.getProfileById(profileId);
+  if (profile == null) return UserMode.adult;
+  return profile.mode == 'child' ? UserMode.child : UserMode.adult;
 }
 
 /// Provider for list of active curricula IDs, scoped to active profile.
