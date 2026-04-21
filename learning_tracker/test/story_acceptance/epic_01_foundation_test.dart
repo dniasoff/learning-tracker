@@ -15,7 +15,6 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/tutor_pin_guard.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -185,10 +184,6 @@ void main() {
 
     test('ParentPinGuard exists', () {
       expect(ParentPinGuard, isNotNull);
-    });
-
-    test('TutorPinGuard exists', () {
-      expect(TutorPinGuard, isNotNull);
     });
   });
 

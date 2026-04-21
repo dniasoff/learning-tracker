@@ -130,11 +130,7 @@ void main() {
         totalItems: 10,
         completedItems: 5,
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 5)],
-        trackBreakdown: {
-          TrackType.personal: 3,
-          TrackType.personal: 2,
-          TrackType.personal: 0,
-        },
+        trackBreakdown: {TrackType.personal: 5},
       );
 
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
@@ -152,11 +148,7 @@ void main() {
         totalItems: 4,
         completedItems: 2,
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 2)],
-        trackBreakdown: {
-          TrackType.personal: 2,
-          TrackType.personal: 0,
-          TrackType.personal: 0,
-        },
+        trackBreakdown: {TrackType.personal: 2},
         subLevels: [
           HierarchyLevelProgress(
             levelName: 'Berachos',
@@ -166,11 +158,7 @@ void main() {
             stageBreakdown: [
               StageBreakdownEntry(stageName: 'Learned', count: 2),
             ],
-            trackBreakdown: {
-              TrackType.personal: 2,
-              TrackType.personal: 0,
-              TrackType.personal: 0,
-            },
+            trackBreakdown: {TrackType.personal: 2},
           ),
           HierarchyLevelProgress(
             levelName: 'Peah',
@@ -180,11 +168,7 @@ void main() {
             stageBreakdown: [
               StageBreakdownEntry(stageName: 'Learned', count: 0),
             ],
-            trackBreakdown: {
-              TrackType.personal: 0,
-              TrackType.personal: 0,
-              TrackType.personal: 0,
-            },
+            trackBreakdown: {TrackType.personal: 0},
           ),
         ],
       );

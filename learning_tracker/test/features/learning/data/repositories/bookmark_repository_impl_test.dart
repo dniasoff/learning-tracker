@@ -225,7 +225,7 @@ void main() {
         trackType: TrackType.personal,
         sefariaRef: _ref1,
       );
-      expect(bookmark2.firestoreId, 'bavli_school');
+      expect(bookmark2.firestoreId, 'bavli_personal');
     });
   });
 
