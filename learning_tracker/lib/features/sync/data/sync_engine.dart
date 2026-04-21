@@ -104,6 +104,8 @@ class SyncEngine {
 
     await pullOnLaunch();
     await _backfillLearnerProfilesIfNeeded();
+    await _backfillCurriculumTracksIfNeeded();
+    await _repairLegacyCompletionTrackIds();
   }
 
   /// Dispose resources and detach listeners.
@@ -595,6 +597,7 @@ class SyncEngine {
     );
 
     var insertedCount = 0;
+    final trackIdCache = <String, int>{};
     for (final remote in remoteCompletions) {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
@@ -625,6 +628,26 @@ class SyncEngine {
         );
 
         if (!exists) {
+          final remoteTrackId = remote['track_id'] as int?;
+          final resolvedTrackId = remoteTrackId ?? await (() async {
+            final key = '$profileId|$curriculumId|$trackType';
+            final cached = trackIdCache[key];
+            if (cached != null) return cached;
+
+            final track = await (_database.select(_database.curriculumTracks)
+                  ..where(
+                    (t) =>
+                        t.profileId.equals(profileId) &
+                        t.curriculumId.equals(curriculumId) &
+                        t.trackType.equals(trackType),
+                  )
+                  ..limit(1))
+                .getSingleOrNull();
+            final value = track?.id ?? 0;
+            trackIdCache[key] = value;
+            return value;
+          })();
+
           await _database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
               profileId: Value(profileId),
@@ -632,7 +655,7 @@ class SyncEngine {
               sefariaRef: sefariaRef,
               stageId: stageId,
               trackType: trackType,
-              trackId: remote['track_id'] as int? ?? 0,
+              trackId: resolvedTrackId,
               completedAt: completedAt,
               points: Value(remote['points'] as int? ?? 0),
             ),
@@ -1038,6 +1061,15 @@ class SyncEngine {
             ),
           );
         }
+
+        // Keep active_curricula table consistent even when the dedicated
+        // active_curricula document is missing in Firestore.
+        if (isActive && archivedAt == null) {
+          await _database.activeCurriculumDao.activateByProfile(
+            curriculumId,
+            profileId,
+          );
+        }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge curriculum track: $e');
@@ -1086,23 +1118,43 @@ class SyncEngine {
 
     for (final remote in remoteProfiles) {
       try {
-        final id = remote['id'] as int?;
-        final accountId = remote['account_id'] as int?;
-        final displayName = remote['display_name'] as String?;
-        final mode = remote['mode'] as String?;
-        final avatarIndex = remote['avatar_index'] as int? ?? 0;
-        final createdAt = _parseTimestamp(remote['created_at']);
-        final updatedAt = _parseTimestamp(remote['updated_at']);
-
-        if (id == null ||
-            accountId == null ||
-            displayName == null ||
-            mode == null ||
-            createdAt == null ||
-            updatedAt == null) {
+        final rawId = remote['id'];
+        final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+        if (id == null) {
           _logger.warning('Skipping invalid remote learner profile: $remote');
           continue;
         }
+
+        final rawAccountId = remote['account_id'];
+        final accountId = rawAccountId is int
+            ? rawAccountId
+            : int.tryParse(rawAccountId?.toString() ?? '') ?? 1;
+
+        final rawDisplayName = remote['display_name']?.toString().trim();
+        final legacyName = remote['name']?.toString().trim();
+        final displayName =
+            rawDisplayName != null && rawDisplayName.isNotEmpty
+            ? rawDisplayName
+            : (legacyName != null && legacyName.isNotEmpty
+                  ? legacyName
+                  : 'Profile $id');
+
+        final rawMode = remote['mode']?.toString().toLowerCase().trim();
+        final mode = rawMode == 'child' ? 'child' : 'adult';
+
+        final rawAvatarIndex = remote['avatar_index'];
+        final avatarIndex = rawAvatarIndex is int
+            ? rawAvatarIndex
+            : int.tryParse(rawAvatarIndex?.toString() ?? '') ?? 0;
+
+        final nowUtc = DateTime.now().toUtc();
+        final createdAt =
+            _parseTimestamp(remote['created_at']) ??
+            _parseTimestamp(remote['updated_at']) ??
+            nowUtc;
+        final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
+        final updatedAt =
+            remoteUpdatedAt ?? _parseTimestamp(remote['created_at']) ?? createdAt;
 
         final existing = await _database.profileDao.getProfileById(id);
         if (existing == null) {
@@ -1119,7 +1171,8 @@ class SyncEngine {
                   updatedAt: updatedAt,
                 ),
               );
-        } else if (updatedAt.isAfter(existing.updatedAt)) {
+        } else if (remoteUpdatedAt != null &&
+            remoteUpdatedAt.isAfter(existing.updatedAt)) {
           await (_database.update(
             _database.profiles,
           )..where((t) => t.id.equals(id))).write(
@@ -1178,6 +1231,110 @@ class SyncEngine {
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — best-effort backfill path
       _logger.warning('Learner profile backfill skipped: $e');
+    }
+  }
+
+  /// Backfill profile-scoped curriculum tracks to Firestore when missing.
+  ///
+  /// This ensures newly added track-state syncing is populated for existing
+  /// cloud users who already had local track rows before the sync payload
+  /// included `track_id` / activation fields.
+  Future<void> _backfillCurriculumTracksIfNeeded() async {
+    if (!_isOnline || !_firestoreDataSource.isAuthenticated) return;
+
+    try {
+      final remoteTracks = await _firestoreDataSource.fetchCurriculumTracks();
+      final remoteKeys = remoteTracks
+          .map((t) => '${t['curriculum_id']}_${t['track_type']}')
+          .whereType<String>()
+          .toSet();
+
+      final localTracks = await _database.trackDao.getAllForProfile(
+        _firestoreDataSource.profileId,
+      );
+      if (localTracks.isEmpty) return;
+
+      var pushed = 0;
+      for (final track in localTracks) {
+        final key = '${track.curriculumId}_${track.trackType}';
+        if (remoteKeys.contains(key)) continue;
+
+        await _firestoreDataSource.pushCurriculumTrack({
+          'profile_id': track.profileId,
+          'track_id': track.id,
+          'curriculum_id': track.curriculumId,
+          'track_type': track.trackType,
+          'is_active': track.isActive,
+          'activated_at': track.activatedAt.toIso8601String(),
+          'deactivated_at': track.deactivatedAt?.toIso8601String(),
+          'archived_at': track.archivedAt?.toIso8601String(),
+          'pace_reset_date': track.paceResetDate?.toIso8601String(),
+        });
+        pushed++;
+      }
+
+      if (pushed > 0) {
+        _logger.info('Backfilled $pushed curriculum track(s) to Firestore');
+      }
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — best-effort backfill path
+      _logger.warning('Curriculum track backfill skipped: $e');
+    }
+  }
+
+  /// Repair legacy completion rows that were synced without `track_id`.
+  ///
+  /// Older cloud payloads omitted track_id, causing restored rows to land
+  /// with trackId=0. This breaks track-scoped progress percentages on the
+  /// dashboard/progress views. We repair by mapping (profile,curriculum,
+  /// trackType) -> trackId when possible.
+  Future<void> _repairLegacyCompletionTrackIds() async {
+    final profileId = _firestoreDataSource.profileId;
+
+    try {
+      final legacyRows = await (_database.select(_database.completions)
+            ..where(
+              (t) => t.profileId.equals(profileId) & t.trackId.equals(0),
+            ))
+          .get();
+      if (legacyRows.isEmpty) return;
+
+      final trackIdCache = <String, int>{};
+      var updated = 0;
+
+      for (final row in legacyRows) {
+        final key = '${row.curriculumId}|${row.trackType}';
+        var trackId = trackIdCache[key];
+        if (trackId == null) {
+          final track = await (_database.select(_database.curriculumTracks)
+                ..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(row.curriculumId) &
+                      t.trackType.equals(row.trackType),
+                )
+                ..limit(1))
+              .getSingleOrNull();
+          trackId = track?.id ?? 0;
+          trackIdCache[key] = trackId;
+        }
+
+        if (trackId == 0) continue;
+
+        await (_database.update(
+          _database.completions,
+        )..where((t) => t.id.equals(row.id))).write(
+          CompletionsCompanion(trackId: Value(trackId)),
+        );
+        updated++;
+      }
+
+      if (updated > 0) {
+        _logger.info('Repaired $updated legacy completion track ids');
+      }
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — best-effort repair path
+      _logger.warning('Legacy completion track-id repair skipped: $e');
     }
   }
 
@@ -1665,10 +1822,12 @@ class SyncEngine {
       final completions = await _database.completionDao.getAllCompletions();
       for (final c in completions) {
         await pushCompletion({
+          'profile_id': c.profileId,
           'curriculum_id': c.curriculumId,
           'content_item_id': c.sefariaRef,
           'stage_id': c.stageId,
           'track_type': c.trackType,
+          'track_id': c.trackId,
           'completed_at': c.completedAt.toIso8601String(),
           'points': c.points,
         });
@@ -1750,6 +1909,25 @@ class SyncEngine {
         await _firestoreDataSource.pushActiveCurricula(activeCurricula);
         _logger.debug('Pushed ${activeCurricula.length} active curricula');
       }
+
+      // --- Curriculum tracks (track activation/archival state) ---
+      final tracks = await _database.trackDao.getAllForProfile(
+        _firestoreDataSource.profileId,
+      );
+      for (final t in tracks) {
+        await _firestoreDataSource.pushCurriculumTrack({
+          'profile_id': t.profileId,
+          'track_id': t.id,
+          'curriculum_id': t.curriculumId,
+          'track_type': t.trackType,
+          'is_active': t.isActive,
+          'activated_at': t.activatedAt.toIso8601String(),
+          'deactivated_at': t.deactivatedAt?.toIso8601String(),
+          'archived_at': t.archivedAt?.toIso8601String(),
+          'pace_reset_date': t.paceResetDate?.toIso8601String(),
+        });
+      }
+      _logger.debug('Pushed ${tracks.length} curriculum tracks');
 
       _logger.info('pushAllLocalData: completed successfully');
       final syncedAt = DateTime.now().toUtc();

@@ -415,15 +415,32 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     // any learner profiles. This is the single source of truth — local
     // data freshly pulled from Firestore — so new-device restores of
     // an existing cloud account land straight in the profile picker.
-    final profileCount = await ref
+    var profileCount = await ref
         .read(userDatabaseProvider)
         .profileDao
         .countProfilesForAccount(1);
 
     if (profileCount == 0) {
-      // Brand-new cloud account (nothing in Firestore either) — run
-      // through onboarding to create the first profile + pick tracks.
-      // Onboarding flips kOnboardingComplete when it finishes.
+      // If local is still empty, double-check cloud account-level profiles.
+      // This avoids incorrectly routing returning cloud users into onboarding
+      // when profile restore lagged behind the first pull attempt.
+      final remoteProfiles = await ref
+              .read(firestoreDataSourceProvider)
+              ?.fetchLearnerProfiles() ??
+          const <Map<String, dynamic>>[];
+
+      if (remoteProfiles.isNotEmpty && syncEngine != null) {
+        await syncEngine.pullOnLaunch();
+        profileCount = await ref
+            .read(userDatabaseProvider)
+            .profileDao
+            .countProfilesForAccount(1);
+      }
+    }
+
+    if (profileCount == 0) {
+      // Brand-new cloud account with no existing cloud profiles — run through
+      // onboarding to create the first profile + pick tracks.
       if (!mounted) return;
       unawaited(context.router.replaceAll([const OnboardingRoute()]));
       return;
