@@ -1,23 +1,22 @@
+import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/dashboard/data/mock_program_cycles.dart';
+import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'program_calendar_providers.g.dart';
 
-/// Provides CalendarPosition for a program track.
+/// Provides calendar-relative position for a program track.
 ///
-/// Mock implementation: computes plausible position from track creation date
-/// and completion count. Will be replaced by real calendar computation.
-///
-/// Interface contract (stable):
-///   Input: trackId (int)
-///   Output: AsyncValue<CalendarPosition>
+/// Uses the enrolled program + selected starting anchor (today or offset) to
+/// compute expected progress and compare against completed learn items.
 @riverpod
 Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  final calendarService = ref.watch(calendarProgramServiceProvider);
 
   // 1. Look up the track
   final track = await (db.select(
@@ -25,34 +24,94 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   )..where((t) => t.id.equals(trackId))).getSingleOrNull();
   if (track == null) throw StateError('Track $trackId not found');
 
-  // 2. Get mock cycle data for this curriculum
-  final cycleData =
-      mockProgramCycles[track.curriculumId] ?? defaultProgramCycleData;
+  // 2. Resolve the track's enrolled program
+  final enrollment = await db.profileProgramDao.getProgramForProfileAndCurriculum(
+    profileId,
+    track.curriculumId,
+  );
+  if (enrollment == null) {
+    throw StateError('Track $trackId has no program enrollment');
+  }
 
-  // 3. Compute position from days since track creation
-  final now = DateTime.now().toUtc();
-  final daysSinceCreation = now.difference(track.activatedAt).inDays;
-  final currentDay = daysSinceCreation.clamp(1, cycleData.totalDays);
+  final program = LearningProgramRepository.instance.getProgramById(
+    enrollment.programId,
+  );
+  if (program == null) {
+    throw StateError('Program ${enrollment.programId} not found');
+  }
 
-  // 4. Get completion count for delta computation
-  final completionCount = await db.completionDao.getAggregateCountByTrack(
+  final apiKey = program.apiProgramKey;
+  if (apiKey == null || apiKey.isEmpty) {
+    throw StateError('Program ${program.name} has no calendar API key');
+  }
+
+  final programKey =
+      CalendarProgramRegistry.byId(apiKey)?.id ??
+      CalendarProgramRegistry.byApiKey(apiKey)?.id ??
+      CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
+  if (programKey == null) {
+    throw StateError('Unable to resolve calendar key for program ${program.name}');
+  }
+
+  // 3. Resolve start date anchor (today by default; may be offset).
+  final now = DateTime.now();
+  final startDate = enrollment.trackingStartDate ?? (() {
+    final rawRef = enrollment.trackingStartRef;
+    if (rawRef == null || !rawRef.startsWith('offset:')) return now;
+    final parsed = int.tryParse(rawRef.substring('offset:'.length));
+    if (parsed == null) return now;
+    return now.add(Duration(days: parsed.clamp(-30, 30)));
+  })();
+
+  // 4. Resolve today's program assignment + cycle size from local calendar rows.
+  final todayEntry = await calendarService.getEntry(programKey, now);
+  final cycleEntries = await calendarService.getEntriesForRange(
+    programKey,
+    DateTime(2024, 1, 1),
+    DateTime(2032, 12, 31),
+  );
+  final totalDays = cycleEntries.isNotEmpty ? cycleEntries.length : 1;
+
+  // 5. Count unique first-stage completions (learn-stage progress).
+  final stages = await db.stageDao.getStagesByTrack(trackId);
+  final firstStage = stages.isEmpty
+      ? null
+      : (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))
+            .first;
+  final completions = await db.completionDao.getCompletionsByTrackAndProfile(
     trackId,
     profileId,
   );
-  final delta = completionCount - currentDay;
+  final completedLearnItems = <String>{};
+  for (final c in completions) {
+    if (firstStage == null ||
+        c.stageId == firstStage.id ||
+        c.stageId == firstStage.stageOrder) {
+      completedLearnItems.add(c.sefariaRef);
+    }
+  }
+  final completionCount = completedLearnItems.length;
 
-  // 5. Derive status from delta
+  // 6. Compare expected vs actual since chosen start anchor.
+  final elapsedDays = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).difference(DateTime(startDate.year, startDate.month, startDate.day)).inDays;
+  final expectedCount = elapsedDays >= 0 ? elapsedDays + 1 : 0;
+  final delta = completionCount - expectedCount;
   final status = delta > 0
       ? CalendarStatus.ahead
       : delta == 0
       ? CalendarStatus.caughtUp
       : CalendarStatus.behind;
+  final currentDay = (expectedCount + delta).clamp(1, totalDays);
 
   return CalendarPosition(
     currentDay: currentDay,
-    totalDays: cycleData.totalDays,
-    todayRef: cycleData.sampleTodayRef,
-    todayDisplayHe: cycleData.sampleTodayDisplayHe,
+    totalDays: totalDays,
+    todayRef: todayEntry?.todayRef ?? '',
+    todayDisplayHe: todayEntry?.todayRef ?? '',
     delta: delta,
     status: status,
   );

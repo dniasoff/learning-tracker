@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/learning_pr
 import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
 /// Default study days: all 7 days active (Sun–Shabbos).
@@ -33,15 +34,18 @@ class TrackCreationService {
     required CurriculumActivationService activationService,
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
+    SyncEngine? syncEngine,
   }) : _database = database,
        _activationService = activationService,
        _wizardService = wizardService,
-       _goalRepository = goalRepository;
+       _goalRepository = goalRepository,
+       _syncEngine = syncEngine;
 
   final UserDatabase _database;
   final CurriculumActivationService _activationService;
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
+  final SyncEngine? _syncEngine;
 
   /// Persist all track configuration from the AddTrackFlow result.
   ///
@@ -141,6 +145,7 @@ class TrackCreationService {
 
     // Link profile to program if one was selected (outside transaction — idempotent)
     if (result.programId != null) {
+      final programId = result.programId!;
       // startingRef is either:
       //   - null → start from beginning
       //   - "offset:N" → legacy day-offset format
@@ -152,8 +157,9 @@ class TrackCreationService {
           result.startingRef!.substring('offset:'.length),
         );
         if (offset != null) {
+          final clampedOffset = offset.clamp(-30, 30);
           trackingStartDate = DateTime.now().toUtc().add(
-            Duration(days: offset),
+            Duration(days: clampedOffset),
           );
         }
       }
@@ -161,10 +167,18 @@ class TrackCreationService {
       await _database.profileProgramDao.setProfileProgram(
         profileId: profileId,
         curriculumType: curriculum.storageKey,
-        programId: result.programId!,
+        programId: programId,
         trackingStartDate: trackingStartDate,
         trackingStartRef: result.startingRef,
       );
+
+      await _syncEngine?.pushProfileProgram({
+        'profile_id': profileId,
+        'curriculum_id': curriculum.storageKey,
+        'program_id': programId,
+        'tracking_start_date': trackingStartDate?.toIso8601String(),
+        'tracking_start_ref': result.startingRef,
+      });
     }
 
     AppLogger.instance.info(

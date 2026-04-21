@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,9 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/providers/calendar_providers.dart';
+import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -644,6 +648,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     return _StartingPositionStep(
       programName: _state.programName ?? '',
       curriculumId: _state.curriculumId!,
+      selectedProgram: _state.selectedProgram as LearningProgramData?,
       onComplete: _onStartingPositionComplete,
     );
   }
@@ -1224,11 +1229,13 @@ class _StartingPositionStep extends ConsumerStatefulWidget {
   const _StartingPositionStep({
     required this.programName,
     required this.curriculumId,
+    required this.selectedProgram,
     required this.onComplete,
   });
 
   final String programName;
   final CurriculumId curriculumId;
+  final LearningProgramData? selectedProgram;
   final ValueChanged<String?> onComplete;
 
   @override
@@ -1237,6 +1244,41 @@ class _StartingPositionStep extends ConsumerStatefulWidget {
 }
 
 class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
+  // Calendar-program mode (date offset picker).
+  int _offsetDays = 0;
+  bool _calendarLoading = false;
+  String? _calendarProgramKey;
+  CalendarProgramEntry? _calendarEntry;
+
+  bool get _isCalendarProgram => widget.selectedProgram?.isCalendarProgram ?? false;
+
+  DateTime get _selectedDate => DateTime.now().add(Duration(days: _offsetDays));
+
+  Future<void> _refreshCalendarEntry() async {
+    if (!_isCalendarProgram || _calendarProgramKey == null) return;
+    setState(() => _calendarLoading = true);
+    try {
+      final service = ref.read(calendarProgramServiceProvider);
+      final entry = await service.getEntry(_calendarProgramKey!, _selectedDate);
+      if (!mounted) return;
+      setState(() => _calendarEntry = entry);
+    } finally {
+      if (mounted) {
+        setState(() => _calendarLoading = false);
+      }
+    }
+  }
+
+  String? _resolveCalendarProgramKey() {
+    final program = widget.selectedProgram;
+    if (program == null) return null;
+    final apiKey = program.apiProgramKey;
+    if (apiKey == null || apiKey.isEmpty) return null;
+    return CalendarProgramRegistry.byId(apiKey)?.id ??
+        CalendarProgramRegistry.byApiKey(apiKey)?.id ??
+        CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
+  }
+
   List<ContentItem>? _allItems;
   bool _loading = true;
 
@@ -1252,7 +1294,13 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
   @override
   void initState() {
     super.initState();
-    _loadContent();
+    if (_isCalendarProgram) {
+      _calendarProgramKey = _resolveCalendarProgramKey();
+      unawaited(_refreshCalendarEntry());
+      _loading = false;
+    } else {
+      _loadContent();
+    }
   }
 
   Future<void> _loadContent() async {
@@ -1327,6 +1375,10 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isCalendarProgram) {
+      return _buildCalendarOffsetMode(context);
+    }
+
     final theme = Theme.of(context);
 
     if (_loading) {
@@ -1485,6 +1537,106 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
           onTap: () => setState(() => _selectedLeaf = leaf),
         );
       },
+    );
+  }
+
+  Widget _buildCalendarOffsetMode(BuildContext context) {
+    final theme = Theme.of(context);
+    final date = _selectedDate;
+    final dateLabel =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Starting Position', style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          Text(
+            'Default is today. You can start up to 30 days back or 30 days ahead.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _offsetDays == 0
+                        ? 'Today ($dateLabel)'
+                        : _offsetDays < 0
+                        ? '${_offsetDays.abs()} day(s) back ($dateLabel)'
+                        : '$_offsetDays day(s) forward ($dateLabel)',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  if (_calendarLoading)
+                    const LinearProgressIndicator()
+                  else if (_calendarEntry != null) ...[
+                    Text(
+                      _calendarEntry!.todayRef,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_calendarEntry!.displayNameHe} • ${_calendarEntry!.displayNameEn}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ] else
+                    Text(
+                      'No local calendar entry found for this date.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Slider(
+            value: _offsetDays.toDouble(),
+            min: -30,
+            max: 30,
+            divisions: 60,
+            label: _offsetDays == 0 ? 'Today' : (_offsetDays > 0 ? '+$_offsetDays' : '$_offsetDays'),
+            onChanged: (value) {
+              setState(() => _offsetDays = value.round());
+            },
+            onChangeEnd: (_) => unawaited(_refreshCalendarEntry()),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() => _offsetDays = 0);
+                    unawaited(_refreshCalendarEntry());
+                  },
+                  child: const Text('Use today'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _calendarEntry == null
+                      ? null
+                      : () => widget.onComplete('offset:$_offsetDays'),
+                  child: const Text('Start here'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

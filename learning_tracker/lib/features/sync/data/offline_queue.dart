@@ -77,6 +77,17 @@ class OfflineQueue {
     _logger.info('Queued goal for offline sync');
   }
 
+  /// Enqueue a profile-program assignment operation.
+  Future<void> enqueueProfileProgram(
+    Map<String, dynamic> profileProgram,
+  ) async {
+    final payload = jsonEncode(profileProgram);
+    await _queue.enqueue('profile_program', payload);
+    _logger.info(
+      'Queued profile program for offline sync: ${profileProgram['curriculum_id']}',
+    );
+  }
+
   /// Enqueue a ledger entry operation.
   Future<void> enqueueLedgerEntry(Map<String, dynamic> entry) async {
     final payload = jsonEncode(entry);
@@ -187,6 +198,9 @@ class OfflineQueue {
               break;
             case 'goal':
               await _firestoreDataSource.pushGoal(payload);
+              break;
+            case 'profile_program':
+              await _firestoreDataSource.pushProfileProgram(payload);
               break;
             case 'ledger_entry':
               await _firestoreDataSource.pushLedgerEntry(payload);

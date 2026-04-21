@@ -114,6 +114,7 @@ class FirestoreDataSource {
       'bookmarks',
       'settings',
       'goals',
+      'profile_programs',
       'streak',
       'active_curricula',
       'curriculum_tracks',
@@ -153,6 +154,7 @@ class FirestoreDataSource {
       'bookmarks',
       'settings',
       'goals',
+      'profile_programs',
       'streak',
       'active_curricula',
       'curriculum_tracks',
@@ -526,6 +528,55 @@ class FirestoreDataSource {
   /// Listen to real-time goal updates.
   Stream<List<Map<String, dynamic>>> listenToGoals() {
     final collection = _profileScopedDoc?.collection('goals');
+    if (collection == null) {
+      return Stream.value([]);
+    }
+
+    return collection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    });
+  }
+
+  // ========== Profile Program Operations ==========
+
+  /// Get profile-program assignments collection (profile-scoped).
+  CollectionReference<Map<String, dynamic>>? get _profileProgramsCollection {
+    return _profileScopedDoc?.collection('profile_programs');
+  }
+
+  /// Push a profile-program assignment to Firestore (LWW).
+  Future<void> pushProfileProgram(Map<String, dynamic> profileProgramData) async {
+    await _ensureProfilePathReady();
+    final collection = _profileProgramsCollection;
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final curriculumId = profileProgramData['curriculum_id'] as String?;
+    if (curriculumId == null || curriculumId.isEmpty) {
+      throw ArgumentError('Profile program must include curriculum_id');
+    }
+
+    await collection.doc(curriculumId).set({
+      ...profileProgramData,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch profile-program assignments from Firestore.
+  Future<List<Map<String, dynamic>>> fetchProfilePrograms({
+    int pageSize = defaultPageSize,
+  }) async {
+    await _ensureProfilePathReady();
+    final collection = _profileProgramsCollection;
+    if (collection == null) return [];
+
+    return _fetchPaginated(collection, pageSize: pageSize);
+  }
+
+  /// Listen to real-time profile-program assignment updates.
+  Stream<List<Map<String, dynamic>>> listenToProfilePrograms() {
+    final collection = _profileProgramsCollection;
     if (collection == null) {
       return Stream.value([]);
     }
