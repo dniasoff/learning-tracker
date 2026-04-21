@@ -9,10 +9,8 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
@@ -63,7 +61,6 @@ class AddTrackFlow extends ConsumerStatefulWidget {
 class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   AddTrackState _state = const AddTrackState();
   late final PageController _pageController;
-  Future<void>? _activationFuture;
   bool _isAnimating = false;
   bool _pendingAdvance = false;
 
@@ -114,8 +111,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Track name — always shown. Program: auto-fill from program name.
     steps.add(AddTrackStep.trackName);
 
-    // Bulk mark / starting position — always shown
-    steps.add(AddTrackStep.bulkMark);
+    // Bulk mark / starting position — only for program tracks
+    if (_isProgramTrack) {
+      steps.add(AddTrackStep.bulkMark);
+    }
 
     return steps;
   }
@@ -334,21 +333,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   // ── Callbacks ──────────────────────────────────────────────────────────────
 
   void _onCurriculumSelected(CurriculumId curriculum) {
-    final service = ref.read(curriculumActivationServiceProvider);
-    _activationFuture = service
-        .activateForProfile(curriculum, widget.profileId)
-        .then((_) {
-          if (mounted) {
-            setState(() => _state = _state.copyWith(contentActivated: true));
-          }
-        })
-        .catchError((_) {
-          if (mounted) {
-            setState(() => _state = _state.copyWith(contentActivated: true));
-          }
-        });
-
-    setState(() => _state = _state.copyWith(curriculumId: curriculum));
+    // Curriculum activation (and track creation) is deferred to
+    // TrackCreationService.createTrack() so that exiting mid-flow does not
+    // leave a phantom track behind. Scope content loads from bundled assets.
+    setState(
+      () => _state = _state.copyWith(
+        curriculumId: curriculum,
+        contentActivated: true,
+      ),
+    );
     _goToNextStep();
   }
 
@@ -394,12 +387,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   void _onTrackLabelComplete(String label) {
     setState(() => _state = _state.copyWith(trackLabel: label));
-    _goToNextStep();
-  }
-
-  Future<void> _onBulkMarkComplete(BulkMarkResult? result) async {
-    setState(() => _state = _state.copyWith(bulkMarkResult: result));
-    await _finishFlow();
+    // Track name is the last step for self-paced tracks — finish directly.
+    // Program tracks still have the starting-position step after this.
+    if (_isProgramTrack) {
+      _goToNextStep();
+    } else {
+      _finishFlow();
+    }
   }
 
   Future<void> _onStartingPositionComplete(String? startingRef) async {
@@ -518,29 +512,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   Widget _buildScopeStep() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
-    if (!_state.contentActivated && _activationFuture != null) {
-      return FutureBuilder<void>(
-        future: _activationFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Preparing content...'),
-                ],
-              ),
-            );
-          }
-          return _ScopeStepContent(
-            curriculumId: _state.curriculumId!,
-            onComplete: _onScopeComplete,
-          );
-        },
-      );
-    }
     return _ScopeStepContent(
       curriculumId: _state.curriculumId!,
       onComplete: _onScopeComplete,
@@ -684,64 +655,14 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
   }
 
-  /// Screen 8: Bulk Mark (self-paced) or Starting Position (program).
+  /// Screen 8: Starting Position (program tracks only).
   Widget _buildScreen8() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
 
-    // Program mode: starting position
-    if (_isProgramTrack) {
-      return _StartingPositionStep(
-        programName: _state.programName ?? '',
-        curriculumId: _state.curriculumId!,
-        onComplete: _onStartingPositionComplete,
-      );
-    }
-
-    // Self-paced: bulk mark
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Mark Prior Learning',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Already completed some items? Mark them now so the app knows your progress.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _onBulkMarkComplete(null),
-                  child: const Text('Skip'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.push<BulkMarkResult>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BulkMarkScreen(
-                          curriculumId: _state.curriculumId!,
-                          scopeConstraints: _state.scopeSelections,
-                        ),
-                      ),
-                    ).then(_onBulkMarkComplete);
-                  },
-                  child: const Text('Mark Completions'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return _StartingPositionStep(
+      programName: _state.programName ?? '',
+      curriculumId: _state.curriculumId!,
+      onComplete: _onStartingPositionComplete,
     );
   }
 }
