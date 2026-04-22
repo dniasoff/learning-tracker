@@ -37,6 +37,7 @@ service cloud.firestore {
       // - learning_ledger/{entryId}
       // - bookmarks/{trackId}
       // - daily_plan/{yyyy-mm-dd}
+      // - notification_settings/preferences
       // - projections/{active_curricula|streak|progress_summary}
       //
       // Legacy collections remain readable/writable for migration safety.

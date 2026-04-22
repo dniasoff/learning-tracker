@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
@@ -6,6 +7,7 @@ import 'package:learning_tracker/features/notifications/domain/services/shabbos_
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,6 +36,8 @@ const String _shabbosModeFixedStartMinuteKey =
     'shabbos_mode_fixed_start_minute';
 const String _shabbosModeFixedEndHourKey = 'shabbos_mode_fixed_end_hour';
 const String _shabbosModeFixedEndMinuteKey = 'shabbos_mode_fixed_end_minute';
+const String _notificationSettingsUpdatedAtMsKey =
+    'notification_settings_updated_at_ms';
 
 /// Default reminder time: 7:00 PM.
 const int defaultReminderHour = 19;
@@ -327,6 +331,62 @@ class ShabbosModeFixedEndTime extends _$ShabbosModeFixedEndTime {
   }
 }
 
+/// Persist the current notification preference set to Firestore for
+/// cloud-born accounts. Local-born accounts remain local-only.
+Future<void> _persistNotificationSettingsToCloud(
+  Ref ref, {
+  required SharedPreferences prefs,
+}) async {
+  final syncEngine = () {
+    try {
+      return ref.read(syncEngineProvider);
+    } catch (_) {
+      // Some tests build notification providers without full sync dependencies.
+      return null;
+    }
+  }();
+  if (syncEngine == null) return;
+
+  final updatedAtMs = DateTime.now().toUtc().millisecondsSinceEpoch;
+  await prefs.setInt(_notificationSettingsUpdatedAtMsKey, updatedAtMs);
+
+  await syncEngine.pushNotificationSettings({
+    'schema_version': 1,
+    'daily_reminder': {
+      'enabled': prefs.getBool(_reminderEnabledKey) ?? true,
+      'hour': prefs.getInt(_reminderHourKey) ?? defaultReminderHour,
+      'minute': prefs.getInt(_reminderMinuteKey) ?? defaultReminderMinute,
+    },
+    'streak_alert': {
+      'enabled': prefs.getBool(_streakAlertEnabledKey) ?? true,
+      'hour': prefs.getInt(_streakAlertHourKey) ?? defaultStreakAlertHour,
+      'minute': prefs.getInt(_streakAlertMinuteKey) ?? defaultStreakAlertMinute,
+    },
+    'reward_notifications': {
+      'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
+    },
+    'shabbos_quiet_mode': {
+      'enabled': prefs.getBool(_shabbosModeEnabledKey) ?? false,
+      'use_location': prefs.getBool(_shabbosModeUseLocationKey) ?? false,
+      'latitude': prefs.getDouble(_shabbosModeLatitudeKey) ?? 0.0,
+      'longitude': prefs.getDouble(_shabbosModeLongitudeKey) ?? 0.0,
+      'fixed_start_hour':
+          prefs.getInt(_shabbosModeFixedStartHourKey) ?? defaultShabbosStartHour,
+      'fixed_start_minute':
+          prefs.getInt(_shabbosModeFixedStartMinuteKey) ??
+          defaultShabbosStartMinute,
+      'fixed_end_hour':
+          prefs.getInt(_shabbosModeFixedEndHourKey) ?? defaultShabbosEndHour,
+      'fixed_end_minute':
+          prefs.getInt(_shabbosModeFixedEndMinuteKey) ?? defaultShabbosEndMinute,
+    },
+    'updated_at': DateTime.fromMillisecondsSinceEpoch(
+      updatedAtMs,
+      isUtc: true,
+    ).toIso8601String(),
+  });
+}
+
 /// Provides the [ShabbosTimeService] singleton.
 @riverpod
 ShabbosTimeService shabbosTimeService(Ref ref) {
@@ -372,6 +432,28 @@ NotificationScheduler notificationScheduler(Ref ref) {
   final service = ref.watch(notificationServiceProvider);
   return NotificationScheduler(service: service);
 }
+
+/// Watches all notification preference providers and syncs the composite
+/// profile-scoped notification_settings document for cloud-born accounts.
+final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
+  ref,
+) async {
+  // Track all preference providers so any change re-runs this effect.
+  ref.watch(reminderEnabledProvider);
+  ref.watch(reminderTimeProvider);
+  ref.watch(streakAlertEnabledProvider);
+  ref.watch(streakAlertTimeProvider);
+  ref.watch(rewardNotificationEnabledProvider);
+  ref.watch(shabbosModeEnabledProvider);
+  ref.watch(shabbosModeUseLocationProvider);
+  ref.watch(shabbosModeLatitudeProvider);
+  ref.watch(shabbosModeLongitudeProvider);
+  ref.watch(shabbosModeFixedStartTimeProvider);
+  ref.watch(shabbosModeFixedEndTimeProvider);
+
+  final prefs = await SharedPreferences.getInstance();
+  await _persistNotificationSettingsToCloud(ref, prefs: prefs);
+});
 
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.

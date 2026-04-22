@@ -56,6 +56,7 @@ class SyncEngine {
   StreamSubscription<List<String>>? _activeCurriculaSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _ledgerSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _curriculumTracksSubscription;
+  StreamSubscription<Map<String, dynamic>?>? _notificationSettingsSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
@@ -87,9 +88,30 @@ class SyncEngine {
   bool _mergingActiveCurricula = false;
   bool _mergingLedgerEntries = false;
   bool _mergingCurriculumTracks = false;
+  bool _mergingNotificationSettings = false;
 
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
+
+  // Notification settings keys (must match notification providers).
+  static const _notificationSettingsUpdatedAtMsKey =
+      'notification_settings_updated_at_ms';
+  static const _reminderEnabledKey = 'daily_reminder_enabled';
+  static const _reminderHourKey = 'daily_reminder_hour';
+  static const _reminderMinuteKey = 'daily_reminder_minute';
+  static const _streakAlertEnabledKey = 'streak_alert_enabled';
+  static const _streakAlertHourKey = 'streak_alert_hour';
+  static const _streakAlertMinuteKey = 'streak_alert_minute';
+  static const _rewardNotificationEnabledKey = 'reward_notification_enabled';
+  static const _shabbosModeEnabledKey = 'shabbos_mode_enabled';
+  static const _shabbosModeUseLocationKey = 'shabbos_mode_use_location';
+  static const _shabbosModeLatitudeKey = 'shabbos_mode_latitude';
+  static const _shabbosModeLongitudeKey = 'shabbos_mode_longitude';
+  static const _shabbosModeFixedStartHourKey = 'shabbos_mode_fixed_start_hour';
+  static const _shabbosModeFixedStartMinuteKey =
+      'shabbos_mode_fixed_start_minute';
+  static const _shabbosModeFixedEndHourKey = 'shabbos_mode_fixed_end_hour';
+  static const _shabbosModeFixedEndMinuteKey = 'shabbos_mode_fixed_end_minute';
 
   // ========== Lifecycle Methods ==========
 
@@ -200,6 +222,10 @@ class SyncEngine {
     _curriculumTracksSubscription = _firestoreDataSource
         .listenToCurriculumTracks()
         .listen(_onCurriculumTracksUpdate, onError: _handleListenerError);
+
+    _notificationSettingsSubscription = _firestoreDataSource
+        .listenToNotificationSettings()
+        .listen(_onNotificationSettingsUpdate, onError: _handleListenerError);
   }
 
   /// Detach foreground listeners (on app background).
@@ -221,6 +247,7 @@ class SyncEngine {
     await _activeCurriculaSubscription?.cancel();
     await _ledgerSubscription?.cancel();
     await _curriculumTracksSubscription?.cancel();
+    await _notificationSettingsSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
@@ -231,6 +258,7 @@ class SyncEngine {
     _activeCurriculaSubscription = null;
     _ledgerSubscription = null;
     _curriculumTracksSubscription = null;
+    _notificationSettingsSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -269,6 +297,7 @@ class SyncEngine {
         _firestoreDataSource.fetchActiveCurricula(),
         _firestoreDataSource.fetchCurriculumTracks(),
         _firestoreDataSource.fetchLearnerProfiles(),
+        _firestoreDataSource.fetchNotificationSettings(),
       ]);
       final completions = results[0] as List<Map<String, dynamic>>;
       final bookmarks = results[1] as List<Map<String, dynamic>>;
@@ -281,6 +310,7 @@ class SyncEngine {
       final activeCurricula = results[8] as List<String>;
       final curriculumTracks = results[9] as List<Map<String, dynamic>>;
       final learnerProfiles = results[10] as List<Map<String, dynamic>>;
+      final notificationSettings = results[11] as Map<String, dynamic>?;
 
       // Merge learner profiles FIRST — other rows (completions, bookmarks,
       // goals, streaks, etc.) reference profile_id, so they need the
@@ -298,6 +328,7 @@ class SyncEngine {
       await _mergeLedgerEntries(ledgerEntries);
       await _mergeActiveCurricula(activeCurricula);
       await _mergeCurriculumTracks(curriculumTracks);
+      await _mergeNotificationSettings(notificationSettings);
 
       _logger.info('Pull-on-launch completed successfully');
       final syncedAt = DateTime.now().toUtc();
@@ -448,6 +479,38 @@ class SyncEngine {
       _trackPushError(e);
       _logger.warning('Failed to push settings, queuing for later', e);
       await _offlineQueue.enqueueSettings(settings);
+      await _emitPendingStatus();
+    }
+  }
+
+  /// Push notification settings to Firestore after local write.
+  Future<void> pushNotificationSettings(
+    Map<String, dynamic> notificationSettings,
+  ) async {
+    if (!_isOnline || _pushSuppressed) {
+      await _offlineQueue.enqueueNotificationSettings(notificationSettings);
+      if (!_isOnline) {
+        _updateStatus(
+          SyncStatus.offline(
+            pendingChanges: await _offlineQueue.getPendingCount(),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.pushNotificationSettings(notificationSettings);
+      _consecutivePushPermissionErrors = 0;
+      _logger.debug('Pushed notification settings to Firestore');
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
+      _logger.warning(
+        'Failed to push notification settings, queuing for later',
+        e,
+      );
+      await _offlineQueue.enqueueNotificationSettings(notificationSettings);
       await _emitPendingStatus();
     }
   }
@@ -943,6 +1006,118 @@ class SyncEngine {
           dayType: dayType,
         );
       }
+    }
+  }
+
+  /// Merge notification settings from Firestore (last-write-wins per profile).
+  ///
+  /// Source of truth for runtime notification settings is SharedPreferences.
+  /// This merge hydrates local prefs for cloud-born accounts so notification
+  /// behavior round-trips across devices.
+  Future<void> _mergeNotificationSettings(
+    Map<String, dynamic>? remoteSettings,
+  ) async {
+    if (remoteSettings == null || remoteSettings.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final remoteUpdatedAt = _parseTimestamp(remoteSettings['updated_at']);
+      final localUpdatedAtMs = prefs.getInt(_notificationSettingsUpdatedAtMsKey);
+      final localUpdatedAt = localUpdatedAtMs == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(localUpdatedAtMs, isUtc: true);
+
+      if (remoteUpdatedAt != null &&
+          !remoteIsNewer(
+            localUpdatedAt: localUpdatedAt,
+            remoteUpdatedAt: remoteUpdatedAt,
+          )) {
+        _logger.debug(
+          'Skipping notification settings merge: local is newer or equal',
+        );
+        return;
+      }
+
+      final dailyReminder =
+          remoteSettings['daily_reminder'] as Map<String, dynamic>? ?? const {};
+      final streakAlert =
+          remoteSettings['streak_alert'] as Map<String, dynamic>? ?? const {};
+      final rewardNotifications =
+          remoteSettings['reward_notifications'] as Map<String, dynamic>? ??
+          const {};
+      final shabbosQuietMode =
+          remoteSettings['shabbos_quiet_mode'] as Map<String, dynamic>? ??
+          const {};
+
+      await prefs.setBool(
+        _reminderEnabledKey,
+        dailyReminder['enabled'] as bool? ?? true,
+      );
+      await prefs.setInt(
+        _reminderHourKey,
+        dailyReminder['hour'] as int? ?? 19,
+      );
+      await prefs.setInt(
+        _reminderMinuteKey,
+        dailyReminder['minute'] as int? ?? 0,
+      );
+
+      await prefs.setBool(
+        _streakAlertEnabledKey,
+        streakAlert['enabled'] as bool? ?? true,
+      );
+      await prefs.setInt(
+        _streakAlertHourKey,
+        streakAlert['hour'] as int? ?? 21,
+      );
+      await prefs.setInt(
+        _streakAlertMinuteKey,
+        streakAlert['minute'] as int? ?? 0,
+      );
+
+      await prefs.setBool(
+        _rewardNotificationEnabledKey,
+        rewardNotifications['enabled'] as bool? ?? true,
+      );
+
+      await prefs.setBool(
+        _shabbosModeEnabledKey,
+        shabbosQuietMode['enabled'] as bool? ?? false,
+      );
+      await prefs.setBool(
+        _shabbosModeUseLocationKey,
+        shabbosQuietMode['use_location'] as bool? ?? false,
+      );
+      await prefs.setDouble(
+        _shabbosModeLatitudeKey,
+        (shabbosQuietMode['latitude'] as num?)?.toDouble() ?? 0.0,
+      );
+      await prefs.setDouble(
+        _shabbosModeLongitudeKey,
+        (shabbosQuietMode['longitude'] as num?)?.toDouble() ?? 0.0,
+      );
+      await prefs.setInt(
+        _shabbosModeFixedStartHourKey,
+        shabbosQuietMode['fixed_start_hour'] as int? ?? 18,
+      );
+      await prefs.setInt(
+        _shabbosModeFixedStartMinuteKey,
+        shabbosQuietMode['fixed_start_minute'] as int? ?? 0,
+      );
+      await prefs.setInt(
+        _shabbosModeFixedEndHourKey,
+        shabbosQuietMode['fixed_end_hour'] as int? ?? 20,
+      );
+      await prefs.setInt(
+        _shabbosModeFixedEndMinuteKey,
+        shabbosQuietMode['fixed_end_minute'] as int? ?? 0,
+      );
+
+      final stamp = remoteUpdatedAt?.millisecondsSinceEpoch ??
+          DateTime.now().toUtc().millisecondsSinceEpoch;
+      await prefs.setInt(_notificationSettingsUpdatedAtMsKey, stamp);
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+      _logger.warning('Failed to merge notification settings: $e');
     }
   }
 
@@ -1700,6 +1875,21 @@ class SyncEngine {
     }
   }
 
+  Future<void> _onNotificationSettingsUpdate(
+    Map<String, dynamic>? notificationSettings,
+  ) async {
+    if (notificationSettings == null) return;
+    if (_mergingNotificationSettings) return;
+    _mergingNotificationSettings = true;
+    _consecutiveListenerErrors = 0;
+    try {
+      _logger.debug('Received notification settings update from listener');
+      await _mergeNotificationSettings(notificationSettings);
+    } finally {
+      _mergingNotificationSettings = false;
+    }
+  }
+
   /// Handle listener errors with quota monitoring (NFR21).
   ///
   /// After [quotaErrorThreshold] consecutive errors, disables all listeners
@@ -1923,6 +2113,46 @@ class SyncEngine {
     }
   }
 
+  /// Read notification preferences from local SharedPreferences and convert
+  /// them into the profile-scoped Firestore notification_settings payload.
+  Future<Map<String, dynamic>> _readLocalNotificationSettingsPayload() async {
+    final prefs = await SharedPreferences.getInstance();
+    final updatedAtMs = prefs.getInt(_notificationSettingsUpdatedAtMsKey);
+    final updatedAt = updatedAtMs == null
+        ? DateTime.now().toUtc()
+        : DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true);
+
+    return {
+      'schema_version': 1,
+      'daily_reminder': {
+        'enabled': prefs.getBool(_reminderEnabledKey) ?? true,
+        'hour': prefs.getInt(_reminderHourKey) ?? 19,
+        'minute': prefs.getInt(_reminderMinuteKey) ?? 0,
+      },
+      'streak_alert': {
+        'enabled': prefs.getBool(_streakAlertEnabledKey) ?? true,
+        'hour': prefs.getInt(_streakAlertHourKey) ?? 21,
+        'minute': prefs.getInt(_streakAlertMinuteKey) ?? 0,
+      },
+      'reward_notifications': {
+        'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
+      },
+      'shabbos_quiet_mode': {
+        'enabled': prefs.getBool(_shabbosModeEnabledKey) ?? false,
+        'use_location': prefs.getBool(_shabbosModeUseLocationKey) ?? false,
+        'latitude': prefs.getDouble(_shabbosModeLatitudeKey) ?? 0.0,
+        'longitude': prefs.getDouble(_shabbosModeLongitudeKey) ?? 0.0,
+        'fixed_start_hour': prefs.getInt(_shabbosModeFixedStartHourKey) ?? 18,
+        'fixed_start_minute':
+            prefs.getInt(_shabbosModeFixedStartMinuteKey) ?? 0,
+        'fixed_end_hour': prefs.getInt(_shabbosModeFixedEndHourKey) ?? 20,
+        'fixed_end_minute': prefs.getInt(_shabbosModeFixedEndMinuteKey) ?? 0,
+      },
+      // LWW merge compares this timestamp against local prefs timestamp.
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
   // ========== Battery-Aware Queue Processing ==========
 
   bool _isBatterySaverMode = false;
@@ -2081,6 +2311,11 @@ class SyncEngine {
         });
       }
       _logger.debug('Pushed ${tracks.length} curriculum tracks');
+
+      // --- Notification settings (profile-scoped preferences) ---
+      final notificationSettings = await _readLocalNotificationSettingsPayload();
+      await pushNotificationSettings(notificationSettings);
+      _logger.debug('Pushed notification settings');
 
       _logger.info('pushAllLocalData: completed successfully');
       final syncedAt = DateTime.now().toUtc();

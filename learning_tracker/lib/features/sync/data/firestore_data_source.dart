@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/learner_profiles/{profileId}/settings/{curriculumId}` - Settings (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/goals/{id}` - Goals (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/streak/data` - Streak (single doc)
+/// - `users/{uid}/learner_profiles/{profileId}/notification_settings/preferences` - Notification preferences (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/active_curricula/data` - Active curricula
 /// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state (LWW)
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
@@ -84,6 +85,13 @@ class FirestoreDataSource {
     return _profileScopedDoc?.collection('streak').doc('data');
   }
 
+  /// Notification settings document reference (profile-scoped).
+  DocumentReference<Map<String, dynamic>>? get _notificationSettingsDoc {
+    return _profileScopedDoc
+        ?.collection('notification_settings')
+        .doc('preferences');
+  }
+
   Future<void> _ensureProfilePathReady() async {
     if (_profilePathChecked) return;
     _profilePathChecked = true;
@@ -118,6 +126,7 @@ class FirestoreDataSource {
       'streak',
       'active_curricula',
       'curriculum_tracks',
+      'notification_settings',
       'learning_ledger',
       'curriculum_imports',
     ];
@@ -158,6 +167,7 @@ class FirestoreDataSource {
       'streak',
       'active_curricula',
       'curriculum_tracks',
+      'notification_settings',
       'learning_ledger',
       'curriculum_imports',
     ];
@@ -484,6 +494,44 @@ class FirestoreDataSource {
   /// Listen to real-time streak updates.
   Stream<Map<String, dynamic>?> listenToStreak() {
     final doc = _streakDoc;
+    if (doc == null) {
+      return Stream.value(null);
+    }
+
+    return doc.snapshots().map((snapshot) => snapshot.data());
+  }
+
+  // ========== Notification Settings Operations ==========
+
+  /// Push notification preferences to Firestore (last-write-wins).
+  Future<void> pushNotificationSettings(
+    Map<String, dynamic> notificationSettings,
+  ) async {
+    await _ensureProfilePathReady();
+    final doc = _notificationSettingsDoc;
+    if (doc == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await doc.set({
+      ...notificationSettings,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch notification preferences from Firestore.
+  Future<Map<String, dynamic>?> fetchNotificationSettings() async {
+    await _ensureProfilePathReady();
+    final doc = _notificationSettingsDoc;
+    if (doc == null) return null;
+
+    final snapshot = await doc.get();
+    return snapshot.data();
+  }
+
+  /// Listen to real-time notification preference updates.
+  Stream<Map<String, dynamic>?> listenToNotificationSettings() {
+    final doc = _notificationSettingsDoc;
     if (doc == null) {
       return Stream.value(null);
     }

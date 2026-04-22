@@ -56,6 +56,15 @@ class OfflineQueue {
     _logger.info('Queued settings for offline sync');
   }
 
+  /// Enqueue a notification settings operation.
+  Future<void> enqueueNotificationSettings(
+    Map<String, dynamic> notificationSettings,
+  ) async {
+    final payload = jsonEncode(notificationSettings);
+    await _queue.enqueue('notification_settings', payload);
+    _logger.info('Queued notification settings for offline sync');
+  }
+
   /// Enqueue a streak operation.
   Future<void> enqueueStreak(Map<String, dynamic> streak) async {
     final payload = jsonEncode(streak);
@@ -189,6 +198,9 @@ class OfflineQueue {
               break;
             case 'settings':
               await _firestoreDataSource.pushSettings(payload);
+              break;
+            case 'notification_settings':
+              await _firestoreDataSource.pushNotificationSettings(payload);
               break;
             case 'streak':
               await _firestoreDataSource.pushStreak(payload);

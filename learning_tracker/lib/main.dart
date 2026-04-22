@@ -132,6 +132,7 @@ void main() {
         // Kick off the sync effects so scheduled notifications reflect current
         // preferences immediately on launch — not only when the user opens the
         // notifications screen.
+        container.read(notificationSettingsCloudSyncEffectProvider);
         container.read(reminderSyncEffectProvider);
         container.read(streakAlertSyncEffectProvider);
       } catch (e, stack) {
