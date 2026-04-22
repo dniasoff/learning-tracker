@@ -153,6 +153,15 @@ class UpgradeToCloudService {
       firebaseUid: credential.user!.uid,
       updatedAt: DateTime.now().toUtc(),
     );
+
+    if (registry != null && accountId != null) {
+      await registry!.updateAccountTier(
+        accountId!,
+        'cloudBorn',
+        firebaseUid: credential.user!.uid,
+      );
+    }
+
     return (await _dao.getUserProfileById(localProfile.id))!;
   }
 
@@ -174,6 +183,15 @@ class UpgradeToCloudService {
       firebaseUid: credential.user!.uid,
       updatedAt: DateTime.now().toUtc(),
     );
+
+    if (registry != null && accountId != null) {
+      await registry!.updateAccountTier(
+        accountId!,
+        'cloudBorn',
+        firebaseUid: credential.user!.uid,
+      );
+    }
+
     return (await _dao.getUserProfileById(localProfile.id))!;
   }
 }

@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Local → cloud upgrade flow entry screen (Epic 20 v2 §4.3).
 ///
@@ -38,6 +41,28 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   bool _discardAcknowledged = false;
   _CollisionChoice _choice = _CollisionChoice.none;
 
+  Future<bool> _requireInternet() async {
+    final checker = ref.read(internetConnectionCheckerProvider);
+    final hasConnection = await checker.hasConnection;
+    if (!hasConnection && mounted) {
+      setState(
+        () => _error =
+            'Internet connection is required to upgrade to cloud. '
+            'Your account and data stay local until you retry online.',
+      );
+    }
+    return hasConnection;
+  }
+
+  Future<void> _pushLocalDataAfterUpgrade() async {
+    // Rebuild provider graph with cloud-born tier before initial push.
+    ref.invalidate(syncEngineProvider);
+    final syncEngine = ref.read(syncEngineProvider);
+    if (syncEngine == null) return;
+    await syncEngine.pushAllLocalData();
+    await syncEngine.pullOnLaunch();
+  }
+
   @override
   void dispose() {
     _passwordController.dispose();
@@ -47,6 +72,8 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!await _requireInternet()) return;
+
     final authState = ref.read(authStateProvider);
     final user = authState.currentUser;
     if (user == null || !authState.isLocalBorn) {
@@ -64,10 +91,14 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       final dao = ref.read(userDatabaseProvider).userProfileDao;
       final profile = await dao.getUserProfileById(user.profileId);
       if (profile == null) throw StateError('Profile missing');
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByEmail(profile.email);
 
       final service = UpgradeToCloudService(
         dao: dao,
         firebaseAuth: ref.read(firebaseAuthProvider),
+        registry: registry,
+        accountId: account?.accountId,
       );
       final upgraded = await service.upgrade(
         profile: profile,
@@ -77,6 +108,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       ref
           .read(authStateProvider.notifier)
           .setCloudBornSession(profile: upgraded);
+      await _pushLocalDataAfterUpgrade();
       if (mounted) setState(() => _success = true);
     } on UpgradePasswordMismatchException {
       if (mounted) {
@@ -85,6 +117,14 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     } on EmailCollisionException {
       if (mounted) {
         setState(() => _collision = true);
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.code == 'network-request-failed'
+              ? 'Internet connection is required to upgrade to cloud.'
+              : 'Upgrade failed: ${e.code}';
+        });
       }
     } catch (e) {
       if (mounted) setState(() => _error = 'Upgrade failed: $e');
@@ -98,6 +138,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   /// password.
   Future<void> _executeCollisionChoice() async {
     if (_choice == _CollisionChoice.none) return;
+    if (!await _requireInternet()) return;
     if (_cloudPasswordController.text.isEmpty) {
       setState(() => _error = 'Please enter your cloud account password.');
       return;
@@ -123,10 +164,14 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       final dao = ref.read(userDatabaseProvider).userProfileDao;
       final profile = await dao.getUserProfileById(user.profileId);
       if (profile == null) throw StateError('Profile missing');
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByEmail(profile.email);
 
       final service = UpgradeToCloudService(
         dao: dao,
         firebaseAuth: ref.read(firebaseAuthProvider),
+        registry: registry,
+        accountId: account?.accountId,
       );
 
       final upgraded = _choice == _CollisionChoice.upload
@@ -142,6 +187,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       ref
           .read(authStateProvider.notifier)
           .setCloudBornSession(profile: upgraded);
+      await _pushLocalDataAfterUpgrade();
       if (mounted) {
         setState(() {
           _success = true;
@@ -151,9 +197,12 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.code == 'wrong-password'
-              ? 'Incorrect cloud account password.'
-              : 'Sign-in failed: ${e.code}';
+          _error = switch (e.code) {
+            'wrong-password' => 'Incorrect cloud account password.',
+            'network-request-failed' =>
+              'Internet connection is required to complete this merge option.',
+            _ => 'Sign-in failed: ${e.code}',
+          };
         });
       }
     } catch (e) {

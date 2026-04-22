@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Widget that observes app lifecycle and manages sync listeners.
@@ -19,10 +20,22 @@ class SyncLifecycleObserver extends ConsumerStatefulWidget {
 
 class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
     with WidgetsBindingObserver {
+  ProviderSubscription<AsyncValue<bool>>? _connectivitySubscription;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    _connectivitySubscription = ref.listenManual<AsyncValue<bool>>(
+      connectivityStreamProvider,
+      (previous, next) {
+        next.whenData((online) {
+          ref.read(syncEngineProvider)?.setOnlineState(online);
+        });
+      },
+      fireImmediately: true,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(syncEngineProvider)?.attachListeners();
@@ -32,6 +45,7 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _connectivitySubscription?.close();
     super.dispose();
   }
 
@@ -43,6 +57,7 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
     switch (state) {
       case AppLifecycleState.resumed:
         engine.attachListeners();
+        engine.pullOnLaunch();
         break;
       case AppLifecycleState.inactive:
         break;

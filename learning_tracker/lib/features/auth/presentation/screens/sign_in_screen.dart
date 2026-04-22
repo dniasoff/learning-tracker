@@ -149,6 +149,34 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     return null;
   }
 
+  /// Legacy fallback for accounts that exist locally but are missing
+  /// a device-registry entry. This preserves offline sign-in after
+  /// migrations or partial registry corruption.
+  Future<bool> _tryLocalFallbackSignIn({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final dao = ref.read(userDatabaseProvider).userProfileDao;
+      final service = LocalAuthService(dao: dao);
+      final profile = await service.signIn(email: email, password: password);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(kOnboardingComplete, true);
+      ref
+          .read(auth_state.authStateProvider.notifier)
+          .setLocalBornSession(profile: profile);
+      ref.read(selectedProfileIdProvider.notifier).clear();
+      if (mounted) {
+        unawaited(context.router.replaceAll([const AppShellRoute()]));
+      }
+      return true;
+    } on InvalidCredentialsException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Epic 21.7: Smart credential routing. Checks the device
   /// registry first to determine which backend handles sign-in,
   /// then falls back to Firebase for emails not on this device.
@@ -229,6 +257,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
           }
         }
       } else {
+        // Not in registry — try local fallback first, then Firebase.
+        final signedInLocally = await _tryLocalFallbackSignIn(
+          email: email,
+          password: password,
+        );
+        if (signedInLocally) return;
+
         // Not on this device → try Firebase (could be account from another device)
         final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
