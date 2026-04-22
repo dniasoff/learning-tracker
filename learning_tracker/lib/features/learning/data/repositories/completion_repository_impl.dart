@@ -108,11 +108,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
       );
 
       // 6. Update cached streak table so the dashboard reflects the new
-      //    streak immediately — the streak_events log alone only updates
-      //    state when the reducer replays it (sync path).
-      if (isChildProfile) {
-        await _streakService?.recordCompletion(created.completedAt);
-      }
+      //    streak immediately — applies to both child and adult profiles.
+      await _streakService?.recordCompletion(created.completedAt);
 
       return (completion: created, isNew: true);
     });
@@ -152,7 +149,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   ) async {
     // Perform all operations in a single transaction
     final isChildProfile = await _isChildProfile();
-    return await _database.transaction(() async {
+    final completions = await _database.transaction(() async {
       final completions = <Completion>[];
 
       for (final sefariaRef in request.sefariaRefs) {
@@ -175,6 +172,18 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
       return completions;
     });
+
+    // Bulk flows (e.g. prior-learning mark) should not advance/sync bookmark
+    // on every item. Advance once after the batch to keep UX responsive.
+    if (completions.isNotEmpty) {
+      await _advanceBookmark(
+        curriculumId: request.curriculumId,
+        trackType: request.trackType,
+        completedSefariaRef: request.sefariaRefs.last,
+      );
+    }
+
+    return completions;
   }
 
   /// Internal method to mark a single completion within an existing transaction.
@@ -211,17 +220,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
       isChildProfile: isChildProfile,
     );
 
-    if (isChildProfile) {
-      await _streakService?.recordCompletion(completion.completedAt);
-    }
+    await _streakService?.recordCompletion(completion.completedAt);
 
-    await _advanceBookmark(
-      curriculumId: request.curriculumId,
-      trackType: request.trackType,
-      completedSefariaRef: request.sefariaRef,
-    );
-
-    await _syncCompletion(completion);
+    // Offline-first: do not block bulk-mark UX on network push.
+    // SyncEngine will queue/push in the background.
+    unawaited(_syncCompletion(completion));
 
     return completion;
   }
@@ -365,9 +368,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // Tee the completion into the append-only streak event log
     // so the streak reducer can derive state independent of the
     // cached Streaks table. Unique keys swallow duplicates silently.
-    if (isChildProfile) {
-      await _appendStreakEvent(profileId: _activeProfileId, at: now);
-    }
+    await _appendStreakEvent(profileId: _activeProfileId, at: now);
 
     // Retrieve the created completion
     final completion = await _database.completionDao.getCompletionById(id);

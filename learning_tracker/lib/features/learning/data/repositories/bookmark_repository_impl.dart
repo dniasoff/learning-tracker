@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -99,7 +101,8 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       );
     }
 
-    await _syncBookmark(bookmark);
+    // Offline-first: never block UI on remote bookmark push.
+    unawaited(_syncBookmark(bookmark));
 
     return bookmark;
   }
