@@ -536,6 +536,7 @@ class _CurriculumProgressTile extends ConsumerWidget {
       aggregateCountProvider(curriculum.storageKey),
     );
     final count = aggregateCountAsync.asData?.value ?? 0;
+    final percentageText = formatFractionAsPercent(percentage);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -583,7 +584,7 @@ class _CurriculumProgressTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$count completions',
+                      '$percentageText • $count completions',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
