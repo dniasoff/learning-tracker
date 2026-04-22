@@ -148,14 +148,32 @@ class TrackCreationService {
       final programId = result.programId!;
       // startingRef is either:
       //   - null → start from beginning
+      //   - "offset:N|ref:<sefariaRef>" → calendar offset + resolved unit
       //   - "offset:N" → legacy day-offset format
       //   - a sefariaRef string (e.g. "Berakhot 42a") → content-based position
+      final rawStartingRef = result.startingRef;
+      String? bookmarkRef = rawStartingRef;
+      String? offsetToken;
+      if (rawStartingRef != null && rawStartingRef.contains('|')) {
+        for (final token in rawStartingRef.split('|')) {
+          if (token.startsWith('offset:')) offsetToken = token;
+          if (token.startsWith('ref:')) {
+            final parsedRef = token.substring('ref:'.length);
+            if (parsedRef.isNotEmpty) {
+              bookmarkRef = parsedRef;
+            }
+          }
+        }
+      }
+
       DateTime? trackingStartDate;
-      if (result.startingRef != null &&
-          result.startingRef!.startsWith('offset:')) {
-        final offset = int.tryParse(
-          result.startingRef!.substring('offset:'.length),
-        );
+      final offsetSource =
+          offsetToken ??
+          ((rawStartingRef != null && rawStartingRef.startsWith('offset:'))
+              ? rawStartingRef
+              : null);
+      if (offsetSource != null) {
+        final offset = int.tryParse(offsetSource.substring('offset:'.length));
         if (offset != null) {
           final clampedOffset = offset.clamp(-30, 30);
           trackingStartDate = DateTime.now().toUtc().add(
@@ -169,15 +187,32 @@ class TrackCreationService {
         curriculumType: curriculum.storageKey,
         programId: programId,
         trackingStartDate: trackingStartDate,
-        trackingStartRef: result.startingRef,
+        trackingStartRef: bookmarkRef,
       );
+
+      if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
+        final updatedAt = DateTime.now().toUtc();
+        await _database.bookmarkDao.upsertBookmarkByProfile(
+          profileId: profileId,
+          curriculumId: curriculum.storageKey,
+          trackType: TrackType.personal.storageKey,
+          sefariaRef: bookmarkRef,
+          updatedAt: updatedAt,
+        );
+        await _syncEngine?.pushBookmark({
+          'curriculum_id': curriculum.storageKey,
+          'track_type': TrackType.personal.storageKey,
+          'content_item_id': bookmarkRef,
+          'updated_at': updatedAt.toIso8601String(),
+        });
+      }
 
       await _syncEngine?.pushProfileProgram({
         'profile_id': profileId,
         'curriculum_id': curriculum.storageKey,
         'program_id': programId,
         'tracking_start_date': trackingStartDate?.toIso8601String(),
-        'tracking_start_ref': result.startingRef,
+        'tracking_start_ref': bookmarkRef,
       });
     }
 

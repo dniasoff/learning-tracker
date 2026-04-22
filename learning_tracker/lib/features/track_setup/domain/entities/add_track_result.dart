@@ -75,6 +75,6 @@ enum AddTrackStep {
   studyDays, // Screen 4 (program: auto-fill read-only)
   chazaraSetup, // Screen 5 (program: show or offer)
   goal, // Screen 6 (program: skip)
-  trackName, // Screen 7 (program: auto-fill)
+  trackName, // Screen 7 (program: prior learned lifetime marking)
   bulkMark, // Screen 8 (program: starting position)
 }

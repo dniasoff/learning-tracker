@@ -142,7 +142,13 @@ List<MilestoneAchievement> _detectMilestones(
   final milestones = <MilestoneAchievement>[];
   if (entries.isEmpty) return milestones;
 
-  final completedUnits = entries.map((e) => e.unitIdentifier).toSet();
+  // Milestones are curriculum/seder completion signals and should be based on
+  // unit-level ledger entries only. Item-level lifetime markers (e.g. daf/perek)
+  // must not artificially complete a curriculum milestone.
+  final unitLevelEntries = entries
+      .where((e) => e.unitType == 'masechta' || e.unitType == 'sefer')
+      .toList();
+  final completedUnits = unitLevelEntries.map((e) => e.unitIdentifier).toSet();
 
   // Check seder-level milestones (all masechtos in a seder completed)
   if (curriculum != CurriculumId.mussar) {
@@ -155,11 +161,10 @@ List<MilestoneAchievement> _detectMilestones(
     for (final entry in sederGroups.entries) {
       if (entry.value.every((unit) => completedUnits.contains(unit))) {
         // Find the latest completion date for this seder
-        final sederCompletions =
-            entries
-                .where((e) => entry.value.contains(e.unitIdentifier))
-                .toList()
-              ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+        final sederCompletions = unitLevelEntries
+            .where((e) => entry.value.contains(e.unitIdentifier))
+            .toList()
+          ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
         if (sederCompletions.isNotEmpty) {
           milestones.add(
             MilestoneAchievement(
@@ -176,7 +181,7 @@ List<MilestoneAchievement> _detectMilestones(
   // Check curriculum-level milestone (all units completed)
   final totalUnits = _countTotalUnits(content, curriculum);
   if (completedUnits.length >= totalUnits && totalUnits > 0) {
-    final allEntries = [...entries]
+    final allEntries = [...unitLevelEntries]
       ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
     milestones.add(
       MilestoneAchievement(
