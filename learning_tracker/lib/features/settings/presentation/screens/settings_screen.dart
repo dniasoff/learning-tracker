@@ -2,8 +2,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart'
-    show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
@@ -18,8 +16,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
-import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -174,18 +172,20 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       onTap: () => _showSignOutConfirmation(context, ref),
                     ),
-                    Divider(height: 1, indent: 56, color: theme.dividerColor),
-                    ListTile(
-                      leading: Icon(
-                        Icons.delete_forever,
-                        color: theme.colorScheme.error,
+                    if (!isChildProfile) ...[
+                      Divider(height: 1, indent: 56, color: theme.dividerColor),
+                      ListTile(
+                        leading: Icon(
+                          Icons.delete_forever,
+                          color: theme.colorScheme.error,
+                        ),
+                        title: Text(
+                          'Delete Account',
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                        onTap: () => showDeleteAccountFlow(context, ref, user),
                       ),
-                      title: Text(
-                        'Delete Account',
-                        style: TextStyle(color: theme.colorScheme.error),
-                      ),
-                      onTap: () => _showDeleteAccountFlow(context, ref, user),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -891,82 +891,6 @@ Future<void> _showSignOutConfirmation(
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Failed to sign out. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-}
-
-Future<void> _showDeleteAccountFlow(
-  BuildContext context,
-  WidgetRef ref,
-  User? user,
-) async {
-  if (user == null) return;
-
-  final service = ref.read(accountManagementServiceProvider);
-
-  final hasPassword = user.providerData.any(
-    (info) => info.providerId == 'password',
-  );
-  final hasGoogle = user.providerData.any(
-    (info) => info.providerId == 'google.com',
-  );
-
-  var reauthenticated = false;
-
-  if (hasPassword) {
-    reauthenticated =
-        await showReauthenticateDialog(
-          context: context,
-          email: user.email ?? '',
-          service: service,
-        ) ??
-        false;
-  } else if (hasGoogle) {
-    try {
-      await service.reauthenticateWithGoogle();
-      reauthenticated = true;
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled ||
-          e.code == GoogleSignInExceptionCode.interrupted) {
-        // User cancelled — do nothing.
-      } else if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Re-authentication failed. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Re-authentication failed. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  if (!reauthenticated || !context.mounted) return;
-
-  final confirmed = await showDeleteAccountDialog(context: context);
-  if (confirmed != true || !context.mounted) return;
-
-  try {
-    await service.deleteAccount(user.uid);
-    if (context.mounted) {
-      await context.router.replaceAll([const WelcomeRoute()]);
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete account: $e'),
           backgroundColor: Colors.red,
         ),
       );

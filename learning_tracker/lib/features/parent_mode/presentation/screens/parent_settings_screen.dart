@@ -2,7 +2,9 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 
 /// Configuration hub shown to a parent when their child profile is active.
 ///
@@ -15,6 +17,7 @@ class ParentSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final user = ref.watch(firebaseAuthProvider).currentUser;
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Parent Mode')),
@@ -65,6 +68,23 @@ class ParentSettingsScreen extends ConsumerWidget {
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.pushRoute(const ParentModeRoute()),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: ListTile(
+                leading: Icon(
+                  Icons.delete_forever,
+                  color: theme.colorScheme.error,
+                ),
+                title: Text(
+                  'Delete Account',
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+                subtitle: const Text(
+                  'Permanently remove this account and cloud data',
+                ),
+                onTap: () => showDeleteAccountFlow(context, ref, user),
               ),
             ),
           ],
