@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/onboarding/domain/validators/auth_vali
     as validators;
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Sign-in screen for existing local-born accounts.
@@ -89,13 +90,31 @@ class _LocalSignInScreenState extends ConsumerState<LocalSignInScreen> {
         registry: registry,
       );
       await session.setActiveAccount(account.accountId);
-      await prefs.setBool(kOnboardingComplete, true);
 
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
+      final profiles = await ref
+          .read(userDatabaseProvider)
+          .profileDao
+          .getProfilesByAccount(1);
+      final firstSignInNeedsSetup = profiles.isEmpty;
+
+      if (firstSignInNeedsSetup) {
+        await prefs.remove(kOnboardingComplete);
+        ref.read(selectedProfileIdProvider.notifier).clear();
+      } else {
+        await prefs.setBool(kOnboardingComplete, true);
+        // Always route local-born users to the profile picker after sign-in.
+        ref.read(selectedProfileIdProvider.notifier).clear();
+      }
+
       if (mounted) {
-        unawaited(context.router.replaceAll([const AppShellRoute()]));
+        if (firstSignInNeedsSetup) {
+          unawaited(context.router.replaceAll([const OnboardingRoute()]));
+        } else {
+          unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
+        }
       }
     } on InvalidCredentialsException {
       setState(() => _submitError = 'Incorrect email or password.');

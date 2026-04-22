@@ -127,7 +127,7 @@ class _LocalSignupScreenState extends ConsumerState<LocalSignupScreen> {
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
       if (mounted) {
-        unawaited(context.router.push(const OnboardingRoute()));
+        unawaited(context.router.replace(const OnboardingRoute()));
       }
     } on DuplicateEmailException {
       setState(
