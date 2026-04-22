@@ -15,6 +15,7 @@ class AuthRepositoryImpl implements AuthRepository {
   bool _googleSignInInitialized = false;
 
   static const _packageName = 'com.jcom.torah.learning_tracker';
+  static const _linkDomain = 'https://torah-study-tracker.firebaseapp.com';
 
   @override
   Future<UserCredential> signInWithEmail(String email, String password) {
@@ -62,11 +63,27 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> sendEmailVerification() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
+    await user.sendEmailVerification(
+      ActionCodeSettings(
+        url: '$_linkDomain/verify-email',
+        handleCodeInApp: true,
+        androidPackageName: _packageName,
+        androidInstallApp: true,
+      ),
+    );
+  }
+
+  @override
   Future<void> sendSignInLinkToEmail(String email) {
     return _firebaseAuth.sendSignInLinkToEmail(
       email: email,
       actionCodeSettings: ActionCodeSettings(
-        url: 'https://torah-study-tracker.firebaseapp.com/sign-in',
+        url: '$_linkDomain/sign-in',
         handleCodeInApp: true,
         androidPackageName: _packageName,
         androidInstallApp: true,

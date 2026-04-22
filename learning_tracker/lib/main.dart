@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -157,6 +158,7 @@ class LearningTrackerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(magicLinkInitializationProvider);
     final appRouter = ref.watch(routerProvider);
     final locale = ref.watch(appLocaleProvider);
     final isChildMode =

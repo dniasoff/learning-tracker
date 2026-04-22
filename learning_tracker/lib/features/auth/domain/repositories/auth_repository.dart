@@ -17,6 +17,9 @@ abstract class AuthRepository {
     String displayName,
   );
 
+  /// Sends an email-verification link to the currently signed-in user.
+  Future<void> sendEmailVerification();
+
   /// Sends a passwordless sign-in link to the given email address.
   Future<void> sendSignInLinkToEmail(String email);
 

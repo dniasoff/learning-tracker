@@ -163,35 +163,17 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signUp(email, password, displayName);
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user != null) {
-        // Epic 21: route the new user's profile into a per-account
-        // DB file and register the account so sign-out can find it.
-        final accountId = const Uuid().v4();
-        final dbFileName = 'user_acc_$accountId.db';
-        activeDbFileName = dbFileName;
-        ref.invalidate(userDatabaseProvider);
-
-        await ref
-            .read(auth_state.authStateProvider.notifier)
-            .promoteToCloud(user);
-
-        final prefs = await SharedPreferences.getInstance();
-        final session = SessionPersistenceService(
-          prefs: prefs,
-          registry: ref.read(deviceRegistryProvider),
-        );
-        await session.registerAccount(
-          accountId: accountId,
-          email: email,
-          displayName: displayName,
-          tier: 'cloudBorn',
-          firebaseUid: user.uid,
-          dbFileName: dbFileName,
-        );
-      }
+      await authRepo.sendEmailVerification();
+      await authRepo.signOut();
       if (mounted) {
-        unawaited(context.router.push(const OnboardingRoute()));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Verification email sent. Verify your email, then sign in.',
+            ),
+          ),
+        );
+        unawaited(context.router.replace(const SignInRoute()));
       }
     } on FirebaseAuthException catch (e) {
       if (e.code == 'network-request-failed' && mounted) {

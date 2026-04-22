@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/auth/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
@@ -24,3 +25,8 @@ MagicLinkService magicLinkService(Ref ref) {
   ref.onDispose(service.dispose);
   return service;
 }
+
+/// Boots the app-link listener once for the app lifetime.
+final magicLinkInitializationProvider = FutureProvider<void>((ref) async {
+  await ref.watch(magicLinkServiceProvider).initialize();
+});

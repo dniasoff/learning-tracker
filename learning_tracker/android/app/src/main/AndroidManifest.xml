@@ -40,7 +40,7 @@
                 <data
                     android:scheme="https"
                     android:host="torah-study-tracker.firebaseapp.com"
-                    android:pathPrefix="/sign-in"/>
+                    android:pathPrefix="/"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

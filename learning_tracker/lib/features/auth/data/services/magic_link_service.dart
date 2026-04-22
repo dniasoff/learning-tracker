@@ -95,11 +95,20 @@ class MagicLinkService {
 
   Future<void> _handleIncomingLink(Uri uri) async {
     final link = uri.toString();
+    final mode = uri.queryParameters['mode'];
+    if (mode == 'verifyEmail') {
+      await _handleVerifyEmailLink(uri);
+      return;
+    }
     if (!_authRepository.isSignInWithEmailLink(link)) {
-      // Not a magic-link — could be any other deep link. Ignore.
+      // Not an auth link we care about. Ignore.
       return;
     }
 
+    await _handleSignInLink(link);
+  }
+
+  Future<void> _handleSignInLink(String link) async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString(kMagicLinkPendingEmail);
     if (email == null || email.isEmpty) {
@@ -133,6 +142,23 @@ class MagicLinkService {
       // Clear pending state regardless — a stale email is worse than none.
       await prefs.remove(kMagicLinkPendingEmail);
       await prefs.remove(kMagicLinkPendingDisplayName);
+    }
+  }
+
+  Future<void> _handleVerifyEmailLink(Uri uri) async {
+    final oobCode = uri.queryParameters['oobCode'];
+    if (oobCode == null || oobCode.isEmpty) {
+      AppLogger.instance.handle(
+        StateError('Received verify-email link without oobCode'),
+        StackTrace.current,
+      );
+      return;
+    }
+    try {
+      await FirebaseAuth.instance.applyActionCode(oobCode);
+      await FirebaseAuth.instance.currentUser?.reload();
+    } on FirebaseAuthException catch (e, stack) {
+      AppLogger.instance.handle(e, stack);
     }
   }
 }
