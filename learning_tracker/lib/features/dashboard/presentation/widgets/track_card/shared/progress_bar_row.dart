@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 
 /// Reusable progress bar row with LinearProgressIndicator + percentage text.
 class ProgressBarRow extends StatelessWidget {
@@ -29,7 +30,7 @@ class ProgressBarRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          '${percentage.round()}%',
+          formatPercentValue(percentage),
           style: theme.textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.w600,
           ),

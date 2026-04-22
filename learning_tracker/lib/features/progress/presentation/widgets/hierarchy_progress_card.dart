@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/stage_breakdown_row.dart';
 
@@ -140,9 +141,9 @@ class _ProgressSummaryLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct = (level.completionPercentage * 100).toStringAsFixed(0);
+    final pct = formatFractionAsPercent(level.completionPercentage);
     return Text(
-      '${level.completedItems}/${level.totalItems} ($pct%)',
+      '${level.completedItems}/${level.totalItems} ($pct)',
       style: Theme.of(context).textTheme.bodySmall,
     );
   }
@@ -169,7 +170,7 @@ class _ProgressCircle extends StatelessWidget {
             strokeWidth: 3,
           ),
           Text(
-            '${(percentage * 100).toStringAsFixed(0)}%',
+            formatFractionAsPercent(percentage),
             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
           ),
         ],

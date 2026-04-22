@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -277,7 +278,7 @@ class _CompletionRingWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final percentageInt = percentage.toInt();
+    final percentageText = formatPercentValue(percentage);
 
     return Card(
       child: Padding(
@@ -303,7 +304,7 @@ class _CompletionRingWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '$percentageInt%',
+                      percentageText,
                       style: theme.textTheme.displaySmall?.copyWith(
                         color: AppTheme.childPrimary,
                         fontWeight: FontWeight.bold,

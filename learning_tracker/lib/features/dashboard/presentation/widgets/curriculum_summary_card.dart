@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
@@ -21,7 +22,7 @@ class CurriculumSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final percentage = (summary.completionPercentage * 100).round();
+    final percentage = formatFractionAsPercent(summary.completionPercentage);
     final curriculumColor = AppTheme.getCurriculumColor(summary.curriculumId);
 
     return Card(
@@ -68,7 +69,7 @@ class CurriculumSummaryCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '$percentage% complete',
+                    '$percentage complete',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

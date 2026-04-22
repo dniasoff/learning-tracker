@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_date_header.dart';
@@ -133,13 +134,6 @@ class _DashboardBody extends ConsumerWidget {
     return l10n.goodEvening;
   }
 
-  String _formatPercent(double fraction) {
-    final percent = fraction * 100;
-    if (percent > 0 && percent < 0.1) return '<0.1%';
-    if (percent < 1) return '${percent.toStringAsFixed(1)}%';
-    return '${percent.round()}%';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -162,7 +156,7 @@ class _DashboardBody extends ConsumerWidget {
       }
     }
     final avgCompletion = loadedCount > 0 ? (totalCompletion / loadedCount) : 0.0;
-    final avgCompletionDisplay = _formatPercent(avgCompletion);
+    final avgCompletionDisplay = formatFractionAsPercent(avgCompletion);
 
     final totalPoints = globalPointsAsync.asData?.value ?? 0;
     final tasksToday = dailyTasksAsync.asData?.value.length ?? 0;
@@ -645,7 +639,7 @@ class _DailyProgressBar extends StatelessWidget {
               ),
             ),
             Text(
-              '${(progress * 100).round()}%',
+              formatFractionAsPercent(progress),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.primary,
                 fontWeight: FontWeight.w600,
@@ -677,13 +671,6 @@ class _CurriculumCard extends ConsumerWidget {
 
   const _CurriculumCard({required this.curriculum, required this.allTasks});
 
-  String _formatPercent(double fraction) {
-    final percent = fraction * 100;
-    if (percent > 0 && percent < 0.1) return '<0.1%';
-    if (percent < 1) return '${percent.toStringAsFixed(1)}%';
-    return '${percent.round()}%';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -698,7 +685,7 @@ class _CurriculumCard extends ConsumerWidget {
     );
     final paceAsync = ref.watch(dashboardPaceStatusProvider(curriculum));
     final percentage = completionAsync.asData?.value ?? 0.0;
-    final pctDisplay = _formatPercent(percentage);
+    final pctDisplay = formatFractionAsPercent(percentage);
 
     // AC-6: Compute per-curriculum task count and today's study item
     final curriculumTasks = allTasks

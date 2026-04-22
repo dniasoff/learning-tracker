@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -303,7 +304,7 @@ class _CurriculumTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      l10n.percentComplete((percentage * 100).round()),
+                      formatFractionAsPercent(percentage),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

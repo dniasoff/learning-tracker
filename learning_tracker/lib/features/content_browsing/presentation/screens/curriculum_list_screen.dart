@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -102,7 +103,7 @@ class _CurriculumCard extends ConsumerWidget {
     );
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final percentage = completionAsync.asData?.value ?? 0.0;
-    final pctDisplay = (percentage * 100).round();
+    final pctDisplay = formatFractionAsPercent(percentage);
 
     return contentAsync.when(
       data: (items) {
@@ -137,7 +138,7 @@ class _CurriculumCard extends ConsumerWidget {
   Widget _buildCard({
     required BuildContext context,
     required Color curriculumColor,
-    required int pctDisplay,
+    required String pctDisplay,
     required double percentage,
     int leafCount = 0,
     int containerCount = 0,
@@ -195,7 +196,7 @@ class _CurriculumCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                if (pctDisplay > 0)
+                if (percentage > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -215,7 +216,7 @@ class _CurriculumCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '$pctDisplay% Done',
+                          '$pctDisplay Done',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
