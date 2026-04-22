@@ -25,21 +25,45 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     // Cloud-born fast path — Firebase has a cached session for us.
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
-      final dao = ref.read(userDatabaseProvider).userProfileDao;
-      final profile = await dao.findCloudBornByFirebaseUid(firebaseUser.uid);
-      if (profile != null) {
-        state = AuthState.signedIn(
-          user: AuthUser.fromProfile(profile),
-          tier: Tier.cloudBorn,
-        );
-        return;
+      await firebaseUser.reload();
+      final refreshed = FirebaseAuth.instance.currentUser;
+      final isPasswordAccount =
+          refreshed?.providerData.any(
+            (provider) => provider.providerId == 'password',
+          ) ??
+          false;
+      if (refreshed == null ||
+          (isPasswordAccount && !refreshed.emailVerified)) {
+        await FirebaseAuth.instance.signOut();
+      } else {
+        final dao = ref.read(userDatabaseProvider).userProfileDao;
+        final profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
+        if (profile != null) {
+          state = AuthState.signedIn(
+            user: AuthUser.fromProfile(profile),
+            tier: Tier.cloudBorn,
+          );
+          return;
+        }
       }
+    }
+
+    // Cloud-born offline restore: if local profile data exists for a
+    // cloud account but Firebase has no cached user yet, keep the user
+    // signed in locally so writes still work offline and queue for sync.
+    final dao = ref.read(userDatabaseProvider).userProfileDao;
+    final clouds = await dao.findByTier(UserTier.cloudBorn);
+    if (clouds.isNotEmpty) {
+      state = AuthState.signedIn(
+        user: AuthUser.fromProfile(clouds.first),
+        tier: Tier.cloudBorn,
+      );
+      return;
     }
 
     // Local-born session restore (20.7 will populate SharedPreferences
     // with the signed-in profile id). For now, fall back to the first
     // local-born row we find — a transitional heuristic.
-    final dao = ref.read(userDatabaseProvider).userProfileDao;
     final locals = await dao.findByTier(UserTier.localBorn);
     if (locals.isNotEmpty) {
       state = AuthState.signedIn(

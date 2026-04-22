@@ -79,6 +79,20 @@ class OfflineQueue {
     _logger.info('Queued profile for offline sync');
   }
 
+  /// Enqueue a learner profile operation.
+  Future<void> enqueueLearnerProfile(Map<String, dynamic> profile) async {
+    final payload = jsonEncode(profile);
+    await _queue.enqueue('learner_profile', payload);
+    _logger.info('Queued learner profile for offline sync');
+  }
+
+  /// Enqueue a learner profile delete operation.
+  Future<void> enqueueLearnerProfileDelete(int profileId) async {
+    final payload = jsonEncode({'profile_id': profileId});
+    await _queue.enqueue('learner_profile_delete', payload);
+    _logger.info('Queued learner profile delete for offline sync: $profileId');
+  }
+
   /// Enqueue a goal operation.
   Future<void> enqueueGoal(Map<String, dynamic> goal) async {
     final payload = jsonEncode(goal);
@@ -207,6 +221,24 @@ class OfflineQueue {
               break;
             case 'profile':
               await _firestoreDataSource.pushProfile(payload);
+              break;
+            case 'learner_profile':
+              await _firestoreDataSource.pushLearnerProfile(payload);
+              break;
+            case 'learner_profile_delete':
+              final rawProfileId = payload['profile_id'];
+              final profileId = rawProfileId is int
+                  ? rawProfileId
+                  : rawProfileId is num
+                  ? rawProfileId.toInt()
+                  : int.tryParse(rawProfileId?.toString() ?? '');
+              if (profileId == null) {
+                _logger.warning(
+                  'Invalid learner_profile_delete payload: $payload',
+                );
+                continue;
+              }
+              await _firestoreDataSource.deleteLearnerProfile(profileId);
               break;
             case 'goal':
               await _firestoreDataSource.pushGoal(payload);

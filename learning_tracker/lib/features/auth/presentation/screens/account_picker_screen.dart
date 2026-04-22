@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -221,38 +222,67 @@ class _AccountTile extends ConsumerWidget {
       activeDbFileName = account.dbFileName;
       ref.invalidate(userDatabaseProvider);
 
-      final profile = await ref
-          .read(userDatabaseProvider)
-          .userProfileDao
-          .findCloudBornByFirebaseUid(account.firebaseUid!);
-      if (profile != null && context.mounted) {
-        final prefs = await SharedPreferences.getInstance();
-        final session = SessionPersistenceService(
-          prefs: prefs,
-          registry: ref.read(deviceRegistryProvider),
-        );
-        await session.setActiveAccount(account.accountId);
-        // Re-assert onboarding-complete so AuthGuard lets AppShellRoute
-        // through; sign-out clears this flag and the picker is the
-        // entry point that restores it.
-        await prefs.setBool(kOnboardingComplete, true);
-        ref
-            .read(authStateProvider.notifier)
-            .setCloudBornSession(profile: profile);
-        if (context.mounted) {
-          unawaited(context.router.replaceAll([const AppShellRoute()]));
-        }
-      }
+      await _activateCloudAccountFromLocalData(context, ref);
     } else if (isCloud && !hasValidSession) {
-      // Expired session — route to sign-in with email pre-filled
-      if (context.mounted) {
-        unawaited(context.router.push(const SignInRoute()));
+      final isOnline = await InternetConnectionChecker.instance.hasConnection;
+      if (isOnline) {
+        // Online with invalid/expired session — route to sign-in.
+        if (context.mounted) {
+          unawaited(context.router.push(const SignInRoute()));
+        }
+      } else {
+        // Offline-first cloud behavior: allow local access and queue sync ops.
+        await _activateCloudAccountFromLocalData(context, ref);
       }
     } else {
       // Local-born — show password prompt
       if (context.mounted) {
         _showPasswordPrompt(context, ref);
       }
+    }
+  }
+
+  Future<void> _activateCloudAccountFromLocalData(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    // Always swap DB first, so profile reads are scoped to this account.
+    activeDbFileName = account.dbFileName;
+    ref.invalidate(userDatabaseProvider);
+
+    final dao = ref.read(userDatabaseProvider).userProfileDao;
+    var profile = account.firebaseUid == null
+        ? null
+        : await dao.findCloudBornByFirebaseUid(account.firebaseUid!);
+
+    if (profile == null) {
+      final profiles = await dao.getAllUserProfiles();
+      for (final candidate in profiles) {
+        if (candidate.tier == 'cloudBorn' &&
+            candidate.email.toLowerCase() == account.email.toLowerCase()) {
+          profile = candidate;
+          break;
+        }
+      }
+    }
+
+    if (profile == null || !context.mounted) {
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final session = SessionPersistenceService(
+      prefs: prefs,
+      registry: ref.read(deviceRegistryProvider),
+    );
+    await session.setActiveAccount(account.accountId);
+    // Re-assert onboarding-complete so AuthGuard lets AppShellRoute through.
+    await prefs.setBool(kOnboardingComplete, true);
+
+    ref.read(authStateProvider.notifier).setCloudBornSession(profile: profile);
+
+    if (context.mounted) {
+      unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
   }
 

@@ -161,17 +161,80 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       final service = LocalAuthService(dao: dao);
       final profile = await service.signIn(email: email, password: password);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(kOnboardingComplete, true);
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
+      final profiles = await ref
+          .read(userDatabaseProvider)
+          .profileDao
+          .getProfilesByAccount(1);
+      final firstSignInNeedsSetup = profiles.isEmpty;
+      if (firstSignInNeedsSetup) {
+        await prefs.remove(kOnboardingComplete);
+      } else {
+        await prefs.setBool(kOnboardingComplete, true);
+      }
+      ref.read(selectedProfileIdProvider.notifier).clear();
+      if (mounted) {
+        if (firstSignInNeedsSetup) {
+          unawaited(context.router.replaceAll([const OnboardingRoute()]));
+        } else {
+          unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
+        }
+      }
+      return true;
+    } on InvalidCredentialsException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Offline-first cloud session restore from device-registry account data.
+  ///
+  /// This allows cloud-born users to keep using their local data even when
+  /// Firebase cannot be reached. Cloud sync resumes once auth is available.
+  Future<bool> _tryOfflineCloudRestore(DeviceAccount account) async {
+    try {
+      // Switch to the account-scoped DB before resolving profile rows.
+      activeDbFileName = account.dbFileName;
+      ref.invalidate(userDatabaseProvider);
+
+      final dao = ref.read(userDatabaseProvider).userProfileDao;
+      var profile = account.firebaseUid == null
+          ? null
+          : await dao.findCloudBornByFirebaseUid(account.firebaseUid!);
+
+      if (profile == null) {
+        final allProfiles = await dao.getAllUserProfiles();
+        for (final candidate in allProfiles) {
+          if (candidate.tier == 'cloudBorn' &&
+              candidate.email.toLowerCase() == account.email.toLowerCase()) {
+            profile = candidate;
+            break;
+          }
+        }
+      }
+
+      if (profile == null) {
+        return false;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final session = SessionPersistenceService(
+        prefs: prefs,
+        registry: ref.read(deviceRegistryProvider),
+      );
+      await session.setActiveAccount(account.accountId);
+      await prefs.setBool(kOnboardingComplete, true);
+      ref
+          .read(auth_state.authStateProvider.notifier)
+          .setCloudBornSession(profile: profile);
       ref.read(selectedProfileIdProvider.notifier).clear();
       if (mounted) {
         unawaited(context.router.replaceAll([const AppShellRoute()]));
       }
       return true;
-    } on InvalidCredentialsException {
-      return false;
     } catch (_) {
       return false;
     }
@@ -210,14 +273,27 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
           registry: registry,
         );
         await session.setActiveAccount(account.accountId);
-        await prefs.setBool(kOnboardingComplete, true);
 
         ref
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
         ref.read(selectedProfileIdProvider.notifier).clear();
+        final profiles = await ref
+            .read(userDatabaseProvider)
+            .profileDao
+            .getProfilesByAccount(1);
+        final firstSignInNeedsSetup = profiles.isEmpty;
+        if (firstSignInNeedsSetup) {
+          await prefs.remove(kOnboardingComplete);
+        } else {
+          await prefs.setBool(kOnboardingComplete, true);
+        }
         if (mounted) {
-          unawaited(context.router.replaceAll([const AppShellRoute()]));
+          if (firstSignInNeedsSetup) {
+            unawaited(context.router.replaceAll([const OnboardingRoute()]));
+          } else {
+            unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
+          }
         }
       } else if (account != null && account.tier == 'cloudBorn') {
         // Cloud-born account on this device → try Firebase or cached session
@@ -225,34 +301,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         if (isOnline) {
           final authRepo = ref.read(authRepositoryProvider);
           await authRepo.signInWithEmail(email, password);
-          if (mounted) await _navigateAfterSignIn();
+          final verified = await _ensureCloudEmailVerified();
+          if (verified && mounted) await _navigateAfterSignIn();
         } else {
-          // Offline — try cached Firebase session. Swap to this
-          // account's DB before reading its profile so we never pull
-          // a row from the previously active account's DB.
-          final fbUser = FirebaseAuth.instance.currentUser;
-          if (fbUser != null && fbUser.uid == account.firebaseUid) {
-            activeDbFileName = account.dbFileName;
-            ref.invalidate(userDatabaseProvider);
-
-            final profile = await ref
-                .read(userDatabaseProvider)
-                .userProfileDao
-                .findCloudBornByFirebaseUid(fbUser.uid);
-            if (profile != null) {
-              ref
-                  .read(auth_state.authStateProvider.notifier)
-                  .setCloudBornSession(profile: profile);
-              if (mounted) await _navigateAfterSignIn();
-            } else {
-              _showError(
-                "This account's local data is missing. "
-                'Connect to the internet to restore it.',
-              );
-            }
-          } else {
+          final restored = await _tryOfflineCloudRestore(account);
+          if (!restored) {
             _showError(
-              'This is a cloud account. Connect to the internet to sign in.',
+              "This account's local data is missing. "
+              'Connect to the internet to restore it.',
             );
           }
         }
@@ -269,7 +325,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
         if (isOnline) {
           final authRepo = ref.read(authRepositoryProvider);
           await authRepo.signInWithEmail(email, password);
-          if (mounted) await _navigateAfterSignIn();
+          final verified = await _ensureCloudEmailVerified();
+          if (verified && mounted) await _navigateAfterSignIn();
         } else {
           _showError(
             "This email isn't on this device and we can't reach the cloud. "
@@ -286,6 +343,91 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<bool> _ensureCloudEmailVerified() async {
+    final auth = ref.read(firebaseAuthProvider);
+    final signedInUser = auth.currentUser;
+    if (signedInUser == null) return false;
+
+    final isPasswordAccount = signedInUser.providerData.any(
+      (provider) => provider.providerId == 'password',
+    );
+    if (!isPasswordAccount) {
+      return true;
+    }
+
+    await signedInUser.reload();
+    final reloadedUser = auth.currentUser;
+    if (reloadedUser == null) return false;
+    if (reloadedUser.emailVerified) return true;
+
+    final verifiedAfterPrompt = await _showEmailVerificationPrompt(
+      reloadedUser.email ?? _emailController.text.trim(),
+    );
+    if (verifiedAfterPrompt) {
+      return true;
+    }
+
+    await ref.read(authRepositoryProvider).signOut();
+    return false;
+  }
+
+  Future<bool> _showEmailVerificationPrompt(String email) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Verify your email'),
+          content: Text(
+            'This cloud account is not verified yet.\n\n'
+            'We sent a verification link to $email. '
+            'Open it, then tap "I verified".',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Not now'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await ref.read(authRepositoryProvider).sendEmailVerification();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Verification email sent again.'),
+                    ),
+                  );
+                } on FirebaseAuthException catch (e) {
+                  if (!mounted) return;
+                  _showError(_mapAuthError(e.code));
+                }
+              },
+              child: const Text('Resend'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final auth = ref.read(firebaseAuthProvider);
+                await auth.currentUser?.reload();
+                final refreshed = auth.currentUser;
+                if (refreshed != null && refreshed.emailVerified) {
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop(true);
+                  }
+                  return;
+                }
+                if (!mounted) return;
+                _showError('Email is still unverified. Check your inbox first.');
+              },
+              child: const Text('I verified'),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
   }
 
   Future<void> _sendPasswordReset() async {
@@ -456,9 +598,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       // If local is still empty, double-check cloud account-level profiles.
       // This avoids incorrectly routing returning cloud users into onboarding
       // when profile restore lagged behind the first pull attempt.
-      final remoteProfiles = await ref
-              .read(firestoreDataSourceProvider)
-              ?.fetchLearnerProfiles() ??
+      final remoteProfiles =
+          await ref.read(firestoreDataSourceProvider)?.fetchLearnerProfiles() ??
           const <Map<String, dynamic>>[];
 
       if (remoteProfiles.isNotEmpty && syncEngine != null) {

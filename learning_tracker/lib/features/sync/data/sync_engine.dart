@@ -369,17 +369,25 @@ class SyncEngine {
     return false;
   }
 
+  bool get _isQueueOnlyMode =>
+      !_isOnline || _pushSuppressed || !_firestoreDataSource.isAuthenticated;
+
+  Future<void> _updateQueueOnlyStatus() async {
+    final pending = await _offlineQueue.getPendingCount();
+    if (!_isOnline) {
+      _updateStatus(SyncStatus.offline(pendingChanges: pending));
+      return;
+    }
+    if (pending > 0) {
+      _updateStatus(SyncStatus.pending(pendingChanges: pending));
+    }
+  }
+
   /// Push a completion to Firestore after local write.
   Future<void> pushCompletion(Map<String, dynamic> completion) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueCompletion(completion);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -398,15 +406,9 @@ class SyncEngine {
 
   /// Push a ledger entry to Firestore after local write.
   Future<void> pushLedgerEntry(Map<String, dynamic> entry) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueLedgerEntry(entry);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -431,15 +433,9 @@ class SyncEngine {
 
   /// Push a bookmark to Firestore after local write.
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueBookmark(bookmark);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -458,15 +454,9 @@ class SyncEngine {
 
   /// Push settings to Firestore after local write.
   Future<void> pushSettings(Map<String, dynamic> settings) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueSettings(settings);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -487,15 +477,9 @@ class SyncEngine {
   Future<void> pushNotificationSettings(
     Map<String, dynamic> notificationSettings,
   ) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueNotificationSettings(notificationSettings);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -531,15 +515,9 @@ class SyncEngine {
 
   /// Push streak data to Firestore after local write.
   Future<void> pushStreak(Map<String, dynamic> streak) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueStreak(streak);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -558,15 +536,9 @@ class SyncEngine {
 
   /// Push profile to Firestore after local write.
   Future<void> pushProfile(Map<String, dynamic> profile) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueProfile(profile);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -584,30 +556,34 @@ class SyncEngine {
   }
 
   /// Push a learner profile (profiles table) to Firestore.
-  /// Best-effort: offline or failed pushes log; the local row is authoritative
-  /// and the next successful pullOnLaunch reconciles against Firestore.
+  /// Local row remains authoritative; cloud push is background/queued.
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
-    if (!_isOnline || _pushSuppressed) {
-      _logger.debug('Skipping learner profile push (offline or suppressed)');
+    final payload = await _enrichLearnerProfilePayload(profile);
+
+    if (_isQueueOnlyMode) {
+      await _offlineQueue.enqueueLearnerProfile(payload);
+      await _updateQueueOnlyStatus();
       return;
     }
 
     try {
-      final payload = await _enrichLearnerProfilePayload(profile);
       await _firestoreDataSource.pushLearnerProfile(payload);
       _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed learner profile to Firestore');
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _trackPushError(e);
-      _logger.warning('Failed to push learner profile', e);
+      _logger.warning('Failed to push learner profile, queuing for later', e);
+      await _offlineQueue.enqueueLearnerProfile(payload);
+      await _emitPendingStatus();
     }
   }
 
   /// Delete a learner profile from Firestore.
   Future<void> deleteLearnerProfile(int profileId) async {
-    if (!_isOnline || _pushSuppressed) {
-      _logger.debug('Skipping learner profile delete (offline or suppressed)');
+    if (_isQueueOnlyMode) {
+      await _offlineQueue.enqueueLearnerProfileDelete(profileId);
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -617,21 +593,17 @@ class SyncEngine {
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _trackPushError(e);
-      _logger.warning('Failed to delete learner profile', e);
+      _logger.warning('Failed to delete learner profile, queuing for later', e);
+      await _offlineQueue.enqueueLearnerProfileDelete(profileId);
+      await _emitPendingStatus();
     }
   }
 
   /// Push a goal to Firestore after local write.
   Future<void> pushGoal(Map<String, dynamic> goal) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueGoal(goal);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -650,15 +622,9 @@ class SyncEngine {
 
   /// Push a profile-program assignment to Firestore after local write.
   Future<void> pushProfileProgram(Map<String, dynamic> profileProgram) async {
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueProfileProgram(profileProgram);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -756,24 +722,27 @@ class SyncEngine {
               : rawTrackId is num
               ? rawTrackId.toInt()
               : int.tryParse(rawTrackId?.toString() ?? '');
-          final resolvedTrackId = remoteTrackId ?? await (() async {
-            final key = '$profileId|$curriculumId|$trackType';
-            final cached = trackIdCache[key];
-            if (cached != null) return cached;
+          final resolvedTrackId =
+              remoteTrackId ??
+              await (() async {
+                final key = '$profileId|$curriculumId|$trackType';
+                final cached = trackIdCache[key];
+                if (cached != null) return cached;
 
-            final track = await (_database.select(_database.curriculumTracks)
-                  ..where(
-                    (t) =>
-                        t.profileId.equals(profileId) &
-                        t.curriculumId.equals(curriculumId) &
-                        t.trackType.equals(trackType),
-                  )
-                  ..limit(1))
-                .getSingleOrNull();
-            final value = track?.id ?? 0;
-            trackIdCache[key] = value;
-            return value;
-          })();
+                final track =
+                    await (_database.select(_database.curriculumTracks)
+                          ..where(
+                            (t) =>
+                                t.profileId.equals(profileId) &
+                                t.curriculumId.equals(curriculumId) &
+                                t.trackType.equals(trackType),
+                          )
+                          ..limit(1))
+                        .getSingleOrNull();
+                final value = track?.id ?? 0;
+                trackIdCache[key] = value;
+                return value;
+              })();
 
           await _database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
@@ -1021,7 +990,9 @@ class SyncEngine {
     try {
       final prefs = await SharedPreferences.getInstance();
       final remoteUpdatedAt = _parseTimestamp(remoteSettings['updated_at']);
-      final localUpdatedAtMs = prefs.getInt(_notificationSettingsUpdatedAtMsKey);
+      final localUpdatedAtMs = prefs.getInt(
+        _notificationSettingsUpdatedAtMsKey,
+      );
       final localUpdatedAt = localUpdatedAtMs == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(localUpdatedAtMs, isUtc: true);
@@ -1052,10 +1023,7 @@ class SyncEngine {
         _reminderEnabledKey,
         dailyReminder['enabled'] as bool? ?? true,
       );
-      await prefs.setInt(
-        _reminderHourKey,
-        dailyReminder['hour'] as int? ?? 19,
-      );
+      await prefs.setInt(_reminderHourKey, dailyReminder['hour'] as int? ?? 19);
       await prefs.setInt(
         _reminderMinuteKey,
         dailyReminder['minute'] as int? ?? 0,
@@ -1112,7 +1080,8 @@ class SyncEngine {
         shabbosQuietMode['fixed_end_minute'] as int? ?? 0,
       );
 
-      final stamp = remoteUpdatedAt?.millisecondsSinceEpoch ??
+      final stamp =
+          remoteUpdatedAt?.millisecondsSinceEpoch ??
           DateTime.now().toUtc().millisecondsSinceEpoch;
       await prefs.setInt(_notificationSettingsUpdatedAtMsKey, stamp);
     } catch (e) {
@@ -1181,7 +1150,9 @@ class SyncEngine {
         final profileId = rawProfileId is int
             ? rawProfileId
             : int.tryParse(rawProfileId?.toString() ?? '') ?? defaultProfileId;
-        final trackingStartDate = _parseTimestamp(remote['tracking_start_date']);
+        final trackingStartDate = _parseTimestamp(
+          remote['tracking_start_date'],
+        );
         final trackingStartRef = remote['tracking_start_ref'] as String?;
 
         if (curriculumId == null || programId == null) {
@@ -1415,8 +1386,7 @@ class SyncEngine {
 
         final rawDisplayName = remote['display_name']?.toString().trim();
         final legacyName = remote['name']?.toString().trim();
-        final displayName =
-            rawDisplayName != null && rawDisplayName.isNotEmpty
+        final displayName = rawDisplayName != null && rawDisplayName.isNotEmpty
             ? rawDisplayName
             : (legacyName != null && legacyName.isNotEmpty
                   ? legacyName
@@ -1437,7 +1407,9 @@ class SyncEngine {
             nowUtc;
         final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
         final updatedAt =
-            remoteUpdatedAt ?? _parseTimestamp(remote['created_at']) ?? createdAt;
+            remoteUpdatedAt ??
+            _parseTimestamp(remote['created_at']) ??
+            createdAt;
 
         final existing = await _database.profileDao.getProfileById(id);
         if (existing == null) {
@@ -1487,9 +1459,7 @@ class SyncEngine {
       final remoteById = <int, Map<String, dynamic>>{};
       for (final remote in remoteProfiles) {
         final rawId = remote['id'];
-        final id = rawId is int
-            ? rawId
-            : int.tryParse(rawId?.toString() ?? '');
+        final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
         if (id != null) {
           remoteById[id] = remote;
         }
@@ -1502,7 +1472,8 @@ class SyncEngine {
       for (final profile in localProfiles) {
         final remote = remoteById[profile.id];
         final needsCreate = remote == null;
-        final missingStreakSummary = remote != null && remote['streak_summary'] == null;
+        final missingStreakSummary =
+            remote != null && remote['streak_summary'] == null;
         if (!needsCreate && !missingStreakSummary) continue;
 
         await pushLearnerProfile({
@@ -1584,11 +1555,11 @@ class SyncEngine {
     final profileId = _firestoreDataSource.profileId;
 
     try {
-      final legacyRows = await (_database.select(_database.completions)
-            ..where(
-              (t) => t.profileId.equals(profileId) & t.trackId.equals(0),
-            ))
-          .get();
+      final legacyRows =
+          await (_database.select(_database.completions)..where(
+                (t) => t.profileId.equals(profileId) & t.trackId.equals(0),
+              ))
+              .get();
       if (legacyRows.isEmpty) return;
 
       final trackIdCache = <String, int>{};
@@ -1598,26 +1569,25 @@ class SyncEngine {
         final key = '${row.curriculumId}|${row.trackType}';
         var trackId = trackIdCache[key];
         if (trackId == null) {
-          final track = await (_database.select(_database.curriculumTracks)
-                ..where(
-                  (t) =>
-                      t.profileId.equals(profileId) &
-                      t.curriculumId.equals(row.curriculumId) &
-                      t.trackType.equals(row.trackType),
-                )
-                ..limit(1))
-              .getSingleOrNull();
+          final track =
+              await (_database.select(_database.curriculumTracks)
+                    ..where(
+                      (t) =>
+                          t.profileId.equals(profileId) &
+                          t.curriculumId.equals(row.curriculumId) &
+                          t.trackType.equals(row.trackType),
+                    )
+                    ..limit(1))
+                  .getSingleOrNull();
           trackId = track?.id ?? 0;
           trackIdCache[key] = trackId;
         }
 
         if (trackId == 0) continue;
 
-        await (_database.update(
-          _database.completions,
-        )..where((t) => t.id.equals(row.id))).write(
-          CompletionsCompanion(trackId: Value(trackId)),
-        );
+        await (_database.update(_database.completions)
+              ..where((t) => t.id.equals(row.id)))
+            .write(CompletionsCompanion(trackId: Value(trackId)));
         updated++;
       }
 
@@ -1644,15 +1614,15 @@ class SyncEngine {
     final activeCurricula = await _database.activeCurriculumDao
         .getActiveCurriculaByProfile(profileId);
 
-    final stageRows = await (_database.select(_database.stageDefinitions)
-          ..where((t) => t.profileId.equals(profileId)))
-        .get();
-    final pointRows = await (_database.select(_database.pointConfigs)
-          ..where((t) => t.profileId.equals(profileId)))
-        .get();
-    final studyDayRows = await (_database.select(_database.studyDayConfigs)
-          ..where((t) => t.profileId.equals(profileId)))
-        .get();
+    final stageRows = await (_database.select(
+      _database.stageDefinitions,
+    )..where((t) => t.profileId.equals(profileId))).get();
+    final pointRows = await (_database.select(
+      _database.pointConfigs,
+    )..where((t) => t.profileId.equals(profileId))).get();
+    final studyDayRows = await (_database.select(
+      _database.studyDayConfigs,
+    )..where((t) => t.profileId.equals(profileId))).get();
 
     final curriculumSettings = <String, Map<String, dynamic>>{};
     for (final row in stageRows) {
@@ -1683,9 +1653,7 @@ class SyncEngine {
           'study_day_config': <String, String>{},
         },
       );
-      (cfg['points_by_stage'] as Map<String, int>)[
-            row.stageOrder.toString()
-          ] =
+      (cfg['points_by_stage'] as Map<String, int>)[row.stageOrder.toString()] =
           row.points;
     }
     for (final row in studyDayRows) {
@@ -1697,22 +1665,23 @@ class SyncEngine {
           'study_day_config': <String, String>{},
         },
       );
-      (cfg['study_day_config'] as Map<String, String>)[
-            row.dayOfWeek.toString()
-          ] =
+      (cfg['study_day_config'] as Map<String, String>)[row.dayOfWeek
+              .toString()] =
           row.dayType;
     }
 
     final totalCompletionsExpr = _database.completions.id.count();
-    final completionStats = await (_database.selectOnly(_database.completions)
-          ..addColumns([totalCompletionsExpr])
-          ..where(_database.completions.profileId.equals(profileId)))
-        .getSingle();
-    final lastCompletion = await (_database.select(_database.completions)
-          ..where((t) => t.profileId.equals(profileId))
-          ..orderBy([(t) => OrderingTerm.desc(t.completedAt)])
-          ..limit(1))
-        .getSingleOrNull();
+    final completionStats =
+        await (_database.selectOnly(_database.completions)
+              ..addColumns([totalCompletionsExpr])
+              ..where(_database.completions.profileId.equals(profileId)))
+            .getSingle();
+    final lastCompletion =
+        await (_database.select(_database.completions)
+              ..where((t) => t.profileId.equals(profileId))
+              ..orderBy([(t) => OrderingTerm.desc(t.completedAt)])
+              ..limit(1))
+            .getSingleOrNull();
     final streak = await _database.streakDao.getStreakByProfile(profileId);
 
     final enriched = <String, dynamic>{
@@ -1733,10 +1702,11 @@ class SyncEngine {
     // Handbook alignment: gamification payload is child-mode only.
     if (isChildProfile) {
       final totalPointsExpr = _database.completions.points.sum();
-      final totalPointsRow = await (_database.selectOnly(_database.completions)
-            ..addColumns([totalPointsExpr])
-            ..where(_database.completions.profileId.equals(profileId)))
-          .getSingle();
+      final totalPointsRow =
+          await (_database.selectOnly(_database.completions)
+                ..addColumns([totalPointsExpr])
+                ..where(_database.completions.profileId.equals(profileId)))
+              .getSingle();
       final totalPoints = totalPointsRow.read(totalPointsExpr) ?? 0;
 
       enriched['gamification_summary'] = {
@@ -1956,6 +1926,15 @@ class SyncEngine {
     _quotaDegraded = false;
     _consecutivePushPermissionErrors = 0;
 
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.info(
+        'Reconnect flush deferred: user not authenticated '
+        '(keeping queued writes local)',
+      );
+      await _updateQueueOnlyStatus();
+      return;
+    }
+
     _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
 
     try {
@@ -2004,15 +1983,9 @@ class SyncEngine {
       'imported_at': importedAt.toIso8601String(),
     };
 
-    if (!_isOnline || _pushSuppressed) {
+    if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueCurriculumImportMetadata(metadata);
-      if (!_isOnline) {
-        _updateStatus(
-          SyncStatus.offline(
-            pendingChanges: await _offlineQueue.getPendingCount(),
-          ),
-        );
-      }
+      await _updateQueueOnlyStatus();
       return;
     }
 
@@ -2233,9 +2206,8 @@ class SyncEngine {
       _logger.debug('Pushed ${goals.length} goals');
 
       // --- Program assignments / start anchors ---
-      final profilePrograms = await _database.profileProgramDao.getProgramsForProfile(
-        _firestoreDataSource.profileId,
-      );
+      final profilePrograms = await _database.profileProgramDao
+          .getProgramsForProfile(_firestoreDataSource.profileId);
       for (final p in profilePrograms) {
         await pushProfileProgram({
           'profile_id': p.profileId,
@@ -2313,7 +2285,8 @@ class SyncEngine {
       _logger.debug('Pushed ${tracks.length} curriculum tracks');
 
       // --- Notification settings (profile-scoped preferences) ---
-      final notificationSettings = await _readLocalNotificationSettingsPayload();
+      final notificationSettings =
+          await _readLocalNotificationSettingsPayload();
       await pushNotificationSettings(notificationSettings);
       _logger.debug('Pushed notification settings');
 
