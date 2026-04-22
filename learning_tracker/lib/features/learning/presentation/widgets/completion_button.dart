@@ -74,11 +74,8 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       trackType: widget.trackType,
     );
 
-    final isChildProfile = widget.userMode == UserMode.child;
-    // Capture streak only for child profiles.
-    final streakBefore = isChildProfile
-        ? (ref.read(dashboardStreakProvider).value?.currentStreak ?? 0)
-        : null;
+    // Capture streak for both child and adult profiles.
+    final streakBefore = ref.read(dashboardStreakProvider).value?.currentStreak;
 
     // --- Optimistic UI update (synchronous, < 1ms) ---
     ref.read(optimisticCompletionStateProvider.notifier).add(optKey);
@@ -130,8 +127,8 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         );
         ref.invalidate(dashboardLastCompletionProvider(curriculumEnum.first));
       }
+      ref.invalidate(dashboardStreakProvider);
       if (widget.userMode == UserMode.child) {
-        ref.invalidate(dashboardStreakProvider);
         ref.invalidate(dashboardGlobalPointsProvider);
       }
       // Today's plan is snapshotted per local day — we don't invalidate

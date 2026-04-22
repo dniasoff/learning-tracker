@@ -163,15 +163,15 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    const activeColor = Colors.green;
 
     return Container(
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: isActive ? primaryColor : Colors.white.withValues(alpha: 0.08),
+        color: isActive ? activeColor : Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
-        border: isToday ? Border.all(color: primaryColor, width: 2) : null,
+        border: isToday ? Border.all(color: activeColor, width: 2) : null,
       ),
       child: Center(
         child: Text(

@@ -118,11 +118,6 @@ Future<DateTime?> dashboardLastCompletion(
 /// Streak data provider, scoped to the active profile.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
-  final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
-  if (userMode != UserMode.child) {
-    return Stream.value((currentStreak: 0, maxStreak: 0));
-  }
-
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   return db.streakDao.watchStreakByProfile(profileId).map((streak) {

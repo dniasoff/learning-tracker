@@ -82,9 +82,7 @@ class DashboardScreen extends ConsumerWidget {
             data: (activeCurricula) {
               final userMode = userModeAsync.asData?.value ?? UserMode.adult;
               final streakData = streakAsync.asData?.value;
-              final currentStreak = userMode == UserMode.child
-                  ? (streakData?.currentStreak ?? 0)
-                  : 0;
+              final currentStreak = streakData?.currentStreak ?? 0;
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -265,6 +263,14 @@ class _DashboardBody extends ConsumerWidget {
         else
           Row(
             children: [
+              Expanded(
+                child: _StatCircle(
+                  icon: Icons.local_fire_department,
+                  iconColor: Colors.orange,
+                  value: '$currentStreak',
+                  label: l10n.streak,
+                ),
+              ),
               Expanded(
                 child: _StatCircle(
                   icon: Icons.check_circle,

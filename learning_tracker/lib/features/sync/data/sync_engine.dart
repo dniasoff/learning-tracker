@@ -1309,17 +1309,26 @@ class SyncEngine {
 
     try {
       final remoteProfiles = await _firestoreDataSource.fetchLearnerProfiles();
-      final remoteIds = remoteProfiles
-          .map((p) => p['id'])
-          .whereType<int>()
-          .toSet();
+      final remoteById = <int, Map<String, dynamic>>{};
+      for (final remote in remoteProfiles) {
+        final rawId = remote['id'];
+        final id = rawId is int
+            ? rawId
+            : int.tryParse(rawId?.toString() ?? '');
+        if (id != null) {
+          remoteById[id] = remote;
+        }
+      }
 
       final localProfiles = await _database.select(_database.profiles).get();
       if (localProfiles.isEmpty) return;
 
       var pushed = 0;
       for (final profile in localProfiles) {
-        if (remoteIds.contains(profile.id)) continue;
+        final remote = remoteById[profile.id];
+        final needsCreate = remote == null;
+        final missingStreakSummary = remote != null && remote['streak_summary'] == null;
+        if (!needsCreate && !missingStreakSummary) continue;
 
         await pushLearnerProfile({
           'id': profile.id,
@@ -1529,6 +1538,7 @@ class SyncEngine {
           ..orderBy([(t) => OrderingTerm.desc(t.completedAt)])
           ..limit(1))
         .getSingleOrNull();
+    final streak = await _database.streakDao.getStreakByProfile(profileId);
 
     final enriched = <String, dynamic>{
       ...profile,
@@ -1537,12 +1547,16 @@ class SyncEngine {
         'total_completions': completionStats.read(totalCompletionsExpr) ?? 0,
         'last_completion_at': lastCompletion?.completedAt.toIso8601String(),
       },
+      'streak_summary': {
+        'current_streak': streak?.currentStreak ?? 0,
+        'max_streak': streak?.maxStreak ?? 0,
+        'last_completion_date': streak?.lastCompletionDate?.toIso8601String(),
+      },
       'settings_snapshot': curriculumSettings,
     };
 
     // Handbook alignment: gamification payload is child-mode only.
     if (isChildProfile) {
-      final streak = await _database.streakDao.getStreakByProfile(profileId);
       final totalPointsExpr = _database.completions.points.sum();
       final totalPointsRow = await (_database.selectOnly(_database.completions)
             ..addColumns([totalPointsExpr])

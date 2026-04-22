@@ -26,7 +26,6 @@ class ProgressChartsScreen extends ConsumerStatefulWidget {
 class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   ChartTimeRange _timeRange = ChartTimeRange.last7Days;
   CurriculumId? _curriculum;
-  final UserMode _userMode = UserMode.child;
 
   ({DateTime start, DateTime end}) get _dateRange {
     final now = DateTime.now();
@@ -46,6 +45,9 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
+    final resolvedUserMode = userMode ?? UserMode.adult;
+
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Progress Charts')),
       body: ListView(
@@ -65,10 +67,13 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
             child: SizedBox(height: 200, child: _buildCumulativeChart()),
           ),
           const SizedBox(height: 24),
-          if (_userMode == UserMode.child) ...[
+          if (resolvedUserMode == UserMode.child) ...[
             _ChartSection(
-              title: 'Points Earned',
-              child: SizedBox(height: 200, child: _buildPointsChart()),
+              title: 'Points Earned (Child)',
+              child: SizedBox(
+                height: 200,
+                child: _buildPointsChart(resolvedUserMode),
+              ),
             ),
             const SizedBox(height: 24),
           ],
@@ -187,7 +192,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
     );
   }
 
-  Widget _buildPointsChart() {
+  Widget _buildPointsChart(UserMode userMode) {
     final service = ref.watch(chartDataServiceProvider);
     final dates = _dateRange;
 
@@ -195,7 +200,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
       future: service.getDailyPoints(
         startDate: dates.start,
         endDate: dates.end,
-        userMode: _userMode,
+        userMode: userMode,
         curriculumId: _curriculum?.storageKey,
       ),
       builder: (context, snapshot) {

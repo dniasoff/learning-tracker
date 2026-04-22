@@ -61,12 +61,8 @@ class ProgressScreen extends ConsumerWidget {
 
               final userMode = userModeAsync.asData?.value ?? UserMode.adult;
               final streakData = streakAsync.asData?.value;
-              final currentStreak = userMode == UserMode.child
-                  ? (streakData?.currentStreak ?? 0)
-                  : 0;
-              final maxStreak = userMode == UserMode.child
-                  ? (streakData?.maxStreak ?? 0)
-                  : 0;
+              final currentStreak = streakData?.currentStreak ?? 0;
+              final maxStreak = streakData?.maxStreak ?? 0;
               final totalPoints = globalPointsAsync.asData?.value ?? 0;
               final journey = journeyAsync.asData?.value;
             final overviewStats = overviewStatsAsync.asData?.value;
@@ -78,11 +74,11 @@ class ProgressScreen extends ConsumerWidget {
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
+                  ref.invalidate(dashboardStreakProvider);
                   if (userMode == UserMode.child) {
-                    ref.invalidate(dashboardStreakProvider);
                     ref.invalidate(dashboardGlobalPointsProvider);
                   }
-                ref.invalidate(progressOverviewStatsProvider);
+                  ref.invalidate(progressOverviewStatsProvider);
                   ref.invalidate(journeyViewModelProvider(profileId));
                   for (final c in activeCurricula) {
                     ref.invalidate(dashboardCompletionPercentageProvider(c));
@@ -102,6 +98,8 @@ class ProgressScreen extends ConsumerWidget {
                         totalCompletions: totalCompletions,
                         totalUniqueUnits: totalUniqueUnits,
                         activeCurricula: activeCurricula,
+                        currentStreak: currentStreak,
+                        maxStreak: maxStreak,
                       ),
               );
             },
@@ -199,11 +197,15 @@ class _AdultProgressView extends StatelessWidget {
     required this.totalCompletions,
     required this.totalUniqueUnits,
     required this.activeCurricula,
+    required this.currentStreak,
+    required this.maxStreak,
   });
 
   final int totalCompletions;
   final int totalUniqueUnits;
   final List<CurriculumId> activeCurricula;
+  final int currentStreak;
+  final int maxStreak;
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +241,14 @@ class _AdultProgressView extends StatelessWidget {
                         iconColor: Colors.deepPurple,
                         value: '$totalUniqueUnits',
                         label: 'Units Done',
+                      ),
+                    ),
+                    Expanded(
+                      child: _StatItem(
+                        icon: Icons.local_fire_department,
+                        iconColor: Colors.orange,
+                        value: '$currentStreak / $maxStreak',
+                        label: 'Current / Best Streak',
                       ),
                     ),
                     Expanded(
