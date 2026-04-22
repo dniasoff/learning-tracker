@@ -4,8 +4,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -287,6 +290,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         );
         _phase = _Phase.done;
       });
+
+      // Refresh progress surfaces immediately after bulk mark.
+      ref.invalidate(dashboardCompletionPercentageProvider(widget.curriculumId));
+      ref.invalidate(dashboardLastCompletionProvider(widget.curriculumId));
+      ref.invalidate(progressOverviewStatsProvider);
+      ref.invalidate(allDailyTasksProvider);
     } catch (e) {
       setState(() {
         _error = e.toString();

@@ -12,8 +12,13 @@ import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -66,6 +71,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   late final PageController _pageController;
   bool _isAnimating = false;
   bool _pendingAdvance = false;
+  bool _isFinishing = false;
 
   /// Whether a program was selected (vs self-paced).
   bool get _isProgramTrack => _state.programId != null;
@@ -111,10 +117,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       steps.add(AddTrackStep.goal);
     }
 
-    // Bulk mark / starting position — only for program tracks
-    if (_isProgramTrack) {
-      steps.add(AddTrackStep.bulkMark);
-    }
+    // Final step:
+    // - Program tracks: starting position
+    // - Self-paced tracks: optional prior completion marking
+    steps.add(AddTrackStep.bulkMark);
 
     return steps;
   }
@@ -382,7 +388,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   void _onGoalComplete(GoalFormResult? result) {
     setState(() => _state = _state.copyWith(goalResult: result));
-    _finishFlow();
+    _goToNextStep();
   }
 
   Future<void> _onStartingPositionComplete(String? startingRef) async {
@@ -390,8 +396,12 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     await _finishFlow();
   }
 
-  Future<void> _finishFlow() async {
-    final result = AddTrackResult(
+  Future<void> _finishFlow({
+    _SelfPacedPriorCompletionSelection? priorCompletionSelection,
+  }) async {
+    if (_isFinishing) return;
+    _isFinishing = true;
+    var result = AddTrackResult(
       curriculumId: _state.curriculumId!,
       label: _getSmartDefault(),
       programId: _state.programId,
@@ -410,6 +420,24 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         result: result,
         profileId: widget.profileId,
       );
+
+      if (!_isProgramTrack && priorCompletionSelection != null) {
+        try {
+          final summary = await _applySelfPacedPriorCompletions(
+            priorCompletionSelection,
+          );
+          result = result.copyWith(
+            bulkMarkResult: {
+              'item_count': summary.itemCount,
+              'completion_count': summary.completionCount,
+            },
+          );
+        } catch (_) {
+          // Do not block finishing navigation if marking fails.
+          // The track itself is already created successfully.
+        }
+      }
+
       await _clearSavedState();
       widget.onComplete?.call(result);
     } catch (e) {
@@ -420,7 +448,57 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
           action: SnackBarAction(label: 'Retry', onPressed: _finishFlow),
         ),
       );
+    } finally {
+      _isFinishing = false;
     }
+  }
+
+  Future<({int itemCount, int completionCount})> _applySelfPacedPriorCompletions(
+    _SelfPacedPriorCompletionSelection selection,
+  ) async {
+    final service = ref.read(bulkPriorCompletionServiceProvider);
+    final curriculum = _state.curriculumId!;
+
+    final hierarchySelections = selection.markAll
+        ? const [HierarchySelection()]
+        : selection.selectedScopes.map((s) {
+            return switch (s.level) {
+              1 => HierarchySelection(level1: s.value),
+              2 => HierarchySelection(level2: s.value),
+              3 => HierarchySelection(level3: s.value),
+              4 => HierarchySelection(level4: s.value),
+              _ => const HierarchySelection(),
+            };
+          }).toList();
+
+    if (hierarchySelections.isEmpty) {
+      return (itemCount: 0, completionCount: 0);
+    }
+
+    final resolved = await service.resolveSelections(
+      curriculumId: curriculum,
+      selections: hierarchySelections,
+    );
+    if (resolved.isEmpty) {
+      return (itemCount: 0, completionCount: 0);
+    }
+
+    final completion = await service.execute(
+      curriculumId: curriculum,
+      resolvedItems: resolved,
+      stageIds: const [1],
+    );
+
+    // Refresh dashboard/progress/task views immediately.
+    ref.invalidate(dashboardCompletionPercentageProvider(curriculum));
+    ref.invalidate(dashboardLastCompletionProvider(curriculum));
+    ref.invalidate(progressOverviewStatsProvider);
+    ref.invalidate(allDailyTasksProvider);
+
+    return (
+      itemCount: completion.itemCount,
+      completionCount: completion.completionCount,
+    );
   }
 
   String _getSmartDefault() {
@@ -641,9 +719,19 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
   }
 
-  /// Screen 8: Starting Position (program tracks only).
+  /// Screen 8: Program start position OR self-paced prior progress.
   Widget _buildScreen8() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
+
+    if (!_isProgramTrack) {
+      return _SelfPacedPriorProgressStep(
+        curriculumId: _state.curriculumId!,
+        scopeSelections: _state.scopeSelections,
+        onSkip: () => unawaited(_finishFlow()),
+        onMarkCompleted: (selection) =>
+            unawaited(_finishFlow(priorCompletionSelection: selection)),
+      );
+    }
 
     return _StartingPositionStep(
       programName: _state.programName ?? '',
@@ -652,6 +740,171 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       onComplete: _onStartingPositionComplete,
     );
   }
+}
+
+class _SelfPacedPriorProgressStep extends StatelessWidget {
+  const _SelfPacedPriorProgressStep({
+    required this.curriculumId,
+    required this.scopeSelections,
+    required this.onSkip,
+    required this.onMarkCompleted,
+  });
+
+  final CurriculumId curriculumId;
+  final List<ScopeEntry>? scopeSelections;
+  final VoidCallback onSkip;
+  final ValueChanged<_SelfPacedPriorCompletionSelection> onMarkCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedCount = scopeSelections?.length ?? 0;
+    final scopeLabel = selectedCount == 0
+        ? 'All selected content'
+        : '$selectedCount selected section(s)';
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Mark Prior Learning', style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          Text(
+            'Do you want to mark parts you already learned as completed?',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$scopeLabel in ${curriculumId.displayNameHe}.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _SelfPacedSelectionList(
+              scopeSelections: scopeSelections,
+              onSkip: onSkip,
+              onMarkCompleted: onMarkCompleted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelfPacedSelectionList extends StatefulWidget {
+  const _SelfPacedSelectionList({
+    required this.scopeSelections,
+    required this.onSkip,
+    required this.onMarkCompleted,
+  });
+
+  final List<ScopeEntry>? scopeSelections;
+  final VoidCallback onSkip;
+  final ValueChanged<_SelfPacedPriorCompletionSelection> onMarkCompleted;
+
+  @override
+  State<_SelfPacedSelectionList> createState() => _SelfPacedSelectionListState();
+}
+
+class _SelfPacedSelectionListState extends State<_SelfPacedSelectionList> {
+  late final List<ScopeEntry> _entries;
+  final _selectedIndexes = <int>{};
+  bool _markAll = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _entries = widget.scopeSelections ?? const <ScopeEntry>[];
+    // Default is intentionally empty selection. User explicitly chooses what to mark.
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canMark = _entries.isEmpty ? _markAll : _selectedIndexes.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_entries.isEmpty)
+          CheckboxListTile(
+            value: _markAll,
+            onChanged: (v) => setState(() => _markAll = v ?? false),
+            title: const Text('All selected content'),
+            subtitle: const Text('Mark everything in this track as learned'),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              itemCount: _entries.length,
+              itemBuilder: (context, index) {
+                final entry = _entries[index];
+                final selected = _selectedIndexes.contains(index);
+                return CheckboxListTile(
+                  value: selected,
+                  onChanged: (v) {
+                    setState(() {
+                      if (v ?? false) {
+                        _selectedIndexes.add(index);
+                      } else {
+                        _selectedIndexes.remove(index);
+                      }
+                    });
+                  },
+                  title: Text(entry.value),
+                  subtitle: const Text('Selected section'),
+                );
+              },
+            ),
+          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: widget.onSkip,
+                child: const Text('Skip'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: canMark
+                    ? () {
+                        final selectedScopes = _entries.isEmpty
+                            ? const <ScopeEntry>[]
+                            : _selectedIndexes
+                                  .map((i) => _entries[i])
+                                  .toList();
+                        widget.onMarkCompleted(
+                          _SelfPacedPriorCompletionSelection(
+                            markAll: _entries.isEmpty ? _markAll : false,
+                            selectedScopes: selectedScopes,
+                          ),
+                        );
+                      }
+                    : null,
+                child: const Text('Mark completed'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SelfPacedPriorCompletionSelection {
+  const _SelfPacedPriorCompletionSelection({
+    required this.markAll,
+    required this.selectedScopes,
+  });
+
+  final bool markAll;
+  final List<ScopeEntry> selectedScopes;
 }
 
 // ── Adapter Widgets ──────────────────────────────────────────────────────────
