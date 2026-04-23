@@ -192,9 +192,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await _db.profileDao.deleteProfile(id);
     });
 
-    try {
-      await _syncEngine?.deleteLearnerProfile(id);
-    } catch (_) {}
+    await _syncEngine?.deleteLearnerProfile(id);
   }
 
   @override

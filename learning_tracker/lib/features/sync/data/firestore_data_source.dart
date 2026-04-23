@@ -280,7 +280,33 @@ class FirestoreDataSource {
   Future<void> deleteLearnerProfile(int profileId) async {
     final collection = _learnerProfilesCollection;
     if (collection == null) return;
-    await collection.doc(profileId.toString()).delete();
+    final profileDoc = collection.doc(profileId.toString());
+
+    const profileSubcollections = [
+      'completions',
+      'bookmarks',
+      'settings',
+      'goals',
+      'rewards',
+      'learning_ledger',
+      'active_curricula',
+      'curriculum_imports',
+      'curriculum_tracks',
+      'profile_programs',
+      'notification_settings',
+      'streak',
+    ];
+
+    // Firestore does not cascade subcollection deletes. Remove descendants
+    // first so profile deletion is complete and does not leave orphaned docs.
+    for (final sub in profileSubcollections) {
+      final subSnapshot = await profileDoc.collection(sub).get();
+      for (final doc in subSnapshot.docs) {
+        await doc.reference.delete();
+      }
+    }
+
+    await profileDoc.delete();
   }
 
   // ========== Completions Operations ==========
