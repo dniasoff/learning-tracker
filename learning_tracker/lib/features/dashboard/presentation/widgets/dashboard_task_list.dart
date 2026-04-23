@@ -58,6 +58,117 @@ class DashboardTaskList extends ConsumerWidget {
               return _buildEmptyState(theme);
             }
 
+            final grouped = _groupTasks(tasks);
+            final hasSplitSections = grouped.overdueProgram.isNotEmpty ||
+                grouped.todayProgram.isNotEmpty ||
+                grouped.overdueReview.isNotEmpty ||
+                grouped.todayReview.isNotEmpty;
+
+            if (hasSplitSections) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (grouped.overdueProgram.isNotEmpty) ...[
+                    _subHeader(
+                      theme,
+                      icon: Icons.warning_amber_rounded,
+                      title:
+                          'Missed previous days (${grouped.overdueProgram.length})',
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 6),
+                    ...grouped.overdueProgram.map(
+                      (task) => DashboardTaskItem(
+                        task: task,
+                        showTrackLabel: showTrackLabels,
+                        onComplete: onCompleteTask != null
+                            ? () => onCompleteTask!(task)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (grouped.todayProgram.isNotEmpty) ...[
+                    _subHeader(
+                      theme,
+                      icon: Icons.today,
+                      title:
+                          "Today's program task (${grouped.todayProgram.length})",
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 6),
+                    ...grouped.todayProgram.map(
+                      (task) => DashboardTaskItem(
+                        task: task,
+                        showTrackLabel: showTrackLabels,
+                        onComplete: onCompleteTask != null
+                            ? () => onCompleteTask!(task)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (grouped.overdueReview.isNotEmpty) ...[
+                    _subHeader(
+                      theme,
+                      icon: Icons.history,
+                      title: 'Missed review (${grouped.overdueReview.length})',
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 6),
+                    ...grouped.overdueReview.map(
+                      (task) => DashboardTaskItem(
+                        task: task,
+                        showTrackLabel: showTrackLabels,
+                        onComplete: onCompleteTask != null
+                            ? () => onCompleteTask!(task)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (grouped.todayReview.isNotEmpty) ...[
+                    _subHeader(
+                      theme,
+                      icon: Icons.refresh,
+                      title: "Today's review (${grouped.todayReview.length})",
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 6),
+                    ...grouped.todayReview.map(
+                      (task) => DashboardTaskItem(
+                        task: task,
+                        showTrackLabel: showTrackLabels,
+                        onComplete: onCompleteTask != null
+                            ? () => onCompleteTask!(task)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (grouped.todayLearning.isNotEmpty) ...[
+                    _subHeader(
+                      theme,
+                      icon: Icons.menu_book,
+                      title:
+                          "Today's learning (${grouped.todayLearning.length})",
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 6),
+                    ...grouped.todayLearning.map(
+                      (task) => DashboardTaskItem(
+                        task: task,
+                        showTrackLabel: showTrackLabels,
+                        onComplete: onCompleteTask != null
+                            ? () => onCompleteTask!(task)
+                            : null,
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            }
+
             final displayTasks = tasks.take(5).toList();
             return Column(
               children: [
@@ -142,4 +253,72 @@ class DashboardTaskList extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _subHeader(
+    ThemeData theme, {
+    required IconData icon,
+    required String title,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GroupedTasks {
+  const _GroupedTasks({
+    required this.overdueProgram,
+    required this.todayProgram,
+    required this.overdueReview,
+    required this.todayReview,
+    required this.todayLearning,
+  });
+
+  final List<DailyTask> overdueProgram;
+  final List<DailyTask> todayProgram;
+  final List<DailyTask> overdueReview;
+  final List<DailyTask> todayReview;
+  final List<DailyTask> todayLearning;
+}
+
+_GroupedTasks _groupTasks(List<DailyTask> tasks) {
+  final overdueProgram = <DailyTask>[];
+  final todayProgram = <DailyTask>[];
+  final overdueReview = <DailyTask>[];
+  final todayReview = <DailyTask>[];
+  final todayLearning = <DailyTask>[];
+
+  for (final task in tasks) {
+    switch (task.priority) {
+      case DailyTaskPriority.overdueProgram:
+        overdueProgram.add(task);
+      case DailyTaskPriority.todayProgram:
+        todayProgram.add(task);
+      case DailyTaskPriority.overdueChazara:
+        overdueReview.add(task);
+      case DailyTaskPriority.scheduledChazara:
+        todayReview.add(task);
+      case DailyTaskPriority.newLearning:
+        todayLearning.add(task);
+    }
+  }
+
+  return _GroupedTasks(
+    overdueProgram: overdueProgram,
+    todayProgram: todayProgram,
+    overdueReview: overdueReview,
+    todayReview: todayReview,
+    todayLearning: todayLearning,
+  );
 }
