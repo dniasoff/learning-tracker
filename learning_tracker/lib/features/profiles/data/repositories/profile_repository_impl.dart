@@ -86,7 +86,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
       updatedAt: now,
     );
 
-    await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    // Profile creation must succeed offline-first even if cloud push fails.
+    try {
+      await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    } catch (_) {}
     return model;
   }
 
@@ -132,7 +135,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
     final updated = await _db.profileDao.getProfileById(id);
     final model = ProfileModel.fromDriftRow(updated!);
-    await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    try {
+      await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    } catch (_) {}
     return model;
   }
 
@@ -187,7 +192,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await _db.profileDao.deleteProfile(id);
     });
 
-    await _syncEngine?.deleteLearnerProfile(id);
+    try {
+      await _syncEngine?.deleteLearnerProfile(id);
+    } catch (_) {}
   }
 
   @override

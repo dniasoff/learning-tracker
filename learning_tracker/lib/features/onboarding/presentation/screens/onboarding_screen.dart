@@ -87,6 +87,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Track count for "add another" prompt
   int _trackCount = 0;
   String? _lastTrackLabel;
+  bool _isCreatingProfile = false;
 
   bool get _isChildMode => _profileMode == 'child';
 
@@ -156,7 +157,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (savedLanguage != null) _selectedLanguage = savedLanguage;
 
     final phase = _ScreenPhase.values.where((p) => p.name == savedPhase);
-    if (phase.isNotEmpty && mounted) {
+    // If the user already advanced this session (e.g., tapped Continue
+    // quickly), don't let a delayed restore overwrite the newer phase.
+    if (!mounted || _phase != _ScreenPhase.profileCreation) return;
+    if (phase.isNotEmpty) {
       setState(() => _phase = phase.first);
     }
   }
@@ -191,7 +195,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _createProfile() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty || _nameError != null) return;
+    if (name.isEmpty || _nameError != null || _isCreatingProfile) return;
+    setState(() => _isCreatingProfile = true);
 
     final repo = ref.read(profileRepositoryProvider);
     final ProfileModel profile;
@@ -205,6 +210,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (mounted) {
         setState(() {
           _nameError = 'A profile with this name already exists';
+          _isCreatingProfile = false;
         });
       }
       return;
@@ -227,6 +233,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     setState(() => _phase = _ScreenPhase.languageSelection);
     await _saveState();
+    if (mounted) {
+      setState(() => _isCreatingProfile = false);
+    }
   }
 
   // Parent PIN setup state (child mode only).
@@ -446,10 +455,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 FilledButton(
                   onPressed:
                       _nameController.text.trim().isNotEmpty &&
-                          _nameError == null
+                          _nameError == null &&
+                          !_isCreatingProfile
                       ? _createProfile
                       : null,
-                  child: const Text('Continue'),
+                  child: _isCreatingProfile
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Continue'),
                 ),
               ],
             ),
