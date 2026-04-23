@@ -94,10 +94,11 @@ class MagicLinkService {
   }
 
   Future<void> _handleIncomingLink(Uri uri) async {
-    final link = uri.toString();
-    final mode = uri.queryParameters['mode'];
+    final authUri = _extractActionUri(uri);
+    final link = authUri.toString();
+    final mode = authUri.queryParameters['mode'];
     if (mode == 'verifyEmail') {
-      await _handleVerifyEmailLink(uri);
+      await _handleVerifyEmailLink(authUri);
       return;
     }
     if (!_authRepository.isSignInWithEmailLink(link)) {
@@ -106,6 +107,28 @@ class MagicLinkService {
     }
 
     await _handleSignInLink(link);
+  }
+
+  /// Firebase links can arrive wrapped (e.g. `link=`/`deep_link_id=` params).
+  /// Unwrap recursively so we can reliably read `mode` and `oobCode`.
+  Uri _extractActionUri(Uri uri) {
+    var current = uri;
+    for (var i = 0; i < 3; i++) {
+      final wrapped =
+          current.queryParameters['link'] ??
+          current.queryParameters['deep_link_id'] ??
+          current.queryParameters['continueUrl'];
+      if (wrapped == null || wrapped.isEmpty) {
+        return current;
+      }
+      final decoded = Uri.decodeComponent(wrapped);
+      final parsed = Uri.tryParse(decoded);
+      if (parsed == null || parsed.toString() == current.toString()) {
+        return current;
+      }
+      current = parsed;
+    }
+    return current;
   }
 
   Future<void> _handleSignInLink(String link) async {

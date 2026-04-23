@@ -79,6 +79,11 @@ class AppRouter extends RootStackRouter {
     // Unauthenticated routes
     AutoRoute(path: '/intro', page: AppIntroRoute.page),
     AutoRoute(path: '/sign-in', page: SignInRoute.page),
+    // Firebase action links can deep-link to these paths. Redirect to sign-in
+    // while MagicLinkService processes the incoming URI in the background.
+    RedirectRoute(path: '/verify-email', redirectTo: '/sign-in'),
+    RedirectRoute(path: '/__/auth/links', redirectTo: '/sign-in'),
+    RedirectRoute(path: '/__/auth/action', redirectTo: '/sign-in'),
     AutoRoute(path: '/welcome', page: WelcomeRoute.page),
     AutoRoute(path: '/create-account', page: AccountCreationRoute.page),
     AutoRoute(path: '/local-signup', page: LocalSignupRoute.page),
