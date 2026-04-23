@@ -22,6 +22,8 @@ class ProfilePickerScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
+  bool _isSelectingProfile = false;
+
   @override
   Widget build(BuildContext context) {
     // Use future provider instead of stream provider to avoid the
@@ -71,7 +73,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 final profile = profiles[index];
                 return _ProfileCard(
                   profile: profile,
-                  onTap: () => unawaited(_selectProfile(profile.id)),
+                  onTap: _isSelectingProfile
+                      ? () {}
+                      : () => unawaited(_selectProfile(profile.id)),
                   onLongPress: () => _showManageSheet(profile, profiles.length),
                 );
               },
@@ -85,16 +89,32 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
   // ── Select Profile ─────────────────────────────────────────────────────────
 
   Future<void> _selectProfile(int profileId) async {
+    if (_isSelectingProfile) return;
+    _isSelectingProfile = true;
+
     ref.read(selectedProfileIdProvider.notifier).select(profileId);
-    // Recreate SyncEngine with the selected profile id and pull once so
-    // profile-scoped tracks/progress are available immediately on AppShell.
+    // Recreate SyncEngine with the selected profile id.
     ref.invalidate(syncEngineProvider);
+
+    // Do not block navigation on cloud pull; run it in background so profile
+    // switching stays responsive even with slow/unavailable network.
     final syncEngine = ref.read(syncEngineProvider);
     if (syncEngine != null) {
-      await syncEngine.pullOnLaunch();
+      unawaited(
+        syncEngine.pullOnLaunch().catchError((Object _, StackTrace __) {
+          // Local data is already selected; cloud pull is best-effort.
+        }),
+      );
     }
+
     if (!mounted) return;
     await context.router.replaceAll([const AppShellRoute()]);
+
+    if (mounted) {
+      setState(() {
+        _isSelectingProfile = false;
+      });
+    }
   }
 
   // ── Add Profile ───────────────────────────────────────────────────────────
