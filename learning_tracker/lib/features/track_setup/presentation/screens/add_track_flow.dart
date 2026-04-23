@@ -894,7 +894,7 @@ class _ProgramPriorProgressStep extends StatelessWidget {
   }
 }
 
-class _SelfPacedPriorProgressStep extends StatelessWidget {
+class _SelfPacedPriorProgressStep extends ConsumerWidget {
   const _SelfPacedPriorProgressStep({
     required this.curriculumId,
     required this.scopeSelections,
@@ -908,12 +908,13 @@ class _SelfPacedPriorProgressStep extends StatelessWidget {
   final ValueChanged<_SelfPacedPriorCompletionSelection> onMarkCompleted;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final selectedCount = scopeSelections?.length ?? 0;
-    final scopeLabel = selectedCount == 0
-        ? 'All selected content'
-        : '$selectedCount selected section(s)';
+    final hasExplicitScopes =
+        scopeSelections != null && scopeSelections!.isNotEmpty;
+    final generatedScopesAsync = hasExplicitScopes
+        ? null
+        : ref.watch(curriculumContentProvider(curriculumId));
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -928,18 +929,48 @@ class _SelfPacedPriorProgressStep extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '$scopeLabel in ${curriculumId.displayNameHe}.',
+            'Choose which sections to mark in ${curriculumId.displayNameHe}.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: _SelfPacedSelectionList(
-              scopeSelections: scopeSelections,
-              onSkip: onSkip,
-              onMarkCompleted: onMarkCompleted,
-            ),
+            child: hasExplicitScopes
+                ? _SelfPacedSelectionList(
+                    scopeSelections: scopeSelections,
+                    selectAllByDefault: false,
+                    onSkip: onSkip,
+                    onMarkCompleted: onMarkCompleted,
+                  )
+                : generatedScopesAsync!.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => _SelfPacedSelectionList(
+                      scopeSelections: const [],
+                      selectAllByDefault: false,
+                      onSkip: onSkip,
+                      onMarkCompleted: onMarkCompleted,
+                    ),
+                    data: (items) {
+                      final seen = <String>{};
+                      final topLevelSelections = <ScopeEntry>[];
+                      for (final item in items) {
+                        final level1 = item.level1;
+                        if (level1.isEmpty) continue;
+                        if (!seen.add(level1)) continue;
+                        topLevelSelections.add(
+                          ScopeEntry(level: 1, value: level1),
+                        );
+                      }
+                      return _SelfPacedSelectionList(
+                        scopeSelections: topLevelSelections,
+                        selectAllByDefault: false,
+                        onSkip: onSkip,
+                        onMarkCompleted: onMarkCompleted,
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -950,11 +981,13 @@ class _SelfPacedPriorProgressStep extends StatelessWidget {
 class _SelfPacedSelectionList extends StatefulWidget {
   const _SelfPacedSelectionList({
     required this.scopeSelections,
+    required this.selectAllByDefault,
     required this.onSkip,
     required this.onMarkCompleted,
   });
 
   final List<ScopeEntry>? scopeSelections;
+  final bool selectAllByDefault;
   final VoidCallback onSkip;
   final ValueChanged<_SelfPacedPriorCompletionSelection> onMarkCompleted;
 
@@ -971,7 +1004,9 @@ class _SelfPacedSelectionListState extends State<_SelfPacedSelectionList> {
   void initState() {
     super.initState();
     _entries = widget.scopeSelections ?? const <ScopeEntry>[];
-    // Default is intentionally empty selection. User explicitly chooses what to mark.
+    if (_entries.isNotEmpty && widget.selectAllByDefault) {
+      _selectedIndexes.addAll(List<int>.generate(_entries.length, (i) => i));
+    }
   }
 
   @override
