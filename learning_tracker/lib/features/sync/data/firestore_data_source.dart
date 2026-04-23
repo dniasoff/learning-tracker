@@ -29,6 +29,18 @@ class FirestoreDataSource {
   /// The active profile ID for Firestore path scoping.
   final int profileId;
 
+  /// Create a datasource instance scoped to a different learner profile.
+  ///
+  /// Useful when flushing queued operations that were created under another
+  /// profile before the user switched profiles.
+  FirestoreDataSource forProfile(int targetProfileId) {
+    return FirestoreDataSource(
+      firestore: _firestore,
+      auth: _auth,
+      profileId: targetProfileId,
+    );
+  }
+
   /// Whether the current Firebase user is authenticated.
   ///
   /// Used by [SyncEngine] to skip Firestore operations before auth completes,
@@ -593,7 +605,9 @@ class FirestoreDataSource {
   }
 
   /// Push a profile-program assignment to Firestore (LWW).
-  Future<void> pushProfileProgram(Map<String, dynamic> profileProgramData) async {
+  Future<void> pushProfileProgram(
+    Map<String, dynamic> profileProgramData,
+  ) async {
     await _ensureProfilePathReady();
     final collection = _profileProgramsCollection;
     if (collection == null) {

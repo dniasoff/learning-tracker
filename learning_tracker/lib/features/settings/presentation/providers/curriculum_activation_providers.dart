@@ -11,14 +11,14 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 final curriculumActivationServiceProvider =
     Provider<CurriculumActivationService>((ref) {
       final database = ref.watch(userDatabaseProvider);
-      final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
+      final syncEngine = ref.watch(syncEngineProvider);
       final trackRepository = ref.watch(trackRepositoryProvider);
       final profileId = ref.watch(activeProfileIdProvider);
 
       return CurriculumActivationService(
         database: database,
-        pushActiveCurricula: firestoreDataSource?.pushActiveCurricula,
-        pushCurriculumTrack: firestoreDataSource?.pushCurriculumTrack,
+        pushActiveCurricula: syncEngine?.pushActiveCurricula,
+        pushCurriculumTrack: syncEngine?.pushCurriculumTrack,
         trackRepository: trackRepository,
         profileId: profileId,
       );
@@ -39,8 +39,8 @@ final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((
 
   await for (final storageKeys
       in database.activeCurriculumDao.watchActiveCurriculaByProfile(
-    profileId,
-  )) {
+        profileId,
+      )) {
     final curricula = storageKeys
         .map<CurriculumId?>((key) {
           final matches = CurriculumId.values.where((c) => c.storageKey == key);

@@ -30,6 +30,31 @@ class OfflineQueue {
   /// Get the sync queue DAO.
   SyncQueueDao get _queue => _database.syncQueueDao;
 
+  int? _parseProfileId(dynamic raw) {
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  ({FirestoreDataSource dataSource, Map<String, dynamic> payload})
+  _resolveTarget(Map<String, dynamic> payload) {
+    final scopedPayload = Map<String, dynamic>.from(payload);
+    final targetProfileId = _parseProfileId(
+      scopedPayload['profile_id'] ?? scopedPayload['_target_profile_id'],
+    );
+    scopedPayload.remove('_target_profile_id');
+
+    if (targetProfileId == null ||
+        targetProfileId == _firestoreDataSource.profileId) {
+      return (dataSource: _firestoreDataSource, payload: scopedPayload);
+    }
+
+    return (
+      dataSource: _firestoreDataSource.forProfile(targetProfileId),
+      payload: scopedPayload,
+    );
+  }
+
   /// Get count of pending operations in the queue.
   Future<int> getPendingCount() {
     return _queue.getPendingCount();
@@ -129,6 +154,19 @@ class OfflineQueue {
     );
   }
 
+  /// Enqueue active-curricula operation.
+  Future<void> enqueueActiveCurricula(
+    List<String> activeCurricula, {
+    int? targetProfileId,
+  }) async {
+    final payload = jsonEncode({
+      'curricula': activeCurricula,
+      if (targetProfileId != null) '_target_profile_id': targetProfileId,
+    });
+    await _queue.enqueue('active_curricula', payload);
+    _logger.info('Queued active curricula for offline sync');
+  }
+
   /// Enqueue a curriculum-track operation.
   Future<void> enqueueCurriculumTrack(Map<String, dynamic> track) async {
     final payload = jsonEncode(track);
@@ -201,29 +239,33 @@ class OfflineQueue {
         }
 
         try {
-          final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
+          final rawPayload =
+              jsonDecode(operation.payload) as Map<String, dynamic>;
+          final resolved = _resolveTarget(rawPayload);
+          final payload = resolved.payload;
+          final dataSource = resolved.dataSource;
 
           switch (operation.operationType) {
             case 'completion':
-              await _firestoreDataSource.pushCompletion(payload);
+              await dataSource.pushCompletion(payload);
               break;
             case 'bookmark':
-              await _firestoreDataSource.pushBookmark(payload);
+              await dataSource.pushBookmark(payload);
               break;
             case 'settings':
-              await _firestoreDataSource.pushSettings(payload);
+              await dataSource.pushSettings(payload);
               break;
             case 'notification_settings':
-              await _firestoreDataSource.pushNotificationSettings(payload);
+              await dataSource.pushNotificationSettings(payload);
               break;
             case 'streak':
-              await _firestoreDataSource.pushStreak(payload);
+              await dataSource.pushStreak(payload);
               break;
             case 'profile':
-              await _firestoreDataSource.pushProfile(payload);
+              await dataSource.pushProfile(payload);
               break;
             case 'learner_profile':
-              await _firestoreDataSource.pushLearnerProfile(payload);
+              await dataSource.pushLearnerProfile(payload);
               break;
             case 'learner_profile_delete':
               final rawProfileId = payload['profile_id'];
@@ -238,22 +280,29 @@ class OfflineQueue {
                 );
                 continue;
               }
-              await _firestoreDataSource.deleteLearnerProfile(profileId);
+              await dataSource.deleteLearnerProfile(profileId);
               break;
             case 'goal':
-              await _firestoreDataSource.pushGoal(payload);
+              await dataSource.pushGoal(payload);
               break;
             case 'profile_program':
-              await _firestoreDataSource.pushProfileProgram(payload);
+              await dataSource.pushProfileProgram(payload);
               break;
             case 'ledger_entry':
-              await _firestoreDataSource.pushLedgerEntry(payload);
+              await dataSource.pushLedgerEntry(payload);
               break;
             case 'curriculum_import_metadata':
-              await _firestoreDataSource.pushCurriculumImportMetadata(payload);
+              await dataSource.pushCurriculumImportMetadata(payload);
+              break;
+            case 'active_curricula':
+              final rawCurricula = payload['curricula'];
+              final curricula = rawCurricula is List
+                  ? rawCurricula.map((e) => e.toString()).toList()
+                  : <String>[];
+              await dataSource.pushActiveCurricula(curricula);
               break;
             case 'curriculum_track':
-              await _firestoreDataSource.pushCurriculumTrack(payload);
+              await dataSource.pushCurriculumTrack(payload);
               break;
             default:
               _logger.warning(
