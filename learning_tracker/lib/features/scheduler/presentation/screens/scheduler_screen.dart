@@ -20,19 +20,6 @@ class SchedulerScreen extends ConsumerStatefulWidget {
 
 class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
   bool _isGroupedView = false;
-  late final SchedulerTaskSectionNotifier _sectionNotifier;
-
-  @override
-  void initState() {
-    super.initState();
-    _sectionNotifier = ref.read(schedulerTaskSectionProvider.notifier);
-  }
-
-  @override
-  void dispose() {
-    _sectionNotifier.reset();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

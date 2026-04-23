@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -27,6 +28,23 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'scheduler_providers.g.dart';
+
+/// Dashboard-driven task section filter for Scheduler screen.
+enum SchedulerTaskSection { all, today, overdue, review }
+
+final schedulerTaskSectionProvider =
+    NotifierProvider<SchedulerTaskSectionNotifier, SchedulerTaskSection>(
+      SchedulerTaskSectionNotifier.new,
+    );
+
+class SchedulerTaskSectionNotifier extends Notifier<SchedulerTaskSection> {
+  @override
+  SchedulerTaskSection build() => SchedulerTaskSection.all;
+
+  void setSection(SchedulerTaskSection section) => state = section;
+
+  void reset() => state = SchedulerTaskSection.all;
+}
 
 /// Provides the current UTC date/time. Override in tests to control time.
 @riverpod

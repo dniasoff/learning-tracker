@@ -28,7 +28,9 @@ class RewardMilestoneService {
   Future<List<RewardMilestone>> getMilestonesForTrack(int trackId) async {
     final all = await getAllMilestones();
     final trackMilestones = all.where((m) => m.trackId == trackId).toList();
-    trackMilestones.sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
+    trackMilestones.sort(
+      (a, b) => a.thresholdPoints.compareTo(b.thresholdPoints),
+    );
     return trackMilestones;
   }
 
@@ -41,7 +43,11 @@ class RewardMilestoneService {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return const [];
       return decoded
-          .whereType<Map<String, dynamic>>()
+          .where((e) => e is Map)
+          .map(
+            (e) =>
+                (e as Map).map((key, value) => MapEntry(key.toString(), value)),
+          )
           .map(RewardMilestone.fromJson)
           .where((m) => m.profileId == profileId)
           .toList();
@@ -59,7 +65,11 @@ class RewardMilestoneService {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return const [];
       return decoded
-          .whereType<Map<String, dynamic>>()
+          .where((e) => e is Map)
+          .map(
+            (e) =>
+                (e as Map).map((key, value) => MapEntry(key.toString(), value)),
+          )
           .map(RewardUnlockRecord.fromJson)
           .where((u) => u.profileId == profileId)
           .toList()
@@ -77,11 +87,13 @@ class RewardMilestoneService {
     bool isEnabled = true,
   }) async {
     final now = DateTimeFactory.nowUtc();
-    final all = await getAllMilestones();
+    final all = List<RewardMilestone>.from(await getAllMilestones());
 
     final existingIndex = milestoneId == null
         ? -1
-        : all.indexWhere((m) => m.id == milestoneId && m.profileId == profileId);
+        : all.indexWhere(
+            (m) => m.id == milestoneId && m.profileId == profileId,
+          );
 
     if (existingIndex >= 0) {
       all[existingIndex] = all[existingIndex].copyWith(
@@ -212,7 +224,12 @@ class RewardMilestoneService {
 
     final milestones = milestonesRaw is List
         ? milestonesRaw
-              .whereType<Map<String, dynamic>>()
+              .where((e) => e is Map)
+              .map(
+                (e) => (e as Map).map(
+                  (key, value) => MapEntry(key.toString(), value),
+                ),
+              )
               .map(RewardMilestone.fromJson)
               .where((m) => m.profileId == profileId)
               .toList()
@@ -220,7 +237,12 @@ class RewardMilestoneService {
 
     final unlocks = unlocksRaw is List
         ? unlocksRaw
-              .whereType<Map<String, dynamic>>()
+              .where((e) => e is Map)
+              .map(
+                (e) => (e as Map).map(
+                  (key, value) => MapEntry(key.toString(), value),
+                ),
+              )
               .map(RewardUnlockRecord.fromJson)
               .where((u) => u.profileId == profileId)
               .toList()
@@ -235,8 +257,8 @@ class RewardMilestoneService {
       _unlockKey,
       jsonEncode(unlocks.map((u) => u.toJson()).toList()),
     );
-    final stamp = (remoteUpdatedAt ?? DateTimeFactory.nowUtc())
-        .millisecondsSinceEpoch;
+    final stamp =
+        (remoteUpdatedAt ?? DateTimeFactory.nowUtc()).millisecondsSinceEpoch;
     await prefs.setInt(_updatedAtMsKey, stamp);
   }
 

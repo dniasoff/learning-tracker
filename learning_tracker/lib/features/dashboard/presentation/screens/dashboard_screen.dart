@@ -784,16 +784,35 @@ class _CurriculumCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Text(
-                            overdueProgramCount > 0
-                                ? 'Overdue: $overdueProgramCount  •  Today due: $todayProgramCount'
-                                : 'On time  •  Today due: $todayProgramCount',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                overdueProgramCount > 0
+                                    ? 'Overdue: $overdueProgramCount'
+                                    : 'Overdue: 0',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: overdueProgramCount > 0
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Today due: $todayProgramCount',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

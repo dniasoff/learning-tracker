@@ -130,6 +130,9 @@ class AccountManagementService {
         'active_curricula',
         'curriculum_imports',
         'curriculum_tracks',
+        'profile_programs',
+        'notification_settings',
+        'gamification_settings',
       ];
 
       // 1. Delete profile-scoped data (canonical learner_profiles path)

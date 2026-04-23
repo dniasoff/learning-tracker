@@ -1255,7 +1255,9 @@ class SyncEngine {
     try {
       final prefs = await SharedPreferences.getInstance();
       final remoteUpdatedAt = _parseTimestamp(remoteSettings['updated_at']);
-      final localUpdatedAtMs = prefs.getInt(_gamificationSettingsUpdatedAtMsKey);
+      final localUpdatedAtMs = prefs.getInt(
+        _gamificationSettingsUpdatedAtMsKey,
+      );
       final localUpdatedAt = localUpdatedAtMs == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(localUpdatedAtMs, isUtc: true);
@@ -1273,9 +1275,7 @@ class SyncEngine {
       if (remoteRows is List) {
         for (final raw in remoteRows) {
           if (raw is! Map) continue;
-          final map = raw.map(
-            (key, value) => MapEntry(key.toString(), value),
-          );
+          final map = raw.map((key, value) => MapEntry(key.toString(), value));
           final curriculumId = map['curriculum_id'] as String?;
           final stageOrder = (map['stage_order'] as num?)?.toInt();
           final points = (map['points'] as num?)?.toInt();
@@ -1869,6 +1869,7 @@ class SyncEngine {
         () => <String, dynamic>{
           'stages': <Map<String, dynamic>>[],
           'points_by_stage': <String, int>{},
+          'points_by_stage_by_track': <String, Map<String, int>>{},
           'study_day_config': <String, String>{},
         },
       );
@@ -1888,11 +1889,16 @@ class SyncEngine {
         () => <String, dynamic>{
           'stages': <Map<String, dynamic>>[],
           'points_by_stage': <String, int>{},
+          'points_by_stage_by_track': <String, Map<String, int>>{},
           'study_day_config': <String, String>{},
         },
       );
       (cfg['points_by_stage'] as Map<String, int>)[row.stageOrder.toString()] =
           row.points;
+      final byTrack =
+          cfg['points_by_stage_by_track'] as Map<String, Map<String, int>>;
+      final trackMap = byTrack.putIfAbsent(row.trackId.toString(), () => {});
+      trackMap[row.stageOrder.toString()] = row.points;
     }
     for (final row in studyDayRows) {
       final cfg = curriculumSettings.putIfAbsent(
@@ -1900,6 +1906,7 @@ class SyncEngine {
         () => <String, dynamic>{
           'stages': <Map<String, dynamic>>[],
           'points_by_stage': <String, int>{},
+          'points_by_stage_by_track': <String, Map<String, int>>{},
           'study_day_config': <String, String>{},
         },
       );
@@ -1921,7 +1928,10 @@ class SyncEngine {
               ..limit(1))
             .getSingleOrNull();
     final streak = await _database.streakDao.getStreakByProfile(profileId);
-    final rewardService = RewardMilestoneService(_database, profileId: profileId);
+    final rewardService = RewardMilestoneService(
+      _database,
+      profileId: profileId,
+    );
     final rewardPayload = await rewardService.exportCloudPayload();
 
     final enriched = <String, dynamic>{
@@ -1936,9 +1946,10 @@ class SyncEngine {
         'max_streak': streak?.maxStreak ?? 0,
         'last_completion_date': streak?.lastCompletionDate?.toIso8601String(),
       },
-      'reward_configuration': rewardPayload['milestones'] ?? const [],
+      'reward_configuration':
+          rewardPayload['milestones'] ?? const <Map<String, dynamic>>[],
       'reward_progress': {
-        'unlocks': rewardPayload['unlocks'] ?? const [],
+        'unlocks': rewardPayload['unlocks'] ?? const <Map<String, dynamic>>[],
       },
       'settings_snapshot': curriculumSettings,
     };

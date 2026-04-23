@@ -48,6 +48,9 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
     "active_curricula",
     "curriculum_imports",
     "curriculum_tracks",
+    "profile_programs",
+    "notification_settings",
+    "gamification_settings",
   ];
 
   for (const profileDoc of profilesSnapshot.docs) {
@@ -87,6 +90,10 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
     "learning_ledger",
     "active_curricula",
     "curriculum_imports",
+    "curriculum_tracks",
+    "profile_programs",
+    "notification_settings",
+    "gamification_settings",
     "profile",
     "learner_profiles",
     "profiles",

@@ -36,6 +36,7 @@ service cloud.firestore {
       // - bookmarks/{trackId}
       // - daily_plan/{yyyy-mm-dd}
       // - notification_settings/preferences
+      // - gamification_settings/config
       // - projections/{active_curricula|streak|progress_summary}
       //
       // Existing collections kept for backward compatibility:
