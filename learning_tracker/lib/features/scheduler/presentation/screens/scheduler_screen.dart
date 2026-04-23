@@ -20,10 +20,24 @@ class SchedulerScreen extends ConsumerStatefulWidget {
 
 class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
   bool _isGroupedView = false;
+  late final SchedulerTaskSectionNotifier _sectionNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _sectionNotifier = ref.read(schedulerTaskSectionProvider.notifier);
+  }
+
+  @override
+  void dispose() {
+    _sectionNotifier.reset();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final asyncTasks = ref.watch(allDailyTasksProvider);
+    final section = ref.watch(schedulerTaskSectionProvider);
 
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Daily Tasks')),
@@ -31,7 +45,8 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
         top: false,
         child: asyncTasks.when(
           data: (tasks) {
-            if (tasks.isEmpty) {
+            final visibleTasks = _filterTasks(tasks, section);
+            if (visibleTasks.isEmpty) {
               return const EmptyState(
                 message: 'All caught up! Great work!',
                 subtitle: 'You have no tasks remaining for today.',
@@ -40,9 +55,8 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
             }
 
             final schedule = ComposedDailySchedule(
-              tasks: tasks,
-              summary:
-                  '${tasks.length} task${tasks.length == 1 ? '' : 's'} today',
+              tasks: visibleTasks,
+              summary: _summaryForSection(section, visibleTasks.length),
             );
 
             return Column(
@@ -66,7 +80,7 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
                             ref.invalidate(allDailyTasksProvider);
                           },
                         )
-                      : _TaskList(tasks: tasks),
+                      : _TaskList(tasks: visibleTasks),
                 ),
               ],
             );
@@ -106,6 +120,45 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
       ),
     );
   }
+}
+
+List<DailyTask> _filterTasks(
+  List<DailyTask> tasks,
+  SchedulerTaskSection section,
+) {
+  switch (section) {
+    case SchedulerTaskSection.all:
+      return tasks;
+    case SchedulerTaskSection.today:
+      return tasks
+          .where(
+            (t) =>
+                !t.isOverdue &&
+                t.priority != DailyTaskPriority.overdueChazara &&
+                t.priority != DailyTaskPriority.scheduledChazara,
+          )
+          .toList();
+    case SchedulerTaskSection.overdue:
+      return tasks.where((t) => t.isOverdue).toList();
+    case SchedulerTaskSection.review:
+      return tasks
+          .where(
+            (t) =>
+                t.priority == DailyTaskPriority.overdueChazara ||
+                t.priority == DailyTaskPriority.scheduledChazara,
+          )
+          .toList();
+  }
+}
+
+String _summaryForSection(SchedulerTaskSection section, int count) {
+  final noun = count == 1 ? 'task' : 'tasks';
+  return switch (section) {
+    SchedulerTaskSection.all => '$count $noun today',
+    SchedulerTaskSection.today => '$count today $noun',
+    SchedulerTaskSection.overdue => '$count missed/overdue $noun',
+    SchedulerTaskSection.review => '$count chazara/review $noun',
+  };
 }
 
 class _TaskList extends ConsumerWidget {

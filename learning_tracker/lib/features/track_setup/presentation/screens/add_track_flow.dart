@@ -463,6 +463,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         } catch (_) {
           // Do not block finishing navigation if lifetime marking fails.
           // The track itself is already created successfully.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Track added, but previous achievements could not be saved.',
+                ),
+              ),
+            );
+          }
         }
       }
 
@@ -579,6 +588,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Refresh progress/journey/dashboard projections.
     ref.invalidate(progressOverviewStatsProvider);
     ref.invalidate(journeyViewModelProvider(activeProfileId));
+    ref.invalidate(previousProgramLifetimeAchievementsProvider(activeProfileId));
     ref.invalidate(dashboardCompletionPercentageProvider(curriculum));
     ref.invalidate(dashboardLastCompletionProvider(curriculum));
 

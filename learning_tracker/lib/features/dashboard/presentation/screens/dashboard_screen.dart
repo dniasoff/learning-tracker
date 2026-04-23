@@ -158,6 +158,15 @@ class _DashboardBody extends ConsumerWidget {
 
     final totalPoints = globalPointsAsync.asData?.value ?? 0;
     final tasksToday = dailyTasksAsync.asData?.value.length ?? 0;
+    final allTasks = dailyTasksAsync.asData?.value ?? const <DailyTask>[];
+    final overdueProgramCount = allTasks
+        .where((t) => t.priority == DailyTaskPriority.overdueProgram)
+        .length;
+    final todayProgramCount = allTasks
+        .where((t) => t.priority == DailyTaskPriority.todayProgram)
+        .length;
+    final hasProgramCalendarTasks =
+        overdueProgramCount > 0 || todayProgramCount > 0;
 
     if (activeCurricula.isEmpty) {
       final isChildMode =
@@ -244,10 +253,16 @@ class _DashboardBody extends ConsumerWidget {
               ),
               Expanded(
                 child: _StatCircle(
-                  icon: Icons.check_circle,
-                  iconColor: theme.colorScheme.primary,
-                  value: avgCompletionDisplay,
-                  label: l10n.done,
+                  icon: hasProgramCalendarTasks
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle,
+                  iconColor: hasProgramCalendarTasks
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                  value: hasProgramCalendarTasks
+                      ? '$overdueProgramCount'
+                      : avgCompletionDisplay,
+                  label: hasProgramCalendarTasks ? 'overdue' : l10n.done,
                 ),
               ),
               Expanded(
@@ -273,18 +288,26 @@ class _DashboardBody extends ConsumerWidget {
               ),
               Expanded(
                 child: _StatCircle(
-                  icon: Icons.check_circle,
-                  iconColor: theme.colorScheme.primary,
-                  value: avgCompletionDisplay,
-                  label: l10n.done,
+                  icon: hasProgramCalendarTasks
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle,
+                  iconColor: hasProgramCalendarTasks
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                  value: hasProgramCalendarTasks
+                      ? '$overdueProgramCount'
+                      : avgCompletionDisplay,
+                  label: hasProgramCalendarTasks ? 'overdue' : l10n.done,
                 ),
               ),
               Expanded(
                 child: _StatCircle(
                   icon: Icons.today,
                   iconColor: Colors.teal,
-                  value: '$tasksToday',
-                  label: l10n.todaysTasks,
+                  value: hasProgramCalendarTasks
+                      ? '$todayProgramCount'
+                      : '$tasksToday',
+                  label: hasProgramCalendarTasks ? 'today due' : l10n.todaysTasks,
                 ),
               ),
             ],
@@ -298,21 +321,6 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
 
-        // Daily Progress bar
-        dailyTasksAsync.when(
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
-          data: (tasks) {
-            if (tasks.isEmpty) return const SizedBox.shrink();
-            return _DailyProgressBar(
-              progress: 0.0,
-              completed: 0,
-              total: tasks.length,
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-
         // AC-1, 2, 6: Active Curricula with pace data
         if (activeCurricula.isNotEmpty) ...[
           Text(
@@ -323,7 +331,7 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 200,
+            height: 232,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: activeCurricula.length,
@@ -504,62 +512,46 @@ class _TodaysLearningSection extends ConsumerWidget {
             }
 
             final grouped = _groupTasks(tasks);
+            void openSection(SchedulerTaskSection section) {
+              ref
+                  .read(schedulerTaskSectionProvider.notifier)
+                  .setSection(section);
+              onViewAll();
+            }
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (grouped.todayTasks.isNotEmpty) ...[
-                  _TaskSectionHeader(
-                    icon: Icons.today,
-                    title: "Today's tasks",
-                    count: grouped.todayTasks.length,
-                    color: theme.colorScheme.primary,
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _TaskSummaryCard(
+                        icon: Icons.today,
+                        title: "Today's tasks",
+                        count: grouped.todayTasks.length,
+                        color: theme.colorScheme.primary,
+                        onTap: () => openSection(SchedulerTaskSection.today),
+                      ),
+                      const SizedBox(width: 12),
+                      _TaskSummaryCard(
+                        icon: Icons.warning_amber_rounded,
+                        title: 'Missed / Overdue tasks',
+                        count: grouped.overdueTasks.length,
+                        color: theme.colorScheme.error,
+                        onTap: () => openSection(SchedulerTaskSection.overdue),
+                      ),
+                      const SizedBox(width: 12),
+                      _TaskSummaryCard(
+                        icon: Icons.refresh,
+                        title: 'Chazara / Review tasks',
+                        count: grouped.reviewTasks.length,
+                        color: Colors.deepPurple,
+                        onTap: () => openSection(SchedulerTaskSection.review),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  ...grouped.todayTasks.map(
-                    (task) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _TaskItemCard(task: task),
-                    ),
-                  ),
-                ],
-                if (grouped.overdueTasks.isNotEmpty) ...[
-                  _TaskSectionHeader(
-                    icon: Icons.warning_amber_rounded,
-                    title: 'Missed / Overdue tasks',
-                    count: grouped.overdueTasks.length,
-                    color: theme.colorScheme.error,
-                  ),
-                  const SizedBox(height: 8),
-                  ...grouped.overdueTasks.map(
-                    (task) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _TaskItemCard(task: task),
-                    ),
-                  ),
-                ],
-                if (grouped.reviewTasks.isNotEmpty) ...[
-                  _TaskSectionHeader(
-                    icon: Icons.refresh,
-                    title: 'Chazara / Review tasks',
-                    count: grouped.reviewTasks.length,
-                    color: Colors.deepPurple,
-                  ),
-                  const SizedBox(height: 8),
-                  ...grouped.reviewTasks.map(
-                    (task) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _TaskItemCard(task: task),
-                    ),
-                  ),
-                ],
-                if (tasks.length > 5)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: TextButton(
-                      onPressed: onViewAll,
-                      child: Text(l10n.moreTasks(tasks.length - 5)),
-                    ),
-                  ),
+                ),
               ],
             );
           },
@@ -569,34 +561,75 @@ class _TodaysLearningSection extends ConsumerWidget {
   }
 }
 
-class _TaskSectionHeader extends StatelessWidget {
-  const _TaskSectionHeader({
+class _TaskSummaryCard extends StatelessWidget {
+  const _TaskSummaryCard({
     required this.icon,
     required this.title,
     required this.count,
     required this.color,
+    required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final int count;
   final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Text(
-          '$title ($count)',
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w700,
+    return SizedBox(
+      width: 220,
+      height: 96,
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$count',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -643,146 +676,6 @@ _DashboardTaskGroups _groupTasks(List<DailyTask> tasks) {
   );
 }
 
-/// AC-1: Individual task card with quick-complete button.
-class _TaskItemCard extends ConsumerWidget {
-  const _TaskItemCard({required this.task});
-
-  final DailyTask task;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final localeCode = Localizations.localeOf(context).languageCode;
-    final curriculumName = localeCode == 'he'
-        ? task.curriculumId.displayNameHe
-        : task.curriculumId.displayNameEn;
-    final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
-
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => context.router.push(const SchedulerRoute()),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: curriculumColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$curriculumName: ${task.contentItemSefariaRef}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      task.stageName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 4),
-              // AC-1: Priority badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: task.isOverdue
-                      ? Colors.orange.withValues(alpha: 0.15)
-                      : curriculumColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  task.isOverdue ? l10n.overdue : task.stageName,
-                  style: TextStyle(
-                    color: task.isOverdue ? Colors.orange : curriculumColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DailyProgressBar extends StatelessWidget {
-  final double progress;
-  final int completed;
-  final int total;
-
-  const _DailyProgressBar({
-    required this.progress,
-    required this.completed,
-    required this.total,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              l10n.dailyProgress,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 1,
-              ),
-            ),
-            Text(
-              formatFractionAsPercent(progress),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 8,
-            backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.25),
-            valueColor: AlwaysStoppedAnimation<Color>(
-              theme.colorScheme.primary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// AC-1, 2, 6: Curriculum card with pace badge and real task data.
 class _CurriculumCard extends ConsumerWidget {
   final CurriculumId curriculum;
@@ -802,6 +695,9 @@ class _CurriculumCard extends ConsumerWidget {
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
     );
+    final hasProgramEnrollmentAsync = ref.watch(
+      dashboardHasProgramEnrollmentProvider(curriculum),
+    );
     final paceAsync = ref.watch(dashboardPaceStatusProvider(curriculum));
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = formatFractionAsPercent(percentage);
@@ -811,6 +707,13 @@ class _CurriculumCard extends ConsumerWidget {
         .where((t) => t.curriculumId == curriculum)
         .toList();
     final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
+    final overdueProgramCount = curriculumTasks
+        .where((t) => t.priority == DailyTaskPriority.overdueProgram)
+        .length;
+    final todayProgramCount = curriculumTasks
+        .where((t) => t.priority == DailyTaskPriority.todayProgram)
+        .length;
+    final hasProgramEnrollment = hasProgramEnrollmentAsync.asData?.value ?? false;
 
     // AC-1: Get pace status
     final paceStatus = paceAsync.asData?.value;
@@ -855,49 +758,92 @@ class _CurriculumCard extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                // AC-2: Animated progress bar
-                AnimatedProgressBar(
-                  value: percentage,
-                  color: curriculumColor,
-                  backgroundColor: curriculumColor.withValues(alpha: 0.15),
-                  height: 4,
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOut,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      pctDisplay,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: curriculumColor,
+                if (hasProgramEnrollment) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: curriculumColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: curriculumColor.withValues(alpha: 0.22),
                       ),
                     ),
-                    const Spacer(),
-                    // AC-2: Projected completion date
-                    if (paceStatus?.projectedCompletionDate != null)
-                      Text(
-                        _formatProjectedDate(
-                          paceStatus!.projectedCompletionDate!,
+                    child: Row(
+                      children: [
+                        Icon(
+                          overdueProgramCount > 0
+                              ? Icons.warning_amber_rounded
+                              : Icons.check_circle_outline,
+                          color: overdueProgramCount > 0
+                              ? theme.colorScheme.error
+                              : Colors.green,
+                          size: 14,
                         ),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: theme.colorScheme.onSurfaceVariant,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            overdueProgramCount > 0
+                                ? 'Overdue: $overdueProgramCount  •  Today due: $todayProgramCount'
+                                : 'On time  •  Today due: $todayProgramCount',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      )
-                    else if (paceStatus != null)
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // AC-2: Animated progress bar (self-paced tracks)
+                  AnimatedProgressBar(
+                    value: percentage,
+                    color: curriculumColor,
+                    backgroundColor: curriculumColor.withValues(alpha: 0.15),
+                    height: 4,
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOut,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
                       Text(
-                        l10n.noProjection,
+                        pctDisplay,
                         style: TextStyle(
-                          fontSize: 10,
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: curriculumColor,
                         ),
                       ),
-                  ],
-                ),
+                      const Spacer(),
+                      // AC-2: Projected completion date
+                      if (paceStatus?.projectedCompletionDate != null)
+                        Text(
+                          _formatProjectedDate(
+                            paceStatus!.projectedCompletionDate!,
+                          ),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        )
+                      else if (paceStatus != null)
+                        Text(
+                          l10n.noProjection,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 const Spacer(),
                 // AC-6: Today's study item for this track
                 if (todayTask != null)
