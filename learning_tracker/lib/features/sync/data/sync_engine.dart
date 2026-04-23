@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
@@ -57,6 +58,7 @@ class SyncEngine {
   StreamSubscription<List<Map<String, dynamic>>>? _ledgerSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _curriculumTracksSubscription;
   StreamSubscription<Map<String, dynamic>?>? _notificationSettingsSubscription;
+  StreamSubscription<Map<String, dynamic>?>? _gamificationSettingsSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
@@ -89,6 +91,7 @@ class SyncEngine {
   bool _mergingLedgerEntries = false;
   bool _mergingCurriculumTracks = false;
   bool _mergingNotificationSettings = false;
+  bool _mergingGamificationSettings = false;
 
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
@@ -96,6 +99,8 @@ class SyncEngine {
   // Notification settings keys (must match notification providers).
   static const _notificationSettingsUpdatedAtMsKey =
       'notification_settings_updated_at_ms';
+  static const _gamificationSettingsUpdatedAtMsKey =
+      'gamification_settings_updated_at_ms';
   static const _reminderEnabledKey = 'daily_reminder_enabled';
   static const _reminderHourKey = 'daily_reminder_hour';
   static const _reminderMinuteKey = 'daily_reminder_minute';
@@ -226,6 +231,10 @@ class SyncEngine {
     _notificationSettingsSubscription = _firestoreDataSource
         .listenToNotificationSettings()
         .listen(_onNotificationSettingsUpdate, onError: _handleListenerError);
+
+    _gamificationSettingsSubscription = _firestoreDataSource
+        .listenToGamificationSettings()
+        .listen(_onGamificationSettingsUpdate, onError: _handleListenerError);
   }
 
   /// Detach foreground listeners (on app background).
@@ -248,6 +257,7 @@ class SyncEngine {
     await _ledgerSubscription?.cancel();
     await _curriculumTracksSubscription?.cancel();
     await _notificationSettingsSubscription?.cancel();
+    await _gamificationSettingsSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
@@ -259,6 +269,7 @@ class SyncEngine {
     _ledgerSubscription = null;
     _curriculumTracksSubscription = null;
     _notificationSettingsSubscription = null;
+    _gamificationSettingsSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -298,6 +309,7 @@ class SyncEngine {
         _firestoreDataSource.fetchCurriculumTracks(),
         _firestoreDataSource.fetchLearnerProfiles(),
         _firestoreDataSource.fetchNotificationSettings(),
+        _firestoreDataSource.fetchGamificationSettings(),
       ]);
       final completions = results[0] as List<Map<String, dynamic>>;
       final bookmarks = results[1] as List<Map<String, dynamic>>;
@@ -311,6 +323,7 @@ class SyncEngine {
       final curriculumTracks = results[9] as List<Map<String, dynamic>>;
       final learnerProfiles = results[10] as List<Map<String, dynamic>>;
       final notificationSettings = results[11] as Map<String, dynamic>?;
+      final gamificationSettings = results[12] as Map<String, dynamic>?;
 
       // Merge learner profiles FIRST — other rows (completions, bookmarks,
       // goals, streaks, etc.) reference profile_id, so they need the
@@ -329,6 +342,7 @@ class SyncEngine {
       await _mergeActiveCurricula(activeCurricula);
       await _mergeCurriculumTracks(curriculumTracks);
       await _mergeNotificationSettings(notificationSettings);
+      await _mergeGamificationSettings(gamificationSettings);
 
       _logger.info('Pull-on-launch completed successfully');
       final syncedAt = DateTime.now().toUtc();
@@ -513,6 +527,42 @@ class SyncEngine {
       );
       await _emitPendingStatus();
     }
+  }
+
+  /// Push gamification settings to Firestore after local write.
+  Future<void> pushGamificationSettings(
+    Map<String, dynamic> gamificationSettings,
+  ) async {
+    if (_isQueueOnlyMode) {
+      await _offlineQueue.enqueueGamificationSettings(
+        _withQueueTargetProfile(gamificationSettings),
+      );
+      await _updateQueueOnlyStatus();
+      return;
+    }
+
+    try {
+      await _firestoreDataSource.pushGamificationSettings(gamificationSettings);
+      _consecutivePushPermissionErrors = 0;
+      _logger.debug('Pushed gamification settings to Firestore');
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
+      _logger.warning(
+        'Failed to push gamification settings, queuing for later',
+        e,
+      );
+      await _offlineQueue.enqueueGamificationSettings(
+        _withQueueTargetProfile(gamificationSettings),
+      );
+      await _emitPendingStatus();
+    }
+  }
+
+  /// Build and push the current gamification snapshot from local storage.
+  Future<void> pushGamificationSettingsSnapshot() async {
+    final payload = await _buildGamificationSettingsPayload();
+    await pushGamificationSettings(payload);
   }
 
   /// Push study day config to Firestore as part of settings document.
@@ -1162,6 +1212,116 @@ class SyncEngine {
     }
   }
 
+  Future<Map<String, dynamic>> _buildGamificationSettingsPayload() async {
+    final profileId = _firestoreDataSource.profileId;
+    final pointRows = await (_database.select(
+      _database.pointConfigs,
+    )..where((t) => t.profileId.equals(profileId))).get();
+
+    final rewardService = RewardMilestoneService(
+      _database,
+      profileId: profileId,
+    );
+    final rewardPayload = await rewardService.exportCloudPayload();
+    final now = DateTime.now().toUtc();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      _gamificationSettingsUpdatedAtMsKey,
+      now.millisecondsSinceEpoch,
+    );
+
+    return {
+      'updated_at': now.toIso8601String(),
+      'points_config': pointRows
+          .map(
+            (row) => {
+              'profile_id': row.profileId,
+              'track_id': row.trackId,
+              'curriculum_id': row.curriculumId,
+              'stage_order': row.stageOrder,
+              'points': row.points,
+            },
+          )
+          .toList(),
+      'reward_settings': rewardPayload,
+    };
+  }
+
+  Future<void> _mergeGamificationSettings(
+    Map<String, dynamic>? remoteSettings,
+  ) async {
+    if (remoteSettings == null || remoteSettings.isEmpty) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final remoteUpdatedAt = _parseTimestamp(remoteSettings['updated_at']);
+      final localUpdatedAtMs = prefs.getInt(_gamificationSettingsUpdatedAtMsKey);
+      final localUpdatedAt = localUpdatedAtMs == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(localUpdatedAtMs, isUtc: true);
+
+      if (remoteUpdatedAt != null &&
+          !remoteIsNewer(
+            localUpdatedAt: localUpdatedAt,
+            remoteUpdatedAt: remoteUpdatedAt,
+          )) {
+        _logger.debug('Skipping gamification settings merge: local is newer');
+        return;
+      }
+
+      final remoteRows = remoteSettings['points_config'];
+      if (remoteRows is List) {
+        for (final raw in remoteRows) {
+          if (raw is! Map) continue;
+          final map = raw.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+          final curriculumId = map['curriculum_id'] as String?;
+          final stageOrder = (map['stage_order'] as num?)?.toInt();
+          final points = (map['points'] as num?)?.toInt();
+          final trackId = (map['track_id'] as num?)?.toInt();
+          if (curriculumId == null ||
+              stageOrder == null ||
+              points == null ||
+              trackId == null) {
+            continue;
+          }
+
+          await _database.pointConfigDao.upsertConfig(
+            PointConfigsCompanion.insert(
+              profileId: Value(_firestoreDataSource.profileId),
+              curriculumId: curriculumId,
+              trackId: trackId,
+              stageOrder: stageOrder,
+              points: points,
+            ),
+          );
+        }
+      }
+
+      final rewardService = RewardMilestoneService(
+        _database,
+        profileId: _firestoreDataSource.profileId,
+      );
+      final rewardSettingsRaw = remoteSettings['reward_settings'];
+      await rewardService.mergeCloudPayload(
+        rewardSettingsRaw is Map
+            ? rewardSettingsRaw.map(
+                (key, value) => MapEntry(key.toString(), value),
+              )
+            : null,
+      );
+
+      final stamp =
+          remoteUpdatedAt?.millisecondsSinceEpoch ??
+          DateTime.now().toUtc().millisecondsSinceEpoch;
+      await prefs.setInt(_gamificationSettingsUpdatedAtMsKey, stamp);
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+      _logger.warning('Failed to merge gamification settings: $e');
+    }
+  }
+
   /// Merge goals from Firestore (last-write-wins per D4).
   ///
   /// For each remote goal, upsert into local DB. If local goal
@@ -1546,7 +1706,13 @@ class SyncEngine {
         final needsCreate = remote == null;
         final missingStreakSummary =
             remote != null && remote['streak_summary'] == null;
-        if (!needsCreate && !missingStreakSummary) continue;
+        final missingRewardConfiguration =
+            remote != null && remote['reward_configuration'] == null;
+        if (!needsCreate &&
+            !missingStreakSummary &&
+            !missingRewardConfiguration) {
+          continue;
+        }
 
         await pushLearnerProfile({
           'id': profile.id,
@@ -1755,6 +1921,8 @@ class SyncEngine {
               ..limit(1))
             .getSingleOrNull();
     final streak = await _database.streakDao.getStreakByProfile(profileId);
+    final rewardService = RewardMilestoneService(_database, profileId: profileId);
+    final rewardPayload = await rewardService.exportCloudPayload();
 
     final enriched = <String, dynamic>{
       ...profile,
@@ -1767,6 +1935,10 @@ class SyncEngine {
         'current_streak': streak?.currentStreak ?? 0,
         'max_streak': streak?.maxStreak ?? 0,
         'last_completion_date': streak?.lastCompletionDate?.toIso8601String(),
+      },
+      'reward_configuration': rewardPayload['milestones'] ?? const [],
+      'reward_progress': {
+        'unlocks': rewardPayload['unlocks'] ?? const [],
       },
       'settings_snapshot': curriculumSettings,
     };
@@ -1929,6 +2101,21 @@ class SyncEngine {
       await _mergeNotificationSettings(notificationSettings);
     } finally {
       _mergingNotificationSettings = false;
+    }
+  }
+
+  Future<void> _onGamificationSettingsUpdate(
+    Map<String, dynamic>? gamificationSettings,
+  ) async {
+    if (gamificationSettings == null) return;
+    if (_mergingGamificationSettings) return;
+    _mergingGamificationSettings = true;
+    _consecutiveListenerErrors = 0;
+    try {
+      _logger.debug('Received gamification settings update from listener');
+      await _mergeGamificationSettings(gamificationSettings);
+    } finally {
+      _mergingGamificationSettings = false;
     }
   }
 
@@ -2365,6 +2552,10 @@ class SyncEngine {
           await _readLocalNotificationSettingsPayload();
       await pushNotificationSettings(notificationSettings);
       _logger.debug('Pushed notification settings');
+
+      // --- Gamification settings (points + reward milestones/unlocks) ---
+      await pushGamificationSettingsSnapshot();
+      _logger.debug('Pushed gamification settings');
 
       _logger.info('pushAllLocalData: completed successfully');
       final syncedAt = DateTime.now().toUtc();

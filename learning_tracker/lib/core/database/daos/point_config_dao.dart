@@ -10,33 +10,73 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
   PointConfigDao(super.db);
 
   /// Get all point configs for a curriculum, ordered by stage.
-  Future<List<PointConfig>> getConfigsByCurriculum(String curriculumId) =>
-      (select(pointConfigs)
-            ..where((t) => t.curriculumId.equals(curriculumId))
-            ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
-          .get();
+  ///
+  /// Optional [profileId] and [trackId] filters allow strict track-scoped
+  /// configuration reads.
+  Future<List<PointConfig>> getConfigsByCurriculum(
+    String curriculumId, {
+    int? profileId,
+    int? trackId,
+  }) {
+    final query = select(pointConfigs)
+      ..where((t) => t.curriculumId.equals(curriculumId))
+      ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]);
 
-  /// Get the point value for a specific curriculum + stage.
-  Future<PointConfig?> getConfig(String curriculumId, int stageOrder) =>
+    if (profileId != null) {
+      query.where((t) => t.profileId.equals(profileId));
+    }
+    if (trackId != null) {
+      query.where((t) => t.trackId.equals(trackId));
+    }
+    return query.get();
+  }
+
+  /// Get the point value for a specific curriculum + stage + track.
+  Future<PointConfig?> getConfig(
+    String curriculumId,
+    int stageOrder, {
+    required int profileId,
+    required int trackId,
+  }) =>
       (select(pointConfigs)
             ..where(
               (t) =>
+                  t.profileId.equals(profileId) &
+                  t.trackId.equals(trackId) &
                   t.curriculumId.equals(curriculumId) &
                   t.stageOrder.equals(stageOrder),
             )
             ..limit(1))
           .getSingleOrNull();
 
-  /// Insert or update a point config (upsert by curriculum_id + stage_order).
+  /// Insert or update a point config (upsert by
+  /// profile_id + track_id + curriculum_id + stage_order).
   Future<void> upsertConfig(PointConfigsCompanion entry) async {
     final currId = entry.curriculumId.value;
     final stage = entry.stageOrder.value;
-    final existing = await getConfig(currId, stage);
+    final profileId = entry.profileId.value;
+    final trackId = entry.trackId.value;
+    final existing = await getConfig(
+      currId,
+      stage,
+      profileId: profileId,
+      trackId: trackId,
+    );
     if (existing != null) {
       await (update(pointConfigs)..where(
-            (t) => t.curriculumId.equals(currId) & t.stageOrder.equals(stage),
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.trackId.equals(trackId) &
+                t.curriculumId.equals(currId) &
+                t.stageOrder.equals(stage),
           ))
-          .write(PointConfigsCompanion(points: entry.points));
+          .write(
+            PointConfigsCompanion(
+              profileId: Value(profileId),
+              trackId: Value(trackId),
+              points: entry.points,
+            ),
+          );
     } else {
       await insertConfig(entry);
     }
@@ -46,17 +86,27 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
   Future<int> insertConfig(PointConfigsCompanion entry) =>
       into(pointConfigs).insert(entry);
 
-  /// Delete all configs for a curriculum.
-  Future<int> deleteAllForCurriculum(String curriculumId) => (delete(
-    pointConfigs,
-  )..where((t) => t.curriculumId.equals(curriculumId))).go();
+  /// Delete all configs for a curriculum + profile.
+  Future<int> deleteAllForCurriculum(
+    String curriculumId, {
+    required int profileId,
+  }) => (delete(pointConfigs)
+        ..where(
+          (t) => t.curriculumId.equals(curriculumId) &
+              t.profileId.equals(profileId),
+        ))
+      .go();
 
   /// Seed default point configs for a curriculum.
   ///
   /// Queries stage definitions for the curriculum to determine how many stages
   /// exist, then assigns descending point values: first stage gets 10 points,
   /// subsequent stages get decreasing values (minimum 1).
-  Future<void> seedDefaults(String curriculumId, int trackId) async {
+  Future<void> seedDefaults(
+    String curriculumId,
+    int trackId, {
+    required int profileId,
+  }) async {
     final stages = await db.stageDao.getStageDefinitionsByCurriculum(
       curriculumId,
     );
@@ -71,6 +121,7 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
       for (final d in fallbackDefaults) {
         await insertConfig(
           PointConfigsCompanion.insert(
+            profileId: Value(profileId),
             curriculumId: curriculumId,
             trackId: trackId,
             stageOrder: d.stageOrder,
@@ -90,6 +141,7 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
           : 1;
       await insertConfig(
         PointConfigsCompanion.insert(
+          profileId: Value(profileId),
           curriculumId: curriculumId,
           trackId: trackId,
           stageOrder: stage.stageOrder,

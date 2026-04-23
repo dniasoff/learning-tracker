@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
@@ -21,6 +22,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
   final StreakService? _streakService;
+  final RewardMilestoneService? _rewardMilestoneService;
   final int _activeProfileId;
 
   CompletionRepositoryImpl({
@@ -30,6 +32,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
     StreakService? streakService,
+    RewardMilestoneService? rewardMilestoneService,
     int activeProfileId = 0,
   }) : _database = database,
        _syncEngine = syncEngine,
@@ -37,6 +40,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _bookmarkRepository = bookmarkRepository,
        _completionDetectionService = completionDetectionService,
        _streakService = streakService,
+       _rewardMilestoneService = rewardMilestoneService,
        _activeProfileId = activeProfileId;
 
   @override
@@ -92,19 +96,25 @@ class CompletionRepositoryImpl implements CompletionRepository {
         }
       }
 
+      final trackId = await _resolveTrackId(
+        curriculumId: request.curriculumId,
+        trackType: request.trackType,
+      );
+
       // 4. Calculate points for this stage
       final points = isChildProfile
           ? await _calculatePoints(
               curriculumId: request.curriculumId,
               stageOrder: request.stageId,
+              trackId: trackId,
             )
           : 0;
 
       // 5. Create completion record
       final created = await _createCompletion(
         request: request,
+        trackId: trackId,
         points: points,
-        isChildProfile: isChildProfile,
       );
 
       // 6. Update cached streak table so the dashboard reflects the new
@@ -137,6 +147,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
             markedBy: _activeProfileId,
           ),
         );
+      }
+
+      if (isChildProfile) {
+        unawaited(_rewardMilestoneService?.evaluateUnlocksForTrack(completion.trackId));
+        unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
       }
     }
 
@@ -207,17 +222,23 @@ class CompletionRepositoryImpl implements CompletionRepository {
       return existing;
     }
 
+    final trackId = await _resolveTrackId(
+      curriculumId: request.curriculumId,
+      trackType: request.trackType,
+    );
+
     final points = isChildProfile
         ? await _calculatePoints(
             curriculumId: request.curriculumId,
             stageOrder: request.stageId,
+            trackId: trackId,
           )
         : 0;
 
     final completion = await _createCompletion(
       request: request,
+      trackId: trackId,
       points: points,
-      isChildProfile: isChildProfile,
     );
 
     await _streakService?.recordCompletion(completion.completedAt);
@@ -299,11 +320,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<int> _calculatePoints({
     required String curriculumId,
     required int stageOrder,
+    required int trackId,
   }) async {
     // Check point_configs table for configured value
     final config = await _database.pointConfigDao.getConfig(
       curriculumId,
       stageOrder,
+      profileId: _activeProfileId,
+      trackId: trackId,
     );
     if (config != null) return config.points;
 
@@ -343,14 +367,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// Create the completion record in the database.
   Future<Completion> _createCompletion({
     required CompletionRequest request,
+    required int trackId,
     required int points,
-    required bool isChildProfile,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
-    final trackId = await _resolveTrackId(
-      curriculumId: request.curriculumId,
-      trackType: request.trackType,
-    );
 
     final id = await _database.completionDao.insertCompletion(
       CompletionsCompanion.insert(

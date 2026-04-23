@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -29,6 +30,9 @@ class ProgressScreen extends ConsumerWidget {
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
     final profileId = ref.watch(activeProfileIdProvider);
     final journeyAsync = ref.watch(journeyViewModelProvider(profileId));
+    final previousAchievementsAsync = ref.watch(
+      previousProgramLifetimeAchievementsProvider(profileId),
+    );
     final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
 
     return Scaffold(
@@ -70,6 +74,8 @@ class ProgressScreen extends ConsumerWidget {
                 overviewStats?.totalCompletions ?? journey?.totalCompletions ?? 0;
             final totalUniqueUnits =
                 overviewStats?.totalUniqueItems ?? journey?.totalUniqueUnits ?? 0;
+              final previousAchievements =
+                  previousAchievementsAsync.asData?.value ?? const <LearningLedgerData>[];
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -80,6 +86,7 @@ class ProgressScreen extends ConsumerWidget {
                   }
                   ref.invalidate(progressOverviewStatsProvider);
                   ref.invalidate(journeyViewModelProvider(profileId));
+                  ref.invalidate(previousProgramLifetimeAchievementsProvider(profileId));
                   for (final c in activeCurricula) {
                     ref.invalidate(dashboardCompletionPercentageProvider(c));
                   }
@@ -93,6 +100,7 @@ class ProgressScreen extends ConsumerWidget {
                         totalPoints: totalPoints,
                         activeCurricula: activeCurricula,
                         journey: journey,
+                        previousAchievements: previousAchievements,
                       )
                     : _AdultProgressView(
                         totalCompletions: totalCompletions,
@@ -100,6 +108,7 @@ class ProgressScreen extends ConsumerWidget {
                         activeCurricula: activeCurricula,
                         currentStreak: currentStreak,
                         maxStreak: maxStreak,
+                        previousAchievements: previousAchievements,
                       ),
               );
             },
@@ -119,6 +128,7 @@ class _ChildProgressView extends StatelessWidget {
     required this.totalPoints,
     required this.activeCurricula,
     required this.journey,
+    required this.previousAchievements,
   });
 
   final int currentStreak;
@@ -128,6 +138,7 @@ class _ChildProgressView extends StatelessWidget {
   final int totalPoints;
   final List<CurriculumId> activeCurricula;
   final JourneyViewModel? journey;
+  final List<LearningLedgerData> previousAchievements;
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +198,10 @@ class _ChildProgressView extends StatelessWidget {
             milestones: allMilestones,
             onSeeAll: () => context.router.push(const GamificationRoute()),
           ),
+        if (previousAchievements.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _PreviousAchievementsSection(entries: previousAchievements),
+        ],
       ],
     );
   }
@@ -199,6 +214,7 @@ class _AdultProgressView extends StatelessWidget {
     required this.activeCurricula,
     required this.currentStreak,
     required this.maxStreak,
+    required this.previousAchievements,
   });
 
   final int totalCompletions;
@@ -206,6 +222,7 @@ class _AdultProgressView extends StatelessWidget {
   final List<CurriculumId> activeCurricula;
   final int currentStreak;
   final int maxStreak;
+  final List<LearningLedgerData> previousAchievements;
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +286,69 @@ class _AdultProgressView extends StatelessWidget {
         const _QuickAccessSection(),
         const SizedBox(height: 20),
         _CurriculaMasterySection(activeCurricula: activeCurricula),
+        if (previousAchievements.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _PreviousAchievementsSection(entries: previousAchievements),
+        ],
       ],
+    );
+  }
+}
+
+class _PreviousAchievementsSection extends StatelessWidget {
+  const _PreviousAchievementsSection({required this.entries});
+
+  final List<LearningLedgerData> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final latest = entries.take(8).toList();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.history_edu_rounded,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Previous Achievements',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Already learned before this programmed track. '
+              'These are separate from ongoing progress.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final entry in latest)
+                  Chip(
+                    avatar: const Icon(Icons.workspace_premium, size: 16),
+                    label: Text(entry.unitDisplayNameEn),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -419,7 +498,7 @@ class _SiyumBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [AppTheme.childTrophyAccent, AppTheme.brandGoldDeep],
         ),
         borderRadius: BorderRadius.circular(16),

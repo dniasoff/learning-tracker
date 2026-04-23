@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/learner_profiles/{profileId}/goals/{id}` - Goals (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/streak/data` - Streak (single doc)
 /// - `users/{uid}/learner_profiles/{profileId}/notification_settings/preferences` - Notification preferences (LWW)
+/// - `users/{uid}/learner_profiles/{profileId}/gamification_settings/config` - Points/rewards config
 /// - `users/{uid}/learner_profiles/{profileId}/active_curricula/data` - Active curricula
 /// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state (LWW)
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
@@ -104,6 +105,11 @@ class FirestoreDataSource {
         .doc('preferences');
   }
 
+  /// Gamification settings document reference (profile-scoped).
+  DocumentReference<Map<String, dynamic>>? get _gamificationSettingsDoc {
+    return _profileScopedDoc?.collection('gamification_settings').doc('config');
+  }
+
   Future<void> _ensureProfilePathReady() async {
     if (_profilePathChecked) return;
     _profilePathChecked = true;
@@ -139,6 +145,7 @@ class FirestoreDataSource {
       'active_curricula',
       'curriculum_tracks',
       'notification_settings',
+      'gamification_settings',
       'learning_ledger',
       'curriculum_imports',
     ];
@@ -180,6 +187,7 @@ class FirestoreDataSource {
       'active_curricula',
       'curriculum_tracks',
       'notification_settings',
+      'gamification_settings',
       'learning_ledger',
       'curriculum_imports',
     ];
@@ -294,6 +302,7 @@ class FirestoreDataSource {
       'curriculum_tracks',
       'profile_programs',
       'notification_settings',
+      'gamification_settings',
       'streak',
     ];
 
@@ -574,6 +583,43 @@ class FirestoreDataSource {
       return Stream.value(null);
     }
 
+    return doc.snapshots().map((snapshot) => snapshot.data());
+  }
+
+  // ========== Gamification Settings Operations ==========
+
+  /// Push gamification settings to Firestore (last-write-wins).
+  Future<void> pushGamificationSettings(
+    Map<String, dynamic> gamificationSettings,
+  ) async {
+    await _ensureProfilePathReady();
+    final doc = _gamificationSettingsDoc;
+    if (doc == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await doc.set({
+      ...gamificationSettings,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch gamification settings from Firestore.
+  Future<Map<String, dynamic>?> fetchGamificationSettings() async {
+    await _ensureProfilePathReady();
+    final doc = _gamificationSettingsDoc;
+    if (doc == null) return null;
+
+    final snapshot = await doc.get();
+    return snapshot.data();
+  }
+
+  /// Listen to real-time gamification settings updates.
+  Stream<Map<String, dynamic>?> listenToGamificationSettings() {
+    final doc = _gamificationSettingsDoc;
+    if (doc == null) {
+      return Stream.value(null);
+    }
     return doc.snapshots().map((snapshot) => snapshot.data());
   }
 

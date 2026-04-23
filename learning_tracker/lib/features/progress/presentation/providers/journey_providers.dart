@@ -118,6 +118,31 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
   );
 }
 
+/// Lifetime "already learned" achievements recorded during program setup.
+///
+/// These are manual ledger markers with no concrete track linkage (trackId null)
+/// and must stay separate from ongoing completion/progress calculations.
+final previousProgramLifetimeAchievementsProvider = FutureProvider.autoDispose
+    .family<List<LearningLedgerData>, int>((ref, profileId) async {
+      final entries = await ref.watch(learningLedgerProvider(profileId).future);
+      final filtered = entries
+          .where((e) => e.isManual && e.trackId == null)
+          .toList()
+        ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+
+      // Keep the latest marker per unique unit key.
+      final seen = <String>{};
+      final deduped = <LearningLedgerData>[];
+      for (final entry in filtered) {
+        final key =
+            '${entry.curriculumId}:${entry.unitType}:${entry.unitIdentifier}';
+        if (seen.add(key)) {
+          deduped.add(entry);
+        }
+      }
+      return deduped;
+    });
+
 /// Count total available units for a curriculum.
 ///
 /// For most curricula, units are level2 (masechtos).

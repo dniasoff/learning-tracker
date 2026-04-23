@@ -274,11 +274,14 @@ class TrackCreationService {
   }) async {
     final existing = await _database.pointConfigDao.getConfigsByCurriculum(
       curriculumId.storageKey,
+      profileId: profileId,
+      trackId: trackId,
     );
     if (existing.isEmpty) {
       await _database.pointConfigDao.seedDefaults(
         curriculumId.storageKey,
         trackId,
+        profileId: profileId,
       );
     }
   }

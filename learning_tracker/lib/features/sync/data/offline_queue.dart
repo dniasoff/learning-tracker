@@ -90,6 +90,15 @@ class OfflineQueue {
     _logger.info('Queued notification settings for offline sync');
   }
 
+  /// Enqueue a gamification settings operation.
+  Future<void> enqueueGamificationSettings(
+    Map<String, dynamic> gamificationSettings,
+  ) async {
+    final payload = jsonEncode(gamificationSettings);
+    await _queue.enqueue('gamification_settings', payload);
+    _logger.info('Queued gamification settings for offline sync');
+  }
+
   /// Enqueue a streak operation.
   Future<void> enqueueStreak(Map<String, dynamic> streak) async {
     final payload = jsonEncode(streak);
@@ -257,6 +266,9 @@ class OfflineQueue {
               break;
             case 'notification_settings':
               await dataSource.pushNotificationSettings(payload);
+              break;
+            case 'gamification_settings':
+              await dataSource.pushGamificationSettings(payload);
               break;
             case 'streak':
               await dataSource.pushStreak(payload);

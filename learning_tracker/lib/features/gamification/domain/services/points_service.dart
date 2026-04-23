@@ -34,10 +34,13 @@ class PointsService {
   Future<int> getPointsForStage({
     required String curriculumId,
     required int stageOrder,
+    required int trackId,
   }) async {
     final config = await _database.pointConfigDao.getConfig(
       curriculumId,
       stageOrder,
+      profileId: profileId,
+      trackId: trackId,
     );
     if (config != null) return config.points;
 
@@ -107,9 +110,15 @@ class PointsService {
   }) async {
     final existing = await _database.pointConfigDao.getConfigsByCurriculum(
       curriculumId,
+      profileId: profileId,
+      trackId: trackId,
     );
     if (existing.isEmpty) {
-      await _database.pointConfigDao.seedDefaults(curriculumId, trackId);
+      await _database.pointConfigDao.seedDefaults(
+        curriculumId,
+        trackId,
+        profileId: profileId,
+      );
     }
   }
 
