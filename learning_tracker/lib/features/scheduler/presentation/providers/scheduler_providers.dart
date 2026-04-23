@@ -590,47 +590,84 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
         CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
     if (programKey == null) continue;
 
-    final entry = await calendarService.getEntry(programKey, now);
-    final todayRef = entry?.todayRef;
-    if (todayRef == null || todayRef.trim().isEmpty) continue;
-
     final contentItems = await getScopedContent(curriculum);
-    final refsForToday = _resolvedOrFallbackProgramRefs(
-      todayRef: todayRef,
-      contentItems: contentItems,
-    );
-    if (refsForToday.isEmpty) continue;
-
     final stages = await db.stageDao.getStagesByTrack(trackId);
     if (stages.isEmpty) continue;
     final firstStage =
         (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))
             .first;
 
+    final todayDate = DateTime(now.year, now.month, now.day);
+    final configuredStartDate = enrollment.trackingStartDate == null
+        ? todayDate
+        : DateTime(
+            enrollment.trackingStartDate!.year,
+            enrollment.trackingStartDate!.month,
+            enrollment.trackingStartDate!.day,
+          );
+    // Start anchor represents where the learner is "currently at",
+    // so backlog begins from the next program unit.
+    var effectiveStartDate = configuredStartDate.add(const Duration(days: 1));
+    if (effectiveStartDate.isAfter(todayDate)) {
+      effectiveStartDate = todayDate;
+    }
+
+    final rangeEntries = await calendarService.getEntriesForRange(
+      programKey,
+      effectiveStartDate,
+      todayDate,
+    );
+
+    final entries = rangeEntries.isNotEmpty
+        ? rangeEntries
+        : [
+            if (await calendarService.getEntry(programKey, now)
+                case final todayEntry?)
+              todayEntry,
+          ];
+    if (entries.isEmpty) continue;
+
     result.removeWhere(
       (t) =>
           t.curriculumId == curriculum &&
           t.trackId == trackId &&
-          t.priority == DailyTaskPriority.newLearning,
+          (t.priority == DailyTaskPriority.newLearning ||
+              t.priority == DailyTaskPriority.overdueProgram ||
+              t.priority == DailyTaskPriority.todayProgram),
     );
 
-    result.addAll(
-      refsForToday.map((ref) {
-        return DailyTask(
-          curriculumId: curriculum,
-          contentItemSefariaRef: ref,
-          stageOrder: firstStage.stageOrder,
-          stageDefinitionId: firstStage.id,
-          priority: DailyTaskPriority.newLearning,
-          isOverdue: false,
-          reason: 'Program assignment for today',
-          stageName: firstStage.stageName,
-          trackId: trackId,
-          trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
-          estimatedEffortMinutes: 5,
-        );
-      }),
-    );
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final refsForEntry = _resolvedOrFallbackProgramRefs(
+        todayRef: entry.todayRef,
+        contentItems: contentItems,
+      );
+      if (refsForEntry.isEmpty) continue;
+      final isTodayUnit = i == entries.length - 1;
+      final priority = isTodayUnit
+          ? DailyTaskPriority.todayProgram
+          : DailyTaskPriority.overdueProgram;
+      final reason = isTodayUnit
+          ? 'Program assignment for today'
+          : 'Program day pending from previous days';
+      result.addAll(
+        refsForEntry.map((ref) {
+          return DailyTask(
+            curriculumId: curriculum,
+            contentItemSefariaRef: ref,
+            stageOrder: firstStage.stageOrder,
+            stageDefinitionId: firstStage.id,
+            priority: priority,
+            isOverdue: !isTodayUnit,
+            reason: reason,
+            stageName: firstStage.stageName,
+            trackId: trackId,
+            trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
+            estimatedEffortMinutes: 5,
+          );
+        }),
+      );
+    }
   }
 
   return result;

@@ -102,12 +102,7 @@ class TrackCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Today: ${progress.tasksToday} task${progress.tasksToday == 1 ? '' : 's'}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  _buildFooterMetrics(theme),
                   FilledButton.tonal(
                     onPressed: onContinue,
                     style: FilledButton.styleFrom(
@@ -135,5 +130,30 @@ class TrackCard extends StatelessWidget {
       case TrackProgressVariant.momentum:
         return MomentumContent(progress: progress);
     }
+  }
+
+  Widget _buildFooterMetrics(ThemeData theme) {
+    if (progress.variant == TrackProgressVariant.programCalendar &&
+        progress.calendarPos != null) {
+      final delta = progress.calendarPos!.delta;
+      final overduePrevious = delta < 0
+          ? (-delta - 1).clamp(0, 9999)
+          : 0;
+      final todayDue = delta < 0 ? 1 : 0;
+      return Text(
+        'Overdue: $overduePrevious  •  Today due: $todayDue',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    return Text(
+      'Today: ${progress.tasksToday} task${progress.tasksToday == 1 ? '' : 's'}',
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
   }
 }
