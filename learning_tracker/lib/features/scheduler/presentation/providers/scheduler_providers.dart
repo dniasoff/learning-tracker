@@ -5,7 +5,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/core/services/calendar_program_service.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
@@ -223,6 +227,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final generator = ref.watch(dailyTaskGeneratorProvider);
   final planRepo = ref.watch(dailyPlanRepositoryProvider);
+  final calendarService = ref.watch(calendarProgramServiceProvider);
   final skipped = ref.watch(skippedTasksProvider);
   final previouslySkipped = await ref.watch(
     previouslySkippedRefsProvider.future,
@@ -238,6 +243,9 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
       generator: generator,
       profileId: profileId,
       now: now,
+      calendarService: calendarService,
+      getScopedContent: (curriculumId) =>
+          ref.read(scopedCurriculumContentProvider(curriculumId).future),
     ),
   );
 
@@ -252,8 +260,20 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final snapshotMissingActiveCurriculum =
       activeCurriculumKeys.isNotEmpty &&
       activeCurriculumKeys.any((key) => !snapshotCurriculumKeys.contains(key));
+  final snapshotMissingProgramAssignments =
+      await _snapshotMissingProgramAssignments(
+        db: db,
+        tasks: tasks,
+        profileId: profileId,
+        now: now,
+        activeCurriculumKeys: activeCurriculumKeys,
+        calendarService: calendarService,
+        getScopedContent: (curriculumId) =>
+            ref.read(scopedCurriculumContentProvider(curriculumId).future),
+      );
 
-  final effectiveTasks = snapshotMissingActiveCurriculum
+  final effectiveTasks =
+      (snapshotMissingActiveCurriculum || snapshotMissingProgramAssignments)
       ? await planRepo.rebuildPlan(
           profileId: profileId,
           now: now,
@@ -262,6 +282,9 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
             generator: generator,
             profileId: profileId,
             now: now,
+            calendarService: calendarService,
+            getScopedContent: (curriculumId) =>
+                ref.read(scopedCurriculumContentProvider(curriculumId).future),
           ),
         )
       : tasks;
@@ -304,6 +327,95 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   }).toList()..sort((a, b) => a.priority.index.compareTo(b.priority.index));
 }
 
+Future<bool> _snapshotMissingProgramAssignments({
+  required UserDatabase db,
+  required List<DailyTask> tasks,
+  required int profileId,
+  required DateTime now,
+  required List<String> activeCurriculumKeys,
+  required CalendarProgramService calendarService,
+  required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
+}) async {
+  if (activeCurriculumKeys.isEmpty) return false;
+
+  final activeCurricula = <CurriculumId>[
+    for (final key in activeCurriculumKeys)
+      ...CurriculumId.values.where((c) => c.storageKey == key).take(1),
+  ];
+  if (activeCurricula.isEmpty) return false;
+
+  final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
+  final trackIdsByCurriculum = <CurriculumId, int>{};
+  for (final curriculum in activeCurricula) {
+    final tracksForCurriculum = activeTracks
+        .where((t) => t.curriculumId == curriculum.storageKey)
+        .toList();
+    if (tracksForCurriculum.isEmpty) continue;
+    final preferred = tracksForCurriculum.firstWhere(
+      (t) => t.trackType == TrackType.personal.storageKey,
+      orElse: () => tracksForCurriculum.first,
+    );
+    trackIdsByCurriculum[curriculum] = preferred.id;
+  }
+
+  for (final curriculum in activeCurricula) {
+    final trackId = trackIdsByCurriculum[curriculum];
+    if (trackId == null) continue;
+
+    final enrollment = await db.profileProgramDao.getProgramForProfileAndCurriculum(
+      profileId,
+      curriculum.storageKey,
+    );
+    final programId = enrollment?.programId;
+    if (programId == null) continue;
+    final program = LearningProgramRepository.instance.getProgramById(programId);
+    final apiKey = program?.apiProgramKey;
+    if (program == null || apiKey == null || apiKey.isEmpty) continue;
+
+    final programKey =
+        CalendarProgramRegistry.byId(apiKey)?.id ??
+        CalendarProgramRegistry.byApiKey(apiKey)?.id ??
+        CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
+    if (programKey == null) continue;
+
+    final entry = await calendarService.getEntry(programKey, now);
+    final todayRef = entry?.todayRef.trim();
+    if (todayRef == null || todayRef.isEmpty) continue;
+
+    final contentItems = await getScopedContent(curriculum);
+    final expectedRefs = _resolvedOrFallbackProgramRefs(
+      todayRef: todayRef,
+      contentItems: contentItems,
+    );
+    if (expectedRefs.isEmpty) continue;
+
+    final found = _programAssignmentPresentInTasks(
+      tasks: tasks,
+      trackId: trackId,
+      expectedRefs: expectedRefs,
+    );
+    if (!found) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool _programAssignmentPresentInTasks({
+  required List<DailyTask> tasks,
+  required int trackId,
+  required Set<String> expectedRefs,
+}) {
+  if (expectedRefs.isEmpty) return true;
+  final expectedNormalized = expectedRefs.map(_normalizeRef).toSet();
+  final actualNormalized = tasks
+      .where((t) => t.trackId == trackId)
+      .map((t) => _normalizeRef(t.contentItemSefariaRef))
+      .toSet();
+  return expectedNormalized.every(actualNormalized.contains);
+}
+
 /// Runs the scheduler across all active curricula to produce a fresh plan.
 /// Called only when no snapshot exists for the current local day.
 Future<List<DailyTask>> _buildFreshPlan({
@@ -311,6 +423,8 @@ Future<List<DailyTask>> _buildFreshPlan({
   required DailyTaskGenerator generator,
   required int profileId,
   required DateTime now,
+  required CalendarProgramService calendarService,
+  required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
 }) async {
   final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
     profileId,
@@ -417,7 +531,7 @@ Future<List<DailyTask>> _buildFreshPlan({
     }
   }
 
-  return generator.generateAll(
+  final generated = await generator.generateAll(
     activeCurricula,
     now,
     goalDeadlines: goalDeadlines,
@@ -427,4 +541,448 @@ Future<List<DailyTask>> _buildFreshPlan({
     trackIds: trackIds,
     trackLabels: trackLabels,
   );
+
+  final overridden = await _applyProgramCalendarOverrides(
+    db: db,
+    generated: generated,
+    profileId: profileId,
+    now: now,
+    activeCurricula: activeCurricula,
+    trackIds: trackIds,
+    trackLabels: trackLabels,
+    calendarService: calendarService,
+    getScopedContent: getScopedContent,
+  );
+  overridden.sort((a, b) => a.priority.index.compareTo(b.priority.index));
+  return overridden;
+}
+
+Future<List<DailyTask>> _applyProgramCalendarOverrides({
+  required UserDatabase db,
+  required List<DailyTask> generated,
+  required int profileId,
+  required DateTime now,
+  required List<CurriculumId> activeCurricula,
+  required Map<CurriculumId, int> trackIds,
+  required Map<CurriculumId, String> trackLabels,
+  required CalendarProgramService calendarService,
+  required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
+}) async {
+  final result = List<DailyTask>.from(generated);
+
+  for (final curriculum in activeCurricula) {
+    final trackId = trackIds[curriculum];
+    if (trackId == null) continue;
+
+    final enrollment = await db.profileProgramDao
+        .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+    if (enrollment == null) continue;
+
+    final program = LearningProgramRepository.instance.getProgramById(
+      enrollment.programId,
+    );
+    final apiKey = program?.apiProgramKey;
+    if (program == null || apiKey == null || apiKey.isEmpty) continue;
+
+    final programKey =
+        CalendarProgramRegistry.byId(apiKey)?.id ??
+        CalendarProgramRegistry.byApiKey(apiKey)?.id ??
+        CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
+    if (programKey == null) continue;
+
+    final entry = await calendarService.getEntry(programKey, now);
+    final todayRef = entry?.todayRef;
+    if (todayRef == null || todayRef.trim().isEmpty) continue;
+
+    final contentItems = await getScopedContent(curriculum);
+    final refsForToday = _resolvedOrFallbackProgramRefs(
+      todayRef: todayRef,
+      contentItems: contentItems,
+    );
+    if (refsForToday.isEmpty) continue;
+
+    final stages = await db.stageDao.getStagesByTrack(trackId);
+    if (stages.isEmpty) continue;
+    final firstStage =
+        (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))
+            .first;
+
+    result.removeWhere(
+      (t) =>
+          t.curriculumId == curriculum &&
+          t.trackId == trackId &&
+          t.priority == DailyTaskPriority.newLearning,
+    );
+
+    result.addAll(
+      refsForToday.map((ref) {
+        return DailyTask(
+          curriculumId: curriculum,
+          contentItemSefariaRef: ref,
+          stageOrder: firstStage.stageOrder,
+          stageDefinitionId: firstStage.id,
+          priority: DailyTaskPriority.newLearning,
+          isOverdue: false,
+          reason: 'Program assignment for today',
+          stageName: firstStage.stageName,
+          trackId: trackId,
+          trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
+          estimatedEffortMinutes: 5,
+        );
+      }),
+    );
+  }
+
+  return result;
+}
+
+Set<String> _resolveProgramTodayRefs(
+  String todayRef,
+  List<ContentItem> contentItems,
+) {
+  final leafRefs = contentItems
+      .where((item) => item.isLeaf)
+      .map((item) => item.sefariaRef)
+      .whereType<String>()
+      .toList();
+  if (leafRefs.isEmpty) return const {};
+
+  final normalizedLeaf = <String, String>{
+    for (final ref in leafRefs) _normalizeRef(ref): ref,
+  };
+
+  final candidates = <String>{
+    ..._refVariants(todayRef),
+    ..._expandSimpleRange(todayRef),
+    ..._expandDafLikeRange(todayRef),
+    for (final variant in _refVariants(todayRef)) ..._expandSimpleRange(variant),
+    for (final variant in _refVariants(todayRef)) ..._expandDafLikeRange(variant),
+  };
+
+  final matches = <String>{};
+  for (final candidate in candidates) {
+    final resolved = normalizedLeaf[_normalizeRef(candidate)];
+    if (resolved != null) {
+      matches.add(resolved);
+    }
+  }
+
+  if (matches.isNotEmpty) return matches;
+
+  // Fallback: calendar entry may point at a non-leaf unit (e.g. full daf),
+  // while track content is leaf-only (e.g. amud a/b). Expand to leaf children.
+  for (final candidate in candidates) {
+    final expanded = _resolveLeafRefsFromContainer(candidate, contentItems);
+    if (expanded.isNotEmpty) {
+      matches.addAll(expanded);
+      continue;
+    }
+
+    final indexed = _resolveIndexedUnitRefs(candidate, contentItems);
+    if (indexed.isNotEmpty) {
+      matches.addAll(indexed);
+    }
+  }
+  return matches;
+}
+
+Set<String> _resolvedOrFallbackProgramRefs({
+  required String todayRef,
+  required List<ContentItem> contentItems,
+}) {
+  final resolved = _resolveProgramTodayRefs(todayRef, contentItems);
+  if (resolved.isNotEmpty) return resolved;
+
+  final fallback = _displayProgramRef(todayRef);
+  if (fallback.isEmpty) return const {};
+  return {fallback};
+}
+
+String _displayProgramRef(String ref) {
+  return ref
+      .replaceAll('_', ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+Set<String> _refVariants(String ref) {
+  final trimmed = ref.replaceAll('–', '-').trim();
+  if (trimmed.isEmpty) return const {};
+
+  final variants = <String>{trimmed};
+  final lower = trimmed.toLowerCase();
+
+  // Common transliteration variants seen in calendar feeds vs content trees.
+  final aliasMap = <String, String>{
+    'midos': 'middot',
+    'mishnayos': 'mishnah',
+    'mishna ': 'mishnah ',
+  };
+  var replacedLower = lower;
+  aliasMap.forEach((from, to) {
+    replacedLower = replacedLower.replaceAll(from, to);
+  });
+  if (replacedLower != lower) {
+    variants.add(_matchOriginalCasing(trimmed, replacedLower));
+  }
+
+  if (lower.startsWith('mishnah ')) {
+    variants.add(trimmed.substring('mishnah '.length).trim());
+  } else {
+    variants.add('Mishnah $trimmed');
+  }
+
+  if (lower.startsWith('jerusalem talmud ')) {
+    variants.add(trimmed.substring('jerusalem talmud '.length).trim());
+  } else {
+    variants.add('Jerusalem Talmud $trimmed');
+  }
+
+  return variants.where((v) => v.trim().isNotEmpty).map((v) => v.trim()).toSet();
+}
+
+String _matchOriginalCasing(String original, String lowerValue) {
+  if (original == original.toUpperCase()) return lowerValue.toUpperCase();
+  if (original == original.toLowerCase()) return lowerValue;
+  return lowerValue
+      .split(' ')
+      .where((part) => part.isNotEmpty)
+      .map((part) => part[0].toUpperCase() + part.substring(1))
+      .join(' ');
+}
+
+String _normalizeRef(String ref) {
+  return ref
+      .toLowerCase()
+      .replaceAll('_', ' ')
+      .replaceAll(':', '.')
+      .replaceAll(RegExp(r'[^a-z0-9.\s]'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+Set<String> _expandSimpleRange(String ref) {
+  final normalized = ref.replaceAll('–', '-').trim();
+  final match = RegExp(
+    r'^(.*?)(\d+)[\.:](\d+)\s*-\s*(\d+)$',
+  ).firstMatch(normalized);
+  if (match == null) return const {};
+
+  final base = match.group(1)?.trim() ?? '';
+  final chapter = int.tryParse(match.group(2) ?? '');
+  final from = int.tryParse(match.group(3) ?? '');
+  final to = int.tryParse(match.group(4) ?? '');
+  if (chapter == null || from == null || to == null || to < from)
+    return const {};
+
+  final expanded = <String>{};
+  for (var section = from; section <= to; section++) {
+    expanded.add('$base $chapter.$section'.trim());
+    expanded.add('$base $chapter:$section'.trim());
+  }
+  return expanded;
+}
+
+Set<String> _expandDafLikeRange(String ref) {
+  final normalized = ref.replaceAll('–', '-').trim();
+  final match = RegExp(
+    r'^(.*?)(\d+)([ab])?\s*-\s*(\d+)([ab])?$',
+    caseSensitive: false,
+  ).firstMatch(normalized);
+  if (match == null) return const {};
+
+  final base = match.group(1)?.trim() ?? '';
+  final fromPage = int.tryParse(match.group(2) ?? '');
+  final fromSide = (match.group(3) ?? '').toLowerCase();
+  final toPage = int.tryParse(match.group(4) ?? '');
+  final toSide = (match.group(5) ?? '').toLowerCase();
+  if (fromPage == null || toPage == null || toPage < fromPage) return const {};
+
+  final expanded = <String>{};
+  for (var page = fromPage; page <= toPage; page++) {
+    if (fromSide.isNotEmpty || toSide.isNotEmpty) {
+      expanded.add('$base ${page}a'.trim());
+      expanded.add('$base ${page}b'.trim());
+      continue;
+    }
+    expanded.add('$base $page'.trim());
+  }
+
+  // If specific boundary sides are provided, trim out impossible endpoints.
+  if (fromSide == 'b') {
+    expanded.remove('$base ${fromPage}a'.trim());
+  }
+  if (toSide == 'a') {
+    expanded.remove('$base ${toPage}b'.trim());
+  }
+  return expanded;
+}
+
+Set<String> _resolveLeafRefsFromContainer(
+  String candidate,
+  List<ContentItem> contentItems,
+) {
+  final normalizedCandidate = _normalizeRef(candidate);
+  if (normalizedCandidate.isEmpty) return const {};
+
+  final exactContainer = contentItems.firstWhere(
+    (item) => _normalizeRef(item.sefariaRef) == normalizedCandidate,
+    orElse: () => const ContentItem(
+      curriculumId: '',
+      level1: '',
+      displayNameHe: '',
+      displayNameEn: '',
+      sefariaRef: '',
+      sortOrder: 0,
+      isLeaf: true,
+    ),
+  );
+
+  if (exactContainer.sefariaRef.isNotEmpty && !exactContainer.isLeaf) {
+    return _leafChildrenForContainer(exactContainer, contentItems);
+  }
+
+  final fuzzyContainer = _findFuzzyContainerMatch(candidate, contentItems);
+  if (fuzzyContainer == null) return const {};
+  return _leafChildrenForContainer(fuzzyContainer, contentItems);
+}
+
+Set<String> _resolveIndexedUnitRefs(
+  String candidate,
+  List<ContentItem> contentItems,
+) {
+  final parsed = _parseRefTail(candidate);
+  if (parsed == null) return const {};
+
+  final rawTitle = parsed.$1.trim();
+  final address = parsed.$2.trim().toLowerCase();
+  final index = int.tryParse(address);
+  if (index == null || index <= 0) return const {};
+
+  // Yerushalmi cycle entries are often "Jerusalem Talmud <masechta> <ordinal>"
+  // where ordinal indexes through units, not chapter number.
+  if (!_normalizeRef(rawTitle).startsWith('jerusalem talmud ')) return const {};
+
+  final topContainer = contentItems.firstWhere(
+    (item) => !item.isLeaf && _normalizeRef(item.sefariaRef) == _normalizeRef(rawTitle),
+    orElse: () => const ContentItem(
+      curriculumId: '',
+      level1: '',
+      displayNameHe: '',
+      displayNameEn: '',
+      sefariaRef: '',
+      sortOrder: 0,
+      isLeaf: true,
+    ),
+  );
+  if (topContainer.sefariaRef.isEmpty) return const {};
+
+  final leaves = _leafChildrenForContainer(topContainer, contentItems).toList()
+    ..sort((a, b) {
+      final aOrder = contentItems
+          .firstWhere((i) => i.sefariaRef == a, orElse: () => const ContentItem(
+                curriculumId: '',
+                level1: '',
+                displayNameHe: '',
+                displayNameEn: '',
+                sefariaRef: '',
+                sortOrder: 0,
+                isLeaf: true,
+              ))
+          .sortOrder;
+      final bOrder = contentItems
+          .firstWhere((i) => i.sefariaRef == b, orElse: () => const ContentItem(
+                curriculumId: '',
+                level1: '',
+                displayNameHe: '',
+                displayNameEn: '',
+                sefariaRef: '',
+                sortOrder: 0,
+                isLeaf: true,
+              ))
+          .sortOrder;
+      return aOrder.compareTo(bOrder);
+    });
+  if (leaves.isEmpty || index > leaves.length) return const {};
+
+  return {leaves[index - 1]};
+}
+
+Set<String> _leafChildrenForContainer(
+  ContentItem container,
+  List<ContentItem> contentItems,
+) {
+  final leaves = contentItems.where((item) {
+    if (!item.isLeaf) return false;
+    if (item.level1 != container.level1) return false;
+    if (container.level2 != null && item.level2 != container.level2) return false;
+    if (container.level3 != null && item.level3 != container.level3) return false;
+    if (container.level4 != null && item.level4 != container.level4) return false;
+    return true;
+  }).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  return leaves.map((leaf) => leaf.sefariaRef).toSet();
+}
+
+ContentItem? _findFuzzyContainerMatch(
+  String candidate,
+  List<ContentItem> contentItems,
+) {
+  final parsed = _parseRefTail(candidate);
+  if (parsed == null) return null;
+  final title = parsed.$1;
+  final address = parsed.$2;
+  if (title.isEmpty || address.isEmpty) return null;
+
+  final normalizedTitle = _normalizeTitle(title);
+  final possibleContainers = contentItems.where((item) => !item.isLeaf).toList();
+  ContentItem? best;
+  var bestScore = -1;
+
+  for (final item in possibleContainers) {
+    final parsedItem = _parseRefTail(item.sefariaRef);
+    if (parsedItem == null) continue;
+    final itemAddress = parsedItem.$2;
+    if (itemAddress != address) continue;
+
+    final itemTitleNorm = _normalizeTitle(parsedItem.$1);
+    final score = _titleSimilarityScore(normalizedTitle, itemTitleNorm);
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+
+  return bestScore >= 2 ? best : null;
+}
+
+(String, String)? _parseRefTail(String ref) {
+  final normalized = ref.replaceAll('_', ' ').trim();
+  final match = RegExp(r'^(.*?)(\d+[a-z]?)$').firstMatch(normalized);
+  if (match == null) return null;
+  return ((match.group(1) ?? '').trim(), (match.group(2) ?? '').trim());
+}
+
+String _normalizeTitle(String value) {
+  return value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z\s]'), '')
+      .replaceAll(RegExp(r'\b(the|talmud|mishnah|jerusalem)\b'), '')
+      .replaceAll('baba', 'bava')
+      .replaceAll('succah', 'sukkah')
+      .replaceAll('megilah', 'megillah')
+      .replaceAll('hullin', 'chullin')
+      .replaceAll('beitzah', 'beitza')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+int _titleSimilarityScore(String a, String b) {
+  if (a.isEmpty || b.isEmpty) return 0;
+  if (a == b) return 10;
+  if (a.contains(b) || b.contains(a)) return 6;
+
+  final aWords = a.split(' ').where((w) => w.isNotEmpty).toSet();
+  final bWords = b.split(' ').where((w) => w.isNotEmpty).toSet();
+  final overlap = aWords.intersection(bWords).length;
+  return overlap;
 }
