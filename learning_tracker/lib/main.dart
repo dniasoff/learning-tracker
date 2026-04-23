@@ -153,13 +153,29 @@ void main() {
   );
 }
 
-class LearningTrackerApp extends ConsumerWidget {
+class LearningTrackerApp extends ConsumerStatefulWidget {
   const LearningTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LearningTrackerApp> createState() => _LearningTrackerAppState();
+}
+
+class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
+  late final RouterConfig<Object> _routerConfig;
+
+  @override
+  void initState() {
+    super.initState();
+    // Keep a single router config instance for the app lifetime.
+    // Re-creating appRouter.config() during rebuilds can trigger
+    // duplicate GlobalKey / root-router overlay instability.
+    final appRouter = ref.read(routerProvider);
+    _routerConfig = appRouter.config();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.watch(magicLinkInitializationProvider);
-    final appRouter = ref.watch(routerProvider);
     final locale = ref.watch(appLocaleProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
@@ -173,7 +189,7 @@ class LearningTrackerApp extends ConsumerWidget {
         ),
         themeMode: ThemeMode.light,
         debugShowCheckedModeBanner: false,
-        routerConfig: appRouter.config(),
+        routerConfig: _routerConfig,
         locale: locale,
         localizationsDelegates: const [
           AppLocalizations.delegate,

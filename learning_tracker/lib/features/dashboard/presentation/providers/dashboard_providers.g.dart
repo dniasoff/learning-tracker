@@ -442,7 +442,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'4fbb3e1335ecc23f05d8adfc295ddac0ae482658';
+String _$dashboardStreakHash() => r'57d98ffb0171ffdee4b35d132f16c664e828f662';
 
 /// Global points total, scoped to active profile.
 

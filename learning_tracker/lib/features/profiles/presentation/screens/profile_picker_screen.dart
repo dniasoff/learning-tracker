@@ -10,7 +10,6 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 @RoutePage()
 class ProfilePickerScreen extends ConsumerStatefulWidget {
@@ -92,28 +91,18 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     if (_isSelectingProfile) return;
     _isSelectingProfile = true;
 
-    ref.read(selectedProfileIdProvider.notifier).select(profileId);
-    // Recreate SyncEngine with the selected profile id.
-    ref.invalidate(syncEngineProvider);
+    try {
+      ref.read(selectedProfileIdProvider.notifier).select(profileId);
 
-    // Do not block navigation on cloud pull; run it in background so profile
-    // switching stays responsive even with slow/unavailable network.
-    final syncEngine = ref.read(syncEngineProvider);
-    if (syncEngine != null) {
-      unawaited(
-        syncEngine.pullOnLaunch().catchError((Object _, StackTrace __) {
-          // Local data is already selected; cloud pull is best-effort.
-        }),
-      );
-    }
-
-    if (!mounted) return;
-    await context.router.replaceAll([const AppShellRoute()]);
-
-    if (mounted) {
-      setState(() {
-        _isSelectingProfile = false;
-      });
+      if (!mounted) return;
+      await context.router.replaceAll([const AppShellRoute()]);
+    } finally {
+      // If navigation didn't happen (or failed), allow another tap attempt.
+      if (mounted) {
+        setState(() {
+          _isSelectingProfile = false;
+        });
+      }
     }
   }
 

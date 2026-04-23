@@ -420,8 +420,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       return auth.currentUser?.emailVerified ?? false;
     } on FirebaseAuthException catch (e) {
       // If the code is no longer usable, clear it to avoid retry loops.
-      if (e.code == 'expired-action-code' ||
-          e.code == 'invalid-action-code') {
+      if (e.code == 'expired-action-code' || e.code == 'invalid-action-code') {
         await prefs.remove(kPendingVerifyEmailOobCode);
         // "invalid-action-code" can mean it was already consumed.
         // Re-check verification before treating it as failure.
@@ -451,7 +450,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
             TextButton(
               onPressed: () async {
                 try {
-                  await ref.read(authRepositoryProvider).sendEmailVerification();
+                  await ref
+                      .read(authRepositoryProvider)
+                      .sendEmailVerification();
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -478,7 +479,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                   return;
                 }
                 if (!mounted) return;
-                _showError('Email is still unverified. Check your inbox first.');
+                _showError(
+                  'Email is still unverified. Check your inbox first.',
+                );
               },
               child: const Text('I verified'),
             ),

@@ -40,15 +40,32 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   )..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)])).watch();
 
   /// Find by email (case-insensitive). Used by sign-in routing.
-  Future<DeviceAccount?> findByEmail(String email) =>
-      (select(deviceAccounts)
-            ..where((t) => t.email.lower().equals(email.trim().toLowerCase())))
-          .getSingleOrNull();
+  ///
+  /// Historically, duplicate rows could exist for a given email during
+  /// transitional multi-account migrations. Prefer the most recently used
+  /// account instead of throwing "Bad state: Too many elements".
+  Future<DeviceAccount?> findByEmail(String email) async {
+    final rows =
+        await (select(deviceAccounts)
+              ..where((t) => t.email.lower().equals(email.trim().toLowerCase()))
+              ..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)])
+              ..limit(1))
+            .get();
+    return rows.isEmpty ? null : rows.first;
+  }
 
   /// Find by Firebase UID. Used for cloud-born session matching.
-  Future<DeviceAccount?> findByFirebaseUid(String uid) => (select(
-    deviceAccounts,
-  )..where((t) => t.firebaseUid.equals(uid))).getSingleOrNull();
+  ///
+  /// Mirrors [findByEmail] behavior to tolerate duplicate rows safely.
+  Future<DeviceAccount?> findByFirebaseUid(String uid) async {
+    final rows =
+        await (select(deviceAccounts)
+              ..where((t) => t.firebaseUid.equals(uid))
+              ..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)])
+              ..limit(1))
+            .get();
+    return rows.isEmpty ? null : rows.first;
+  }
 
   /// Find by account ID.
   Future<DeviceAccount?> findById(String accountId) => (select(

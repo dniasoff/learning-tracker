@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
-import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
@@ -235,10 +234,8 @@ class _AccountTile extends ConsumerWidget {
         await _activateCloudAccountFromLocalData(context, ref);
       }
     } else {
-      // Local-born — show password prompt
-      if (context.mounted) {
-        _showPasswordPrompt(context, ref);
-      }
+      // Local-born — instant local activation (no modal password dialog).
+      await _activateLocalAccountFromLocalData(context, ref);
     }
   }
 
@@ -286,77 +283,29 @@ class _AccountTile extends ConsumerWidget {
     }
   }
 
-  void _showPasswordPrompt(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    String? error;
+  Future<void> _activateLocalAccountFromLocalData(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    activeDbFileName = account.dbFileName;
+    ref.invalidate(userDatabaseProvider);
 
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Sign in as ${account.displayName}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(account.email),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  errorText: error,
-                ),
-                autofocus: true,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                try {
-                  // Swap to this account's DB first — LocalAuthService
-                  // reads the argon2 hash from the account's own DB,
-                  // not the globally cached one.
-                  activeDbFileName = account.dbFileName;
-                  ref.invalidate(userDatabaseProvider);
+    final dao = ref.read(userDatabaseProvider).userProfileDao;
+    final profile = await dao.findLocalBornByEmail(account.email);
+    if (profile == null || !context.mounted) return;
 
-                  final dao = ref.read(userDatabaseProvider).userProfileDao;
-                  final service = LocalAuthService(dao: dao);
-                  final profile = await service.signIn(
-                    email: account.email,
-                    password: controller.text,
-                  );
-                  final prefs = await SharedPreferences.getInstance();
-                  final session = SessionPersistenceService(
-                    prefs: prefs,
-                    registry: ref.read(deviceRegistryProvider),
-                  );
-                  await session.setActiveAccount(account.accountId);
-                  await prefs.setBool(kOnboardingComplete, true);
-                  ref
-                      .read(authStateProvider.notifier)
-                      .setLocalBornSession(profile: profile);
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                  if (context.mounted) {
-                    unawaited(
-                      context.router.replaceAll([const AppShellRoute()]),
-                    );
-                  }
-                } on InvalidCredentialsException {
-                  setDialogState(() => error = 'Incorrect password');
-                }
-              },
-              child: const Text('Sign In'),
-            ),
-          ],
-        ),
-      ),
-    ).then((_) => controller.dispose());
+    final prefs = await SharedPreferences.getInstance();
+    final session = SessionPersistenceService(
+      prefs: prefs,
+      registry: ref.read(deviceRegistryProvider),
+    );
+    await session.setActiveAccount(account.accountId);
+    await prefs.setBool(kOnboardingComplete, true);
+    ref.read(authStateProvider.notifier).setLocalBornSession(profile: profile);
+
+    if (context.mounted) {
+      unawaited(context.router.replaceAll([const AppShellRoute()]));
+    }
   }
 
   Future<bool> _confirmDismiss(BuildContext context, bool isCloud) async {
