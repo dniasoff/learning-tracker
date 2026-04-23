@@ -22,6 +22,15 @@ class UpgradePasswordMismatchException implements Exception {
   String toString() => 'UpgradePasswordMismatchException';
 }
 
+/// Thrown when an upgrade account exists but email ownership has not been
+/// verified yet. Caller should keep the account local-born, prompt the user
+/// to verify via inbox link, and retry completion.
+class UpgradeEmailNotVerifiedException implements Exception {
+  const UpgradeEmailNotVerifiedException();
+  @override
+  String toString() => 'UpgradeEmailNotVerifiedException';
+}
+
 /// Domain service for the local → cloud upgrade flow (v2 §4.3).
 ///
 /// One-way only. Verifies the user's local-born credentials first,
@@ -54,6 +63,9 @@ class UpgradeToCloudService {
   final DeviceRegistryDatabase? registry;
   final String? accountId;
 
+  static const _packageName = 'com.jcom.torah.learning_tracker';
+  static const _linkDomain = 'https://torah-study-tracker.firebaseapp.com';
+
   /// Attempts to upgrade [profile] to a cloud-born account.
   ///
   /// Throws:
@@ -82,12 +94,48 @@ class UpgradeToCloudService {
       );
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        throw EmailCollisionException(profile.email);
+        // Retry path: user may already have started upgrade. If the existing
+        // account can be signed in with the same password and is verified,
+        // proceed; otherwise require verification or collision flow.
+        try {
+          credential = await _auth.signInWithEmailAndPassword(
+            email: profile.email,
+            password: password,
+          );
+        } on FirebaseAuthException catch (signInError) {
+          if (signInError.code == 'wrong-password' ||
+              signInError.code == 'invalid-credential' ||
+              signInError.code == 'user-not-found') {
+            throw EmailCollisionException(profile.email);
+          }
+          rethrow;
+        }
+
+        final existingUser = credential.user!;
+        await existingUser.reload();
+        final refreshed = _auth.currentUser;
+        if (refreshed == null || !refreshed.emailVerified) {
+          await _sendVerificationEmail(existingUser);
+          await _auth.signOut();
+          throw const UpgradeEmailNotVerifiedException();
+        }
+      } else {
+        rethrow;
       }
-      rethrow;
     }
 
-    final firebaseUid = credential.user!.uid;
+    final firebaseUser = credential.user!;
+    await firebaseUser.reload();
+    final refreshedUser = _auth.currentUser;
+
+    // Freshly created upgrade accounts must verify ownership before migration.
+    if (refreshedUser == null || !refreshedUser.emailVerified) {
+      await _sendVerificationEmail(firebaseUser);
+      await _auth.signOut();
+      throw const UpgradeEmailNotVerifiedException();
+    }
+
+    final firebaseUid = refreshedUser.uid;
     await _dao.upgradeLocalToCloud(
       profileId: profile.id,
       firebaseUid: firebaseUid,
@@ -105,6 +153,45 @@ class UpgradeToCloudService {
     }
 
     return (await _dao.getUserProfileById(profile.id))!;
+  }
+
+  Future<void> resendUpgradeVerification({
+    required UserProfile profile,
+    required String password,
+  }) async {
+    if (profile.tier != UserTier.localBorn.dbValue) {
+      throw StateError('resendUpgradeVerification() requires local-born profile');
+    }
+    final hash = profile.passwordHash;
+    if (hash == null || !await _hasher.verify(password, hash)) {
+      throw const UpgradePasswordMismatchException();
+    }
+
+    UserCredential credential;
+    try {
+      credential = await _auth.signInWithEmailAndPassword(
+        email: profile.email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' ||
+          e.code == 'invalid-credential' ||
+          e.code == 'user-not-found') {
+        throw EmailCollisionException(profile.email);
+      }
+      rethrow;
+    }
+
+    final user = credential.user;
+    if (user == null) return;
+    await user.reload();
+    final refreshed = _auth.currentUser;
+    if (refreshed != null && refreshed.emailVerified) {
+      await _auth.signOut();
+      return;
+    }
+    await _sendVerificationEmail(user);
+    await _auth.signOut();
   }
 
   /// Collision-path resolution: sign in to the existing cloud
@@ -148,9 +235,16 @@ class UpgradeToCloudService {
       email: localProfile.email,
       password: cloudPassword,
     );
+    await credential.user?.reload();
+    final refreshed = _auth.currentUser;
+    if (refreshed == null || !refreshed.emailVerified) {
+      await _sendVerificationEmail(credential.user!);
+      await _auth.signOut();
+      throw const UpgradeEmailNotVerifiedException();
+    }
     await _dao.upgradeLocalToCloud(
       profileId: localProfile.id,
-      firebaseUid: credential.user!.uid,
+      firebaseUid: refreshed.uid,
       updatedAt: DateTime.now().toUtc(),
     );
 
@@ -158,7 +252,7 @@ class UpgradeToCloudService {
       await registry!.updateAccountTier(
         accountId!,
         'cloudBorn',
-        firebaseUid: credential.user!.uid,
+        firebaseUid: refreshed.uid,
       );
     }
 
@@ -177,10 +271,17 @@ class UpgradeToCloudService {
       email: localProfile.email,
       password: cloudPassword,
     );
+    await credential.user?.reload();
+    final refreshed = _auth.currentUser;
+    if (refreshed == null || !refreshed.emailVerified) {
+      await _sendVerificationEmail(credential.user!);
+      await _auth.signOut();
+      throw const UpgradeEmailNotVerifiedException();
+    }
     await discardLocalCredentials(localProfile.id);
     await _dao.upgradeLocalToCloud(
       profileId: localProfile.id,
-      firebaseUid: credential.user!.uid,
+      firebaseUid: refreshed.uid,
       updatedAt: DateTime.now().toUtc(),
     );
 
@@ -188,10 +289,21 @@ class UpgradeToCloudService {
       await registry!.updateAccountTier(
         accountId!,
         'cloudBorn',
-        firebaseUid: credential.user!.uid,
+        firebaseUid: refreshed.uid,
       );
     }
 
     return (await _dao.getUserProfileById(localProfile.id))!;
+  }
+
+  Future<void> _sendVerificationEmail(User user) {
+    return user.sendEmailVerification(
+      ActionCodeSettings(
+        url: '$_linkDomain/verify-email',
+        handleCodeInApp: true,
+        androidPackageName: _packageName,
+        androidInstallApp: true,
+      ),
+    );
   }
 }

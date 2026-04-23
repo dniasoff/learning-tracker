@@ -38,6 +38,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   String? _error;
   bool _collision = false;
   bool _success = false;
+  bool _verificationRequired = false;
   bool _discardAcknowledged = false;
   _CollisionChoice _choice = _CollisionChoice.none;
 
@@ -85,6 +86,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       _isLoading = true;
       _error = null;
       _collision = false;
+      _verificationRequired = false;
     });
 
     try {
@@ -109,14 +111,31 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
           .read(authStateProvider.notifier)
           .setCloudBornSession(profile: upgraded);
       await _pushLocalDataAfterUpgrade();
-      if (mounted) setState(() => _success = true);
+      if (mounted) {
+        setState(() {
+          _success = true;
+          _verificationRequired = false;
+        });
+      }
+    } on UpgradeEmailNotVerifiedException {
+      if (mounted) {
+        setState(() {
+          _verificationRequired = true;
+          _error =
+              'Verify your email first. We sent a confirmation link to your '
+              'inbox. After verifying, tap "I verified — complete upgrade".';
+        });
+      }
     } on UpgradePasswordMismatchException {
       if (mounted) {
         setState(() => _error = 'Incorrect password.');
       }
     } on EmailCollisionException {
       if (mounted) {
-        setState(() => _collision = true);
+        setState(() {
+          _verificationRequired = false;
+          _collision = true;
+        });
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -128,6 +147,61 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _error = 'Upgrade failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resendVerification() async {
+    if (!await _requireInternet()) return;
+    final authState = ref.read(authStateProvider);
+    final user = authState.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final dao = ref.read(userDatabaseProvider).userProfileDao;
+      final profile = await dao.getUserProfileById(user.profileId);
+      if (profile == null) throw StateError('Profile missing');
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByEmail(profile.email);
+      final service = UpgradeToCloudService(
+        dao: dao,
+        firebaseAuth: ref.read(firebaseAuthProvider),
+        registry: registry,
+        accountId: account?.accountId,
+      );
+      await service.resendUpgradeVerification(
+        profile: profile,
+        password: _passwordController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification email sent. Check your inbox.'),
+          ),
+        );
+      }
+    } on UpgradePasswordMismatchException {
+      if (mounted) setState(() => _error = 'Incorrect password.');
+    } on EmailCollisionException {
+      if (mounted) {
+        setState(() {
+          _verificationRequired = false;
+          _collision = true;
+          _error = null;
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Could not resend verification: ${e.code}');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not resend verification: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -191,7 +265,18 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       if (mounted) {
         setState(() {
           _success = true;
+          _verificationRequired = false;
           _collision = false;
+        });
+      }
+    } on UpgradeEmailNotVerifiedException {
+      if (mounted) {
+        setState(() {
+          _verificationRequired = true;
+          _collision = false;
+          _error =
+              'This cloud account is not verified yet. Verify your email, '
+              'then complete the upgrade.';
         });
       }
     } on FirebaseAuthException catch (e) {
@@ -242,6 +327,20 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                 const SizedBox(height: 24),
                 if (_success)
                   _SuccessBlock(theme: theme)
+                else if (_verificationRequired)
+                  _VerificationRequiredBlock(
+                    theme: theme,
+                    error: _error,
+                    isLoading: _isLoading,
+                    onIVerified: _submit,
+                    onResend: _resendVerification,
+                    onCancel: () {
+                      setState(() {
+                        _verificationRequired = false;
+                        _error = null;
+                      });
+                    },
+                  )
                 else if (_collision)
                   _CollisionBlock(
                     theme: theme,
@@ -471,6 +570,79 @@ class _CollisionBlock extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 8),
+          TextButton(
+            onPressed: isLoading ? null : onCancel,
+            child: const Text('Cancel — keep offline account'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VerificationRequiredBlock extends StatelessWidget {
+  const _VerificationRequiredBlock({
+    required this.theme,
+    required this.error,
+    required this.isLoading,
+    required this.onIVerified,
+    required this.onResend,
+    required this.onCancel,
+  });
+
+  final ThemeData theme;
+  final String? error;
+  final bool isLoading;
+  final Future<void> Function() onIVerified;
+  final Future<void> Function() onResend;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.mark_email_unread, color: theme.colorScheme.tertiary),
+              const SizedBox(width: 8),
+              Text(
+                'Email verification required',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            error ??
+                'Open the verification link we sent to your email, then tap '
+                    '"I verified — complete upgrade".',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: isLoading ? null : onIVerified,
+            child: isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('I verified — complete upgrade'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: isLoading ? null : onResend,
+            child: const Text('Resend verification email'),
+          ),
           TextButton(
             onPressed: isLoading ? null : onCancel,
             child: const Text('Cancel — keep offline account'),
