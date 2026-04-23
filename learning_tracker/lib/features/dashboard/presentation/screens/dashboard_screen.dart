@@ -503,16 +503,55 @@ class _TodaysLearningSection extends ConsumerWidget {
               );
             }
 
-            // AC-5: Show actual task items
-            final previewTasks = tasks.take(5).toList();
+            final grouped = _groupTasks(tasks);
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ...previewTasks.map(
-                  (task) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _TaskItemCard(task: task),
+                if (grouped.todayTasks.isNotEmpty) ...[
+                  _TaskSectionHeader(
+                    icon: Icons.today,
+                    title: "Today's tasks",
+                    count: grouped.todayTasks.length,
+                    color: theme.colorScheme.primary,
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  ...grouped.todayTasks.map(
+                    (task) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _TaskItemCard(task: task),
+                    ),
+                  ),
+                ],
+                if (grouped.overdueTasks.isNotEmpty) ...[
+                  _TaskSectionHeader(
+                    icon: Icons.warning_amber_rounded,
+                    title: 'Missed / Overdue tasks',
+                    count: grouped.overdueTasks.length,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(height: 8),
+                  ...grouped.overdueTasks.map(
+                    (task) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _TaskItemCard(task: task),
+                    ),
+                  ),
+                ],
+                if (grouped.reviewTasks.isNotEmpty) ...[
+                  _TaskSectionHeader(
+                    icon: Icons.refresh,
+                    title: 'Chazara / Review tasks',
+                    count: grouped.reviewTasks.length,
+                    color: Colors.deepPurple,
+                  ),
+                  const SizedBox(height: 8),
+                  ...grouped.reviewTasks.map(
+                    (task) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _TaskItemCard(task: task),
+                    ),
+                  ),
+                ],
                 if (tasks.length > 5)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
@@ -528,6 +567,80 @@ class _TodaysLearningSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _TaskSectionHeader extends StatelessWidget {
+  const _TaskSectionHeader({
+    required this.icon,
+    required this.title,
+    required this.count,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String title;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Text(
+          '$title ($count)',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardTaskGroups {
+  const _DashboardTaskGroups({
+    required this.todayTasks,
+    required this.overdueTasks,
+    required this.reviewTasks,
+  });
+
+  final List<DailyTask> todayTasks;
+  final List<DailyTask> overdueTasks;
+  final List<DailyTask> reviewTasks;
+}
+
+_DashboardTaskGroups _groupTasks(List<DailyTask> tasks) {
+  final todayTasks = <DailyTask>[];
+  final overdueTasks = <DailyTask>[];
+  final reviewTasks = <DailyTask>[];
+
+  bool isReview(DailyTask task) =>
+      task.priority == DailyTaskPriority.overdueChazara ||
+      task.priority == DailyTaskPriority.scheduledChazara;
+
+  for (final task in tasks) {
+    if (isReview(task)) {
+      reviewTasks.add(task);
+      continue;
+    }
+
+    if (task.isOverdue) {
+      overdueTasks.add(task);
+      continue;
+    }
+
+    todayTasks.add(task);
+  }
+
+  return _DashboardTaskGroups(
+    todayTasks: todayTasks,
+    overdueTasks: overdueTasks,
+    reviewTasks: reviewTasks,
+  );
 }
 
 /// AC-1: Individual task card with quick-complete button.
