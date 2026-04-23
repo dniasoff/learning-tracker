@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// the original email to complete sign-in.
 const kMagicLinkPendingEmail = 'magic_link_pending_email';
 const kMagicLinkPendingDisplayName = 'magic_link_pending_display_name';
+const kPendingVerifyEmailOobCode = 'pending_verify_email_oob_code';
 
 /// Listens for incoming deep links and completes Firebase magic-link sign-in.
 ///
@@ -66,11 +67,13 @@ class MagicLinkService {
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
+    AppLogger.instance.info('MagicLinkService initialized');
 
     // Cold-start link: app was launched by tapping the email link.
     try {
       final initial = await _appLinks.getInitialLink();
       if (initial != null) {
+        AppLogger.instance.info('MagicLinkService received initial link');
         await _handleIncomingLink(initial);
       }
     } catch (e, stack) {
@@ -94,9 +97,11 @@ class MagicLinkService {
   }
 
   Future<void> _handleIncomingLink(Uri uri) async {
+    AppLogger.instance.info('MagicLinkService handling incoming link');
     final authUri = _extractActionUri(uri);
     final link = authUri.toString();
     final mode = authUri.queryParameters['mode'];
+    AppLogger.instance.info('MagicLinkService parsed mode: ${mode ?? 'none'}');
     if (mode == 'verifyEmail') {
       await _handleVerifyEmailLink(authUri);
       return;
@@ -114,14 +119,25 @@ class MagicLinkService {
   Uri _extractActionUri(Uri uri) {
     var current = uri;
     for (var i = 0; i < 3; i++) {
-      final wrapped =
-          current.queryParameters['link'] ??
-          current.queryParameters['deep_link_id'] ??
-          current.queryParameters['continueUrl'];
-      if (wrapped == null || wrapped.isEmpty) {
+      // Stop once we have an actionable Firebase auth link.
+      final mode = current.queryParameters['mode'];
+      final hasActionCode = (current.queryParameters['oobCode'] ?? '').isNotEmpty;
+      if (mode != null && mode.isNotEmpty && hasActionCode) {
         return current;
       }
-      final decoded = Uri.decodeComponent(wrapped);
+
+      final wrapped =
+          current.queryParameters['link'] ??
+          current.queryParameters['deep_link_id'];
+      final fallbackContinueUrl = current.queryParameters['continueUrl'];
+      final next =
+          wrapped ??
+          // Only consider continueUrl if we still don't have a mode/oobCode.
+          ((mode == null || mode.isEmpty) ? fallbackContinueUrl : null);
+      if (next == null || next.isEmpty) {
+        return current;
+      }
+      final decoded = Uri.decodeComponent(next);
       final parsed = Uri.tryParse(decoded);
       if (parsed == null || parsed.toString() == current.toString()) {
         return current;
@@ -177,10 +193,21 @@ class MagicLinkService {
       );
       return;
     }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(kPendingVerifyEmailOobCode, oobCode);
+    AppLogger.instance.info('Stored pending verify-email action code');
     try {
+      await FirebaseAuth.instance.checkActionCode(oobCode);
       await FirebaseAuth.instance.applyActionCode(oobCode);
+      await prefs.remove(kPendingVerifyEmailOobCode);
+      AppLogger.instance.info('Applied verify-email action code successfully');
       await FirebaseAuth.instance.currentUser?.reload();
     } on FirebaseAuthException catch (e, stack) {
+      if (e.code == 'invalid-action-code' || e.code == 'expired-action-code') {
+        // Code may already be consumed if another handler/browser applied it.
+        await prefs.remove(kPendingVerifyEmailOobCode);
+        AppLogger.instance.info('Verify-email action code already consumed');
+      }
       AppLogger.instance.handle(e, stack);
     }
   }

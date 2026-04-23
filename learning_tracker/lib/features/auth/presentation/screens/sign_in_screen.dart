@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -357,10 +358,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       return true;
     }
 
-    await signedInUser.reload();
+    final initiallyVerified = await _refreshAndCheckVerified();
+    if (initiallyVerified) return true;
+
+    // Firebase can be briefly eventually consistent after action-code apply.
+    final verifiedAfterShortWait = await _waitForVerified(maxAttempts: 3);
+    if (verifiedAfterShortWait) return true;
+
+    final verifiedFromPendingCode = await _tryApplyPendingVerificationCode();
+    if (verifiedFromPendingCode) {
+      return true;
+    }
+
+    final stillUnverified = !(await _refreshAndCheckVerified());
+    if (!stillUnverified) return true;
     final reloadedUser = auth.currentUser;
     if (reloadedUser == null) return false;
-    if (reloadedUser.emailVerified) return true;
 
     final verifiedAfterPrompt = await _showEmailVerificationPrompt(
       reloadedUser.email ?? _emailController.text.trim(),
@@ -371,6 +384,51 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
 
     await ref.read(authRepositoryProvider).signOut();
     return false;
+  }
+
+  /// Reload auth state and check whether current user is verified.
+  Future<bool> _refreshAndCheckVerified() async {
+    final auth = ref.read(firebaseAuthProvider);
+    final user = auth.currentUser;
+    if (user == null) return false;
+    await user.reload();
+    return auth.currentUser?.emailVerified ?? false;
+  }
+
+  Future<bool> _waitForVerified({required int maxAttempts}) async {
+    for (var i = 0; i < maxAttempts; i++) {
+      final verified = await _refreshAndCheckVerified();
+      if (verified) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+    }
+    return false;
+  }
+
+  Future<bool> _tryApplyPendingVerificationCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pendingCode = prefs.getString(kPendingVerifyEmailOobCode);
+    if (pendingCode == null || pendingCode.isEmpty) {
+      return false;
+    }
+
+    try {
+      final auth = ref.read(firebaseAuthProvider);
+      await auth.checkActionCode(pendingCode);
+      await auth.applyActionCode(pendingCode);
+      await prefs.remove(kPendingVerifyEmailOobCode);
+      await auth.currentUser?.reload();
+      return auth.currentUser?.emailVerified ?? false;
+    } on FirebaseAuthException catch (e) {
+      // If the code is no longer usable, clear it to avoid retry loops.
+      if (e.code == 'expired-action-code' ||
+          e.code == 'invalid-action-code') {
+        await prefs.remove(kPendingVerifyEmailOobCode);
+        // "invalid-action-code" can mean it was already consumed.
+        // Re-check verification before treating it as failure.
+        return _refreshAndCheckVerified();
+      }
+      return false;
+    }
   }
 
   Future<bool> _showEmailVerificationPrompt(String email) async {
@@ -409,10 +467,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
             ),
             FilledButton(
               onPressed: () async {
-                final auth = ref.read(firebaseAuthProvider);
-                await auth.currentUser?.reload();
-                final refreshed = auth.currentUser;
-                if (refreshed != null && refreshed.emailVerified) {
+                final verified =
+                    await _tryApplyPendingVerificationCode() ||
+                    await _refreshAndCheckVerified() ||
+                    await _waitForVerified(maxAttempts: 2);
+                if (verified) {
                   if (dialogContext.mounted) {
                     Navigator.of(dialogContext).pop(true);
                   }
