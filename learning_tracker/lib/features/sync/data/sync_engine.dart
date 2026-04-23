@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
@@ -405,6 +406,91 @@ class SyncEngine {
     return {...payload, '_target_profile_id': _firestoreDataSource.profileId};
   }
 
+  int? _asInt(dynamic raw) {
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  Future<Map<String, dynamic>> _withTrackProgressSchema(
+    Map<String, dynamic> trackData,
+  ) async {
+    final enriched = Map<String, dynamic>.from(trackData);
+    final profileId =
+        _asInt(enriched['profile_id']) ?? _firestoreDataSource.profileId;
+    final trackId = _asInt(enriched['track_id']);
+    final curriculumId = (enriched['curriculum_id'] ?? '').toString();
+    final trackType =
+        (enriched['track_type'] ?? TrackType.personal.storageKey).toString();
+
+    if (curriculumId.isEmpty) {
+      return enriched;
+    }
+
+    final nowUtc = DateTime.now().toUtc();
+    final enrollment = await _database.profileProgramDao
+        .getProgramForProfileAndCurriculum(profileId, curriculumId);
+    final isProgramTrack = enrollment != null;
+
+    enriched['progress_schema_version'] = 1;
+    enriched['progress_computed_at'] = nowUtc.toIso8601String();
+    enriched['progress_model'] = isProgramTrack
+        ? 'program_adherence'
+        : 'self_paced_completion';
+
+    if (isProgramTrack) {
+      final planDate = DateUtils.extractLocalDate(nowUtc);
+      final rows = await _database.dailyPlanDao.getPlanForDay(
+        profileId: profileId,
+        planDate: planDate,
+      );
+      final relevantRows = trackId == null
+          ? rows
+                .where(
+                  (r) => r.curriculumId == curriculumId,
+                )
+                .toList()
+          : rows.where((r) => r.trackId == trackId).toList();
+
+      final overdueCount = relevantRows
+          .where((r) => r.priority == 'overdueProgram')
+          .length;
+      final todayDueCount = relevantRows
+          .where((r) => r.priority == 'todayProgram')
+          .length;
+      final status = overdueCount > 0
+          ? 'behind'
+          : (todayDueCount > 0 ? 'on_time' : 'caught_up');
+
+      enriched['program_progress'] = {
+        'overdue_count': overdueCount,
+        'today_due_count': todayDueCount,
+        'status': status,
+        'snapshot_plan_date': planDate.toIso8601String(),
+      };
+      enriched['self_paced_progress'] = null;
+    } else {
+      final completedStageEvents = trackId == null
+          ? (await _database.completionDao.getCompletionsByCurriculumAndProfile(
+              curriculumId,
+              profileId,
+            ))
+                .where((c) => c.trackType == trackType)
+                .length
+          : await _database.completionDao.getAggregateCountByTrack(
+              trackId,
+              profileId,
+            );
+
+      enriched['self_paced_progress'] = {
+        'completed_stage_events': completedStageEvents,
+      };
+      enriched['program_progress'] = null;
+    }
+
+    return enriched;
+  }
+
   /// Push a completion to Firestore after local write.
   Future<void> pushCompletion(Map<String, dynamic> completion) async {
     if (_isQueueOnlyMode) {
@@ -740,16 +826,17 @@ class SyncEngine {
 
   /// Push curriculum-track state to Firestore after local write.
   Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {
+    final payload = await _withTrackProgressSchema(trackData);
     if (_isQueueOnlyMode) {
       await _offlineQueue.enqueueCurriculumTrack(
-        _withQueueTargetProfile(trackData),
+        _withQueueTargetProfile(payload),
       );
       await _updateQueueOnlyStatus();
       return;
     }
 
     try {
-      await _firestoreDataSource.pushCurriculumTrack(trackData);
+      await _firestoreDataSource.pushCurriculumTrack(payload);
       _consecutivePushPermissionErrors = 0;
       _logger.debug('Pushed curriculum track to Firestore');
     } catch (e) {
@@ -757,7 +844,7 @@ class SyncEngine {
       _trackPushError(e);
       _logger.warning('Failed to push curriculum track, queuing for later', e);
       await _offlineQueue.enqueueCurriculumTrack(
-        _withQueueTargetProfile(trackData),
+        _withQueueTargetProfile(payload),
       );
       await _emitPendingStatus();
     }
@@ -1760,7 +1847,7 @@ class SyncEngine {
         final key = '${track.curriculumId}_${track.trackType}';
         if (remoteKeys.contains(key)) continue;
 
-        await _firestoreDataSource.pushCurriculumTrack({
+        await pushCurriculumTrack({
           'profile_id': track.profileId,
           'track_id': track.id,
           'curriculum_id': track.curriculumId,
@@ -2544,7 +2631,7 @@ class SyncEngine {
         _firestoreDataSource.profileId,
       );
       for (final t in tracks) {
-        await _firestoreDataSource.pushCurriculumTrack({
+        await pushCurriculumTrack({
           'profile_id': t.profileId,
           'track_id': t.id,
           'curriculum_id': t.curriculumId,

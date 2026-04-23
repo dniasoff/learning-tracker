@@ -12,7 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/learner_profiles/{profileId}/notification_settings/preferences` - Notification preferences (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/gamification_settings/config` - Points/rewards config
 /// - `users/{uid}/learner_profiles/{profileId}/active_curricula/data` - Active curricula
-/// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state (LWW)
+/// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state + progress schema (LWW)
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
 class FirestoreDataSource {
   FirestoreDataSource({
