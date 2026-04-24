@@ -36,12 +36,25 @@ class CumulativeLineChart extends StatelessWidget {
         ],
         isCurved: true,
         preventCurveOverShooting: true,
-        color: Theme.of(context).colorScheme.primary,
+        color: const Color(0xFF123DAE),
         barWidth: 3,
-        dotData: const FlDotData(show: false),
+        dotData: FlDotData(
+          show: true,
+          checkToShowDot: (spot, barData) => spot.x == data.length - 1,
+          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+            radius: 3.5,
+            color: const Color(0xFF123DAE),
+            strokeWidth: 2,
+            strokeColor: Colors.white,
+          ),
+        ),
         belowBarData: BarAreaData(
           show: true,
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x33123DAE), Color(0x00123DAE)],
+          ),
         ),
       ),
     ];
@@ -64,16 +77,16 @@ class CumulativeLineChart extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 16, right: 16),
+      padding: const EdgeInsets.only(top: 8),
       child: LineChart(
         LineChartData(
           maxY: maxY == 0 ? 5 : maxY,
           lineBarsData: lineBarsData,
           titlesData: FlTitlesData(
-            show: true,
+            show: false,
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
-                showTitles: true,
+                showTitles: false,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index < 0 || index >= data.length) {
@@ -96,21 +109,7 @@ class CumulativeLineChart extends StatelessWidget {
                 },
               ),
             ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 36,
-                getTitlesWidget: (value, meta) {
-                  if (value == value.roundToDouble() && value >= 0) {
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
@@ -118,7 +117,7 @@ class CumulativeLineChart extends StatelessWidget {
               sideTitles: SideTitles(showTitles: false),
             ),
           ),
-          gridData: const FlGridData(show: true, drawVerticalLine: false),
+          gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),
           lineTouchData: const LineTouchData(enabled: false),
         ),

@@ -13,117 +13,86 @@ class StreakCalendar extends StatelessWidget {
     required this.endDate,
   });
 
-  static const _monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final months = <_MonthBucket>[];
-    var current = startDate;
-    while (!current.isAfter(endDate)) {
-      if (months.isEmpty ||
-          months.last.year != current.year ||
-          months.last.month != current.month) {
-        months.add(_MonthBucket(current.year, current.month));
-      }
-      months.last.days.add(current);
-      current = current.add(const Duration(days: 1));
+    final dates = <DateTime>[];
+    var cursor = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+    ).subtract(const Duration(days: 13));
+    for (var i = 0; i < 14; i++) {
+      dates.add(cursor);
+      cursor = cursor.add(const Duration(days: 1));
     }
-    // Most recent month first, so users see the latest activity at the top.
-    final orderedMonths = months.reversed.toList();
-
-    final theme = Theme.of(context);
-    final showYear =
-        orderedMonths.isNotEmpty &&
-        orderedMonths.first.year != orderedMonths.last.year;
+    final today = DateTime.now();
+    final weekdayLabels = dates
+        .take(7)
+        .map((d) => _weekdayInitial(d.weekday))
+        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Day of week headers (shown once at top)
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _DayLabel('M'),
-            _DayLabel('T'),
-            _DayLabel('W'),
-            _DayLabel('T'),
-            _DayLabel('F'),
-            _DayLabel('S'),
-            _DayLabel('S'),
-          ],
+          children: [for (final label in weekdayLabels) _DayLabel(label)],
         ),
-        for (var i = 0; i < orderedMonths.length; i++) ...[
-          SizedBox(height: i == 0 ? 8 : 16),
-          Text(
-            showYear
-                ? '${_monthNames[orderedMonths[i].month - 1]} ${orderedMonths[i].year}'
-                : _monthNames[orderedMonths[i].month - 1],
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 6),
-          _MonthGrid(bucket: orderedMonths[i], activeDates: activeDates),
-        ],
+        const SizedBox(height: 8),
+        _DayRow(
+          dates: dates.take(7).toList(growable: false),
+          activeDates: activeDates,
+          today: today,
+        ),
+        const SizedBox(height: 8),
+        _DayRow(
+          dates: dates.skip(7).take(7).toList(growable: false),
+          activeDates: activeDates,
+          today: today,
+        ),
       ],
     );
   }
+
+  String _weekdayInitial(int weekday) => switch (weekday) {
+    DateTime.monday => 'M',
+    DateTime.tuesday => 'T',
+    DateTime.wednesday => 'W',
+    DateTime.thursday => 'T',
+    DateTime.friday => 'F',
+    DateTime.saturday => 'S',
+    DateTime.sunday => 'S',
+    _ => '',
+  };
 }
 
-class _MonthBucket {
-  final int year;
-  final int month;
-  final List<DateTime> days = [];
+class _DayRow extends StatelessWidget {
+  const _DayRow({
+    required this.dates,
+    required this.activeDates,
+    required this.today,
+  });
 
-  _MonthBucket(this.year, this.month);
-}
-
-class _MonthGrid extends StatelessWidget {
-  final _MonthBucket bucket;
+  final List<DateTime> dates;
   final Set<DateTime> activeDates;
-
-  const _MonthGrid({required this.bucket, required this.activeDates});
+  final DateTime today;
 
   @override
   Widget build(BuildContext context) {
-    final firstWeekday = bucket.days.first.weekday; // 1=Mon ... 7=Sun
-    final padBefore = firstWeekday - 1;
-
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        for (var i = 0; i < padBefore; i++)
-          const SizedBox(width: 28, height: 28),
-        for (final day in bucket.days)
+        for (final date in dates)
           _DayCell(
-            date: day,
-            isActive: activeDates.contains(day),
-            isToday: _isToday(day),
+            date: date,
+            isActive: activeDates.contains(date),
+            isToday:
+                date.year == today.year &&
+                date.month == today.month &&
+                date.day == today.day,
           ),
       ],
     );
-  }
-
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
   }
 }
 
@@ -135,14 +104,14 @@ class _DayLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 28,
+      width: 34,
       child: Center(
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 11,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -163,25 +132,32 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeColor = Colors.green;
+    const activeColor = Color(0xFF103BAC);
 
     return Container(
-      width: 28,
-      height: 28,
+      width: 34,
+      height: 34,
       decoration: BoxDecoration(
-        color: isActive ? activeColor : Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(4),
-        border: isToday ? Border.all(color: activeColor, width: 2) : null,
+        color: isActive ? activeColor : Colors.transparent,
+        shape: BoxShape.circle,
+        border: isToday
+            ? Border.all(
+                color: isActive ? Colors.white : const Color(0xFF9FA8BD),
+                width: 1.4,
+              )
+            : null,
       ),
       child: Center(
         child: Text(
           '${date.day}',
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             color: isActive
                 ? Colors.white
-                : Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
+            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),

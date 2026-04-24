@@ -20,11 +20,22 @@ class CompletionsBarChart extends StatelessWidget {
     );
     final maxY = maxCount == 0 ? 5.0 : (maxCount + 1).toDouble();
 
+    final isShortRange = data.length <= 7;
+    final weekdayLabel = <int, String>{
+      DateTime.monday: 'MON',
+      DateTime.tuesday: 'TUE',
+      DateTime.wednesday: 'WED',
+      DateTime.thursday: 'THU',
+      DateTime.friday: 'FRI',
+      DateTime.saturday: 'SAT',
+      DateTime.sunday: 'SUN',
+    };
+
     return Padding(
-      padding: const EdgeInsets.only(top: 16, right: 16),
+      padding: const EdgeInsets.only(top: 8),
       child: BarChart(
         BarChartData(
-          alignment: BarChartAlignment.spaceAround,
+          alignment: BarChartAlignment.spaceBetween,
           maxY: maxY,
           barTouchData: const BarTouchData(enabled: false),
           titlesData: FlTitlesData(
@@ -37,39 +48,24 @@ class CompletionsBarChart extends StatelessWidget {
                   if (index < 0 || index >= data.length) {
                     return const SizedBox.shrink();
                   }
-                  // Show label every few bars to avoid overlap
-                  final step = data.length <= 7
-                      ? 1
-                      : data.length <= 14
-                      ? 2
-                      : 5;
+                  final step = isShortRange ? 1 : 2;
                   if (index % step != 0) return const SizedBox.shrink();
                   final d = data[index].date;
                   return Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      '${d.month}/${d.day}',
-                      style: const TextStyle(fontSize: 10),
+                      weekdayLabel[d.weekday] ?? '',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Color(0xFF8A91A5),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 28,
-                getTitlesWidget: (value, meta) {
-                  if (value == value.roundToDouble() && value >= 0) {
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
@@ -77,7 +73,7 @@ class CompletionsBarChart extends StatelessWidget {
               sideTitles: SideTitles(showTitles: false),
             ),
           ),
-          gridData: const FlGridData(show: true, drawVerticalLine: false),
+          gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),
           barGroups: [
             for (var i = 0; i < data.length; i++)
@@ -86,18 +82,17 @@ class CompletionsBarChart extends StatelessWidget {
                 barRods: [
                   BarChartRodData(
                     toY: data[i].count.toDouble(),
-                    color: Theme.of(context).colorScheme.primary,
-                    width: data.length <= 7
-                        ? 20
-                        : data.length <= 14
-                        ? 12
-                        : 6,
+                    color: i == data.length - 1
+                        ? const Color(0xFF123DAE)
+                        : const Color(0xFFC8CEDB),
+                    width: isShortRange ? 18 : 10,
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(4),
-                      topRight: Radius.circular(4),
+                      topLeft: Radius.circular(6),
+                      topRight: Radius.circular(6),
                     ),
                   ),
                 ],
+                showingTooltipIndicators: const [],
               ),
           ],
         ),

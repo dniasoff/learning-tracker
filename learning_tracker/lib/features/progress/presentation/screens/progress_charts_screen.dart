@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -47,95 +46,197 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   Widget build(BuildContext context) {
     final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
     final resolvedUserMode = userMode ?? UserMode.adult;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Progress Charts')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildTimeRangeSelector(),
-          const SizedBox(height: 12),
-          _buildCurriculumToggle(),
-          const SizedBox(height: 24),
-          _ChartSection(
-            title: 'Completions Over Time',
-            child: SizedBox(height: 200, child: _buildCompletionsChart()),
-          ),
-          const SizedBox(height: 24),
-          _ChartSection(
-            title: 'Cumulative Progress',
-            child: SizedBox(height: 200, child: _buildCumulativeChart()),
-          ),
-          const SizedBox(height: 24),
-          if (resolvedUserMode == UserMode.child) ...[
-            _ChartSection(
-              title: 'Points Earned (Child)',
-              child: SizedBox(
-                height: 200,
-                child: _buildPointsChart(resolvedUserMode),
-              ),
+      backgroundColor: const Color(0xFFF4F6FB),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () => context.maybePop(),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                ),
+                Expanded(
+                  child: Text(
+                    'Progress Charts',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 40),
+              ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 10),
+            _buildTimeRangeSelector(),
+            const SizedBox(height: 10),
+            _buildCurriculumToggle(),
+            const SizedBox(height: 16),
+            _ChartSection(
+              title: 'Completions Over Time',
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EAFF),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'DAILY ACTIVITY',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF545D99),
+                    letterSpacing: 0.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              child: SizedBox(height: 170, child: _buildCompletionsChart()),
+            ),
+            const SizedBox(height: 14),
+            _ChartSection(
+              title: 'Cumulative Progress',
+              subtitle: '+12% vs last week',
+              child: SizedBox(height: 150, child: _buildCumulativeChart()),
+            ),
+            const SizedBox(height: 14),
+            if (resolvedUserMode == UserMode.child) ...[
+              _ChartSection(
+                title: 'Points Earned',
+                subtitle: 'TOTAL TORAH POINTS',
+                trailing: _buildTotalPointsLabel(),
+                child: SizedBox(
+                  height: 140,
+                  child: _buildPointsChart(resolvedUserMode),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            _ChartSection(
+              title: 'Learning Journey',
+              subtitle: 'Keep the flame alive every day!',
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6F77),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '7 DAY STREAK!',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.white,
+                    letterSpacing: 0.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              child: _buildStreakCalendar(),
+            ),
           ],
-          _ChartSection(
-            title: 'Streak Calendar',
-            child: _buildStreakCalendar(),
-          ),
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildTimeRangeSelector() {
-    return SegmentedButton<ChartTimeRange>(
-      segments: ChartTimeRange.values
-          .map((r) => ButtonSegment(value: r, label: Text(r.displayName)))
-          .toList(),
-      selected: {_timeRange},
-      onSelectionChanged: (set) => setState(() => _timeRange = set.first),
+    return Row(
+      children: ChartTimeRange.values.map((range) {
+        final selected = _timeRange == range;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _timeRange = range),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF123DAE)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  switch (range) {
+                    ChartTimeRange.last7Days => 'Last 7 Days',
+                    ChartTimeRange.last30Days => 'Last 30\nDays',
+                    ChartTimeRange.allTime => 'All Time',
+                  },
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: selected ? Colors.white : const Color(0xFF5E6678),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
   Widget _buildCurriculumToggle() {
-    final activeCurriculaAsync = ref.watch(
-      dashboardActiveCurriculaStreamProvider,
-    );
-    return activeCurriculaAsync.when(
-      loading: () => const SizedBox(
-        height: 40,
-        child: Center(child: LoadingIndicator(message: 'Loading...')),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (activeCurricula) {
-        if (_curriculum != null && !activeCurricula.contains(_curriculum)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _curriculum = null);
-          });
-        }
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              FilterChip(
-                label: const Text('All'),
-                selected: _curriculum == null,
-                onSelected: (_) => setState(() => _curriculum = null),
-              ),
-              const SizedBox(width: 8),
-              ...activeCurricula.map(
-                (c) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(c.displayNameHe),
-                    selected: _curriculum == c,
-                    onSelected: (_) => setState(
-                      () => _curriculum = _curriculum == c ? null : c,
-                    ),
-                  ),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _FilterPill(
+            label: 'All',
+            selected: _curriculum == null,
+            onSelected: (_) => setState(() => _curriculum = null),
+          ),
+          const SizedBox(width: 8),
+          ...CurriculumId.values.map(
+            (curriculum) => Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _FilterPill(
+                label:
+                    '${curriculum.displayNameHe} • ${curriculum.displayNameEn}',
+                selected: _curriculum == curriculum,
+                onSelected: (_) => setState(
+                  () => _curriculum = _curriculum == curriculum
+                      ? null
+                      : curriculum,
                 ),
               ),
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalPointsLabel() {
+    final service = ref.watch(chartDataServiceProvider);
+    final dates = _dateRange;
+    return FutureBuilder<List<DailyPointsData>?>(
+      future: service.getDailyPoints(
+        startDate: dates.start,
+        endDate: dates.end,
+        userMode: UserMode.child,
+        curriculumId: _curriculum?.storageKey,
+      ),
+      builder: (context, snapshot) {
+        final total = snapshot.data?.fold<int>(
+          0,
+          (sum, day) => sum + day.points,
+        );
+        return Text(
+          total?.toString() ?? '--',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1A1F2F),
           ),
         );
       },
@@ -249,24 +350,100 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
 
 class _ChartSection extends StatelessWidget {
   final String title;
+  final String? subtitle;
+  final Widget? trailing;
   final Widget child;
 
-  const _ChartSection({required this.title, required this.child});
+  const _ChartSection({
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            child,
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF03174C).withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          subtitle!,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: const Color(0xFF778099),
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
+      showCheckmark: false,
+      side: BorderSide.none,
+      backgroundColor: Colors.white,
+      selectedColor: const Color(0xFF123DAE),
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: selected ? Colors.white : const Color(0xFF4D5668),
+        fontWeight: FontWeight.w700,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
     );
   }
 }
