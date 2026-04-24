@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -28,11 +29,11 @@ class AccountPickerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final registry = ref.watch(deviceRegistryProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose an Account')),
+      backgroundColor: const Color(0xFFF5F7FC),
       body: SafeArea(
         child: FutureBuilder<List<DeviceAccount>>(
           future: registry.getAllAccounts(),
@@ -55,52 +56,161 @@ class AccountPickerScreen extends ConsumerWidget {
             return Column(
               children: [
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: accounts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) =>
-                        _AccountTile(account: accounts[index]),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    children: [
+                      Text(
+                        'Choose an Account',
+                        style: theme.textTheme.displaySmall?.copyWith(
+                          color: AppTheme.brandInk,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Select a learner to continue your journey',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...accounts.map(
+                        (account) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _AccountTile(account: account),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                // [+ Add another account] button
-                if (accounts.length < kMaxDeviceAccounts)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                context.router.push(AccountCreationRoute()),
-                            icon: const Icon(Icons.add),
-                            label: Text(
-                              'Add another account '
-                              '(${kMaxDeviceAccounts - accounts.length} '
-                              'slots remaining)',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Text(
-                      'Maximum $kMaxDeviceAccounts accounts reached',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
+                _BottomAddAccountSection(accountCount: accounts.length),
               ],
             );
           },
         ),
       ),
     );
+  }
+}
+
+class _BottomAddAccountSection extends StatelessWidget {
+  const _BottomAddAccountSection({required this.accountCount});
+
+  final int accountCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        children: [
+          if (accountCount < kMaxDeviceAccounts)
+            _DashedOutlineButton(
+              onTap: () => context.router.push(AccountCreationRoute()),
+              child: Text(
+                '+1   Add another account '
+                '(${kMaxDeviceAccounts - accountCount} slots remaining)',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: AppTheme.brandBlueDeep,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                'Maximum $kMaxDeviceAccounts accounts reached',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppTheme.brandInkMuted,
+                ),
+              ),
+            ),
+          const SizedBox(height: 10),
+          Text(
+            'Manage your privacy and security in Settings',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppTheme.brandInkMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashedOutlineButton extends StatelessWidget {
+  const _DashedOutlineButton({required this.child, this.onTap});
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const radius = 24.0;
+    return CustomPaint(
+      painter: _DashedRRectPainter(
+        color: AppTheme.brandBlueDeep,
+        strokeWidth: 1.4,
+        radius: radius,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(radius),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+            child: Center(child: child),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedRRectPainter extends CustomPainter {
+  const _DashedRRectPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.radius,
+  });
+
+  final Color color;
+  final double strokeWidth;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+    final path = Path()..addRRect(rrect);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    const dashWidth = 6.0;
+    const dashSpace = 5.0;
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = (distance + dashWidth).clamp(0, metric.length).toDouble();
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.radius != radius;
   }
 }
 
@@ -125,85 +235,129 @@ class _AccountTile extends ConsumerWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: isCloud
-              ? theme.colorScheme.errorContainer
-              : theme.colorScheme.error,
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFFF3CCD1),
+          borderRadius: BorderRadius.circular(22),
         ),
         child: Text(
           isCloud ? 'Remove from device' : 'Delete account',
           style: TextStyle(
-            color: isCloud
-                ? theme.colorScheme.onErrorContainer
-                : theme.colorScheme.onError,
+            color: AppTheme.brandCoralDeep,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
       confirmDismiss: (direction) => _confirmDismiss(context, isCloud),
       onDismissed: (_) => _onDismissed(context, ref),
-      child: Card(
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-            child: Icon(
-              isCloud ? Icons.cloud : Icons.phone_android,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          title: Text(
-            account.displayName,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(account.email),
-              const SizedBox(height: 2),
-              Row(
-                children: [
-                  Icon(
-                    isCloud ? Icons.cloud : Icons.phone_android,
-                    size: 12,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    isCloud ? 'Cloud' : 'Local',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (isCloud && !hasValidSession) ...[
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.warning_amber,
-                      size: 12,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      'Sign in again',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-          trailing: isCloud
-              ? (hasValidSession
-                    ? const Icon(Icons.chevron_right)
-                    : Icon(Icons.warning_amber, color: theme.colorScheme.error))
-              : const Icon(Icons.lock_outline, size: 20),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
           onTap: () => _onTap(context, ref, hasValidSession),
+          child: Ink(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppTheme.brandOutline.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: _avatarBg(isCloud, hasValidSession),
+                  child: Icon(
+                    isCloud ? Icons.cloud_rounded : Icons.smartphone_rounded,
+                    color: _avatarFg(isCloud, hasValidSession),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        account.displayName,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.brandInk,
+                        ),
+                      ),
+                      Text(
+                        account.email,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _pillBg(isCloud, hasValidSession),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          _pillText(isCloud, hasValidSession),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: _pillFg(isCloud, hasValidSession),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  isCloud
+                      ? (hasValidSession
+                            ? Icons.chevron_right_rounded
+                            : Icons.warning_rounded)
+                      : Icons.lock_outline_rounded,
+                  color: isCloud && !hasValidSession
+                      ? const Color(0xFFBA273A)
+                      : AppTheme.brandInkMuted,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  Color _avatarBg(bool isCloud, bool hasValidSession) {
+    if (!isCloud) return const Color(0xFFFEE6C5);
+    if (!hasValidSession) return const Color(0xFFF8DDE2);
+    return AppTheme.brandBlueSoft;
+  }
+
+  Color _avatarFg(bool isCloud, bool hasValidSession) {
+    if (!isCloud) return const Color(0xFF6A4926);
+    if (!hasValidSession) return const Color(0xFFB43A4A);
+    return AppTheme.brandBlue;
+  }
+
+  Color _pillBg(bool isCloud, bool hasValidSession) {
+    if (!isCloud) return const Color(0xFFE8EBF0);
+    if (!hasValidSession) return const Color(0xFFFDE7EA);
+    return const Color(0xFFE8EEFF);
+  }
+
+  Color _pillFg(bool isCloud, bool hasValidSession) {
+    if (!isCloud) return AppTheme.brandInkMuted;
+    if (!hasValidSession) return const Color(0xFFBA273A);
+    return AppTheme.brandBlueDeep;
+  }
+
+  String _pillText(bool isCloud, bool hasValidSession) {
+    if (!isCloud) return 'LOCAL ACCOUNT';
+    if (!hasValidSession) return 'SIGN IN AGAIN';
+    return 'CLOUD ACCOUNT';
   }
 
   Future<void> _onTap(
