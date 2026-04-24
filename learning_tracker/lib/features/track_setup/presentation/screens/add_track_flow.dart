@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -459,7 +460,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
   }
 
-  Future<({int itemCount, int completionCount})> _applySelfPacedPriorCompletions(
+  Future<({int itemCount, int completionCount})>
+  _applySelfPacedPriorCompletions(
     _SelfPacedPriorCompletionSelection selection,
   ) async {
     final service = ref.read(bulkPriorCompletionServiceProvider);
@@ -520,36 +522,68 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   @override
   Widget build(BuildContext context) {
     final steps = _activeSteps;
+    final progress = (_currentIndex + 1) / steps.length;
+    final theme = Theme.of(context);
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _goToPreviousStep();
       },
-      child: SafeArea(
-        child: Column(
-          children: [
-            if (steps.length > 1)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+      child: ColoredBox(
+        color: const Color(0xFFF4F5F7),
+        child: SafeArea(
+          child: Column(
+            children: [
+              if (steps.length > 1)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 6, 24, 8),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'STEP ${_currentIndex + 1} OF ${steps.length}',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: AppTheme.brandInkMuted,
+                              letterSpacing: 1.2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${(progress * 100).round()}%',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: AppTheme.brandBlueDeep,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 10,
+                          backgroundColor: const Color(0xFFE1E4EB),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppTheme.brandBlueBright,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: LinearProgressIndicator(
-                  value: (_currentIndex + 1) / steps.length,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest,
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: steps.map(_buildStep).toList(),
                 ),
               ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: steps.map(_buildStep).toList(),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -601,11 +635,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
 
     // Self-paced: editable vertical list
-    return _StudyDaysEditable(
-      onComplete: _onStudyDaysComplete,
-      onSkip: () =>
-          _onStudyDaysComplete(Map<int, String>.from(kDefaultStudyDays)),
-    );
+    return _StudyDaysEditable(onComplete: _onStudyDaysComplete);
   }
 
   Widget _buildChazaraStep() {
@@ -746,7 +776,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       onComplete: _onStartingPositionComplete,
     );
   }
-
 }
 
 class _SelfPacedPriorProgressStep extends ConsumerWidget {
@@ -847,7 +876,8 @@ class _SelfPacedSelectionList extends StatefulWidget {
   final ValueChanged<_SelfPacedPriorCompletionSelection> onMarkCompleted;
 
   @override
-  State<_SelfPacedSelectionList> createState() => _SelfPacedSelectionListState();
+  State<_SelfPacedSelectionList> createState() =>
+      _SelfPacedSelectionListState();
 }
 
 class _SelfPacedSelectionListState extends State<_SelfPacedSelectionList> {
@@ -918,9 +948,7 @@ class _SelfPacedSelectionListState extends State<_SelfPacedSelectionList> {
                     ? () {
                         final selectedScopes = _entries.isEmpty
                             ? const <ScopeEntry>[]
-                            : _selectedIndexes
-                                  .map((i) => _entries[i])
-                                  .toList();
+                            : _selectedIndexes.map((i) => _entries[i]).toList();
                         widget.onMarkCompleted(
                           _SelfPacedPriorCompletionSelection(
                             markAll: _entries.isEmpty ? _markAll : false,
@@ -1101,6 +1129,52 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   int get _totalSelectionCount => _selections.length;
 
+  int _childCountForValue(List<ContentItem> items, String value) {
+    final nextLevel = _currentLevel + 1;
+    if (nextLevel > _hierarchy.maxLevels) return 0;
+    final seen = <String>{};
+    for (final item in items) {
+      var matches = true;
+      for (final crumb in _breadcrumbs) {
+        if (_getItemLevel(item, crumb.level) != crumb.value) {
+          matches = false;
+          break;
+        }
+      }
+      if (!matches) continue;
+      if (_getItemLevel(item, _currentLevel) != value) continue;
+      final child = _getItemLevel(item, nextLevel);
+      if (child != null) seen.add(child);
+    }
+    return seen.length;
+  }
+
+  String _scopeDescription(String value) {
+    if (widget.curriculumId == CurriculumId.mishnayos) {
+      return switch (value.toLowerCase()) {
+        'seder zeraim' => 'Seeds & Agriculture',
+        'seder moed' => 'Festivals & Sabbaths',
+        'seder nashim' => 'Women & Marriage',
+        'seder nezikin' => 'Damages & Civil Law',
+        'seder kodashim' => 'Temple Service & Sacrifices',
+        'seder taharos' => 'Purity & Ritual Law',
+        _ => 'Core section focus',
+      };
+    }
+    return 'Core section focus';
+  }
+
+  IconData _scopeIcon(String value) {
+    final normalized = value.toLowerCase();
+    if (normalized.contains('zeraim')) return Icons.eco_rounded;
+    if (normalized.contains('moed')) return Icons.calendar_month_rounded;
+    if (normalized.contains('nashim')) return Icons.family_restroom_rounded;
+    if (normalized.contains('nezikin')) return Icons.balance_rounded;
+    if (normalized.contains('kodashim')) return Icons.temple_buddhist_rounded;
+    if (normalized.contains('taharos')) return Icons.water_drop_rounded;
+    return Icons.book_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     final contentAsync = ref.watch(
@@ -1115,16 +1189,45 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
         children: [
           Text(
             'All of it, or just a section?',
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            widget.curriculumId.displayNameHe,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E9FF),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.menu_book_rounded,
+                      size: 15,
+                      color: AppTheme.brandBlueDeep,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.curriculumId.displayNameEn,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: AppTheme.brandBlueDeep,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           Expanded(
             child: contentAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -1150,7 +1253,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                   }
                   return const Center(child: CircularProgressIndicator());
                 }
-                return _breadcrumbs.isEmpty && _selections.isEmpty
+                return _breadcrumbs.isEmpty
                     ? _buildTopLevel(items)
                     : _buildHierarchyView(items);
               },
@@ -1169,48 +1272,166 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FilledButton.icon(
-          onPressed: () => widget.onComplete(null),
-          icon: const Icon(Icons.select_all),
-          label: const Text('Learn All'),
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppTheme.brandBlueDeep, AppTheme.brandBlueBright],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26084BB8),
+                blurRadius: 16,
+                offset: Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => widget.onComplete(null),
+              borderRadius: BorderRadius.circular(28),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'I want to learn everything!',
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Select the entire ${widget.curriculumId.displayNameHe}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.86),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const CircleAvatar(
+                          radius: 21,
+                          backgroundColor: Color(0x40FFFFFF),
+                          child: Icon(Icons.auto_awesome, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    right: 12,
+                    top: -7,
+                    child: Transform.rotate(
+                      angle: 0.14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6C78),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Text(
+                          'FASTER!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 24),
-        Text(
-          'Or choose by ${_labelForLevel(1)}:',
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        const SizedBox(height: 14),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE9ECF2)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            child: Row(
+              children: [
+                Text(
+                  widget.curriculumId.displayNameEn,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: AppTheme.brandBlueDeep,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: AppTheme.brandInkMuted,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${_labelForLevel(1)} Selection',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: AppTheme.brandInk,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: ListView.builder(
+          child: ListView.separated(
             itemCount: values.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final value = values[index];
+              final selected = _isDirectlySelected(value);
+              final count = _childCountForValue(items, value);
               final canDrillDeeper = _currentLevel < _maxSelectableLevel;
-              return _HierarchyTile(
+              return _ScopeLevelTile(
                 title: value,
-                isSelected: _isDirectlySelected(value),
-                canDrill: canDrillDeeper,
+                subtitle:
+                    '$count ${_labelForLevel(2)} • ${_scopeDescription(value)}',
+                icon: _scopeIcon(value),
+                selected: selected,
+                badgeText: selected ? 'SELECTED' : null,
                 onCheck: () => _toggleSelection(value),
+                canDrill: canDrillDeeper,
                 onDrill: canDrillDeeper ? () => _drillInto(value, items) : null,
               );
             },
           ),
         ),
-        if (_selections.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _done,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+        const SizedBox(height: 14),
+        FilledButton(
+          onPressed: _selections.isNotEmpty ? _done : null,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(58),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
             ),
-            child: Text('Continue with $_totalSelectionCount selected'),
           ),
-        ],
+          child: Text(
+            _selections.isEmpty
+                ? 'Select at least one'
+                : 'Continue with $_totalSelectionCount selected',
+          ),
+        ),
       ],
     );
   }
@@ -1386,12 +1607,131 @@ class _HierarchyTile extends StatelessWidget {
   }
 }
 
+class _ScopeLevelTile extends StatelessWidget {
+  const _ScopeLevelTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onCheck,
+    required this.canDrill,
+    this.onDrill,
+    this.badgeText,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final String? badgeText;
+  final VoidCallback onCheck;
+  final bool canDrill;
+  final VoidCallback? onDrill;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE9ECF2)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onCheck,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: const Color(0xFFF3F4F8),
+                  child: Icon(icon, size: 19, color: AppTheme.brandBlueDeep),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            title,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (badgeText != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3D4A5),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                badgeText!,
+                                style: const TextStyle(
+                                  color: Color(0xFF594624),
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (canDrill)
+                      IconButton(
+                        onPressed: onDrill,
+                        icon: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppTheme.brandInkMuted,
+                        ),
+                        tooltip: 'Show contents',
+                      ),
+                    Checkbox(
+                      value: selected,
+                      onChanged: (_) => onCheck(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Study days — vertical layout, all 7 active by default, "Shabbos" label.
 class _StudyDaysEditable extends StatefulWidget {
-  const _StudyDaysEditable({required this.onComplete, required this.onSkip});
+  const _StudyDaysEditable({required this.onComplete});
 
   final ValueChanged<Map<int, String>> onComplete;
-  final VoidCallback onSkip;
 
   @override
   State<_StudyDaysEditable> createState() => _StudyDaysEditableState();
@@ -1404,6 +1744,8 @@ class _StudyDaysEditableState extends State<_StudyDaysEditable> {
   void initState() {
     super.initState();
     _days = Map<int, String>.from(kDefaultStudyDays);
+    // Self-paced default: keep Shabbos optional (off) unless user enables it.
+    _days[6] = 'review';
   }
 
   @override
@@ -1411,52 +1753,183 @@ class _StudyDaysEditableState extends State<_StudyDaysEditable> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Study Days', style: theme.textTheme.headlineSmall),
+          Text(
+            'Study Days',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('Which days do you learn?', style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 24),
+          Text(
+            'Which days do you learn?',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: AppTheme.brandInkMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
           Expanded(
-            child: ListView.separated(
+            child: ListView.builder(
               itemCount: 7,
-              separatorBuilder: (_, __) => const SizedBox(height: 4),
               itemBuilder: (context, index) {
                 final dayNum = _dayNumbers[index];
                 final isActive = _days[dayNum] == 'study';
-                return SwitchListTile(
-                  title: Text(
-                    _dayLabels[index],
-                    style: theme.textTheme.bodyLarge,
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _StudyDayCard(
+                    initial: _dayLabels[index].substring(0, 1),
+                    title: _dayName(dayNum),
+                    subtitle: _daySubtitle(dayNum),
+                    subtitleColor: dayNum == 5
+                        ? const Color(0xFFAA2F39)
+                        : AppTheme.brandInkMuted,
+                    activeColor: dayNum == 5
+                        ? const Color(0xFFFFE1E4)
+                        : const Color(0xFFE9ECF2),
+                    isShabbos: dayNum == 6,
+                    isOn: isActive,
+                    onChanged: (v) =>
+                        setState(() => _days[dayNum] = v ? 'study' : 'review'),
                   ),
-                  value: isActive,
-                  onChanged: (v) {
-                    setState(() => _days[dayNum] = v ? 'study' : 'review');
-                  },
                 );
               },
             ),
           ),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: widget.onSkip,
-                  child: const Text('Use Defaults'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
                 child: FilledButton(
                   onPressed: () => widget.onComplete(Map.from(_days)),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
                   child: const Text('Continue'),
                 ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  String _dayName(int dayNum) {
+    return switch (dayNum) {
+      7 => 'Sunday',
+      1 => 'Monday',
+      2 => 'Tuesday',
+      3 => 'Wednesday',
+      4 => 'Thursday',
+      5 => 'Friday',
+      6 => 'Shabbos',
+      _ => 'Day',
+    };
+  }
+
+  String _daySubtitle(int dayNum) {
+    return switch (dayNum) {
+      7 => 'Yom Rishon',
+      5 => 'EREV SHABBOS',
+      6 => 'DAY OF REST',
+      _ => '',
+    };
+  }
+}
+
+class _StudyDayCard extends StatelessWidget {
+  const _StudyDayCard({
+    required this.initial,
+    required this.title,
+    required this.subtitle,
+    required this.subtitleColor,
+    required this.activeColor,
+    required this.isShabbos,
+    required this.isOn,
+    required this.onChanged,
+  });
+
+  final String initial;
+  final String title;
+  final String subtitle;
+  final Color subtitleColor;
+  final Color activeColor;
+  final bool isShabbos;
+  final bool isOn;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isShabbos ? const Color(0xFFD8DCE5) : const Color(0xFFE8EBF2),
+        ),
+        boxShadow: isShabbos
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x121D2939),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: activeColor,
+              child: Text(
+                initial,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: AppTheme.brandInkMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: subtitleColor,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Switch(
+              value: isOn,
+              onChanged: onChanged,
+              activeThumbColor: Colors.white,
+              activeTrackColor: AppTheme.brandBlueBright,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1545,7 +2018,8 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
   String? _calendarProgramKey;
   CalendarProgramEntry? _calendarEntry;
 
-  bool get _isCalendarProgram => widget.selectedProgram?.isCalendarProgram ?? false;
+  bool get _isCalendarProgram =>
+      widget.selectedProgram?.isCalendarProgram ?? false;
 
   DateTime get _selectedDate => DateTime.now().add(Duration(days: _offsetDays));
 
@@ -1629,7 +2103,9 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
 
       if (!mounted) return;
       final containerList = containers.values.toList();
-      final defaultContainer = containerList.isNotEmpty ? containerList.first : null;
+      final defaultContainer = containerList.isNotEmpty
+          ? containerList.first
+          : null;
       final defaultLeaves = defaultContainer == null
           ? <ContentItem>[]
           : items.where((item) {

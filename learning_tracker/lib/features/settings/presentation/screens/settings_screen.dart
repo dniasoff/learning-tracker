@@ -8,10 +8,9 @@ import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
@@ -26,7 +25,7 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 
 // TODO(DNI-105): Replace with dynamic version from package_info_plus
 // once the dependency is added to pubspec.yaml.
-const String _appVersion = '1.0.0';
+const String _appVersion = '1.2.4';
 
 @RoutePage()
 class SettingsScreen extends ConsumerWidget {
@@ -43,205 +42,171 @@ class SettingsScreen extends ConsumerWidget {
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
     final isChildProfile = activeProfile?.mode == 'child';
+    final isAdultProfile = activeProfile?.mode == 'adult';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const AppBarTitle(text: 'Settings'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.router.maybePop(),
-        ),
-      ),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.brandCreamCard,
-              theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
-              theme.scaffoldBackgroundColor,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            children: [
-              // User Profile Section
-              _UserProfileSection(user: user),
-              const SizedBox(height: 24),
-
-              // LEARNING section
-              const _SectionHeader(title: 'LEARNING'),
-              const SizedBox(height: 8),
-              Card(
-                child: Column(
-                  children: [
-                    // Child profiles can't manage tracks directly — the parent
-                    // does that from the parent-mode settings screen.
-                    if (!isChildProfile) ...[
-                      ListTile(
-                        leading: Icon(
-                          Icons.route,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: const Text('Manage Tracks'),
-                        subtitle: const Text('Add, edit, or archive tracks'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () =>
-                            context.pushRoute(TrackManagementHubRoute()),
-                      ),
-                      Divider(height: 1, indent: 56, color: theme.dividerColor),
-                    ],
-                    _HebrewDateTile(theme: theme),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              const _SectionHeader(title: 'LIFETIME KNOWLEDGE'),
-              const SizedBox(height: 8),
-              Card(
-                child: ListTile(
-                  leading: Icon(
-                    Icons.history_edu_outlined,
-                    color: theme.colorScheme.primary,
-                  ),
-                  title: const Text('Add what you\'ve learned'),
-                  subtitle: const Text(
-                    'Mark lifetime learning by curriculum and section',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LifetimeMarkingScreen(),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // NOTIFICATIONS section
-              const _SectionHeader(title: 'NOTIFICATIONS'),
-              const SizedBox(height: 8),
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        Icons.notifications_outlined,
-                        color: theme.colorScheme.primary,
-                      ),
-                      title: const Text('Notification Settings'),
-                      subtitle: const Text('Push, email and sound'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () =>
-                          context.pushRoute(const NotificationsRoute()),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // BACKUP & SYNC section (DNI-188)
-              const _SectionHeader(title: 'BACKUP & SYNC'),
-              const SizedBox(height: 8),
-              const _BackupSyncSection(),
-              const SizedBox(height: 24),
-
-              // LANGUAGE section
-              const _SectionHeader(title: 'LANGUAGE'),
-              const SizedBox(height: 8),
-              Card(
-                child: Column(children: [_LanguageTile(theme: theme)]),
-              ),
-              const SizedBox(height: 24),
-
-              // ACCOUNT section
-              const _SectionHeader(title: 'ACCOUNT'),
-              const SizedBox(height: 8),
-              Card(
-                child: Column(
-                  children: [
-                    if (user != null &&
-                        user.providerData.any(
-                          (info) => info.providerId == 'password',
-                        ))
-                      Column(
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.lock_outline),
-                            title: const Text('Change Password'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () =>
-                                _showChangePasswordFlow(context, ref, user),
-                          ),
-                          Divider(
-                            height: 1,
-                            indent: 56,
-                            color: theme.dividerColor,
-                          ),
-                        ],
-                      ),
-                    ListTile(
-                      leading: Icon(
-                        Icons.logout,
-                        color: theme.colorScheme.primary,
-                      ),
-                      title: Text(
-                        'Sign Out',
-                        style: TextStyle(color: theme.colorScheme.primary),
-                      ),
-                      onTap: () => _showSignOutConfirmation(context, ref),
-                    ),
-                    if (!isChildProfile) ...[
-                      Divider(height: 1, indent: 56, color: theme.dividerColor),
-                      ListTile(
-                        leading: Icon(
-                          Icons.delete_forever,
-                          color: theme.colorScheme.error,
-                        ),
-                        title: Text(
-                          'Delete Account',
-                          style: TextStyle(color: theme.colorScheme.error),
-                        ),
-                        onTap: () => showDeleteAccountFlow(context, ref, user),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // PARENTAL CONTROLS section — only visible for child-mode accounts.
-              _ParentalControlsSection(
+      body: SafeArea(
+        top: true,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => context.pushRoute(const ProfilePickerRoute()),
+              child: _UserProfileSection(
                 user: user,
-                isChildProfile: isChildProfile,
+                activeProfile: activeProfile,
               ),
-
-              // App Version
-              Center(
-                child: Text(
-                  'Torah Tracker v$_appVersion',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 24),
+            const _SectionHeader(title: 'TRACKS'),
+            const SizedBox(height: 10),
+            _SurfaceCard(
+              child: _SettingsTile(
+                icon: Icons.route_rounded,
+                iconColor: AppTheme.brandBlueBright,
+                iconBackground: AppTheme.brandBlueSoft,
+                title: 'Manage tracks',
+                subtitle: 'Create and edit your learning tracks',
+                onTap: () => context.pushRoute(TrackManagementHubRoute()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const _SectionHeader(title: 'LEARNING'),
+            const SizedBox(height: 10),
+            _SurfaceCard(
+              child: Column(
+                children: [
+                  _HebrewDateTile(theme: theme),
+                  _tileDivider(theme),
+                  _SettingsTile(
+                    icon: Icons.menu_book_rounded,
+                    iconColor: AppTheme.brandGoldDeep,
+                    iconBackground: AppTheme.brandGoldSoft,
+                    title: 'Add what you\'ve learned',
+                    subtitle: 'Log custom Mitzvot or Torah studies',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LifetimeMarkingScreen(),
+                      ),
+                    ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SurfaceCard(
+              child: _SettingsTile(
+                icon: Icons.notifications_active_outlined,
+                iconColor: AppTheme.brandCoralDeep,
+                iconBackground: theme.colorScheme.errorContainer,
+                title: 'Notification Settings',
+                subtitle: 'Push, email, and study sound alerts',
+                onTap: () => context.pushRoute(const NotificationsRoute()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const _SurfaceCard(child: _LanguageTile()),
+            const SizedBox(height: 16),
+            const _BackupSyncSection(),
+            const SizedBox(height: 24),
+            _ParentalControlsSection(
+              user: user,
+              isChildProfile: isChildProfile,
+            ),
+            const _SectionHeader(title: 'ACCOUNT'),
+            const SizedBox(height: 10),
+            if (user != null &&
+                user.providerData.any((info) => info.providerId == 'password'))
+              Column(
+                children: [
+                  _SurfaceCard(
+                    child: _SettingsTile(
+                      icon: Icons.vpn_key_outlined,
+                      iconColor: AppTheme.brandInkMuted,
+                      iconBackground: theme.colorScheme.secondaryContainer,
+                      title: 'Change Password',
+                      onTap: () => _showChangePasswordFlow(context, ref, user),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            _SurfaceCard(
+              child: _SettingsTile(
+                icon: Icons.logout_rounded,
+                iconColor: theme.colorScheme.error,
+                iconBackground: theme.colorScheme.errorContainer,
+                title: 'Sign Out',
+                titleColor: theme.colorScheme.error,
+                trailing: const SizedBox.shrink(),
+                onTap: () => _showSignOutConfirmation(context, ref),
+              ),
+            ),
+            if (isAdultProfile && user != null) ...[
+              const SizedBox(height: 12),
+              _SurfaceCard(
+                child: _SettingsTile(
+                  icon: Icons.delete_forever_rounded,
+                  iconColor: theme.colorScheme.error,
+                  iconBackground: theme.colorScheme.errorContainer,
+                  title: 'Delete Account',
+                  subtitle: 'Permanently remove this account and cloud data',
+                  titleColor: theme.colorScheme.error,
+                  trailing: const SizedBox.shrink(),
+                  onTap: () => showDeleteAccountFlow(context, ref, user),
                 ),
               ),
-              const SizedBox(height: 4),
-              Center(
-                child: Text(
-                  'Handcrafted with care',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
             ],
-          ),
+            const SizedBox(height: 24),
+            Center(
+              child: Text(
+                'v$_appVersion',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Center(
+              child: Text(
+                'Handcrafted for your Torah journey',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.change_history_rounded,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.forum_outlined,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.star_rounded,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -259,92 +224,214 @@ class _BackupSyncSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final syncStatus = ref.watch(syncStatusProvider);
     final authState = ref.watch(authStateProvider);
-
-    return Card(
-      child: Column(
-        children: [
-          switch (syncStatus) {
-            SyncStatusLocalOnly() => _buildLocalOnlyTile(
-              context,
-              theme,
-              isLocalAuth: authState.isLocalBorn,
-            ),
-            SyncStatusSynced(:final lastSyncedAt) => _buildSyncedTile(
-              theme,
-              lastSyncedAt,
-            ),
-            SyncStatusSyncing() => _buildStatusTile(
-              theme,
-              icon: Icons.sync,
-              label: 'Syncing...',
-              color: theme.colorScheme.primary,
-            ),
-            SyncStatusPending(:final pendingChanges) => _buildStatusTile(
-              theme,
-              icon: Icons.schedule,
-              label: '$pendingChanges changes pending',
-              color: AppTheme.brandCoral,
-            ),
-            SyncStatusOffline(:final pendingChanges) => _buildStatusTile(
-              theme,
-              icon: Icons.cloud_off,
-              label: pendingChanges > 0
-                  ? '$pendingChanges changes queued'
-                  : 'Offline',
-              color: AppTheme.brandInkSoft,
-            ),
-            SyncStatusError(:final message) => _buildStatusTile(
-              theme,
-              icon: Icons.warning_amber,
-              label: 'Sync error: $message',
-              color: AppTheme.brandCoralDeep,
-            ),
-          },
-        ],
+    return switch (syncStatus) {
+      SyncStatusLocalOnly() => _buildLocalOnlyCard(
+        context,
+        theme,
+        isLocalAuth: authState.isLocalBorn,
       ),
-    );
+      SyncStatusSynced(:final lastSyncedAt) => _buildCloudStatusCard(
+        context,
+        theme,
+        icon: Icons.cloud_done_rounded,
+        subtitle: 'Last synced ${_formatTimeAgo(lastSyncedAt)}',
+      ),
+      SyncStatusSyncing() => _buildCloudStatusCard(
+        context,
+        theme,
+        icon: Icons.sync_rounded,
+        subtitle: 'Syncing...',
+      ),
+      SyncStatusPending(:final pendingChanges) => _buildCloudStatusCard(
+        context,
+        theme,
+        icon: Icons.schedule_rounded,
+        subtitle: '$pendingChanges changes pending',
+      ),
+      SyncStatusOffline(:final pendingChanges) => _buildCloudStatusCard(
+        context,
+        theme,
+        icon: Icons.cloud_off_rounded,
+        subtitle: pendingChanges > 0
+            ? '$pendingChanges changes queued'
+            : 'Offline',
+      ),
+      SyncStatusError(:final message) => _buildCloudStatusCard(
+        context,
+        theme,
+        icon: Icons.warning_amber_rounded,
+        subtitle: 'Sync error: $message',
+      ),
+    };
   }
 
-  Widget _buildLocalOnlyTile(
+  Widget _buildLocalOnlyCard(
     BuildContext context,
     ThemeData theme, {
     required bool isLocalAuth,
   }) {
-    return ListTile(
-      leading: Icon(
-        Icons.smartphone,
-        color: theme.colorScheme.onSurfaceVariant,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B3FB4),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x30053698),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
-      title: const Text('Local only'),
-      subtitle: const Text('Upgrade to enable cloud backup and sync'),
-      trailing: isLocalAuth
-          ? FilledButton.tonal(
-              onPressed: () => context.pushRoute(const UpgradeToCloudRoute()),
-              child: const Text('Upgrade to Cloud'),
-            )
-          : null,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Color(0x3A8EA4ED),
+                  child: Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 17,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'Backup & Sync',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 30,
+                    height: 1.05,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Your learning progress is currently\nLOCAL ONLY. Upgrade to sync\nacross all devices.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Colors.white.withValues(alpha: 0.88),
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (isLocalAuth)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFF3D4A5),
+                    foregroundColor: const Color(0xFF2C2A26),
+                    minimumSize: const Size.fromHeight(42),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    textStyle: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: const Color(0xFF2C2A26),
+                    ),
+                  ),
+                  onPressed: () =>
+                      context.pushRoute(const UpgradeToCloudRoute()),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF322A23),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.arrow_upward_rounded,
+                          color: Color(0xFFF3D4A5),
+                          size: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Upgrade to Cloud'),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildSyncedTile(ThemeData theme, DateTime lastSyncedAt) {
-    final timeAgo = _formatTimeAgo(lastSyncedAt);
-    return ListTile(
-      leading: const Icon(Icons.cloud_done, color: AppTheme.brandGold),
-      title: const Text('Sync enabled'),
-      subtitle: Text('Last synced $timeAgo'),
-      trailing: const Icon(Icons.chevron_right),
-    );
-  }
-
-  Widget _buildStatusTile(
+  Widget _buildCloudStatusCard(
+    BuildContext context,
     ThemeData theme, {
     required IconData icon,
-    required String label,
-    required Color color,
+    required String subtitle,
   }) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(label),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B3FB4),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x30053698),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: const Color(0x3A8EA4ED),
+              child: Icon(icon, size: 17, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Backup & Sync',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 22,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.88),
+                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () => context.pushRoute(const DeviceRestoreRoute()),
+              icon: const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -366,106 +453,50 @@ class _HebrewDateTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final useHebrew = ref.watch(useHebrewDateProvider);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.calendar_month_outlined,
-                color: theme.colorScheme.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text('Calendar Preference', style: theme.textTheme.titleSmall),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Applies to all date pickers across the app',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(
-                  value: false,
-                  label: Text('Gregorian'),
-                  icon: Icon(Icons.calendar_today),
-                ),
-                ButtonSegment(
-                  value: true,
-                  label: Text('Hebrew'),
-                  icon: Icon(Icons.calendar_month),
-                ),
-              ],
-              selected: {useHebrew},
-              onSelectionChanged: (selected) {
-                ref
-                    .read(useHebrewDateProvider.notifier)
-                    .setUseHebrewDate(selected.first);
-              },
-            ),
-          ),
-        ],
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      minLeadingWidth: 0,
+      leading: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: AppTheme.brandBlueSoft,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.calendar_month_rounded,
+          color: theme.colorScheme.primary,
+          size: 16,
+        ),
       ),
-    );
-  }
-}
-
-class _EditNameDialog extends StatefulWidget {
-  const _EditNameDialog({required this.initialName});
-
-  final String initialName;
-
-  @override
-  State<_EditNameDialog> createState() => _EditNameDialogState();
-}
-
-class _EditNameDialogState extends State<_EditNameDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialName);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Edit Name'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: const InputDecoration(
-          labelText: 'Display Name',
-          border: OutlineInputBorder(),
+      title: Text(
+        'Calendar Preference',
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+          color: const Color(0xFF1D2432),
         ),
-        textCapitalization: TextCapitalization.words,
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+      subtitle: Text(
+        'Switch between Gregorian/Hebrew',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: const Color(0xFF929BAA),
+          fontSize: 11.5,
         ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, _controller.text.trim()),
-          child: const Text('Save'),
+      ),
+      trailing: Transform.scale(
+        scale: 0.9,
+        child: Switch(
+          value: useHebrew,
+          activeThumbColor: Colors.white,
+          activeTrackColor: AppTheme.brandBlueBright,
+          inactiveThumbColor: Colors.white,
+          inactiveTrackColor: const Color(0xFFD7DEEA),
+          onChanged: (value) =>
+              ref.read(useHebrewDateProvider.notifier).setUseHebrewDate(value),
         ),
-      ],
+      ),
     );
   }
 }
@@ -483,21 +514,116 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.primary.withValues(alpha: 0.9),
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.2,
+          color: const Color(0xFF8E97A6),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2,
         ),
       ),
     );
   }
 }
 
+class _SurfaceCard extends StatelessWidget {
+  const _SurfaceCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE9ECF2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x121D2939),
+            blurRadius: 16,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.titleColor,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? titleColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      minLeadingWidth: 0,
+      leading: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: iconBackground,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, color: iconColor, size: 16.5),
+      ),
+      title: Text(
+        title,
+        style: theme.textTheme.titleSmall?.copyWith(
+          color: titleColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+        ),
+      ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF929BAA),
+                fontSize: 11.5,
+              ),
+            ),
+      trailing:
+          trailing ??
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 19,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
+          ),
+      onTap: onTap,
+    );
+  }
+}
+
+Widget _tileDivider(ThemeData theme) =>
+    Divider(height: 1, indent: 62, endIndent: 14, color: theme.dividerColor);
+
 /// Displays user profile info with avatar, name, email, and badge.
 class _UserProfileSection extends ConsumerStatefulWidget {
-  const _UserProfileSection({required this.user});
+  const _UserProfileSection({required this.user, required this.activeProfile});
 
   final User? user;
+  final ProfileModel? activeProfile;
 
   @override
   ConsumerState<_UserProfileSection> createState() =>
@@ -518,35 +644,6 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
     super.didUpdateWidget(oldWidget);
     if (widget.user != oldWidget.user) {
       _user = widget.user;
-    }
-  }
-
-  Future<void> _showEditNameDialog({
-    required String initialName,
-    required int? profileId,
-    User? user,
-  }) async {
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (ctx) => _EditNameDialog(initialName: initialName),
-    );
-
-    if (newName == null || newName.isEmpty || !mounted) return;
-
-    if (profileId != null) {
-      await ref
-          .read(profileRepositoryProvider)
-          .updateProfile(id: profileId, displayName: newName);
-      if (!mounted) return;
-      ref.invalidate(selectedProfileProvider);
-      ref.invalidate(profileListProvider);
-    } else if (user != null) {
-      await user.updateDisplayName(newName);
-      await user.reload();
-      if (!mounted) return;
-      setState(() {
-        _user = FirebaseAuth.instance.currentUser;
-      });
     }
   }
 
@@ -580,64 +677,92 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
-    final activeProfile = profilesAsync.asData?.value
-        .where((p) => p.id == activeProfileId)
-        .firstOrNull;
+    final activeProfile =
+        widget.activeProfile ??
+        profilesAsync.asData?.value
+            .where((p) => p.id == activeProfileId)
+            .firstOrNull;
 
     final displayName =
         activeProfile?.displayName ??
         user.displayName ??
         user.email?.split('@').first ??
         'User';
-    final initials = displayName.isNotEmpty
-        ? displayName
-              .split(' ')
-              .take(2)
-              .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
-              .join()
-        : '?';
+    final profileInitial = _profileInitial(displayName);
 
-    return Card(
+    return _SurfaceCard(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-              child: Text(
-                initials,
-                style: TextStyle(
-                  color: theme.colorScheme.primary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFCFD8EA),
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: Container(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    alignment: Alignment.center,
+                    child: Text(
+                      profileInitial,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Positioned(
+                  bottom: -2,
+                  left: -2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.error,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'PRO',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 7.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    displayName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (user.email != null)
-                    Text(
-                      user.email!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
-                    runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
+                      Text(
+                        displayName,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 22,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -645,7 +770,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                         ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primary.withValues(
-                            alpha: 0.15,
+                            alpha: 0.12,
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -653,27 +778,25 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                           'SELF-LEARNER',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
-                            fontSize: 10,
+                            fontSize: 8,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
                           ),
                         ),
                       ),
-                      const NoBackupBadge(),
                     ],
                   ),
+                  if (user.email != null)
+                    Text(
+                      user.email!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF8E97A6),
+                        fontSize: 13,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  const _NoBackupInlineText(),
                 ],
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.edit_outlined,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              onPressed: () => _showEditNameDialog(
-                initialName: displayName,
-                profileId: activeProfile?.id,
-                user: user,
               ),
             ),
           ],
@@ -706,56 +829,56 @@ class _LocalBornProfileRow extends ConsumerWidget {
         (authUser.displayName.isNotEmpty
             ? authUser.displayName
             : authUser.email.split('@').first);
-    final initials = displayName
-        .split(' ')
-        .take(2)
-        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
-        .join();
+    final profileInitial = _profileInitial(displayName);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-            child: Text(
-              initials.isEmpty ? '?' : initials,
-              style: TextStyle(
-                color: theme.colorScheme.primary,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+    return _SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    profileInitial,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  authUser.email,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  Text(
+                    authUser.email,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [NoBackupBadge()],
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  const _NoBackupInlineText(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -817,47 +940,41 @@ class _ParentalControlsSectionState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionHeader(title: 'PARENTAL CONTROLS'),
-        const SizedBox(height: 8),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: Icon(
-                  Icons.admin_panel_settings_outlined,
-                  color: theme.colorScheme.primary,
-                ),
-                title: const Text('Parent Mode'),
-                subtitle: Text(
-                  _hasPin
-                      ? 'Customize tracks, rewards, and points'
-                      : 'Set a PIN to unlock parent controls',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () async {
-                  ref.read(routerProvider).parentPinGuard.lock();
-                  await context.pushRoute(const ParentSettingsRoute());
-                  if (mounted) await _load();
-                },
-              ),
-              Divider(height: 1, indent: 56, color: theme.dividerColor),
-              ListTile(
-                leading: Icon(
-                  Icons.pin_outlined,
-                  color: theme.colorScheme.primary,
-                ),
-                title: Text(_hasPin ? 'Change Parent PIN' : 'Set Parent PIN'),
-                subtitle: const Text('4-digit PIN, stored on this device'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () async {
-                  final route = _hasPin
-                      ? const PinChangeRoute()
-                      : const PinSetupRoute();
-                  final result =
-                      (await context.pushRoute<bool>(route)) ?? false;
-                  if (result && mounted) await _load();
-                },
-              ),
-            ],
+        const SizedBox(height: 10),
+        _SurfaceCard(
+          child: _SettingsTile(
+            icon: Icons.admin_panel_settings_outlined,
+            iconColor: AppTheme.brandCoralDeep,
+            iconBackground: const Color(0xFFF8E3E7),
+            title: 'Parent Mode',
+            subtitle: 'Switch to admin (PIN-guarded)',
+            trailing: Icon(
+              _hasPin ? Icons.lock : Icons.lock_open,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 18,
+            ),
+            onTap: () async {
+              ref.read(routerProvider).parentPinGuard.lock();
+              await context.pushRoute(const ParentSettingsRoute());
+              if (mounted) await _load();
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        _SurfaceCard(
+          child: _SettingsTile(
+            icon: Icons.pin_outlined,
+            iconColor: AppTheme.brandInkMuted,
+            iconBackground: AppTheme.brandCreamSoft,
+            title: 'Parent PIN',
+            subtitle: 'Change your security PIN',
+            onTap: () async {
+              final route = _hasPin
+                  ? const PinChangeRoute()
+                  : const PinSetupRoute();
+              final result = (await context.pushRoute<bool>(route)) ?? false;
+              if (result && mounted) await _load();
+            },
           ),
         ),
         const SizedBox(height: 24),
@@ -948,34 +1065,19 @@ Future<void> _showChangePasswordFlow(
 }
 
 class _LanguageTile extends ConsumerWidget {
-  const _LanguageTile({required this.theme});
-
-  final ThemeData theme;
+  const _LanguageTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(languageProvider);
     final label = supportedLanguages[current] ?? current;
 
-    return ListTile(
-      leading: Icon(Icons.language, color: theme.colorScheme.primary),
-      title: const Text('Language'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right),
-        ],
-      ),
+    return _SettingsTile(
+      icon: Icons.language_rounded,
+      iconColor: AppTheme.brandInkMuted,
+      iconBackground: AppTheme.brandCreamSoft,
+      title: 'Language',
+      subtitle: label,
       onTap: () => _showLanguagePicker(context, ref, current),
     );
   }
@@ -1029,3 +1131,31 @@ class _LanguageTile extends ConsumerWidget {
   }
 }
 
+class _NoBackupInlineText extends StatelessWidget {
+  const _NoBackupInlineText();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.cloud_off, size: 12, color: Color(0xFFCE8A41)),
+        const SizedBox(width: 4),
+        Text(
+          'No Backup',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: const Color(0xFFCE8A41),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _profileInitial(String fullName) {
+  final normalized = fullName.trim();
+  if (normalized.isEmpty) return 'U';
+  return normalized.substring(0, 1).toUpperCase();
+}

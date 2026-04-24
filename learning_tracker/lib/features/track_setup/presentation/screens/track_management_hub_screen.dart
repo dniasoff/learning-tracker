@@ -40,7 +40,6 @@ class _TrackManagementHubScreenState
   Widget build(BuildContext context) {
     if (_addingTrack) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Add Track')),
         body: AddTrackFlow(
           profileId: ref.watch(activeProfileIdProvider),
           isOnboarding: false,
