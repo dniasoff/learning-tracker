@@ -465,7 +465,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                                 ),
                                 const SizedBox(height: 22),
                                 if (isOnline) ...[
-                                  OutlinedButton.icon(
+                                  OutlinedButton(
                                     onPressed: _isLoading
                                         ? null
                                         : _signUpWithGoogle,
@@ -481,14 +481,21 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                                         vertical: 14,
                                       ),
                                     ),
-                                    icon: const Icon(
-                                      Icons.g_mobiledata_rounded,
-                                    ),
-                                    label: const Text(
-                                      'Sign Up with Google',
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w600,
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.g_mobiledata_rounded),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Sign Up with Google',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -684,33 +691,7 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                     ),
                   ),
                   const SizedBox(height: 26),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 430),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoChip(
-                            backgroundColor: const Color(0xFFF4D5AF),
-                            icon: Icons.shield_rounded,
-                            iconContainer: const Color(0xFFFAE8D1),
-                            title: 'PARENTAL',
-                            value: 'Gate Active',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildInfoChip(
-                            backgroundColor: const Color(0xFFECEEF4),
-                            icon: Icons.language_rounded,
-                            iconContainer: const Color(0xFFDEE2EC),
-                            title: 'LANGUAGE',
-                            value: 'English',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 8),
                   Text(
                     '© 2024 MITZVAH QUEST • THE LEARNING PLAYGROUND',
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -783,58 +764,6 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
           borderRadius: BorderRadius.circular(28),
           borderSide: const BorderSide(color: AppTheme.brandBlueBright),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoChip({
-    required Color backgroundColor,
-    required IconData icon,
-    required Color iconContainer,
-    required String title,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: iconContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 18, color: AppTheme.brandInk),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppTheme.brandInkMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: AppTheme.brandInk,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
