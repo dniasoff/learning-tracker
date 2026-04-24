@@ -865,24 +865,34 @@ class _CurriculumCard extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Text(
-                        'Current: $pctDisplay',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: curriculumColor,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Current: $pctDisplay',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: curriculumColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Lifetime: $lifetimePctDisplay',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.brandGoldDeep,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Lifetime: $lifetimePctDisplay',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.brandGoldDeep,
-                        ),
-                      ),
-                      const Spacer(),
                       // AC-2: Projected completion date
                       if (paceStatus?.projectedCompletionDate != null)
                         Text(

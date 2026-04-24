@@ -64,7 +64,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
           return Card(
             child: ListTile(
               leading: const Icon(Icons.menu_book_outlined),
-              title: Text(curriculum.displayNameHe),
+              title: Text('${curriculum.displayNameHe} • ${curriculum.displayNameEn}'),
               subtitle: Text(
                 '${(summary.percentage * 100).toStringAsFixed(2)}% • '
                 '${summary.learnedLeafCount}/${summary.totalLeafCount}',
@@ -104,7 +104,6 @@ class _LifetimeCurriculumMarkingScreenState
   final List<ScopeEntry> _breadcrumbs = [];
   final List<ScopeEntry> _selections = [];
   bool _saving = false;
-  bool _unmarkMode = false;
 
   CurriculumId get _curriculum => CurriculumId.values.firstWhere(
     (c) => c.storageKey == widget.curriculumId,
@@ -178,6 +177,15 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
+  void _markAllCurrentLevel(List<String> values) {
+    setState(() {
+      _selections.removeWhere((s) => s.level == _currentLevel);
+      for (final value in values) {
+        _selections.add(ScopeEntry(level: _currentLevel, value: value));
+      }
+    });
+  }
+
   Future<void> _markSelections(List<ScopeEntry> selections) async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -190,7 +198,7 @@ class _LifetimeCurriculumMarkingScreenState
         if (!unique.add(key)) continue;
         await repo.recordCompletion(
           curriculumId: _curriculum.storageKey,
-          unitType: '${_unmarkMode ? 'unmark_' : ''}level${selection.level}',
+          unitType: 'level${selection.level}',
           unitIdentifier: selection.value,
           unitDisplayNameHe: selection.value,
           unitDisplayNameEn: selection.value,
@@ -205,9 +213,7 @@ class _LifetimeCurriculumMarkingScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '${_unmarkMode ? 'Unmarked' : 'Marked'} ${unique.length} lifetime selection(s).',
-          ),
+          content: Text('Marked ${unique.length} lifetime selection(s).'),
         ),
       );
     } catch (e) {
@@ -238,7 +244,11 @@ class _LifetimeCurriculumMarkingScreenState
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: AppBarTitle(text: _curriculum.displayNameHe)),
+      appBar: AppBar(
+        title: AppBarTitle(
+          text: '${_curriculum.displayNameHe} • ${_curriculum.displayNameEn}',
+        ),
+      ),
       body: contentAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -250,44 +260,39 @@ class _LifetimeCurriculumMarkingScreenState
         data: (allItems) {
           final values = _valuesAtCurrentLevel(allItems);
           final canDrill = _currentLevel < 4;
+          final valueToEnglish = <String, String>{};
+          for (final item in allItems) {
+            final key = _getItemLevel(item, _currentLevel);
+            if (key == null || key.isEmpty) continue;
+            valueToEnglish.putIfAbsent(key, () => item.displayNameEn);
+          }
           return Column(
             children: [
               Card(
                 margin: const EdgeInsets.all(16),
                 child: ListTile(
                   leading: const Icon(Icons.history_edu_outlined),
-                  title: Text(
-                    _unmarkMode
-                        ? 'Unmark from lifetime learned'
-                        : 'Mark as lifetime learned',
-                  ),
+                  title: const Text('Mark as lifetime learned'),
                   subtitle: Text(
                     'Selected: ${_selections.length} • Level $_currentLevel',
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment<bool>(
-                      value: false,
-                      icon: Icon(Icons.add_task_outlined),
-                      label: Text('Mark'),
+              Row(
+                children: [
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: values.isEmpty
+                          ? null
+                          : () => _markAllCurrentLevel(values),
+                      icon: const Icon(Icons.select_all),
+                      label: const Text('Mark all'),
                     ),
-                    ButtonSegment<bool>(
-                      value: true,
-                      icon: Icon(Icons.remove_circle_outline),
-                      label: Text('Unmark'),
-                    ),
-                  ],
-                  selected: {_unmarkMode},
-                  onSelectionChanged: (selected) {
-                    setState(() => _unmarkMode = selected.first);
-                  },
-                ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
               ),
-              const SizedBox(height: 8),
               if (_breadcrumbs.isNotEmpty)
                 SizedBox(
                   height: 42,
@@ -330,6 +335,14 @@ class _LifetimeCurriculumMarkingScreenState
                             ? TextStyle(color: theme.colorScheme.onSurfaceVariant)
                             : null,
                       ),
+                      subtitle: Text(
+                        valueToEnglish[value] ?? value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       trailing: canDrill
                           ? IconButton(
                               icon: const Icon(Icons.chevron_right),
@@ -365,11 +378,7 @@ class _LifetimeCurriculumMarkingScreenState
                                 height: 18,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : Text(
-                                _unmarkMode
-                                    ? 'Save unmark changes'
-                                    : 'Save lifetime marks',
-                              ),
+                            : const Text('Save lifetime marks'),
                       ),
                     ),
                   ],

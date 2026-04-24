@@ -332,7 +332,10 @@ class _GlobalLifetimeTreeSection extends StatelessWidget {
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 leading: const Icon(Icons.menu_book_outlined),
-                title: Text(summaries[i].curriculumId.displayNameHe),
+                title: Text(
+                  '${summaries[i].curriculumId.displayNameHe} • '
+                  '${summaries[i].curriculumId.displayNameEn}',
+                ),
                 subtitle: Text(
                   '${formatFractionAsPercent(summaries[i].percentage)} • '
                   '${summaries[i].learnedLeafCount}/${summaries[i].totalLeafCount}',
