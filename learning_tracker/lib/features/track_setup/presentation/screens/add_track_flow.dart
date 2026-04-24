@@ -657,35 +657,162 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
           )
           .toList();
 
+      String normalizeStageName(String raw) {
+        final cleaned = raw.replaceAll('_', ' ').trim();
+        if (cleaned.isEmpty) return 'Review stage';
+        return cleaned
+            .split(' ')
+            .where((part) => part.isNotEmpty)
+            .map(
+              (part) =>
+                  '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+            )
+            .join(' ');
+      }
+
       return Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Review Schedule', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
             Text(
-              'Review stages set by ${_state.programName}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              'Review Schedule',
+              style: theme.textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 24),
-            ...chazaraStages.map((s) {
-              final stage = s as Map<String, dynamic>;
-              final name = stage['stage'].toString().replaceAll('_', ' ');
-              final delay = stage['delay_days'];
-              return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.refresh),
-                  title: Text(name),
-                  subtitle: delay != null ? Text('After $delay days') : null,
-                ),
-              );
-            }),
-            const Spacer(),
+            const SizedBox(height: 6),
+            Text(
+              'Review stages set by ${_state.programName}',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: AppTheme.brandInkMuted,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF2FF),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.lock_outline_rounded,
+                    size: 16,
+                    color: AppTheme.brandBlueDeep,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This schedule is fixed by the program and cannot be edited.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.brandBlueDeep,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: chazaraStages.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No review stages are configured for this program.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: chazaraStages.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final stage =
+                            chazaraStages[index] as Map<String, dynamic>;
+                        final name = normalizeStageName(
+                          stage['stage'].toString(),
+                        );
+                        final delay = stage['delay_days'];
+                        final delayLabel = switch (delay) {
+                          int value when value == 1 => 'After 1 day',
+                          int value => 'After $value days',
+                          String value => 'After $value days',
+                          _ => 'Scheduled by program',
+                        };
+
+                        return DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: const Color(0xFFE7EAF1)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: const Color(0xFFE9ECFF),
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: AppTheme.brandBlueDeep,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        delayLabel,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: AppTheme.brandInkMuted,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.lock_rounded,
+                                  size: 18,
+                                  color: AppTheme.brandInkMuted,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
             FilledButton(
               onPressed: () => _onChazaraComplete(null),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
               child: const Text('Continue'),
             ),
           ],
@@ -2713,129 +2840,320 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
   Widget _buildCalendarOffsetMode(BuildContext context) {
     final theme = Theme.of(context);
     final date = _selectedDate;
-    final dateLabel =
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final weekdayNames = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    final monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final weekday = weekdayNames[date.weekday - 1];
+    final month = monthNames[date.month - 1];
+    final dateLabel = '$weekday, $month ${date.day}';
+    final offsetLabel = switch (_offsetDays) {
+      0 => 'Today',
+      < 0 => 'Day ${_offsetDays}',
+      _ => 'Day +$_offsetDays',
+    };
+    final directionLabel = switch (_offsetDays) {
+      > 0 => 'FORWARD',
+      < 0 => 'BACKWARDS',
+      _ => 'TODAY',
+    };
+    final absDays = _offsetDays.abs();
+    final daysLabel = absDays == 1 ? '1 Day' : '$absDays Days';
+    final canStart = _calendarEntry != null && !_calendarLoading;
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Starting Position', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
           Text(
-            'Default is today. You can start up to 30 days back or 30 days ahead.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _offsetDays == 0
-                        ? 'Today ($dateLabel)'
-                        : _offsetDays < 0
-                        ? '${_offsetDays.abs()} day(s) back ($dateLabel)'
-                        : '$_offsetDays day(s) forward ($dateLabel)',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  if (_calendarLoading)
-                    const LinearProgressIndicator()
-                  else if (_calendarEntry != null) ...[
-                    Text(
-                      _calendarEntry!.todayRef,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_calendarEntry!.displayNameHe} • ${_calendarEntry!.displayNameEn}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ] else
-                    Text(
-                      'No local calendar entry found for this date.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                ],
-              ),
+            'Starting Position',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 12),
-          Card(
+          const SizedBox(height: 6),
+          Text(
+            'Can start up to 30 days back/forward from today',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: AppTheme.brandInkMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x12000000),
+                      blurRadius: 18,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                  child: Column(
+                    children: [
+                      const CircleAvatar(
+                        radius: 34,
+                        backgroundColor: Color(0xFFE6E8FF),
+                        child: Icon(
+                          Icons.calendar_today_rounded,
+                          size: 28,
+                          color: AppTheme.brandBlueDeep,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'TARGET DATE',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          letterSpacing: 1.1,
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        dateLabel,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: AppTheme.brandBlueDeep,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_calendarLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      else if (_calendarEntry != null)
+                        Column(
+                          children: [
+                            Text(
+                              _calendarEntry!.todayRef,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: AppTheme.brandInk,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF4E2C5),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '${_calendarEntry!.displayNameEn} • ${_calendarEntry!.displayNameHe}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: const Color(0xFF6A4A13),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          'No local calendar entry found for this date.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -14,
+                right: 12,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF707D),
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x33000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      offsetLabel,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: const Color(0xFFE7EAF1)),
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  IconButton(
-                    tooltip: 'Back one unit',
-                    onPressed: _offsetDays <= -30
+                  InkWell(
+                    borderRadius: BorderRadius.circular(40),
+                    onTap: _offsetDays <= -30
                         ? null
                         : () {
                             setState(() => _offsetDays -= 1);
                             unawaited(_refreshCalendarEntry());
                           },
-                    icon: const Icon(Icons.arrow_back_ios_new),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        _offsetDays == 0
-                            ? 'Today'
-                            : (_offsetDays > 0
-                                  ? '+$_offsetDays unit(s)'
-                                  : '$_offsetDays unit(s)'),
-                        style: theme.textTheme.titleMedium,
+                    child: Ink(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F6FA),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Icon(
+                        Icons.chevron_left_rounded,
+                        size: 30,
+                        color: _offsetDays <= -30
+                            ? AppTheme.brandInkMuted.withValues(alpha: 0.45)
+                            : AppTheme.brandBlueDeep,
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Forward one unit',
-                    onPressed: _offsetDays >= 30
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _offsetDays == 0 ? 'Today' : daysLabel,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            directionLabel,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              letterSpacing: 1.1,
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(40),
+                    onTap: _offsetDays >= 30
                         ? null
                         : () {
                             setState(() => _offsetDays += 1);
                             unawaited(_refreshCalendarEntry());
                           },
-                    icon: const Icon(Icons.arrow_forward_ios),
+                    child: Ink(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F6FA),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 30,
+                        color: _offsetDays >= 30
+                            ? AppTheme.brandInkMuted.withValues(alpha: 0.45)
+                            : AppTheme.brandBlueDeep,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
           const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    setState(() => _offsetDays = 0);
-                    unawaited(_refreshCalendarEntry());
-                  },
-                  child: const Text('Use today'),
-                ),
+          FilledButton.tonal(
+            onPressed: () {
+              setState(() => _offsetDays = 0);
+              unawaited(_refreshCalendarEntry());
+            },
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _calendarEntry == null
-                      ? null
-                      : () => widget.onComplete(
-                          'offset:$_offsetDays|ref:${_calendarEntry!.todayRef}',
-                        ),
-                  child: const Text('Start here'),
-                ),
+              backgroundColor: const Color(0xFFE9EBF1),
+              foregroundColor: AppTheme.brandInk,
+            ),
+            child: const Text('Use Today'),
+          ),
+          const SizedBox(height: 10),
+          FilledButton(
+            onPressed: canStart
+                ? () => widget.onComplete(
+                    'offset:$_offsetDays|ref:${_calendarEntry!.todayRef}',
+                  )
+                : null,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
               ),
-            ],
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Start Here'),
+                SizedBox(width: 8),
+                Icon(Icons.rocket_launch_rounded, size: 18),
+              ],
+            ),
           ),
         ],
       ),
