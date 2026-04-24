@@ -3,13 +3,14 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 
 @RoutePage()
 class ProfilePickerScreen extends ConsumerStatefulWidget {
@@ -31,37 +32,97 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     final profilesAsync = ref.watch(profileListProvider);
 
     return Scaffold(
-      body: SafeArea(
-        child: profilesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Error: $e')),
-          data: (profiles) => _buildBody(context, profiles),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.brandCreamCard,
+              AppTheme.brandBlueSoft.withValues(alpha: 0.22),
+              AppTheme.brandCream,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: profilesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Error: $e')),
+            data: (profiles) => _buildBody(context, profiles),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildBody(BuildContext context, List<ProfileModel> profiles) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          const SizedBox(height: 48),
-          Text(
-            "Who's learning today?",
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: GridView.builder(
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: AppTheme.brandBlue.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    size: 14,
+                    color: AppTheme.brandBlue,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'TorahTrack',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: AppTheme.brandBlueDeep,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 24,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 34),
+            Text(
+              'Who is learning?',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontSize: 48,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.brandBlueDeep,
+                letterSpacing: -0.8,
+                height: 1.03,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Choose a profile to continue your\njourney',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: AppTheme.brandInkMuted,
+                fontWeight: FontWeight.w500,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 20),
+            GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.85,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
               ),
               itemCount: profiles.length + 1,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemBuilder: (_, index) {
                 if (index == profiles.length) {
                   return _AddProfileCard(
@@ -79,8 +140,12 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 );
               },
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            const _FamilyStreakPanel(),
+            const SizedBox(height: 18),
+            const _PickerBottomBar(),
+          ],
+        ),
       ),
     );
   }
@@ -411,30 +476,154 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    final theme = Theme.of(context);
+    final isChild = profile.mode == 'child';
+    const modeColor = AppTheme.brandBlue;
+    final trimmedName = profile.displayName.trim();
+    final firstLetter = trimmedName.isEmpty
+        ? '?'
+        : trimmedName.substring(0, 1).toUpperCase();
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
+        borderRadius: BorderRadius.circular(30),
         onTap: onTap,
         onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.brandCreamCard,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: AppTheme.brandOutline.withValues(alpha: 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.brandInk.withValues(alpha: 0.05),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ProfileAvatar(avatarIndex: profile.avatarIndex, radius: 36),
-              const SizedBox(height: 12),
-              Text(
-                profile.displayName,
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: modeColor,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      isChild ? 'CHILD MODE' : 'ADULT MODE',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.35,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: AppTheme.brandInkMuted,
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                profile.mode == 'child' ? 'Child' : 'Adult',
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: 10),
+              Center(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 92,
+                      height: 92,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFF2F5FC), Color(0xFFE6ECF8)],
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.brandBlue.withValues(alpha: 0.14),
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          firstLetter,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: AppTheme.brandBlueDeep,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isChild)
+                      Positioned(
+                        right: -1,
+                        bottom: -1,
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF96B82),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppTheme.brandCreamCard,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.star_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 14),
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      profile.displayName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 22,
+                        color: AppTheme.brandInk,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap to\ncontinue',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 2),
             ],
           ),
         ),
@@ -451,39 +640,334 @@ class _AddProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      color: isDisabled
-          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-          : null,
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
+        borderRadius: BorderRadius.circular(30),
         onTap: isDisabled ? null : onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add_circle_outline,
-                size: 48,
-                color: isDisabled
-                    ? theme.colorScheme.onSurface.withValues(alpha: 0.3)
-                    : theme.colorScheme.primary,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.brandCreamCard.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: CustomPaint(
+            painter: _DashedRoundedRectPainter(
+              color: isDisabled
+                  ? AppTheme.brandOutline.withValues(alpha: 0.6)
+                  : AppTheme.brandOutline,
+              strokeWidth: 1.6,
+              dashLength: 6,
+              gapLength: 5,
+              borderRadius: 30,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CustomPaint(
+                    painter: _DashedCirclePainter(
+                      color: isDisabled
+                          ? AppTheme.brandOutline.withValues(alpha: 0.6)
+                          : AppTheme.brandInkMuted,
+                    ),
+                    child: SizedBox(
+                      width: 96,
+                      height: 96,
+                      child: Center(
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: 44,
+                          color: isDisabled
+                              ? AppTheme.brandInkSoft
+                              : AppTheme.brandBlue,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isDisabled ? 'Max Profiles' : 'Add\nProfile',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: AppTheme.brandInk,
+                      fontWeight: FontWeight.w700,
+                      height: 1.08,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isDisabled ? 'Maximum reached' : 'Create new\nlearner',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                isDisabled ? 'Max 10 profiles' : 'Add Profile',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: isDisabled
-                      ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
-                      : theme.colorScheme.primary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _FamilyStreakPanel extends StatelessWidget {
+  const _FamilyStreakPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      decoration: BoxDecoration(
+        color: AppTheme.brandCreamSoft.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'FAMILY STREAK',
+            style: GoogleFonts.plusJakartaSans(
+              color: AppTheme.brandBlueDeep,
+              fontSize: 29,
+              fontWeight: FontWeight.w800,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 0.2,
+            ),
+          ),
+          Text(
+            '14 Consecutive Days!',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.brandInk,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _StreakBubble(
+                background: Color(0xFFF7DDB6),
+                icon: Icons.auto_awesome_rounded,
+                iconColor: AppTheme.brandInk,
+              ),
+              SizedBox(width: 10),
+              _StreakBubble(
+                background: Color(0xFFF96B82),
+                icon: Icons.local_fire_department_rounded,
+                iconColor: Colors.white,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: 0.76,
+              minHeight: 16,
+              backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.5),
+              color: AppTheme.brandBlue,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StreakBubble extends StatelessWidget {
+  const _StreakBubble({
+    required this.background,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  final Color background;
+  final IconData icon;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+      child: Icon(icon, color: iconColor, size: 20),
+    );
+  }
+}
+
+class _PickerBottomBar extends StatelessWidget {
+  const _PickerBottomBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.brandCreamCard,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandInk.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.brandBlueSoft.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.supervised_user_circle_rounded,
+                    color: AppTheme.brandBlueDeep,
+                    size: 20,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Profiles',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandBlueDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => context.router.push(const SettingsRoute()),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.settings_rounded,
+                      color: AppTheme.brandInkMuted.withValues(alpha: 0.7),
+                      size: 20,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Settings',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.brandInkMuted.withValues(alpha: 0.85),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashedRoundedRectPainter extends CustomPainter {
+  _DashedRoundedRectPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.gapLength,
+    required this.borderRadius,
+  });
+
+  final Color color;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
+  final double borderRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(borderRadius),
+    );
+    final path = Path()..addRRect(rect);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    _drawDashedPath(canvas, path, paint, dashLength, gapLength);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRoundedRectPainter oldDelegate) {
+    return color != oldDelegate.color ||
+        strokeWidth != oldDelegate.strokeWidth ||
+        dashLength != oldDelegate.dashLength ||
+        gapLength != oldDelegate.gapLength ||
+        borderRadius != oldDelegate.borderRadius;
+  }
+}
+
+class _DashedCirclePainter extends CustomPainter {
+  const _DashedCirclePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8;
+    final path = Path()
+      ..addOval(
+        Rect.fromCircle(
+          center: Offset(size.width / 2, size.height / 2),
+          radius: size.width / 2 - 2,
+        ),
+      );
+    _drawDashedPath(canvas, path, paint, 6, 5);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
+    return color != oldDelegate.color;
+  }
+}
+
+void _drawDashedPath(
+  Canvas canvas,
+  Path source,
+  Paint paint,
+  double dashLength,
+  double gapLength,
+) {
+  for (final metric in source.computeMetrics()) {
+    var distance = 0.0;
+    while (distance < metric.length) {
+      final next = distance + dashLength;
+      canvas.drawPath(
+        metric.extractPath(distance, next.clamp(0, metric.length)),
+        paint,
+      );
+      distance = next + gapLength;
+    }
   }
 }
