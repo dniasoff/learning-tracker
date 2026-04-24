@@ -177,7 +177,6 @@ class _CurriculumCard extends ConsumerWidget {
                       Text(
                         curriculum.displayNameHe,
                         style: const TextStyle(
-                          fontFamily: 'Noto Sans Hebrew',
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.brandInk,

@@ -198,6 +198,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
       );
     }
 
+    if (isChildProfile && completions.isNotEmpty) {
+      final affectedTrackIds = completions.map((c) => c.trackId).toSet();
+      for (final trackId in affectedTrackIds) {
+        unawaited(_rewardMilestoneService?.evaluateUnlocksForTrack(trackId));
+      }
+      unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
+    }
+
     return completions;
   }
 

@@ -74,7 +74,11 @@ class _ContentHierarchyScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: AppTheme.brandCoralDeep,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Unknown curriculum: "${widget.curriculumId}"',
@@ -223,7 +227,11 @@ class _ContentHierarchyScreenState
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error, size: 48, color: Colors.red),
+                    const Icon(
+                      Icons.error,
+                      size: 48,
+                      color: AppTheme.brandCoralDeep,
+                    ),
                     const SizedBox(height: 16),
                     Text('Error loading content: $error'),
                   ],

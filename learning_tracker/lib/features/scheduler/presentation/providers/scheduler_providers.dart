@@ -623,6 +623,22 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
             enrollment.trackingStartDate!.month,
             enrollment.trackingStartDate!.day,
           );
+    result.removeWhere(
+      (t) =>
+          t.curriculumId == curriculum &&
+          t.trackId == trackId &&
+          (t.priority == DailyTaskPriority.newLearning ||
+              t.priority == DailyTaskPriority.overdueProgram ||
+              t.priority == DailyTaskPriority.todayProgram),
+    );
+
+    // Future anchors defer cycle tasks until the selected day.
+    // This treats skipped-forward days as baseline, without writing fake
+    // completion rows (which would distort streak/points/awards).
+    if (configuredStartDate.isAfter(todayDate)) {
+      continue;
+    }
+
     // Start anchor represents where the learner is "currently at",
     // so backlog begins from the next program unit.
     var effectiveStartDate = configuredStartDate.add(const Duration(days: 1));
@@ -644,15 +660,6 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
               todayEntry,
           ];
     if (entries.isEmpty) continue;
-
-    result.removeWhere(
-      (t) =>
-          t.curriculumId == curriculum &&
-          t.trackId == trackId &&
-          (t.priority == DailyTaskPriority.newLearning ||
-              t.priority == DailyTaskPriority.overdueProgram ||
-              t.priority == DailyTaskPriority.todayProgram),
-    );
 
     for (var i = 0; i < entries.length; i++) {
       final entry = entries[i];

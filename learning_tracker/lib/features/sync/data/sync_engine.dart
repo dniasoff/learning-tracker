@@ -412,6 +412,13 @@ class SyncEngine {
     return int.tryParse(raw?.toString() ?? '');
   }
 
+  int? _parseOffsetDaysFromRef(String? trackingStartRef) {
+    if (trackingStartRef == null || trackingStartRef.isEmpty) return null;
+    final firstToken = trackingStartRef.split('|').first;
+    if (!firstToken.startsWith('offset:')) return null;
+    return int.tryParse(firstToken.substring('offset:'.length));
+  }
+
   Future<Map<String, dynamic>> _withTrackProgressSchema(
     Map<String, dynamic> trackData,
   ) async {
@@ -444,6 +451,8 @@ class SyncEngine {
         profileId: profileId,
         planDate: planDate,
       );
+      final offsetDays = _parseOffsetDaysFromRef(enrollment.trackingStartRef) ?? 0;
+      final deferredUntil = enrollment.trackingStartDate;
       final relevantRows = trackId == null
           ? rows
                 .where(
@@ -467,6 +476,13 @@ class SyncEngine {
         'today_due_count': todayDueCount,
         'status': status,
         'snapshot_plan_date': planDate.toIso8601String(),
+        'precredit': {
+          'mode': 'deferred_baseline',
+          'offset_days': offsetDays,
+          'deferred_until': deferredUntil?.toIso8601String(),
+          'counts_as_completion': false,
+          'affects_streak_points_awards': false,
+        },
       };
       enriched['self_paced_progress'] = null;
     } else {
@@ -518,23 +534,36 @@ class SyncEngine {
 
   /// Push a ledger entry to Firestore after local write.
   Future<void> pushLedgerEntry(Map<String, dynamic> entry) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueLedgerEntry(_withQueueTargetProfile(entry));
+    // Local-born / unauthenticated sessions should stay local-only.
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.debug('Skipping ledger sync: user not authenticated');
+      return;
+    }
+
+    // Always queue first so UI never blocks on network for lifetime marking.
+    await _offlineQueue.enqueueLedgerEntry(_withQueueTargetProfile(entry));
+    await _emitPendingStatus();
+
+    if (_isQueueOnlyMode || !_isOnline) {
       await _updateQueueOnlyStatus();
       return;
     }
 
-    try {
-      await _firestoreDataSource.pushLedgerEntry(entry);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed ledger entry to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push ledger entry, queuing for later', e);
-      await _offlineQueue.enqueueLedgerEntry(_withQueueTargetProfile(entry));
-      await _emitPendingStatus();
-    }
+    // Best-effort background flush while online. Do not block caller.
+    unawaited(() async {
+      try {
+        final batchSize = _isBatterySaverMode ? 5 : null;
+        final synced = await _offlineQueue.flush(batchSize: batchSize);
+        if (synced > 0) {
+          _consecutivePushPermissionErrors = 0;
+          _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
+        }
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+        _trackPushError(e);
+        _logger.warning('Background ledger queue flush failed', e);
+      }
+    }());
   }
 
   /// Fetch all bookmarks for the current user from Firestore.

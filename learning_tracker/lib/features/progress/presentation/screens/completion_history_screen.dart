@@ -224,7 +224,7 @@ class _CompletionHistoryScreenState
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.star, color: Colors.amber, size: 20),
+            const Icon(Icons.star, color: AppTheme.brandGold, size: 20),
             Text(
               '${completion.points}',
               style: const TextStyle(fontWeight: FontWeight.bold),

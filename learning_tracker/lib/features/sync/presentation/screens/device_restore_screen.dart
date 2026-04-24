@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/restore_providers.dart';
 
@@ -81,7 +82,11 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
             complete: (collectionsRestored) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle, size: 64, color: Colors.green),
+                const Icon(
+                  Icons.check_circle,
+                  size: 64,
+                  color: AppTheme.brandGold,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'Restore complete!',
@@ -92,7 +97,11 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
             error: (message) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: AppTheme.brandCoralDeep,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'Restore failed',

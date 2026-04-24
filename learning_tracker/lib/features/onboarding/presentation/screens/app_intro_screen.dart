@@ -30,7 +30,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       title: '9 Curricula, One App',
       subtitle:
           'From Biblical texts and Oral Law to Law Codes and Ethics. All your learning, sourced from Sefaria and available offline.',
-      bgColor: Color(0xFFEFF3FF),
+      bgColor: AppTheme.brandBlueSoft,
       titleColor: AppTheme.brandInk,
       subtitleColor: AppTheme.brandInkMuted,
       iconColor: AppTheme.brandBlue,
@@ -41,7 +41,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       title: 'Never Forget\na Mishna',
       subtitle:
           'Our intelligent chazara engine schedules reviews based on your pace. Spaced repetition ensures your learning stays with you forever.',
-      bgColor: Color(0xFFEBF3FF),
+      bgColor: AppTheme.brandCreamSoft,
       titleColor: AppTheme.brandInk,
       subtitleColor: AppTheme.brandInkMuted,
       iconColor: AppTheme.brandBlueBright,
@@ -52,7 +52,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       title: 'Master Your\nLearning at Scale',
       subtitle:
           'Juggling Mishnah, Talmud, and Bible is hard. We turn large-scale learning goals into a clear daily plan tailored to you.',
-      bgColor: Color(0xFFF8F2E6),
+      bgColor: AppTheme.brandGoldSoft,
       titleColor: AppTheme.brandInk,
       subtitleColor: AppTheme.brandInkMuted,
       iconColor: AppTheme.brandGoldDeep,
@@ -63,7 +63,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       title: 'Designed for Every\nScholar',
       subtitle:
           'Choose Child Mode for a gamified journey with points and rewards, or Adult Mode for clean, scholarly progress tracking.',
-      bgColor: Color(0xFFF4EEFF),
+      bgColor: AppTheme.brandCoralSoft,
       titleColor: AppTheme.brandInk,
       subtitleColor: AppTheme.brandInkMuted,
       iconColor: AppTheme.curriculumMussar,
@@ -140,7 +140,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
                       const SizedBox(width: 8),
                       Text(
                         'Aleph Bright',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.brandBlue,
                           fontWeight: FontWeight.w700,
                         ),
@@ -256,7 +256,7 @@ class _IntroPage extends StatelessWidget {
                 color: data.bgColor,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: AppTheme.brandCreamCard.withValues(alpha: 0.6),
                   width: 1.6,
                 ),
                 boxShadow: [
@@ -276,7 +276,7 @@ class _IntroPage extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.78),
+                          color: AppTheme.brandCreamCard.withValues(alpha: 0.78),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Stack(
@@ -295,7 +295,7 @@ class _IntroPage extends StatelessWidget {
                                 ),
                                 child: Text(
                                   data.chipText,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     color: data.iconColor,
@@ -325,7 +325,7 @@ class _IntroPage extends StatelessWidget {
                                             data.iconColor.withValues(
                                               alpha: 0.22,
                                             ),
-                                            Colors.white,
+                                            AppTheme.brandCreamCard,
                                           ],
                                         ),
                                         border: Border.all(
@@ -372,7 +372,7 @@ class _IntroPage extends StatelessWidget {
                                 child: Text(
                                   data.title,
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.playfairDisplay(
+                                  style: GoogleFonts.plusJakartaSans(
                                     color: data.titleColor,
                                     fontSize: 36,
                                     fontWeight: FontWeight.w700,
@@ -399,7 +399,7 @@ class _IntroPage extends StatelessWidget {
                                 child: Text(
                                   data.subtitle,
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     color: data.subtitleColor,
                                     fontSize: 14,
                                     height: 1.45,
@@ -455,7 +455,7 @@ class _GlowingButton extends StatelessWidget {
           ],
         ),
         child: Material(
-          color: Colors.transparent,
+          color: AppTheme.transparent,
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(28),
@@ -466,8 +466,8 @@ class _GlowingButton extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.brandCreamCard,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -476,7 +476,7 @@ class _GlowingButton extends StatelessWidget {
                     const SizedBox(width: 8),
                     const Icon(
                       Icons.arrow_forward_rounded,
-                      color: Colors.white,
+                      color: AppTheme.brandCreamCard,
                       size: 20,
                     ),
                   ],

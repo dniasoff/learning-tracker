@@ -93,7 +93,7 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const green = Color(0xFF4ADE80);
+    const green = AppTheme.brandGold;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -112,7 +112,7 @@ class _DashboardBody extends StatelessWidget {
                   value: '${data.currentStreak}',
                   label: 'Day Streak',
                   icon: Icons.local_fire_department,
-                  iconColor: Colors.orange,
+                  iconColor: AppTheme.brandCoral,
                 ),
               ),
               const SizedBox(width: 8),
@@ -121,7 +121,7 @@ class _DashboardBody extends StatelessWidget {
                   value: '${data.globalPoints}',
                   label: 'Total Points',
                   icon: Icons.stars,
-                  iconColor: Colors.amber,
+                  iconColor: AppTheme.brandGold,
                 ),
               ),
             ],
@@ -405,7 +405,7 @@ class _ParentCurriculumCard extends StatelessWidget {
                   Text(
                     '${summary.points} pts earned',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.amber.withValues(alpha: 0.8),
+                      color: AppTheme.brandGold.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -431,9 +431,9 @@ class _PaceBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      PaceStatusType.ahead => ('Ahead', Colors.green),
-      PaceStatusType.onPace => ('On Pace', Colors.blue),
-      PaceStatusType.behind => ('Behind', Colors.orange),
+      PaceStatusType.ahead => ('Ahead', AppTheme.brandGold),
+      PaceStatusType.onPace => ('On Pace', AppTheme.brandBlue),
+      PaceStatusType.behind => ('Behind', AppTheme.brandCoral),
     };
 
     return Container(

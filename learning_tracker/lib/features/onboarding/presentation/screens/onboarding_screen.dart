@@ -387,7 +387,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.white,
+              AppTheme.brandCreamCard,
               AppTheme.brandBlueSoft.withValues(alpha: 0.2),
               AppTheme.brandCream,
             ],

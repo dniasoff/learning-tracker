@@ -698,6 +698,79 @@ class LearningRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [LifetimeCurriculumMarkingScreen]
+class LifetimeCurriculumMarkingRoute
+    extends PageRouteInfo<LifetimeCurriculumMarkingRouteArgs> {
+  LifetimeCurriculumMarkingRoute({
+    required String curriculumId,
+    Key? key,
+    List<PageRouteInfo>? children,
+  }) : super(
+         LifetimeCurriculumMarkingRoute.name,
+         args: LifetimeCurriculumMarkingRouteArgs(
+           curriculumId: curriculumId,
+           key: key,
+         ),
+         initialChildren: children,
+       );
+
+  static const String name = 'LifetimeCurriculumMarkingRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<LifetimeCurriculumMarkingRouteArgs>();
+      return LifetimeCurriculumMarkingScreen(
+        curriculumId: args.curriculumId,
+        key: args.key,
+      );
+    },
+  );
+}
+
+class LifetimeCurriculumMarkingRouteArgs {
+  const LifetimeCurriculumMarkingRouteArgs({
+    required this.curriculumId,
+    this.key,
+  });
+
+  final String curriculumId;
+
+  final Key? key;
+
+  @override
+  String toString() {
+    return 'LifetimeCurriculumMarkingRouteArgs{curriculumId: $curriculumId, key: $key}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! LifetimeCurriculumMarkingRouteArgs) return false;
+    return curriculumId == other.curriculumId && key == other.key;
+  }
+
+  @override
+  int get hashCode => curriculumId.hashCode ^ key.hashCode;
+}
+
+/// generated route for
+/// [LifetimeMarkingScreen]
+class LifetimeMarkingRoute extends PageRouteInfo<void> {
+  const LifetimeMarkingRoute({List<PageRouteInfo>? children})
+    : super(LifetimeMarkingRoute.name, initialChildren: children);
+
+  static const String name = 'LifetimeMarkingRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const LifetimeMarkingScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [LocalSignInScreen]
 class LocalSignInRoute extends PageRouteInfo<void> {
   const LocalSignInRoute({List<PageRouteInfo>? children})
@@ -1032,22 +1105,6 @@ class SignInRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const SignInScreen();
-    },
-  );
-}
-
-/// generated route for
-/// [SplashScreen]
-class SplashRoute extends PageRouteInfo<void> {
-  const SplashRoute({List<PageRouteInfo>? children})
-    : super(SplashRoute.name, initialChildren: children);
-
-  static const String name = 'SplashRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const SplashScreen();
     },
   );
 }

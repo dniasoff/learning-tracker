@@ -21,8 +21,8 @@ class LearningScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final interTheme = theme.copyWith(
-      textTheme: GoogleFonts.interTextTheme(theme.textTheme),
+    final plusJakartaTheme = theme.copyWith(
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(theme.textTheme),
     );
     final l10n = AppLocalizations.of(context)!;
     final activeCurriculaAsync = ref.watch(
@@ -38,7 +38,7 @@ class LearningScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F8),
       body: Theme(
-        data: interTheme,
+        data: plusJakartaTheme,
         child: SafeArea(
           child: activeCurriculaAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -194,24 +194,27 @@ class _StreakHeroCard extends StatelessWidget {
         Positioned(
           right: 14,
           bottom: -14,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4CFA4),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+          child: Transform.rotate(
+            angle: 0.08,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4CFA4),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                'Keep it up! 🚀',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: const Color(0xFF5A3E22),
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
-            ),
-            child: Text(
-              'Keep it up! 🚀',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: const Color(0xFF5A3E22),
-                fontWeight: FontWeight.w700,
               ),
             ),
           ),

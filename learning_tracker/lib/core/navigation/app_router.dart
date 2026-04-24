@@ -23,7 +23,6 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/app_in
 import 'package:learning_tracker/features/onboarding/presentation/screens/local_sign_in_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/local_signup_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
@@ -42,6 +41,7 @@ import 'package:learning_tracker/features/progress/presentation/screens/progress
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/device_restore_screen.dart';
@@ -73,11 +73,8 @@ class AppRouter extends RootStackRouter {
 
   @override
   List<AutoRoute> get routes => [
-    // Splash screen (initial route)
-    AutoRoute(path: '/splash', page: SplashRoute.page, initial: true),
-
     // Unauthenticated routes
-    AutoRoute(path: '/intro', page: AppIntroRoute.page),
+    AutoRoute(path: '/intro', page: AppIntroRoute.page, initial: true),
     AutoRoute(path: '/sign-in', page: SignInRoute.page),
     // Firebase action links can deep-link to these paths. Redirect to sign-in
     // while MagicLinkService processes the incoming URI in the background.
@@ -240,6 +237,16 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/settings/tracks/:curriculumId/:trackType',
       page: TrackDetailRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/settings/lifetime',
+      page: LifetimeMarkingRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/settings/lifetime/:curriculumId',
+      page: LifetimeCurriculumMarkingRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(

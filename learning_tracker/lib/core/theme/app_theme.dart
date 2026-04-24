@@ -3,46 +3,50 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 
-/// Material 3 theme for the Torah learning app — "Aleph Bright" palette.
+/// Material 3 theme for the Torah learning app.
 ///
-/// Light-only palette matching the v1 screenshots: cream background, deep
-/// royal blue primary, warm coral streak accent, and gold trophy accent.
+/// App-wide palette:
+/// - Primary: Techelet Blue (#0038A8)
+/// - Secondary background: Stone White (#F9F9FB)
+/// - Accent: Silver Slate (#708090)
+/// - Success: Olive Grove (#6B8E23)
 class AppTheme {
   AppTheme._();
 
   // ---------------------------------------------------------------------------
-  // Aleph Bright palette
+  // Canonical palette
   // ---------------------------------------------------------------------------
 
-  /// Deep royal blue — extracted from provided screenshots.
-  static const Color brandBlue = Color(0xFF1038A0);
-  static const Color brandBlueBright = Color(0xFF2050D0);
-  static const Color brandBlueDeep = Color(0xFF002080);
-  static const Color brandBlueSoft = Color(0xFFD6DBEC);
+  /// Primary brand blue (Techelet Blue).
+  static const Color brandBlue = Color(0xFF0038A8);
+  static const Color brandBlueBright = Color(0xFF1A57C2);
+  static const Color brandBlueDeep = Color(0xFF002A80);
+  static const Color brandBlueSoft = Color(0xFFD9E2F4);
 
-  /// Coral / warm red — streak accent, warnings, highlights.
-  static const Color brandCoral = Color(0xFFF86868);
-  static const Color brandCoralSoft = Color(0xFFF8C0C0);
-  static const Color brandCoralDeep = Color(0xFFD64045);
+  /// Neutral accent (Silver Slate) for secondary text and iconography.
+  static const Color brandCoral = Color(0xFF708090);
+  static const Color brandCoralSoft = Color(0xFFD8DEE3);
+  static const Color brandCoralDeep = Color(0xFF4E5E70);
 
-  /// Gold / amber — trophy, rewards, achievements.
-  static const Color brandGold = Color(0xFFF8D8B8);
-  static const Color brandGoldSoft = Color(0xFFF8E0B8);
-  static const Color brandGoldDeep = Color(0xFFC9A961);
+  /// Success color (Olive Grove) for progress and streaks.
+  static const Color brandGold = Color(0xFF6B8E23);
+  static const Color brandGoldSoft = Color(0xFFDCE7C7);
+  static const Color brandGoldDeep = Color(0xFF4F6E1A);
 
-  /// Cream / parchment backgrounds and cards.
-  static const Color brandCream = Color(0xFFEDEDF0);
-  static const Color brandCreamCard = Color(0xFFFDFDFC);
-  static const Color brandCreamSoft = Color(0xFFEBE4E8);
-  static const Color brandOutline = Color(0xFFD6DBEC);
-  static const Color brandOutlineMuted = Color(0xFFB6AFB9);
+  /// Secondary background and neutral surfaces.
+  static const Color brandCream = Color(0xFFF9F9FB);
+  static const Color brandCreamCard = Color(0xFFFFFFFF);
+  static const Color brandCreamSoft = Color(0xFFF1F3F7);
+  static const Color brandOutline = Color(0xFFC3CBD3);
+  static const Color brandOutlineMuted = Color(0xFFA4AFBA);
 
-  /// Ink (text on light surfaces).
-  static const Color brandInk = Color(0xFF1D1E21);
-  static const Color brandInkMuted = Color(0xFF404669);
-  static const Color brandInkSoft = Color(0xFF9B96AB);
+  /// Ink/text tones.
+  static const Color brandInk = Color(0xFF1B2330);
+  static const Color brandInkMuted = Color(0xFF708090);
+  static const Color brandInkSoft = Color(0xFF95A1AE);
+  static const Color transparent = Color(0x00000000);
 
-  static const Color _errorColor = Color(0xFFD64045);
+  static const Color _errorColor = Color(0xFFB00020);
 
   /// Default accent kept for backward compatibility with existing call sites.
   static const Color defaultAccentColor = brandBlue;
@@ -78,7 +82,7 @@ class AppTheme {
   static const Color childCard = brandCreamCard;
   static const Color childOutline = brandOutline;
   static const Color childPrimary = brandBlue;
-  static const Color childStreakAccent = brandCoral;
+  static const Color childStreakAccent = brandGold;
   static const Color childPointsAccent = brandBlueBright;
   static const Color childTrophyAccent = brandGold;
   static const Color childText = brandInk;
@@ -142,8 +146,7 @@ class AppTheme {
   // ---------------------------------------------------------------------------
 
   static TextTheme _buildTextTheme() {
-    final serif = GoogleFonts.playfairDisplayTextTheme();
-    final sans = GoogleFonts.interTextTheme();
+    final sans = GoogleFonts.plusJakartaSansTextTheme();
 
     TextStyle? head(TextStyle? base) =>
         base?.copyWith(color: brandInk, fontWeight: FontWeight.w700);
@@ -151,13 +154,13 @@ class AppTheme {
     TextStyle? subtle(TextStyle? base) => base?.copyWith(color: brandInkMuted);
 
     return TextTheme(
-      displayLarge: head(serif.displayLarge),
-      displayMedium: head(serif.displayMedium),
-      displaySmall: head(serif.displaySmall),
-      headlineLarge: head(serif.headlineLarge),
-      headlineMedium: head(serif.headlineMedium),
-      headlineSmall: head(serif.headlineSmall),
-      titleLarge: head(serif.titleLarge),
+      displayLarge: head(sans.displayLarge),
+      displayMedium: head(sans.displayMedium),
+      displaySmall: head(sans.displaySmall),
+      headlineLarge: head(sans.headlineLarge),
+      headlineMedium: head(sans.headlineMedium),
+      headlineSmall: head(sans.headlineSmall),
+      titleLarge: head(sans.titleLarge),
       titleMedium: body(
         sans.titleMedium,
       )?.copyWith(fontWeight: FontWeight.w600),
@@ -190,7 +193,7 @@ class AppTheme {
       _lightTheme(accent: accent);
 
   // ---------------------------------------------------------------------------
-  // Light theme — matches Aleph Bright screenshots
+  // Light theme
   // ---------------------------------------------------------------------------
 
   static ThemeData _lightTheme({required Color accent}) {
@@ -205,11 +208,11 @@ class AppTheme {
         primaryContainer: brandBlueSoft,
         onPrimaryContainer: brandBlueDeep,
         secondary: brandCoral,
-        onSecondary: Colors.white,
+        onSecondary: brandCream,
         secondaryContainer: brandCoralSoft,
         onSecondaryContainer: brandCoralDeep,
         tertiary: brandGold,
-        onTertiary: Colors.white,
+        onTertiary: brandCream,
         tertiaryContainer: brandGoldSoft,
         onTertiaryContainer: brandGoldDeep,
         error: _errorColor,
@@ -228,7 +231,7 @@ class AppTheme {
         foregroundColor: brandInk,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.playfairDisplay(
+        titleTextStyle: GoogleFonts.plusJakartaSans(
           color: brandInk,
           fontSize: 18,
           fontWeight: FontWeight.w700,
@@ -254,7 +257,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.plusJakartaSans(
             fontSize: 15,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
@@ -269,7 +272,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.plusJakartaSans(
             fontSize: 15,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
@@ -281,7 +284,7 @@ class AppTheme {
           foregroundColor: accent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -292,7 +295,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(30),
           ),
           side: const BorderSide(color: brandOutline),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -314,8 +317,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _errorColor),
         ),
-        labelStyle: GoogleFonts.inter(color: brandInkMuted),
-        hintStyle: GoogleFonts.inter(color: brandInkSoft),
+        labelStyle: GoogleFonts.plusJakartaSans(color: brandInkMuted),
+        hintStyle: GoogleFonts.plusJakartaSans(color: brandInkSoft),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -329,29 +332,33 @@ class AppTheme {
         elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: brandCreamCard,
-        indicatorColor: brandBlueSoft,
+        backgroundColor: transparent,
+        indicatorColor: brandBlue.withValues(alpha: 0.14),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: accent);
           }
-          return const IconThemeData(color: brandInkMuted);
+          return const IconThemeData(color: brandCoral);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final base = GoogleFonts.inter(fontSize: 12, letterSpacing: 0.2);
+          final base = GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            letterSpacing: 0.2,
+          );
           if (states.contains(WidgetState.selected)) {
-            return base.copyWith(color: accent, fontWeight: FontWeight.w600);
+            return base.copyWith(color: accent, fontWeight: FontWeight.w700);
           }
-          return base.copyWith(color: brandInkMuted);
+          return base.copyWith(color: brandCoral, fontWeight: FontWeight.w500);
         }),
+        surfaceTintColor: transparent,
         elevation: 0,
       ),
       dividerColor: brandOutline,
       chipTheme: ChipThemeData(
         backgroundColor: brandCreamSoft,
         selectedColor: accent,
-        labelStyle: GoogleFonts.inter(color: brandInk, fontSize: 13),
-        secondaryLabelStyle: GoogleFonts.inter(
+        labelStyle: GoogleFonts.plusJakartaSans(color: brandInk, fontSize: 13),
+        secondaryLabelStyle: GoogleFonts.plusJakartaSans(
           color: Colors.white,
           fontSize: 13,
         ),
@@ -401,7 +408,7 @@ class AppTheme {
         }),
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: brandBlue,
+        color: brandGold,
         linearTrackColor: brandOutline,
       ),
       dialogTheme: DialogThemeData(
@@ -419,7 +426,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: brandInk,
-        contentTextStyle: GoogleFonts.inter(color: Colors.white),
+        contentTextStyle: GoogleFonts.plusJakartaSans(color: Colors.white),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

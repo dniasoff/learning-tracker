@@ -51,9 +51,7 @@ class ContentItemTile extends ConsumerWidget {
       leading: _buildLeadingIcon(theme, count),
       title: Text(
         item.displayNameHe,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontFamily: 'Noto Sans Hebrew',
-        ),
+        style: theme.textTheme.titleMedium,
         textDirection: TextDirection.rtl,
         textAlign: TextAlign.right,
       ),
