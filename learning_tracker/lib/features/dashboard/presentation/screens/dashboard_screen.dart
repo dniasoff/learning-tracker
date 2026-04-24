@@ -141,7 +141,9 @@ class _DashboardBody extends ConsumerWidget {
     final profileId = ref.watch(activeProfileIdProvider);
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
-    final lifetimeSummariesAsync = ref.watch(globalLifetimeCurriculaProvider(profileId));
+    final lifetimeTotalsAsync = ref.watch(
+      lifetimeTotalsAcrossAllCurriculaProvider(profileId),
+    );
     final name = profileName ?? l10n.learner;
     final now = DateTime.now();
 
@@ -171,19 +173,8 @@ class _DashboardBody extends ConsumerWidget {
         .length;
     final hasProgramCalendarTasks =
         overdueProgramCount > 0 || todayProgramCount > 0;
-    final lifetimeSummaries =
-        lifetimeSummariesAsync.asData?.value ?? const <CurriculumLifetimeSummary>[];
-    final totalLifetimeLearned = lifetimeSummaries.fold<int>(
-      0,
-      (sum, summary) => sum + summary.learnedLeafCount,
-    );
-    final totalLifetimeUnits = lifetimeSummaries.fold<int>(
-      0,
-      (sum, summary) => sum + summary.totalLeafCount,
-    );
-    final cumulativeLifetime = totalLifetimeUnits > 0
-        ? totalLifetimeLearned / totalLifetimeUnits
-        : 0.0;
+    final lifetimeTotals = lifetimeTotalsAsync.asData?.value;
+    final cumulativeLifetime = lifetimeTotals?.percentage ?? 0.0;
     final cumulativeLifetimeDisplay = formatFractionAsPercent(cumulativeLifetime);
 
     if (activeCurricula.isEmpty) {
@@ -372,7 +363,7 @@ class _DashboardBody extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Cumulative lifetime percentage across all learned curricula.',
+                  'Cumulative lifetime percentage across all curricula.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

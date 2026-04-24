@@ -58,6 +58,20 @@ class TrackDualProgressMetric {
   final int? overdueCount;
 }
 
+class LifetimeTotals {
+  const LifetimeTotals({
+    required this.learnedUnits,
+    required this.totalUnits,
+    required this.curriculaCounted,
+  });
+
+  final int learnedUnits;
+  final int totalUnits;
+  final int curriculaCounted;
+
+  double get percentage => totalUnits > 0 ? learnedUnits / totalUnits : 0.0;
+}
+
 final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
     .family<List<CurriculumLifetimeSummary>, int>((ref, profileId) async {
       final db = ref.watch(userDatabaseProvider);
@@ -171,6 +185,46 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
       }
 
       return metrics;
+    });
+
+final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
+    .family<LifetimeTotals, int>((ref, profileId) async {
+      final db = ref.watch(userDatabaseProvider);
+      final repo = ref.watch(contentRepositoryProvider);
+
+      var learnedTotal = 0;
+      var unitsTotal = 0;
+      var counted = 0;
+
+      for (final curriculum in CurriculumId.values) {
+        final leaves = await _safeLoadLeaves(repo, curriculum);
+        if (leaves == null || leaves.isEmpty) continue;
+
+        final completions = await db.completionDao.getCompletionsByCurriculumAndProfile(
+          curriculum.storageKey,
+          profileId,
+        );
+        final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
+          profileId,
+          curriculum.storageKey,
+        );
+
+        final learnedRefs = _learnedLeafRefs(
+          leaves: leaves,
+          completedRefs: completions.map((c) => c.sefariaRef).toSet(),
+          ledgerEntries: ledger,
+        );
+
+        learnedTotal += learnedRefs.length;
+        unitsTotal += leaves.length;
+        counted++;
+      }
+
+      return LifetimeTotals(
+        learnedUnits: learnedTotal,
+        totalUnits: unitsTotal,
+        curriculaCounted: counted,
+      );
     });
 
 Future<List<ContentItem>?> _safeLoadLeaves(
