@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -58,95 +57,81 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   Widget _buildBody(BuildContext context, List<ProfileModel> profiles) {
     final theme = Theme.of(context);
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: AppTheme.brandBlue.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+    return Column(
+      children: [
+        Expanded(
+          child: SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 16),
+                  Text(
+                    'Who is learning?',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.brandBlueDeep,
+                      letterSpacing: -0.8,
+                      height: 1.03,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.person_rounded,
-                    size: 14,
-                    color: AppTheme.brandBlue,
+                  const SizedBox(height: 10),
+                  Text(
+                    'Choose a profile to continue your\njourney',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      fontWeight: FontWeight.w500,
+                      height: 1.35,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'TorahTrack',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: AppTheme.brandBlueDeep,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 24,
+                  const SizedBox(height: 20),
+                  GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.71,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                        ),
+                    itemCount: profiles.length + 1,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemBuilder: (_, index) {
+                      if (index == profiles.length) {
+                        return _AddProfileCard(
+                          onTap: () => _showAddDialog(profiles.length),
+                          isDisabled: profiles.length >= 10,
+                        );
+                      }
+                      final profile = profiles[index];
+                      return _ProfileCard(
+                        profile: profile,
+                        onTap: _isSelectingProfile
+                            ? () {}
+                            : () => unawaited(_selectProfile(profile.id)),
+                        onLongPress: () =>
+                            _showManageSheet(profile, profiles.length),
+                      );
+                    },
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 34),
-            Text(
-              'Who is learning?',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontSize: 48,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.brandBlueDeep,
-                letterSpacing: -0.8,
-                height: 1.03,
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              'Choose a profile to continue your\njourney',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: AppTheme.brandInkMuted,
-                fontWeight: FontWeight.w500,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 20),
-            GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-              ),
-              itemCount: profiles.length + 1,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (_, index) {
-                if (index == profiles.length) {
-                  return _AddProfileCard(
-                    onTap: () => _showAddDialog(profiles.length),
-                    isDisabled: profiles.length >= 10,
-                  );
-                }
-                final profile = profiles[index];
-                return _ProfileCard(
-                  profile: profile,
-                  onTap: _isSelectingProfile
-                      ? () {}
-                      : () => unawaited(_selectProfile(profile.id)),
-                  onLongPress: () => _showManageSheet(profile, profiles.length),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            const _FamilyStreakPanel(),
-            const SizedBox(height: 18),
-            const _PickerBottomBar(),
-          ],
+          ),
         ),
-      ),
+        const SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 8, 20, 22),
+            child: _PickerBottomBar(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -712,91 +697,6 @@ class _AddProfileCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _FamilyStreakPanel extends StatelessWidget {
-  const _FamilyStreakPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-      decoration: BoxDecoration(
-        color: AppTheme.brandCreamSoft.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'FAMILY STREAK',
-            style: GoogleFonts.plusJakartaSans(
-              color: AppTheme.brandBlueDeep,
-              fontSize: 29,
-              fontWeight: FontWeight.w800,
-              fontStyle: FontStyle.italic,
-              letterSpacing: 0.2,
-            ),
-          ),
-          Text(
-            '14 Consecutive Days!',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.brandInk,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _StreakBubble(
-                background: Color(0xFFF7DDB6),
-                icon: Icons.auto_awesome_rounded,
-                iconColor: AppTheme.brandInk,
-              ),
-              SizedBox(width: 10),
-              _StreakBubble(
-                background: Color(0xFFF96B82),
-                icon: Icons.local_fire_department_rounded,
-                iconColor: Colors.white,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: 0.76,
-              minHeight: 16,
-              backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.5),
-              color: AppTheme.brandBlue,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StreakBubble extends StatelessWidget {
-  const _StreakBubble({
-    required this.background,
-    required this.icon,
-    required this.iconColor,
-  });
-
-  final Color background;
-  final IconData icon;
-  final Color iconColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
-      child: Icon(icon, color: iconColor, size: 20),
     );
   }
 }
