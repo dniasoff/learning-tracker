@@ -138,8 +138,10 @@ class _DashboardBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final profileId = ref.watch(activeProfileIdProvider);
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
+    final lifetimeSummariesAsync = ref.watch(globalLifetimeCurriculaProvider(profileId));
     final name = profileName ?? l10n.learner;
     final now = DateTime.now();
 
@@ -169,6 +171,20 @@ class _DashboardBody extends ConsumerWidget {
         .length;
     final hasProgramCalendarTasks =
         overdueProgramCount > 0 || todayProgramCount > 0;
+    final lifetimeSummaries =
+        lifetimeSummariesAsync.asData?.value ?? const <CurriculumLifetimeSummary>[];
+    final totalLifetimeLearned = lifetimeSummaries.fold<int>(
+      0,
+      (sum, summary) => sum + summary.learnedLeafCount,
+    );
+    final totalLifetimeUnits = lifetimeSummaries.fold<int>(
+      0,
+      (sum, summary) => sum + summary.totalLeafCount,
+    );
+    final cumulativeLifetime = totalLifetimeUnits > 0
+        ? totalLifetimeLearned / totalLifetimeUnits
+        : 0.0;
+    final cumulativeLifetimeDisplay = formatFractionAsPercent(cumulativeLifetime);
 
     if (activeCurricula.isEmpty) {
       final isChildMode =
@@ -314,6 +330,57 @@ class _DashboardBody extends ConsumerWidget {
               ),
             ],
           ),
+        const SizedBox(height: 14),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.timeline,
+                      color: AppTheme.brandGoldDeep,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Lifetime total progress',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      cumulativeLifetimeDisplay,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: AppTheme.brandGoldDeep,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                AnimatedProgressBar(
+                  value: cumulativeLifetime,
+                  color: AppTheme.brandGold,
+                  backgroundColor: AppTheme.brandGoldSoft,
+                  height: 8,
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOutCubic,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cumulative lifetime percentage across all learned curricula.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 24),
 
         // AC-5: Today's Learning section (actual task items)
