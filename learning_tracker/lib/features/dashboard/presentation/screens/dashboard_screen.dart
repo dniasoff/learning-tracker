@@ -10,7 +10,9 @@ import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_date_header.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/day_type_indicator.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
@@ -67,7 +69,7 @@ class DashboardScreen extends ConsumerWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.white,
+              AppTheme.brandCreamCard,
               AppTheme.brandBlueSoft.withValues(alpha: 0.22),
               AppTheme.brandCream,
             ],
@@ -202,20 +204,20 @@ class _DashboardBody extends ConsumerWidget {
               Text(
                 '${_greeting(l10n)},',
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.86),
+                  color: AppTheme.brandCreamCard.withValues(alpha: 0.86),
                 ),
               ),
               Text(
                 name,
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
+                  color: AppTheme.brandCreamCard,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 8),
               DefaultTextStyle(
                 style: theme.textTheme.bodySmall!.copyWith(
-                  color: Colors.white.withValues(alpha: 0.86),
+                  color: AppTheme.brandCreamCard.withValues(alpha: 0.86),
                 ),
                 child: DashboardDateHeader(date: now),
               ),
@@ -246,7 +248,7 @@ class _DashboardBody extends ConsumerWidget {
               Expanded(
                 child: _StatCircle(
                   icon: Icons.local_fire_department,
-                  iconColor: Colors.orange,
+                  iconColor: AppTheme.brandGold,
                   value: '$currentStreak',
                   label: l10n.streak,
                 ),
@@ -268,7 +270,7 @@ class _DashboardBody extends ConsumerWidget {
               Expanded(
                 child: _StatCircle(
                   icon: Icons.auto_stories,
-                  iconColor: Colors.deepPurple,
+                  iconColor: AppTheme.brandBlue,
                   value: '$totalPoints',
                   label: l10n.points,
                 ),
@@ -281,7 +283,7 @@ class _DashboardBody extends ConsumerWidget {
               Expanded(
                 child: _StatCircle(
                   icon: Icons.local_fire_department,
-                  iconColor: Colors.orange,
+                  iconColor: AppTheme.brandGold,
                   value: '$currentStreak',
                   label: l10n.streak,
                 ),
@@ -303,7 +305,7 @@ class _DashboardBody extends ConsumerWidget {
               Expanded(
                 child: _StatCircle(
                   icon: Icons.today,
-                  iconColor: Colors.teal,
+                  iconColor: AppTheme.brandCoral,
                   value: hasProgramCalendarTasks
                       ? '$todayProgramCount'
                       : '$tasksToday',
@@ -546,7 +548,7 @@ class _TodaysLearningSection extends ConsumerWidget {
                         icon: Icons.refresh,
                         title: 'Chazara / Review tasks',
                         count: grouped.reviewTasks.length,
-                        color: Colors.deepPurple,
+                        color: AppTheme.brandBlue,
                         onTap: () => openSection(SchedulerTaskSection.review),
                       ),
                     ],
@@ -687,10 +689,8 @@ class _CurriculumCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final localeCode = Localizations.localeOf(context).languageCode;
-    final displayName = localeCode == 'he'
-        ? curriculum.displayNameHe
-        : curriculum.displayNameEn;
+    final displayNamePrimary = curriculum.displayNameHe;
+    final displayNameSecondary = curriculum.displayNameEn;
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
@@ -701,6 +701,14 @@ class _CurriculumCard extends ConsumerWidget {
     final paceAsync = ref.watch(dashboardPaceStatusProvider(curriculum));
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = formatFractionAsPercent(percentage);
+    final profileId = ref.watch(activeProfileIdProvider);
+    final lifetimeSummaryAsync = ref.watch(globalLifetimeCurriculaProvider(profileId));
+    final lifetimeSummary = lifetimeSummaryAsync.asData?.value
+        .where((s) => s.curriculumId == curriculum)
+        .firstOrNull;
+    final lifetimePctDisplay = formatFractionAsPercent(
+      lifetimeSummary?.percentage ?? 0.0,
+    );
 
     // AC-6: Compute per-curriculum task count and today's study item
     final curriculumTasks = allTasks
@@ -736,11 +744,26 @@ class _CurriculumCard extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        displayName,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            displayNamePrimary,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            displayNameSecondary,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                     // AC-7: Show shimmer while loading, nothing if no goal
@@ -779,7 +802,7 @@ class _CurriculumCard extends ConsumerWidget {
                               : Icons.check_circle_outline,
                           color: overdueProgramCount > 0
                               ? theme.colorScheme.error
-                              : Colors.green,
+                              : AppTheme.brandGold,
                           size: 14,
                         ),
                         const SizedBox(width: 6),
@@ -812,6 +835,17 @@ class _CurriculumCard extends ConsumerWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Lifetime: $lifetimePctDisplay',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: curriculumColor,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -832,11 +866,20 @@ class _CurriculumCard extends ConsumerWidget {
                   Row(
                     children: [
                       Text(
-                        pctDisplay,
+                        'Current: $pctDisplay',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: curriculumColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Lifetime: $lifetimePctDisplay',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.brandGoldDeep,
                         ),
                       ),
                       const Spacer(),
@@ -953,15 +996,15 @@ class _MiniPaceBadge extends StatelessWidget {
     final (label, color, icon) = switch (paceStatus!.status) {
       PaceStatusType.ahead => (
         '${paceStatus!.daysDelta}d',
-        Colors.green,
+        AppTheme.brandGold,
         Icons.trending_up,
       ),
       PaceStatusType.behind => (
         '${paceStatus!.daysDelta.abs()}d',
-        Colors.orange,
+        AppTheme.brandCoralDeep,
         Icons.trending_down,
       ),
-      PaceStatusType.onPace => ('OK', Colors.blue, Icons.trending_flat),
+      PaceStatusType.onPace => ('OK', AppTheme.brandBlue, Icons.trending_flat),
     };
 
     return Row(
@@ -1028,18 +1071,18 @@ class _StreakRecoveryBanner extends ConsumerWidget {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Card(
-            color: Colors.orange.withValues(alpha: 0.15),
+            color: AppTheme.brandCoral.withValues(alpha: 0.15),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  const Icon(Icons.shield, color: Colors.orange, size: 24),
+                  const Icon(Icons.shield, color: AppTheme.brandCoral, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       l10n.streakRecovery(info.currentStreak),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.orange,
+                        color: AppTheme.brandCoral,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
