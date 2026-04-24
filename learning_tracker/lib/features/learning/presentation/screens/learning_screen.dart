@@ -1,19 +1,17 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
-import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -22,86 +20,203 @@ class LearningScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final interTheme = theme.copyWith(
+      textTheme: GoogleFonts.interTextTheme(theme.textTheme),
+    );
+    final l10n = AppLocalizations.of(context)!;
     final activeCurriculaAsync = ref.watch(
       dashboardActiveCurriculaStreamProvider,
     );
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
-    final userModeAsync = ref.watch(dashboardUserModeProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
-    final l10n = AppLocalizations.of(context)!;
+    final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
+    final maxStreak = streakAsync.asData?.value.maxStreak ?? 0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: AppBarTitle(text: l10n.learn),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: l10n.searchContent,
-            onPressed: () => context.router.push(const CurriculumListRoute()),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: activeCurriculaAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) =>
-              Center(child: Text(l10n.errorWithMessage(e.toString()))),
-          data: (activeCurricula) {
-            if (activeCurricula.isEmpty) {
-              return EmptyState(
-                message: l10n.noActiveTracks,
-                subtitle: isChildMode
-                    ? l10n.askGrownUpToAddTrack
-                    : l10n.addTrackToStart,
-                icon: Icons.menu_book_outlined,
-                action: isChildMode
-                    ? null
-                    : FilledButton.icon(
-                        onPressed: () => context.router.push(
-                          TrackManagementHubRoute(startAdding: true),
+      backgroundColor: const Color(0xFFF4F5F8),
+      body: Theme(
+        data: interTheme,
+        child: SafeArea(
+          child: activeCurriculaAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) =>
+                Center(child: Text(l10n.errorWithMessage(e.toString()))),
+            data: (activeCurricula) {
+              if (activeCurricula.isEmpty) {
+                return EmptyState(
+                  message: l10n.noActiveTracks,
+                  subtitle: isChildMode
+                      ? l10n.askGrownUpToAddTrack
+                      : l10n.addTrackToStart,
+                  icon: Icons.menu_book_outlined,
+                  action: isChildMode
+                      ? null
+                      : FilledButton.icon(
+                          onPressed: () => context.router.push(
+                            TrackManagementHubRoute(startAdding: true),
+                          ),
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.addTrack),
                         ),
-                        icon: const Icon(Icons.add),
-                        label: Text(l10n.addTrack),
-                      ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(allDailyTasksProvider);
+                  ref.invalidate(dashboardActiveCurriculaStreamProvider);
+                  ref.invalidate(dashboardStreakProvider);
+                },
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(25, 10, 25, 32),
+                  children: [
+                    const SizedBox(height: 18),
+                    _StreakHeroCard(
+                      currentStreak: currentStreak,
+                      maxStreak: maxStreak,
+                    ),
+                    const SizedBox(height: 36),
+                    _DailyTasksSection(
+                      dailyTasksAsync: dailyTasksAsync,
+                      onViewAll: () =>
+                          context.router.push(const SchedulerRoute()),
+                    ),
+                    const SizedBox(height: 24),
+                    _CurriculaSection(activeCurricula: activeCurricula),
+                  ],
+                ),
               );
-            }
-
-            final userMode = userModeAsync.asData?.value ?? UserMode.adult;
-            final streakData = streakAsync.asData?.value;
-            final currentStreak = streakData?.currentStreak ?? 0;
-            final maxStreak = streakData?.maxStreak ?? 0;
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(allDailyTasksProvider);
-                ref.invalidate(dashboardActiveCurriculaStreamProvider);
-                ref.invalidate(dashboardStreakProvider);
-              },
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  StreakWidget(
-                    currentStreak: currentStreak,
-                    maxStreak: maxStreak,
-                    userMode: userMode,
-                  ),
-                  const SizedBox(height: 16),
-                  _DailyTasksSection(
-                    dailyTasksAsync: dailyTasksAsync,
-                    onViewAll: () =>
-                        context.router.push(const SchedulerRoute()),
-                  ),
-                  const SizedBox(height: 24),
-                  _CurriculaSection(activeCurricula: activeCurricula),
-                ],
-              ),
-            );
-          },
+            },
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _StreakHeroCard extends StatelessWidget {
+  const _StreakHeroCard({required this.currentStreak, required this.maxStreak});
+
+  final int currentStreak;
+  final int maxStreak;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1B3FAF), Color(0xFF1F4ECD), Color(0xFF2632AF)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1F4ECD).withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CURRENT ACHIEVEMENT',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        letterSpacing: 1,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$currentStreak Day Streak',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 38,
+                        height: 1.02,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.workspace_premium_rounded,
+                            color: Color(0xFFF7E7AF),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Personal Best: $maxStreak',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.local_fire_department_rounded,
+                color: Color(0xFFFF6C54),
+                size: 56,
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 14,
+          bottom: -14,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4CFA4),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              'Keep it up! 🚀',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: const Color(0xFF5A3E22),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -118,104 +233,239 @@ class _DailyTasksSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(l10n.todaysTasks, style: theme.textTheme.titleMedium),
-            TextButton(onPressed: onViewAll, child: Text(l10n.viewAll)),
+            Expanded(
+              child: Text(
+                'Today’s Tasks',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 36,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onViewAll,
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF354993),
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+                textStyle: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              child: dailyTasksAsync.when(
+                data: (tasks) => Text('${tasks.length} Items'),
+                loading: () => const Text('...'),
+                error: (_, __) => const Text('0 Items'),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
         dailyTasksAsync.when(
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            ),
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator()),
           ),
-          error: (e, _) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(l10n.errorLoadingTasks(e.toString())),
-            ),
+          error: (e, _) => _InfoCard(
+            icon: Icons.error_outline,
+            title: 'Unable to load tasks',
+            subtitle: e.toString(),
           ),
           data: (tasks) {
             if (tasks.isEmpty) {
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.celebration_outlined,
-                        color: theme.colorScheme.primary,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.allCaughtUp,
-                              style: theme.textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              l10n.noTasksRemaining,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return const _InfoCard(
+                icon: Icons.celebration_outlined,
+                title: 'All caught up',
+                subtitle: 'No tasks remaining for today.',
               );
             }
 
-            // Show up to 5 tasks inline
-            final previewTasks = tasks.take(5).toList();
             return Column(
               children: [
-                ...previewTasks.map(
-                  (task) => DailyTaskCard(
-                    key: ValueKey(
-                      '${task.curriculumId.storageKey}_'
-                      '${task.contentItemSefariaRef}_${task.stageOrder}',
-                    ),
-                    task: task,
-                    onDismissed: () {
-                      ref
-                          .read(skippedTasksProvider.notifier)
-                          .skip(task.contentItemSefariaRef);
-                    },
-                    onCompleted: () {
-                      ref.invalidate(allDailyTasksProvider);
-                    },
-                  ),
-                ),
-                if (tasks.length > 5)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: TextButton(
-                      onPressed: onViewAll,
-                      child: Text(l10n.moreTasks(tasks.length - 5)),
-                    ),
-                  ),
+                for (final task in tasks.take(5)) ...[
+                  _LearnTaskCard(task: task),
+                  const SizedBox(height: 12),
+                ],
               ],
             );
           },
         ),
       ],
     );
+  }
+}
+
+class _LearnTaskCard extends StatelessWidget {
+  const _LearnTaskCard({required this.task});
+
+  final DailyTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
+    final isOverdue = task.isOverdue;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => context.router.push(
+          TextDisplayRoute(sefariaRef: task.contentItemSefariaRef),
+        ),
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color:
+                      (isOverdue
+                              ? const Color(0xFFF05A67)
+                              : curriculumColor.withValues(alpha: 0.2))
+                          .withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isOverdue ? Icons.priority_high_rounded : _taskIcon(task),
+                  color: isOverdue ? const Color(0xFFD33349) : curriculumColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        if (isOverdue) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFCDDE0),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              'OVERDUE',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFC22840),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF0F4),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            task.stageName,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: const Color(0xFF6A7282),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      task.contentItemSefariaRef.replaceAll('_', ' '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF171C25),
+                        fontSize: 22,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.history_rounded,
+                          size: 14,
+                          color: Color(0xFF6A7282),
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            task.trackLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: const Color(0xFF586170),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.watch_later_outlined,
+                          size: 14,
+                          color: Color(0xFF6A7282),
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${task.estimatedEffortMinutes}m',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF586170),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFA2A8B6),
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _taskIcon(DailyTask task) {
+    return switch (task.priority) {
+      DailyTaskPriority.overdueProgram => Icons.priority_high_rounded,
+      DailyTaskPriority.todayProgram => Icons.menu_book_rounded,
+      DailyTaskPriority.overdueChazara => Icons.history_rounded,
+      DailyTaskPriority.scheduledChazara => Icons.history_rounded,
+      DailyTaskPriority.newLearning => Icons.auto_stories_rounded,
+    };
   }
 }
 
@@ -227,15 +477,27 @@ class _CurriculaSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.myCurricula, style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        ...activeCurricula.map(
-          (curriculum) => _CurriculumTile(curriculum: curriculum),
+        Text(
+          'My Curricula',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 36,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 170,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: activeCurricula.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              return _CurriculumTile(curriculum: activeCurricula[index]);
+            },
+          ),
         ),
       ],
     );
@@ -250,89 +512,147 @@ class _CurriculumTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final localeCode = Localizations.localeOf(context).languageCode;
-    final displayName = localeCode == 'he'
-        ? curriculum.displayNameHe
-        : curriculum.displayNameEn;
-    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
     );
     final percentage = completionAsync.asData?.value ?? 0.0;
+    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          context.router.push(
-            ContentHierarchyRoute(curriculumId: curriculum.storageKey),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: curriculumColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(displayName, style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: percentage,
-                        minHeight: 6,
-                        backgroundColor: curriculumColor.withValues(
-                          alpha: 0.15,
-                        ),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          curriculumColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      formatFractionAsPercent(percentage),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.bar_chart, size: 20),
-                    tooltip: l10n.viewProgress,
-                    onPressed: () {
-                      context.router.push(
-                        CurriculumProgressRoute(
-                          curriculumId: curriculum.storageKey,
-                        ),
-                      );
-                    },
-                  ),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-            ],
-          ),
+    return InkWell(
+      onTap: () => context.router.push(
+        ContentHierarchyRoute(curriculumId: curriculum.storageKey),
+      ),
+      borderRadius: BorderRadius.circular(20),
+      child: Ink(
+        width: 220,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: curriculumColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.menu_book_rounded,
+                    color: curriculumColor,
+                    size: 22,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.open_in_new_rounded,
+                  size: 20,
+                  color: AppTheme.brandBlue.withValues(alpha: 0.85),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${curriculum.displayNameEn} (${curriculum.displayNameHe})',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+                fontSize: 17,
+              ),
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                Text(
+                  'PROGRESS',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF717A88),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  formatFractionAsPercent(percentage),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: AnimatedProgressBar(
+                value: percentage,
+                color: curriculumColor,
+                backgroundColor: curriculumColor.withValues(alpha: 0.2),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutCubic,
+                height: 8,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppTheme.brandBlue, size: 24),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
