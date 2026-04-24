@@ -989,23 +989,119 @@ Future<void> _showSignOutConfirmation(
 ) async {
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Sign Out'),
-      content: const Text(
-        'Are you sure you want to sign out? Your data will be preserved '
-        'for when you sign back in.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+    barrierColor: Colors.black.withValues(alpha: 0.46),
+    builder: (context) {
+      final theme = Theme.of(context);
+      return Dialog(
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
+          decoration: BoxDecoration(
+            color: AppTheme.brandCreamCard,
+            borderRadius: BorderRadius.circular(34),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDE7EA),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.logout_rounded,
+                      color: Color(0xFFB43A4A),
+                      size: 40,
+                    ),
+                  ),
+                  Positioned(
+                    top: -1,
+                    right: -2,
+                    child: Container(
+                      width: 23,
+                      height: 23,
+                      decoration: BoxDecoration(
+                        color: AppTheme.brandBlue,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.brandCreamCard,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.question_mark_rounded,
+                        size: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Sign Out',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: AppTheme.brandBlueDeep,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Are you sure you want to sign out?\n'
+                'Your data will be preserved for when\n'
+                'you sign back in.',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.brandInkMuted,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.brandBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: const Text('Sign Out'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.brandInkMuted,
+                    backgroundColor: const Color(0xFFF0F1F5),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
         ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Sign Out'),
-        ),
-      ],
-    ),
+      );
+    },
   );
 
   if (confirmed != true || !context.mounted) return;
