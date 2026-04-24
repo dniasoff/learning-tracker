@@ -32,13 +32,6 @@ class DashboardScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFF26666),
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
-        onPressed: () => context.router.navigate(const LearningRoute()),
-        child: const Icon(Icons.menu_book_rounded),
-      ),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -423,7 +416,7 @@ class _DashboardLevelPointsCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'LEVEL $level SCHOLAR',
+                'STATS',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: Colors.white.withValues(alpha: 0.85),
                   fontWeight: FontWeight.w700,
@@ -642,20 +635,23 @@ class _MainFocusMissionCard extends StatelessWidget {
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 42),
                     textStyle: theme.textTheme.labelLarge?.copyWith(
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: FontWeight.w700,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Start Learning'),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_rounded, size: 18),
-                    ],
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text('Start Learning'),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_rounded, size: 18),
+                      ],
+                    ),
                   ),
                 ),
               ),

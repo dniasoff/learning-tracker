@@ -26,6 +26,7 @@ class DailyTaskCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
     final stageLabel = task.stageName;
+    final xp = task.estimatedEffortMinutes * 3;
 
     return Dismissible(
       key: ValueKey(
@@ -36,27 +37,38 @@ class DailyTaskCard extends ConsumerWidget {
       onDismissed: (_) => onDismissed(),
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
+        padding: const EdgeInsets.only(right: 20),
         color: theme.colorScheme.outline.withValues(alpha: 0.2),
-        child: Icon(Icons.skip_next, color: theme.colorScheme.onSurface),
+        child: Icon(Icons.skip_next_rounded, color: theme.colorScheme.onSurface),
       ),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(28),
           onTap: () => context.router.push(
             TextDisplayRoute(sefariaRef: task.contentItemSefariaRef),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
+          child: Ink(
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.brandInk.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Row(
               children: [
                 Container(
-                  width: 4,
-                  height: 48,
+                  width: 6,
+                  height: 104,
                   decoration: BoxDecoration(
                     color: curriculumColor,
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -65,30 +77,33 @@ class DailyTaskCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
                               task.contentItemSefariaRef.replaceAll('_', ' '),
-                              style: theme.textTheme.titleSmall,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.brandInk,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (task.isOverdue)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                                horizontal: 10,
+                                vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.error.withValues(
-                                  alpha: 0.1,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
+                                color: const Color(0xFFF26666),
+                                borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 'Overdue',
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.error,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
@@ -99,17 +114,18 @@ class DailyTaskCard extends ConsumerWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
+                              horizontal: 8,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
                               color: curriculumColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
                               task.curriculumId.displayNameHe,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: curriculumColor,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
@@ -117,31 +133,46 @@ class DailyTaskCard extends ConsumerWidget {
                           Text(
                             stageLabel,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
                           Icon(
                             Icons.timer_outlined,
-                            size: 14,
-                            color: theme.colorScheme.onSurfaceVariant,
+                            size: 16,
+                            color: AppTheme.brandInkMuted,
                           ),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: 4),
                           Text(
                             '${task.estimatedEffortMinutes}m',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Icon(
+                            Icons.stars_rounded,
+                            size: 16,
+                            color: AppTheme.brandInkMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+$xp XP',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ],
             ),

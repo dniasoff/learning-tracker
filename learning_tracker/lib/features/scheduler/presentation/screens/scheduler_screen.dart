@@ -2,11 +2,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/daily_schedule_composer.dart';
-import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_schedule_header.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/grouped_daily_view.dart';
 
@@ -25,11 +24,11 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
   Widget build(BuildContext context) {
     final asyncTasks = ref.watch(allDailyTasksProvider);
     final section = ref.watch(schedulerTaskSectionProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Daily Tasks')),
+      backgroundColor: const Color(0xFFF5F7FC),
       body: SafeArea(
-        top: false,
         child: asyncTasks.when(
           data: (tasks) {
             final visibleTasks = _filterTasks(tasks, section);
@@ -48,26 +47,42 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
 
             return Column(
               children: [
-                DailyScheduleHeader(
-                  summary: schedule.summary,
-                  isGroupedView: _isGroupedView,
-                  onToggleView: () =>
-                      setState(() => _isGroupedView = !_isGroupedView),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                  child: _HeaderRow(
+                    titleStyle: theme.textTheme.headlineSmall?.copyWith(
+                      color: AppTheme.brandBlueDeep,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+                  child: _GoalCard(
+                    count: visibleTasks.length,
+                    isGroupedView: _isGroupedView,
+                    onToggleView: () =>
+                        setState(() => _isGroupedView = !_isGroupedView),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 Expanded(
-                  child: _isGroupedView
-                      ? GroupedDailyView(
-                          schedule: schedule,
-                          onTaskDismissed: (curriculum, index) {
-                            final grouped = schedule.groupedByCurriculum;
-                            final task = grouped[curriculum]![index];
-                            _skipTask(task);
-                          },
-                          onTaskCompleted: (curriculum, index) {
-                            ref.invalidate(allDailyTasksProvider);
-                          },
-                        )
-                      : _TaskList(tasks: visibleTasks),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: _isGroupedView
+                        ? GroupedDailyView(
+                            schedule: schedule,
+                            onTaskDismissed: (curriculum, index) {
+                              final grouped = schedule.groupedByCurriculum;
+                              final task = grouped[curriculum]![index];
+                              _skipTask(task);
+                            },
+                            onTaskCompleted: (curriculum, index) {
+                              ref.invalidate(allDailyTasksProvider);
+                            },
+                          )
+                        : _TaskList(tasks: visibleTasks),
+                  ),
                 ),
               ],
             );
@@ -155,39 +170,135 @@ class _TaskList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(top: 4, bottom: 90),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
-        return DailyTaskCard(
-          key: ValueKey(
-            '${task.curriculumId.storageKey}_'
-            '${task.contentItemSefariaRef}_${task.stageOrder}',
-          ),
-          task: task,
-          onDismissed: () {
-            ref
-                .read(skippedTasksProvider.notifier)
-                .skip(task.contentItemSefariaRef);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Task skipped until tomorrow'),
-                action: SnackBarAction(
-                  label: 'Undo',
-                  onPressed: () {
-                    ref
-                        .read(skippedTasksProvider.notifier)
-                        .undoSkip(task.contentItemSefariaRef);
-                  },
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DailyTaskCard(
+            key: ValueKey(
+              '${task.curriculumId.storageKey}_'
+              '${task.contentItemSefariaRef}_${task.stageOrder}',
+            ),
+            task: task,
+            onDismissed: () {
+              ref
+                  .read(skippedTasksProvider.notifier)
+                  .skip(task.contentItemSefariaRef);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Task skipped until tomorrow'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    onPressed: () {
+                      ref
+                          .read(skippedTasksProvider.notifier)
+                          .undoSkip(task.contentItemSefariaRef);
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
-          onCompleted: () {
-            ref.invalidate(allDailyTasksProvider);
-          },
+              );
+            },
+            onCompleted: () {
+              ref.invalidate(allDailyTasksProvider);
+            },
+          ),
         );
       },
+    );
+  }
+}
+
+class _HeaderRow extends StatelessWidget {
+  const _HeaderRow({this.titleStyle});
+
+  final TextStyle? titleStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Daily Tasks',
+      style: titleStyle,
+    );
+  }
+}
+
+class _GoalCard extends StatelessWidget {
+  const _GoalCard({
+    required this.count,
+    required this.isGroupedView,
+    required this.onToggleView,
+  });
+
+  final int count;
+  final bool isGroupedView;
+  final VoidCallback onToggleView;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B46C8), Color(0xFF143DB6), Color(0xFF11349D)],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandBlue.withValues(alpha: 0.24),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "TODAY'S GOAL",
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.78),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$count today tasks',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onToggleView,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isGroupedView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
