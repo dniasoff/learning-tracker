@@ -256,132 +256,14 @@ class _DashboardBody extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.brandBlueBright,
-                AppTheme.brandBlue,
-                AppTheme.brandBlueDeep,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.brandBlue.withValues(alpha: 0.24),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.workspace_premium_rounded,
-                    color: Color(0xFFF7E4B0),
-                    size: 14,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'LEVEL $level SCHOLAR',
-                    style: _iosTextStyle(
-                      context,
-                      size: 11,
-                      weight: FontWeight.w700,
-                      color: Colors.white.withValues(alpha: 0.86),
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '$totalPoints pts',
-                style: _iosTextStyle(
-                  context,
-                  size: 41,
-                  weight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1.05,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Keep going! You are doing great work.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.88),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Text(
-                    'Lifetime Progress',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    doneDisplay,
-                    style: _iosTextStyle(
-                      context,
-                      size: 14,
-                      weight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: AnimatedProgressBar(
-                  value: cumulativeLifetime,
-                  color: const Color(0xFFF7E4B0),
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  height: 8,
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.easeOutCubic,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Column(
-          children: [
-            _DashboardKpiTile(
-              label: 'OVERDUE',
-              value: '$overdueCount',
-              valueColor: AppTheme.brandInk,
-              icon: Icons.priority_high_rounded,
-              iconColor: AppTheme.brandCoral,
-            ),
-            const SizedBox(height: 10),
-            _DashboardKpiTile(
-              label: 'TODAY DUE',
-              value: '$todayCount',
-              valueColor: AppTheme.brandBlue,
-              icon: Icons.today_rounded,
-              iconColor: AppTheme.brandBlue,
-            ),
-            const SizedBox(height: 10),
-            _DashboardKpiTile(
-              label: 'DONE',
-              value: doneDisplay,
-              valueColor: const Color(0xFF26A570),
-              icon: Icons.check_circle_rounded,
-              iconColor: const Color(0xFF26A570),
-            ),
-          ],
+        _DashboardLevelPointsCard(
+          level: level,
+          totalPoints: totalPoints,
+          overdueCount: overdueCount,
+          todayCount: todayCount,
+          reviewCount: reviewCount,
+          doneDisplay: doneDisplay,
+          cumulativeLifetime: cumulativeLifetime,
         ),
         const SizedBox(height: 30),
         Row(
@@ -490,70 +372,170 @@ class _DashboardBody extends ConsumerWidget {
   }
 }
 
-class _DashboardKpiTile extends StatelessWidget {
-  const _DashboardKpiTile({
+class _DashboardLevelPointsCard extends StatelessWidget {
+  const _DashboardLevelPointsCard({
+    required this.level,
+    required this.totalPoints,
+    required this.overdueCount,
+    required this.todayCount,
+    required this.reviewCount,
+    required this.doneDisplay,
+    required this.cumulativeLifetime,
+  });
+
+  final int level;
+  final int totalPoints;
+  final int overdueCount;
+  final int todayCount;
+  final int reviewCount;
+  final String doneDisplay;
+  final double cumulativeLifetime;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bubbleData = [
+      ('OVERDUE', '$overdueCount', Colors.white),
+      ('TODAY\nDUE', '$todayCount', Colors.white),
+      ('CHAZARA', '$reviewCount', const Color(0xFF76F4A7)),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B46C8), Color(0xFF143DB6), Color(0xFF11349D)],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandBlue.withValues(alpha: 0.24),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'LEVEL $level SCHOLAR',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.9,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$totalPoints pts',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (var i = 0; i < bubbleData.length; i++) ...[
+                Expanded(
+                  child: _DashboardStatBubble(
+                    label: bubbleData[i].$1,
+                    value: bubbleData[i].$2,
+                    valueColor: bubbleData[i].$3,
+                  ),
+                ),
+                if (i < bubbleData.length - 1) const SizedBox(width: 10),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text(
+                'Lifetime Progress',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                doneDisplay,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: AnimatedProgressBar(
+              value: cumulativeLifetime,
+              color: const Color(0xFFF4C163),
+              backgroundColor: Colors.white.withValues(alpha: 0.22),
+              height: 12,
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardStatBubble extends StatelessWidget {
+  const _DashboardStatBubble({
     required this.label,
     required this.value,
     required this.valueColor,
-    required this.icon,
-    required this.iconColor,
   });
 
   final String label;
   final String value;
   final Color valueColor;
-  final IconData icon;
-  final Color iconColor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      height: 96,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.brandOutline.withValues(alpha: 0.45),
-        ),
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
+            textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandInkMuted,
+              color: Colors.white.withValues(alpha: 0.82),
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
+              letterSpacing: 0.5,
+              height: 1,
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 33,
-                  color: valueColor,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(icon, color: iconColor, size: 32),
-              ),
-            ],
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: valueColor,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
           ),
         ],
       ),
