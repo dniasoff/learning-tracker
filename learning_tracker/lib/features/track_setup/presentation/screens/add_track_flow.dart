@@ -714,44 +714,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   Widget _buildGoalStep() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                "What's your pace or deadline?",
-                style: theme.textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Set a goal, or skip for now.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: GoalSetupForm(
-            curriculumId: _state.curriculumId!,
-            submitLabel: 'Continue',
-            onComplete: _onGoalComplete,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: TextButton(
-            onPressed: () => _onGoalComplete(null),
-            child: const Text('Skip'),
-          ),
-        ),
-      ],
+    return _SelfPacedGoalStep(
+      curriculumId: _state.curriculumId!,
+      onComplete: _onGoalComplete,
     );
   }
 
@@ -1983,6 +1948,343 @@ class _StudyDaysReadOnly extends StatelessWidget {
             ),
           ),
           FilledButton(onPressed: onContinue, child: const Text('Continue')),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelfPacedGoalStep extends StatefulWidget {
+  const _SelfPacedGoalStep({
+    required this.curriculumId,
+    required this.onComplete,
+  });
+
+  final CurriculumId curriculumId;
+  final ValueChanged<GoalFormResult?> onComplete;
+
+  @override
+  State<_SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
+}
+
+class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
+  int _paceValue = 1;
+  String _paceUnit = 'per_week';
+  DateTime? _deadline;
+  String _mode = 'pace';
+
+  @override
+  void initState() {
+    super.initState();
+    final daily =
+        CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1;
+    _paceValue = (daily * 7).clamp(1, 99);
+    final now = DateTime.now();
+    _deadline = DateTime(now.year, now.month, now.day);
+  }
+
+  String get _unitSingular => switch (widget.curriculumId) {
+    CurriculumId.bavli || CurriculumId.yerushalmi => 'daf',
+    CurriculumId.mishnayos => 'mishnah',
+    _ => 'unit',
+  };
+
+  String get _unitPlural => switch (_unitSingular) {
+    'daf' => 'dafim',
+    'mishnah' => 'mishnayos',
+    _ => 'units',
+  };
+
+  String _formatDate(DateTime value) {
+    final dd = value.day.toString().padLeft(2, '0');
+    final mm = value.month.toString().padLeft(2, '0');
+    final yyyy = value.year.toString();
+    return '$dd/$mm/$yyyy';
+  }
+
+  String get _projectedFinish {
+    final weeklyPace = _paceUnit == 'per_day' ? _paceValue * 7 : _paceValue;
+    final days = (weeklyPace <= 0 ? 14 : (120 / weeklyPace * 7)).ceil();
+    final projected = DateTime.now().add(Duration(days: days));
+    return _formatDate(projected);
+  }
+
+  Future<void> _pickDeadline() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _deadline ?? DateTime(now.year, now.month, now.day),
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked != null) {
+      setState(() {
+        _deadline = picked;
+        _mode = 'deadline';
+      });
+    }
+  }
+
+  void _continue() {
+    if (_mode == 'deadline') {
+      if (_deadline == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Pick a deadline first.')));
+        return;
+      }
+      widget.onComplete(
+        GoalFormResult(
+          targetPercent: 100,
+          goalType: 'deadline',
+          targetDate: _deadline!.toUtc(),
+          learningUnit:
+              widget.curriculumId == CurriculumId.bavli ||
+                  widget.curriculumId == CurriculumId.yerushalmi
+              ? 'daf'
+              : null,
+        ),
+      );
+      return;
+    }
+
+    widget.onComplete(
+      GoalFormResult(
+        targetPercent: 100,
+        goalType: 'pace',
+        paceValue: _paceValue,
+        paceUnit: _paceUnit,
+        learningUnit:
+            widget.curriculumId == CurriculumId.bavli ||
+                widget.curriculumId == CurriculumId.yerushalmi
+            ? 'daf'
+            : null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            "What's your pace or deadline?",
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Set a goal, or skip for now.',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: AppTheme.brandInkMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: _mode == 'pace'
+                    ? AppTheme.brandBlueBright
+                    : const Color(0xFFE9ECF2),
+                width: _mode == 'pace' ? 2 : 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Color(0xFFE5E9FF),
+                        child: Icon(
+                          Icons.speed_rounded,
+                          size: 16,
+                          color: AppTheme.brandBlueDeep,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Target Pace',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${_unitSingular[0].toUpperCase()}${_unitSingular.substring(1)} $_unitPlural ${_paceUnit == 'per_day' ? 'per day' : 'per week'}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'per_day', label: Text('Per day')),
+                      ButtonSegment(value: 'per_week', label: Text('Per week')),
+                    ],
+                    selected: {_paceUnit},
+                    onSelectionChanged: (value) {
+                      setState(() {
+                        _mode = 'pace';
+                        _paceUnit = value.first;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _mode = 'pace';
+                            if (_paceValue > 1) _paceValue -= 1;
+                          });
+                        },
+                        icon: const Icon(Icons.remove_circle_outline_rounded),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            '$_paceValue',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _mode = 'pace';
+                            _paceValue += 1;
+                          });
+                        },
+                        icon: const Icon(Icons.add_circle_outline_rounded),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Estimated finish: $_projectedFinish',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: _mode == 'deadline'
+                    ? AppTheme.brandBlueBright
+                    : const Color(0xFFE9ECF2),
+                width: _mode == 'deadline' ? 2 : 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Color(0xFFF9E4C8),
+                        child: Icon(
+                          Icons.calendar_month_rounded,
+                          size: 16,
+                          color: Color(0xFF7D5411),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Set Deadline',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    onTap: _pickDeadline,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F5F8),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            _formatDate(_deadline ?? DateTime.now()),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: _mode == 'deadline'
+                                  ? AppTheme.brandInk
+                                  : AppTheme.brandInkMuted,
+                            ),
+                          ),
+                          const Spacer(),
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 17,
+                            color: AppTheme.brandInkMuted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_deadline != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Deadline goal set for ${_formatDate(_deadline!)}.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          FilledButton(
+            onPressed: _continue,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text('Continue'),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => widget.onComplete(null),
+            child: const Text('Skip for now'),
+          ),
         ],
       ),
     );
