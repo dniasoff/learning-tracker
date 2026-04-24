@@ -861,49 +861,79 @@ class _SelfPacedSelectionListState extends State<_SelfPacedSelectionList> {
 
   @override
   Widget build(BuildContext context) {
-    final canMark = _entries.isEmpty ? _markAll : _selectedIndexes.isNotEmpty;
+    final theme = Theme.of(context);
+    final canMark = _markAll || _selectedIndexes.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_entries.isEmpty)
-          CheckboxListTile(
-            value: _markAll,
-            onChanged: (v) => setState(() => _markAll = v ?? false),
-            title: const Text('All selected content'),
-            subtitle: const Text('Mark everything in this track as learned'),
-          )
-        else
-          Expanded(
-            child: ListView.builder(
-              itemCount: _entries.length,
-              itemBuilder: (context, index) {
-                final entry = _entries[index];
-                final selected = _selectedIndexes.contains(index);
-                return CheckboxListTile(
-                  value: selected,
-                  onChanged: (v) {
-                    setState(() {
-                      if (v ?? false) {
-                        _selectedIndexes.add(index);
-                      } else {
-                        _selectedIndexes.remove(index);
-                      }
-                    });
-                  },
-                  title: Text(entry.value),
-                  subtitle: const Text('Selected section'),
-                );
-              },
-            ),
+        Text(
+          'Have you already completed some of these sections?',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
+        ),
+        const SizedBox(height: 14),
+        _SelectionCard(
+          title: 'Mark everything as finished',
+          subtitle: 'Best if you are starting a new review cycle',
+          selected: _markAll,
+          onChanged: (checked) {
+            setState(() {
+              _markAll = checked;
+              _selectedIndexes
+                ..clear()
+                ..addAll(
+                  checked
+                      ? List<int>.generate(_entries.length, (index) => index)
+                      : const <int>[],
+                );
+            });
+          },
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: _entries.isEmpty
+              ? Center(
+                  child: Text(
+                    'No specific folders were selected, but you can still mark all as completed.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  itemCount: _entries.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final entry = _entries[index];
+                    final selected = _selectedIndexes.contains(index);
+                    return _SelectionCard(
+                      title: entry.value,
+                      subtitle: 'Selected folder',
+                      selected: selected,
+                      onChanged: (checked) {
+                        setState(() {
+                          _markAll = false;
+                          if (checked) {
+                            _selectedIndexes.add(index);
+                          } else {
+                            _selectedIndexes.remove(index);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: OutlinedButton(
                 onPressed: widget.onSkip,
-                child: const Text('Skip'),
+                child: const Text('Skip for now'),
               ),
             ),
             const SizedBox(width: 12),
@@ -911,23 +941,83 @@ class _SelfPacedSelectionListState extends State<_SelfPacedSelectionList> {
               child: FilledButton(
                 onPressed: canMark
                     ? () {
-                        final selectedScopes = _entries.isEmpty
-                            ? const <ScopeEntry>[]
+                        final selectedScopes = (_markAll && _entries.isNotEmpty)
+                            ? _entries
                             : _selectedIndexes.map((i) => _entries[i]).toList();
                         widget.onMarkCompleted(
                           _SelfPacedPriorCompletionSelection(
-                            markAll: _entries.isEmpty ? _markAll : false,
+                            markAll: _markAll && _entries.isEmpty,
                             selectedScopes: selectedScopes,
                           ),
                         );
                       }
                     : null,
-                child: const Text('Mark completed'),
+                child: const Text('Mark Completed'),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _SelectionCard extends StatelessWidget {
+  const _SelectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => onChanged(!selected),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Checkbox(
+                value: selected,
+                onChanged: (v) => onChanged(v ?? false),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
