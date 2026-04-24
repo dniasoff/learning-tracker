@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/program_calendar_providers.dart';
 
 enum LifetimeNodeState { none, partial, full }
 
@@ -43,6 +44,8 @@ class TrackDualProgressMetric {
     required this.currentCyclePercentage,
     required this.lifetimePercentage,
     required this.isProgramTrack,
+    this.todayDueCount,
+    this.overdueCount,
   });
 
   final int trackId;
@@ -51,6 +54,8 @@ class TrackDualProgressMetric {
   final double currentCyclePercentage;
   final double lifetimePercentage;
   final bool isProgramTrack;
+  final int? todayDueCount;
+  final int? overdueCount;
 }
 
 final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
@@ -135,6 +140,21 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         final lifetimePct = lifetimeRefs.length / denominator;
         final enrollment = await db.profileProgramDao
             .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+        int? todayDueCount;
+        int? overdueCount;
+        if (enrollment != null) {
+          try {
+            final calendarPos = await ref.read(
+              programCalendarPositionProvider(track.id).future,
+            );
+            final delta = calendarPos.delta;
+            overdueCount = delta < 0 ? (-delta - 1).clamp(0, 9999) : 0;
+            todayDueCount = delta > 0 ? 0 : 1;
+          } catch (_) {
+            overdueCount = 0;
+            todayDueCount = 0;
+          }
+        }
 
         metrics.add(
           TrackDualProgressMetric(
@@ -144,6 +164,8 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
             currentCyclePercentage: currentCyclePct.clamp(0.0, 1.0),
             lifetimePercentage: lifetimePct.clamp(0.0, 1.0),
             isProgramTrack: enrollment != null,
+            todayDueCount: todayDueCount,
+            overdueCount: overdueCount,
           ),
         );
       }
@@ -171,57 +193,72 @@ Set<String> _learnedLeafRefs({
   required List<dynamic> ledgerEntries,
 }) {
   final learnedRefs = <String>{...completedRefs};
-  final level1 = <String>{};
-  final level2 = <String>{};
-  final level3 = <String>{};
-  final level4 = <String>{};
+  final refActions = <String, bool>{};
+  final level1Actions = <String, bool>{};
+  final level2Actions = <String, bool>{};
+  final level3Actions = <String, bool>{};
+  final level4Actions = <String, bool>{};
 
   for (final entry in ledgerEntries) {
     final unitType = (entry.unitType ?? '').toString();
     final unitId = (entry.unitIdentifier ?? '').toString();
     if (unitId.isEmpty) continue;
-    switch (unitType) {
+    final isUnmark = unitType.startsWith('unmark_');
+    final resolvedType = isUnmark ? unitType.substring('unmark_'.length) : unitType;
+    final action = !isUnmark;
+    switch (resolvedType) {
       case 'seder':
       case 'sefer':
       case 'level1':
-        level1.add(unitId);
+        level1Actions.putIfAbsent(unitId, () => action);
         break;
       case 'masechta':
       case 'siman':
       case 'level2':
-        level2.add(unitId);
+        level2Actions.putIfAbsent(unitId, () => action);
         break;
       case 'perek':
       case 'daf':
       case 'halacha':
       case 'pasuk':
       case 'level3':
-        level3.add(unitId);
+        level3Actions.putIfAbsent(unitId, () => action);
         break;
       case 'mishna':
       case 'amud':
       case 'seif':
       case 'seif_katan':
       case 'level4':
-        level4.add(unitId);
+        level4Actions.putIfAbsent(unitId, () => action);
         break;
       default:
-        learnedRefs.add(unitId);
+        if (resolvedType.startsWith('level')) {
+          refActions.putIfAbsent(unitId, () => action);
+        } else if (action) {
+          learnedRefs.add(unitId);
+        }
         break;
     }
   }
 
   for (final leaf in leaves) {
-    if (learnedRefs.contains(leaf.sefariaRef) ||
+    final completedDirectly =
+        learnedRefs.contains(leaf.sefariaRef) ||
         learnedRefs.contains(leaf.level4) ||
         learnedRefs.contains(leaf.level3) ||
         learnedRefs.contains(leaf.level2) ||
-        learnedRefs.contains(leaf.level1) ||
-        (leaf.level4 != null && level4.contains(leaf.level4!)) ||
-        (leaf.level3 != null && level3.contains(leaf.level3!)) ||
-        (leaf.level2 != null && level2.contains(leaf.level2!)) ||
-        level1.contains(leaf.level1)) {
+        learnedRefs.contains(leaf.level1);
+    final refAction = refActions[leaf.sefariaRef];
+    final level4Action = leaf.level4 != null ? level4Actions[leaf.level4!] : null;
+    final level3Action = leaf.level3 != null ? level3Actions[leaf.level3!] : null;
+    final level2Action = leaf.level2 != null ? level2Actions[leaf.level2!] : null;
+    final level1Action = level1Actions[leaf.level1];
+    final scopedAction =
+        refAction ?? level4Action ?? level3Action ?? level2Action ?? level1Action;
+    if (completedDirectly || scopedAction == true) {
       learnedRefs.add(leaf.sefariaRef);
+    } else if (scopedAction == false) {
+      learnedRefs.remove(leaf.sefariaRef);
     }
   }
 

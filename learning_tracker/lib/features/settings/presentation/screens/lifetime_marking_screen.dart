@@ -104,6 +104,7 @@ class _LifetimeCurriculumMarkingScreenState
   final List<ScopeEntry> _breadcrumbs = [];
   final List<ScopeEntry> _selections = [];
   bool _saving = false;
+  bool _unmarkMode = false;
 
   CurriculumId get _curriculum => CurriculumId.values.firstWhere(
     (c) => c.storageKey == widget.curriculumId,
@@ -189,7 +190,7 @@ class _LifetimeCurriculumMarkingScreenState
         if (!unique.add(key)) continue;
         await repo.recordCompletion(
           curriculumId: _curriculum.storageKey,
-          unitType: 'level${selection.level}',
+          unitType: '${_unmarkMode ? 'unmark_' : ''}level${selection.level}',
           unitIdentifier: selection.value,
           unitDisplayNameHe: selection.value,
           unitDisplayNameEn: selection.value,
@@ -203,7 +204,11 @@ class _LifetimeCurriculumMarkingScreenState
       _invalidateComputedViews();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved ${unique.length} lifetime selection(s).')),
+        SnackBar(
+          content: Text(
+            '${_unmarkMode ? 'Unmarked' : 'Marked'} ${unique.length} lifetime selection(s).',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -251,12 +256,38 @@ class _LifetimeCurriculumMarkingScreenState
                 margin: const EdgeInsets.all(16),
                 child: ListTile(
                   leading: const Icon(Icons.history_edu_outlined),
-                  title: const Text('Mark as lifetime learned'),
+                  title: Text(
+                    _unmarkMode
+                        ? 'Unmark from lifetime learned'
+                        : 'Mark as lifetime learned',
+                  ),
                   subtitle: Text(
                     'Selected: ${_selections.length} • Level $_currentLevel',
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment<bool>(
+                      value: false,
+                      icon: Icon(Icons.add_task_outlined),
+                      label: Text('Mark'),
+                    ),
+                    ButtonSegment<bool>(
+                      value: true,
+                      icon: Icon(Icons.remove_circle_outline),
+                      label: Text('Unmark'),
+                    ),
+                  ],
+                  selected: {_unmarkMode},
+                  onSelectionChanged: (selected) {
+                    setState(() => _unmarkMode = selected.first);
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
               if (_breadcrumbs.isNotEmpty)
                 SizedBox(
                   height: 42,
@@ -334,7 +365,11 @@ class _LifetimeCurriculumMarkingScreenState
                                 height: 18,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Save lifetime marks'),
+                            : Text(
+                                _unmarkMode
+                                    ? 'Save unmark changes'
+                                    : 'Save lifetime marks',
+                              ),
                       ),
                     ),
                   ],

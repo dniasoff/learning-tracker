@@ -31,6 +31,7 @@ class ProgressScreen extends ConsumerWidget {
     final profileId = ref.watch(activeProfileIdProvider);
     final journeyAsync = ref.watch(journeyViewModelProvider(profileId));
     final trackMetricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
+    final lifetimeSummariesAsync = ref.watch(globalLifetimeCurriculaProvider(profileId));
     final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
 
     return Scaffold(
@@ -73,6 +74,9 @@ class ProgressScreen extends ConsumerWidget {
             final totalUniqueUnits =
                 overviewStats?.totalUniqueItems ?? journey?.totalUniqueUnits ?? 0;
               final trackMetrics = trackMetricsAsync.asData?.value ?? const <TrackDualProgressMetric>[];
+              final lifetimeSummaries =
+                  lifetimeSummariesAsync.asData?.value ??
+                  const <CurriculumLifetimeSummary>[];
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -83,6 +87,7 @@ class ProgressScreen extends ConsumerWidget {
                   }
                   ref.invalidate(progressOverviewStatsProvider);
                   ref.invalidate(journeyViewModelProvider(profileId));
+                  ref.invalidate(globalLifetimeCurriculaProvider(profileId));
                   for (final c in activeCurricula) {
                     ref.invalidate(dashboardCompletionPercentageProvider(c));
                   }
@@ -97,6 +102,7 @@ class ProgressScreen extends ConsumerWidget {
                         activeCurricula: activeCurricula,
                         journey: journey,
                         trackMetrics: trackMetrics,
+                        lifetimeSummaries: lifetimeSummaries,
                       )
                     : _AdultProgressView(
                         totalCompletions: totalCompletions,
@@ -105,6 +111,7 @@ class ProgressScreen extends ConsumerWidget {
                         currentStreak: currentStreak,
                         maxStreak: maxStreak,
                         trackMetrics: trackMetrics,
+                        lifetimeSummaries: lifetimeSummaries,
                       ),
               );
             },
@@ -125,6 +132,7 @@ class _ChildProgressView extends StatelessWidget {
     required this.activeCurricula,
     required this.journey,
     required this.trackMetrics,
+    required this.lifetimeSummaries,
   });
 
   final int currentStreak;
@@ -135,6 +143,7 @@ class _ChildProgressView extends StatelessWidget {
   final List<CurriculumId> activeCurricula;
   final JourneyViewModel? journey;
   final List<TrackDualProgressMetric> trackMetrics;
+  final List<CurriculumLifetimeSummary> lifetimeSummaries;
 
   @override
   Widget build(BuildContext context) {
@@ -188,6 +197,10 @@ class _ChildProgressView extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         _CurriculaMasterySection(activeCurricula: activeCurricula),
+        if (lifetimeSummaries.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _GlobalLifetimeTreeSection(summaries: lifetimeSummaries),
+        ],
         if (trackMetrics.isNotEmpty) ...[
           const SizedBox(height: 20),
           _TrackViewSection(trackMetrics: trackMetrics),
@@ -211,6 +224,7 @@ class _AdultProgressView extends StatelessWidget {
     required this.currentStreak,
     required this.maxStreak,
     required this.trackMetrics,
+    required this.lifetimeSummaries,
   });
 
   final int totalCompletions;
@@ -219,6 +233,7 @@ class _AdultProgressView extends StatelessWidget {
   final int currentStreak;
   final int maxStreak;
   final List<TrackDualProgressMetric> trackMetrics;
+  final List<CurriculumLifetimeSummary> lifetimeSummaries;
 
   @override
   Widget build(BuildContext context) {
@@ -286,7 +301,134 @@ class _AdultProgressView extends StatelessWidget {
           const SizedBox(height: 20),
         ],
         _CurriculaMasterySection(activeCurricula: activeCurricula),
+        if (lifetimeSummaries.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _GlobalLifetimeTreeSection(summaries: lifetimeSummaries),
+        ],
       ],
+    );
+  }
+}
+
+class _GlobalLifetimeTreeSection extends StatelessWidget {
+  const _GlobalLifetimeTreeSection({required this.summaries});
+
+  final List<CurriculumLifetimeSummary> summaries;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.account_tree_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Global Lifetime Tree',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Curriculum-wide lifetime coverage across all tracks.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (var i = 0; i < summaries.length; i++) ...[
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(summaries[i].curriculumId.displayNameHe),
+                subtitle: Text(
+                  '${formatFractionAsPercent(summaries[i].percentage)} • '
+                  '${summaries[i].learnedLeafCount}/${summaries[i].totalLeafCount}',
+                ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    child: Column(
+                      children: summaries[i].tree
+                          .map((node) => _GlobalLifetimeNodeTile(node: node, depth: 0))
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+              if (i < summaries.length - 1) const Divider(height: 18),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlobalLifetimeNodeTile extends StatelessWidget {
+  const _GlobalLifetimeNodeTile({required this.node, required this.depth});
+
+  final LifetimeTreeNode node;
+  final int depth;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = switch (node.state) {
+      LifetimeNodeState.full => AppTheme.brandGold,
+      LifetimeNodeState.partial => AppTheme.brandCoral,
+      LifetimeNodeState.none => theme.colorScheme.onSurfaceVariant,
+    };
+    final icon = switch (node.state) {
+      LifetimeNodeState.full => Icons.check_circle,
+      LifetimeNodeState.partial => Icons.adjust,
+      LifetimeNodeState.none => Icons.radio_button_unchecked,
+    };
+
+    if (node.children.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.only(left: depth * 14.0),
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon, color: color, size: 18),
+          title: Text(
+            node.label,
+            style: theme.textTheme.bodySmall?.copyWith(color: color),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(left: depth * 14.0),
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          dense: true,
+          leading: Icon(icon, color: color, size: 18),
+          title: Text(
+            node.label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          children: [
+            for (final child in node.children)
+              _GlobalLifetimeNodeTile(node: child, depth: depth + 1),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -361,18 +503,88 @@ class _TrackDualMetricRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        _PercentageBar(
-          title: 'Current Cycle',
-          percentage: metric.currentCyclePercentage,
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(height: 8),
+        if (!metric.isProgramTrack) ...[
+          _PercentageBar(
+            title: 'Current Cycle',
+            percentage: metric.currentCyclePercentage,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 8),
+        ],
         _PercentageBar(
           title: 'Lifetime Curriculum',
           percentage: metric.lifetimePercentage,
           color: AppTheme.brandGold,
         ),
+        if (metric.isProgramTrack) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _DueBadge(
+                  icon: Icons.warning_amber_rounded,
+                  label: 'Overdue',
+                  value: '${metric.overdueCount ?? 0}',
+                  color: (metric.overdueCount ?? 0) > 0
+                      ? AppTheme.brandCoral
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _DueBadge(
+                  icon: Icons.today_outlined,
+                  label: 'Today due',
+                  value: '${metric.todayDueCount ?? 0}',
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
+    );
+  }
+}
+
+class _DueBadge extends StatelessWidget {
+  const _DueBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              '$label: $value',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
