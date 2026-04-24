@@ -2484,7 +2484,7 @@ class _ChazaraPreset {
 
 class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
   static const List<_ChazaraPreset> _presets = [
-    _ChazaraPreset(label: 'לימוד only', delays: []),
+    _ChazaraPreset(label: 'Learn Only', delays: []),
     _ChazaraPreset(label: '1 day', delays: [1]),
     _ChazaraPreset(label: '1 + 7 days', delays: [1, 7]),
     _ChazaraPreset(label: '1 + 7 + 30 days', delays: [1, 7, 30]),
@@ -2576,139 +2576,326 @@ class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.headerTitle, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 4),
           Text(
-            widget.headerSubtitle,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            widget.headerTitle,
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
+          Text(
+            widget.headerSubtitle,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: AppTheme.brandInkMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Presets
-                  for (var i = 0; i < _presets.length; i++)
-                    _PresetTile(
-                      label: _presets[i].label,
-                      stagesPreview: _stagesPreview(_presets[i].delays),
-                      isSelected: _selectedPresetIndex == i,
-                      onTap: () => _selectPreset(i),
-                    ),
-                  // Custom
-                  _PresetTile(
-                    label: 'Custom',
-                    stagesPreview: _selectedPresetIndex == -1
-                        ? _stagesPreview(_customDelays)
-                        : 'Build your own',
-                    isSelected: _selectedPresetIndex == -1,
-                    onTap: _selectCustom,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final cardWidth = (constraints.maxWidth - 10) / 2;
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          for (var i = 0; i < _presets.length; i++)
+                            SizedBox(
+                              width: cardWidth,
+                              child: _ReviewPresetCard(
+                                title: _presets[i].label,
+                                subtitle: _presetDescription(i),
+                                icon: _presetIcon(i),
+                                isSelected: _selectedPresetIndex == i,
+                                isPopular: i == 2,
+                                onTap: () => _selectPreset(i),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
-                  if (_selectedPresetIndex == -1) ...[
-                    const SizedBox(height: 12),
-                    for (var i = 0; i < _customDelays.length; i++)
-                      _CustomRoundEditor(
-                        label: HebrewTerms.getChazaraStageName(i + 1),
-                        delayDays: _customDelays[i],
-                        onChanged: (v) => _updateCustomRound(i, v),
-                        onRemove: () => _removeCustomRound(i),
-                      ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: _customDelays.length >= 5
-                            ? null
-                            : _addCustomRound,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add a round'),
+                  const SizedBox(height: 14),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _selectedPresetIndex == -1
+                            ? AppTheme.brandBlueBright
+                            : const Color(0xFFE9ECF2),
+                        width: _selectedPresetIndex == -1 ? 2 : 1,
                       ),
                     ),
-                  ],
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: _selectCustom,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 15,
+                                  backgroundColor: Color(0xFFF9E4C8),
+                                  child: Icon(
+                                    Icons.settings_suggest_rounded,
+                                    size: 16,
+                                    color: Color(0xFF7D5411),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Custom Cycle',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE5E9FF),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${_customDelays.length} Sessions',
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: AppTheme.brandBlueDeep,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                for (var i = 0; i < _customDelays.length; i++)
+                                  _CustomDayEditorChip(
+                                    day: _customDelays[i],
+                                    accentColor: _delayAccent(i),
+                                    onMinus: () {
+                                      _selectCustom();
+                                      if (_customDelays[i] > 1) {
+                                        _updateCustomRound(
+                                          i,
+                                          _customDelays[i] - 1,
+                                        );
+                                      }
+                                    },
+                                    onPlus: () {
+                                      _selectCustom();
+                                      _updateCustomRound(
+                                        i,
+                                        _customDelays[i] + 1,
+                                      );
+                                    },
+                                    onRemove: _customDelays.length > 1
+                                        ? () {
+                                            _selectCustom();
+                                            _removeCustomRound(i);
+                                          }
+                                        : null,
+                                  ),
+                                if (_customDelays.length < 5)
+                                  _AddRoundChip(
+                                    onTap: () {
+                                      _selectCustom();
+                                      _addCustomRound();
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: _skip,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFE4E5E9),
+              foregroundColor: AppTheme.brandInk,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+            child: const Text('Skip (no review)'),
+          ),
           const SizedBox(height: 8),
-          FilledButton(onPressed: _confirm, child: const Text('Continue')),
-          TextButton(onPressed: _skip, child: const Text('Skip (no review)')),
+          FilledButton(
+            onPressed: _confirm,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+            ),
+            child: const Text('Continue'),
+          ),
         ],
       ),
     );
   }
 
-  String _stagesPreview(List<int> delays) {
-    if (delays.isEmpty) return HebrewTerms.stageLearn;
-    final parts = <String>[HebrewTerms.stageLearn];
-    for (var i = 0; i < delays.length; i++) {
-      parts.add('${HebrewTerms.getChazaraStageName(i + 1)} (+${delays[i]}d)');
-    }
-    return parts.join(' → ');
+  String _presetDescription(int index) {
+    return switch (index) {
+      0 => 'No scheduled reviews.',
+      1 => 'Review next morning.',
+      2 => 'The recommended starter.',
+      3 => 'Full mastery cycle.',
+      _ => '',
+    };
+  }
+
+  IconData _presetIcon(int index) {
+    return switch (index) {
+      0 => Icons.visibility_off_rounded,
+      1 => Icons.event_available_rounded,
+      2 => Icons.auto_awesome_rounded,
+      3 => Icons.insights_rounded,
+      _ => Icons.schedule_rounded,
+    };
+  }
+
+  Color _delayAccent(int index) {
+    return switch (index % 3) {
+      0 => AppTheme.brandBlueBright,
+      1 => const Color(0xFFFF6C78),
+      _ => const Color(0xFFAA7B36),
+    };
   }
 }
 
-class _PresetTile extends StatelessWidget {
-  const _PresetTile({
-    required this.label,
-    required this.stagesPreview,
+class _ReviewPresetCard extends StatelessWidget {
+  const _ReviewPresetCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
     required this.isSelected,
     required this.onTap,
+    this.isPopular = false,
   });
 
-  final String label;
-  final String stagesPreview;
+  final String title;
+  final String subtitle;
+  final IconData icon;
   final bool isSelected;
+  final bool isPopular;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isSelected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.outline.withValues(alpha: 0.3),
+    const selectedGradient = LinearGradient(
+      colors: [AppTheme.brandBlueDeep, AppTheme.brandBlueBright],
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: isSelected ? selectedGradient : null,
+        color: isSelected ? null : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isSelected ? AppTheme.brandBlueDeep : const Color(0xFFE9ECF2),
           width: isSelected ? 2 : 1,
         ),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Icon(
-                isSelected ? Icons.check_circle : Icons.circle_outlined,
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 2),
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: isSelected
+                          ? const Color(0x33FFFFFF)
+                          : const Color(0xFFE9ECF2),
+                      child: Icon(
+                        icon,
+                        size: 17,
+                        color: isSelected
+                            ? Colors.white
+                            : AppTheme.brandBlueDeep,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Text(
-                      stagesPreview,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      title,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: isSelected ? Colors.white : AppTheme.brandInk,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : AppTheme.brandInkMuted,
+                        height: 1.25,
                       ),
                     ),
                   ],
                 ),
               ),
+              if (isPopular)
+                Positioned(
+                  top: -7,
+                  right: 8,
+                  child: Transform.rotate(
+                    angle: 0.12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6C78),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'POPULAR',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -2717,57 +2904,146 @@ class _PresetTile extends StatelessWidget {
   }
 }
 
-class _CustomRoundEditor extends StatelessWidget {
-  const _CustomRoundEditor({
-    required this.label,
-    required this.delayDays,
-    required this.onChanged,
-    required this.onRemove,
+class _CustomDayEditorChip extends StatelessWidget {
+  const _CustomDayEditorChip({
+    required this.day,
+    required this.accentColor,
+    required this.onMinus,
+    required this.onPlus,
+    this.onRemove,
   });
 
-  final String label;
-  final int delayDays;
-  final ValueChanged<int> onChanged;
-  final VoidCallback onRemove;
+  final int day;
+  final Color accentColor;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 70,
-              child: Text(label, style: theme.textTheme.titleSmall),
+    return SizedBox(
+      width: 96,
+      child: Column(
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: accentColor, width: 5),
+              color: Colors.white,
             ),
-            Expanded(
-              child: Slider(
-                value: delayDays.toDouble().clamp(1, 60),
-                min: 1,
-                max: 60,
-                divisions: 59,
-                label: '${delayDays}d',
-                onChanged: (v) => onChanged(v.round()),
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '$day',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  'DAYS',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(
-              width: 56,
-              child: Text(
-                '${delayDays}d',
-                textAlign: TextAlign.end,
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _TinyCircleButton(icon: Icons.remove, onTap: onMinus),
+              const SizedBox(width: 8),
+              _TinyCircleButton(icon: Icons.add, onTap: onPlus),
+            ],
+          ),
+          if (onRemove != null) ...[
+            const SizedBox(height: 4),
+            TextButton(
               onPressed: onRemove,
-              tooltip: 'Remove',
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 24),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              child: const Text('Remove', style: TextStyle(fontSize: 11)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AddRoundChip extends StatelessWidget {
+  const _AddRoundChip({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 96,
+        child: Column(
+          children: [
+            Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD1D5DE),
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add, color: AppTheme.brandInkMuted),
+                  Text(
+                    'ADD NEW',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TinyCircleButton extends StatelessWidget {
+  const _TinyCircleButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFFF1F3F7),
+          border: Border.all(color: const Color(0xFFDDE2EB)),
+        ),
+        child: Icon(icon, size: 14, color: AppTheme.brandInkMuted),
       ),
     );
   }
