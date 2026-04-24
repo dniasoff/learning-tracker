@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/preferences/text_display_preferences.dart'
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
-import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -32,9 +31,24 @@ class TextDisplayScreen extends ConsumerWidget {
     final textAsync = ref.watch(textContentProvider(sefariaRef));
     final fontSize = ref.watch(fontSizeProvider);
     final showNikud = ref.watch(showNikudProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: AppBarTitle(text: sefariaRef)),
+      backgroundColor: const Color(0xFFF5F7FC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7FC),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: Text(
+          sefariaRef.replaceAll('_', ' '),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: AppTheme.brandInk,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
       body: SafeArea(
         top: false,
         child: textAsync.when(
@@ -175,99 +189,118 @@ class _TextContentView extends StatelessWidget {
     final displayHebrew = showNikud
         ? textContent.hebrewText
         : HebrewUtils.stripNikud(textContent.hebrewText);
+    final insightChips = _buildInsightChips(textContent.englishText);
 
     return Column(
       children: [
-        // Progress bar at top
-        ClipRRect(
-          child: LinearProgressIndicator(
-            value: 0.15,
-            minHeight: 3,
-            backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.5),
-            valueColor: AlwaysStoppedAnimation<Color>(
-              theme.colorScheme.primary,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: 0.15,
+              minHeight: 5,
+              backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.35),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.brandBlue),
             ),
           ),
         ),
 
-        // Scrollable content
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Hebrew text (RTL)
                 if (textContent.hebrewText.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.brandCreamCard,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.brandOutline),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              'Hebrew Text',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.brandInkMuted,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          displayHebrew,
-                          textDirection: TextDirection.rtl,
-                          textAlign: TextAlign.right,
-                          style: AppTextStyles.hebrewBodyLarge.copyWith(
-                            fontSize: 18 * fontSize.multiplier,
-                            height: 1.8,
-                          ),
-                        ),
-                      ],
+                  _ReaderSectionCard(
+                    label: 'Hebrew Text',
+                    labelBackground: const Color(0xFFF26666),
+                    alignLabelRight: false,
+                    child: Text(
+                      displayHebrew,
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      style: AppTextStyles.hebrewBodyLarge.copyWith(
+                        fontSize: 26 * fontSize.multiplier,
+                        height: 1.65,
+                        color: const Color(0xFF1A1D24),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                // English text (LTR)
-                if (textContent.englishText.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.brandCreamCard,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.brandOutline),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: AppTheme.brandOutline.withValues(alpha: 0.65),
+                      ),
                     ),
+                    const SizedBox(width: 10),
+                    const Icon(
+                      Icons.menu_book_rounded,
+                      size: 22,
+                      color: AppTheme.brandBlue,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Divider(
+                        color: AppTheme.brandOutline.withValues(alpha: 0.65),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                if (textContent.englishText.isNotEmpty) ...[
+                  _ReaderSectionCard(
+                    label: 'English Translation',
+                    labelBackground: AppTheme.brandBlue,
+                    alignLabelRight: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'English Translation',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.brandInkMuted,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
                           textContent.englishText,
                           style: AppTextStyles.bodyLarge.copyWith(
                             fontSize: 16 * fontSize.multiplier,
-                            height: 1.6,
+                            height: 1.55,
+                            color: AppTheme.brandInk,
                           ),
                         ),
+                        if (insightChips.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: insightChips
+                                .map(
+                                  (chip) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 11,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.brandBlueSoft.withValues(
+                                        alpha: 0.55,
+                                      ),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      chip,
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: AppTheme.brandBlueDeep,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -277,14 +310,91 @@ class _TextContentView extends StatelessWidget {
           ),
         ),
 
-        // Pinned Mark Complete button at the bottom of the screen.
         Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
-            border: Border(top: BorderSide(color: AppTheme.brandOutline)),
+            color: const Color(0xFFF5F7FC),
+            border: Border(
+              top: BorderSide(color: AppTheme.brandOutline.withValues(alpha: 0.4)),
+            ),
           ),
           child: _CompletionSection(sefariaRef: sefariaRef),
+        ),
+      ],
+    );
+  }
+}
+
+List<String> _buildInsightChips(String englishText) {
+  final text = englishText.toLowerCase();
+  final chips = <String>[];
+  if (text.contains('priest')) chips.add('Vocabulary: Priests');
+  if (text.contains('time') || text.contains('watch')) {
+    chips.add('Concept: Time');
+  }
+  return chips.take(2).toList();
+}
+
+class _ReaderSectionCard extends StatelessWidget {
+  const _ReaderSectionCard({
+    required this.label,
+    required this.labelBackground,
+    required this.child,
+    this.alignLabelRight = false,
+  });
+
+  final String label;
+  final Color labelBackground;
+  final Widget child;
+  final bool alignLabelRight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 18),
+          decoration: BoxDecoration(
+            color: AppTheme.brandCreamCard,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.brandInk.withValues(alpha: 0.04),
+                blurRadius: 11,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(color: AppTheme.brandOutline.withValues(alpha: 0.45)),
+          ),
+          child: child,
+        ),
+        Positioned(
+          top: -12,
+          left: alignLabelRight ? null : 0,
+          right: alignLabelRight ? 0 : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: labelBackground,
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                  color: labelBackground.withValues(alpha: 0.26),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -364,7 +474,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Couldn't save: $e"),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.brandCoralDeep,
           ),
         );
       }
@@ -388,7 +498,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       ),
       error: (e, _) => Row(
         children: [
-          const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+          const Icon(Icons.error_outline, color: AppTheme.brandCoralDeep, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -407,7 +517,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             children: [
               Icon(
                 Icons.check_circle,
-                color: Colors.green.withValues(alpha: 0.8),
+                color: AppTheme.brandGold.withValues(alpha: 0.8),
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -442,30 +552,40 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
         return SizedBox(
           width: double.infinity,
-          child: FilledButton.icon(
+          child: FilledButton(
             onPressed: (_saving || isDone) ? null : () => _handleComplete(task),
             style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: isDone ? Colors.green.shade700 : null,
+              backgroundColor: isDone ? AppTheme.brandGoldDeep : AppTheme.brandBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              elevation: 2,
             ),
-            icon: _saving
-                ? const SizedBox(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_saving)
+                  const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppTheme.brandCreamCard,
                     ),
                   )
-                : Icon(
-                    isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+                else
+                  Icon(
+                    isDone ? Icons.check_circle : Icons.check_circle_outline_rounded,
                     size: 20,
                   ),
-            label: Text(
-              isDone
-                  ? 'Completed (${task.stageName})'
-                  : 'Mark ${task.stageName} Complete',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                const SizedBox(width: 10),
+                Text(
+                  isDone ? 'Completed (${task.stageName})' : 'Mark Learn Complete',
+                  style: const TextStyle(fontSize: 31/2, fontWeight: FontWeight.w700),
+                ),
+              ],
             ),
           ),
         );
