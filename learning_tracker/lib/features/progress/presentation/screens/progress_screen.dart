@@ -1,20 +1,16 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
-import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/widgets/milestone_badge.dart';
 
 @RoutePage()
 class ProgressScreen extends ConsumerWidget {
@@ -22,36 +18,33 @@ class ProgressScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final baseTheme = Theme.of(context);
+    final interTextTheme = GoogleFonts.interTextTheme(baseTheme.textTheme)
+        .apply(
+          bodyColor: baseTheme.colorScheme.onSurface,
+          displayColor: baseTheme.colorScheme.onSurface,
+        );
     final activeCurriculaAsync = ref.watch(
       dashboardActiveCurriculaStreamProvider,
     );
     final streakAsync = ref.watch(dashboardStreakProvider);
-    final userModeAsync = ref.watch(dashboardUserModeProvider);
-    final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
     final profileId = ref.watch(activeProfileIdProvider);
-    final journeyAsync = ref.watch(journeyViewModelProvider(profileId));
-    final lifetimeSummariesAsync = ref.watch(globalLifetimeCurriculaProvider(profileId));
+    final lifetimeSummariesAsync = ref.watch(
+      globalLifetimeCurriculaProvider(profileId),
+    );
     final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Progress')),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.2),
-              AppTheme.brandCream,
-            ],
-          ),
+      backgroundColor: const Color(0xFFF4F6FB),
+      body: Theme(
+        data: baseTheme.copyWith(
+          textTheme: interTextTheme,
+          primaryTextTheme: interTextTheme,
         ),
         child: SafeArea(
-          top: false,
           child: activeCurriculaAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (error, _) => Center(child: Text('Error: $error')),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
                 return const EmptyState(
@@ -61,17 +54,11 @@ class ProgressScreen extends ConsumerWidget {
                 );
               }
 
-              final userMode = userModeAsync.asData?.value ?? UserMode.adult;
               final streakData = streakAsync.asData?.value;
               final currentStreak = streakData?.currentStreak ?? 0;
-              final maxStreak = streakData?.maxStreak ?? 0;
-              final totalPoints = globalPointsAsync.asData?.value ?? 0;
-              final journey = journeyAsync.asData?.value;
-            final overviewStats = overviewStatsAsync.asData?.value;
-            final totalCompletions =
-                overviewStats?.totalCompletions ?? journey?.totalCompletions ?? 0;
-            final totalUniqueUnits =
-                overviewStats?.totalUniqueItems ?? journey?.totalUniqueUnits ?? 0;
+              final overviewStats = overviewStatsAsync.asData?.value;
+              final totalCompletions = overviewStats?.totalCompletions ?? 0;
+              final totalUniqueUnits = overviewStats?.totalUniqueItems ?? 0;
               final lifetimeSummaries =
                   lifetimeSummariesAsync.asData?.value ??
                   const <CurriculumLifetimeSummary>[];
@@ -80,35 +67,41 @@ class ProgressScreen extends ConsumerWidget {
                 onRefresh: () async {
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
-                  if (userMode == UserMode.child) {
-                    ref.invalidate(dashboardGlobalPointsProvider);
-                  }
                   ref.invalidate(progressOverviewStatsProvider);
-                  ref.invalidate(journeyViewModelProvider(profileId));
                   ref.invalidate(globalLifetimeCurriculaProvider(profileId));
-                  for (final c in activeCurricula) {
-                    ref.invalidate(dashboardCompletionPercentageProvider(c));
+                  for (final curriculum in activeCurricula) {
+                    ref.invalidate(
+                      dashboardCompletionPercentageProvider(curriculum),
+                    );
                   }
                 },
-                child: userMode == UserMode.child
-                    ? _ChildProgressView(
-                        currentStreak: currentStreak,
-                        maxStreak: maxStreak,
-                        totalCompletions: totalCompletions,
-                        totalUniqueUnits: totalUniqueUnits,
-                        totalPoints: totalPoints,
-                        activeCurricula: activeCurricula,
-                        journey: journey,
-                        lifetimeSummaries: lifetimeSummaries,
-                      )
-                    : _AdultProgressView(
-                        totalCompletions: totalCompletions,
-                        totalUniqueUnits: totalUniqueUnits,
-                        activeCurricula: activeCurricula,
-                        currentStreak: currentStreak,
-                        maxStreak: maxStreak,
-                        lifetimeSummaries: lifetimeSummaries,
-                      ),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(25, 8, 25, 20),
+                  children: [
+                    Text(
+                      'Progress',
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 12),
+                    _StatGrid(
+                      totalCompletions: totalCompletions,
+                      totalUniqueUnits: totalUniqueUnits,
+                      currentStreak: currentStreak,
+                      activeTracks: activeCurricula.length,
+                    ),
+                    const SizedBox(height: 16),
+                    const _ProgressChartsTile(),
+                    const SizedBox(height: 20),
+                    _CurriculaMasterySection(activeCurricula: activeCurricula),
+                    const SizedBox(height: 18),
+                    _LearningLifetimeTreeCard(
+                      summaries: lifetimeSummaries,
+                      activeCurricula: activeCurricula,
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -118,534 +111,210 @@ class ProgressScreen extends ConsumerWidget {
   }
 }
 
-class _ChildProgressView extends StatelessWidget {
-  const _ChildProgressView({
-    required this.currentStreak,
-    required this.maxStreak,
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({
     required this.totalCompletions,
     required this.totalUniqueUnits,
-    required this.totalPoints,
-    required this.activeCurricula,
-    required this.journey,
-    required this.lifetimeSummaries,
+    required this.currentStreak,
+    required this.activeTracks,
   });
 
-  final int currentStreak;
-  final int maxStreak;
   final int totalCompletions;
   final int totalUniqueUnits;
-  final int totalPoints;
-  final List<CurriculumId> activeCurricula;
-  final JourneyViewModel? journey;
-  final List<CurriculumLifetimeSummary> lifetimeSummaries;
+  final int currentStreak;
+  final int activeTracks;
 
   @override
   Widget build(BuildContext context) {
-    final totalPercentage = totalUniqueUnits > 0
-        ? (totalCompletions / totalUniqueUnits * 100)
-        : 0.0;
-    final allMilestones = <MilestoneAchievement>[];
-    if (journey != null) {
-      for (final curr in journey!.curricula) {
-        allMilestones.addAll(curr.milestones);
-      }
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.16,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       children: [
-        _CompletionRingWidget(
-          percentage: totalPercentage,
-          completions: totalCompletions,
-          total: totalUniqueUnits,
+        _OverviewStatCard(
+          icon: Icons.verified_outlined,
+          iconColor: const Color(0xFFF8C146),
+          value: '$totalCompletions',
+          label: 'COMPLETIONS',
         ),
-        const SizedBox(height: 24),
-        Row(
+        _OverviewStatCard(
+          icon: Icons.menu_book_outlined,
+          iconColor: AppTheme.brandBlue,
+          value: '$totalUniqueUnits',
+          label: 'UNITS DONE',
+        ),
+        _OverviewStatCard(
+          icon: Icons.local_fire_department_rounded,
+          iconColor: Colors.white,
+          value: '$currentStreak',
+          label: 'DAY STREAK',
+          highlighted: true,
+        ),
+        _OverviewStatCard(
+          icon: Icons.hub_outlined,
+          iconColor: const Color(0xFFF8C146),
+          value: '$activeTracks',
+          label: 'ACTIVE TRACKS',
+        ),
+      ],
+    );
+  }
+}
+
+class _OverviewStatCard extends StatelessWidget {
+  const _OverviewStatCard({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+    this.highlighted = false,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = highlighted ? const Color(0xFFFF6E76) : Colors.white;
+    final valueColor = highlighted ? Colors.white : const Color(0xFF11182C);
+    final labelColor = highlighted
+        ? Colors.white.withValues(alpha: 0.82)
+        : const Color(0xFF7C8595);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF03174C).withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          if (highlighted)
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: highlighted ? 0.18 : 0.14),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, color: iconColor, size: 17),
+              ),
+              const Spacer(),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: valueColor,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: labelColor,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressChartsTile extends StatelessWidget {
+  const _ProgressChartsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => context.router.push(const ProgressChartsRoute()),
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF03174C).withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
           children: [
-            Expanded(
-              child: _MetricCard(
-                backgroundColor: AppTheme.childPointsAccent,
-                icon: Icons.star,
-                value: totalPoints.toString(),
-                label: 'Total Points',
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF3FF),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.bar_chart_rounded,
+                color: AppTheme.brandBlue,
+                size: 20,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _MetricCard(
-                backgroundColor: AppTheme.childStreakAccent,
-                icon: Icons.local_fire_department,
-                value: '$maxStreak',
-                label: 'Best Streak',
-                sublabel: 'days',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _SiyumBanner(
-          siyumCount: allMilestones
-              .where((m) => m.type == 'curriculum_complete')
-              .length,
-          onViewAll: () => context.router.push(const GamificationRoute()),
-        ),
-        const SizedBox(height: 20),
-        _CurriculaMasterySection(activeCurricula: activeCurricula),
-        if (lifetimeSummaries.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          _GlobalLifetimeTreeSection(summaries: lifetimeSummaries),
-        ],
-        const SizedBox(height: 20),
-        if (allMilestones.isNotEmpty)
-          _RecentAchievementsRow(
-            milestones: allMilestones,
-            onSeeAll: () => context.router.push(const GamificationRoute()),
-          ),
-      ],
-    );
-  }
-}
-
-class _AdultProgressView extends StatelessWidget {
-  const _AdultProgressView({
-    required this.totalCompletions,
-    required this.totalUniqueUnits,
-    required this.activeCurricula,
-    required this.currentStreak,
-    required this.maxStreak,
-    required this.lifetimeSummaries,
-  });
-
-  final int totalCompletions;
-  final int totalUniqueUnits;
-  final List<CurriculumId> activeCurricula;
-  final int currentStreak;
-  final int maxStreak;
-  final List<CurriculumLifetimeSummary> lifetimeSummaries;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Overview',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatItem(
-                        icon: Icons.check_circle,
-                        iconColor: Theme.of(context).colorScheme.primary,
-                        value: '$totalCompletions',
-                        label: 'Completions',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatItem(
-                        icon: Icons.auto_stories,
-                        iconColor: AppTheme.brandBlue,
-                        value: '$totalUniqueUnits',
-                        label: 'Units Done',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatItem(
-                        icon: Icons.local_fire_department,
-                        iconColor: AppTheme.brandGold,
-                        value: '$currentStreak / $maxStreak',
-                        label: 'Current / Best Streak',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatItem(
-                        icon: Icons.menu_book,
-                        iconColor: AppTheme.brandCoral,
-                        value: '${activeCurricula.length}',
-                        label: 'Active Tracks',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        const _QuickAccessSection(),
-        const SizedBox(height: 20),
-        _CurriculaMasterySection(activeCurricula: activeCurricula),
-        if (lifetimeSummaries.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          _GlobalLifetimeTreeSection(summaries: lifetimeSummaries),
-        ],
-      ],
-    );
-  }
-}
-
-class _GlobalLifetimeTreeSection extends StatelessWidget {
-  const _GlobalLifetimeTreeSection({required this.summaries});
-
-  final List<CurriculumLifetimeSummary> summaries;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.account_tree_outlined, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Global Lifetime Tree',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Curriculum-wide lifetime coverage across all tracks.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            for (var i = 0; i < summaries.length; i++) ...[
-              ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                leading: const Icon(Icons.menu_book_outlined),
-                title: Text(
-                  '${summaries[i].curriculumId.displayNameHe} • '
-                  '${summaries[i].curriculumId.displayNameEn}',
-                ),
-                subtitle: Text(
-                  '${formatFractionAsPercent(summaries[i].percentage)} • '
-                  '${summaries[i].learnedLeafCount}/${summaries[i].totalLeafCount}',
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                    child: Column(
-                      children: summaries[i].tree
-                          .map((node) => _GlobalLifetimeNodeTile(node: node, depth: 0))
-                          .toList(),
+                  Text(
+                    'Progress Charts',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    'Completions, trends, and more',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
                     ),
                   ),
                 ],
               ),
-              if (i < summaries.length - 1) const Divider(height: 18),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GlobalLifetimeNodeTile extends StatelessWidget {
-  const _GlobalLifetimeNodeTile({required this.node, required this.depth});
-
-  final LifetimeTreeNode node;
-  final int depth;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = switch (node.state) {
-      LifetimeNodeState.full => AppTheme.brandGold,
-      LifetimeNodeState.partial => AppTheme.brandCoral,
-      LifetimeNodeState.none => theme.colorScheme.onSurfaceVariant,
-    };
-    final icon = switch (node.state) {
-      LifetimeNodeState.full => Icons.check_circle,
-      LifetimeNodeState.partial => Icons.adjust,
-      LifetimeNodeState.none => Icons.radio_button_unchecked,
-    };
-
-    if (node.children.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.only(left: depth * 14.0),
-        child: ListTile(
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(icon, color: color, size: 18),
-          title: Text(
-            node.label,
-            style: theme.textTheme.bodySmall?.copyWith(color: color),
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.only(left: depth * 14.0),
-      child: Theme(
-        data: theme.copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          dense: true,
-          leading: Icon(icon, color: color, size: 18),
-          title: Text(
-            node.label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
             ),
-          ),
-          children: [
-            for (final child in node.children)
-              _GlobalLifetimeNodeTile(node: child, depth: depth + 1),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CompletionRingWidget extends StatelessWidget {
-  const _CompletionRingWidget({
-    required this.percentage,
-    required this.completions,
-    required this.total,
-  });
-
-  final double percentage;
-  final int completions;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final percentageText = formatPercentValue(percentage);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 180,
-                  height: 180,
-                  child: CircularProgressIndicator(
-                    value: percentage / 100,
-                    strokeWidth: 12,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppTheme.childPrimary,
-                    ),
-                    backgroundColor: AppTheme.childOutline,
-                  ),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      percentageText,
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        color: AppTheme.childPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text('Complete', style: theme.textTheme.labelMedium),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'You\'ve completed $completions of $total units',
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.brandInkMuted,
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.backgroundColor,
-    required this.icon,
-    required this.value,
-    required this.label,
-    this.sublabel,
-  });
-
-  final Color backgroundColor;
-  final IconData icon;
-  final String value;
-  final String label;
-  final String? sublabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [backgroundColor, backgroundColor.withValues(alpha: 0.82)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: backgroundColor.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppTheme.brandCreamCard, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: AppTheme.brandCreamCard,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandCreamCard.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (sublabel != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              sublabel!,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: AppTheme.brandCreamCard.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SiyumBanner extends StatelessWidget {
-  const _SiyumBanner({required this.siyumCount, required this.onViewAll});
-
-  final int siyumCount;
-  final VoidCallback onViewAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.childTrophyAccent, AppTheme.brandGoldDeep],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.emoji_events, color: AppTheme.brandCreamCard, size: 32),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$siyumCount ${siyumCount == 1 ? 'Siyum' : 'Siyums'}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: AppTheme.brandCreamCard,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Completion celebrations',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandCreamCard.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(onPressed: onViewAll, child: const Text('View All')),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentAchievementsRow extends StatelessWidget {
-  const _RecentAchievementsRow({
-    required this.milestones,
-    required this.onSeeAll,
-  });
-
-  final List<MilestoneAchievement> milestones;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Recent Achievements',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            TextButton(onPressed: onSeeAll, child: const Text('See All')),
-          ],
-        ),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              ...milestones.take(5).map((m) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: MilestoneBadge(milestone: m),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -657,21 +326,21 @@ class _CurriculaMasterySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Curriculum Mastery',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
-        ...activeCurricula.map(
-          (curriculum) => _CurriculumProgressTile(curriculum: curriculum),
-        ),
+        for (final curriculum in activeCurricula)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _CurriculumProgressTile(curriculum: curriculum),
+          ),
       ],
     );
   }
@@ -684,141 +353,248 @@ class _CurriculumProgressTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
     );
     final percentage = completionAsync.asData?.value ?? 0.0;
-    final aggregateCountAsync = ref.watch(
-      aggregateCountProvider(curriculum.storageKey),
-    );
-    final count = aggregateCountAsync.asData?.value ?? 0;
     final percentageText = formatFractionAsPercent(percentage);
+    final color = AppTheme.getCurriculumColor(curriculum);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          context.router.push(
-            CurriculumProgressRoute(curriculumId: curriculum.storageKey),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: curriculumColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      curriculum.displayNameHe,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: percentage,
-                        minHeight: 6,
-                        backgroundColor: curriculumColor.withValues(
-                          alpha: 0.15,
-                        ),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          curriculumColor,
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        context.router.push(
+          CurriculumProgressRoute(curriculumId: curriculum.storageKey),
+        );
+      },
+      child: Ink(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF03174C).withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        curriculum.displayNameEn,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF172347),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$percentageText • $count completions',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      Text(
+                        curriculum.displayNameHe,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF8A92A4),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$percentageText DONE',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: const Color(0xFF243053),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: percentage,
+                minHeight: 9,
+                backgroundColor: const Color(0xFFE8ECF3),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _QuickAccessSection extends StatelessWidget {
-  const _QuickAccessSection();
+class _LearningLifetimeTreeCard extends StatelessWidget {
+  const _LearningLifetimeTreeCard({
+    required this.summaries,
+    required this.activeCurricula,
+  });
+
+  final List<CurriculumLifetimeSummary> summaries;
+  final List<CurriculumId> activeCurricula;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Detailed Views', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.bar_chart, color: AppTheme.brandBlueDeep),
-            title: const Text('Progress Charts'),
-            subtitle: const Text('Completions, trends, streak calendar'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.router.push(const ProgressChartsRoute()),
-          ),
+    if (summaries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    CurriculumLifetimeSummary? selected;
+    for (final curriculum in activeCurricula) {
+      for (final summary in summaries) {
+        if (summary.curriculumId == curriculum) {
+          selected = summary;
+          break;
+        }
+      }
+      if (selected != null) break;
+    }
+    final summary = selected ?? summaries.first;
+    final topNodes = summary.tree.take(2).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0E2E8C), Color(0xFF1D3FA3), Color(0xFF183A95)],
         ),
-      ],
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF132968).withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Learning Lifetime Tree',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your growth across all Torah tracks.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.78),
+            ),
+          ),
+          const SizedBox(height: 14),
+          for (final node in topNodes)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _LifetimeNodeRow(node: node),
+            ),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${summary.curriculumId.displayNameEn} • ${formatFractionAsPercent(summary.percentage)}',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _StatItem extends StatelessWidget {
-  const _StatItem({
-    required this.icon,
-    required this.iconColor,
-    required this.value,
-    required this.label,
-  });
+class _LifetimeNodeRow extends StatelessWidget {
+  const _LifetimeNodeRow({required this.node});
 
-  final IconData icon;
-  final Color iconColor;
-  final String value;
-  final String label;
+  final LifetimeTreeNode node;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final indicatorColor = switch (node.state) {
+      LifetimeNodeState.full => const Color(0xFF3BDD87),
+      LifetimeNodeState.partial => const Color(0xFFFFD26A),
+      LifetimeNodeState.none => Colors.white54,
+    };
+    final children = node.children.take(2).toList();
 
-    return Column(
-      children: [
-        Icon(icon, color: iconColor, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 28,
+            decoration: BoxDecoration(
+              color: indicatorColor,
+              borderRadius: BorderRadius.circular(3),
+            ),
           ),
-        ),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  node.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (children.isNotEmpty)
+                  Text(
+                    children.map((child) => child.label).join('  •  '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.72),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+          Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+        ],
+      ),
     );
   }
 }
