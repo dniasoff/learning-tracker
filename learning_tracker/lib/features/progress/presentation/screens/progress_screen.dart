@@ -1,7 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -13,6 +12,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/milestone_badge.dart';
 
@@ -30,9 +30,7 @@ class ProgressScreen extends ConsumerWidget {
     final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
     final profileId = ref.watch(activeProfileIdProvider);
     final journeyAsync = ref.watch(journeyViewModelProvider(profileId));
-    final previousAchievementsAsync = ref.watch(
-      previousProgramLifetimeAchievementsProvider(profileId),
-    );
+    final trackMetricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
     final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
 
     return Scaffold(
@@ -43,7 +41,7 @@ class ProgressScreen extends ConsumerWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.white,
+              AppTheme.brandCreamCard,
               AppTheme.brandBlueSoft.withValues(alpha: 0.2),
               AppTheme.brandCream,
             ],
@@ -74,8 +72,7 @@ class ProgressScreen extends ConsumerWidget {
                 overviewStats?.totalCompletions ?? journey?.totalCompletions ?? 0;
             final totalUniqueUnits =
                 overviewStats?.totalUniqueItems ?? journey?.totalUniqueUnits ?? 0;
-              final previousAchievements =
-                  previousAchievementsAsync.asData?.value ?? const <LearningLedgerData>[];
+              final trackMetrics = trackMetricsAsync.asData?.value ?? const <TrackDualProgressMetric>[];
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -86,7 +83,6 @@ class ProgressScreen extends ConsumerWidget {
                   }
                   ref.invalidate(progressOverviewStatsProvider);
                   ref.invalidate(journeyViewModelProvider(profileId));
-                  ref.invalidate(previousProgramLifetimeAchievementsProvider(profileId));
                   for (final c in activeCurricula) {
                     ref.invalidate(dashboardCompletionPercentageProvider(c));
                   }
@@ -100,7 +96,7 @@ class ProgressScreen extends ConsumerWidget {
                         totalPoints: totalPoints,
                         activeCurricula: activeCurricula,
                         journey: journey,
-                        previousAchievements: previousAchievements,
+                        trackMetrics: trackMetrics,
                       )
                     : _AdultProgressView(
                         totalCompletions: totalCompletions,
@@ -108,7 +104,7 @@ class ProgressScreen extends ConsumerWidget {
                         activeCurricula: activeCurricula,
                         currentStreak: currentStreak,
                         maxStreak: maxStreak,
-                        previousAchievements: previousAchievements,
+                        trackMetrics: trackMetrics,
                       ),
               );
             },
@@ -128,7 +124,7 @@ class _ChildProgressView extends StatelessWidget {
     required this.totalPoints,
     required this.activeCurricula,
     required this.journey,
-    required this.previousAchievements,
+    required this.trackMetrics,
   });
 
   final int currentStreak;
@@ -138,7 +134,7 @@ class _ChildProgressView extends StatelessWidget {
   final int totalPoints;
   final List<CurriculumId> activeCurricula;
   final JourneyViewModel? journey;
-  final List<LearningLedgerData> previousAchievements;
+  final List<TrackDualProgressMetric> trackMetrics;
 
   @override
   Widget build(BuildContext context) {
@@ -192,16 +188,16 @@ class _ChildProgressView extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         _CurriculaMasterySection(activeCurricula: activeCurricula),
+        if (trackMetrics.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _TrackViewSection(trackMetrics: trackMetrics),
+        ],
         const SizedBox(height: 20),
         if (allMilestones.isNotEmpty)
           _RecentAchievementsRow(
             milestones: allMilestones,
             onSeeAll: () => context.router.push(const GamificationRoute()),
           ),
-        if (previousAchievements.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          _PreviousAchievementsSection(entries: previousAchievements),
-        ],
       ],
     );
   }
@@ -214,7 +210,7 @@ class _AdultProgressView extends StatelessWidget {
     required this.activeCurricula,
     required this.currentStreak,
     required this.maxStreak,
-    required this.previousAchievements,
+    required this.trackMetrics,
   });
 
   final int totalCompletions;
@@ -222,7 +218,7 @@ class _AdultProgressView extends StatelessWidget {
   final List<CurriculumId> activeCurricula;
   final int currentStreak;
   final int maxStreak;
-  final List<LearningLedgerData> previousAchievements;
+  final List<TrackDualProgressMetric> trackMetrics;
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +251,7 @@ class _AdultProgressView extends StatelessWidget {
                     Expanded(
                       child: _StatItem(
                         icon: Icons.auto_stories,
-                        iconColor: Colors.deepPurple,
+                        iconColor: AppTheme.brandBlue,
                         value: '$totalUniqueUnits',
                         label: 'Units Done',
                       ),
@@ -263,7 +259,7 @@ class _AdultProgressView extends StatelessWidget {
                     Expanded(
                       child: _StatItem(
                         icon: Icons.local_fire_department,
-                        iconColor: Colors.orange,
+                        iconColor: AppTheme.brandGold,
                         value: '$currentStreak / $maxStreak',
                         label: 'Current / Best Streak',
                       ),
@@ -271,7 +267,7 @@ class _AdultProgressView extends StatelessWidget {
                     Expanded(
                       child: _StatItem(
                         icon: Icons.menu_book,
-                        iconColor: Colors.teal,
+                        iconColor: AppTheme.brandCoral,
                         value: '${activeCurricula.length}',
                         label: 'Active Tracks',
                       ),
@@ -285,26 +281,24 @@ class _AdultProgressView extends StatelessWidget {
         const SizedBox(height: 20),
         const _QuickAccessSection(),
         const SizedBox(height: 20),
-        _CurriculaMasterySection(activeCurricula: activeCurricula),
-        if (previousAchievements.isNotEmpty) ...[
+        if (trackMetrics.isNotEmpty) ...[
+          _TrackViewSection(trackMetrics: trackMetrics),
           const SizedBox(height: 20),
-          _PreviousAchievementsSection(entries: previousAchievements),
         ],
+        _CurriculaMasterySection(activeCurricula: activeCurricula),
       ],
     );
   }
 }
 
-class _PreviousAchievementsSection extends StatelessWidget {
-  const _PreviousAchievementsSection({required this.entries});
+class _TrackViewSection extends StatelessWidget {
+  const _TrackViewSection({required this.trackMetrics});
 
-  final List<LearningLedgerData> entries;
+  final List<TrackDualProgressMetric> trackMetrics;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final latest = entries.take(8).toList();
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -313,13 +307,10 @@ class _PreviousAchievementsSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.history_edu_rounded,
-                  color: theme.colorScheme.primary,
-                ),
+                Icon(Icons.route, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Previous Achievements',
+                  'Track View',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -328,27 +319,101 @@ class _PreviousAchievementsSection extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Already learned before this programmed track. '
-              'These are separate from ongoing progress.',
+              'Current cycle progress and lifetime curriculum coverage per track.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final entry in latest)
-                  Chip(
-                    avatar: const Icon(Icons.workspace_premium, size: 16),
-                    label: Text(entry.unitDisplayNameEn),
-                  ),
-              ],
-            ),
+            const SizedBox(height: 14),
+            for (var i = 0; i < trackMetrics.length; i++) ...[
+              _TrackDualMetricRow(metric: trackMetrics[i]),
+              if (i < trackMetrics.length - 1) const Divider(height: 24),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TrackDualMetricRow extends StatelessWidget {
+  const _TrackDualMetricRow({required this.metric});
+
+  final TrackDualProgressMetric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          metric.trackLabel,
+          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          metric.isProgramTrack
+              ? 'Program track • ${metric.curriculumId.displayNameHe}'
+              : 'Self-paced track • ${metric.curriculumId.displayNameHe}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _PercentageBar(
+          title: 'Current Cycle',
+          percentage: metric.currentCyclePercentage,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        _PercentageBar(
+          title: 'Lifetime Curriculum',
+          percentage: metric.lifetimePercentage,
+          color: AppTheme.brandGold,
+        ),
+      ],
+    );
+  }
+}
+
+class _PercentageBar extends StatelessWidget {
+  const _PercentageBar({
+    required this.title,
+    required this.percentage,
+    required this.color,
+  });
+
+  final String title;
+  final double percentage;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(title, style: theme.textTheme.bodySmall),
+            ),
+            Text(
+              formatFractionAsPercent(percentage),
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(
+          value: percentage.clamp(0.0, 1.0),
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(8),
+          color: color,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+        ),
+      ],
     );
   }
 }
@@ -455,19 +520,21 @@ class _MetricCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.white, size: 28),
+          Icon(icon, color: AppTheme.brandCreamCard, size: 28),
           const SizedBox(height: 8),
           Text(
             value,
             style: theme.textTheme.titleLarge?.copyWith(
-              color: Colors.white,
+              color: AppTheme.brandCreamCard,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(color: Colors.white70),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppTheme.brandCreamCard.withValues(alpha: 0.7),
+            ),
             textAlign: TextAlign.center,
           ),
           if (sublabel != null) ...[
@@ -475,7 +542,7 @@ class _MetricCard extends StatelessWidget {
             Text(
               sublabel!,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: Colors.white60,
+                color: AppTheme.brandCreamCard.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -505,7 +572,7 @@ class _SiyumBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.emoji_events, color: Colors.white, size: 32),
+          const Icon(Icons.emoji_events, color: AppTheme.brandCreamCard, size: 32),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -514,14 +581,14 @@ class _SiyumBanner extends StatelessWidget {
                 Text(
                   '$siyumCount ${siyumCount == 1 ? 'Siyum' : 'Siyums'}',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
+                    color: AppTheme.brandCreamCard,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   'Completion celebrations',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: Colors.white70,
+                    color: AppTheme.brandCreamCard.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -703,7 +770,7 @@ class _QuickAccessSection extends StatelessWidget {
         const SizedBox(height: 8),
         Card(
           child: ListTile(
-            leading: const Icon(Icons.bar_chart, color: Colors.indigo),
+            leading: const Icon(Icons.bar_chart, color: AppTheme.brandBlueDeep),
             title: const Text('Progress Charts'),
             subtitle: const Text('Completions, trends, streak calendar'),
             trailing: const Icon(Icons.chevron_right),

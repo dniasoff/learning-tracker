@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
@@ -14,13 +13,10 @@ import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
@@ -122,12 +118,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
 
     // Final step:
-    // - Program tracks: starting position, then lifetime prior-learning mark
+    // - Program tracks: starting position only
     // - Self-paced tracks: optional prior completion marking
     steps.add(AddTrackStep.bulkMark);
-    if (_isProgramTrack) {
-      steps.add(AddTrackStep.trackName);
-    }
 
     return steps;
   }
@@ -400,12 +393,17 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   Future<void> _onStartingPositionComplete(String? startingRef) async {
     setState(() => _state = _state.copyWith(startingRef: startingRef));
+    // Program tracks end on the starting-position step.
+    // After selecting "Start here", finish immediately.
+    if (_isProgramTrack) {
+      await _finishFlow();
+      return;
+    }
     _goToNextStep();
   }
 
   Future<void> _finishFlow({
     _SelfPacedPriorCompletionSelection? priorCompletionSelection,
-    List<ScopeEntry>? programLifetimeSelections,
   }) async {
     if (_isFinishing) return;
     _isFinishing = true;
@@ -443,35 +441,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         } catch (_) {
           // Do not block finishing navigation if marking fails.
           // The track itself is already created successfully.
-        }
-      }
-
-      if (_isProgramTrack &&
-          programLifetimeSelections != null &&
-          programLifetimeSelections.isNotEmpty) {
-        try {
-          final completionCount = await _applyProgramPriorLifetimeCompletions(
-            programLifetimeSelections,
-          );
-          result = result.copyWith(
-            bulkMarkResult: {
-              'item_count': programLifetimeSelections.length,
-              'completion_count': completionCount,
-              'mode': 'lifetime_prior_learning',
-            },
-          );
-        } catch (_) {
-          // Do not block finishing navigation if lifetime marking fails.
-          // The track itself is already created successfully.
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Track added, but previous achievements could not be saved.',
-                ),
-              ),
-            );
-          }
         }
       }
 
@@ -536,63 +505,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       itemCount: completion.itemCount,
       completionCount: completion.completionCount,
     );
-  }
-
-  Future<int> _applyProgramPriorLifetimeCompletions(
-    List<ScopeEntry> selections,
-  ) async {
-    final curriculum = _state.curriculumId!;
-    final ledgerRepository = ref.read(learningLedgerRepositoryProvider);
-    final contentRepository = ref.read(contentRepositoryProvider);
-    final contentItems = await contentRepository.getContentForCurriculum(
-      curriculum,
-    );
-    final activeProfileId = ref.read(activeProfileIdProvider);
-
-    var inserted = 0;
-    final seen = <String>{};
-    for (final selection in selections) {
-      final key = '${selection.level}:${selection.value}';
-      if (!seen.add(key)) continue;
-      final unitType = switch (selection.level) {
-        1 => 'seder',
-        2 => 'masechta',
-        3 => 'perek',
-        _ => 'daf',
-      };
-      final representative = contentItems
-          .where((item) {
-            return switch (selection.level) {
-              1 => item.level1 == selection.value,
-              2 => item.level2 == selection.value,
-              3 => item.level3 == selection.value,
-              _ => item.level4 == selection.value,
-            };
-          })
-          .firstOrNull;
-
-      await ledgerRepository.recordCompletion(
-        curriculumId: curriculum.storageKey,
-        unitType: unitType,
-        unitIdentifier: selection.value,
-        unitDisplayNameHe: representative?.displayNameHe ?? selection.value,
-        unitDisplayNameEn: representative?.displayNameEn ?? selection.value,
-        trackType: TrackType.personal.storageKey,
-        trackId: null,
-        markedBy: activeProfileId,
-        isManual: true,
-      );
-      inserted++;
-    }
-
-    // Refresh progress/journey/dashboard projections.
-    ref.invalidate(progressOverviewStatsProvider);
-    ref.invalidate(journeyViewModelProvider(activeProfileId));
-    ref.invalidate(previousProgramLifetimeAchievementsProvider(activeProfileId));
-    ref.invalidate(dashboardCompletionPercentageProvider(curriculum));
-    ref.invalidate(dashboardLastCompletionProvider(curriculum));
-
-    return inserted;
   }
 
   String _getSmartDefault() {
@@ -661,7 +573,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       AddTrackStep.studyDays => _buildStudyDaysStep(),
       AddTrackStep.chazaraSetup => _buildChazaraStep(),
       AddTrackStep.goal => _buildGoalStep(),
-      AddTrackStep.trackName => _buildProgramPriorMarkStep(),
+      AddTrackStep.trackName => const SizedBox.shrink(),
       AddTrackStep.bulkMark => _buildScreen8(),
     };
   }
@@ -835,63 +747,6 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
   }
 
-  Widget _buildProgramPriorMarkStep() {
-    if (_state.curriculumId == null) return const SizedBox.shrink();
-    return _ProgramPriorProgressStep(
-      curriculumId: _state.curriculumId!,
-      onSkip: () => unawaited(_finishFlow()),
-      onMarkCompleted: (selections) =>
-          unawaited(_finishFlow(programLifetimeSelections: selections)),
-    );
-  }
-}
-
-class _ProgramPriorProgressStep extends StatelessWidget {
-  const _ProgramPriorProgressStep({
-    required this.curriculumId,
-    required this.onSkip,
-    required this.onMarkCompleted,
-  });
-
-  final CurriculumId curriculumId;
-  final VoidCallback onSkip;
-  final ValueChanged<List<ScopeEntry>> onMarkCompleted;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Already Learned (Lifetime)', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(
-            'Would you like to mark what you\'ve already learned?',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'This affects lifetime achievements only and stays separate '
-            'from current-cycle progress.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _ScopeStepContent(
-              curriculumId: curriculumId,
-              onComplete: (scopes) => onMarkCompleted(scopes ?? const []),
-            ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(onPressed: onSkip, child: const Text('Skip for now')),
-        ],
-      ),
-    );
-  }
 }
 
 class _SelfPacedPriorProgressStep extends ConsumerWidget {

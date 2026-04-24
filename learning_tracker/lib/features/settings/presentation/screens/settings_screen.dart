@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -16,6 +17,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
@@ -56,7 +58,7 @@ class SettingsScreen extends ConsumerWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.white,
+              AppTheme.brandCreamCard,
               theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
               theme.scaffoldBackgroundColor,
             ],
@@ -95,6 +97,28 @@ class SettingsScreen extends ConsumerWidget {
                     ],
                     _HebrewDateTile(theme: theme),
                   ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              const _SectionHeader(title: 'LIFETIME KNOWLEDGE'),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
+                  leading: Icon(
+                    Icons.history_edu_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: const Text('Add what you\'ve learned'),
+                  subtitle: const Text(
+                    'Mark lifetime learning by curriculum and section',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LifetimeMarkingScreen(),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -259,7 +283,7 @@ class _BackupSyncSection extends ConsumerWidget {
               theme,
               icon: Icons.schedule,
               label: '$pendingChanges changes pending',
-              color: Colors.orange,
+              color: AppTheme.brandCoral,
             ),
             SyncStatusOffline(:final pendingChanges) => _buildStatusTile(
               theme,
@@ -267,13 +291,13 @@ class _BackupSyncSection extends ConsumerWidget {
               label: pendingChanges > 0
                   ? '$pendingChanges changes queued'
                   : 'Offline',
-              color: Colors.grey,
+              color: AppTheme.brandInkSoft,
             ),
             SyncStatusError(:final message) => _buildStatusTile(
               theme,
               icon: Icons.warning_amber,
               label: 'Sync error: $message',
-              color: Colors.red,
+              color: AppTheme.brandCoralDeep,
             ),
           },
         ],
@@ -305,7 +329,7 @@ class _BackupSyncSection extends ConsumerWidget {
   Widget _buildSyncedTile(ThemeData theme, DateTime lastSyncedAt) {
     final timeAgo = _formatTimeAgo(lastSyncedAt);
     return ListTile(
-      leading: const Icon(Icons.cloud_done, color: Colors.green),
+      leading: const Icon(Icons.cloud_done, color: AppTheme.brandGold),
       title: const Text('Sync enabled'),
       subtitle: Text('Last synced $timeAgo'),
       trailing: const Icon(Icons.chevron_right),
@@ -891,7 +915,7 @@ Future<void> _showSignOutConfirmation(
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Failed to sign out. Please try again.'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.brandCoralDeep,
         ),
       );
     }
@@ -1004,3 +1028,4 @@ class _LanguageTile extends ConsumerWidget {
     );
   }
 }
+
