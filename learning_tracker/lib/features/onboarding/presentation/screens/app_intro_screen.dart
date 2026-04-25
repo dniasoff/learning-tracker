@@ -9,6 +9,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const kIntroSeen = 'intro_seen';
 
+/// Onboarding intro palette (design mockup).
+const _kNavy = Color(0xFF1A36A5);
+const _kGreen = Color(0xFF1DB97D);
+const _kCoral = Color(0xFFF86B6B);
+const _kPeach = Color(0xFFFFD8C8);
+const _kGoldTrophy = Color(0xFFFFC94A);
+const _kBg = Color(0xFFF8F9FB);
+const _kPillBlue = Color(0xFFC8D8F8);
+const _kMysteryBorder = Color(0xFFC9A86A);
+const _kBadgeBg = Color(0xFFE8ECFF);
+const _kMysteryBg = Color(0xFFFFF3E0);
+
 @RoutePage()
 class AppIntroScreen extends StatefulWidget {
   const AppIntroScreen({super.key});
@@ -24,44 +36,10 @@ class _AppIntroScreenState extends State<AppIntroScreen>
 
   late final AnimationController _iconController;
 
-  final _pages = const <_IntroPageData>[
-    _IntroPageData(
-      icon: Icons.schedule_rounded,
-      title: 'Your Daily\nTorah Plan',
-      subtitle:
-          'Learning Tracker turns massive goals into clear daily tasks, so you always know what to study next.',
-      bgColor: AppTheme.brandBlueSoft,
-      titleColor: AppTheme.brandInk,
-      subtitleColor: AppTheme.brandInkMuted,
-      iconColor: AppTheme.brandBlue,
-      chipText: 'INTRO',
-      showIllustration: false,
-    ),
-    _IntroPageData(
-      icon: Icons.psychology_rounded,
-      title: 'Never Forget\na Mishna',
-      subtitle:
-          'Master your learning with intelligent review cycles. Our spaced-repetition engine helps you retain everything you learn.',
-      bgColor: AppTheme.brandBlueSoft,
-      titleColor: AppTheme.brandInk,
-      subtitleColor: AppTheme.brandInkMuted,
-      iconColor: AppTheme.brandBlue,
-      chipText: 'GOAL',
-      showIllustration: false,
-    ),
-    _IntroPageData(
-      icon: Icons.emoji_events_rounded,
-      title: 'Earn While You\nLearn',
-      subtitle:
-          'Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a Master Scholar!',
-      bgColor: AppTheme.brandBlueSoft,
-      titleColor: AppTheme.brandInk,
-      subtitleColor: AppTheme.brandInkMuted,
-      iconColor: AppTheme.brandBlue,
-      chipText: 'START',
-      showIllustration: true,
-      illustrationType: 'rewards',
-    ),
+  static const _pages = <_IntroPageData>[
+    _IntroPageData(variant: _IntroPageVariant.dailyPlan),
+    _IntroPageData(variant: _IntroPageVariant.mishna),
+    _IntroPageData(variant: _IntroPageVariant.rewards),
   ];
 
   @override
@@ -85,6 +63,15 @@ class _AppIntroScreenState extends State<AppIntroScreen>
     _iconController
       ..reset()
       ..forward();
+  }
+
+  void _goToPage(int index) {
+    if (index == _currentPage) return;
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _nextPage() {
@@ -111,50 +98,13 @@ class _AppIntroScreenState extends State<AppIntroScreen>
   @override
   Widget build(BuildContext context) {
     final isLast = _currentPage == _pages.length - 1;
-    final pageData = _pages[_currentPage];
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
+      backgroundColor: _kBg,
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.menu_book,
-                        color: pageData.iconColor,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Aleph Bright',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: AppTheme.brandBlue,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (!isLast)
-                    TextButton(
-                      onPressed: _skip,
-                      child: Text(
-                        'Skip',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.brandBlue.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 60),
-                ],
-              ),
-            ),
+            _IntroHeader(onSkip: _skip),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -169,39 +119,459 @@ class _AppIntroScreenState extends State<AppIntroScreen>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Column(
-                children: [
-                  if (_pages.length > 1)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 28),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(_pages.length, (index) {
-                          final isActive = index == _currentPage;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 350),
-                            curve: Curves.easeOutCubic,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: isActive ? 32 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(4),
-                              color: isActive
-                                  ? pageData.iconColor
-                                  : AppTheme.brandOutline,
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: _GlowingButton(
+                onTap: _nextPage,
+                label: isLast ? 'Get Started' : 'Continue Journey',
+                showArrow: true,
+              ),
+            ),
+            _IntroStepper(currentIndex: _currentPage, onTap: _goToPage),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Header -----------------------------------------------------------------
+
+class _IntroHeader extends StatelessWidget {
+  const _IntroHeader({required this.onSkip});
+
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.menu_book_rounded, color: _kNavy, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Learning Tracker',
+                style: GoogleFonts.plusJakartaSans(
+                  color: _kNavy,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                ),
+              ),
+            ],
+          ),
+          TextButton(
+            onPressed: onSkip,
+            style: TextButton.styleFrom(foregroundColor: AppTheme.brandInkSoft),
+            child: Text(
+              'Skip',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.brandInkSoft,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Data -------------------------------------------------------------------
+
+enum _IntroPageVariant { dailyPlan, mishna, rewards }
+
+class _IntroPageData {
+  const _IntroPageData({required this.variant});
+  final _IntroPageVariant variant;
+}
+
+// --- Per page content ------------------------------------------------------
+
+class _IntroPage extends StatelessWidget {
+  const _IntroPage({required this.data, required this.iconAnimation});
+
+  final _IntroPageData data;
+  final Animation<double> iconAnimation;
+
+  TextStyle get _headStyle => GoogleFonts.plusJakartaSans(
+    color: AppTheme.brandInk,
+    fontSize: 32,
+    fontWeight: FontWeight.w800,
+    height: 1.15,
+  );
+
+  TextStyle get _subStyle => GoogleFonts.plusJakartaSans(
+    color: AppTheme.brandInkMuted,
+    fontSize: 15,
+    height: 1.55,
+    fontWeight: FontWeight.w400,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                _buildHero(),
+                const SizedBox(height: 24),
+                _buildTitleBlock(),
+                const SizedBox(height: 14),
+                _buildSubtitleBlock(),
+                const SizedBox(height: 20),
+                _buildProgressArea(),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHero() {
+    switch (data.variant) {
+      case _IntroPageVariant.dailyPlan:
+        return _IntroDailyPlanIllustration(animation: iconAnimation);
+      case _IntroPageVariant.mishna:
+        return _IntroMishnaIllustration(animation: iconAnimation);
+      case _IntroPageVariant.rewards:
+        return _IntroRewardsHeroIllustration(animation: iconAnimation);
+    }
+  }
+
+  Widget _buildTitleBlock() {
+    return AnimatedBuilder(
+      animation: iconAnimation,
+      builder: (context, _) {
+        final fade = CurvedAnimation(
+          parent: iconAnimation,
+          curve: const Interval(0.2, 0.75, curve: Curves.easeOut),
+        ).value;
+        return Opacity(opacity: fade, child: _titleRich());
+      },
+    );
+  }
+
+  Widget _titleRich() {
+    switch (data.variant) {
+      case _IntroPageVariant.dailyPlan:
+        return Text.rich(
+          TextSpan(
+            style: _headStyle,
+            children: const [
+              TextSpan(text: 'Your Daily\n'),
+              TextSpan(
+                text: 'Torah Plan',
+                style: TextStyle(color: _kNavy, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        );
+      case _IntroPageVariant.mishna:
+        return Text.rich(
+          TextSpan(
+            style: _headStyle,
+            children: const [
+              TextSpan(text: 'Never Forget\na '),
+              TextSpan(
+                text: 'Mishna',
+                style: TextStyle(color: _kNavy, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        );
+      case _IntroPageVariant.rewards:
+        return Text(
+          'Earn While You Learn',
+          textAlign: TextAlign.center,
+          style: _headStyle,
+        );
+    }
+  }
+
+  Widget _buildSubtitleBlock() {
+    return AnimatedBuilder(
+      animation: iconAnimation,
+      builder: (context, _) {
+        final fade = CurvedAnimation(
+          parent: iconAnimation,
+          curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
+        ).value;
+        return Opacity(opacity: fade, child: _subtitleRich());
+      },
+    );
+  }
+
+  Widget _subtitleRich() {
+    switch (data.variant) {
+      case _IntroPageVariant.dailyPlan:
+        return Text.rich(
+          TextSpan(
+            style: _subStyle,
+            children: const [
+              TextSpan(text: 'Learning Tracker turns massive goals into '),
+              TextSpan(
+                text: 'clear daily tasks',
+                style: TextStyle(
+                  color: AppTheme.brandInk,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextSpan(text: ', so you always know what to study next.'),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        );
+      case _IntroPageVariant.mishna:
+        return Text.rich(
+          TextSpan(
+            style: _subStyle,
+            children: const [
+              TextSpan(
+                text:
+                    'Master your learning with intelligent review cycles. Our ',
+              ),
+              TextSpan(
+                text: 'spaced-repetition engine',
+                style: TextStyle(
+                  color: AppTheme.brandInk,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextSpan(text: ' helps you retain everything you learn.'),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        );
+      case _IntroPageVariant.rewards:
+        return Text(
+          'Collect points, build streaks, and unlock mystery rewards as you '
+          'climb from a Novice to a Master Scholar!',
+          textAlign: TextAlign.center,
+          style: _subStyle,
+        );
+    }
+  }
+
+  Widget _buildProgressArea() {
+    switch (data.variant) {
+      case _IntroPageVariant.dailyPlan:
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1 / 3),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, t, child) {
+                    return LayoutBuilder(
+                      builder: (context, c) {
+                        return Stack(
+                          children: [
+                            Container(
+                              width: c.maxWidth,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE2E5EB),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
                             ),
-                          );
-                        }),
-                      ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                width: c.maxWidth * t,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: _kGreen,
+                                  borderRadius: BorderRadius.horizontal(
+                                    left: Radius.circular(999),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'SETUP PROGRESS',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppTheme.brandInkSoft,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ],
+        );
+      case _IntroPageVariant.mishna:
+        return SizedBox(
+          width: double.infinity,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 2 / 3),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (context, t, child) {
+                return LayoutBuilder(
+                  builder: (context, c) {
+                    return Stack(
+                      children: [
+                        Container(
+                          width: c.maxWidth,
+                          height: 5,
+                          color: const Color(0xFFE2E5EB),
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: c.maxWidth * t,
+                            height: 5,
+                            color: const Color(0xFFB8C0CC),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      case _IntroPageVariant.rewards:
+        return Column(
+          children: const [
+            _FeatureCardsRow(),
+            SizedBox(height: 20),
+            _ScholarLevelCard(),
+          ],
+        );
+    }
+  }
+}
+
+// --- Page 1 illustration --------------------------------------------------
+
+class _IntroDailyPlanIllustration extends StatelessWidget {
+  const _IntroDailyPlanIllustration({required this.animation});
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final scale = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        ).value.clamp(0.85, 1.0);
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: SizedBox(
+        height: 220,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              left: 8,
+              top: 0,
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kPeach,
+                ),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: 260,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.brandCreamCard,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kNavy.withValues(alpha: 0.12),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                  _GlowingButton(
-                    onTap: _nextPage,
-                    label: isLast ? 'Get Started →' : 'Continue Journey →',
-                    bgColor: AppTheme.brandBlue,
-                    showArrow: false,
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            _WindowDot(c: _kCoral),
+                            _WindowDot(c: Color(0xFFFFC94A)),
+                            _WindowDot(c: Color(0xFF5BC0EB)),
+                          ],
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 18,
+                          color: AppTheme.brandInkMuted,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    _dailyListRow1Checked(),
+                    const SizedBox(height: 8),
+                    _dailyListRow2Highlight(),
+                    const SizedBox(height: 8),
+                    _dailyListRowEmpty(filled: true),
+                    const SizedBox(height: 8),
+                    _dailyListRowEmpty(filled: false),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              right: 4,
+              bottom: 8,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kNavy,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.auto_awesome,
+                    color: _kGoldTrophy,
+                    size: 20,
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -211,335 +581,716 @@ class _AppIntroScreenState extends State<AppIntroScreen>
   }
 }
 
-class _IntroPageData {
-  const _IntroPageData({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.bgColor,
-    required this.titleColor,
-    required this.subtitleColor,
-    required this.iconColor,
-    required this.chipText,
-    this.showIllustration = false,
-    this.illustrationType = 'default',
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color bgColor;
-  final Color titleColor;
-  final Color subtitleColor;
-  final Color iconColor;
-  final String chipText;
-  final bool showIllustration;
-  final String illustrationType;
+Widget _dailyListRow1Checked() {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0F1F4),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: _kNavy,
+          ),
+          child: const Icon(
+            Icons.check,
+            size: 14,
+            color: AppTheme.brandCreamCard,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 7,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCDFE5),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
-class _IntroPage extends StatelessWidget {
-  const _IntroPage({required this.data, required this.iconAnimation});
+Widget _dailyListRow2Highlight() {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    decoration: BoxDecoration(
+      color: _kNavy,
+      borderRadius: BorderRadius.circular(999),
+      boxShadow: [
+        BoxShadow(
+          color: _kNavy.withValues(alpha: 0.2),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: const BoxDecoration(
+            color: AppTheme.brandCreamCard,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.play_arrow_rounded, color: _kNavy, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: AppTheme.brandCreamCard.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-  final _IntroPageData data;
-  final Animation<double> iconAnimation;
+Widget _dailyListRowEmpty({required bool filled}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0F1F4),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFC9CED6)),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 7,
+            decoration: BoxDecoration(
+              color: filled ? const Color(0xFFDCDFE5) : const Color(0xFFE5E7EC),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _WindowDot extends StatelessWidget {
+  const _WindowDot({required this.c});
+  final Color c;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          const SizedBox(height: 16),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Illustration area
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: _buildIllustration(),
+    return Container(
+      margin: const EdgeInsets.only(right: 5),
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: c),
+    );
+  }
+}
+
+// --- Page 2 illustration --------------------------------------------------
+
+class _IntroMishnaIllustration extends StatelessWidget {
+  const _IntroMishnaIllustration({required this.animation});
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final t = animation.value;
+        return Transform.rotate(angle: -0.04 + (0.01 * (1 - t)), child: child);
+      },
+      child: SizedBox(
+        height: 250,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              left: 0,
+              top: 20,
+              child: Transform.rotate(
+                angle: -0.1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
                   ),
-                  // Content area
-                  Column(
-                    children: [
-                      AnimatedBuilder(
-                        animation: iconAnimation,
-                        builder: (context, _) {
-                          final fade = CurvedAnimation(
-                            parent: iconAnimation,
-                            curve: const Interval(
-                              0.3,
-                              0.8,
-                              curve: Curves.easeOut,
-                            ),
-                          ).value;
-                          return Opacity(
-                            opacity: fade,
-                            child: Text(
-                              data.title,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: data.titleColor,
-                                fontSize: 36,
-                                fontWeight: FontWeight.w800,
-                                height: 1.2,
-                              ),
-                            ),
-                          );
-                        },
+                  decoration: BoxDecoration(
+                    color: _kPillBlue,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    'Review…',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: _kNavy,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 40,
+              child: Transform.rotate(
+                angle: 0.08,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _kPeach.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '…yos',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.brandInk,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: 188,
+                height: 200,
+                decoration: BoxDecoration(
+                  color: _kNavy,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kNavy.withValues(alpha: 0.28),
+                      blurRadius: 22,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    const Center(
+                      child: Icon(
+                        Icons.psychology_rounded,
+                        color: AppTheme.brandCreamCard,
+                        size: 96,
                       ),
-                      const SizedBox(height: 12),
-                      AnimatedBuilder(
-                        animation: iconAnimation,
-                        builder: (context, _) {
-                          final fade = CurvedAnimation(
-                            parent: iconAnimation,
-                            curve: const Interval(
-                              0.4,
-                              0.9,
-                              curve: Curves.easeOut,
-                            ),
-                          ).value;
-                          return Opacity(
-                            opacity: fade,
-                            child: Text(
-                              data.subtitle,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: data.subtitleColor,
-                                fontSize: 15,
-                                height: 1.5,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          );
-                        },
+                    ),
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _kCoral,
+                        ),
+                        child: const Icon(
+                          Icons.sync,
+                          color: AppTheme.brandCreamCard,
+                          size: 20,
+                        ),
                       ),
-                    ],
+                    ),
+                    Positioned(
+                      left: 8,
+                      bottom: 8,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppTheme.brandCreamCard,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.lightbulb_outline,
+                          color: _kNavy,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Page 3 hero + feature cards + scholar ----------------------------------
+
+class _IntroRewardsHeroIllustration extends StatelessWidget {
+  const _IntroRewardsHeroIllustration({required this.animation});
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final s = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        ).value.clamp(0.88, 1.0);
+        return Transform.scale(scale: s, child: child);
+      },
+      child: SizedBox(
+        height: 200,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 168,
+              height: 168,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kNavy,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x40000000),
+                    blurRadius: 18,
+                    offset: Offset(0, 10),
                   ),
                 ],
               ),
+              child: const Icon(
+                Icons.emoji_events_rounded,
+                color: _kGoldTrophy,
+                size: 84,
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 32,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kPeach,
+                ),
+                child: const Icon(
+                  Icons.star,
+                  color: AppTheme.brandInk,
+                  size: 24,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              bottom: 6,
+              child: Transform.rotate(
+                angle: -0.1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _kCoral,
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x2E000000),
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department,
+                        size: 14,
+                        color: AppTheme.brandCreamCard,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '7 DAY STREAK',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppTheme.brandCreamCard,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeatureCardsRow extends StatelessWidget {
+  const _FeatureCardsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: const [
+        Expanded(
+          child: _FeatureCard(
+            icon: Icons.military_tech_outlined,
+            label: 'Badge\nCollection',
+            bottomBorder: _kNavy,
+            circleColor: _kBadgeBg,
+            textColor: _kNavy,
+            iconColor: _kNavy,
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: _FeatureCard(
+            icon: Icons.card_giftcard_rounded,
+            label: 'Mystery\nPrizes',
+            bottomBorder: _kMysteryBorder,
+            circleColor: _kMysteryBg,
+            textColor: Color(0xFF5C4A2A),
+            iconColor: Color(0xFF6B4E1E),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  const _FeatureCard({
+    required this.icon,
+    required this.label,
+    required this.bottomBorder,
+    required this.circleColor,
+    required this.textColor,
+    required this.iconColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color bottomBorder;
+  final Color circleColor;
+  final Color textColor;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+      decoration: BoxDecoration(
+        color: AppTheme.brandCreamCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border(bottom: BorderSide(color: bottomBorder, width: 3)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandInk.withValues(alpha: 0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: circleColor,
+            ),
+            child: Icon(icon, size: 24, color: iconColor),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
+}
 
-  Widget _buildIllustration() {
-    return AnimatedBuilder(
-      animation: iconAnimation,
-      builder: (context, _) {
-        final scale = CurvedAnimation(
-          parent: iconAnimation,
-          curve: Curves.elasticOut,
-        ).value;
-        return Transform.scale(
-          scale: 0.8 + (scale * 0.2),
-          child: Container(
-            width: 180,
-            height: 260,
-            decoration: BoxDecoration(
-              color: AppTheme.brandBlue,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.brandBlue.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (data.showIllustration && data.illustrationType == 'rewards')
-                  _buildRewardsIllustration()
-                else
-                  _buildDefaultIllustration(),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+class _ScholarLevelCard extends StatelessWidget {
+  const _ScholarLevelCard();
 
-  Widget _buildDefaultIllustration() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.15),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: AppTheme.brandCreamCard,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandInk.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Icon(data.icon, size: 54, color: Colors.white),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRewardsIllustration() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Trophy icon at top
-        Padding(
-          padding: const EdgeInsets.only(top: 24),
-          child: Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFFA500),
-            ),
-            child: const Icon(
-              Icons.emoji_events_rounded,
-              size: 50,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        // Badge Collection & Mystery Prizes cards
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.card_giftcard_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Badge\nCollection',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.card_giftcard_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Mystery\nPrizes',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Scholar level indicator
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Scholar Level',
                 style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  color: AppTheme.brandInk,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Text(
+                'Level 4',
+                style: GoogleFonts.plusJakartaSans(
+                  color: _kNavy,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, c) {
+              return Stack(
                 children: [
-                  Text(
-                    'NOVICE',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                  Container(
+                    width: c.maxWidth,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8EAEF),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  Text(
-                    'Level 4',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      width: c.maxWidth * 0.6,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: _kGreen,
+                        borderRadius: BorderRadius.horizontal(
+                          left: Radius.circular(999),
+                        ),
+                      ),
                     ),
                   ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'NOVICE',
+                style: GoogleFonts.plusJakartaSans(
+                  color: AppTheme.brandInkSoft,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              Text(
+                'MASTER SCHOLAR',
+                style: GoogleFonts.plusJakartaSans(
+                  color: AppTheme.brandInkSoft,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Stepper ----------------------------------------------------------------
+
+class _IntroStepper extends StatelessWidget {
+  const _IntroStepper({required this.currentIndex, required this.onTap});
+
+  final int currentIndex;
+  final void Function(int index) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: const BoxDecoration(
+        color: AppTheme.brandCreamCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 8,
+            offset: Offset(0, -1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(3, (i) {
+          return _StepTile(
+            index: i,
+            active: i == currentIndex,
+            onTap: () => onTap(i),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _StepTile extends StatelessWidget {
+  const _StepTile({
+    required this.index,
+    required this.active,
+    required this.onTap,
+  });
+
+  final int index;
+  final bool active;
+  final VoidCallback onTap;
+
+  (IconData, String) get _spec {
+    switch (index) {
+      case 0:
+        return (Icons.star_rounded, 'INTRO');
+      case 1:
+        return (Icons.flag_rounded, 'GOAL');
+      case _:
+        return (Icons.play_arrow_rounded, 'START');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _spec;
+    if (active) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kNavy,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x2E1A36A5),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(s.$1, color: AppTheme.brandCreamCard, size: 22),
+                  const SizedBox(height: 2),
                   Text(
-                    'MASTER',
+                    s.$2,
                     style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                      color: AppTheme.brandCreamCard,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      );
+    }
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(s.$1, color: AppTheme.brandInkSoft, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            s.$2,
+            style: GoogleFonts.plusJakartaSans(
+              color: AppTheme.brandInkSoft,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              height: 1.0,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// --- CTA button -------------------------------------------------------------
 
 class _GlowingButton extends StatelessWidget {
   const _GlowingButton({
     required this.onTap,
     required this.label,
-    required this.bgColor,
-    this.showArrow = false,
+    this.showArrow = true,
   });
 
   final VoidCallback onTap;
   final String label;
-  final Color bgColor;
   final bool showArrow;
 
   @override
@@ -550,10 +1301,10 @@ class _GlowingButton extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          color: bgColor,
+          color: _kNavy,
           boxShadow: [
             BoxShadow(
-              color: bgColor.withValues(alpha: 0.3),
+              color: _kNavy.withValues(alpha: 0.28),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -574,7 +1325,7 @@ class _GlowingButton extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.brandCreamCard,
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                   if (showArrow) ...[
