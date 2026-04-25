@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
@@ -76,6 +77,10 @@ void main() {
       // `activeDbFileName` synchronously, so it must be set here.
       try {
         final prefs = await SharedPreferences.getInstance();
+        await PendingLocalSignupStore.cleanupStaleOnStartup(
+          prefs: prefs,
+          databasesPath: docsDir.path,
+        );
         final registry = DeviceRegistryDatabase(
           driftDatabase(name: 'device_registry'),
         );

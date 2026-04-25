@@ -16,6 +16,7 @@ void main() {
   setUp(() {
     mockRouter = MockStackRouter();
     when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
+    when(() => mockRouter.maybePop()).thenAnswer((_) async => true);
   });
 
   Widget createTestWidget() {
@@ -49,86 +50,59 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    testWidgets('starts at profile creation phase', (tester) async {
+    testWidgets('starts at combined new profile phase', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Profile creation shows name field and mode selector
-      expect(find.text("What's your name?"), findsOneWidget);
-      expect(find.text('Adult'), findsOneWidget);
-      expect(find.text('Child'), findsOneWidget);
+      expect(find.text('New Profile'), findsNothing);
+      expect(find.text('What should we call you?'), findsOneWidget);
+      expect(find.text('Child Mode'), findsOneWidget);
+      expect(find.text('Adult Mode'), findsOneWidget);
+      expect(find.text('Create Profile'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('Continue disabled with empty name', (tester) async {
+    testWidgets('Create Profile disabled with empty name', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
       final button = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Continue'),
+        find.widgetWithText(FilledButton, 'Create Profile'),
       );
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('child mode changes prompt text', (tester) async {
+    testWidgets('child mode shows ACTIVE on Child Mode card', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Switch to child mode
-      await tester.tap(find.text('Child'));
+      await tester.tap(find.text('Child Mode'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text("What is your child's name?"), findsOneWidget);
+      expect(find.text('ACTIVE'), findsOneWidget);
     });
 
-    testWidgets('resumes at language selection from saved state', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({
-        'onboarding_phase': 'languageSelection',
-        'onboarding_profile_id': 1,
-        'onboarding_profile_name': 'Test',
-        'onboarding_profile_mode': 'adult',
-        'onboarding_language': 'he',
-      });
+    testWidgets(
+      'legacy languageSelection save without profile maps to new profile UI',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          'onboarding_phase': 'languageSelection',
+          'onboarding_language': 'he',
+        });
 
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpWidget(createTestWidget());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
-      // Should show language selection
-      expect(
-        find.text('Choose your preferred language for content'),
-        findsOneWidget,
-      );
-      expect(
-        find.text('\u05E2\u05D1\u05E8\u05D9\u05EA (Hebrew with nikud)'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('language selection shows all supported languages', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({
-        'onboarding_phase': 'languageSelection',
-        'onboarding_profile_id': 1,
-        'onboarding_profile_name': 'Test',
-        'onboarding_profile_mode': 'adult',
-        'onboarding_language': 'he',
-      });
-
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.text('English'), findsOneWidget);
-      expect(find.text('Fran\u00E7ais'), findsOneWidget);
-    });
+        expect(find.text('New Profile'), findsNothing);
+        expect(find.text('English'), findsOneWidget);
+        expect(find.text('עברית'), findsOneWidget);
+      },
+    );
 
     testWidgets('childAwareText returns adult text in adult mode', (
       tester,

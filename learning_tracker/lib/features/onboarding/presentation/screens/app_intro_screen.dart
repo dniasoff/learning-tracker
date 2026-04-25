@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/constants/app_assets.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -156,7 +157,12 @@ class _IntroHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.menu_book_rounded, color: _kNavy, size: 24),
+              Image.asset(
+                kAppLogoAsset,
+                height: 28,
+                fit: BoxFit.contain,
+                semanticLabel: 'Learning Tracker',
+              ),
               const SizedBox(width: 8),
               Text(
                 'Learning Tracker',

@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
@@ -26,16 +27,13 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 @RoutePage()
 class SignupScreen extends ConsumerStatefulWidget {
-  const SignupScreen({
-    super.key,
-    this.prefilledName,
-    this.prefilledEmail,
-  });
+  const SignupScreen({super.key, this.prefilledName, this.prefilledEmail});
 
   /// Pre-fills the name field when returning from a connectivity
   /// wait flow with the same draft values.
@@ -43,8 +41,7 @@ class SignupScreen extends ConsumerStatefulWidget {
   final String? prefilledEmail;
 
   @override
-  ConsumerState<SignupScreen> createState() =>
-      _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
@@ -156,14 +153,56 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     String displayName,
   ) async {
     setState(() => _isLoading = true);
+    final normalized = email.trim().toLowerCase();
+    final accountId = const Uuid().v4();
+    final dbFileName = 'user_acc_$accountId.db';
+    var reservedEmail = false;
+    var switchedDb = false;
+
+    Future<void> recover(String databasesPath) async {
+      final prefs = await SharedPreferences.getInstance();
+      if (reservedEmail) {
+        await PendingLocalSignupStore.releaseEmail(prefs, normalized);
+      }
+      await PendingLocalSignupStore.clearPayload(prefs);
+      if (switchedDb) {
+        PendingLocalSignupStore.deleteOrphanDbFile(databasesPath, dbFileName);
+        activeDbFileName = 'learning_tracker';
+        ref.invalidate(userDatabaseProvider);
+      }
+    }
+
     try {
-      // Epic 21: swap to a fresh per-account DB before writing the
-      // local-born profile so each account's data lives in its own
-      // file and the registry entry points at the right DB.
-      final accountId = const Uuid().v4();
-      final dbFileName = 'user_acc_$accountId.db';
+      final registry = ref.read(deviceRegistryProvider);
+      if (await registry.findByEmail(normalized) != null) {
+        if (mounted) {
+          _showError(
+            'An account with this email already exists on this device. '
+            'Sign in instead.',
+          );
+        }
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final reserved = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        normalized,
+      );
+      if (!reserved) {
+        if (mounted) {
+          _showError(
+            'An offline signup for this email is already in progress. '
+            'Finish creating a profile or try again later.',
+          );
+        }
+        return;
+      }
+      reservedEmail = true;
+
       activeDbFileName = dbFileName;
       ref.invalidate(userDatabaseProvider);
+      switchedDb = true;
 
       final dao = ref.read(userDatabaseProvider).userProfileDao;
       final service = LocalAuthService(dao: dao);
@@ -174,34 +213,48 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         userMode: 'adult',
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      final session = SessionPersistenceService(
-        prefs: prefs,
-        registry: ref.read(deviceRegistryProvider),
-      );
-      await session.registerAccount(
-        accountId: accountId,
-        email: email,
-        displayName: displayName,
-        tier: 'localBorn',
-        dbFileName: dbFileName,
+      await PendingLocalSignupStore.writePayload(
+        prefs,
+        PendingLocalRegistration(
+          accountId: accountId,
+          dbFileName: dbFileName,
+          email: normalized,
+          displayName: displayName,
+        ),
       );
 
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
-      if (mounted) {
-        unawaited(context.router.push(const OnboardingRoute()));
-      }
+
+      if (!mounted) return;
+      final router = context.router;
+      final docs = await getApplicationDocumentsDirectory();
+      if (!mounted) return;
+      unawaited(
+        router.push(const OnboardingRoute()).then((_) async {
+          if (!mounted) return;
+          await PendingLocalSignupStore.rollbackIfIncomplete(
+            ref: ref,
+            databasesPath: docs.path,
+          );
+        }),
+      );
     } on DuplicateEmailException {
+      final docs = await getApplicationDocumentsDirectory();
+      await recover(docs.path);
       if (mounted) {
         _showError(
           'An offline account already exists on this device with that email.',
         );
       }
     } on InvalidInputException catch (e) {
+      final docs = await getApplicationDocumentsDirectory();
+      await recover(docs.path);
       if (mounted) _showError(e.reason);
     } catch (e) {
+      final docs = await getApplicationDocumentsDirectory();
+      await recover(docs.path);
       if (mounted) _showError('Signup failed: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -464,7 +517,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                                _buildAccountModeCard(theme: theme, isOnline: isOnline),
+                                _buildAccountModeCard(
+                                  theme: theme,
+                                  isOnline: isOnline,
+                                ),
                                 const SizedBox(height: 22),
                                 if (!isOnline) ...[
                                   Container(
@@ -722,7 +778,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         decoration: BoxDecoration(
           color: AppTheme.brandBlueBright.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.brandBlueBright.withValues(alpha: 0.35)),
+          border: Border.all(
+            color: AppTheme.brandBlueBright.withValues(alpha: 0.35),
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -750,12 +808,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           decoration: BoxDecoration(
             color: AppTheme.brandCoralSoft.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.brandCoralDeep.withValues(alpha: 0.55)),
+            border: Border.all(
+              color: AppTheme.brandCoralDeep.withValues(alpha: 0.55),
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.warning_amber_rounded, color: AppTheme.brandCoralDeep),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.brandCoralDeep,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

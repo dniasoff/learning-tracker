@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -63,18 +64,16 @@ const _kOnboardingProfileId = 'onboarding_profile_id';
 const _kOnboardingProfileName = 'onboarding_profile_name';
 const _kOnboardingProfileMode = 'onboarding_profile_mode';
 const _kOnboardingLanguage = 'onboarding_language';
+const _kOnboardingHebrewCalendar = 'onboarding_use_hebrew_calendar';
 
 /// Persistent flag — once set, onboarding is never shown again on this device.
 const kOnboardingComplete = 'onboarding_complete';
 
-/// Supported content languages.
-///
-/// Must stay in sync with `AppLocalizations.supportedLocales` and
-/// [supportedLanguages] in `language_provider.dart`.
-const _supportedLanguages = <String, String>{'he': 'עברית', 'en': 'English'};
-
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _selectedLanguage = 'en';
+
+  /// `true` = Hebrew calendar; `false` = Gregorian (matches UI labels).
+  bool _useHebrewCalendar = false;
   var _phase = _ScreenPhase.profileCreation;
 
   // Profile creation state
@@ -155,11 +154,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (profileName != null) _profileName = profileName;
     if (profileMode != null) _profileMode = profileMode;
     if (savedLanguage != null) _selectedLanguage = savedLanguage;
+    _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? false;
 
-    final phase = _ScreenPhase.values.where((p) => p.name == savedPhase);
     // If the user already advanced this session (e.g., tapped Continue
     // quickly), don't let a delayed restore overwrite the newer phase.
     if (!mounted || _phase != _ScreenPhase.profileCreation) return;
+
+    // Legacy: older builds created the profile row before language/calendar.
+    if (profileId != null &&
+        (savedPhase == 'languageSelection' ||
+            savedPhase == 'calendarPreference')) {
+      final resumeChildPin =
+          profileMode == 'child' && savedPhase == 'languageSelection';
+      setState(() {
+        _phase = resumeChildPin
+            ? _ScreenPhase.parentPinSetup
+            : _ScreenPhase.addTrack;
+      });
+      return;
+    }
+
+    // New flow: language/calendar are on the profile screen — remap saves.
+    if (profileId == null &&
+        (savedPhase == 'languageSelection' ||
+            savedPhase == 'calendarPreference')) {
+      setState(() => _phase = _ScreenPhase.profileCreation);
+      return;
+    }
+
+    final phase = _ScreenPhase.values.where((p) => p.name == savedPhase);
     if (phase.isNotEmpty) {
       setState(() => _phase = phase.first);
     }
@@ -176,6 +199,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     await prefs.setString(_kOnboardingProfileMode, _profileMode);
     await prefs.setString(_kOnboardingLanguage, _selectedLanguage);
+    await prefs.setBool(_kOnboardingHebrewCalendar, _useHebrewCalendar);
   }
 
   Future<void> _clearSavedState() async {
@@ -186,6 +210,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _kOnboardingProfileName,
       _kOnboardingProfileMode,
       _kOnboardingLanguage,
+      _kOnboardingHebrewCalendar,
     ]) {
       await prefs.remove(key);
     }
@@ -198,6 +223,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (name.isEmpty || _nameError != null || _isCreatingProfile) return;
     setState(() => _isCreatingProfile = true);
 
+    await ref
+        .read(appLocaleProvider.notifier)
+        .setLocale(Locale(_selectedLanguage));
+    await ref
+        .read(useHebrewDateProvider.notifier)
+        .setUseHebrewDate(_useHebrewCalendar);
+
     final repo = ref.read(profileRepositoryProvider);
     final ProfileModel profile;
     try {
@@ -205,6 +237,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         accountId: 1,
         displayName: name,
         mode: _profileMode,
+        avatarIndex: 0,
       );
     } on DuplicateProfileNameException {
       if (mounted) {
@@ -231,7 +264,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _profileName = name;
     ref.read(selectedProfileIdProvider.notifier).select(profile.id);
 
-    setState(() => _phase = _ScreenPhase.languageSelection);
+    await PendingLocalSignupStore.finalizeAfterFirstProfile(ref);
+
+    setState(
+      () => _phase = _isChildMode
+          ? _ScreenPhase.parentPinSetup
+          : _ScreenPhase.addTrack,
+    );
     await _saveState();
     if (mounted) {
       setState(() => _isCreatingProfile = false);
@@ -279,30 +318,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _firstPin = null;
       _isPinConfirmStep = false;
       _pinError = null;
-      _phase = _ScreenPhase.calendarPreference;
+      _phase = _ScreenPhase.addTrack;
     });
     await _saveState();
-  }
-
-  void _onLanguageSelected() {
-    unawaited(
-      ref.read(appLocaleProvider.notifier).setLocale(Locale(_selectedLanguage)),
-    );
-
-    // Child profiles get an extra step: the parent sets a 4-digit PIN that
-    // gates parental controls for this profile. Adult profiles skip straight
-    // to calendar preference.
-    final nextPhase = _isChildMode
-        ? _ScreenPhase.parentPinSetup
-        : _ScreenPhase.calendarPreference;
-    setState(() => _phase = nextPhase);
-    _saveState();
-  }
-
-  void _onCalendarPreferenceSet(bool useHebrew) {
-    ref.read(useHebrewDateProvider.notifier).setUseHebrewDate(useHebrew);
-    setState(() => _phase = _ScreenPhase.addTrack);
-    _saveState();
   }
 
   void _onAddTrackComplete(AddTrackResult result) {
@@ -313,8 +331,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _onAddTrackCancel() {
-    // Back from AddTrackFlow Stage 1 → return to language selection
-    setState(() => _phase = _ScreenPhase.languageSelection);
+    // If the learner row is not committed yet, return to the combined form.
+    if (_createdProfileId == null) {
+      setState(() => _phase = _ScreenPhase.profileCreation);
+      return;
+    }
+    // Profile + prefs already saved — cannot re-use the create form.
+    if (_isChildMode) {
+      setState(() => _phase = _ScreenPhase.handoff);
+    } else {
+      unawaited(_navigateToDashboard());
+    }
   }
 
   void _onAddAnotherTrack() {
@@ -336,6 +363,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _createdProfileId = null;
     _profileName = null;
     _profileMode = 'adult';
+    _useHebrewCalendar = false;
+    _selectedLanguage = 'en';
     _nameError = null;
     _trackCount = 0;
     _lastTrackLabel = null;
@@ -365,22 +394,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final isCombinedProfilePhase =
+        _phase == _ScreenPhase.profileCreation ||
+        _phase == _ScreenPhase.languageSelection ||
+        _phase == _ScreenPhase.calendarPreference;
+
     final appBarTitle = switch (_phase) {
-      _ScreenPhase.profileCreation => 'Add a Learner',
-      _ScreenPhase.parentPinSetup => 'Set Parent PIN',
-      _ScreenPhase.languageSelection => 'Choose Language',
-      _ScreenPhase.calendarPreference => 'Calendar',
-      _ScreenPhase.addTrack => 'Set Up a Track',
-      _ScreenPhase.addAnotherPrompt => 'Track Ready!',
-      _ScreenPhase.handoff => 'Setup Complete!',
-      _ScreenPhase.done => 'All Set!',
+      _ScreenPhase.profileCreation ||
+      _ScreenPhase.languageSelection ||
+      _ScreenPhase.calendarPreference => const SizedBox.shrink(),
+      _ScreenPhase.parentPinSetup => const AppBarTitle(text: 'Set Parent PIN'),
+      _ScreenPhase.addTrack => const AppBarTitle(text: 'Set Up a Track'),
+      _ScreenPhase.addAnotherPrompt => const AppBarTitle(text: 'Track Ready!'),
+      _ScreenPhase.handoff => const AppBarTitle(text: 'Setup Complete!'),
+      _ScreenPhase.done => const AppBarTitle(text: 'All Set!'),
     };
 
-    // Hide app bar during AddTrackFlow (it has its own progress indicator)
-    final showAppBar = _phase != _ScreenPhase.addTrack;
+    // Hide app bar during AddTrackFlow (it has its own progress indicator).
+    // Combined profile step has no app bar (back lives in the scroll content).
+    final showAppBar =
+        _phase != _ScreenPhase.addTrack && !isCombinedProfilePhase;
 
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: AppBarTitle(text: appBarTitle)) : null,
+      appBar: showAppBar ? AppBar(title: appBarTitle) : null,
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -397,8 +433,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: switch (_phase) {
             _ScreenPhase.profileCreation => _buildProfileCreation(theme),
             _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
-            _ScreenPhase.languageSelection => _buildLanguageSelection(theme),
-            _ScreenPhase.calendarPreference => _buildCalendarPreference(theme),
+            _ScreenPhase.languageSelection => _buildProfileCreation(theme),
+            _ScreenPhase.calendarPreference => _buildProfileCreation(theme),
             _ScreenPhase.addTrack => _buildAddTrack(),
             _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),
             _ScreenPhase.handoff => _buildHandoff(theme),
@@ -410,66 +446,349 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildProfileCreation(ThemeData theme) {
-    final prompt = _profileMode == 'child'
-        ? "What is your child's name?"
-        : "What's your name?";
+    const cardRadius = 20.0;
+    const prefsBg = Color(0xFFF0F1F6);
+
+    Widget pillPair({
+      required String leftLabel,
+      required String rightLabel,
+      required bool leftSelected,
+      required VoidCallback onLeft,
+      required VoidCallback onRight,
+    }) {
+      Widget pill(String label, bool selected, VoidCallback onTap) {
+        return Expanded(
+          child: Material(
+            color: selected ? Colors.white : const Color(0xFFE4E7EF),
+            borderRadius: BorderRadius.circular(22),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(22),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.brandInk,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE4E7EF),
+          borderRadius: BorderRadius.circular(26),
+        ),
+        child: Row(
+          children: [
+            pill(leftLabel, leftSelected, onLeft),
+            const SizedBox(width: 4),
+            pill(rightLabel, !leftSelected, onRight),
+          ],
+        ),
+      );
+    }
+
+    Widget modeCard({
+      required bool isChild,
+      required IconData icon,
+      required Color iconBgMuted,
+      required String title,
+      required String subtitle,
+    }) {
+      final selected = _profileMode == (isChild ? 'child' : 'adult');
+      final iconColor = selected ? AppTheme.brandBlue : AppTheme.brandInkMuted;
+      final circleBg = selected
+          ? AppTheme.brandBlueSoft.withValues(alpha: 0.85)
+          : iconBgMuted;
+      return Expanded(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(cardRadius),
+              elevation: selected ? 0 : 1,
+              shadowColor: Colors.black26,
+              child: InkWell(
+                onTap: () =>
+                    setState(() => _profileMode = isChild ? 'child' : 'adult'),
+                borderRadius: BorderRadius.circular(cardRadius),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 18, 12, 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(cardRadius),
+                    border: Border.all(
+                      color: selected ? AppTheme.brandBlue : Colors.transparent,
+                      width: selected ? 2.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 26,
+                        backgroundColor: circleBg,
+                        child: Icon(icon, color: iconColor, size: 28),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: selected
+                              ? AppTheme.brandBlue
+                              : AppTheme.brandInk,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (selected)
+              Positioned(
+                top: -6,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD14A4A),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'ACTIVE',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
 
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  prompt,
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'What should we call you?',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 22,
+                height: 1.25,
+                color: AppTheme.brandInk,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                hintText: 'Enter name',
+                filled: true,
+                fillColor: Colors.white,
+                errorText: _nameError,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFFC8CCD8)),
                 ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: const OutlineInputBorder(),
-                    errorText: _nameError,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFFC8CCD8)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(
+                    color: AppTheme.brandBlue,
+                    width: 1.5,
                   ),
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 24),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'adult', label: Text('Adult')),
-                    ButtonSegment(value: 'child', label: Text('Child')),
-                  ],
-                  selected: {_profileMode},
-                  onSelectionChanged: (value) {
-                    setState(() => _profileMode = value.first);
-                  },
+                suffixIcon: const Icon(
+                  Icons.edit_outlined,
+                  color: AppTheme.brandBlue,
                 ),
-                const Spacer(),
-                FilledButton(
-                  onPressed:
-                      _nameController.text.trim().isNotEmpty &&
-                          _nameError == null &&
-                          !_isCreatingProfile
-                      ? _createProfile
-                      : null,
-                  child: _isCreatingProfile
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Continue'),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              textCapitalization: TextCapitalization.words,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              'Learning Experience',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                height: 1.25,
+                color: AppTheme.brandInk,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                modeCard(
+                  isChild: true,
+                  icon: Icons.rocket_launch_rounded,
+                  iconBgMuted: const Color(0xFFE8E0FF),
+                  title: 'Child Mode',
+                  subtitle: 'Fun & Rewards',
+                ),
+                const SizedBox(width: 12),
+                modeCard(
+                  isChild: false,
+                  icon: Icons.menu_book_rounded,
+                  iconBgMuted: const Color(0xFFE4E7EF),
+                  title: 'Adult Mode',
+                  subtitle: 'Deep & Scholarly',
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 22),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: prefsBg,
+                borderRadius: BorderRadius.circular(cardRadius),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 22,
+                        color: AppTheme.brandInk,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Preferred Calendar',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.brandInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  pillPair(
+                    leftLabel: 'Gregorian',
+                    rightLabel: 'Hebrew',
+                    leftSelected: !_useHebrewCalendar,
+                    onLeft: () => setState(() => _useHebrewCalendar = false),
+                    onRight: () => setState(() => _useHebrewCalendar = true),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.language_rounded,
+                        size: 22,
+                        color: AppTheme.brandInk,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'App Language',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.brandInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  pillPair(
+                    leftLabel: 'English',
+                    rightLabel: 'עברית',
+                    leftSelected: _selectedLanguage == 'en',
+                    onLeft: () => setState(() => _selectedLanguage = 'en'),
+                    onRight: () => setState(() => _selectedLanguage = 'he'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.brandBlue,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const StadiumBorder(),
+                elevation: 3,
+                shadowColor: AppTheme.brandBlue.withValues(alpha: 0.35),
+              ),
+              onPressed:
+                  _nameController.text.trim().isNotEmpty &&
+                      _nameError == null &&
+                      !_isCreatingProfile
+                  ? _createProfile
+                  : null,
+              child: _isCreatingProfile
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Create Profile',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You can change these settings anytime later.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppTheme.brandInkMuted,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -511,144 +830,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageSelection(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text(
-            'Choose your preferred language for content',
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'You can change this later in Settings.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _supportedLanguages.length,
-            itemBuilder: (context, index) {
-              final entry = _supportedLanguages.entries.elementAt(index);
-              final isSelected = _selectedLanguage == entry.key;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Card(
-                  elevation: isSelected ? 3 : 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.outline.withValues(alpha: 0.3),
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: InkWell(
-                    onTap: () => setState(() => _selectedLanguage = entry.key),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              entry.value,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: isSelected ? FontWeight.bold : null,
-                                color: isSelected
-                                    ? theme.colorScheme.primary
-                                    : null,
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            Icon(
-                              Icons.check_circle,
-                              color: theme.colorScheme.primary,
-                            )
-                          else
-                            Icon(
-                              Icons.circle_outlined,
-                              color: theme.colorScheme.outline.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: FilledButton(
-            onPressed: _onLanguageSelected,
-            child: const Text('Continue'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCalendarPreference(ThemeData theme) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Which calendar do you prefer?',
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This applies to dates throughout the app. You can change it later in Settings.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            FilledButton.icon(
-              onPressed: () => _onCalendarPreferenceSet(true),
-              icon: const Icon(Icons.calendar_month),
-              label: const Text('Hebrew Calendar'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => _onCalendarPreferenceSet(false),
-              icon: const Icon(Icons.calendar_today),
-              label: const Text('Gregorian Calendar'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-          ],
         ),
       ),
     );
