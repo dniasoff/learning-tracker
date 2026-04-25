@@ -21,6 +21,12 @@ const _kMysteryBorder = Color(0xFFC9A86A);
 const _kBadgeBg = Color(0xFFE8ECFF);
 const _kMysteryBg = Color(0xFFFFF3E0);
 
+/// End padding so scroll content clears the overlaid bottom CTA (not in Column flex).
+const _kIntroScrollCtaSpacer = 100.0;
+
+/// Overlaid CTA: bottom padding + 48px button (matches `_GlowingButton` height) + small gap.
+const _kIntroCtaOverlayReserve = 64.0;
+
 @RoutePage()
 class AppIntroScreen extends StatefulWidget {
   const AppIntroScreen({super.key});
@@ -65,15 +71,6 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       ..forward();
   }
 
-  void _goToPage(int index) {
-    if (index == _currentPage) return;
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
   void _nextPage() {
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
@@ -101,33 +98,41 @@ class _AppIntroScreenState extends State<AppIntroScreen>
 
     return Scaffold(
       backgroundColor: _kBg,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
-        child: Column(
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
           children: [
-            _IntroHeader(onSkip: _skip),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: _onPageChanged,
-                itemCount: _pages.length,
-                itemBuilder: (context, index) {
-                  return _IntroPage(
-                    data: _pages[index],
-                    iconAnimation: _iconController,
-                  );
-                },
+            Positioned.fill(
+              child: Column(
+                children: [
+                  _IntroHeader(onSkip: _skip),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: _onPageChanged,
+                      itemCount: _pages.length,
+                      itemBuilder: (context, index) {
+                        return _IntroPage(
+                          data: _pages[index],
+                          iconAnimation: _iconController,
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 8,
               child: _GlowingButton(
                 onTap: _nextPage,
                 label: isLast ? 'Get Started' : 'Continue Journey',
                 showArrow: true,
               ),
             ),
-            _IntroStepper(currentIndex: _currentPage, onTap: _goToPage),
-            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -145,7 +150,7 @@ class _IntroHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -214,10 +219,66 @@ class _IntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.variant == _IntroPageVariant.dailyPlan) {
+      return _buildDailyPlanBottomAnchored();
+    }
+    return _buildScrolledPage();
+  }
+
+  /// First intro: taller hero zone, then copy + bar; scrolls on very short viewports.
+  Widget _buildDailyPlanBottomAnchored() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: LayoutBuilder(
+        builder: (context, c) {
+          // Reserve a generous vertical band for the task-card (scale-to-fit via FittedBox).
+          const minHero = 220.0;
+          const maxHero = 320.0;
+          final heroH = (c.maxHeight * 0.55).clamp(minHero, maxHero);
+          return SingleChildScrollView(
+            clipBehavior: Clip.hardEdge,
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: c.maxHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: heroH,
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: _buildHero(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTitleBlock(),
+                  const SizedBox(height: 10),
+                  _buildSubtitleBlock(),
+                  const SizedBox(height: 12),
+                  _buildProgressArea(),
+                  const SizedBox(height: _kIntroCtaOverlayReserve),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Pages 2 & 3: full-page scroll.
+  Widget _buildScrolledPage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        clipBehavior: Clip.hardEdge,
         slivers: [
           SliverToBoxAdapter(
             child: Column(
@@ -233,6 +294,9 @@ class _IntroPage extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
             ),
+          ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: _kIntroScrollCtaSpacer),
           ),
         ],
       ),
@@ -268,7 +332,7 @@ class _IntroPage extends StatelessWidget {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
           TextSpan(
-            style: _headStyle,
+            style: _headStyle.copyWith(fontSize: 28, height: 1.1),
             children: const [
               TextSpan(text: 'Your Daily\n'),
               TextSpan(
@@ -320,7 +384,7 @@ class _IntroPage extends StatelessWidget {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
           TextSpan(
-            style: _subStyle,
+            style: _subStyle.copyWith(fontSize: 14, height: 1.45),
             children: const [
               TextSpan(text: 'Learning Tracker turns massive goals into '),
               TextSpan(
@@ -489,36 +553,39 @@ class _IntroDailyPlanIllustration extends StatelessWidget {
         ).value.clamp(0.85, 1.0);
         return Transform.scale(scale: scale, child: child);
       },
-      child: SizedBox(
-        height: 220,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Positioned(
-              left: 8,
-              top: 0,
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _kPeach,
-                ),
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            left: 4,
+            top: 0,
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kPeach,
               ),
             ),
-            Center(
+          ),
+          // Card Column is ~180+ px intrinsic; FittedBox scales to fit the Stack
+          // (prevents ~30px RenderFlex overflow in tight maxHeight).
+          Center(
+            child: FittedBox(
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
               child: Container(
-                width: 260,
-                padding: const EdgeInsets.all(14),
+                width: 248,
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 decoration: BoxDecoration(
                   color: AppTheme.brandCreamCard,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
                       color: _kNavy.withValues(alpha: 0.12),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -538,44 +605,40 @@ class _IntroDailyPlanIllustration extends StatelessWidget {
                         const Spacer(),
                         const Icon(
                           Icons.calendar_today_outlined,
-                          size: 18,
+                          size: 14,
                           color: AppTheme.brandInkMuted,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 6),
                     _dailyListRow1Checked(),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     _dailyListRow2Highlight(),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     _dailyListRowEmpty(filled: true),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     _dailyListRowEmpty(filled: false),
                   ],
                 ),
               ),
             ),
-            Positioned(
-              right: 4,
-              bottom: 8,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _kNavy,
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.auto_awesome,
-                    color: _kGoldTrophy,
-                    size: 20,
-                  ),
-                ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kNavy,
+              ),
+              child: const Center(
+                child: Icon(Icons.auto_awesome, color: _kGoldTrophy, size: 16),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -583,7 +646,7 @@ class _IntroDailyPlanIllustration extends StatelessWidget {
 
 Widget _dailyListRow1Checked() {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
       color: const Color(0xFFF0F1F4),
       borderRadius: BorderRadius.circular(999),
@@ -620,7 +683,7 @@ Widget _dailyListRow1Checked() {
 
 Widget _dailyListRow2Highlight() {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
       color: _kNavy,
       borderRadius: BorderRadius.circular(999),
@@ -660,7 +723,7 @@ Widget _dailyListRow2Highlight() {
 
 Widget _dailyListRowEmpty({required bool filled}) {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
       color: const Color(0xFFF0F1F4),
       borderRadius: BorderRadius.circular(999),
@@ -1152,134 +1215,6 @@ class _ScholarLevelCard extends StatelessWidget {
   }
 }
 
-// --- Stepper ----------------------------------------------------------------
-
-class _IntroStepper extends StatelessWidget {
-  const _IntroStepper({required this.currentIndex, required this.onTap});
-
-  final int currentIndex;
-  final void Function(int index) onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: const BoxDecoration(
-        color: AppTheme.brandCreamCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 8,
-            offset: Offset(0, -1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(3, (i) {
-          return _StepTile(
-            index: i,
-            active: i == currentIndex,
-            onTap: () => onTap(i),
-          );
-        }),
-      ),
-    );
-  }
-}
-
-class _StepTile extends StatelessWidget {
-  const _StepTile({
-    required this.index,
-    required this.active,
-    required this.onTap,
-  });
-
-  final int index;
-  final bool active;
-  final VoidCallback onTap;
-
-  (IconData, String) get _spec {
-    switch (index) {
-      case 0:
-        return (Icons.star_rounded, 'INTRO');
-      case 1:
-        return (Icons.flag_rounded, 'GOAL');
-      case _:
-        return (Icons.play_arrow_rounded, 'START');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = _spec;
-    if (active) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: _kNavy,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x2E1A36A5),
-                    blurRadius: 8,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(s.$1, color: AppTheme.brandCreamCard, size: 22),
-                  const SizedBox(height: 2),
-                  Text(
-                    s.$2,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.brandCreamCard,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(s.$1, color: AppTheme.brandInkSoft, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            s.$2,
-            style: GoogleFonts.plusJakartaSans(
-              color: AppTheme.brandInkSoft,
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              height: 1.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // --- CTA button -------------------------------------------------------------
 
 class _GlowingButton extends StatelessWidget {
@@ -1297,46 +1232,55 @@ class _GlowingButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 56,
-      child: Container(
+      height: 48,
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(24),
           color: _kNavy,
           boxShadow: [
             BoxShadow(
               color: _kNavy.withValues(alpha: 0.28),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Material(
-          color: AppTheme.transparent,
+          type: MaterialType.transparency,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
             child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.brandCreamCard,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppTheme.brandCreamCard,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (showArrow) ...[
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: AppTheme.brandCreamCard,
+                          size: 20,
+                        ),
+                      ],
+                    ],
                   ),
-                  if (showArrow) ...[
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.arrow_forward_rounded,
-                      color: AppTheme.brandCreamCard,
-                      size: 20,
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
