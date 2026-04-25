@@ -155,12 +155,60 @@ class UpgradeToCloudService {
     return (await _dao.getUserProfileById(profile.id))!;
   }
 
+  /// Completes a pending local→cloud upgrade after the user verified email
+  /// out-of-band (e.g. inbox link opened the app on Sign-In).
+  ///
+  /// Signs into Firebase with the same [password] used for the local account.
+  /// If Firebase has no account, credentials are wrong, or email is still
+  /// unverified, signs out of Firebase and returns `null`. On success the
+  /// local [UserProfile] row is flipped to [cloudBorn], the registry tier is
+  /// updated when [registry]/[accountId] are set, and the Firebase session
+  /// remains active for sync.
+  Future<UserProfile?> tryFinalizeVerifiedCloudUpgrade({
+    required UserProfile localProfile,
+    required String password,
+  }) async {
+    if (localProfile.tier != UserTier.localBorn.dbValue) return null;
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: localProfile.email,
+        password: password,
+      );
+      await credential.user?.reload();
+      final refreshed = _auth.currentUser;
+      if (refreshed == null || !refreshed.emailVerified) {
+        await _auth.signOut();
+        return null;
+      }
+      await _dao.upgradeLocalToCloud(
+        profileId: localProfile.id,
+        firebaseUid: refreshed.uid,
+        updatedAt: DateTime.now().toUtc(),
+      );
+
+      if (registry != null && accountId != null) {
+        await registry!.updateAccountTier(
+          accountId!,
+          'cloudBorn',
+          firebaseUid: refreshed.uid,
+        );
+      }
+
+      return (await _dao.getUserProfileById(localProfile.id))!;
+    } on FirebaseAuthException {
+      await _auth.signOut();
+      return null;
+    }
+  }
+
   Future<void> resendUpgradeVerification({
     required UserProfile profile,
     required String password,
   }) async {
     if (profile.tier != UserTier.localBorn.dbValue) {
-      throw StateError('resendUpgradeVerification() requires local-born profile');
+      throw StateError(
+        'resendUpgradeVerification() requires local-born profile',
+      );
     }
     final hash = profile.passwordHash;
     if (hash == null || !await _hasher.verify(password, hash)) {

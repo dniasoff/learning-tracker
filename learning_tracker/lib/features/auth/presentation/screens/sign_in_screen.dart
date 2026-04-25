@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
@@ -51,6 +52,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _keepSignedIn = true;
+
   /// Set when the email matches a device-registry account (shown under field).
   String? _registryFoundHint;
   _RegistryMatchKind _registryMatchKind = _RegistryMatchKind.none;
@@ -233,6 +235,33 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           registry: registry,
         );
         await session.setActiveAccount(account.accountId);
+
+        // Upgrade-to-cloud: user may have created + verified Firebase from
+        // Settings while the local row is still localBorn. Finish the flip
+        // and push local data without making them run Upgrade again.
+        final isOnline = await InternetConnectionChecker.instance.hasConnection;
+        if (isOnline && mounted) {
+          final upgradeSvc = UpgradeToCloudService(
+            dao: dao,
+            firebaseAuth: ref.read(firebaseAuthProvider),
+            registry: registry,
+            accountId: account.accountId,
+          );
+          final finalized = await upgradeSvc.tryFinalizeVerifiedCloudUpgrade(
+            localProfile: profile,
+            password: password,
+          );
+          if (finalized != null && mounted) {
+            ref.invalidate(syncEngineProvider);
+            final syncEngine = ref.read(syncEngineProvider);
+            if (syncEngine != null) {
+              await syncEngine.pushAllLocalData();
+              await syncEngine.pullOnLaunch();
+            }
+            if (mounted) await _navigateAfterSignIn();
+            return;
+          }
+        }
 
         ref
             .read(auth_state.authStateProvider.notifier)
