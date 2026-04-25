@@ -1011,14 +1011,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 18),
-                                OutlinedButton.icon(
-                                  onPressed: _isLoading
-                                      ? null
-                                      : _signInWithGoogle,
-                                  icon: const Icon(Icons.g_mobiledata_rounded),
-                                  label: const Text('Sign in with Google'),
-                                ),
-                                const SizedBox(height: 20),
+                                if (isOnline)
+                                  OutlinedButton.icon(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _signInWithGoogle,
+                                    icon: const Icon(Icons.g_mobiledata_rounded),
+                                    label: const Text('Sign in with Google'),
+                                  ),
+                                if (isOnline) const SizedBox(height: 20),
                                 Center(
                                   child: RichText(
                                     text: TextSpan(
