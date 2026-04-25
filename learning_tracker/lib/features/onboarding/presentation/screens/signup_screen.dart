@@ -466,64 +466,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                 const SizedBox(height: 16),
                                 _buildAccountModeCard(theme: theme, isOnline: isOnline),
                                 const SizedBox(height: 22),
-                                if (isOnline) ...[
-                                  OutlinedButton(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : _signUpWithGoogle,
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.brandInk,
-                                      side: const BorderSide(
-                                        color: Color(0xFFC8CCD8),
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(28),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 14,
-                                      ),
-                                    ),
-                                    child: const FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.g_mobiledata_rounded),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Sign Up with Google',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 18),
-                                  Row(
-                                    children: [
-                                      const Expanded(child: Divider()),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                        ),
-                                        child: Text(
-                                          'OR',
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
-                                                color: AppTheme.brandInkMuted,
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: 0.8,
-                                              ),
-                                        ),
-                                      ),
-                                      const Expanded(child: Divider()),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 18),
-                                ],
                                 if (!isOnline) ...[
                                   Container(
                                     padding: const EdgeInsets.all(12),
@@ -654,6 +596,64 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                     ),
                                   ),
                                 ),
+                                if (isOnline) ...[
+                                  const SizedBox(height: 18),
+                                  Row(
+                                    children: [
+                                      const Expanded(child: Divider()),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                        ),
+                                        child: Text(
+                                          'OR',
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: AppTheme.brandInkMuted,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.8,
+                                              ),
+                                        ),
+                                      ),
+                                      const Expanded(child: Divider()),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+                                  OutlinedButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _signUpWithGoogle,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.brandInk,
+                                      side: const BorderSide(
+                                        color: Color(0xFFC8CCD8),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.g_mobiledata_rounded),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Sign Up with Google',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 18),
                                 Center(
                                   child: RichText(
@@ -691,17 +691,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 26),
-                  const SizedBox(height: 8),
-                  Text(
-                    '© 2024 MITZVAH QUEST • THE LEARNING PLAYGROUND',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      letterSpacing: 2,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

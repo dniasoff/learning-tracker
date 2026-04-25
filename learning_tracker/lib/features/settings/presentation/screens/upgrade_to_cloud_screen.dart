@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/auth/presentation/widgets/email_verification_confirm_panel.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Local → cloud upgrade flow entry screen (Epic 20 v2 §4.3).
@@ -122,8 +123,8 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
         setState(() {
           _verificationRequired = true;
           _error =
-              'Verify your email first. We sent a confirmation link to your '
-              'inbox. After verifying, tap "I verified — complete upgrade".';
+              'We sent a confirmation link to your inbox. After you verify, '
+              'tap "I\'ve verified — complete upgrade" below.';
         });
       }
     } on UpgradePasswordMismatchException {
@@ -275,8 +276,8 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
           _verificationRequired = true;
           _collision = false;
           _error =
-              'This cloud account is not verified yet. Verify your email, '
-              'then complete the upgrade.';
+              'This cloud account is not verified yet. Check your inbox, '
+              'then tap "I\'ve verified — complete upgrade" below.';
         });
       }
     } on FirebaseAuthException catch (e) {
@@ -329,8 +330,11 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                   _SuccessBlock(theme: theme)
                 else if (_verificationRequired)
                   _VerificationRequiredBlock(
-                    theme: theme,
-                    error: _error,
+                    email: authState.currentUser?.email,
+                    bodyText:
+                        _error ??
+                        'We sent a confirmation link to your inbox. '
+                            'Open it, then tap the button below to finish upgrading.',
                     isLoading: _isLoading,
                     onIVerified: _submit,
                     onResend: _resendVerification,
@@ -582,16 +586,16 @@ class _CollisionBlock extends StatelessWidget {
 
 class _VerificationRequiredBlock extends StatelessWidget {
   const _VerificationRequiredBlock({
-    required this.theme,
-    required this.error,
+    required this.email,
+    required this.bodyText,
     required this.isLoading,
     required this.onIVerified,
     required this.onResend,
     required this.onCancel,
   });
 
-  final ThemeData theme;
-  final String? error;
+  final String? email;
+  final String bodyText;
   final bool isLoading;
   final Future<void> Function() onIVerified;
   final Future<void> Function() onResend;
@@ -599,55 +603,16 @@ class _VerificationRequiredBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.mark_email_unread, color: theme.colorScheme.tertiary),
-              const SizedBox(width: 8),
-              Text(
-                'Email verification required',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            error ??
-                'Open the verification link we sent to your email, then tap '
-                    '"I verified — complete upgrade".',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: isLoading ? null : onIVerified,
-            child: isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('I verified — complete upgrade'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: isLoading ? null : onResend,
-            child: const Text('Resend verification email'),
-          ),
-          TextButton(
-            onPressed: isLoading ? null : onCancel,
-            child: const Text('Cancel — keep offline account'),
-          ),
-        ],
+    return SizedBox(
+      width: double.infinity,
+      child: EmailVerificationConfirmPanel(
+        email: email,
+        bodyText: bodyText,
+        verifiedLinkLabel: "I've verified — complete upgrade",
+        actionsLocked: isLoading,
+        onSendAgain: onResend,
+        onCancel: onCancel,
+        onVerified: onIVerified,
       ),
     );
   }

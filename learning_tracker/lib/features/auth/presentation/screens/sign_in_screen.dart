@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_provi
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
     as auth_state;
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/auth/presentation/widgets/email_verification_confirm_panel.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
@@ -39,6 +40,10 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 enum _SignInModeHint { cloud, cloudOffline, local, unknown }
 
+/// Registry lookup result for the debounced email field. Connectivity is
+/// applied in [build] via [ref.watch] so header cards track online/offline.
+enum _RegistryMatchKind { none, localBorn, cloudBorn, notOnDevice }
+
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -46,8 +51,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _keepSignedIn = true;
-  String? _registryHint;
-  _SignInModeHint _signInModeHint = _SignInModeHint.unknown;
+  /// Set when the email matches a device-registry account (shown under field).
+  String? _registryFoundHint;
+  _RegistryMatchKind _registryMatchKind = _RegistryMatchKind.none;
   Timer? _emailDebounce;
 
   @override
@@ -65,15 +71,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     _emailDebounce = Timer(const Duration(milliseconds: 300), () async {
       final normalized = email.trim().toLowerCase();
       if (normalized.length < 5) {
-        if (_registryHint != null) {
-          final isOnline = ref
-              .read(connectivityStreamProvider)
-              .maybeWhen(data: (v) => v, orElse: () => true);
+        if (_registryMatchKind != _RegistryMatchKind.none ||
+            _registryFoundHint != null) {
           setState(() {
-            _registryHint = null;
-            _signInModeHint = isOnline
-                ? _SignInModeHint.cloud
-                : _SignInModeHint.local;
+            _registryFoundHint = null;
+            _registryMatchKind = _RegistryMatchKind.none;
           });
         }
         return;
@@ -81,27 +83,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
       final registry = ref.read(deviceRegistryProvider);
       final account = await registry.findByEmail(normalized);
-      final isOnline = ref
-          .read(connectivityStreamProvider)
-          .maybeWhen(data: (v) => v, orElse: () => true);
 
       if (!mounted) return;
       setState(() {
         if (account != null) {
           final tierLabel = account.tier == 'cloudBorn' ? 'Cloud' : 'Local';
-          _registryHint = 'Found on this device ($tierLabel)';
-          _signInModeHint = account.tier == 'localBorn'
-              ? _SignInModeHint.local
-              : (isOnline
-                    ? _SignInModeHint.cloud
-                    : _SignInModeHint.cloudOffline);
-        } else if (isOnline) {
-          _registryHint = "Not on this device \u2014 we'll check the cloud";
-          _signInModeHint = _SignInModeHint.cloud;
+          _registryFoundHint = 'Found on this device ($tierLabel)';
+          _registryMatchKind = account.tier == 'localBorn'
+              ? _RegistryMatchKind.localBorn
+              : _RegistryMatchKind.cloudBorn;
         } else {
-          _registryHint =
-              'Not on this device (offline \u2014 only device accounts available)';
-          _signInModeHint = _SignInModeHint.local;
+          _registryFoundHint = null;
+          _registryMatchKind = _RegistryMatchKind.notOnDevice;
         }
       });
     });
@@ -400,94 +393,51 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
+      barrierColor: Colors.black54,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Verify your email'),
-          content: Text(
-            'This cloud account is not verified yet.\n\n'
-            'We sent a verification link to $email. '
-            'Open it, then tap "I verified".',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Not now'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  await ref
-                      .read(authRepositoryProvider)
-                      .sendEmailVerification();
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Verification email sent again.'),
-                    ),
-                  );
-                } on FirebaseAuthException catch (e) {
-                  if (!mounted) return;
-                  _showError(_mapAuthError(e.code));
-                }
-              },
-              child: const Text('Resend'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final verified =
-                    await _tryApplyPendingVerificationCode() ||
-                    await _refreshAndCheckVerified() ||
-                    await _waitForVerified(maxAttempts: 2);
-                if (verified) {
-                  if (dialogContext.mounted) {
-                    Navigator.of(dialogContext).pop(true);
-                  }
-                  return;
-                }
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: EmailVerificationConfirmPanel(
+            email: email,
+            bodyText:
+                'We sent a verification link to your inbox. '
+                'Please check your email to continue.',
+            verifiedLinkLabel: "I've verified",
+            onSendAgain: () async {
+              try {
+                await ref.read(authRepositoryProvider).sendEmailVerification();
                 if (!mounted) return;
-                _showError(
-                  'Email is still unverified. Check your inbox first.',
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Verification email sent again.'),
+                  ),
                 );
-              },
-              child: const Text('I verified'),
-            ),
-          ],
+              } on FirebaseAuthException catch (e) {
+                if (!mounted) return;
+                _showError(_mapAuthError(e.code));
+              }
+            },
+            onCancel: () => Navigator.of(dialogContext).pop(false),
+            onVerified: () async {
+              final verified =
+                  await _tryApplyPendingVerificationCode() ||
+                  await _refreshAndCheckVerified() ||
+                  await _waitForVerified(maxAttempts: 2);
+              if (verified) {
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop(true);
+                }
+                return;
+              }
+              if (!mounted) return;
+              _showError('Email is still unverified. Check your inbox first.');
+            },
+          ),
         );
       },
     );
     return result ?? false;
-  }
-
-  Future<void> _sendPasswordReset() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      _showError('Please enter your email address first.');
-      return;
-    }
-    final emailError = validators.validateEmail(email);
-    if (emailError != null) {
-      _showError(emailError);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.sendPasswordResetEmail(email);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset email sent. Check your inbox.'),
-          ),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showError(_mapAuthError(e.code));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   Future<void> _signInWithGoogle() async {
@@ -709,13 +659,30 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     if (_emailController.text.trim().isEmpty) {
       return isOnline ? _SignInModeHint.cloud : _SignInModeHint.local;
     }
-    if (!isOnline && _signInModeHint == _SignInModeHint.cloud) {
-      return _SignInModeHint.cloudOffline;
+    switch (_registryMatchKind) {
+      case _RegistryMatchKind.none:
+        return isOnline ? _SignInModeHint.cloud : _SignInModeHint.local;
+      case _RegistryMatchKind.localBorn:
+        return _SignInModeHint.local;
+      case _RegistryMatchKind.cloudBorn:
+        return isOnline ? _SignInModeHint.cloud : _SignInModeHint.cloudOffline;
+      case _RegistryMatchKind.notOnDevice:
+        return isOnline ? _SignInModeHint.cloud : _SignInModeHint.local;
     }
-    if (_signInModeHint == _SignInModeHint.unknown) {
-      return isOnline ? _SignInModeHint.cloud : _SignInModeHint.local;
+  }
+
+  String? _registrySubtitle({required bool isOnline}) {
+    switch (_registryMatchKind) {
+      case _RegistryMatchKind.none:
+        return null;
+      case _RegistryMatchKind.localBorn:
+      case _RegistryMatchKind.cloudBorn:
+        return _registryFoundHint;
+      case _RegistryMatchKind.notOnDevice:
+        return isOnline
+            ? "Not on this device \u2014 we'll check the cloud"
+            : 'Not on this device (offline \u2014 only device accounts available)';
     }
-    return _signInModeHint;
   }
 
   Widget _buildSignInModeCard({
@@ -763,7 +730,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.cloud_off_rounded, color: AppTheme.brandCoralDeep),
+              const Icon(
+                Icons.cloud_off_rounded,
+                color: AppTheme.brandCoralDeep,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -852,6 +822,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final connectivity = ref.watch(connectivityStreamProvider);
     final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
     final signInMode = _effectiveSignInMode(isOnline: isOnline);
+    final registrySubtitle = _registrySubtitle(isOnline: isOnline);
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F8),
       body: SafeArea(
@@ -925,14 +896,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   validator: _validateEmail,
                                   onChanged: _onEmailChanged,
                                 ),
-                                if (_registryHint != null)
+                                if (registrySubtitle != null)
                                   Padding(
                                     padding: const EdgeInsets.only(
                                       top: 8,
                                       left: 4,
                                     ),
                                     child: Text(
-                                      _registryHint!,
+                                      registrySubtitle,
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: AppTheme.brandInkMuted,
@@ -940,17 +911,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     ),
                                   ),
                                 const SizedBox(height: 20),
-                                Row(
-                                  children: [
-                                    Expanded(child: _buildLabel('Secret Key')),
-                                    TextButton(
-                                      onPressed: _isLoading
-                                          ? null
-                                          : _sendPasswordReset,
-                                      child: const Text('Forgot Password?'),
-                                    ),
-                                  ],
-                                ),
+                                _buildLabel('Secret Key'),
                                 const SizedBox(height: 8),
                                 _buildAuthField(
                                   controller: _passwordController,
@@ -1050,7 +1011,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     onPressed: _isLoading
                                         ? null
                                         : _signInWithGoogle,
-                                    icon: const Icon(Icons.g_mobiledata_rounded),
+                                    icon: const Icon(
+                                      Icons.g_mobiledata_rounded,
+                                    ),
                                     label: const Text('Sign in with Google'),
                                   ),
                                 if (isOnline) const SizedBox(height: 20),
@@ -1085,46 +1048,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   ),
                                 ),
                               ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 430),
-                    child: Column(
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.star,
-                              color: Color(0xFFD14A4A),
-                              size: 17,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'GLOBAL LEARNING PROGRESS',
-                              style: TextStyle(
-                                color: AppTheme.brandInk,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.9,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: const LinearProgressIndicator(
-                            value: 0.76,
-                            minHeight: 10,
-                            backgroundColor: Color(0xFFE2E5EE),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppTheme.brandBlueBright,
                             ),
                           ),
                         ),
