@@ -443,7 +443,7 @@ class _CurriculumProgressTile extends ConsumerWidget {
   }
 }
 
-class _LearningLifetimeTreeCard extends StatelessWidget {
+class _LearningLifetimeTreeCard extends ConsumerStatefulWidget {
   const _LearningLifetimeTreeCard({
     required this.summaries,
     required this.activeCurricula,
@@ -453,14 +453,29 @@ class _LearningLifetimeTreeCard extends StatelessWidget {
   final List<CurriculumId> activeCurricula;
 
   @override
+  ConsumerState<_LearningLifetimeTreeCard> createState() =>
+      _LearningLifetimeTreeCardState();
+}
+
+class _LearningLifetimeTreeCardState
+    extends ConsumerState<_LearningLifetimeTreeCard> {
+  late Map<String, bool> _expandedNodes;
+
+  @override
+  void initState() {
+    super.initState();
+    _expandedNodes = {};
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (summaries.isEmpty) {
+    if (widget.summaries.isEmpty) {
       return const SizedBox.shrink();
     }
 
     CurriculumLifetimeSummary? selected;
-    for (final curriculum in activeCurricula) {
-      for (final summary in summaries) {
+    for (final curriculum in widget.activeCurricula) {
+      for (final summary in widget.summaries) {
         if (summary.curriculumId == curriculum) {
           selected = summary;
           break;
@@ -468,134 +483,217 @@ class _LearningLifetimeTreeCard extends StatelessWidget {
       }
       if (selected != null) break;
     }
-    final summary = selected ?? summaries.first;
+    final summary = selected ?? widget.summaries.first;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0E2E8C), Color(0xFF1D3FA3), Color(0xFF183A95)],
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.brandBlue.withValues(alpha: 0.95),
+              AppTheme.brandBlueBright.withValues(alpha: 0.85),
+            ],
+          ),
         ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF132968).withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Learning Lifetime Tree',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your growth across all Torah tracks.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.78),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${summary.curriculumId.displayNameEn} • ${formatFractionAsPercent(summary.percentage)}',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 200,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  for (final node in summary.tree)
-                    _LifetimeTreeNodeWidget(node: node, depth: 0),
+                  const Icon(
+                    Icons.folder_special_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Learning Lifetime',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        Text(
+                          'What you\'ve learned across your lifetime',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.78),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${summary.curriculumId.displayNameEn} (${summary.curriculumId.displayNameHe}) • ${formatFractionAsPercent(summary.percentage)}',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.95),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 280,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final node in summary.tree)
+                        _FolderTreeNode(
+                          node: node,
+                          depth: 0,
+                          isExpanded:
+                              _expandedNodes['${node.label}_0'] ?? false,
+                          onToggle: (isExpanded) {
+                            setState(() {
+                              _expandedNodes['${node.label}_0'] = isExpanded;
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _LifetimeTreeNodeWidget extends StatelessWidget {
-  const _LifetimeTreeNodeWidget({
+class _FolderTreeNode extends StatefulWidget {
+  const _FolderTreeNode({
     required this.node,
     required this.depth,
+    required this.isExpanded,
+    required this.onToggle,
   });
 
   final LifetimeTreeNode node;
   final int depth;
+  final bool isExpanded;
+  final void Function(bool) onToggle;
 
   @override
+  State<_FolderTreeNode> createState() => _FolderTreeNodeState();
+}
+
+class _FolderTreeNodeState extends State<_FolderTreeNode> {
+  @override
   Widget build(BuildContext context) {
-    final indicatorColor = switch (node.state) {
+    final color = switch (widget.node.state) {
       LifetimeNodeState.full => const Color(0xFF3BDD87),
       LifetimeNodeState.partial => const Color(0xFFFFD26A),
-      LifetimeNodeState.none => Colors.white54,
+      LifetimeNodeState.none => Colors.white.withValues(alpha: 0.5),
     };
-    final indent = depth * 16.0;
+    final indent = widget.depth * 20.0;
+    final hasChildren = widget.node.children.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: indent, bottom: 6),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 3,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: indicatorColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+          padding: EdgeInsets.only(left: indent),
+          child: GestureDetector(
+            onTap: hasChildren
+                ? () => widget.onToggle(!widget.isExpanded)
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.3),
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  node.label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasChildren)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Icon(
+                        widget.isExpanded
+                            ? Icons.expand_less_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 18,
+                        color: color,
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: color,
+                      ),
+                    ),
+                  Container(
+                    width: 6,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      widget.node.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        for (final child in node.children)
-          _LifetimeTreeNodeWidget(
-            node: child,
-            depth: depth + 1,
-          ),
+        if (hasChildren && widget.isExpanded)
+          for (final child in widget.node.children)
+            _FolderTreeNode(
+              node: child,
+              depth: widget.depth + 1,
+              isExpanded: false,
+              onToggle: (isExpanded) {
+                setState(() {});
+              },
+            ),
       ],
     );
   }
