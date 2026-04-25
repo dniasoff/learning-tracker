@@ -519,9 +519,7 @@ class _LearningLifetimeTreeCardState
                       children: [
                         Text(
                           'Learning Lifetime',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
+                          style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -529,9 +527,7 @@ class _LearningLifetimeTreeCardState
                         ),
                         Text(
                           'What you\'ve learned across your lifetime',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
+                          style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: Colors.white.withValues(alpha: 0.78),
                               ),
@@ -544,7 +540,10 @@ class _LearningLifetimeTreeCardState
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -568,7 +567,8 @@ class _LearningLifetimeTreeCardState
                         _FolderTreeNode(
                           node: node,
                           depth: 0,
-                          nodeKey: '/${node.label}_${summary.curriculumId.displayNameEn}',
+                          nodeKey:
+                              '/${node.label}_${summary.curriculumId.displayNameEn}',
                           expandedNodes: _expandedNodes,
                           onExpandToggle: (key, isExpanded) {
                             setState(() {
@@ -675,8 +675,7 @@ class _FolderTreeNodeState extends State<_FolderTreeNode> {
                       widget.node.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.white.withValues(alpha: 0.95),
                         fontWeight: FontWeight.w600,
                       ),
