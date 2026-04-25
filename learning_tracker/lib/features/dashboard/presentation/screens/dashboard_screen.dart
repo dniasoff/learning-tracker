@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -54,6 +55,7 @@ class DashboardScreen extends ConsumerWidget {
               final userMode = userModeAsync.asData?.value ?? UserMode.adult;
               final streakData = streakAsync.asData?.value;
               final currentStreak = streakData?.currentStreak ?? 0;
+              final profileId = ref.watch(activeProfileIdProvider);
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -62,6 +64,10 @@ class DashboardScreen extends ConsumerWidget {
                   ref.invalidate(dashboardStreakProvider);
                   ref.invalidate(dashboardGlobalPointsProvider);
                   ref.invalidate(allDailyTasksProvider);
+                  ref.invalidate(
+                    lifetimeTotalsAcrossAllCurriculaProvider(profileId),
+                  );
+                  ref.invalidate(globalLifetimeCurriculaProvider(profileId));
                   for (final c in activeCurricula) {
                     ref.invalidate(dashboardCompletionPercentageProvider(c));
                     ref.invalidate(dashboardLastCompletionProvider(c));
@@ -157,6 +163,13 @@ class _DashboardBody extends ConsumerWidget {
     final allTasks = dailyTasksAsync.asData?.value ?? const <DailyTask>[];
     final lifetimeTotals = lifetimeTotalsAsync.asData?.value;
     final cumulativeLifetime = lifetimeTotals?.percentage ?? 0.0;
+    final numberFormat = NumberFormat.decimalPattern();
+    final lifetimePercentStr = formatFractionAsPercent(cumulativeLifetime);
+    final lifetimeSectionsStr = lifetimeTotals == null
+        ? '0 / 0 sections — ${CurriculumId.values.length} curricula'
+        : '${numberFormat.format(lifetimeTotals.learnedSections)} / '
+            '${numberFormat.format(lifetimeTotals.totalSections)} sections — '
+            '${CurriculumId.values.length} curricula';
 
     if (activeCurricula.isEmpty) {
       final isChildMode =
@@ -174,7 +187,8 @@ class _DashboardBody extends ConsumerWidget {
     final reviewCount = groupedTasks.reviewTasks.length;
     final totalRemaining = todayCount + overdueCount + reviewCount;
     final level = (1 + (cumulativeLifetime * 19)).clamp(1, 20).round();
-    final doneDisplay = formatFractionAsPercent(cumulativeLifetime);
+    final doneDisplay = lifetimePercentStr;
+    final sectionsDetail = lifetimeSectionsStr;
 
     final focusLabel = groupedTasks.todayTasks.isNotEmpty
         ? groupedTasks.todayTasks
@@ -256,6 +270,7 @@ class _DashboardBody extends ConsumerWidget {
           todayCount: todayCount,
           reviewCount: reviewCount,
           doneDisplay: doneDisplay,
+          lifetimeSectionsDetail: sectionsDetail,
           cumulativeLifetime: cumulativeLifetime,
         ),
         const SizedBox(height: 30),
@@ -373,6 +388,7 @@ class _DashboardLevelPointsCard extends StatelessWidget {
     required this.todayCount,
     required this.reviewCount,
     required this.doneDisplay,
+    required this.lifetimeSectionsDetail,
     required this.cumulativeLifetime,
   });
 
@@ -382,6 +398,7 @@ class _DashboardLevelPointsCard extends StatelessWidget {
   final int todayCount;
   final int reviewCount;
   final String doneDisplay;
+  final String lifetimeSectionsDetail;
   final double cumulativeLifetime;
 
   @override
@@ -451,14 +468,16 @@ class _DashboardLevelPointsCard extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              Text(
-                'Lifetime Progress',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  'Learning lifetime (all curricula)',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 doneDisplay,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -467,6 +486,17 @@ class _DashboardLevelPointsCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            lifetimeSectionsDetail,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.75),
+              fontWeight: FontWeight.w500,
+              height: 1.25,
+            ),
           ),
           const SizedBox(height: 7),
           ClipRRect(

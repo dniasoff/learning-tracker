@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -11,6 +12,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
 @RoutePage()
@@ -24,63 +26,88 @@ class LifetimeMarkingScreen extends ConsumerWidget {
     );
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(title: const AppBarTitle(text: 'Lifetime Learning')),
-      body: ListView.separated(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: CurriculumId.values.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return const Card(
-              child: ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text('Mark what you already learned'),
-                subtitle: Text(
-                  'Choose a curriculum, then mark sections as lifetime learned.',
+        children: [
+          LifetimeFolderSurface(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const LifetimeFolderPageHeader(
+                  title: 'Add what you\'ve learned',
+                  subtitle:
+                      'Mark what you already studied — in print or anywhere — as lifetime learning.',
                 ),
-              ),
-            );
-          }
-
-          final curriculum = CurriculumId.values[index - 1];
-          final summary = summariesAsync.asData?.value.firstWhere(
-            (s) => s.curriculumId == curriculum,
-            orElse: () => CurriculumLifetimeSummary(
-              curriculumId: curriculum,
-              learnedLeafCount: 0,
-              totalLeafCount: 0,
-              percentage: 0,
-              tree: const [],
-            ),
-          ) ??
-              CurriculumLifetimeSummary(
-                curriculumId: curriculum,
-                learnedLeafCount: 0,
-                totalLeafCount: 0,
-                percentage: 0,
-                tree: const [],
-              );
-
-          return Card(
-            child: ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
-              title: Text('${curriculum.displayNameHe} • ${curriculum.displayNameEn}'),
-              subtitle: Text(
-                '${(summary.percentage * 100).toStringAsFixed(2)}% • '
-                '${summary.learnedLeafCount}/${summary.totalLeafCount}',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => LifetimeCurriculumMarkingScreen(
-                    curriculumId: curriculum.storageKey,
+                const SizedBox(height: 12),
+                const LifetimeFolderFrostedHint(
+                  leading: Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 22,
                   ),
+                  title: 'How it works',
+                  subtitle:
+                      'Open a curriculum, then use the folder list to select '
+                      'sections. Green = selected for saving; open a subfolder '
+                      'with the arrow when there is more inside.',
                 ),
-              ),
+                const SizedBox(height: 14),
+                for (var i = 0; i < CurriculumId.values.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 4),
+                  _curriculumEntry(
+                    context,
+                    CurriculumId.values[i],
+                    summariesAsync,
+                  ),
+                ],
+              ],
             ),
-          );
-        },
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _curriculumEntry(
+    BuildContext context,
+    CurriculumId curriculum,
+    AsyncValue<List<CurriculumLifetimeSummary>> summariesAsync,
+  ) {
+    final summary =
+        summariesAsync.asData?.value.firstWhere(
+          (s) => s.curriculumId == curriculum,
+          orElse: () => CurriculumLifetimeSummary(
+            curriculumId: curriculum,
+            learnedLeafCount: 0,
+            totalLeafCount: 0,
+            percentage: 0,
+            tree: const [],
+          ),
+        ) ??
+        CurriculumLifetimeSummary(
+          curriculumId: curriculum,
+          learnedLeafCount: 0,
+          totalLeafCount: 0,
+          percentage: 0,
+          tree: const [],
+        );
+
+    return LifetimeCurriculumFolderRow(
+      titleEn: curriculum.displayNameEn,
+      titleHe: curriculum.displayNameHe,
+      trailingPercent: percentTextForCurriculum(summary) ?? '—',
+      isExpandableListStyle: false,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => LifetimeCurriculumMarkingScreen(
+              curriculumId: curriculum.storageKey,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -110,7 +137,8 @@ class _LifetimeCurriculumMarkingScreenState
     orElse: () => CurriculumId.mishnayos,
   );
 
-  int get _currentLevel => _breadcrumbs.isEmpty ? 1 : _breadcrumbs.last.level + 1;
+  int get _currentLevel =>
+      _breadcrumbs.isEmpty ? 1 : _breadcrumbs.last.level + 1;
 
   String? _getItemLevel(ContentItem item, int level) {
     return switch (level) {
@@ -145,7 +173,9 @@ class _LifetimeCurriculumMarkingScreenState
       return true;
     }
     for (final crumb in _breadcrumbs) {
-      if (_selections.any((s) => s.level == crumb.level && s.value == crumb.value)) {
+      if (_selections.any(
+        (s) => s.level == crumb.level && s.value == crumb.value,
+      )) {
         return true;
       }
     }
@@ -184,6 +214,14 @@ class _LifetimeCurriculumMarkingScreenState
         _selections.add(ScopeEntry(level: _currentLevel, value: value));
       }
     });
+  }
+
+  MarkingRowVisual _visualFor(String value) {
+    final selected = _isSelected(value);
+    final implicit = selected && !_isDirectlySelected(value);
+    if (implicit) return MarkingRowVisual.implicit;
+    if (selected) return MarkingRowVisual.direct;
+    return MarkingRowVisual.none;
   }
 
   Future<void> _markSelections(List<ScopeEntry> selections) async {
@@ -236,15 +274,18 @@ class _LifetimeCurriculumMarkingScreenState
     ref.invalidate(journeyViewModelProvider(profileId));
     ref.invalidate(dashboardCompletionPercentageProvider(_curriculum));
     ref.invalidate(dashboardLastCompletionProvider(_curriculum));
+    ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
   }
 
   @override
   Widget build(BuildContext context) {
     final contentAsync = ref.watch(curriculumContentProvider(_curriculum));
-    final theme = Theme.of(context);
+    const cream = Color(0xFFF4F6FB);
 
     return Scaffold(
+      backgroundColor: cream,
       appBar: AppBar(
+        backgroundColor: AppTheme.brandCreamCard,
         title: AppBarTitle(
           text: '${_curriculum.displayNameHe} • ${_curriculum.displayNameEn}',
         ),
@@ -266,125 +307,176 @@ class _LifetimeCurriculumMarkingScreenState
             if (key == null || key.isEmpty) continue;
             valueToEnglish.putIfAbsent(key, () => item.displayNameEn);
           }
-          return Column(
-            children: [
-              Card(
-                margin: const EdgeInsets.all(16),
-                child: ListTile(
-                  leading: const Icon(Icons.history_edu_outlined),
-                  title: const Text('Mark as lifetime learned'),
-                  subtitle: Text(
-                    'Selected: ${_selections.length} • Level $_currentLevel',
-                  ),
-                ),
-              ),
-              Row(
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Column(
                 children: [
-                  const SizedBox(width: 16),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: values.isEmpty
-                          ? null
-                          : () => _markAllCurrentLevel(values),
-                      icon: const Icon(Icons.select_all),
-                      label: const Text('Mark all'),
+                    child: LifetimeFolderSurface(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const LifetimeFolderPageHeader(
+                            title: 'Select what you\'ve learned',
+                            subtitle:
+                                'Check sections to include; open folders to go deeper.',
+                            icon: Icons.playlist_add_check_outlined,
+                          ),
+                          const SizedBox(height: 10),
+                          LifetimeFolderFrostedHint(
+                            leading: Icon(
+                              Icons.draw_outlined,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                            title: 'Mark as lifetime learned',
+                            subtitle:
+                                'Selected: ${_selections.length} • level $_currentLevel',
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: values.isEmpty
+                                ? null
+                                : () => _markAllCurrentLevel(values),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white54),
+                            ),
+                            icon: const Icon(Icons.select_all, size: 20),
+                            label: const Text('Select all in this list'),
+                          ),
+                          if (_breadcrumbs.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 40,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(_breadcrumbs.clear);
+                                    },
+                                    child: const Text(
+                                      'Root',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                  for (var i = 0; i < _breadcrumbs.length; i++)
+                                    TextButton(
+                                      onPressed: i < _breadcrumbs.length - 1
+                                          ? () {
+                                              setState(() {
+                                                _breadcrumbs.removeRange(
+                                                  i + 1,
+                                                  _breadcrumbs.length,
+                                                );
+                                              });
+                                            }
+                                          : null,
+                                      child: Text(
+                                        _breadcrumbs[i].value,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: LifetimeFolderListPanel(
+                              child: values.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        'No items at this level',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.75,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      padding: EdgeInsets.zero,
+                                      itemCount: values.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox.shrink(),
+                                      itemBuilder: (context, index) {
+                                        final value = values[index];
+                                        return LifetimeMarkingScopeRow(
+                                          primary: value,
+                                          secondary: valueToEnglish[value],
+                                          hasDrill: canDrill,
+                                          visual: _visualFor(value),
+                                          isImplicit:
+                                              _isSelected(value) &&
+                                              !_isDirectlySelected(value),
+                                          onDrill: canDrill
+                                              ? () => _drillInto(value)
+                                              : null,
+                                          onToggle: () =>
+                                              _toggleSelection(value),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _saving || _selections.isEmpty
+                                      ? null
+                                      : () {
+                                          setState(_selections.clear);
+                                        },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(
+                                      color: Colors.white38,
+                                    ),
+                                  ),
+                                  child: const Text('Clear selection'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: AppTheme.brandBlue,
+                                  ),
+                                  onPressed: _saving || _selections.isEmpty
+                                      ? null
+                                      : () {
+                                          _markSelections(List.of(_selections));
+                                        },
+                                  child: _saving
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppTheme.brandBlue,
+                                          ),
+                                        )
+                                      : const Text('Save'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
                 ],
               ),
-              if (_breadcrumbs.isNotEmpty)
-                SizedBox(
-                  height: 42,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      TextButton(
-                        onPressed: () => setState(() => _breadcrumbs.clear()),
-                        child: const Text('Root'),
-                      ),
-                      for (var i = 0; i < _breadcrumbs.length; i++)
-                        TextButton(
-                          onPressed: i < _breadcrumbs.length - 1
-                              ? () => setState(() {
-                                  _breadcrumbs.removeRange(i + 1, _breadcrumbs.length);
-                                })
-                              : null,
-                          child: Text(_breadcrumbs[i].value),
-                        ),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  itemCount: values.length,
-                  itemBuilder: (context, index) {
-                    final value = values[index];
-                    final selected = _isSelected(value);
-                    final implicit = selected && !_isDirectlySelected(value);
-                    return ListTile(
-                      leading: Checkbox(
-                        value: selected,
-                        onChanged: implicit ? null : (_) => _toggleSelection(value),
-                      ),
-                      title: Text(
-                        value,
-                        style: implicit
-                            ? TextStyle(color: theme.colorScheme.onSurfaceVariant)
-                            : null,
-                      ),
-                      subtitle: Text(
-                        valueToEnglish[value] ?? value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      trailing: canDrill
-                          ? IconButton(
-                              icon: const Icon(Icons.chevron_right),
-                              onPressed: () => _drillInto(value),
-                            )
-                          : null,
-                      onTap: () => _toggleSelection(value),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _saving || _selections.isEmpty
-                            ? null
-                            : () => setState(() => _selections.clear()),
-                        child: const Text('Clear selection'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: _saving || _selections.isEmpty
-                            ? null
-                            : () => _markSelections(List.of(_selections)),
-                        child: _saving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Save lifetime marks'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           );
         },
       ),

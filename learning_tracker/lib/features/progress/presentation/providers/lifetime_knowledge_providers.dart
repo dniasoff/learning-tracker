@@ -60,16 +60,24 @@ class TrackDualProgressMetric {
 
 class LifetimeTotals {
   const LifetimeTotals({
-    required this.learnedUnits,
-    required this.totalUnits,
-    required this.curriculaCounted,
+    required this.learnedSections,
+    required this.totalSections,
+    required this.totalCurricula,
   });
 
-  final int learnedUnits;
-  final int totalUnits;
-  final int curriculaCounted;
+  /// Leaf units marked lifetime-learned, summed across all curricula in scope.
+  final int learnedSections;
 
-  double get percentage => totalUnits > 0 ? learnedUnits / totalUnits : 0.0;
+  /// Total leaf units in scope (all loadable hierarchies for the profile).
+  final int totalSections;
+
+  /// Tracked [CurriculumId] count (nine); display copy, not the divisor for %.
+  final int totalCurricula;
+
+  /// Pooled completion: completed sections / total sections in app content.
+  double get percentage => totalSections > 0
+      ? learnedSections / totalSections
+      : 0.0;
 }
 
 final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
@@ -194,8 +202,8 @@ final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
       final repo = ref.watch(contentRepositoryProvider);
 
       var learnedTotal = 0;
-      var unitsTotal = 0;
-      var counted = 0;
+      var sectionTotal = 0;
+      final totalCurricula = CurriculumId.values.length;
 
       for (final curriculum in CurriculumId.values) {
         final leaves = await _safeLoadLeaves(repo, curriculum);
@@ -217,14 +225,13 @@ final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
         );
 
         learnedTotal += learnedRefs.length;
-        unitsTotal += leaves.length;
-        counted++;
+        sectionTotal += leaves.length;
       }
 
       return LifetimeTotals(
-        learnedUnits: learnedTotal,
-        totalUnits: unitsTotal,
-        curriculaCounted: counted,
+        learnedSections: learnedTotal,
+        totalSections: sectionTotal,
+        totalCurricula: totalCurricula,
       );
     });
 
