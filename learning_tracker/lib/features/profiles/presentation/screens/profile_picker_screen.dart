@@ -168,6 +168,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
     final result = await showDialog<({String n, String m})>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.46),
       useRootNavigator: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
@@ -189,47 +190,182 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             }
           }
 
-          return AlertDialog(
-            title: const Text('Add Profile'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: ctrl,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      labelText: 'Name',
-                      border: const OutlineInputBorder(),
-                      errorText: err,
+          final theme = Theme.of(ctx);
+          return Dialog(
+            elevation: 0,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
+              decoration: BoxDecoration(
+                color: AppTheme.brandCreamCard,
+                borderRadius: BorderRadius.circular(34),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F3FF),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person_add_rounded,
+                            color: AppTheme.brandBlue,
+                            size: 40,
+                          ),
+                        ),
+                        Positioned(
+                          top: -1,
+                          right: -2,
+                          child: Container(
+                            width: 23,
+                            height: 23,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4CAF50),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppTheme.brandCreamCard,
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.add_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    onChanged: (_) => check(),
-                  ),
-                  const SizedBox(height: 16),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'adult', label: Text('Adult')),
-                      ButtonSegment(value: 'child', label: Text('Child')),
-                    ],
-                    selected: {mode},
-                    onSelectionChanged: (v) => set(() => mode = v.first),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    Text(
+                      'Add Profile',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: AppTheme.brandBlueDeep,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Create a new learner profile\nto get started.',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        height: 1.45,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: ctrl,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.words,
+                      style: theme.textTheme.bodyMedium,
+                      decoration: InputDecoration(
+                        labelText: 'Profile Name',
+                        labelStyle: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE9ECF2),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE9ECF2),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppTheme.brandBlue,
+                            width: 2,
+                          ),
+                        ),
+                        errorText: err,
+                        errorStyle: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      onChanged: (_) => check(),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F7FB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE9ECF2)),
+                      ),
+                      child: SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(value: 'adult', label: Text('Adult')),
+                          ButtonSegment(value: 'child', label: Text('Child')),
+                        ],
+                        selected: {mode},
+                        onSelectionChanged: (v) => set(() => mode = v.first),
+                        style: SegmentedButton.styleFrom(
+                          textStyle: theme.textTheme.labelMedium,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed:
+                            ctrl.text.trim().isNotEmpty && err == null
+                                ? () => Navigator.pop(
+                                      ctx,
+                                      (n: ctrl.text.trim(), m: mode),
+                                    )
+                                : null,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.brandBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: const Text('Create Profile'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.brandInkMuted,
+                          backgroundColor: const Color(0xFFF0F1F5),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: ctrl.text.trim().isNotEmpty && err == null
-                    ? () => Navigator.pop(ctx, (n: ctrl.text.trim(), m: mode))
-                    : null,
-                child: const Text('Create'),
-              ),
-            ],
           );
         },
       ),

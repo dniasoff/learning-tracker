@@ -754,29 +754,63 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.brandCoralSoft.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.brandCoralDeep.withValues(alpha: 0.55)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: AppTheme.brandCoralDeep),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Local account only: no cloud backup and no device sync.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppTheme.brandInk,
-                fontWeight: FontWeight.w700,
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.brandCoralSoft.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.brandCoralDeep.withValues(alpha: 0.55)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: AppTheme.brandCoralDeep),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Local account only: no cloud backup and no device sync.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.brandCoralSoft.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.brandCoralDeep.withValues(alpha: 0.45),
             ),
           ),
-        ],
-      ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.dangerous_rounded,
+                color: AppTheme.brandCoralDeep,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'No cloud backup or device sync. Your data stays only on this device.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
