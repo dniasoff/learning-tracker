@@ -107,6 +107,9 @@ dev_dependencies:
   # App Icon Generation
   flutter_launcher_icons: ^0.14.2
 
+  # Native splash (run: dart run flutter_native_splash:create)
+  flutter_native_splash: ^2.4.7
+
   # Testing
   test: ^1.26.0
   mocktail: ^1.0.4
@@ -124,6 +127,17 @@ flutter_launcher_icons:
     notification_icon_background_color: "#ffffff"
   ios:
     generate: true
+
+# Full-screen art on Android <12 and iOS. Android 12+ uses color + centered image only (OS limit).
+flutter_native_splash:
+  background_image: assets/images/splash_background.png
+  android_gravity: fill
+  ios_content_mode: scaleAspectFill
+  fullscreen: true
+  android_12:
+    color: "#0D2137"
+    image: assets/images/app_logo.png
+    icon_background_color: "#153A5C"
 
 flutter:
   generate: true
