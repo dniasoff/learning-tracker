@@ -249,14 +249,14 @@ class _IntroPage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
                   // Illustration area
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 32),
+                    padding: const EdgeInsets.only(bottom: 24),
                     child: _buildIllustration(),
                   ),
                   // Content area
@@ -280,7 +280,7 @@ class _IntroPage extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
                                 color: data.titleColor,
-                                fontSize: 40,
+                                fontSize: 36,
                                 fontWeight: FontWeight.w800,
                                 height: 1.2,
                               ),
@@ -288,7 +288,7 @@ class _IntroPage extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       AnimatedBuilder(
                         animation: iconAnimation,
                         builder: (context, _) {
@@ -307,7 +307,7 @@ class _IntroPage extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
                                 color: data.subtitleColor,
-                                fontSize: 16,
+                                fontSize: 15,
                                 height: 1.5,
                                 fontWeight: FontWeight.w400,
                               ),
@@ -321,7 +321,7 @@ class _IntroPage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -338,8 +338,8 @@ class _IntroPage extends StatelessWidget {
         return Transform.scale(
           scale: 0.8 + (scale * 0.2),
           child: Container(
-            width: 200,
-            height: 280,
+            width: 180,
+            height: 260,
             decoration: BoxDecoration(
               color: AppTheme.brandBlue,
               borderRadius: BorderRadius.circular(32),
@@ -377,11 +377,7 @@ class _IntroPage extends StatelessWidget {
             shape: BoxShape.circle,
             color: Colors.white.withValues(alpha: 0.15),
           ),
-          child: Icon(
-            data.icon,
-            size: 54,
-            color: Colors.white,
-          ),
+          child: Icon(data.icon, size: 54, color: Colors.white),
         ),
       ],
     );
