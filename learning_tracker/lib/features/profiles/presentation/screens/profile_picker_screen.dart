@@ -194,6 +194,45 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           final theme = Theme.of(ctx);
           const surfaceGrey = Color(0xFFF2F4F7);
           const labelGrey = Color(0xFF333333);
+          final canSubmit = ctrl.text.trim().isNotEmpty && err == null;
+          final createProfileButton = SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: canSubmit
+                  ? () => Navigator.pop(ctx, (n: ctrl.text.trim(), m: mode))
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.brandBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                textStyle: theme.textTheme.titleSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              child: const Text('Create Profile'),
+            ),
+          );
+          final createProfileCta = canSubmit
+              ? DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.brandBlue.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: createProfileButton,
+                )
+              : createProfileButton;
           return Dialog(
             elevation: 0,
             insetPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -329,51 +368,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                           ],
                         ),
                         const SizedBox(height: 22),
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.brandBlue.withValues(
-                                  alpha: 0.35,
-                                ),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              onPressed:
-                                  ctrl.text.trim().isNotEmpty && err == null
-                                  ? () => Navigator.pop(ctx, (
-                                      n: ctrl.text.trim(),
-                                      m: mode,
-                                    ))
-                                  : null,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppTheme.brandBlue,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: AppTheme.brandBlue
-                                    .withValues(alpha: 0.35),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                elevation: 0,
-                                shadowColor: Colors.transparent,
-                                textStyle: theme.textTheme.titleSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              child: const Text('Create Profile'),
-                            ),
-                          ),
-                        ),
+                        createProfileCta,
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
                           style: TextButton.styleFrom(
