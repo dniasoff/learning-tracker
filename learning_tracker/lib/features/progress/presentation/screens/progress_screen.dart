@@ -568,11 +568,11 @@ class _LearningLifetimeTreeCardState
                         _FolderTreeNode(
                           node: node,
                           depth: 0,
-                          isExpanded:
-                              _expandedNodes['${node.label}_0'] ?? false,
-                          onToggle: (isExpanded) {
+                          nodeKey: '/${node.label}_${summary.curriculumId.displayNameEn}',
+                          expandedNodes: _expandedNodes,
+                          onExpandToggle: (key, isExpanded) {
                             setState(() {
-                              _expandedNodes['${node.label}_0'] = isExpanded;
+                              _expandedNodes[key] = isExpanded;
                             });
                           },
                         ),
@@ -592,14 +592,16 @@ class _FolderTreeNode extends StatefulWidget {
   const _FolderTreeNode({
     required this.node,
     required this.depth,
-    required this.isExpanded,
-    required this.onToggle,
+    required this.nodeKey,
+    required this.expandedNodes,
+    required this.onExpandToggle,
   });
 
   final LifetimeTreeNode node;
   final int depth;
-  final bool isExpanded;
-  final void Function(bool) onToggle;
+  final String nodeKey;
+  final Map<String, bool> expandedNodes;
+  final void Function(String, bool) onExpandToggle;
 
   @override
   State<_FolderTreeNode> createState() => _FolderTreeNodeState();
@@ -615,6 +617,7 @@ class _FolderTreeNodeState extends State<_FolderTreeNode> {
     };
     final indent = widget.depth * 20.0;
     final hasChildren = widget.node.children.isNotEmpty;
+    final isExpanded = widget.expandedNodes[widget.nodeKey] ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -623,7 +626,7 @@ class _FolderTreeNodeState extends State<_FolderTreeNode> {
           padding: EdgeInsets.only(left: indent),
           child: GestureDetector(
             onTap: hasChildren
-                ? () => widget.onToggle(!widget.isExpanded)
+                ? () => widget.onExpandToggle(widget.nodeKey, !isExpanded)
                 : null,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -642,7 +645,7 @@ class _FolderTreeNodeState extends State<_FolderTreeNode> {
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: Icon(
-                        widget.isExpanded
+                        isExpanded
                             ? Icons.expand_less_rounded
                             : Icons.chevron_right_rounded,
                         size: 18,
@@ -684,15 +687,14 @@ class _FolderTreeNodeState extends State<_FolderTreeNode> {
             ),
           ),
         ),
-        if (hasChildren && widget.isExpanded)
+        if (hasChildren && isExpanded)
           for (final child in widget.node.children)
             _FolderTreeNode(
               node: child,
               depth: widget.depth + 1,
-              isExpanded: false,
-              onToggle: (isExpanded) {
-                setState(() {});
-              },
+              nodeKey: '${widget.nodeKey}/${child.label}',
+              expandedNodes: widget.expandedNodes,
+              onExpandToggle: widget.onExpandToggle,
             ),
       ],
     );
