@@ -19,7 +19,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(const AppIntroRoute());
-    registerFallbackValue(const WelcomeRoute());
+    registerFallbackValue(const SignInRoute());
     registerFallbackValue(const AccountPickerRoute());
 
     // Mock path_provider so driftDatabase can resolve a temp directory
@@ -73,21 +73,21 @@ void main() {
     );
 
     test(
-      'redirects to welcome or account picker when onboarding not complete but intro already seen',
+      'redirects to sign-in or account picker when onboarding not complete but intro already seen',
       () async {
         SharedPreferences.setMockInitialValues({'intro_seen': true});
 
         await authGuard.onNavigation(mockResolver, mockRouter);
 
         // The guard checks the device registry for existing accounts.
-        // With no accounts, it redirects to WelcomeRoute.
+        // With no accounts, it redirects to SignInRoute.
         // With accounts, it redirects to AccountPickerRoute.
         final captured = verify(
           () => mockRouter.replace(captureAny()),
         ).captured;
         expect(
           captured.single,
-          anyOf(isA<WelcomeRoute>(), isA<AccountPickerRoute>()),
+          anyOf(isA<SignInRoute>(), isA<AccountPickerRoute>()),
         );
         verify(() => mockResolver.next(false)).called(1);
       },
