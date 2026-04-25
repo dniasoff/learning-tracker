@@ -168,8 +168,8 @@ class _DashboardBody extends ConsumerWidget {
     final lifetimeSectionsStr = lifetimeTotals == null
         ? '0 / 0 sections — ${CurriculumId.values.length} curricula'
         : '${numberFormat.format(lifetimeTotals.learnedSections)} / '
-            '${numberFormat.format(lifetimeTotals.totalSections)} sections — '
-            '${CurriculumId.values.length} curricula';
+              '${numberFormat.format(lifetimeTotals.totalSections)} sections — '
+              '${CurriculumId.values.length} curricula';
 
     if (activeCurricula.isEmpty) {
       final isChildMode =
@@ -1046,7 +1046,8 @@ class _CurriculumCard extends ConsumerWidget {
         .where((t) => t.curriculumId == curriculum)
         .toList();
     final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
-    final hasProgramEnrollment = hasProgramEnrollmentAsync.asData?.value ?? false;
+    final hasProgramEnrollment =
+        hasProgramEnrollmentAsync.asData?.value ?? false;
 
     // AC-1: Get pace status
     final paceStatus = paceAsync.asData?.value;
@@ -1135,8 +1136,9 @@ class _CurriculumCard extends ConsumerWidget {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFD63C3C)
-                                        .withValues(alpha: 0.14),
+                                    color: const Color(
+                                      0xFFD63C3C,
+                                    ).withValues(alpha: 0.14),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -1174,28 +1176,28 @@ class _CurriculumCard extends ConsumerWidget {
                         ],
                       )
                   else
-                    // Show pace badge for self-paced tracks
-                    if (paceAsync.isLoading)
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: curriculumColor.withValues(alpha: 0.5),
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.brandCreamSoft,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: _MiniPaceBadge(paceStatus: paceStatus),
+                  // Show pace badge for self-paced tracks
+                  if (paceAsync.isLoading)
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: curriculumColor.withValues(alpha: 0.5),
                       ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.brandCreamSoft,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: _MiniPaceBadge(paceStatus: paceStatus),
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -1217,34 +1219,42 @@ class _CurriculumCard extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Text(
-                    'Completion',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      fontWeight: FontWeight.w700,
+              if (hasProgramEnrollment)
+                _ProgrammedDueFoot(
+                  overdueTasks: overdueTasks,
+                  todayTasks: todayTasks,
+                  l10n: l10n,
+                )
+              else ...[
+                Row(
+                  children: [
+                    Text(
+                      'Completion',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    pctDisplay,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppTheme.brandInk,
-                      fontWeight: FontWeight.w700,
+                    const Spacer(),
+                    Text(
+                      pctDisplay,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppTheme.brandInk,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              AnimatedProgressBar(
-                value: percentage,
-                color: curriculumColor,
-                backgroundColor: AppTheme.brandCreamSoft,
-                height: 10,
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOut,
-              ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                AnimatedProgressBar(
+                  value: percentage,
+                  color: curriculumColor,
+                  backgroundColor: AppTheme.brandCreamSoft,
+                  height: 10,
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOut,
+                ),
+              ],
               const Spacer(),
               Row(
                 children: [
@@ -1271,6 +1281,134 @@ class _CurriculumCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Footer for programmed tracks: overdue vs due today (not leaf completion %).
+class _ProgrammedDueFoot extends StatelessWidget {
+  const _ProgrammedDueFoot({
+    required this.overdueTasks,
+    required this.todayTasks,
+    required this.l10n,
+  });
+
+  final int overdueTasks;
+  final int todayTasks;
+  final AppLocalizations l10n;
+
+  static const _overdueColor = Color(0xFFD63C3C);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final totalDue = overdueTasks + todayTasks;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Schedule',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: AppTheme.brandInkMuted,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: overdueTasks > 0
+                      ? _overdueColor.withValues(alpha: 0.1)
+                      : AppTheme.brandCreamSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.overdue,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$overdueTasks',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: overdueTasks > 0
+                            ? _overdueColor
+                            : AppTheme.brandInk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: todayTasks > 0
+                      ? AppTheme.brandBlue.withValues(alpha: 0.1)
+                      : AppTheme.brandCreamSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Due today',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$todayTasks',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: todayTasks > 0
+                            ? AppTheme.brandBlue
+                            : AppTheme.brandInk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (totalDue == 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Nothing due in this queue right now.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppTheme.brandInkMuted,
+                height: 1.2,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
