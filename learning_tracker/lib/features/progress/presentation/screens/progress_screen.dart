@@ -469,7 +469,6 @@ class _LearningLifetimeTreeCard extends StatelessWidget {
       if (selected != null) break;
     }
     final summary = selected ?? summaries.first;
-    final topNodes = summary.tree.take(2).toList();
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -506,12 +505,6 @@ class _LearningLifetimeTreeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          for (final node in topNodes)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _LifetimeNodeRow(node: node),
-            ),
-          const SizedBox(height: 4),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -527,16 +520,33 @@ class _LearningLifetimeTreeCard extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 200,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final node in summary.tree)
+                    _LifetimeTreeNodeWidget(node: node, depth: 0),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _LifetimeNodeRow extends StatelessWidget {
-  const _LifetimeNodeRow({required this.node});
+class _LifetimeTreeNodeWidget extends StatelessWidget {
+  const _LifetimeTreeNodeWidget({
+    required this.node,
+    required this.depth,
+  });
 
   final LifetimeTreeNode node;
+  final int depth;
 
   @override
   Widget build(BuildContext context) {
@@ -545,56 +555,48 @@ class _LifetimeNodeRow extends StatelessWidget {
       LifetimeNodeState.partial => const Color(0xFFFFD26A),
       LifetimeNodeState.none => Colors.white54,
     };
-    final children = node.children.take(2).toList();
+    final indent = depth * 16.0;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 28,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: indent, bottom: 6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color: indicatorColor,
-              borderRadius: BorderRadius.circular(3),
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  node.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  width: 3,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: indicatorColor,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                if (children.isNotEmpty)
-                  Text(
-                    children.map((child) => child.label).join('  •  '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.72),
-                    ),
+                const SizedBox(width: 8),
+                Text(
+                  node.label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: Colors.white.withValues(alpha: 0.8),
+        ),
+        for (final child in node.children)
+          _LifetimeTreeNodeWidget(
+            node: child,
+            depth: depth + 1,
           ),
-        ],
-      ),
+      ],
     );
   }
 }

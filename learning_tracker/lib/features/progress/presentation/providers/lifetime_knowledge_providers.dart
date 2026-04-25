@@ -97,12 +97,13 @@ final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
           completedRefs: completions.map((c) => c.sefariaRef).toSet(),
           ledgerEntries: ledger,
         );
-        if (learnedLeafRefs.isEmpty) continue;
 
         final tree = _buildTree(leaves, learnedLeafRefs);
         final percentage = leaves.isEmpty
             ? 0.0
             : learnedLeafRefs.length / leaves.length;
+
+        // Include curriculum even if no learned items yet (tree will show all as unlearned)
         summaries.add(
           CurriculumLifetimeSummary(
             curriculumId: curriculum,
