@@ -24,7 +24,7 @@ final routerProvider = Provider<AppRouter>((ref) {
   // watched field. Sign-in/signup flows invalidate userDatabaseProvider
   // to swap per-account DB files mid-flow — if the router watched the
   // provider, that invalidate would tear down the router, reset its
-  // route state, and bounce brand-new sign-ins back to WelcomeRoute.
+  // route state, and bounce brand-new sign-ins back to SignInRoute.
   UserDatabase getDb() => ref.read(userDatabaseProvider);
 
   return AppRouter(

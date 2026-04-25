@@ -30,24 +30,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 @RoutePage()
-class AccountCreationScreen extends ConsumerStatefulWidget {
-  const AccountCreationScreen({
+class SignupScreen extends ConsumerStatefulWidget {
+  const SignupScreen({
     super.key,
     this.prefilledName,
     this.prefilledEmail,
   });
 
-  /// Pre-fills the name field when the user came from the local
-  /// signup screen via "Wait for Internet" reconnection.
+  /// Pre-fills the name field when returning from a connectivity
+  /// wait flow with the same draft values.
   final String? prefilledName;
   final String? prefilledEmail;
 
   @override
-  ConsumerState<AccountCreationScreen> createState() =>
-      _AccountCreationScreenState();
+  ConsumerState<SignupScreen> createState() =>
+      _SignupScreenState();
 }
 
-class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -463,6 +463,8 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
                                     color: AppTheme.brandInkMuted,
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+                                _buildAccountModeCard(theme: theme, isOnline: isOnline),
                                 const SizedBox(height: 22),
                                 if (isOnline) ...[
                                   OutlinedButton(
@@ -717,6 +719,63 @@ class _AccountCreationScreenState extends ConsumerState<AccountCreationScreen> {
         color: AppTheme.brandInk,
         fontSize: 17,
         fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+
+  Widget _buildAccountModeCard({
+    required ThemeData theme,
+    required bool isOnline,
+  }) {
+    if (isOnline) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.brandBlueBright.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.brandBlueBright.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.cloud_done_rounded, color: AppTheme.brandBlue),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Cloud account: your data is backed up and can sync across devices.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.brandInk,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.brandCoralSoft.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.brandCoralDeep.withValues(alpha: 0.55)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppTheme.brandCoralDeep),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Local account only: no cloud backup and no device sync.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.brandInk,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

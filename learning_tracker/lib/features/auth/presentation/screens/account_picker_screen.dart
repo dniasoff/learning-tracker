@@ -44,10 +44,10 @@ class AccountPickerScreen extends ConsumerWidget {
             final accounts = snapshot.data!;
             if (accounts.isEmpty) {
               // No accounts left — shouldn't happen (caller should
-              // route to WelcomeRoute), but handle gracefully.
+              // route to SignInRoute), but handle gracefully.
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {
-                  unawaited(context.router.replaceAll([const WelcomeRoute()]));
+                  unawaited(context.router.replaceAll([const SignInRoute()]));
                 }
               });
               return const SizedBox.shrink();
@@ -108,7 +108,7 @@ class _BottomAddAccountSection extends StatelessWidget {
         children: [
           if (accountCount < kMaxDeviceAccounts)
             _DashedOutlineButton(
-              onTap: () => context.router.push(AccountCreationRoute()),
+              onTap: () => context.router.push(SignupRoute()),
               child: Text(
                 '+1   Add another account '
                 '(${kMaxDeviceAccounts - accountCount} slots remaining)',

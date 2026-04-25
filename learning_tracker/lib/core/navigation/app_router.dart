@@ -18,12 +18,9 @@ import 'package:learning_tracker/features/learning/presentation/screens/curricul
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/learning_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/account_creation_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/local_sign_in_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/local_signup_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_track_management_screen.dart';
@@ -81,10 +78,7 @@ class AppRouter extends RootStackRouter {
     RedirectRoute(path: '/verify-email', redirectTo: '/sign-in'),
     RedirectRoute(path: '/__/auth/links', redirectTo: '/sign-in'),
     RedirectRoute(path: '/__/auth/action', redirectTo: '/sign-in'),
-    AutoRoute(path: '/welcome', page: WelcomeRoute.page),
-    AutoRoute(path: '/create-account', page: AccountCreationRoute.page),
-    AutoRoute(path: '/local-signup', page: LocalSignupRoute.page),
-    AutoRoute(path: '/local-sign-in', page: LocalSignInRoute.page),
+    AutoRoute(path: '/create-account', page: SignupRoute.page),
     AutoRoute(path: '/account-picker', page: AccountPickerRoute.page),
     AutoRoute(
       path: '/upgrade-to-cloud',

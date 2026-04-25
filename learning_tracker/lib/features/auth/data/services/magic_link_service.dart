@@ -22,7 +22,7 @@ const kPendingVerifyEmailOobCode = 'pending_verify_email_oob_code';
 ///
 /// ## How it works
 ///
-/// 1. User enters email in [AccountCreationScreen] and taps "Send link".
+/// 1. User enters email in [SignupScreen] and taps "Send link".
 ///    The screen calls [AuthRepository.sendSignInLinkToEmail] and persists
 ///    the email under [kMagicLinkPendingEmail].
 /// 2. Firebase sends an email containing a one-time `https://...` link.

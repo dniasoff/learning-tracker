@@ -99,12 +99,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // Epic 20.6: onboarding is only reachable after signup. If the
     // user somehow lands here without a live AuthState session
     // (signedOut / initializing fallthrough), bounce them back to
-    // the welcome screen so they can sign up.
+    // the sign-in screen so they can sign up.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authState = ref.read(authStateProvider);
       if (!authState.isSignedIn) {
-        unawaited(context.router.replaceAll([const WelcomeRoute()]));
+        unawaited(context.router.replaceAll([const SignInRoute()]));
       }
     });
   }

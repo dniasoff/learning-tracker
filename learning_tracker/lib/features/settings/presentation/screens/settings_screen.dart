@@ -1120,7 +1120,7 @@ Future<void> _showSignOutConfirmation(
       if (accounts.isNotEmpty) {
         await context.router.replaceAll([const AccountPickerRoute()]);
       } else {
-        await context.router.replaceAll([const WelcomeRoute()]);
+        await context.router.replaceAll([const SignInRoute()]);
       }
     }
   } catch (e) {

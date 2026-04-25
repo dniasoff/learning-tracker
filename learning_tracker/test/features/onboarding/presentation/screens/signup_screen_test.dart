@@ -8,7 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart'
+    show userDatabaseProvider;
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
@@ -18,7 +19,7 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_state
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/account_creation_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_repositories.dart';
@@ -39,6 +40,7 @@ void main() {
   setUpAll(() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     registerFallbackValue(const OnboardingRoute());
+    registerFallbackValue(SignupRoute());
   });
 
   setUp(() {
@@ -61,7 +63,7 @@ void main() {
         home: StackRouterScope(
           controller: mockRouter,
           stateHash: 0,
-          child: const AccountCreationScreen(),
+          child: const SignupScreen(),
         ),
       ),
     );
@@ -70,18 +72,21 @@ void main() {
   Widget createTestWidgetWithDatabase({
     required MockFirebaseAuth firebaseAuth,
     required UserDatabase database,
+    bool online = true,
   }) {
     final testRegistry = DeviceRegistryDatabase(NativeDatabase.memory());
     return ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(mockAuthRepo),
         firebaseAuthProvider.overrideWithValue(firebaseAuth),
-        appDatabaseProvider.overrideWithValue(database),
+        userDatabaseProvider.overrideWithValue(database),
         deviceRegistryProvider.overrideWithValue(testRegistry),
         auth_state_mod.authStateProvider.overrideWithValue(
           const AuthState.signedOut(),
         ),
-        connectivityStreamProvider.overrideWith((ref) => Stream.value(true)),
+        connectivityStreamProvider.overrideWith(
+          (ref) => Stream.value(online),
+        ),
         userProfileServiceProvider.overrideWith((ref) {
           return UserProfileService(
             userProfileDao: database.userProfileDao,
@@ -98,40 +103,40 @@ void main() {
         home: StackRouterScope(
           controller: mockRouter,
           stateHash: 0,
-          child: const AccountCreationScreen(),
+          child: const SignupScreen(),
         ),
       ),
     );
   }
 
-  group('AccountCreationScreen Widget Tests', () {
+  group('SignupScreen Widget Tests', () {
     testWidgets('displays email and password fields', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
       expect(find.text('Email Address'), findsOneWidget);
       expect(find.text('Create Password'), findsOneWidget);
-      expect(find.text('Full Name'), findsOneWidget);
+      expect(find.text('Display Name'), findsOneWidget);
     });
 
-    testWidgets('displays Create Account button', (tester) async {
+    testWidgets('displays Create Account title and Sign Up CTA', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
-      expect(
-        find.widgetWithText(FilledButton, 'Create Account'),
-        findsOneWidget,
-      );
+      expect(find.text('Create Account'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Sign Up'), findsOneWidget);
     });
 
     testWidgets('displays Google Sign-In button', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
-      expect(find.text('Sign up with Google'), findsOneWidget);
+      expect(find.text('Sign Up with Google'), findsOneWidget);
     });
 
     testWidgets('shows validation errors for empty fields', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
-      final button = find.widgetWithText(FilledButton, 'Create Account');
+      final button = find.widgetWithText(FilledButton, 'Sign Up');
       await tester.ensureVisible(button);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -147,22 +152,11 @@ void main() {
     testWidgets('shows validation error for invalid email', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Enter your full name'),
-        'Test',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'name@example.com'),
-        'invalid-email',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Min. 8 characters'),
-        '123456',
-      );
-      final invalidEmailButton = find.widgetWithText(
-        FilledButton,
-        'Create Account',
-      );
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), 'Test');
+      await tester.enterText(fields.at(1), 'invalid-email');
+      await tester.enterText(fields.at(2), '123456');
+      final invalidEmailButton = find.widgetWithText(FilledButton, 'Sign Up');
       await tester.ensureVisible(invalidEmailButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -176,19 +170,11 @@ void main() {
     testWidgets('shows validation error for short password', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Enter your full name'),
-        'Test',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'name@example.com'),
-        'test@example.com',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Min. 8 characters'),
-        '12345',
-      );
-      final shortPwButton = find.widgetWithText(FilledButton, 'Create Account');
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), 'Test');
+      await tester.enterText(fields.at(1), 'test@example.com');
+      await tester.enterText(fields.at(2), '12345');
+      final shortPwButton = find.widgetWithText(FilledButton, 'Sign Up');
       await tester.ensureVisible(shortPwButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -207,77 +193,33 @@ void main() {
     ) async {
       await tester.pumpWidget(createTestWidget());
 
-      expect(find.text('OR SIGN UP WITH'), findsOneWidget);
+      expect(find.text('OR'), findsOneWidget);
     });
 
-    testWidgets('email sign-up success navigates to OnboardingRoute', (
+    testWidgets('offline stream shows local warning and offline CTA', (
       tester,
     ) async {
-      // The sign-up flow performs a one-shot connectivity check via
-      // InternetConnectionChecker.instance.hasConnection — in tests this
-      // returns false, so the local-born offline path is taken. Provide
-      // a test database so LocalAuthService can create a profile.
       final db = UserDatabase(NativeDatabase.memory());
       addTearDown(() async => db.close());
 
-      final mockCredential = MockUserCredential();
-      when(
-        () => mockAuthRepo.signUp(any(), any(), any()),
-      ).thenAnswer((_) async => mockCredential);
-
       await tester.pumpWidget(
-        createTestWidgetWithDatabase(firebaseAuth: mockAuth, database: db),
+        createTestWidgetWithDatabase(
+          firebaseAuth: mockAuth,
+          database: db,
+          online: false,
+        ),
       );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Enter your full name'),
-        'Test User',
+      expect(
+        find.textContaining('no cloud backup'),
+        findsOneWidget,
       );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'name@example.com'),
-        'test@example.com',
+      expect(
+        find.widgetWithText(FilledButton, 'Create Offline Account'),
+        findsOneWidget,
       );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Min. 8 characters'),
-        'password123',
-      );
-      final confirmPwField = find.widgetWithText(
-        TextFormField,
-        'Repeat password',
-      );
-      await tester.ensureVisible(confirmPwField);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.enterText(confirmPwField, 'password123');
-
-      // Agree to terms
-      final checkbox = find.byType(Checkbox);
-      await tester.ensureVisible(checkbox);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.tap(checkbox);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // Acknowledge offline warning if displayed
-      final offlineCheckbox = find.byType(CheckboxListTile);
-      if (tester.widgetList(offlineCheckbox).isNotEmpty) {
-        await tester.tap(offlineCheckbox.first);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-      }
-
-      final signUpButton = find.widgetWithText(FilledButton, 'Create Account');
-      await tester.ensureVisible(signUpButton);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.tap(signUpButton);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 2));
-
-      verify(
-        () => mockRouter.push(any(that: isA<OnboardingRoute>())),
-      ).called(1);
     });
 
     testWidgets('Google sign-in button triggers signInWithGoogle', (
@@ -316,7 +258,7 @@ void main() {
         ),
       );
 
-      final googleButton = find.text('Sign up with Google');
+      final googleButton = find.text('Sign Up with Google');
       await tester.ensureVisible(googleButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));

@@ -37,6 +37,8 @@ class SignInScreen extends ConsumerStatefulWidget {
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
 
+enum _SignInModeHint { cloud, cloudOffline, local, unknown }
+
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -45,6 +47,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _obscurePassword = true;
   bool _keepSignedIn = true;
   String? _registryHint;
+  _SignInModeHint _signInModeHint = _SignInModeHint.unknown;
   Timer? _emailDebounce;
 
   @override
@@ -62,7 +65,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     _emailDebounce = Timer(const Duration(milliseconds: 300), () async {
       final normalized = email.trim().toLowerCase();
       if (normalized.length < 5) {
-        if (_registryHint != null) setState(() => _registryHint = null);
+        if (_registryHint != null) {
+          final isOnline = ref
+              .read(connectivityStreamProvider)
+              .maybeWhen(data: (v) => v, orElse: () => true);
+          setState(() {
+            _registryHint = null;
+            _signInModeHint = isOnline
+                ? _SignInModeHint.cloud
+                : _SignInModeHint.local;
+          });
+        }
         return;
       }
 
@@ -77,11 +90,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         if (account != null) {
           final tierLabel = account.tier == 'cloudBorn' ? 'Cloud' : 'Local';
           _registryHint = 'Found on this device ($tierLabel)';
+          _signInModeHint = account.tier == 'localBorn'
+              ? _SignInModeHint.local
+              : (isOnline
+                    ? _SignInModeHint.cloud
+                    : _SignInModeHint.cloudOffline);
         } else if (isOnline) {
           _registryHint = "Not on this device \u2014 we'll check the cloud";
+          _signInModeHint = _SignInModeHint.cloud;
         } else {
           _registryHint =
               'Not on this device (offline \u2014 only device accounts available)';
+          _signInModeHint = _SignInModeHint.local;
         }
       });
     });
@@ -685,9 +705,119 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
   }
 
+  _SignInModeHint _effectiveSignInMode({required bool isOnline}) {
+    if (_emailController.text.trim().isEmpty) {
+      return isOnline ? _SignInModeHint.cloud : _SignInModeHint.local;
+    }
+    if (!isOnline && _signInModeHint == _SignInModeHint.cloud) {
+      return _SignInModeHint.cloudOffline;
+    }
+    if (_signInModeHint == _SignInModeHint.unknown) {
+      return isOnline ? _SignInModeHint.cloud : _SignInModeHint.local;
+    }
+    return _signInModeHint;
+  }
+
+  Widget _buildSignInModeCard({
+    required ThemeData theme,
+    required _SignInModeHint mode,
+  }) {
+    switch (mode) {
+      case _SignInModeHint.cloud:
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.brandBlueBright.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.brandBlueBright.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.cloud_done_rounded, color: AppTheme.brandBlue),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Cloud account: your data is backed up and syncs across devices.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case _SignInModeHint.cloudOffline:
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.brandCoralSoft.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.brandCoralDeep.withValues(alpha: 0.45),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.cloud_off_rounded, color: AppTheme.brandCoralDeep),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Cloud account is offline right now. We will try local cached data until internet returns.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case _SignInModeHint.local:
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.brandCoralSoft.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.brandCoralDeep.withValues(alpha: 0.55),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.brandCoralDeep,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Local account only: no cloud backup and no device sync.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case _SignInModeHint.unknown:
+        return const SizedBox.shrink();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final connectivity = ref.watch(connectivityStreamProvider);
+    final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
+    final signInMode = _effectiveSignInMode(isOnline: isOnline);
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F8),
       body: SafeArea(
@@ -743,6 +873,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     height: 1.4,
                                   ),
                                   textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                _buildSignInModeCard(
+                                  theme: theme,
+                                  mode: signInMode,
                                 ),
                                 const SizedBox(height: 26),
                                 _buildLabel('Your Email'),
@@ -905,7 +1040,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                             ..onTap = () {
                                               if (!_isLoading) {
                                                 context.router.replace(
-                                                  AccountCreationRoute(),
+                                                  SignupRoute(),
                                                 );
                                               }
                                             },

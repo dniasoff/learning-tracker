@@ -103,7 +103,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   // ─── Transitional shims (delete after 20.6/20.7/20.9 rewrites) ──
 
   /// Legacy: called from the deprecated `sign_in_screen`,
-  /// `account_creation_screen`, and magic-link providers. Keeps
+  /// `signup_screen`, and magic-link providers. Keeps
   /// those files compiling; they will be removed in 20.6/20.7.
   Future<void> promoteToCloud(User firebaseUser) async {
     final dao = ref.read(userDatabaseProvider).userProfileDao;

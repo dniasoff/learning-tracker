@@ -112,7 +112,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
   Future<void> _markIntroSeenAndContinue() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kIntroSeen, true);
-    if (mounted) unawaited(context.router.replace(const WelcomeRoute()));
+    if (mounted) unawaited(context.router.replace(const SignInRoute()));
   }
 
   @override

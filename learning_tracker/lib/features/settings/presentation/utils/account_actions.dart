@@ -72,7 +72,7 @@ Future<void> showDeleteAccountFlow(
   try {
     await service.deleteAccount(user.uid);
     if (context.mounted) {
-      await context.router.replaceAll([const WelcomeRoute()]);
+      await context.router.replaceAll([const SignInRoute()]);
     }
   } catch (e) {
     if (context.mounted) {

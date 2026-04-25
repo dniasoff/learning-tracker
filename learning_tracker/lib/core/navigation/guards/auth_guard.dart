@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// - Onboarding complete → pass through
 /// - Intro slides not seen → redirect to [AppIntroRoute]
 /// - Intro seen, onboarding incomplete, accounts on device → [AccountPickerRoute]
-/// - Intro seen, onboarding incomplete, no accounts → [WelcomeRoute]
+/// - Intro seen, onboarding incomplete, no accounts → [SignInRoute]
 ///
 /// Signed-in / signed-out session status is owned by `AuthStateNotifier`,
 /// read downstream by individual screens. This guard only governs the
@@ -53,7 +53,7 @@ class AuthGuard extends AutoRouteGuard {
         if (accounts.isNotEmpty) {
           unawaited(router.replace(const AccountPickerRoute()));
         } else {
-          unawaited(router.replace(const WelcomeRoute()));
+          unawaited(router.replace(const SignInRoute()));
         }
       } finally {
         await registry.close();
