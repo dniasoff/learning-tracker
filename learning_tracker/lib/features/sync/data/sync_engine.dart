@@ -574,23 +574,34 @@ class SyncEngine {
 
   /// Push a bookmark to Firestore after local write.
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueBookmark(_withQueueTargetProfile(bookmark));
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.debug('Skipping bookmark sync: user not authenticated');
+      return;
+    }
+
+    // Always queue first so UI never blocks on network during track creation.
+    await _offlineQueue.enqueueBookmark(_withQueueTargetProfile(bookmark));
+    await _emitPendingStatus();
+
+    if (_isQueueOnlyMode || !_isOnline) {
       await _updateQueueOnlyStatus();
       return;
     }
 
-    try {
-      await _firestoreDataSource.pushBookmark(bookmark);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed bookmark to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push bookmark, queuing for later', e);
-      await _offlineQueue.enqueueBookmark(_withQueueTargetProfile(bookmark));
-      await _emitPendingStatus();
-    }
+    unawaited(() async {
+      try {
+        final batchSize = _isBatterySaverMode ? 5 : null;
+        final synced = await _offlineQueue.flush(batchSize: batchSize);
+        if (synced > 0) {
+          _consecutivePushPermissionErrors = 0;
+          _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
+        }
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+        _trackPushError(e);
+        _logger.warning('Background bookmark queue flush failed', e);
+      }
+    }());
   }
 
   /// Push settings to Firestore after local write.
@@ -803,27 +814,36 @@ class SyncEngine {
 
   /// Push a profile-program assignment to Firestore after local write.
   Future<void> pushProfileProgram(Map<String, dynamic> profileProgram) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueProfileProgram(
-        _withQueueTargetProfile(profileProgram),
-      );
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.debug('Skipping profile program sync: user not authenticated');
+      return;
+    }
+
+    // Always queue first so UI never blocks on network during track creation.
+    await _offlineQueue.enqueueProfileProgram(
+      _withQueueTargetProfile(profileProgram),
+    );
+    await _emitPendingStatus();
+
+    if (_isQueueOnlyMode || !_isOnline) {
       await _updateQueueOnlyStatus();
       return;
     }
 
-    try {
-      await _firestoreDataSource.pushProfileProgram(profileProgram);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed profile program to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push profile program, queuing for later', e);
-      await _offlineQueue.enqueueProfileProgram(
-        _withQueueTargetProfile(profileProgram),
-      );
-      await _emitPendingStatus();
-    }
+    unawaited(() async {
+      try {
+        final batchSize = _isBatterySaverMode ? 5 : null;
+        final synced = await _offlineQueue.flush(batchSize: batchSize);
+        if (synced > 0) {
+          _consecutivePushPermissionErrors = 0;
+          _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
+        }
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+        _trackPushError(e);
+        _logger.warning('Background profile program queue flush failed', e);
+      }
+    }());
   }
 
   /// Push active curricula list to Firestore after local write.

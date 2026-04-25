@@ -528,20 +528,17 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       );
 
       if (!_isProgramTrack && priorCompletionSelection != null) {
-        try {
-          final summary = await _applySelfPacedPriorCompletions(
-            priorCompletionSelection,
-          );
-          result = result.copyWith(
-            bulkMarkResult: {
-              'item_count': summary.itemCount,
-              'completion_count': summary.completionCount,
+        unawaited(
+          _applySelfPacedPriorCompletions(priorCompletionSelection).then(
+            (_) {
+              // Bulk marking completed in background.
             },
-          );
-        } catch (_) {
-          // Do not block finishing navigation if marking fails.
-          // The track itself is already created successfully.
-        }
+            onError: (_) {
+              // Do not block navigation if bulk marking fails.
+              // The track is already created successfully.
+            },
+          ),
+        );
       }
 
       await _clearSavedState();

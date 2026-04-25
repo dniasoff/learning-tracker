@@ -1016,10 +1016,14 @@ class _CurriculumCard extends ConsumerWidget {
         .where((t) => t.curriculumId == curriculum)
         .toList();
     final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
-    hasProgramEnrollmentAsync.asData?.value;
+    final hasProgramEnrollment = hasProgramEnrollmentAsync.asData?.value ?? false;
 
     // AC-1: Get pace status
     final paceStatus = paceAsync.asData?.value;
+
+    // Count overdue and today tasks for programmed tracks
+    final overdueTasks = curriculumTasks.where((t) => t.isOverdue).length;
+    final todayTasks = curriculumTasks.where((t) => !t.isOverdue).length;
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -1064,27 +1068,104 @@ class _CurriculumCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  if (paceAsync.isLoading)
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: curriculumColor.withValues(alpha: 0.5),
-                      ),
-                    )
+                  if (hasProgramEnrollment)
+                    // Show task counts for programmed tracks
+                    if (paceAsync.isLoading)
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: curriculumColor.withValues(alpha: 0.5),
+                        ),
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.brandCreamSoft,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: _MiniPaceBadge(paceStatus: paceStatus),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (overdueTasks > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD63C3C)
+                                        .withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '$overdueTasks overdue',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: const Color(0xFFD63C3C),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                )
+                              else if (todayTasks > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.brandBlue.withValues(
+                                      alpha: 0.14,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '$todayTasks today',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: AppTheme.brandBlue,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      )
                   else
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
+                    // Show pace badge for self-paced tracks
+                    if (paceAsync.isLoading)
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: curriculumColor.withValues(alpha: 0.5),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.brandCreamSoft,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: _MiniPaceBadge(paceStatus: paceStatus),
                       ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.brandCreamSoft,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: _MiniPaceBadge(paceStatus: paceStatus),
-                    ),
                 ],
               ),
               const SizedBox(height: 8),
