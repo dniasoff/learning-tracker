@@ -19,9 +19,8 @@ import 'package:learning_tracker/features/learning/presentation/screens/learning
 import 'package:learning_tracker/features/learning_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_track_management_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_change_screen.dart';
@@ -181,11 +180,6 @@ class AppRouter extends RootStackRouter {
       path: '/notifications',
       page: NotificationsRoute.page,
       guards: [authGuard],
-    ),
-    AutoRoute(
-      path: '/parent-mode',
-      page: ParentModeRoute.page,
-      guards: [authGuard, childModeGuard, parentPinGuard],
     ),
     AutoRoute(
       path: '/parent-mode/settings',

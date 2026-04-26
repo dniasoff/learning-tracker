@@ -752,22 +752,6 @@ class OnboardingRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [ParentModeScreen]
-class ParentModeRoute extends PageRouteInfo<void> {
-  const ParentModeRoute({List<PageRouteInfo>? children})
-    : super(ParentModeRoute.name, initialChildren: children);
-
-  static const String name = 'ParentModeRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const ParentModeScreen();
-    },
-  );
-}
-
-/// generated route for
 /// [ParentSettingsScreen]
 class ParentSettingsRoute extends PageRouteInfo<void> {
   const ParentSettingsRoute({List<PageRouteInfo>? children})

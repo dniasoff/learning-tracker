@@ -1574,29 +1574,11 @@ abstract class AppLocalizations {
   /// **'Sync status and settings will appear here.'**
   String get syncScreenBody;
 
-  /// No description provided for @parentDashboard.
-  ///
-  /// In en, this message translates to:
-  /// **'Parent Dashboard'**
-  String get parentDashboard;
-
   /// No description provided for @parentSettingsTitle.
   ///
   /// In en, this message translates to:
   /// **'Parent Settings'**
   String get parentSettingsTitle;
-
-  /// No description provided for @addChildTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Add Child'**
-  String get addChildTooltip;
-
-  /// No description provided for @errorLoadingDashboard.
-  ///
-  /// In en, this message translates to:
-  /// **'Error loading dashboard: {error}'**
-  String errorLoadingDashboard(String error);
 
   /// No description provided for @manageTracksForChildSubtitle.
   ///
@@ -1615,12 +1597,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Set how many points activities are worth'**
   String get pointConfigurationSubtitle;
-
-  /// No description provided for @parentDashboardCardSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'See your child\'s learning progress at a glance'**
-  String get parentDashboardCardSubtitle;
 
   /// No description provided for @sectionAccountSafety.
   ///
@@ -1729,6 +1705,522 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'PINs do not match'**
   String get pinsDoNotMatch;
+
+  /// No description provided for @tabBarDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'DASHBOARD'**
+  String get tabBarDashboard;
+
+  /// No description provided for @tabBarLearn.
+  ///
+  /// In en, this message translates to:
+  /// **'LEARN'**
+  String get tabBarLearn;
+
+  /// No description provided for @tabBarProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'PROGRESS'**
+  String get tabBarProgress;
+
+  /// No description provided for @tabBarSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'SETTINGS'**
+  String get tabBarSettings;
+
+  /// No description provided for @errorLoadingCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading calendar'**
+  String get errorLoadingCalendar;
+
+  /// No description provided for @journeyByCurriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'By Curriculum'**
+  String get journeyByCurriculum;
+
+  /// No description provided for @journeyTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get journeyTimeline;
+
+  /// No description provided for @journeyTitleNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s Learning Journey'**
+  String journeyTitleNamed(String name);
+
+  /// No description provided for @loadingYourJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your journey...'**
+  String get loadingYourJourney;
+
+  /// No description provided for @failedToLoadJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load journey: {error}'**
+  String failedToLoadJourney(String error);
+
+  /// No description provided for @journeyEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your learning journey starts here!'**
+  String get journeyEmptyTitle;
+
+  /// No description provided for @journeyEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your first masechta to see it recorded forever.'**
+  String get journeyEmptyBody;
+
+  /// No description provided for @progressChartsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress Charts'**
+  String get progressChartsTitle;
+
+  /// No description provided for @chartCompletionsOverTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Completions Over Time'**
+  String get chartCompletionsOverTime;
+
+  /// No description provided for @chartDailyActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'DAILY ACTIVITY'**
+  String get chartDailyActivity;
+
+  /// No description provided for @chartCumulativeProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Cumulative Progress'**
+  String get chartCumulativeProgress;
+
+  /// No description provided for @chartCumulativeProgressSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'+12% vs last week'**
+  String get chartCumulativeProgressSubtitle;
+
+  /// No description provided for @chartPointsEarned.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Earned'**
+  String get chartPointsEarned;
+
+  /// No description provided for @chartTotalTorahPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'TOTAL TORAH POINTS'**
+  String get chartTotalTorahPoints;
+
+  /// No description provided for @chartLearningJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Journey'**
+  String get chartLearningJourney;
+
+  /// No description provided for @chartJourneyMotivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the flame alive every day!'**
+  String get chartJourneyMotivation;
+
+  /// No description provided for @chartSevenDayStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'7 DAY STREAK!'**
+  String get chartSevenDayStreak;
+
+  /// No description provided for @chartLast7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 Days'**
+  String get chartLast7Days;
+
+  /// No description provided for @chartLast30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30\nDays'**
+  String get chartLast30Days;
+
+  /// No description provided for @chartAllTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All Time'**
+  String get chartAllTime;
+
+  /// No description provided for @chartFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get chartFilterAll;
+
+  /// No description provided for @notifAppBarSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get notifAppBarSettings;
+
+  /// No description provided for @notifHeroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifHeroTitle;
+
+  /// No description provided for @notifHeroSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your Torah journey on track!'**
+  String get notifHeroSubtitle;
+
+  /// No description provided for @notifDailyReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Reminder'**
+  String get notifDailyReminder;
+
+  /// No description provided for @notifDailyReminderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t forget to learn today!'**
+  String get notifDailyReminderSubtitle;
+
+  /// No description provided for @notifReminderTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder Time'**
+  String get notifReminderTime;
+
+  /// No description provided for @notifStreakAlert.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak Alert'**
+  String get notifStreakAlert;
+
+  /// No description provided for @notifStreakAlertSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your fire burning!'**
+  String get notifStreakAlertSubtitle;
+
+  /// No description provided for @notifHotStreakBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'HOT STREAK'**
+  String get notifHotStreakBadge;
+
+  /// No description provided for @notifStreakAlertTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak Alert Time'**
+  String get notifStreakAlertTime;
+
+  /// No description provided for @notifRewardNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward Notifications'**
+  String get notifRewardNotifications;
+
+  /// No description provided for @notifRewardNotificationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When you earn Mitzvah Points!'**
+  String get notifRewardNotificationsSubtitle;
+
+  /// No description provided for @notifSacredTime.
+  ///
+  /// In en, this message translates to:
+  /// **'SACRED TIME'**
+  String get notifSacredTime;
+
+  /// No description provided for @notifShabbosYomTovMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos / Yom Tov\nMode'**
+  String get notifShabbosYomTovMode;
+
+  /// No description provided for @notifShabbosModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet learning during holy days'**
+  String get notifShabbosModeSubtitle;
+
+  /// No description provided for @notifUseLocationForTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Location for Times'**
+  String get notifUseLocationForTimes;
+
+  /// No description provided for @notifQuietStart.
+  ///
+  /// In en, this message translates to:
+  /// **'QUIET START'**
+  String get notifQuietStart;
+
+  /// No description provided for @notifQuietEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'QUIET END'**
+  String get notifQuietEnd;
+
+  /// No description provided for @notifCandleLighting.
+  ///
+  /// In en, this message translates to:
+  /// **'Candle lighting'**
+  String get notifCandleLighting;
+
+  /// No description provided for @notifHavdalah.
+  ///
+  /// In en, this message translates to:
+  /// **'Havdalah'**
+  String get notifHavdalah;
+
+  /// No description provided for @authPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is required'**
+  String get authPasswordRequired;
+
+  /// No description provided for @authLocalDataMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This account\'s local data is missing. Connect to the internet to restore it.'**
+  String get authLocalDataMissing;
+
+  /// No description provided for @authEmailOfflineUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'This email isn\'t on this device and we can\'t reach the cloud. Try again when online.'**
+  String get authEmailOfflineUnreachable;
+
+  /// No description provided for @authIncorrectPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect password.'**
+  String get authIncorrectPassword;
+
+  /// No description provided for @authSignInFailedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed: {error}'**
+  String authSignInFailedError(String error);
+
+  /// No description provided for @authVerifyEmailBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a verification link to your inbox. Please check your email to continue.'**
+  String get authVerifyEmailBody;
+
+  /// No description provided for @authIveVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve verified'**
+  String get authIveVerified;
+
+  /// No description provided for @authVerificationEmailSentAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent again.'**
+  String get authVerificationEmailSentAgain;
+
+  /// No description provided for @authEmailStillUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is still unverified. Check your inbox first.'**
+  String get authEmailStillUnverified;
+
+  /// No description provided for @authMaxDeviceAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum {count} device accounts reached. Remove one to add another.'**
+  String authMaxDeviceAccounts(int count);
+
+  /// No description provided for @authOfflineUseUpgrade.
+  ///
+  /// In en, this message translates to:
+  /// **'An offline account with this email exists on this device. Use the Upgrade to Cloud option in Settings instead.'**
+  String get authOfflineUseUpgrade;
+
+  /// No description provided for @authGoogleSignInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Sign-In failed. Please try again.'**
+  String get authGoogleSignInFailed;
+
+  /// No description provided for @authErrUserNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No account found with this email.'**
+  String get authErrUserNotFound;
+
+  /// No description provided for @authErrWrongPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect password. Please try again.'**
+  String get authErrWrongPassword;
+
+  /// No description provided for @authErrInvalidCredential.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email or password. Please try again.'**
+  String get authErrInvalidCredential;
+
+  /// No description provided for @authErrUserDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This account has been disabled.'**
+  String get authErrUserDisabled;
+
+  /// No description provided for @authErrTooManyRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please try again later.'**
+  String get authErrTooManyRequests;
+
+  /// No description provided for @authErrInvalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address.'**
+  String get authErrInvalidEmail;
+
+  /// No description provided for @authErrNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network error. Please check your connection.'**
+  String get authErrNetwork;
+
+  /// No description provided for @authErrSignInGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed. Please try again.'**
+  String get authErrSignInGeneric;
+
+  /// No description provided for @authTierCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud'**
+  String get authTierCloud;
+
+  /// No description provided for @authTierLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Local'**
+  String get authTierLocal;
+
+  /// No description provided for @authFoundOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Found on this device ({tier})'**
+  String authFoundOnDevice(String tier);
+
+  /// No description provided for @authNotOnDeviceCheckCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on this device — we\'ll check the cloud'**
+  String get authNotOnDeviceCheckCloud;
+
+  /// No description provided for @authNotOnDeviceOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on this device (offline — only device accounts available)'**
+  String get authNotOnDeviceOffline;
+
+  /// No description provided for @authModeCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud account: your data is backed up and syncs across devices.'**
+  String get authModeCloud;
+
+  /// No description provided for @authModeCloudOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud account is offline right now. We will try local cached data until internet returns.'**
+  String get authModeCloudOffline;
+
+  /// No description provided for @authModeLocalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local account only: no cloud backup and no device sync.'**
+  String get authModeLocalTitle;
+
+  /// No description provided for @authModeLocalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No cloud backup or device sync. Your data stays only on this device.'**
+  String get authModeLocalBody;
+
+  /// No description provided for @signInWelcomeBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome Back!'**
+  String get signInWelcomeBack;
+
+  /// No description provided for @signInReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for your next learning adventure?'**
+  String get signInReady;
+
+  /// No description provided for @signInYourEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Email'**
+  String get signInYourEmail;
+
+  /// No description provided for @signInEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'yourname@quest.com'**
+  String get signInEmailHint;
+
+  /// No description provided for @signInPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret Key'**
+  String get signInPasswordLabel;
+
+  /// No description provided for @signInPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'••••••••'**
+  String get signInPasswordHint;
+
+  /// No description provided for @signInKeepMeSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep me signed in'**
+  String get signInKeepMeSignedIn;
+
+  /// No description provided for @signInCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get signInCta;
+
+  /// No description provided for @signInWithGoogleCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google'**
+  String get signInWithGoogleCta;
+
+  /// No description provided for @signInNewToQuest.
+  ///
+  /// In en, this message translates to:
+  /// **'New to the Quest? '**
+  String get signInNewToQuest;
+
+  /// No description provided for @signInRegisterHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Register Here'**
+  String get signInRegisterHere;
 }
 
 class _AppLocalizationsDelegate

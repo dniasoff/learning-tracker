@@ -805,18 +805,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get syncScreenBody => 'מצב הסנכרון וההגדרות יופיעו כאן.';
 
   @override
-  String get parentDashboard => 'לוח הורה';
-
-  @override
   String get parentSettingsTitle => 'הגדרות הורה';
-
-  @override
-  String get addChildTooltip => 'הוספת ילד';
-
-  @override
-  String errorLoadingDashboard(String error) {
-    return 'שגיאה בטעינת לוח הבקרה: $error';
-  }
 
   @override
   String get manageTracksForChildSubtitle =>
@@ -827,9 +816,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get pointConfigurationSubtitle => 'כמה נקודות שווה כל פעילות';
-
-  @override
-  String get parentDashboardCardSubtitle => 'מבט על התקדמות הלמידה של הילד';
 
   @override
   String get sectionAccountSafety => 'בטיחות חשבון';
@@ -886,4 +872,283 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get pinsDoNotMatch => 'הקודים אינם תואמים';
+
+  @override
+  String get tabBarDashboard => 'לוח';
+
+  @override
+  String get tabBarLearn => 'למידה';
+
+  @override
+  String get tabBarProgress => 'התקדמות';
+
+  @override
+  String get tabBarSettings => 'הגדרות';
+
+  @override
+  String get errorLoadingCalendar => 'שגיאה בטעינת לוח השנה';
+
+  @override
+  String get journeyByCurriculum => 'לפי תוכנית';
+
+  @override
+  String get journeyTimeline => 'ציר זמן';
+
+  @override
+  String journeyTitleNamed(String name) {
+    return 'מסע הלמידה של $name';
+  }
+
+  @override
+  String get loadingYourJourney => 'טוענים את המסע...';
+
+  @override
+  String failedToLoadJourney(String error) {
+    return 'נכשל בטעינת המסע: $error';
+  }
+
+  @override
+  String get journeyEmptyTitle => 'מסע הלמידה שלכם מתחיל כאן!';
+
+  @override
+  String get journeyEmptyBody =>
+      'השלימו את המסכתא הראשונה כדי לראות אותה נרשמת לנצח.';
+
+  @override
+  String get progressChartsTitle => 'תרשימי התקדמות';
+
+  @override
+  String get chartCompletionsOverTime => 'השלמות לאורך זמן';
+
+  @override
+  String get chartDailyActivity => 'פעילות יומית';
+
+  @override
+  String get chartCumulativeProgress => 'התקדמות מצטברת';
+
+  @override
+  String get chartCumulativeProgressSubtitle => '+12% לעומת השבוע שעבר';
+
+  @override
+  String get chartPointsEarned => 'נקודות שהורו';
+
+  @override
+  String get chartTotalTorahPoints => 'נק׳ תורה סה״כ';
+
+  @override
+  String get chartLearningJourney => 'מסע הלמידה';
+
+  @override
+  String get chartJourneyMotivation => 'שמרו על הלהבה בוערת מדי יום!';
+
+  @override
+  String get chartSevenDayStreak => 'רצף 7 ימים!';
+
+  @override
+  String get chartLast7Days => '7 ימים';
+
+  @override
+  String get chartLast30Days => '30\nימים';
+
+  @override
+  String get chartAllTime => 'הכול';
+
+  @override
+  String get chartFilterAll => 'הכול';
+
+  @override
+  String get notifAppBarSettings => 'הגדרות';
+
+  @override
+  String get notifHeroTitle => 'התראות';
+
+  @override
+  String get notifHeroSubtitle => 'לשמור על מסע התורה ביעד!';
+
+  @override
+  String get notifDailyReminder => 'תזכורת יומית';
+
+  @override
+  String get notifDailyReminderSubtitle => 'אל תשכחו ללמוד היום!';
+
+  @override
+  String get notifReminderTime => 'שעת תזכורת';
+
+  @override
+  String get notifStreakAlert => 'התראת רצף';
+
+  @override
+  String get notifStreakAlertSubtitle => 'שמרו על האש בוערת!';
+
+  @override
+  String get notifHotStreakBadge => 'רצף לוהט';
+
+  @override
+  String get notifStreakAlertTime => 'שעת התראת רצף';
+
+  @override
+  String get notifRewardNotifications => 'התראות פרסים';
+
+  @override
+  String get notifRewardNotificationsSubtitle => 'כשאתם מרוויחים נק׳ מצווה!';
+
+  @override
+  String get notifSacredTime => 'זמן קדוש';
+
+  @override
+  String get notifShabbosYomTovMode => 'מצב שבת / יום טוב';
+
+  @override
+  String get notifShabbosModeSubtitle => 'לימוד שקט בימים קדושים';
+
+  @override
+  String get notifUseLocationForTimes => 'מיקום לשעות';
+
+  @override
+  String get notifQuietStart => 'התחלת שקט';
+
+  @override
+  String get notifQuietEnd => 'סיום שקט';
+
+  @override
+  String get notifCandleLighting => 'הדלקת נרות';
+
+  @override
+  String get notifHavdalah => 'הבדלה';
+
+  @override
+  String get authPasswordRequired => 'נדרשת סיסמה';
+
+  @override
+  String get authLocalDataMissing =>
+      'נתונים מקומיים של חשבון זה חסרים. התחברו לאינטרנט כדי לשחזר אותם.';
+
+  @override
+  String get authEmailOfflineUnreachable =>
+      'האימייל הזה אינו במכשיר ואין גישה לענן. נסו שוב כשאתם מקוונים.';
+
+  @override
+  String get authIncorrectPassword => 'סיסמה שגויה.';
+
+  @override
+  String authSignInFailedError(String error) {
+    return 'הכניסה נכשלה: $error';
+  }
+
+  @override
+  String get authVerifyEmailBody =>
+      'שלחנו קישור אימות לתיבה שלכם. בדקו את האימייל כדי להמשיך.';
+
+  @override
+  String get authIveVerified => 'אימתתי';
+
+  @override
+  String get authVerificationEmailSentAgain => 'מייל אימות נשלח שוב.';
+
+  @override
+  String get authEmailStillUnverified =>
+      'האימייל עדיין לא אומת. בדקו קודם את תיבת הדואר.';
+
+  @override
+  String authMaxDeviceAccounts(int count) {
+    return 'הגעתם למקסימום $count חשבונות במכשיר. הסירו אחד כדי להוסיף.';
+  }
+
+  @override
+  String get authOfflineUseUpgrade =>
+      'במכשיר כבר קיים חשבורת אוף־ליין עם אימייל זה. השתמשו ב״שדרג לענן״ בהגדרות.';
+
+  @override
+  String get authGoogleSignInFailed => 'הכניסה בגוגל נכשלה. נסו שוב.';
+
+  @override
+  String get authErrUserNotFound => 'לא נמצא חשבון עם האימייל הזה.';
+
+  @override
+  String get authErrWrongPassword => 'סיסמה שגויה. נסו שוב.';
+
+  @override
+  String get authErrInvalidCredential => 'אימייל או סיסמה לא תקינים. נסו שוב.';
+
+  @override
+  String get authErrUserDisabled => 'חשבון זה הושבת.';
+
+  @override
+  String get authErrTooManyRequests => 'יותר מדי נסיונות. נסו שוב מאוחר יותר.';
+
+  @override
+  String get authErrInvalidEmail => 'הזינו כתובת אימייל תקינה.';
+
+  @override
+  String get authErrNetwork => 'שגיאת רשת. בדקו את החיבור.';
+
+  @override
+  String get authErrSignInGeneric => 'ההתחברות נכשלה. נסו שוב.';
+
+  @override
+  String get authTierCloud => 'ענן';
+
+  @override
+  String get authTierLocal => 'מקומי';
+
+  @override
+  String authFoundOnDevice(String tier) {
+    return 'נמצא במכשיר הזה ($tier)';
+  }
+
+  @override
+  String get authNotOnDeviceCheckCloud => 'לא על המכשיר — נבדוק מול הענן';
+
+  @override
+  String get authNotOnDeviceOffline =>
+      'לא על המכשיר (לא מקוונים — רק חשבונות מקומיים)';
+
+  @override
+  String get authModeCloud =>
+      'חשבון ענן: הנתנונים מגובים ומסתנכרנים בין מכשירים.';
+
+  @override
+  String get authModeCloudOffline =>
+      'החשבון בענן לא מקוון כרגע. ננסה נתונים מקומיים עד שיוחזר אינטרנט.';
+
+  @override
+  String get authModeLocalTitle =>
+      'חשבורת מקומי בלבד: ללא גיבוי לענן וללא סנכרון בין מכשירים.';
+
+  @override
+  String get authModeLocalBody =>
+      'ללא גיבוי לענן. הנתנונים נשארים רק במכשיר הזה.';
+
+  @override
+  String get signInWelcomeBack => 'ברוכים השבים!';
+
+  @override
+  String get signInReady => 'מוכנים להרפתקת הלמידה הבאה?';
+
+  @override
+  String get signInYourEmail => 'האימייל שלכם';
+
+  @override
+  String get signInEmailHint => 'yourname@quest.com';
+
+  @override
+  String get signInPasswordLabel => 'סיסמה';
+
+  @override
+  String get signInPasswordHint => '••••••••';
+
+  @override
+  String get signInKeepMeSignedIn => 'השאירו אותי מחוברים';
+
+  @override
+  String get signInCta => 'התחברות';
+
+  @override
+  String get signInWithGoogleCta => 'התחברות עם גוגל';
+
+  @override
+  String get signInNewToQuest => 'חדשים בקווסט? ';
+
+  @override
+  String get signInRegisterHere => 'הרשמה כאן';
 }

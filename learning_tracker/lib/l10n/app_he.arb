@@ -380,19 +380,10 @@
   "profilesLabel": "פרופילים",
   "syncTitle": "סנכרון",
   "syncScreenBody": "מצב הסנכרון וההגדרות יופיעו כאן.",
-  "parentDashboard": "לוח הורה",
   "parentSettingsTitle": "הגדרות הורה",
-  "addChildTooltip": "הוספת ילד",
-  "errorLoadingDashboard": "שגיאה בטעינת לוח הבקרה: {error}",
-  "@errorLoadingDashboard": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageTracksForChildSubtitle": "הוספה, עריכה או ארכיון של מסלולי הילד",
   "pointConfiguration": "הגדרת נקודות",
   "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",
-  "parentDashboardCardSubtitle": "מבט על התקדמות הלמידה של הילד",
   "sectionAccountSafety": "בטיחות חשבון",
   "bottomNavTracks": "מסלולים",
   "bottomNavRewards": "פרסים",
@@ -416,5 +407,116 @@
   "enterCurrentPin": "הזינו את הקוד הנוכחי",
   "enterNewPin": "הזינו קוד חדש",
   "confirmNewPin": "אשרו את הקוד החדש",
-  "pinsDoNotMatch": "הקודים אינם תואמים"
+  "pinsDoNotMatch": "הקודים אינם תואמים",
+  "tabBarDashboard": "לוח",
+  "tabBarLearn": "למידה",
+  "tabBarProgress": "התקדמות",
+  "tabBarSettings": "הגדרות",
+  "errorLoadingCalendar": "שגיאה בטעינת לוח השנה",
+  "journeyByCurriculum": "לפי תוכנית",
+  "journeyTimeline": "ציר זמן",
+  "journeyTitleNamed": "מסע הלמידה של {name}",
+  "@journeyTitleNamed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "loadingYourJourney": "טוענים את המסע...",
+  "failedToLoadJourney": "נכשל בטעינת המסע: {error}",
+  "@failedToLoadJourney": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "journeyEmptyTitle": "מסע הלמידה שלכם מתחיל כאן!",
+  "journeyEmptyBody": "השלימו את המסכתא הראשונה כדי לראות אותה נרשמת לנצח.",
+  "progressChartsTitle": "תרשימי התקדמות",
+  "chartCompletionsOverTime": "השלמות לאורך זמן",
+  "chartDailyActivity": "פעילות יומית",
+  "chartCumulativeProgress": "התקדמות מצטברת",
+  "chartCumulativeProgressSubtitle": "+12% לעומת השבוע שעבר",
+  "chartPointsEarned": "נקודות שהורו",
+  "chartTotalTorahPoints": "נק׳ תורה סה״כ",
+  "chartLearningJourney": "מסע הלמידה",
+  "chartJourneyMotivation": "שמרו על הלהבה בוערת מדי יום!",
+  "chartSevenDayStreak": "רצף 7 ימים!",
+  "chartLast7Days": "7 ימים",
+  "chartLast30Days": "30\nימים",
+  "chartAllTime": "הכול",
+  "chartFilterAll": "הכול",
+  "notifAppBarSettings": "הגדרות",
+  "notifHeroTitle": "התראות",
+  "notifHeroSubtitle": "לשמור על מסע התורה ביעד!",
+  "notifDailyReminder": "תזכורת יומית",
+  "notifDailyReminderSubtitle": "אל תשכחו ללמוד היום!",
+  "notifReminderTime": "שעת תזכורת",
+  "notifStreakAlert": "התראת רצף",
+  "notifStreakAlertSubtitle": "שמרו על האש בוערת!",
+  "notifHotStreakBadge": "רצף לוהט",
+  "notifStreakAlertTime": "שעת התראת רצף",
+  "notifRewardNotifications": "התראות פרסים",
+  "notifRewardNotificationsSubtitle": "כשאתם מרוויחים נק׳ מצווה!",
+  "notifSacredTime": "זמן קדוש",
+  "notifShabbosYomTovMode": "מצב שבת / יום טוב",
+  "notifShabbosModeSubtitle": "לימוד שקט בימים קדושים",
+  "notifUseLocationForTimes": "מיקום לשעות",
+  "notifQuietStart": "התחלת שקט",
+  "notifQuietEnd": "סיום שקט",
+  "notifCandleLighting": "הדלקת נרות",
+  "notifHavdalah": "הבדלה",
+  "authPasswordRequired": "נדרשת סיסמה",
+  "authLocalDataMissing": "נתונים מקומיים של חשבון זה חסרים. התחברו לאינטרנט כדי לשחזר אותם.",
+  "authEmailOfflineUnreachable": "האימייל הזה אינו במכשיר ואין גישה לענן. נסו שוב כשאתם מקוונים.",
+  "authIncorrectPassword": "סיסמה שגויה.",
+  "authSignInFailedError": "הכניסה נכשלה: {error}",
+  "@authSignInFailedError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "authVerifyEmailBody": "שלחנו קישור אימות לתיבה שלכם. בדקו את האימייל כדי להמשיך.",
+  "authIveVerified": "אימתתי",
+  "authVerificationEmailSentAgain": "מייל אימות נשלח שוב.",
+  "authEmailStillUnverified": "האימייל עדיין לא אומת. בדקו קודם את תיבת הדואר.",
+  "authMaxDeviceAccounts": "הגעתם למקסימום {count} חשבונות במכשיר. הסירו אחד כדי להוסיף.",
+  "@authMaxDeviceAccounts": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "authOfflineUseUpgrade": "במכשיר כבר קיים חשבון אוף־ליין עם אימייל זה. השתמשו ב״שדרג לענן״ בהגדרות.",
+  "authGoogleSignInFailed": "הכניסה בגוגל נכשלה. נסו שוב.",
+  "authErrUserNotFound": "לא נמצא חשבון עם האימייל הזה.",
+  "authErrWrongPassword": "סיסמה שגויה. נסו שוב.",
+  "authErrInvalidCredential": "אימייל או סיסמה לא תקינים. נסו שוב.",
+  "authErrUserDisabled": "חשבון זה הושבת.",
+  "authErrTooManyRequests": "יותר מדי נסיונות. נסו שוב מאוחר יותר.",
+  "authErrInvalidEmail": "הזינו כתובת אימייל תקינה.",
+  "authErrNetwork": "שגיאת רשת. בדקו את החיבור.",
+  "authErrSignInGeneric": "ההתחברות נכשלה. נסו שוב.",
+  "authTierCloud": "ענן",
+  "authTierLocal": "מקומי",
+  "authFoundOnDevice": "נמצא במכשיר הזה ({tier})",
+  "@authFoundOnDevice": {
+    "placeholders": {
+      "tier": { "type": "String" }
+    }
+  },
+  "authNotOnDeviceCheckCloud": "לא על המכשיר — נבדוק מול הענן",
+  "authNotOnDeviceOffline": "לא על המכשיר (לא מקוונים — רק חשבונות מקומיים)",
+  "authModeCloud": "חשבון ענן: הנתונים מגובים ומסתנכרנים בין מכשירים.",
+  "authModeCloudOffline": "החשבון בענן לא מקוון כרגע. ננסה נתונים מקומיים עד שיוחזר אינטרנט.",
+  "authModeLocalTitle": "חשבון מקומי בלבד: ללא גיבוי לענן וללא סנכרון בין מכשירים.",
+  "authModeLocalBody": "ללא גיבוי לענן. הנתונים נשארים רק במכשיר הזה.",
+  "signInWelcomeBack": "ברוכים השבים!",
+  "signInReady": "מוכנים להרפתקת הלמידה הבאה?",
+  "signInYourEmail": "האימייל שלכם",
+  "signInEmailHint": "yourname@quest.com",
+  "signInPasswordLabel": "סיסמה",
+  "signInPasswordHint": "••••••••",
+  "signInKeepMeSignedIn": "השאירו אותי מחוברים",
+  "signInCta": "התחברות",
+  "signInWithGoogleCta": "התחברות עם גוגל",
+  "signInNewToQuest": "חדשים בקווסט? ",
+  "signInRegisterHere": "הרשמה כאן"
 }

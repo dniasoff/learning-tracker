@@ -15,7 +15,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Configuration hub shown to a parent when their child profile is active.
 ///
 /// Surfaces parent-only controls — managing tracks for the child, tuning
-/// reward points, backup/sync, lifetime learning entries, and the dashboard.
+/// reward points, backup/sync, and lifetime learning entries.
 @RoutePage()
 class ParentSettingsScreen extends ConsumerWidget {
   const ParentSettingsScreen({super.key});
@@ -146,31 +146,6 @@ class ParentSettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () =>
                         context.pushRoute(const LifetimeMarkingRoute()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _WhitePanel(
-                  child: _ManageRow(
-                    iconBackground: AppTheme.brandBlueSoft,
-                    icon: Icons.space_dashboard_rounded,
-                    iconColor: AppTheme.brandBlueBright,
-                    leadingSquare: true,
-                    title: l10n.parentDashboard,
-                    subtitle: l10n.parentDashboardCardSubtitle,
-                    trailing: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF0F2F6),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.trending_up_rounded,
-                        color: Color(0xFF8B95A5),
-                        size: 20,
-                      ),
-                    ),
-                    onTap: () => context.pushRoute(const ParentModeRoute()),
                   ),
                 ),
                 const SizedBox(height: 16),

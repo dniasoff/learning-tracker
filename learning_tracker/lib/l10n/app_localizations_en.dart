@@ -813,18 +813,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncScreenBody => 'Sync status and settings will appear here.';
 
   @override
-  String get parentDashboard => 'Parent Dashboard';
-
-  @override
   String get parentSettingsTitle => 'Parent Settings';
-
-  @override
-  String get addChildTooltip => 'Add Child';
-
-  @override
-  String errorLoadingDashboard(String error) {
-    return 'Error loading dashboard: $error';
-  }
 
   @override
   String get manageTracksForChildSubtitle =>
@@ -836,10 +825,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pointConfigurationSubtitle =>
       'Set how many points activities are worth';
-
-  @override
-  String get parentDashboardCardSubtitle =>
-      'See your child\'s learning progress at a glance';
 
   @override
   String get sectionAccountSafety => 'ACCOUNT SAFETY';
@@ -896,4 +881,288 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pinsDoNotMatch => 'PINs do not match';
+
+  @override
+  String get tabBarDashboard => 'DASHBOARD';
+
+  @override
+  String get tabBarLearn => 'LEARN';
+
+  @override
+  String get tabBarProgress => 'PROGRESS';
+
+  @override
+  String get tabBarSettings => 'SETTINGS';
+
+  @override
+  String get errorLoadingCalendar => 'Error loading calendar';
+
+  @override
+  String get journeyByCurriculum => 'By Curriculum';
+
+  @override
+  String get journeyTimeline => 'Timeline';
+
+  @override
+  String journeyTitleNamed(String name) {
+    return '$name\'s Learning Journey';
+  }
+
+  @override
+  String get loadingYourJourney => 'Loading your journey...';
+
+  @override
+  String failedToLoadJourney(String error) {
+    return 'Failed to load journey: $error';
+  }
+
+  @override
+  String get journeyEmptyTitle => 'Your learning journey starts here!';
+
+  @override
+  String get journeyEmptyBody =>
+      'Complete your first masechta to see it recorded forever.';
+
+  @override
+  String get progressChartsTitle => 'Progress Charts';
+
+  @override
+  String get chartCompletionsOverTime => 'Completions Over Time';
+
+  @override
+  String get chartDailyActivity => 'DAILY ACTIVITY';
+
+  @override
+  String get chartCumulativeProgress => 'Cumulative Progress';
+
+  @override
+  String get chartCumulativeProgressSubtitle => '+12% vs last week';
+
+  @override
+  String get chartPointsEarned => 'Points Earned';
+
+  @override
+  String get chartTotalTorahPoints => 'TOTAL TORAH POINTS';
+
+  @override
+  String get chartLearningJourney => 'Learning Journey';
+
+  @override
+  String get chartJourneyMotivation => 'Keep the flame alive every day!';
+
+  @override
+  String get chartSevenDayStreak => '7 DAY STREAK!';
+
+  @override
+  String get chartLast7Days => 'Last 7 Days';
+
+  @override
+  String get chartLast30Days => 'Last 30\nDays';
+
+  @override
+  String get chartAllTime => 'All Time';
+
+  @override
+  String get chartFilterAll => 'All';
+
+  @override
+  String get notifAppBarSettings => 'Settings';
+
+  @override
+  String get notifHeroTitle => 'Notifications';
+
+  @override
+  String get notifHeroSubtitle => 'Keep your Torah journey on track!';
+
+  @override
+  String get notifDailyReminder => 'Daily Reminder';
+
+  @override
+  String get notifDailyReminderSubtitle => 'Don\'t forget to learn today!';
+
+  @override
+  String get notifReminderTime => 'Reminder Time';
+
+  @override
+  String get notifStreakAlert => 'Streak Alert';
+
+  @override
+  String get notifStreakAlertSubtitle => 'Keep your fire burning!';
+
+  @override
+  String get notifHotStreakBadge => 'HOT STREAK';
+
+  @override
+  String get notifStreakAlertTime => 'Streak Alert Time';
+
+  @override
+  String get notifRewardNotifications => 'Reward Notifications';
+
+  @override
+  String get notifRewardNotificationsSubtitle =>
+      'When you earn Mitzvah Points!';
+
+  @override
+  String get notifSacredTime => 'SACRED TIME';
+
+  @override
+  String get notifShabbosYomTovMode => 'Shabbos / Yom Tov\nMode';
+
+  @override
+  String get notifShabbosModeSubtitle => 'Quiet learning during holy days';
+
+  @override
+  String get notifUseLocationForTimes => 'Use Location for Times';
+
+  @override
+  String get notifQuietStart => 'QUIET START';
+
+  @override
+  String get notifQuietEnd => 'QUIET END';
+
+  @override
+  String get notifCandleLighting => 'Candle lighting';
+
+  @override
+  String get notifHavdalah => 'Havdalah';
+
+  @override
+  String get authPasswordRequired => 'Password is required';
+
+  @override
+  String get authLocalDataMissing =>
+      'This account\'s local data is missing. Connect to the internet to restore it.';
+
+  @override
+  String get authEmailOfflineUnreachable =>
+      'This email isn\'t on this device and we can\'t reach the cloud. Try again when online.';
+
+  @override
+  String get authIncorrectPassword => 'Incorrect password.';
+
+  @override
+  String authSignInFailedError(String error) {
+    return 'Sign-in failed: $error';
+  }
+
+  @override
+  String get authVerifyEmailBody =>
+      'We sent a verification link to your inbox. Please check your email to continue.';
+
+  @override
+  String get authIveVerified => 'I\'ve verified';
+
+  @override
+  String get authVerificationEmailSentAgain => 'Verification email sent again.';
+
+  @override
+  String get authEmailStillUnverified =>
+      'Email is still unverified. Check your inbox first.';
+
+  @override
+  String authMaxDeviceAccounts(int count) {
+    return 'Maximum $count device accounts reached. Remove one to add another.';
+  }
+
+  @override
+  String get authOfflineUseUpgrade =>
+      'An offline account with this email exists on this device. Use the Upgrade to Cloud option in Settings instead.';
+
+  @override
+  String get authGoogleSignInFailed =>
+      'Google Sign-In failed. Please try again.';
+
+  @override
+  String get authErrUserNotFound => 'No account found with this email.';
+
+  @override
+  String get authErrWrongPassword => 'Incorrect password. Please try again.';
+
+  @override
+  String get authErrInvalidCredential =>
+      'Invalid email or password. Please try again.';
+
+  @override
+  String get authErrUserDisabled => 'This account has been disabled.';
+
+  @override
+  String get authErrTooManyRequests =>
+      'Too many attempts. Please try again later.';
+
+  @override
+  String get authErrInvalidEmail => 'Please enter a valid email address.';
+
+  @override
+  String get authErrNetwork => 'Network error. Please check your connection.';
+
+  @override
+  String get authErrSignInGeneric => 'Sign-in failed. Please try again.';
+
+  @override
+  String get authTierCloud => 'Cloud';
+
+  @override
+  String get authTierLocal => 'Local';
+
+  @override
+  String authFoundOnDevice(String tier) {
+    return 'Found on this device ($tier)';
+  }
+
+  @override
+  String get authNotOnDeviceCheckCloud =>
+      'Not on this device — we\'ll check the cloud';
+
+  @override
+  String get authNotOnDeviceOffline =>
+      'Not on this device (offline — only device accounts available)';
+
+  @override
+  String get authModeCloud =>
+      'Cloud account: your data is backed up and syncs across devices.';
+
+  @override
+  String get authModeCloudOffline =>
+      'Cloud account is offline right now. We will try local cached data until internet returns.';
+
+  @override
+  String get authModeLocalTitle =>
+      'Local account only: no cloud backup and no device sync.';
+
+  @override
+  String get authModeLocalBody =>
+      'No cloud backup or device sync. Your data stays only on this device.';
+
+  @override
+  String get signInWelcomeBack => 'Welcome Back!';
+
+  @override
+  String get signInReady => 'Ready for your next learning adventure?';
+
+  @override
+  String get signInYourEmail => 'Your Email';
+
+  @override
+  String get signInEmailHint => 'yourname@quest.com';
+
+  @override
+  String get signInPasswordLabel => 'Secret Key';
+
+  @override
+  String get signInPasswordHint => '••••••••';
+
+  @override
+  String get signInKeepMeSignedIn => 'Keep me signed in';
+
+  @override
+  String get signInCta => 'Sign In';
+
+  @override
+  String get signInWithGoogleCta => 'Sign in with Google';
+
+  @override
+  String get signInNewToQuest => 'New to the Quest? ';
+
+  @override
+  String get signInRegisterHere => 'Register Here';
 }

@@ -380,19 +380,10 @@
   "profilesLabel": "Profiles",
   "syncTitle": "Sync",
   "syncScreenBody": "Sync status and settings will appear here.",
-  "parentDashboard": "Parent Dashboard",
   "parentSettingsTitle": "Parent Settings",
-  "addChildTooltip": "Add Child",
-  "errorLoadingDashboard": "Error loading dashboard: {error}",
-  "@errorLoadingDashboard": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageTracksForChildSubtitle": "Add, edit, or archive your child's tracks",
   "pointConfiguration": "Point Configuration",
   "pointConfigurationSubtitle": "Set how many points activities are worth",
-  "parentDashboardCardSubtitle": "See your child's learning progress at a glance",
   "sectionAccountSafety": "ACCOUNT SAFETY",
   "bottomNavTracks": "Tracks",
   "bottomNavRewards": "Rewards",
@@ -416,5 +407,116 @@
   "enterCurrentPin": "Enter Current PIN",
   "enterNewPin": "Enter New PIN",
   "confirmNewPin": "Confirm New PIN",
-  "pinsDoNotMatch": "PINs do not match"
+  "pinsDoNotMatch": "PINs do not match",
+  "tabBarDashboard": "DASHBOARD",
+  "tabBarLearn": "LEARN",
+  "tabBarProgress": "PROGRESS",
+  "tabBarSettings": "SETTINGS",
+  "errorLoadingCalendar": "Error loading calendar",
+  "journeyByCurriculum": "By Curriculum",
+  "journeyTimeline": "Timeline",
+  "journeyTitleNamed": "{name}'s Learning Journey",
+  "@journeyTitleNamed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "loadingYourJourney": "Loading your journey...",
+  "failedToLoadJourney": "Failed to load journey: {error}",
+  "@failedToLoadJourney": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "journeyEmptyTitle": "Your learning journey starts here!",
+  "journeyEmptyBody": "Complete your first masechta to see it recorded forever.",
+  "progressChartsTitle": "Progress Charts",
+  "chartCompletionsOverTime": "Completions Over Time",
+  "chartDailyActivity": "DAILY ACTIVITY",
+  "chartCumulativeProgress": "Cumulative Progress",
+  "chartCumulativeProgressSubtitle": "+12% vs last week",
+  "chartPointsEarned": "Points Earned",
+  "chartTotalTorahPoints": "TOTAL TORAH POINTS",
+  "chartLearningJourney": "Learning Journey",
+  "chartJourneyMotivation": "Keep the flame alive every day!",
+  "chartSevenDayStreak": "7 DAY STREAK!",
+  "chartLast7Days": "Last 7 Days",
+  "chartLast30Days": "Last 30\nDays",
+  "chartAllTime": "All Time",
+  "chartFilterAll": "All",
+  "notifAppBarSettings": "Settings",
+  "notifHeroTitle": "Notifications",
+  "notifHeroSubtitle": "Keep your Torah journey on track!",
+  "notifDailyReminder": "Daily Reminder",
+  "notifDailyReminderSubtitle": "Don't forget to learn today!",
+  "notifReminderTime": "Reminder Time",
+  "notifStreakAlert": "Streak Alert",
+  "notifStreakAlertSubtitle": "Keep your fire burning!",
+  "notifHotStreakBadge": "HOT STREAK",
+  "notifStreakAlertTime": "Streak Alert Time",
+  "notifRewardNotifications": "Reward Notifications",
+  "notifRewardNotificationsSubtitle": "When you earn Mitzvah Points!",
+  "notifSacredTime": "SACRED TIME",
+  "notifShabbosYomTovMode": "Shabbos / Yom Tov\nMode",
+  "notifShabbosModeSubtitle": "Quiet learning during holy days",
+  "notifUseLocationForTimes": "Use Location for Times",
+  "notifQuietStart": "QUIET START",
+  "notifQuietEnd": "QUIET END",
+  "notifCandleLighting": "Candle lighting",
+  "notifHavdalah": "Havdalah",
+  "authPasswordRequired": "Password is required",
+  "authLocalDataMissing": "This account's local data is missing. Connect to the internet to restore it.",
+  "authEmailOfflineUnreachable": "This email isn't on this device and we can't reach the cloud. Try again when online.",
+  "authIncorrectPassword": "Incorrect password.",
+  "authSignInFailedError": "Sign-in failed: {error}",
+  "@authSignInFailedError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "authVerifyEmailBody": "We sent a verification link to your inbox. Please check your email to continue.",
+  "authIveVerified": "I've verified",
+  "authVerificationEmailSentAgain": "Verification email sent again.",
+  "authEmailStillUnverified": "Email is still unverified. Check your inbox first.",
+  "authMaxDeviceAccounts": "Maximum {count} device accounts reached. Remove one to add another.",
+  "@authMaxDeviceAccounts": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "authOfflineUseUpgrade": "An offline account with this email exists on this device. Use the Upgrade to Cloud option in Settings instead.",
+  "authGoogleSignInFailed": "Google Sign-In failed. Please try again.",
+  "authErrUserNotFound": "No account found with this email.",
+  "authErrWrongPassword": "Incorrect password. Please try again.",
+  "authErrInvalidCredential": "Invalid email or password. Please try again.",
+  "authErrUserDisabled": "This account has been disabled.",
+  "authErrTooManyRequests": "Too many attempts. Please try again later.",
+  "authErrInvalidEmail": "Please enter a valid email address.",
+  "authErrNetwork": "Network error. Please check your connection.",
+  "authErrSignInGeneric": "Sign-in failed. Please try again.",
+  "authTierCloud": "Cloud",
+  "authTierLocal": "Local",
+  "authFoundOnDevice": "Found on this device ({tier})",
+  "@authFoundOnDevice": {
+    "placeholders": {
+      "tier": { "type": "String" }
+    }
+  },
+  "authNotOnDeviceCheckCloud": "Not on this device — we'll check the cloud",
+  "authNotOnDeviceOffline": "Not on this device (offline — only device accounts available)",
+  "authModeCloud": "Cloud account: your data is backed up and syncs across devices.",
+  "authModeCloudOffline": "Cloud account is offline right now. We will try local cached data until internet returns.",
+  "authModeLocalTitle": "Local account only: no cloud backup and no device sync.",
+  "authModeLocalBody": "No cloud backup or device sync. Your data stays only on this device.",
+  "signInWelcomeBack": "Welcome Back!",
+  "signInReady": "Ready for your next learning adventure?",
+  "signInYourEmail": "Your Email",
+  "signInEmailHint": "yourname@quest.com",
+  "signInPasswordLabel": "Secret Key",
+  "signInPasswordHint": "••••••••",
+  "signInKeepMeSignedIn": "Keep me signed in",
+  "signInCta": "Sign In",
+  "signInWithGoogleCta": "Sign in with Google",
+  "signInNewToQuest": "New to the Quest? ",
+  "signInRegisterHere": "Register Here"
 }

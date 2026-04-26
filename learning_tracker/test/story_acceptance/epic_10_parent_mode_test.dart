@@ -16,7 +16,6 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_mode_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
 import 'package:mocktail/mocktail.dart';
@@ -504,185 +503,12 @@ void main() {
       expect(data.curricula.length, equals(1));
       expect(data.curricula.first.points, equals(30));
     });
-
-    // ── Widget: dashboard displays all key stats ──
-
-    testWidgets('dashboard displays all key stats', (tester) async {
-      final now = DateTime.now().toUtc();
-      await seedCurriculumAndCompletions(
-        db,
-        curriculumId: 'mishnayos',
-        completionCount: 2,
-        pointsPerCompletion: 15,
-        completionBaseDate: now,
-      );
-      await db.streakDao.upsertStreak(
-        StreaksCompanion.insert(
-          currentStreak: const Value(3),
-          maxStreak: const Value(7),
-          lastCompletionDate: Value(now),
-        ),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-          child: const MaterialApp(home: ParentModeScreen()),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Key stats visible — values shown as raw numbers, labels as 'Day Streak'
-      // and 'Total Points'. maxStreak is not separately displayed.
-      expect(find.text('3'), findsOneWidget); // current streak value
-      expect(find.text('30'), findsOneWidget); // points value (2 * 15)
-      expect(find.text('Day Streak'), findsOneWidget);
-      expect(find.text('Total Points'), findsOneWidget);
-    });
-
-    // ── Widget: per-curriculum cards show on-track status ──
-
-    testWidgets('per-curriculum cards show individual on-track status', (
-      tester,
-    ) async {
-      await seedCurriculumAndCompletions(
-        db,
-        curriculumId: 'mishnayos',
-        completionCount: 1,
-        pointsPerCompletion: 10,
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-          child: const MaterialApp(home: ParentModeScreen()),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Should show curriculum name and pace badge
-      expect(find.text('משניות'), findsOneWidget);
-      expect(find.text('On Pace'), findsOneWidget);
-    });
-
-    // ── Widget: recent completions list renders ──
-
-    testWidgets('recent completions list renders with dates and items', (
-      tester,
-    ) async {
-      final now = DateTime.now().toUtc();
-      await seedCurriculumAndCompletions(
-        db,
-        curriculumId: 'mishnayos',
-        completionCount: 2,
-        pointsPerCompletion: 10,
-        completionBaseDate: now,
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-          child: const MaterialApp(home: ParentModeScreen()),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Scroll down to reveal lazily-built Recent Activity section
-      await tester.scrollUntilVisible(
-        find.text('Recent Activity'),
-        200,
-        scrollable: find.byType(Scrollable),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Recent Activity'), findsOneWidget);
-      expect(find.text('ref-mishnayos-0'), findsOneWidget);
-      expect(find.text('ref-mishnayos-1'), findsOneWidget);
-      expect(find.text('+10'), findsAtLeastNWidgets(1));
-    });
-
-    // ── Integration: multi-day completions reflected in dashboard UI ──
-
-    testWidgets(
-      'integration: multi-day completions reflected in dashboard UI',
-      (tester) async {
-        final now = DateTime.now().toUtc();
-
-        // Day 1: 3 completions
-        for (var i = 0; i < 3; i++) {
-          await db.completionDao.insertCompletion(
-            CompletionsCompanion.insert(
-              curriculumId: 'mishnayos',
-              sefariaRef: 'day1-ref-$i',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now.subtract(const Duration(days: 2)),
-              points: const Value(10),
-            ),
-          );
-        }
-
-        // Day 2: 2 completions
-        for (var i = 0; i < 2; i++) {
-          await db.completionDao.insertCompletion(
-            CompletionsCompanion.insert(
-              curriculumId: 'mishnayos',
-              sefariaRef: 'day2-ref-$i',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now.subtract(const Duration(days: 1)),
-              points: const Value(10),
-            ),
-          );
-        }
-
-        await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
-        await db.streakDao.upsertStreak(
-          StreaksCompanion.insert(
-            currentStreak: const Value(2),
-            maxStreak: const Value(2),
-            lastCompletionDate: Value(now.subtract(const Duration(days: 1))),
-          ),
-        );
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [userDatabaseProvider.overrideWithValue(db)],
-            child: const MaterialApp(home: ParentModeScreen()),
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        // Verify key stats are displayed in the UI
-        expect(find.text('50'), findsOneWidget); // 5 * 10 points
-        expect(find.text('2'), findsOneWidget); // current streak value
-        // maxStreak is not separately displayed in the parent dashboard UI
-
-        // Scroll down to reveal lazily-built Recent Activity section
-        await tester.scrollUntilVisible(
-          find.text('Recent Activity'),
-          200,
-          scrollable: find.byType(Scrollable),
-        );
-        await tester.pumpAndSettle();
-
-        // Verify recent completions are shown
-        expect(find.text('Recent Activity'), findsOneWidget);
-        expect(find.text('day1-ref-0'), findsOneWidget);
-        expect(find.text('day2-ref-0'), findsOneWidget);
-      },
-    );
   });
 
   // ── Story 10.4: Point Value Configuration ────────────────────
 
   group('Story 10.4 -- Point Value Configuration', tags: ['story_10_4'], () {
+    const testProfileId = 0;
     late UserDatabase db;
     late int trackId;
     late PointsService pointsService;
@@ -690,7 +516,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       trackId = await _insertTrack(db);
-      pointsService = PointsService(db);
+      pointsService = PointsService(db, profileId: testProfileId);
 
       // Activate mishnayos and seed stages + point configs
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
@@ -708,6 +534,7 @@ void main() {
       await db.pointConfigDao.seedDefaults(
         CurriculumId.mishnayos.storageKey,
         trackId,
+        profileId: testProfileId,
       );
     });
 
@@ -721,7 +548,9 @@ void main() {
         // Update Learn from 10 to 15
         await db.pointConfigDao.upsertConfig(
           PointConfigsCompanion(
+            profileId: const Value(testProfileId),
             curriculumId: Value(CurriculumId.mishnayos.storageKey),
+            trackId: Value(trackId),
             stageOrder: const Value(1),
             points: const Value(15),
           ),
@@ -730,6 +559,8 @@ void main() {
         final config = await db.pointConfigDao.getConfig(
           CurriculumId.mishnayos.storageKey,
           1,
+          profileId: testProfileId,
+          trackId: trackId,
         );
         expect(config!.points, 15);
 
@@ -737,6 +568,8 @@ void main() {
         final config2 = await db.pointConfigDao.getConfig(
           CurriculumId.mishnayos.storageKey,
           2,
+          profileId: testProfileId,
+          trackId: trackId,
         );
         expect(config2!.points, 5);
       },
@@ -749,7 +582,9 @@ void main() {
       for (var i = 1; i <= 3; i++) {
         await db.pointConfigDao.upsertConfig(
           PointConfigsCompanion(
+            profileId: const Value(testProfileId),
             curriculumId: Value(CurriculumId.mishnayos.storageKey),
+            trackId: Value(trackId),
             stageOrder: Value(i),
             points: const Value(99),
           ),
@@ -759,14 +594,18 @@ void main() {
       // Reset: delete all then re-seed
       await db.pointConfigDao.deleteAllForCurriculum(
         CurriculumId.mishnayos.storageKey,
+        profileId: testProfileId,
       );
       await db.pointConfigDao.seedDefaults(
         CurriculumId.mishnayos.storageKey,
         trackId,
+        profileId: testProfileId,
       );
 
       final configs = await db.pointConfigDao.getConfigsByCurriculum(
         CurriculumId.mishnayos.storageKey,
+        profileId: testProfileId,
+        trackId: trackId,
       );
       expect(configs[0].points, 10); // Learn
       expect(configs[1].points, 5); // Chazara 1
@@ -792,7 +631,9 @@ void main() {
       // Now change point config for stage 1 to 15
       await db.pointConfigDao.upsertConfig(
         PointConfigsCompanion(
+          profileId: const Value(testProfileId),
           curriculumId: Value(CurriculumId.mishnayos.storageKey),
+          trackId: Value(trackId),
           stageOrder: const Value(1),
           points: const Value(15),
         ),
@@ -809,6 +650,7 @@ void main() {
       final newPoints = await pointsService.getPointsForStage(
         curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 1,
+        trackId: trackId,
       );
       expect(newPoints, 15);
     });
@@ -834,6 +676,7 @@ void main() {
       await db.pointConfigDao.seedDefaults(
         CurriculumId.bavli.storageKey,
         trackId,
+        profileId: testProfileId,
       );
 
       await tester.pumpWidget(
@@ -888,7 +731,9 @@ void main() {
       // Change a point value first
       await db.pointConfigDao.upsertConfig(
         PointConfigsCompanion(
+          profileId: const Value(testProfileId),
           curriculumId: Value(CurriculumId.mishnayos.storageKey),
+          trackId: Value(trackId),
           stageOrder: const Value(1),
           points: const Value(99),
         ),
@@ -920,6 +765,8 @@ void main() {
       // Values should be back to defaults
       final configs = await db.pointConfigDao.getConfigsByCurriculum(
         CurriculumId.mishnayos.storageKey,
+        profileId: testProfileId,
+        trackId: trackId,
       );
       expect(configs[0].points, 10);
       expect(configs[1].points, 5);
@@ -970,7 +817,9 @@ void main() {
         // Change Learn points to 15
         await db.pointConfigDao.upsertConfig(
           PointConfigsCompanion(
+            profileId: const Value(testProfileId),
             curriculumId: Value(CurriculumId.mishnayos.storageKey),
+            trackId: Value(trackId),
             stageOrder: const Value(1),
             points: const Value(15),
           ),
@@ -980,6 +829,7 @@ void main() {
         final points = await pointsService.getPointsForStage(
           curriculumId: CurriculumId.mishnayos.storageKey,
           stageOrder: 1,
+          trackId: trackId,
         );
         expect(points, 15);
 
