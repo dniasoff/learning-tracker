@@ -311,7 +311,7 @@ class _LifetimeFolderTreeNodeState extends State<LifetimeFolderTreeNode> {
     final isExpanded = widget.expandedNodes[widget.nodeKey] ?? false;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: EdgeInsets.only(left: indent),
@@ -320,6 +320,7 @@ class _LifetimeFolderTreeNodeState extends State<LifetimeFolderTreeNode> {
                 ? () => widget.onExpandToggle(widget.nodeKey, !isExpanded)
                 : null,
             child: Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
@@ -330,7 +331,6 @@ class _LifetimeFolderTreeNodeState extends State<LifetimeFolderTreeNode> {
                 ),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (hasChildren)
                     Padding(
@@ -361,7 +361,7 @@ class _LifetimeFolderTreeNodeState extends State<LifetimeFolderTreeNode> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Flexible(
+                  Expanded(
                     child: Text(
                       widget.node.label,
                       maxLines: 1,

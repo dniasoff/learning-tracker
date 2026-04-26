@@ -524,7 +524,7 @@ class _LearningLifetimeTreeCardState extends State<_LearningLifetimeTreeCard> {
             maxHeight: 280,
             child: SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (final node in summary.tree)
                     LifetimeFolderTreeNode(

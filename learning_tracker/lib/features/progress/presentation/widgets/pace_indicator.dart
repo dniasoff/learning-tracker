@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// Shows behind/on-track/ahead status badge for a curriculum goal.
@@ -9,39 +10,69 @@ class PaceIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final (label, color, icon) = switch (paceStatus.status) {
       PaceStatusType.ahead => (
         'Ahead by ${paceStatus.daysDelta} days',
-        Colors.green,
-        Icons.trending_up,
+        AppTheme.brandGold,
+        Icons.trending_up_rounded,
       ),
       PaceStatusType.onPace => (
         'On pace',
-        Colors.blue,
-        Icons.check_circle_outline,
+        AppTheme.brandBlue,
+        Icons.check_circle_outline_rounded,
       ),
       PaceStatusType.behind => (
         'Behind by ${paceStatus.daysDelta.abs()} days',
-        Colors.orange,
-        Icons.trending_down,
+        AppTheme.brandCoralDeep,
+        Icons.trending_down_rounded,
       ),
     };
 
-    return Card(
-      color: color.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w600),
-            ),
-          ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: AppTheme.brandCreamCard,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.brandOutline.withValues(alpha: 0.35),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: AppTheme.brandInk,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.flag_outlined,
+            size: 20,
+            color: color.withValues(alpha: 0.85),
+          ),
+        ],
       ),
     );
   }

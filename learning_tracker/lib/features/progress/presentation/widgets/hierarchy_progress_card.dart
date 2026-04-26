@@ -28,11 +28,40 @@ class HierarchyProgressCard extends StatelessWidget {
       return _ExpandableHierarchyCard(level: level, color: color);
     }
 
-    return Card(
+    return _HierarchySurfaceCard(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: _LevelContent(level: level, color: color),
       ),
+    );
+  }
+}
+
+class _HierarchySurfaceCard extends StatelessWidget {
+  const _HierarchySurfaceCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppTheme.brandCreamCard,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.brandOutline.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
@@ -45,39 +74,63 @@ class _ExpandableHierarchyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ExpansionTile(
-        title: Text(
-          level.levelName,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: _ProgressSummaryLine(level: level),
-        leading: _ProgressCircle(
-          percentage: level.completionPercentage,
-          color: color,
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                StageBreakdownRow(stageBreakdown: level.stageBreakdown),
-                const SizedBox(height: 4),
-                _TrackBreakdownLine(trackBreakdown: level.trackBreakdown),
-                if (level.subLevels != null) ...[
-                  const Divider(),
-                  ...level.subLevels!.map(
-                    (sub) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _LevelContent(level: sub, color: color),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+    final theme = Theme.of(context);
+    return _HierarchySurfaceCard(
+      child: Theme(
+        data: theme.copyWith(
+          dividerTheme: DividerThemeData(
+            color: AppTheme.brandOutline.withValues(alpha: 0.4),
           ),
-        ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 4,
+            ),
+            childrenPadding: EdgeInsets.zero,
+            shape: const Border(),
+            collapsedShape: const Border(),
+            title: Text(
+              level.levelName,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.brandInk,
+              ),
+            ),
+            subtitle: _ProgressSummaryLine(level: level),
+            leading: _ProgressCircle(
+              percentage: level.completionPercentage,
+              color: color,
+            ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    StageBreakdownRow(stageBreakdown: level.stageBreakdown),
+                    const SizedBox(height: 4),
+                    _TrackBreakdownLine(trackBreakdown: level.trackBreakdown),
+                    if (level.subLevels != null) ...[
+                      Divider(
+                        height: 20,
+                        color: AppTheme.brandOutline.withValues(alpha: 0.45),
+                      ),
+                      ...level.subLevels!.map(
+                        (sub) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _LevelContent(level: sub, color: color),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -91,6 +144,7 @@ class _LevelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -107,7 +161,10 @@ class _LevelContent extends StatelessWidget {
                 children: [
                   Text(
                     level.levelName,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.brandInk,
+                    ),
                   ),
                   _ProgressSummaryLine(level: level),
                 ],
@@ -117,12 +174,12 @@ class _LevelContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: level.completionPercentage,
-            backgroundColor: color.withValues(alpha: 0.15),
+            backgroundColor: AppTheme.brandCreamSoft,
             valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
+            minHeight: 8,
           ),
         ),
         const SizedBox(height: 8),
@@ -144,7 +201,10 @@ class _ProgressSummaryLine extends StatelessWidget {
     final pct = formatFractionAsPercent(level.completionPercentage);
     return Text(
       '${level.completedItems}/${level.totalItems} ($pct)',
-      style: Theme.of(context).textTheme.bodySmall,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: AppTheme.brandInkMuted,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }
@@ -157,21 +217,48 @@ class _ProgressCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = formatFractionAsPercent(percentage);
+    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontSize: 9,
+      fontWeight: FontWeight.w800,
+      height: 1.0,
+      letterSpacing: -0.15,
+      color: AppTheme.brandInk,
+    );
+
     return SizedBox(
       width: 40,
       height: 40,
       child: Stack(
+        clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          CircularProgressIndicator(
-            value: percentage,
-            backgroundColor: color.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            strokeWidth: 3,
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              value: percentage,
+              backgroundColor: color.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              strokeWidth: 3,
+              strokeAlign: BorderSide.strokeAlignInside,
+            ),
           ),
-          Text(
-            formatFractionAsPercent(percentage),
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+          Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                textHeightBehavior: const TextHeightBehavior(
+                  applyHeightToFirstAscent: false,
+                  applyHeightToLastDescent: false,
+                ),
+                style: textStyle,
+              ),
+            ),
           ),
         ],
       ),
@@ -204,7 +291,10 @@ class _TrackBreakdownLine extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               '${entry.key.displayNameEn}: ${entry.value}',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.brandInkMuted,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         );
