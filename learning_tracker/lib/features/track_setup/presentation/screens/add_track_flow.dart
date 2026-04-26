@@ -1407,6 +1407,36 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   int get _totalSelectionCount => _selections.length;
 
+  /// Whether every value in [values] is directly selected at the current level.
+  bool _allValuesDirectlySelected(List<String> values) {
+    if (values.isEmpty) return false;
+    return values.every(_isDirectlySelected);
+  }
+
+  /// Select every section at the current list, or deselect if already all direct.
+  void _toggleSelectAllCurrentLevel(List<ContentItem> items) {
+    final values = _valuesAtCurrentLevel(items);
+    if (values.isEmpty) return;
+    setState(() {
+      if (_allValuesDirectlySelected(values)) {
+        for (final v in values) {
+          _selections.removeWhere(
+            (s) => s.level == _currentLevel && s.value == v,
+          );
+        }
+      } else {
+        _selections.removeWhere((s) => s.level > _currentLevel);
+        for (final v in values) {
+          if (!_selections.any(
+            (s) => s.level == _currentLevel && s.value == v,
+          )) {
+            _selections.add(ScopeEntry(level: _currentLevel, value: v));
+          }
+        }
+      }
+    });
+  }
+
   int _childCountForValue(List<ContentItem> items, String value) {
     final nextLevel = _currentLevel + 1;
     if (nextLevel > _hierarchy.maxLevels) return 0;
@@ -1671,6 +1701,26 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             ),
           ),
         ),
+        if (values.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => _toggleSelectAllCurrentLevel(items),
+              icon: Icon(
+                _allValuesDirectlySelected(values)
+                    ? Icons.remove_done
+                    : Icons.select_all,
+                size: 20,
+              ),
+              label: Text(
+                _allValuesDirectlySelected(values)
+                    ? 'Deselect all in this list'
+                    : 'Select all in this list',
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         Expanded(
           child: ListView.separated(
@@ -1747,6 +1797,26 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                     ),
                   )
                   .toList(),
+            ),
+          ),
+        ],
+        if (values.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => _toggleSelectAllCurrentLevel(items),
+              icon: Icon(
+                _allValuesDirectlySelected(values)
+                    ? Icons.remove_done
+                    : Icons.select_all,
+                size: 20,
+              ),
+              label: Text(
+                _allValuesDirectlySelected(values)
+                    ? 'Deselect all in this list'
+                    : 'Select all in this list',
+              ),
             ),
           ),
         ],
