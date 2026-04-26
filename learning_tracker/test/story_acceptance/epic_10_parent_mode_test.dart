@@ -75,6 +75,15 @@ Future<int> _insertTrack(UserDatabase db) async {
   return row.id;
 }
 
+/// Taller logical surface so scroll-heavy Point Settings fits in tests.
+void _pointConfigLargeSurface(WidgetTester tester) {
+  final view = tester.view;
+  view.physicalSize = const Size(800, 1600);
+  view.devicePixelRatio = 1.0;
+  addTearDown(view.resetPhysicalSize);
+  addTearDown(view.resetDevicePixelRatio);
+}
+
 /// Point config screen under l10n + DB, with sync off (no Firebase in tests).
 Widget _pointConfigTestApp(UserDatabase db, Widget child) => ProviderScope(
   overrides: [
@@ -676,6 +685,7 @@ void main() {
     testWidgets('config screen lists curricula with expandable stage rows', (
       tester,
     ) async {
+      _pointConfigLargeSurface(tester);
       // Second active track (Bavli) with its own stages and point configs
       await db.activeCurriculumDao.activate(CurriculumId.bavli);
       final bavliTrackRow = await db
@@ -710,17 +720,23 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Both curricula visible (English titles + Hebrew subtitles)
-      expect(find.text('Mishnayos'), findsOneWidget);
-      expect(find.textContaining('תלמוד בבלי'), findsOneWidget);
+      // Both curricula visible (English titles + Hebrew subtitles).
+      // Cards may be below the fold — do not skip offstage finders.
+      expect(find.text('Mishnayos', skipOffstage: false), findsOneWidget);
+      expect(
+        find.textContaining('תלמוד בבלי', skipOffstage: false),
+        findsOneWidget,
+      );
 
-      // Expand "Other stages" on Mishnayos card to see non-primary stages
-      await tester.tap(find.textContaining('Other stages').first);
+      // Primary row shows stage name; expand Mishnayos card's other stages
+      expect(find.textContaining('Learning', skipOffstage: false), findsWidgets);
+      await tester.tap(find.byKey(ValueKey('point-other-stages-$trackId')));
       await tester.pumpAndSettle();
 
-      // Stage names visible
-      expect(find.text('Learning'), findsOneWidget);
-      expect(find.text('Chazara 1'), findsAtLeastNWidgets(1));
+      expect(
+        find.text('Chazara 1', skipOffstage: false),
+        findsAtLeastNWidgets(1),
+      );
     });
 
     // ── Widget: Each stage row shows editable point value field ──
@@ -728,17 +744,18 @@ void main() {
     testWidgets('each stage row shows editable point value field', (
       tester,
     ) async {
+      _pointConfigLargeSurface(tester);
       await tester.pumpWidget(
         _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
       // Primary stepper shows 10; expand other stages for 5 and 3
-      expect(find.text('10'), findsWidgets);
-      await tester.tap(find.textContaining('Other stages').first);
+      expect(find.text('10', skipOffstage: false), findsWidgets);
+      await tester.tap(find.byKey(ValueKey('point-other-stages-$trackId')));
       await tester.pumpAndSettle();
-      expect(find.text('5'), findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('5', skipOffstage: false), findsOneWidget);
+      expect(find.text('3', skipOffstage: false), findsOneWidget);
     });
 
     // ── Widget: Reset button with confirmation restores defaults ──
@@ -746,6 +763,7 @@ void main() {
     testWidgets('reset button with confirmation restores defaults', (
       tester,
     ) async {
+      _pointConfigLargeSurface(tester);
       // Change a point value first
       await db.pointConfigDao.upsertConfig(
         PointConfigsCompanion(
@@ -763,14 +781,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Per-track reset (restore icon on card)
-      await tester.tap(find.byIcon(Icons.restore_rounded));
+      await tester.tap(find.byIcon(Icons.restore_rounded, skipOffstage: false));
       await tester.pumpAndSettle();
 
       // Confirmation dialog
       expect(find.text('Reset to defaults'), findsOneWidget);
 
       // Confirm
-      await tester.tap(find.text('Reset to defaults'), warnIfMissed: false);
+      await tester.tap(find.text('Reset'));
       await tester.pumpAndSettle();
 
       // Values should be back to defaults
@@ -787,17 +805,17 @@ void main() {
     // ── Widget: Validation prevents zero or negative values ──
 
     testWidgets('validation prevents zero or negative values', (tester) async {
+      _pointConfigLargeSurface(tester);
       await tester.pumpWidget(
         _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
-      // Expand Mishnayos
-      await tester.tap(find.textContaining('משניות'));
+      await tester.tap(find.byKey(ValueKey('point-other-stages-$trackId')));
       await tester.pumpAndSettle();
 
-      // Tap edit on the first stage (Learn = 10)
-      final editButtons = find.byIcon(Icons.edit);
+      // Tap edit on the first non-primary stage row
+      final editButtons = find.byIcon(Icons.edit, skipOffstage: false);
       await tester.tap(editButtons.first);
       await tester.pumpAndSettle();
 

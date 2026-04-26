@@ -60,9 +60,7 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
 
 List<_StagePointConfig> _nonPrimaryStages(_TrackPointData data) {
   final primaryOrder = _primaryStageRow(data).stage.stageOrder;
-  return data.stages
-      .where((s) => s.stage.stageOrder != primaryOrder)
-      .toList()
+  return data.stages.where((s) => s.stage.stageOrder != primaryOrder).toList()
     ..sort((a, b) => a.stage.stageOrder.compareTo(b.stage.stageOrder));
 }
 
@@ -191,16 +189,16 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
           _saving = false;
         });
         ref.invalidate(_pointConfigDataProvider);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.pointSettingsSavedSnackbar)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.pointSettingsSavedSnackbar)),
+        );
       }
     } catch (e) {
       if (mounted) setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -225,7 +223,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.pointSettingsResetTrackTitle),
+            child: Text(l10n.pointSettingsResetConfirm),
           ),
         ],
       ),
@@ -258,7 +256,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.pointSettingsResetAllTitle),
+            child: Text(l10n.pointSettingsResetConfirm),
           ),
         ],
       ),
@@ -308,7 +306,10 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
         actions: [
           if (tracks != null && tracks.isNotEmpty)
             PopupMenuButton<String>(
-              icon: Icon(Icons.settings_outlined, color: AppTheme.brandBlueDeep),
+              icon: Icon(
+                Icons.settings_outlined,
+                color: AppTheme.brandBlueDeep,
+              ),
               onSelected: (value) {
                 if (value == 'resetAll') {
                   _confirmResetAll(tracks);
@@ -372,53 +373,46 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                       sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final data = pointData[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: _CurriculumPointsCard(
-                                l10n: l10n,
-                                data: data,
-                                showAccentStripe: index == 1,
-                                primaryPoints: _effectivePrimaryPoints(data),
-                                primaryStageName:
-                                    _primaryStageRow(data).stage.stageName,
-                                onDecrement: _effectivePrimaryPoints(data) > 1
-                                    ? () => _bumpPrimary(data, -1)
-                                    : null,
-                                onIncrement: () => _bumpPrimary(data, 1),
-                                onReset: () => _confirmResetTrack(data),
-                                otherStages: _nonPrimaryStages(data),
-                                onOtherStageSave:
-                                    (
-                                      _StagePointConfig sp,
-                                      int newPoints,
-                                    ) async {
-                                      final db = ref.read(userDatabaseProvider);
-                                      await db.pointConfigDao.upsertConfig(
-                                        PointConfigsCompanion(
-                                          profileId: Value(data.profileId),
-                                          curriculumId: Value(
-                                            data.curriculum.storageKey,
-                                          ),
-                                          trackId: Value(data.trackId),
-                                          stageOrder: Value(
-                                            sp.stage.stageOrder,
-                                          ),
-                                          points: Value(newPoints),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final data = pointData[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _CurriculumPointsCard(
+                              l10n: l10n,
+                              data: data,
+                              showAccentStripe: index == 1,
+                              primaryPoints: _effectivePrimaryPoints(data),
+                              primaryStageName: _primaryStageRow(
+                                data,
+                              ).stage.stageName,
+                              onDecrement: _effectivePrimaryPoints(data) > 1
+                                  ? () => _bumpPrimary(data, -1)
+                                  : null,
+                              onIncrement: () => _bumpPrimary(data, 1),
+                              onReset: () => _confirmResetTrack(data),
+                              otherStages: _nonPrimaryStages(data),
+                              onOtherStageSave:
+                                  (_StagePointConfig sp, int newPoints) async {
+                                    final db = ref.read(userDatabaseProvider);
+                                    await db.pointConfigDao.upsertConfig(
+                                      PointConfigsCompanion(
+                                        profileId: Value(data.profileId),
+                                        curriculumId: Value(
+                                          data.curriculum.storageKey,
                                         ),
-                                      );
-                                      await ref
-                                          .read(syncEngineProvider)
-                                          ?.pushGamificationSettingsSnapshot();
-                                      ref.invalidate(_pointConfigDataProvider);
-                                    },
-                              ),
-                            );
-                          },
-                          childCount: pointData.length,
-                        ),
+                                        trackId: Value(data.trackId),
+                                        stageOrder: Value(sp.stage.stageOrder),
+                                        points: Value(newPoints),
+                                      ),
+                                    );
+                                    await ref
+                                        .read(syncEngineProvider)
+                                        ?.pushGamificationSettingsSnapshot();
+                                    ref.invalidate(_pointConfigDataProvider);
+                                  },
+                            ),
+                          );
+                        }, childCount: pointData.length),
                       ),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 120)),
@@ -432,7 +426,9 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                 onPressed: () => _savePending(pointData),
                 onNothingToSave: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.pointSettingsNothingToSaveSnackbar)),
+                    SnackBar(
+                      content: Text(l10n.pointSettingsNothingToSaveSnackbar),
+                    ),
                   );
                 },
               ),
@@ -615,7 +611,10 @@ class _CurriculumPointsCard extends StatelessWidget {
                   onPressed: onReset,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Container(
@@ -713,6 +712,7 @@ class _CurriculumPointsCard extends StatelessWidget {
               Theme(
                 data: theme.copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
+                  key: ValueKey<String>('point-other-stages-${data.trackId}'),
                   tilePadding: EdgeInsets.zero,
                   childrenPadding: const EdgeInsets.only(bottom: 4),
                   title: Text(
@@ -820,11 +820,7 @@ class _RoundStepButton extends StatelessWidget {
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
-          child: SizedBox(
-            width: 40,
-            height: 40,
-            child: Center(child: child),
-          ),
+          child: SizedBox(width: 40, height: 40, child: Center(child: child)),
         ),
       ),
     );
@@ -832,10 +828,7 @@ class _RoundStepButton extends StatelessWidget {
 }
 
 class _OtherStageRow extends StatelessWidget {
-  const _OtherStageRow({
-    required this.stagePoint,
-    required this.onSave,
-  });
+  const _OtherStageRow({required this.stagePoint, required this.onSave});
 
   final _StagePointConfig stagePoint;
   final Future<void> Function(int) onSave;
@@ -853,7 +846,7 @@ class _OtherStageRow extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 22),
+            icon: const Icon(Icons.edit, size: 22),
             onPressed: () => _showEditDialog(context),
           ),
         ],
