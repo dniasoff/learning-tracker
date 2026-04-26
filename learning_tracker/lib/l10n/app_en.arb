@@ -413,6 +413,26 @@
   "pointConfigPerTaskTitle": "Points per completed task",
   "pointConfigPerTaskDescription": "For each active learning track, set how many points your child earns when they complete one task from their daily list. The amount depends on the task stage (for example first learn vs review).",
   "pointConfigNoActiveTracksBody": "No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.",
+  "pointSettingsTitle": "Point Settings",
+  "pointSettingsConfigurationLabel": "CONFIGURATION",
+  "pointSettingsRewardsStrategyTitle": "Rewards Strategy",
+  "pointSettingsRewardsStrategySubtitle": "Adjust how many points your child earns for each sacred milestone.",
+  "pointSettingsActiveCurricula": "Active Curricula",
+  "pointSettingsPointsPerTask": "Points per Task",
+  "pointSettingsPts": "PTS",
+  "pointSettingsActiveBadge": "ACTIVE",
+  "pointSettingsSaveAll": "Save All Changes",
+  "pointSettingsSaveFooter": "Point changes will sync instantly to the Child's dashboard.",
+  "pointSettingsSavedSnackbar": "Changes saved and synced.",
+  "pointSettingsNothingToSaveSnackbar": "No changes to save.",
+  "pointSettingsOtherStages": "Other stages (reviews)",
+  "pointSettingsResetTrackTitle": "Reset to defaults",
+  "pointSettingsResetConfirm": "Reset",
+  "pointSettingsResetTrackMessage": "Reset all point values for this track to the default ladder?",
+  "pointSettingsResetAllTitle": "Reset all tracks",
+  "pointSettingsResetAllMessage": "Reset point values for every active track to defaults?",
+  "pointSettingsMenuResetAll": "Reset all tracks…",
+  "pointSettingsPrimaryStageLabel": "First completion (daily task)",
   "sectionAccountSafety": "ACCOUNT SAFETY",
   "bottomNavTracks": "Tracks",
   "bottomNavRewards": "Rewards",
@@ -548,5 +568,31 @@
   "signInWithGoogleCta": "Sign in with Google",
   "signInNewToQuest": "New to the Quest? ",
   "signInRegisterHere": "Register Here",
-  "chartFailedToLoad": "Failed to load data"
+  "chartFailedToLoad": "Failed to load data",
+  "accountPickerTitle": "Choose an Account",
+  "accountPickerSubtitle": "Select a learner to continue your journey",
+  "accountPickerMaxAccountsShort": "Maximum {count} device accounts reached",
+  "@accountPickerMaxAccountsShort": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "accountPickerPrivacyFooter": "Manage your privacy and security in Settings",
+  "accountRemoveFromDevice": "Remove from device",
+  "accountDeleteAccountAction": "Delete account",
+  "badgeLocalAccount": "LOCAL ACCOUNT",
+  "badgeSignInAgain": "SIGN IN AGAIN",
+  "badgeCloudAccount": "CLOUD ACCOUNT",
+  "accountRemoveFromDeviceTitle": "Remove from device?",
+  "accountDeleteAccountTitle": "Delete account?",
+  "accountRemoveFromDeviceBody": "Your cloud data is safe — you can sign back in anytime.",
+  "accountDeleteAccountBody": "All learning data will be permanently lost. This cannot be undone.",
+  "accountRemove": "Remove",
+  "accountDeleteForever": "Delete Forever",
+  "accountPickerAddAnother": "+1   Add another account ({remaining} slots remaining)",
+  "@accountPickerAddAnother": {
+    "placeholders": {
+      "remaining": { "type": "int" }
+    }
+  }
 }

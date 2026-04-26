@@ -879,6 +879,70 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא נמצאו מסלולי למידה פעילים עם שלבים לילד הזה. הפעילו מקצועות והגדירו מסלולים תחת ניהול מסלולים, ואז חזרו לכאן כדי לקבוע נקודות לכל משימה.';
 
   @override
+  String get pointSettingsTitle => 'הגדרות נקודות';
+
+  @override
+  String get pointSettingsConfigurationLabel => 'הגדרות';
+
+  @override
+  String get pointSettingsRewardsStrategyTitle => 'אסטרטגיית פרסים';
+
+  @override
+  String get pointSettingsRewardsStrategySubtitle =>
+      'כווננו כמה נקודות הילד מקבל בכל צעד משמעותי בלמידה.';
+
+  @override
+  String get pointSettingsActiveCurricula => 'מקצועות פעילים';
+
+  @override
+  String get pointSettingsPointsPerTask => 'נקודות למשימה';
+
+  @override
+  String get pointSettingsPts => 'נק׳';
+
+  @override
+  String get pointSettingsActiveBadge => 'פעיל';
+
+  @override
+  String get pointSettingsSaveAll => 'שמירת כל השינויים';
+
+  @override
+  String get pointSettingsSaveFooter =>
+      'שינויי הנקודות יסתנכרנו מיד ללוח הילד.';
+
+  @override
+  String get pointSettingsSavedSnackbar => 'השינויים נשמרו וסונכרנו.';
+
+  @override
+  String get pointSettingsNothingToSaveSnackbar => 'אין שינויים לשמירה.';
+
+  @override
+  String get pointSettingsOtherStages => 'שלבים נוספים (חזרות)';
+
+  @override
+  String get pointSettingsResetTrackTitle => 'איפוס לברירת מחדל';
+
+  @override
+  String get pointSettingsResetConfirm => 'איפוס';
+
+  @override
+  String get pointSettingsResetTrackMessage =>
+      'לאפס את כל ערכי הנקודות למסלול הזה לסולם ברירת המחדל?';
+
+  @override
+  String get pointSettingsResetAllTitle => 'איפוס כל המסלולים';
+
+  @override
+  String get pointSettingsResetAllMessage =>
+      'לאפס את ערכי הנקודות לכל המסלולים הפעילים לברירת המחדל?';
+
+  @override
+  String get pointSettingsMenuResetAll => 'איפוס כל המסלולים…';
+
+  @override
+  String get pointSettingsPrimaryStageLabel => 'השלמה ראשונה (משימה יומית)';
+
+  @override
   String get sectionAccountSafety => 'בטיחות חשבון';
 
   @override
@@ -1215,4 +1279,58 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chartFailedToLoad => 'נכשל בטעינת הנתונים';
+
+  @override
+  String get accountPickerTitle => 'בחירת חשבון';
+
+  @override
+  String get accountPickerSubtitle => 'בחרו משתמש כדי להמשיך';
+
+  @override
+  String accountPickerMaxAccountsShort(int count) {
+    return 'הגעתם למקסימום $count חשבונות';
+  }
+
+  @override
+  String get accountPickerPrivacyFooter => 'ניהול פרטיות ואבטחה בהגדרות';
+
+  @override
+  String get accountRemoveFromDevice => 'הסרה מהמכשיר';
+
+  @override
+  String get accountDeleteAccountAction => 'מחיקת חשבון';
+
+  @override
+  String get badgeLocalAccount => 'חשבון מקומי';
+
+  @override
+  String get badgeSignInAgain => 'התחברו שוב';
+
+  @override
+  String get badgeCloudAccount => 'חשבון ענן';
+
+  @override
+  String get accountRemoveFromDeviceTitle => 'להסיר מהמכשיר?';
+
+  @override
+  String get accountDeleteAccountTitle => 'למחוק חשבון?';
+
+  @override
+  String get accountRemoveFromDeviceBody =>
+      'הנתונים בענן בטוחים — תוכלו להתחבר שוב בכל עת.';
+
+  @override
+  String get accountDeleteAccountBody =>
+      'כל נתוני הלמידה יימחקו לצמיתות. לא ניתן לבטל.';
+
+  @override
+  String get accountRemove => 'הסרה';
+
+  @override
+  String get accountDeleteForever => 'מחיקה לצמיתות';
+
+  @override
+  String accountPickerAddAnother(int remaining) {
+    return '+1   הוספת חשבון ($remaining מקומות פנויים)';
+  }
 }

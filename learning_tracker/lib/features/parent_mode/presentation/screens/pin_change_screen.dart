@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Screen for changing the parent PIN.
 ///
@@ -26,22 +27,23 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
   bool _isLockedOut = false;
   int _lockoutRemainingMinutes = 0;
 
-  String get _title {
+  String _titleForStep(AppLocalizations l10n) {
     switch (_step) {
       case _PinChangeStep.verifyCurrent:
-        return 'Enter Current PIN';
+        return l10n.enterCurrentPin;
       case _PinChangeStep.enterNew:
-        return 'Enter New PIN';
+        return l10n.enterNewPin;
       case _PinChangeStep.confirmNew:
-        return 'Confirm New PIN';
+        return l10n.confirmNewPin;
     }
   }
 
   Future<void> _onPinComplete(String pin) async {
+    final l10n = AppLocalizations.of(context)!;
     final pinService = ref.read(pinServiceProvider);
     final profileId = ref.read(selectedProfileIdProvider);
     if (profileId == null) {
-      setState(() => _errorMessage = 'No active profile');
+      setState(() => _errorMessage = l10n.noActiveProfile);
       return;
     }
 
@@ -55,7 +57,7 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
               _errorMessage = null;
             });
           } else {
-            setState(() => _errorMessage = 'Incorrect PIN');
+            setState(() => _errorMessage = l10n.incorrectPin);
           }
         } on PinLockoutException catch (e) {
           setState(() {
@@ -75,7 +77,7 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
       case _PinChangeStep.confirmNew:
         if (pin != _newPin) {
           setState(() {
-            _errorMessage = 'PINs do not match';
+            _errorMessage = l10n.pinsDoNotMatch;
             _step = _PinChangeStep.enterNew;
             _newPin = null;
           });
@@ -84,7 +86,7 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
         await pinService.setProfilePin(profileId, pin);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('PIN changed successfully')),
+            SnackBar(content: Text(l10n.pinChangedSuccessfully)),
           );
           await context.router.maybePop(true);
         }
@@ -93,15 +95,16 @@ class _PinChangeScreenState extends ConsumerState<PinChangeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Change Parent PIN')),
+      appBar: AppBar(title: AppBarTitle(text: l10n.changeParentPin)),
       body: SafeArea(
         top: false,
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: PinEntryWidget(
-              title: _title,
+              title: _titleForStep(l10n),
               errorMessage: _errorMessage,
               isLockedOut: _isLockedOut,
               lockoutRemainingMinutes: _lockoutRemainingMinutes,

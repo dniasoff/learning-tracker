@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/offline_top_banner.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class AppShellScreen extends StatelessWidget {
@@ -23,11 +24,12 @@ class AppShellScreen extends StatelessWidget {
         child: OfflineTopBanner(),
       ),
       bottomNavigationBuilder: (context, tabsRouter) {
-        const items = [
-          (icon: Icons.space_dashboard_rounded, label: 'DASHBOARD'),
-          (icon: Icons.menu_book_rounded, label: 'LEARN'),
-          (icon: Icons.auto_graph_rounded, label: 'PROGRESS'),
-          (icon: Icons.settings_rounded, label: 'SETTINGS'),
+        final l10n = AppLocalizations.of(context)!;
+        final items = [
+          (icon: Icons.space_dashboard_rounded, label: l10n.tabBarDashboard),
+          (icon: Icons.menu_book_rounded, label: l10n.tabBarLearn),
+          (icon: Icons.auto_graph_rounded, label: l10n.tabBarProgress),
+          (icon: Icons.settings_rounded, label: l10n.tabBarSettings),
         ];
         return DecoratedBox(
           decoration: BoxDecoration(

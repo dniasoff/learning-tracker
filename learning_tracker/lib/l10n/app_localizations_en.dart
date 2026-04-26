@@ -888,6 +888,70 @@ class AppLocalizationsEn extends AppLocalizations {
       'No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.';
 
   @override
+  String get pointSettingsTitle => 'Point Settings';
+
+  @override
+  String get pointSettingsConfigurationLabel => 'CONFIGURATION';
+
+  @override
+  String get pointSettingsRewardsStrategyTitle => 'Rewards Strategy';
+
+  @override
+  String get pointSettingsRewardsStrategySubtitle =>
+      'Adjust how many points your child earns for each sacred milestone.';
+
+  @override
+  String get pointSettingsActiveCurricula => 'Active Curricula';
+
+  @override
+  String get pointSettingsPointsPerTask => 'Points per Task';
+
+  @override
+  String get pointSettingsPts => 'PTS';
+
+  @override
+  String get pointSettingsActiveBadge => 'ACTIVE';
+
+  @override
+  String get pointSettingsSaveAll => 'Save All Changes';
+
+  @override
+  String get pointSettingsSaveFooter =>
+      'Point changes will sync instantly to the Child\'s dashboard.';
+
+  @override
+  String get pointSettingsSavedSnackbar => 'Changes saved and synced.';
+
+  @override
+  String get pointSettingsNothingToSaveSnackbar => 'No changes to save.';
+
+  @override
+  String get pointSettingsOtherStages => 'Other stages (reviews)';
+
+  @override
+  String get pointSettingsResetTrackTitle => 'Reset to defaults';
+
+  @override
+  String get pointSettingsResetConfirm => 'Reset';
+
+  @override
+  String get pointSettingsResetTrackMessage =>
+      'Reset all point values for this track to the default ladder?';
+
+  @override
+  String get pointSettingsResetAllTitle => 'Reset all tracks';
+
+  @override
+  String get pointSettingsResetAllMessage =>
+      'Reset point values for every active track to defaults?';
+
+  @override
+  String get pointSettingsMenuResetAll => 'Reset all tracks…';
+
+  @override
+  String get pointSettingsPrimaryStageLabel => 'First completion (daily task)';
+
+  @override
   String get sectionAccountSafety => 'ACCOUNT SAFETY';
 
   @override
@@ -1229,4 +1293,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartFailedToLoad => 'Failed to load data';
+
+  @override
+  String get accountPickerTitle => 'Choose an Account';
+
+  @override
+  String get accountPickerSubtitle =>
+      'Select a learner to continue your journey';
+
+  @override
+  String accountPickerMaxAccountsShort(int count) {
+    return 'Maximum $count device accounts reached';
+  }
+
+  @override
+  String get accountPickerPrivacyFooter =>
+      'Manage your privacy and security in Settings';
+
+  @override
+  String get accountRemoveFromDevice => 'Remove from device';
+
+  @override
+  String get accountDeleteAccountAction => 'Delete account';
+
+  @override
+  String get badgeLocalAccount => 'LOCAL ACCOUNT';
+
+  @override
+  String get badgeSignInAgain => 'SIGN IN AGAIN';
+
+  @override
+  String get badgeCloudAccount => 'CLOUD ACCOUNT';
+
+  @override
+  String get accountRemoveFromDeviceTitle => 'Remove from device?';
+
+  @override
+  String get accountDeleteAccountTitle => 'Delete account?';
+
+  @override
+  String get accountRemoveFromDeviceBody =>
+      'Your cloud data is safe — you can sign back in anytime.';
+
+  @override
+  String get accountDeleteAccountBody =>
+      'All learning data will be permanently lost. This cannot be undone.';
+
+  @override
+  String get accountRemove => 'Remove';
+
+  @override
+  String get accountDeleteForever => 'Delete Forever';
+
+  @override
+  String accountPickerAddAnother(int remaining) {
+    return '+1   Add another account ($remaining slots remaining)';
+  }
 }

@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
     show kOnboardingComplete;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -87,10 +88,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final account = await registry.findByEmail(normalized);
 
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
         if (account != null) {
-          final tierLabel = account.tier == 'cloudBorn' ? 'Cloud' : 'Local';
-          _registryFoundHint = 'Found on this device ($tierLabel)';
+          final tierLabel = account.tier == 'cloudBorn'
+              ? l10n.authTierCloud
+              : l10n.authTierLocal;
+          _registryFoundHint = l10n.authFoundOnDevice(tierLabel);
           _registryMatchKind = account.tier == 'localBorn'
               ? _RegistryMatchKind.localBorn
               : _RegistryMatchKind.cloudBorn;
@@ -104,9 +108,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   String? _validateEmail(String? value) => validators.validateEmail(value);
 
-  String? _validatePassword(String? value) {
+  String? _validatePassword(String? value, AppLocalizations l10n) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return l10n.authPasswordRequired;
     }
     return null;
   }
@@ -212,6 +216,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final password = _passwordController.text;
 
     setState(() => _isLoading = true);
+    final l10n = AppLocalizations.of(context)!;
     try {
       // Step 1: check device registry for this email
       final registry = ref.read(deviceRegistryProvider);
@@ -295,10 +300,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         } else {
           final restored = await _tryOfflineCloudRestore(account);
           if (!restored) {
-            _showError(
-              "This account's local data is missing. "
-              'Connect to the internet to restore it.',
-            );
+            _showError(l10n.authLocalDataMissing);
           }
         }
       } else {
@@ -317,18 +319,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           final verified = await _ensureCloudEmailVerified();
           if (verified && mounted) await _navigateAfterSignIn();
         } else {
-          _showError(
-            "This email isn't on this device and we can't reach the cloud. "
-            'Try again when online.',
-          );
+          _showError(l10n.authEmailOfflineUnreachable);
         }
       }
     } on InvalidCredentialsException {
-      if (mounted) _showError('Incorrect password.');
+      if (mounted) _showError(l10n.authIncorrectPassword);
     } on FirebaseAuthException catch (e) {
-      if (mounted) _showError(_mapAuthError(e.code));
+      if (mounted) _showError(_mapAuthError(e.code, l10n));
     } catch (e) {
-      if (mounted) _showError('Sign-in failed: $e');
+      if (mounted) _showError(l10n.authSignInFailedError(e.toString()));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -424,27 +423,27 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       barrierDismissible: true,
       barrierColor: Colors.black54,
       builder: (dialogContext) {
+        final dialogL10n = AppLocalizations.of(dialogContext)!;
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 24),
           child: EmailVerificationConfirmPanel(
             email: email,
-            bodyText:
-                'We sent a verification link to your inbox. '
-                'Please check your email to continue.',
-            verifiedLinkLabel: "I've verified",
+            bodyText: dialogL10n.authVerifyEmailBody,
+            verifiedLinkLabel: dialogL10n.authIveVerified,
             onSendAgain: () async {
               try {
                 await ref.read(authRepositoryProvider).sendEmailVerification();
                 if (!mounted) return;
+                final m = AppLocalizations.of(context)!;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Verification email sent again.'),
+                  SnackBar(
+                    content: Text(m.authVerificationEmailSentAgain),
                   ),
                 );
               } on FirebaseAuthException catch (e) {
                 if (!mounted) return;
-                _showError(_mapAuthError(e.code));
+                _showError(_mapAuthError(e.code, AppLocalizations.of(context)!));
               }
             },
             onCancel: () => Navigator.of(dialogContext).pop(false),
@@ -460,7 +459,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 return;
               }
               if (!mounted) return;
-              _showError('Email is still unverified. Check your inbox first.');
+              _showError(AppLocalizations.of(context)!.authEmailStillUnverified);
             },
           ),
         );
@@ -471,6 +470,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
+    final l10n = AppLocalizations.of(context)!;
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInWithGoogle();
@@ -487,8 +487,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         if (accounts.length >= kMaxDeviceAccounts) {
           if (mounted) {
             _showError(
-              'Maximum $kMaxDeviceAccounts accounts reached. '
-              'Remove one to add another.',
+              l10n.authMaxDeviceAccounts(kMaxDeviceAccounts),
             );
           }
           await FirebaseAuth.instance.signOut();
@@ -501,8 +500,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (localMatch != null && localMatch.tier == 'localBorn') {
         if (mounted) {
           _showError(
-            'An offline account with this email exists on this device. '
-            'Use the Upgrade to Cloud option in Settings instead.',
+            l10n.authOfflineUseUpgrade,
           );
         }
         await FirebaseAuth.instance.signOut();
@@ -514,18 +512,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        _showError(_mapAuthError(e.code));
+        _showError(_mapAuthError(e.code, l10n));
       }
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled ||
           e.code == GoogleSignInExceptionCode.interrupted) {
         // User cancelled — do nothing.
       } else if (mounted) {
-        _showError('Google Sign-In failed. Please try again.');
+        _showError(l10n.authGoogleSignInFailed);
       }
     } catch (e) {
       if (mounted) {
-        _showError('Google Sign-In failed: $e');
+        _showError(l10n.authSignInFailedError(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -650,24 +648,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     unawaited(context.router.replaceAll([const AppShellRoute()]));
   }
 
-  String _mapAuthError(String code) {
+  String _mapAuthError(String code, AppLocalizations l10n) {
     switch (code) {
       case 'user-not-found':
-        return 'No account found with this email.';
+        return l10n.authErrUserNotFound;
       case 'wrong-password':
-        return 'Incorrect password. Please try again.';
+        return l10n.authErrWrongPassword;
       case 'invalid-credential':
-        return 'Invalid email or password. Please try again.';
+        return l10n.authErrInvalidCredential;
       case 'user-disabled':
-        return 'This account has been disabled.';
+        return l10n.authErrUserDisabled;
       case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
+        return l10n.authErrTooManyRequests;
       case 'invalid-email':
-        return 'Please enter a valid email address.';
+        return l10n.authErrInvalidEmail;
       case 'network-request-failed':
-        return 'Network error. Please check your connection.';
+        return l10n.authErrNetwork;
       default:
-        return 'Sign-in failed. Please try again.';
+        return l10n.authErrSignInGeneric;
     }
   }
 
@@ -700,7 +698,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
-  String? _registrySubtitle({required bool isOnline}) {
+  String? _registrySubtitle({
+    required bool isOnline,
+    required AppLocalizations l10n,
+  }) {
     switch (_registryMatchKind) {
       case _RegistryMatchKind.none:
         return null;
@@ -709,14 +710,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         return _registryFoundHint;
       case _RegistryMatchKind.notOnDevice:
         return isOnline
-            ? "Not on this device \u2014 we'll check the cloud"
-            : 'Not on this device (offline \u2014 only device accounts available)';
+            ? l10n.authNotOnDeviceCheckCloud
+            : l10n.authNotOnDeviceOffline;
     }
   }
 
   Widget _buildSignInModeCard({
     required ThemeData theme,
     required _SignInModeHint mode,
+    required AppLocalizations l10n,
   }) {
     switch (mode) {
       case _SignInModeHint.cloud:
@@ -736,7 +738,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Cloud account: your data is backed up and syncs across devices.',
+                  l10n.authModeCloud,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppTheme.brandInk,
                     fontWeight: FontWeight.w600,
@@ -766,7 +768,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Cloud account is offline right now. We will try local cached data until internet returns.',
+                  l10n.authModeCloudOffline,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppTheme.brandInk,
                     fontWeight: FontWeight.w600,
@@ -798,7 +800,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Local account only: no cloud backup and no device sync.',
+                      l10n.authModeLocalTitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: AppTheme.brandInk,
                         fontWeight: FontWeight.w700,
@@ -828,7 +830,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'No cloud backup or device sync. Your data stays only on this device.',
+                      l10n.authModeLocalBody,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppTheme.brandInk,
                         fontWeight: FontWeight.w600,
@@ -848,10 +850,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final connectivity = ref.watch(connectivityStreamProvider);
     final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
     final signInMode = _effectiveSignInMode(isOnline: isOnline);
-    final registrySubtitle = _registrySubtitle(isOnline: isOnline);
+    final registrySubtitle = _registrySubtitle(isOnline: isOnline, l10n: l10n);
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F8),
       body: SafeArea(
@@ -894,14 +897,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text(
-                                  'Welcome Back!',
+                                  l10n.signInWelcomeBack,
                                   style: theme.textTheme.headlineMedium
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Ready for your next learning adventure?',
+                                  l10n.signInReady,
                                   style: theme.textTheme.bodyLarge?.copyWith(
                                     color: AppTheme.brandInkMuted,
                                     height: 1.4,
@@ -912,13 +915,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 _buildSignInModeCard(
                                   theme: theme,
                                   mode: signInMode,
+                                  l10n: l10n,
                                 ),
                                 const SizedBox(height: 26),
-                                _buildLabel('Your Email'),
+                                _buildLabel(l10n.signInYourEmail),
                                 const SizedBox(height: 8),
                                 _buildAuthField(
                                   controller: _emailController,
-                                  hintText: 'yourname@quest.com',
+                                  hintText: l10n.signInEmailHint,
                                   prefixIcon: Icons.mail_rounded,
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,
@@ -940,15 +944,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     ),
                                   ),
                                 const SizedBox(height: 20),
-                                _buildLabel('Secret Key'),
+                                _buildLabel(l10n.signInPasswordLabel),
                                 const SizedBox(height: 8),
                                 _buildAuthField(
                                   controller: _passwordController,
-                                  hintText: '........',
+                                  hintText: l10n.signInPasswordHint,
                                   prefixIcon: Icons.lock_rounded,
                                   obscureText: _obscurePassword,
                                   textInputAction: TextInputAction.done,
-                                  validator: _validatePassword,
+                                  validator: (v) => _validatePassword(v, l10n),
                                   onFieldSubmitted: (_) => _signInWithEmail(),
                                   suffixIcon: IconButton(
                                     icon: Icon(
@@ -976,9 +980,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                             ),
                                       visualDensity: VisualDensity.compact,
                                     ),
-                                    const Text(
-                                      'Keep me signed in',
-                                      style: TextStyle(
+                                    Text(
+                                      l10n.signInKeepMeSignedIn,
+                                      style: const TextStyle(
                                         color: AppTheme.brandInkMuted,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -1024,9 +1028,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                                 color: AppTheme.brandCreamCard,
                                               ),
                                             )
-                                          : const Text(
-                                              'Sign In',
-                                              style: TextStyle(
+                                          : Text(
+                                              l10n.signInCta,
+                                              style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w700,
                                               ),
@@ -1043,7 +1047,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     icon: const Icon(
                                       Icons.g_mobiledata_rounded,
                                     ),
-                                    label: const Text('Sign in with Google'),
+                                    label: Text(l10n.signInWithGoogleCta),
                                   ),
                                 if (isOnline) const SizedBox(height: 20),
                                 Center(
@@ -1054,11 +1058,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                             color: AppTheme.brandInkMuted,
                                           ),
                                       children: [
-                                        const TextSpan(
-                                          text: 'New to the Quest? ',
+                                        TextSpan(
+                                          text: l10n.signInNewToQuest,
                                         ),
                                         TextSpan(
-                                          text: 'Register Here',
+                                          text: l10n.signInRegisterHere,
                                           style: const TextStyle(
                                             color: Color(0xFF8E6425),
                                             fontWeight: FontWeight.w700,

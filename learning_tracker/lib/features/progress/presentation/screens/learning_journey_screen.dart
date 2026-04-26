@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/progress/domain/models/journey_view_mo
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/journey_grouped_view.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/journey_timeline_view.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class LearningJourneyScreen extends ConsumerWidget {
@@ -22,6 +23,7 @@ class LearningJourneyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final effectiveProfileId = profileId ?? activeProfileId;
     final journeyAsync = ref.watch(
@@ -36,18 +38,17 @@ class LearningJourneyScreen extends ConsumerWidget {
         : null;
     final profileName = profileAsync?.asData?.value?.displayName;
     final title = profileName != null
-        ? "$profileName's Learning Journey"
-        : 'My Learning Journey';
+        ? l10n.journeyTitleNamed(profileName)
+        : l10n.myLearningJourney;
 
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: title)),
       body: SafeArea(
         top: false,
         child: journeyAsync.when(
-          loading: () =>
-              const LoadingIndicator(message: 'Loading your journey...'),
+          loading: () => LoadingIndicator(message: l10n.loadingYourJourney),
           error: (error, _) => ErrorDisplay(
-            message: 'Failed to load journey: $error',
+            message: l10n.failedToLoadJourney(error.toString()),
             onRetry: () =>
                 ref.invalidate(journeyViewModelProvider(effectiveProfileId)),
           ),
@@ -69,16 +70,16 @@ class LearningJourneyScreen extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                     child: SegmentedButton<JourneySortModeValue>(
-                      segments: const [
+                      segments: [
                         ButtonSegment(
                           value: JourneySortModeValue.grouped,
-                          label: Text('By Curriculum'),
-                          icon: Icon(Icons.grid_view),
+                          label: Text(l10n.journeyByCurriculum),
+                          icon: const Icon(Icons.grid_view),
                         ),
                         ButtonSegment(
                           value: JourneySortModeValue.chronological,
-                          label: Text('Timeline'),
-                          icon: Icon(Icons.timeline),
+                          label: Text(l10n.journeyTimeline),
+                          icon: const Icon(Icons.timeline),
                         ),
                       ],
                       selected: {sortMode},
@@ -117,6 +118,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -132,13 +134,13 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Your learning journey starts here!',
+              l10n.journeyEmptyTitle,
               style: Theme.of(context).textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'Complete your first masechta to see it recorded forever.',
+              l10n.journeyEmptyBody,
               style: TextStyle(
                 fontSize: 16,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -149,7 +151,7 @@ class _EmptyState extends StatelessWidget {
             FilledButton.icon(
               onPressed: onStartLearning,
               icon: const Icon(Icons.play_arrow),
-              label: const Text('Start Learning'),
+              label: Text(l10n.startLearning),
               style: FilledButton.styleFrom(minimumSize: const Size(200, 48)),
             ),
           ],

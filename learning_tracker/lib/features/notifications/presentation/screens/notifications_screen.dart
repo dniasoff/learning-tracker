@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class NotificationsScreen extends ConsumerWidget {
@@ -9,6 +10,7 @@ class NotificationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final reminderEnabled = ref.watch(reminderEnabledProvider);
     final reminderTime = ref.watch(reminderTimeProvider);
     final streakAlertEnabled = ref.watch(streakAlertEnabledProvider);
@@ -29,9 +31,9 @@ class NotificationsScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFFF3F4F8),
         elevation: 0,
         titleSpacing: 0,
-        title: const Text(
-          'Settings',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+        title: Text(
+          l10n.notifAppBarSettings,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
         actions: [
           IconButton(
@@ -44,9 +46,9 @@ class NotificationsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const Text(
-            'Notifications',
-            style: TextStyle(
+          Text(
+            l10n.notifHeroTitle,
+            style: const TextStyle(
               fontSize: 38,
               height: 0.98,
               fontWeight: FontWeight.w800,
@@ -54,9 +56,9 @@ class NotificationsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Keep your Torah journey on track!',
-            style: TextStyle(
+          Text(
+            l10n.notifHeroSubtitle,
+            style: const TextStyle(
               fontSize: 15,
               color: Color(0xFF6F7788),
               fontWeight: FontWeight.w500,
@@ -70,8 +72,8 @@ class NotificationsScreen extends ConsumerWidget {
                 icon: Icons.event_note_outlined,
                 iconTint: const Color(0xFF2A4BB3),
                 iconBg: const Color(0xFFE8EBFF),
-                title: 'Daily Reminder',
-                subtitle: 'Don\'t forget to learn today!',
+                title: l10n.notifDailyReminder,
+                subtitle: l10n.notifDailyReminderSubtitle,
                 value: reminderEnabled,
                 onChanged: (willEnable) async {
                   if (willEnable) {
@@ -85,7 +87,7 @@ class NotificationsScreen extends ConsumerWidget {
               _SettingsTimeRow(
                 key: const Key('reminder_time'),
                 icon: Icons.access_time_filled_rounded,
-                title: 'Reminder Time',
+                title: l10n.notifReminderTime,
                 timeText: reminderTime.format(context),
                 enabled: reminderEnabled,
                 onTap: reminderEnabled
@@ -112,10 +114,10 @@ class NotificationsScreen extends ConsumerWidget {
                 icon: Icons.local_fire_department_rounded,
                 iconTint: const Color(0xFFE35D66),
                 iconBg: const Color(0xFFFDECEF),
-                title: 'Streak Alert',
-                subtitle: 'Keep your fire burning!',
+                title: l10n.notifStreakAlert,
+                subtitle: l10n.notifStreakAlertSubtitle,
                 value: streakAlertEnabled,
-                trailingTopBadge: const _TopBadge(text: 'HOT STREAK'),
+                trailingTopBadge: _TopBadge(text: l10n.notifHotStreakBadge),
                 onChanged: (willEnable) async {
                   if (willEnable) {
                     final service = ref.read(notificationServiceProvider);
@@ -128,7 +130,7 @@ class NotificationsScreen extends ConsumerWidget {
               _SettingsTimeRow(
                 key: const Key('streak_alert_time'),
                 icon: Icons.alarm_rounded,
-                title: 'Streak Alert Time',
+                title: l10n.notifStreakAlertTime,
                 timeText: streakAlertTime.format(context),
                 enabled: streakAlertEnabled,
                 onTap: streakAlertEnabled
@@ -155,8 +157,8 @@ class NotificationsScreen extends ConsumerWidget {
                 icon: Icons.auto_awesome_rounded,
                 iconTint: const Color(0xFFB07A2A),
                 iconBg: const Color(0xFFFDF2DE),
-                title: 'Reward Notifications',
-                subtitle: 'When you earn Mitzvah Points!',
+                title: l10n.notifRewardNotifications,
+                subtitle: l10n.notifRewardNotificationsSubtitle,
                 value: rewardEnabled,
                 onChanged: (willEnable) async {
                   if (willEnable) {
@@ -172,6 +174,7 @@ class NotificationsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           _SacredTimeCard(
+            l10n: l10n,
             shabbosEnabled: shabbosEnabled,
             shabbosUseLocation: shabbosUseLocation,
             shabbosStartTime: shabbosStartTime,
@@ -401,6 +404,7 @@ class _TopBadge extends StatelessWidget {
 
 class _SacredTimeCard extends StatelessWidget {
   const _SacredTimeCard({
+    required this.l10n,
     required this.shabbosEnabled,
     required this.shabbosUseLocation,
     required this.shabbosStartTime,
@@ -411,6 +415,7 @@ class _SacredTimeCard extends StatelessWidget {
     required this.onEditEndTime,
   });
 
+  final AppLocalizations l10n;
   final bool shabbosEnabled;
   final bool shabbosUseLocation;
   final TimeOfDay shabbosStartTime;
@@ -443,13 +448,17 @@ class _SacredTimeCard extends StatelessWidget {
               color: Color(0xFF11389F),
               borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.auto_stories_rounded, color: Colors.white, size: 17),
-                SizedBox(width: 8),
+                const Icon(
+                  Icons.auto_stories_rounded,
+                  color: Colors.white,
+                  size: 17,
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  'SACRED TIME',
-                  style: TextStyle(
+                  l10n.notifSacredTime,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
@@ -467,8 +476,8 @@ class _SacredTimeCard extends StatelessWidget {
                   icon: Icons.nightlight_round,
                   iconTint: const Color(0xFF153DA8),
                   iconBg: const Color(0xFFEBEEFF),
-                  title: 'Shabbos / Yom Tov\nMode',
-                  subtitle: 'Quiet learning during holy days',
+                  title: l10n.notifShabbosYomTovMode,
+                  subtitle: l10n.notifShabbosModeSubtitle,
                   value: shabbosEnabled,
                   onChanged: (_) => onToggleShabbosMode(),
                 ),
@@ -477,10 +486,10 @@ class _SacredTimeCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Use Location for Times',
-                        style: TextStyle(
+                        l10n.notifUseLocationForTimes,
+                        style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF596175),
                           fontSize: 14,
@@ -507,9 +516,9 @@ class _SacredTimeCard extends StatelessWidget {
                       Expanded(
                         child: _QuietTimeTile(
                           key: const Key('shabbos_start_time'),
-                          label: 'QUIET START',
+                          label: l10n.notifQuietStart,
                           time: shabbosStartTime.format(context),
-                          hint: 'Candle lighting',
+                          hint: l10n.notifCandleLighting,
                           onTap: onEditStartTime,
                         ),
                       ),
@@ -517,9 +526,9 @@ class _SacredTimeCard extends StatelessWidget {
                       Expanded(
                         child: _QuietTimeTile(
                           key: const Key('shabbos_end_time'),
-                          label: 'QUIET END',
+                          label: l10n.notifQuietEnd,
                           time: shabbosEndTime.format(context),
-                          hint: 'Havdalah',
+                          hint: l10n.notifHavdalah,
                           onTap: onEditEndTime,
                         ),
                       ),

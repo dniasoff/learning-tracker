@@ -413,6 +413,26 @@
   "pointConfigPerTaskTitle": "נקודות לכל משימה שהושלמה",
   "pointConfigPerTaskDescription": "לכל מסלול למידה פעיל, הגדירו כמה נקודות הילד מקבל כשהוא משלים משימה אחת מהרשימה היומית. הסכום תלוי בשלב המשימה (למשל לימוד ראשון מול חזרה).",
   "pointConfigNoActiveTracksBody": "לא נמצאו מסלולי למידה פעילים עם שלבים לילד הזה. הפעילו מקצועות והגדירו מסלולים תחת ניהול מסלולים, ואז חזרו לכאן כדי לקבוע נקודות לכל משימה.",
+  "pointSettingsTitle": "הגדרות נקודות",
+  "pointSettingsConfigurationLabel": "הגדרות",
+  "pointSettingsRewardsStrategyTitle": "אסטרטגיית פרסים",
+  "pointSettingsRewardsStrategySubtitle": "כווננו כמה נקודות הילד מקבל בכל צעד משמעותי בלמידה.",
+  "pointSettingsActiveCurricula": "מקצועות פעילים",
+  "pointSettingsPointsPerTask": "נקודות למשימה",
+  "pointSettingsPts": "נק׳",
+  "pointSettingsActiveBadge": "פעיל",
+  "pointSettingsSaveAll": "שמירת כל השינויים",
+  "pointSettingsSaveFooter": "שינויי הנקודות יסתנכרנו מיד ללוח הילד.",
+  "pointSettingsSavedSnackbar": "השינויים נשמרו וסונכרנו.",
+  "pointSettingsNothingToSaveSnackbar": "אין שינויים לשמירה.",
+  "pointSettingsOtherStages": "שלבים נוספים (חזרות)",
+  "pointSettingsResetTrackTitle": "איפוס לברירת מחדל",
+  "pointSettingsResetConfirm": "איפוס",
+  "pointSettingsResetTrackMessage": "לאפס את כל ערכי הנקודות למסלול הזה לסולם ברירת המחדל?",
+  "pointSettingsResetAllTitle": "איפוס כל המסלולים",
+  "pointSettingsResetAllMessage": "לאפס את ערכי הנקודות לכל המסלולים הפעילים לברירת המחדל?",
+  "pointSettingsMenuResetAll": "איפוס כל המסלולים…",
+  "pointSettingsPrimaryStageLabel": "השלמה ראשונה (משימה יומית)",
   "sectionAccountSafety": "בטיחות חשבון",
   "bottomNavTracks": "מסלולים",
   "bottomNavRewards": "פרסים",
@@ -548,5 +568,31 @@
   "signInWithGoogleCta": "התחברות עם גוגל",
   "signInNewToQuest": "חדשים בקווסט? ",
   "signInRegisterHere": "הרשמה כאן",
-  "chartFailedToLoad": "נכשל בטעינת הנתונים"
+  "chartFailedToLoad": "נכשל בטעינת הנתונים",
+  "accountPickerTitle": "בחירת חשבון",
+  "accountPickerSubtitle": "בחרו משתמש כדי להמשיך",
+  "accountPickerMaxAccountsShort": "הגעתם למקסימום {count} חשבונות",
+  "@accountPickerMaxAccountsShort": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "accountPickerPrivacyFooter": "ניהול פרטיות ואבטחה בהגדרות",
+  "accountRemoveFromDevice": "הסרה מהמכשיר",
+  "accountDeleteAccountAction": "מחיקת חשבון",
+  "badgeLocalAccount": "חשבון מקומי",
+  "badgeSignInAgain": "התחברו שוב",
+  "badgeCloudAccount": "חשבון ענן",
+  "accountRemoveFromDeviceTitle": "להסיר מהמכשיר?",
+  "accountDeleteAccountTitle": "למחוק חשבון?",
+  "accountRemoveFromDeviceBody": "הנתונים בענן בטוחים — תוכלו להתחבר שוב בכל עת.",
+  "accountDeleteAccountBody": "כל נתוני הלמידה יימחקו לצמיתות. לא ניתן לבטל.",
+  "accountRemove": "הסרה",
+  "accountDeleteForever": "מחיקה לצמיתות",
+  "accountPickerAddAnother": "+1   הוספת חשבון ({remaining} מקומות פנויים)",
+  "@accountPickerAddAnother": {
+    "placeholders": {
+      "remaining": { "type": "int" }
+    }
+  }
 }

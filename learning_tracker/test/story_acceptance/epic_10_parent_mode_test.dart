@@ -13,11 +13,13 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
@@ -72,6 +74,20 @@ Future<int> _insertTrack(UserDatabase db) async {
       );
   return row.id;
 }
+
+/// Point config screen under l10n + DB, with sync off (no Firebase in tests).
+Widget _pointConfigTestApp(UserDatabase db, Widget child) => ProviderScope(
+  overrides: [
+    userDatabaseProvider.overrideWithValue(db),
+    syncEngineProvider.overrideWithValue(null),
+  ],
+  child: MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
+    home: child,
+  ),
+);
 
 void main() {
   // ── Story 10.1: Parent PIN setup ──────────────────────────────
@@ -660,13 +676,23 @@ void main() {
     testWidgets('config screen lists curricula with expandable stage rows', (
       tester,
     ) async {
-      // Also activate bavli
+      // Second active track (Bavli) with its own stages and point configs
       await db.activeCurriculumDao.activate(CurriculumId.bavli);
+      final bavliTrackRow = await db
+          .into(db.curriculumTracks)
+          .insertReturning(
+            CurriculumTracksCompanion.insert(
+              curriculumId: CurriculumId.bavli.storageKey,
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
+      final bavliTrackId = bavliTrackRow.id;
       for (var i = 1; i <= 2; i++) {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             curriculumId: CurriculumId.bavli.storageKey,
-            trackId: trackId,
+            trackId: bavliTrackId,
             stageOrder: i,
             stageName: i == 1 ? 'Learning' : 'Chazara 1',
             delayDays: 0,
@@ -675,24 +701,21 @@ void main() {
       }
       await db.pointConfigDao.seedDefaults(
         CurriculumId.bavli.storageKey,
-        trackId,
+        bavliTrackId,
         profileId: testProfileId,
       );
 
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-          child: const MaterialApp(home: PointConfigScreen()),
-        ),
+        _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
-      // Both curricula visible
-      expect(find.text('משניות'), findsOneWidget);
-      expect(find.text('תלמוד בבלי'), findsOneWidget);
+      // Both curricula visible (English titles + Hebrew subtitles)
+      expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.textContaining('תלמוד בבלי'), findsOneWidget);
 
-      // Tap to expand Mishnayos
-      await tester.tap(find.text('משניות'));
+      // Expand "Other stages" on Mishnayos card to see non-primary stages
+      await tester.tap(find.textContaining('Other stages').first);
       await tester.pumpAndSettle();
 
       // Stage names visible
@@ -706,19 +729,14 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-          child: const MaterialApp(home: PointConfigScreen()),
-        ),
+        _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
-      // Expand Mishnayos
-      await tester.tap(find.text('משניות'));
+      // Primary stepper shows 10; expand other stages for 5 and 3
+      expect(find.text('10'), findsWidgets);
+      await tester.tap(find.textContaining('Other stages').first);
       await tester.pumpAndSettle();
-
-      // Should see point values as text (default: 10, 5, 3)
-      expect(find.text('10'), findsOneWidget);
       expect(find.text('5'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
     });
@@ -740,26 +758,19 @@ void main() {
       );
 
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-          child: const MaterialApp(home: PointConfigScreen()),
-        ),
+        _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
-      // Expand Mishnayos
-      await tester.tap(find.text('משניות'));
-      await tester.pumpAndSettle();
-
-      // Find and tap reset button
-      await tester.tap(find.byIcon(Icons.restore));
+      // Per-track reset (restore icon on card)
+      await tester.tap(find.byIcon(Icons.restore_rounded));
       await tester.pumpAndSettle();
 
       // Confirmation dialog
-      expect(find.text('Reset to Defaults'), findsOneWidget);
+      expect(find.text('Reset to defaults'), findsOneWidget);
 
       // Confirm
-      await tester.tap(find.text('Reset'));
+      await tester.tap(find.text('Reset to defaults'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // Values should be back to defaults
@@ -777,15 +788,12 @@ void main() {
 
     testWidgets('validation prevents zero or negative values', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [userDatabaseProvider.overrideWithValue(db)],
-          child: const MaterialApp(home: PointConfigScreen()),
-        ),
+        _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
       // Expand Mishnayos
-      await tester.tap(find.text('משניות'));
+      await tester.tap(find.textContaining('משניות'));
       await tester.pumpAndSettle();
 
       // Tap edit on the first stage (Learn = 10)
@@ -860,7 +868,6 @@ void main() {
       },
     );
   });
-
 
   // ── Story 10.6: Multi-child profiles ──────────────────────────
 

@@ -1706,6 +1706,126 @@ abstract class AppLocalizations {
   /// **'No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.'**
   String get pointConfigNoActiveTracksBody;
 
+  /// No description provided for @pointSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Point Settings'**
+  String get pointSettingsTitle;
+
+  /// No description provided for @pointSettingsConfigurationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'CONFIGURATION'**
+  String get pointSettingsConfigurationLabel;
+
+  /// No description provided for @pointSettingsRewardsStrategyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards Strategy'**
+  String get pointSettingsRewardsStrategyTitle;
+
+  /// No description provided for @pointSettingsRewardsStrategySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust how many points your child earns for each sacred milestone.'**
+  String get pointSettingsRewardsStrategySubtitle;
+
+  /// No description provided for @pointSettingsActiveCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Curricula'**
+  String get pointSettingsActiveCurricula;
+
+  /// No description provided for @pointSettingsPointsPerTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Points per Task'**
+  String get pointSettingsPointsPerTask;
+
+  /// No description provided for @pointSettingsPts.
+  ///
+  /// In en, this message translates to:
+  /// **'PTS'**
+  String get pointSettingsPts;
+
+  /// No description provided for @pointSettingsActiveBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTIVE'**
+  String get pointSettingsActiveBadge;
+
+  /// No description provided for @pointSettingsSaveAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Save All Changes'**
+  String get pointSettingsSaveAll;
+
+  /// No description provided for @pointSettingsSaveFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Point changes will sync instantly to the Child\'s dashboard.'**
+  String get pointSettingsSaveFooter;
+
+  /// No description provided for @pointSettingsSavedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes saved and synced.'**
+  String get pointSettingsSavedSnackbar;
+
+  /// No description provided for @pointSettingsNothingToSaveSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes to save.'**
+  String get pointSettingsNothingToSaveSnackbar;
+
+  /// No description provided for @pointSettingsOtherStages.
+  ///
+  /// In en, this message translates to:
+  /// **'Other stages (reviews)'**
+  String get pointSettingsOtherStages;
+
+  /// No description provided for @pointSettingsResetTrackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to defaults'**
+  String get pointSettingsResetTrackTitle;
+
+  /// No description provided for @pointSettingsResetConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get pointSettingsResetConfirm;
+
+  /// No description provided for @pointSettingsResetTrackMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all point values for this track to the default ladder?'**
+  String get pointSettingsResetTrackMessage;
+
+  /// No description provided for @pointSettingsResetAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all tracks'**
+  String get pointSettingsResetAllTitle;
+
+  /// No description provided for @pointSettingsResetAllMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset point values for every active track to defaults?'**
+  String get pointSettingsResetAllMessage;
+
+  /// No description provided for @pointSettingsMenuResetAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all tracks…'**
+  String get pointSettingsMenuResetAll;
+
+  /// No description provided for @pointSettingsPrimaryStageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'First completion (daily task)'**
+  String get pointSettingsPrimaryStageLabel;
+
   /// No description provided for @sectionAccountSafety.
   ///
   /// In en, this message translates to:
@@ -2335,6 +2455,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load data'**
   String get chartFailedToLoad;
+
+  /// No description provided for @accountPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an Account'**
+  String get accountPickerTitle;
+
+  /// No description provided for @accountPickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a learner to continue your journey'**
+  String get accountPickerSubtitle;
+
+  /// No description provided for @accountPickerMaxAccountsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum {count} device accounts reached'**
+  String accountPickerMaxAccountsShort(int count);
+
+  /// No description provided for @accountPickerPrivacyFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your privacy and security in Settings'**
+  String get accountPickerPrivacyFooter;
+
+  /// No description provided for @accountRemoveFromDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from device'**
+  String get accountRemoveFromDevice;
+
+  /// No description provided for @accountDeleteAccountAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get accountDeleteAccountAction;
+
+  /// No description provided for @badgeLocalAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'LOCAL ACCOUNT'**
+  String get badgeLocalAccount;
+
+  /// No description provided for @badgeSignInAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'SIGN IN AGAIN'**
+  String get badgeSignInAgain;
+
+  /// No description provided for @badgeCloudAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'CLOUD ACCOUNT'**
+  String get badgeCloudAccount;
+
+  /// No description provided for @accountRemoveFromDeviceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from device?'**
+  String get accountRemoveFromDeviceTitle;
+
+  /// No description provided for @accountDeleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account?'**
+  String get accountDeleteAccountTitle;
+
+  /// No description provided for @accountRemoveFromDeviceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your cloud data is safe — you can sign back in anytime.'**
+  String get accountRemoveFromDeviceBody;
+
+  /// No description provided for @accountDeleteAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All learning data will be permanently lost. This cannot be undone.'**
+  String get accountDeleteAccountBody;
+
+  /// No description provided for @accountRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get accountRemove;
+
+  /// No description provided for @accountDeleteForever.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Forever'**
+  String get accountDeleteForever;
+
+  /// No description provided for @accountPickerAddAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'+1   Add another account ({remaining} slots remaining)'**
+  String accountPickerAddAnother(int remaining);
 }
 
 class _AppLocalizationsDelegate

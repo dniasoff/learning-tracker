@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/progress/presentation/widgets/completi
 import 'package:learning_tracker/features/progress/presentation/widgets/cumulative_line_chart.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/points_over_time_chart.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class ProgressChartsScreen extends ConsumerStatefulWidget {
@@ -44,6 +45,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
     final resolvedUserMode = userMode ?? UserMode.adult;
     final theme = Theme.of(context);
@@ -62,7 +64,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    'Progress Charts',
+                    l10n.progressChartsTitle,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -73,12 +75,12 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            _buildTimeRangeSelector(),
+            _buildTimeRangeSelector(l10n),
             const SizedBox(height: 10),
-            _buildCurriculumToggle(),
+            _buildCurriculumToggle(l10n),
             const SizedBox(height: 16),
             _ChartSection(
-              title: 'Completions Over Time',
+              title: l10n.chartCompletionsOverTime,
               trailing: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -89,7 +91,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  'DAILY ACTIVITY',
+                  l10n.chartDailyActivity,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: const Color(0xFF545D99),
                     letterSpacing: 0.4,
@@ -97,30 +99,33 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                   ),
                 ),
               ),
-              child: SizedBox(height: 170, child: _buildCompletionsChart()),
+              child: SizedBox(
+                height: 170,
+                child: _buildCompletionsChart(l10n),
+              ),
             ),
             const SizedBox(height: 14),
             _ChartSection(
-              title: 'Cumulative Progress',
-              subtitle: '+12% vs last week',
-              child: SizedBox(height: 150, child: _buildCumulativeChart()),
+              title: l10n.chartCumulativeProgress,
+              subtitle: l10n.chartCumulativeProgressSubtitle,
+              child: SizedBox(height: 150, child: _buildCumulativeChart(l10n)),
             ),
             const SizedBox(height: 14),
             if (resolvedUserMode == UserMode.child) ...[
               _ChartSection(
-                title: 'Points Earned',
-                subtitle: 'TOTAL TORAH POINTS',
+                title: l10n.chartPointsEarned,
+                subtitle: l10n.chartTotalTorahPoints,
                 trailing: _buildTotalPointsLabel(),
                 child: SizedBox(
                   height: 140,
-                  child: _buildPointsChart(resolvedUserMode),
+                  child: _buildPointsChart(l10n, resolvedUserMode),
                 ),
               ),
               const SizedBox(height: 14),
             ],
             _ChartSection(
-              title: 'Learning Journey',
-              subtitle: 'Keep the flame alive every day!',
+              title: l10n.chartLearningJourney,
+              subtitle: l10n.chartJourneyMotivation,
               trailing: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -131,7 +136,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '7 DAY STREAK!',
+                  l10n.chartSevenDayStreak,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: Colors.white,
                     letterSpacing: 0.4,
@@ -139,7 +144,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                   ),
                 ),
               ),
-              child: _buildStreakCalendar(),
+              child: _buildStreakCalendar(l10n),
             ),
           ],
         ),
@@ -147,7 +152,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
     );
   }
 
-  Widget _buildTimeRangeSelector() {
+  Widget _buildTimeRangeSelector(AppLocalizations l10n) {
     return Row(
       children: ChartTimeRange.values.map((range) {
         final selected = _timeRange == range;
@@ -167,9 +172,9 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                 ),
                 child: Text(
                   switch (range) {
-                    ChartTimeRange.last7Days => 'Last 7 Days',
-                    ChartTimeRange.last30Days => 'Last 30\nDays',
-                    ChartTimeRange.allTime => 'All Time',
+                    ChartTimeRange.last7Days => l10n.chartLast7Days,
+                    ChartTimeRange.last30Days => l10n.chartLast30Days,
+                    ChartTimeRange.allTime => l10n.chartAllTime,
                   },
                   textAlign: TextAlign.center,
                   maxLines: 2,
@@ -186,13 +191,13 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
     );
   }
 
-  Widget _buildCurriculumToggle() {
+  Widget _buildCurriculumToggle(AppLocalizations l10n) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           _FilterPill(
-            label: 'All',
+            label: l10n.chartFilterAll,
             selected: _curriculum == null,
             onSelected: (_) => setState(() => _curriculum = null),
           ),
@@ -243,7 +248,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
     );
   }
 
-  Widget _buildCompletionsChart() {
+  Widget _buildCompletionsChart(AppLocalizations l10n) {
     final service = ref.watch(chartDataServiceProvider);
     final dates = _dateRange;
 
@@ -256,19 +261,19 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
-            message: 'Failed to load data',
+            message: l10n.chartFailedToLoad,
             onRetry: () => setState(() {}),
           );
         }
         if (!snapshot.hasData) {
-          return const LoadingIndicator(message: 'Loading...');
+          return LoadingIndicator(message: l10n.loading);
         }
         return CompletionsBarChart(data: snapshot.data!);
       },
     );
   }
 
-  Widget _buildCumulativeChart() {
+  Widget _buildCumulativeChart(AppLocalizations l10n) {
     final service = ref.watch(chartDataServiceProvider);
     final dates = _dateRange;
 
@@ -281,19 +286,19 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
-            message: 'Failed to load data',
+            message: l10n.chartFailedToLoad,
             onRetry: () => setState(() {}),
           );
         }
         if (!snapshot.hasData) {
-          return const LoadingIndicator(message: 'Loading...');
+          return LoadingIndicator(message: l10n.loading);
         }
         return CumulativeLineChart(data: snapshot.data!);
       },
     );
   }
 
-  Widget _buildPointsChart(UserMode userMode) {
+  Widget _buildPointsChart(AppLocalizations l10n, UserMode userMode) {
     final service = ref.watch(chartDataServiceProvider);
     final dates = _dateRange;
 
@@ -307,19 +312,19 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
-            message: 'Failed to load data',
+            message: l10n.chartFailedToLoad,
             onRetry: () => setState(() {}),
           );
         }
         if (!snapshot.hasData || snapshot.data == null) {
-          return const LoadingIndicator(message: 'Loading...');
+          return LoadingIndicator(message: l10n.loading);
         }
         return PointsOverTimeChart(data: snapshot.data!);
       },
     );
   }
 
-  Widget _buildStreakCalendar() {
+  Widget _buildStreakCalendar(AppLocalizations l10n) {
     final service = ref.watch(chartDataServiceProvider);
     final dates = _dateRange;
 
@@ -331,12 +336,12 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
-            message: 'Failed to load data',
+            message: l10n.chartFailedToLoad,
             onRetry: () => setState(() {}),
           );
         }
         if (!snapshot.hasData) {
-          return const LoadingIndicator(message: 'Loading...');
+          return LoadingIndicator(message: l10n.loading);
         }
         return StreakCalendar(
           activeDates: snapshot.data!,

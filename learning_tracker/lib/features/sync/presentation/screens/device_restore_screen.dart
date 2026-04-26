@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/restore_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class DeviceRestoreScreen extends ConsumerStatefulWidget {
@@ -50,6 +51,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(restoreStatusProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Center(
@@ -57,12 +59,12 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
           padding: const EdgeInsets.all(32),
           child: status.when(
             idle: () => const SizedBox.shrink(),
-            checking: () => const Column(
+            checking: () => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 24),
-                Text('Checking device...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 24),
+                Text(l10n.deviceRestoreChecking),
               ],
             ),
             restoring: (phase, completedSteps, totalSteps) => Column(
@@ -76,7 +78,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                   value: totalSteps > 0 ? completedSteps / totalSteps : null,
                 ),
                 const SizedBox(height: 8),
-                Text('Step $completedSteps of $totalSteps'),
+                Text(l10n.deviceRestoreStep(completedSteps, totalSteps)),
               ],
             ),
             complete: (collectionsRestored) => Column(
@@ -89,7 +91,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Restore complete!',
+                  l10n.deviceRestoreComplete,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ],
@@ -104,7 +106,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Restore failed',
+                  l10n.deviceRestoreFailed,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
@@ -114,11 +116,14 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(onPressed: _retry, child: const Text('Retry')),
+                ElevatedButton(
+                  onPressed: _retry,
+                  child: Text(l10n.retry),
+                ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: _navigateToApp,
-                  child: const Text('Skip & continue'),
+                  child: Text(l10n.skipAndContinue),
                 ),
               ],
             ),
