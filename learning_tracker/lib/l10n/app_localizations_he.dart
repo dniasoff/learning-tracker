@@ -126,6 +126,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get dashboardRewardsGallery => 'גלריית פרסים';
 
   @override
+  String get dashboardChildPointsTab => 'נקודות';
+
+  @override
   String get dashboardSeeAllRewards => 'הצג הכול';
 
   @override
@@ -149,6 +152,53 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get gamification => 'הישגים ופרסים';
+
+  @override
+  String get myAchievementsTitle => 'ההישגים שלי';
+
+  @override
+  String get achievementsYourProgress => 'ההתקדמות שלך';
+
+  @override
+  String achievementsRewardsCount(int unlocked, int total) {
+    return '$unlocked / $total פרסים';
+  }
+
+  @override
+  String get achievementsAcrossAllTracks => 'בכל המסלולים שלך.';
+
+  @override
+  String get achievementsTrackSection => 'מסלול';
+
+  @override
+  String get achievementsAllTracks => 'כל המסלולים';
+
+  @override
+  String get achievementsStatusUnlocked => 'נפתח!';
+
+  @override
+  String get achievementsStatusComingSoon => 'בקרוב!';
+
+  @override
+  String get achievementsStatusLocked => 'נעול';
+
+  @override
+  String achievementsUnlockedAtPoints(String points) {
+    return 'נפתח ב־$points נקודות';
+  }
+
+  @override
+  String get achievementsUltimateGoal => 'היעד האולטימטיבי.';
+
+  @override
+  String get achievementsProTipTitle => 'טיפ!';
+
+  @override
+  String get achievementsProTipBody =>
+      'המשיכו ללמוד במסלולים כדי לטפס בסולם הפרסים.';
+
+  @override
+  String get achievementsActivityAndPoints => 'פעילות ונקודות';
 
   @override
   String get rewardCatalog => 'קטלוג פרסים';
@@ -818,6 +868,17 @@ class AppLocalizationsHe extends AppLocalizations {
   String get pointConfigurationSubtitle => 'כמה נקודות שווה כל פעילות';
 
   @override
+  String get pointConfigPerTaskTitle => 'נקודות לכל משימה שהושלמה';
+
+  @override
+  String get pointConfigPerTaskDescription =>
+      'לכל מסלול למידה פעיל, הגדירו כמה נקודות הילד מקבל כשהוא משלים משימה אחת מהרשימה היומית. הסכום תלוי בשלב המשימה (למשל לימוד ראשון מול חזרה).';
+
+  @override
+  String get pointConfigNoActiveTracksBody =>
+      'לא נמצאו מסלולי למידה פעילים עם שלבים לילד הזה. הפעילו מקצועות והגדירו מסלולים תחת ניהול מסלולים, ואז חזרו לכאן כדי לקבוע נקודות לכל משימה.';
+
+  @override
   String get sectionAccountSafety => 'בטיחות חשבון';
 
   @override
@@ -1056,7 +1117,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get authOfflineUseUpgrade =>
-      'במכשיר כבר קיים חשבורת אוף־ליין עם אימייל זה. השתמשו ב״שדרג לענן״ בהגדרות.';
+      'במכשיר כבר קיים חשבון אוף־ליין עם אימייל זה. השתמשו ב״שדרג לענן״ בהגדרות.';
 
   @override
   String get authGoogleSignInFailed => 'הכניסה בגוגל נכשלה. נסו שוב.';
@@ -1105,7 +1166,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get authModeCloud =>
-      'חשבון ענן: הנתנונים מגובים ומסתנכרנים בין מכשירים.';
+      'חשבון ענן: הנתונים מגובים ומסתנכרנים בין מכשירים.';
 
   @override
   String get authModeCloudOffline =>
@@ -1113,11 +1174,11 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get authModeLocalTitle =>
-      'חשבורת מקומי בלבד: ללא גיבוי לענן וללא סנכרון בין מכשירים.';
+      'חשבון מקומי בלבד: ללא גיבוי לענן וללא סנכרון בין מכשירים.';
 
   @override
   String get authModeLocalBody =>
-      'ללא גיבוי לענן. הנתנונים נשארים רק במכשיר הזה.';
+      'ללא גיבוי לענן. הנתונים נשארים רק במכשיר הזה.';
 
   @override
   String get signInWelcomeBack => 'ברוכים השבים!';
@@ -1151,4 +1212,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get signInRegisterHere => 'הרשמה כאן';
+
+  @override
+  String get chartFailedToLoad => 'נכשל בטעינת הנתונים';
 }

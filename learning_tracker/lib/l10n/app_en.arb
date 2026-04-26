@@ -52,6 +52,7 @@
   "mysteryReward": "Mystery Reward!",
   "totalPoints": "Total Points",
   "dashboardRewardsGallery": "Rewards Gallery",
+  "dashboardChildPointsTab": "Points",
   "dashboardSeeAllRewards": "SEE ALL",
   "dashboardMysteryChest": "Mystery Chest",
   "dashboardTapToUnlockAtPts": "TAP TO UNLOCK AT {points} PTS",
@@ -69,6 +70,31 @@
   "dashboardBubbleDone": "DONE",
   "complete": "complete",
   "gamification": "Gamification",
+  "myAchievementsTitle": "My Achievements",
+  "achievementsYourProgress": "YOUR PROGRESS",
+  "achievementsRewardsCount": "{unlocked} / {total} Rewards",
+  "@achievementsRewardsCount": {
+    "placeholders": {
+      "unlocked": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "achievementsAcrossAllTracks": "Across all your tracks.",
+  "achievementsTrackSection": "TRACK",
+  "achievementsAllTracks": "All Tracks",
+  "achievementsStatusUnlocked": "Unlocked!",
+  "achievementsStatusComingSoon": "Coming soon!",
+  "achievementsStatusLocked": "Locked",
+  "achievementsUnlockedAtPoints": "Unlocked at {points} points",
+  "@achievementsUnlockedAtPoints": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
+  "achievementsUltimateGoal": "The Ultimate Goal.",
+  "achievementsProTipTitle": "Pro Tip!",
+  "achievementsProTipBody": "Keep learning on your tracks to climb the reward ladder.",
+  "achievementsActivityAndPoints": "Activity & points",
   "rewardCatalog": "Reward Catalog",
   "noRewardsConfigured": "No rewards configured yet",
   "addReward": "Add Reward",
@@ -384,6 +410,9 @@
   "manageTracksForChildSubtitle": "Add, edit, or archive your child's tracks",
   "pointConfiguration": "Point Configuration",
   "pointConfigurationSubtitle": "Set how many points activities are worth",
+  "pointConfigPerTaskTitle": "Points per completed task",
+  "pointConfigPerTaskDescription": "For each active learning track, set how many points your child earns when they complete one task from their daily list. The amount depends on the task stage (for example first learn vs review).",
+  "pointConfigNoActiveTracksBody": "No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.",
   "sectionAccountSafety": "ACCOUNT SAFETY",
   "bottomNavTracks": "Tracks",
   "bottomNavRewards": "Rewards",
@@ -518,5 +547,6 @@
   "signInCta": "Sign In",
   "signInWithGoogleCta": "Sign in with Google",
   "signInNewToQuest": "New to the Quest? ",
-  "signInRegisterHere": "Register Here"
+  "signInRegisterHere": "Register Here",
+  "chartFailedToLoad": "Failed to load data"
 }

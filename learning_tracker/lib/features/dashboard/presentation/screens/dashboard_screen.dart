@@ -267,51 +267,15 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         if (userMode == UserMode.child) ...[
-          _ChildTotalPointsPill(
+          _ChildPointsRewardsTabCard(
             totalPoints: totalPoints,
-            l10n: l10n,
-            numberFormat: numberFormat,
-          ),
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.dashboardRewardsGallery,
-                    style: _iosTextStyle(
-                      context,
-                      size: 22,
-                      weight: FontWeight.w800,
-                      color: AppTheme.brandInk,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () =>
-                      context.router.push(const GamificationRoute()),
-                  child: Text(
-                    l10n.dashboardSeeAllRewards,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: AppTheme.brandBlueBright,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          _ChildMysteryChestCard(
-            nextRewardAsync: ref.watch(dashboardChildNextRewardProvider),
-            globalPointsFallback: totalPoints,
             l10n: l10n,
             theme: theme,
             numberFormat: numberFormat,
+            nextRewardAsync: ref.watch(dashboardChildNextRewardProvider),
             onOpenRewards: () => context.router.push(const GamificationRoute()),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
         ],
         _DashboardLevelPointsCard(
           userMode: userMode,
@@ -431,84 +395,140 @@ class _DashboardBody extends ConsumerWidget {
   }
 }
 
-class _ChildTotalPointsPill extends StatelessWidget {
-  const _ChildTotalPointsPill({
+class _ChildPointsRewardsTabCard extends StatelessWidget {
+  const _ChildPointsRewardsTabCard({
     required this.totalPoints,
     required this.l10n,
+    required this.theme,
     required this.numberFormat,
+    required this.nextRewardAsync,
+    required this.onOpenRewards,
   });
 
   final int totalPoints;
   final AppLocalizations l10n;
+  final ThemeData theme;
   final NumberFormat numberFormat;
+  final AsyncValue<DashboardChildNextReward?> nextRewardAsync;
+  final VoidCallback onOpenRewards;
+
+  static const double _tabViewHeight = 108.0;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.brandBlueDeep, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.brandBlue.withValues(alpha: 0.1),
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFD54F),
-              shape: BoxShape.circle,
+    return DefaultTabController(
+      length: 2,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.brandBlueDeep, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.brandBlue.withValues(alpha: 0.1),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
-            child: const Icon(
-              Icons.emoji_events_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.totalPoints.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppTheme.brandBlueDeep,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.1,
-                  ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: TabBar(
+                tabs: [
+                  Tab(text: l10n.dashboardChildPointsTab),
+                  Tab(text: l10n.bottomNavRewards),
+                ],
+                labelColor: AppTheme.brandBlueDeep,
+                unselectedLabelColor: AppTheme.brandInkMuted,
+                indicatorColor: AppTheme.brandBlueBright,
+                indicatorWeight: 3,
+                dividerColor: Colors.transparent,
+                labelStyle: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.dashboardPointsValue(numberFormat.format(totalPoints)),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: AppTheme.brandInk,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
+                unselectedLabelStyle: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+            SizedBox(
+              height: _tabViewHeight,
+              child: TabBarView(
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFD54F),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.emoji_events_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                l10n.totalPoints.toUpperCase(),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: AppTheme.brandBlueDeep,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                l10n.dashboardPointsValue(
+                                  numberFormat.format(totalPoints),
+                                ),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: AppTheme.brandInk,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _ChildRewardsTabPanel(
+                    nextRewardAsync: nextRewardAsync,
+                    globalPointsFallback: totalPoints,
+                    l10n: l10n,
+                    theme: theme,
+                    numberFormat: numberFormat,
+                    onOpenRewards: onOpenRewards,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ChildMysteryChestCard extends StatelessWidget {
-  const _ChildMysteryChestCard({
+class _ChildRewardsTabPanel extends StatelessWidget {
+  const _ChildRewardsTabPanel({
     required this.nextRewardAsync,
     required this.globalPointsFallback,
     required this.l10n,
@@ -527,9 +547,12 @@ class _ChildMysteryChestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return nextRewardAsync.when(
-      loading: () => const SizedBox(
-        height: 140,
-        child: Center(child: CircularProgressIndicator()),
+      loading: () => const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
       ),
       error: (_, __) => const SizedBox.shrink(),
       data: (next) {
@@ -544,76 +567,80 @@ class _ChildMysteryChestCard extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onOpenRewards,
-            borderRadius: BorderRadius.circular(28),
-            child: Ink(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF3949AB), Color(0xFF1A237E)],
-                ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.card_giftcard_rounded,
+                        color: AppTheme.brandBlueBright,
+                        size: 26,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              l10n.dashboardMysteryChest,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: AppTheme.brandInk,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              l10n.dashboardTapToUnlockAtPts(
+                                numberFormat.format(threshold),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: AppTheme.brandInkMuted,
+                                fontWeight: FontWeight.w600,
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.only(left: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: onOpenRewards,
+                        child: Text(
+                          l10n.dashboardSeeAllRewards,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppTheme.brandBlueBright,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 5,
+                      backgroundColor: AppTheme.brandBlueSoft.withValues(
+                        alpha: 0.45,
+                      ),
+                      color: const Color(0xFF43A047),
+                    ),
                   ),
                 ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 14),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.card_giftcard_rounded,
-                        color: Color(0xFFFFD54F),
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      l10n.dashboardMysteryChest,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.dashboardTapToUnlockAtPts(
-                        numberFormat.format(threshold),
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.7,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        minHeight: 7,
-                        backgroundColor: Colors.white.withValues(alpha: 0.22),
-                        color: const Color(0xFF66BB6A),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),

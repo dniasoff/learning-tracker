@@ -320,6 +320,12 @@ abstract class AppLocalizations {
   /// **'Rewards Gallery'**
   String get dashboardRewardsGallery;
 
+  /// No description provided for @dashboardChildPointsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Points'**
+  String get dashboardChildPointsTab;
+
   /// No description provided for @dashboardSeeAllRewards.
   ///
   /// In en, this message translates to:
@@ -361,6 +367,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Gamification'**
   String get gamification;
+
+  /// No description provided for @myAchievementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Achievements'**
+  String get myAchievementsTitle;
+
+  /// No description provided for @achievementsYourProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR PROGRESS'**
+  String get achievementsYourProgress;
+
+  /// No description provided for @achievementsRewardsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{unlocked} / {total} Rewards'**
+  String achievementsRewardsCount(int unlocked, int total);
+
+  /// No description provided for @achievementsAcrossAllTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Across all your tracks.'**
+  String get achievementsAcrossAllTracks;
+
+  /// No description provided for @achievementsTrackSection.
+  ///
+  /// In en, this message translates to:
+  /// **'TRACK'**
+  String get achievementsTrackSection;
+
+  /// No description provided for @achievementsAllTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'All Tracks'**
+  String get achievementsAllTracks;
+
+  /// No description provided for @achievementsStatusUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked!'**
+  String get achievementsStatusUnlocked;
+
+  /// No description provided for @achievementsStatusComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon!'**
+  String get achievementsStatusComingSoon;
+
+  /// No description provided for @achievementsStatusLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get achievementsStatusLocked;
+
+  /// No description provided for @achievementsUnlockedAtPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked at {points} points'**
+  String achievementsUnlockedAtPoints(String points);
+
+  /// No description provided for @achievementsUltimateGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'The Ultimate Goal.'**
+  String get achievementsUltimateGoal;
+
+  /// No description provided for @achievementsProTipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pro Tip!'**
+  String get achievementsProTipTitle;
+
+  /// No description provided for @achievementsProTipBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep learning on your tracks to climb the reward ladder.'**
+  String get achievementsProTipBody;
+
+  /// No description provided for @achievementsActivityAndPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity & points'**
+  String get achievementsActivityAndPoints;
 
   /// No description provided for @rewardCatalog.
   ///
@@ -1598,6 +1688,24 @@ abstract class AppLocalizations {
   /// **'Set how many points activities are worth'**
   String get pointConfigurationSubtitle;
 
+  /// No description provided for @pointConfigPerTaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Points per completed task'**
+  String get pointConfigPerTaskTitle;
+
+  /// No description provided for @pointConfigPerTaskDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'For each active learning track, set how many points your child earns when they complete one task from their daily list. The amount depends on the task stage (for example first learn vs review).'**
+  String get pointConfigPerTaskDescription;
+
+  /// No description provided for @pointConfigNoActiveTracksBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.'**
+  String get pointConfigNoActiveTracksBody;
+
   /// No description provided for @sectionAccountSafety.
   ///
   /// In en, this message translates to:
@@ -2221,6 +2329,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Register Here'**
   String get signInRegisterHere;
+
+  /// No description provided for @chartFailedToLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load data'**
+  String get chartFailedToLoad;
 }
 
 class _AppLocalizationsDelegate

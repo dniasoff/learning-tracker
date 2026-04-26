@@ -52,6 +52,7 @@
   "mysteryReward": "!פרס מסתורי",
   "totalPoints": "סה״כ נקודות",
   "dashboardRewardsGallery": "גלריית פרסים",
+  "dashboardChildPointsTab": "נקודות",
   "dashboardSeeAllRewards": "הצג הכול",
   "dashboardMysteryChest": "תיבת מסתורין",
   "dashboardTapToUnlockAtPts": "לחיצה לפתיחה ב־{points} נק׳",
@@ -69,6 +70,31 @@
   "dashboardBubbleDone": "בוצע",
   "complete": "הושלם",
   "gamification": "הישגים ופרסים",
+  "myAchievementsTitle": "ההישגים שלי",
+  "achievementsYourProgress": "ההתקדמות שלך",
+  "achievementsRewardsCount": "{unlocked} / {total} פרסים",
+  "@achievementsRewardsCount": {
+    "placeholders": {
+      "unlocked": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "achievementsAcrossAllTracks": "בכל המסלולים שלך.",
+  "achievementsTrackSection": "מסלול",
+  "achievementsAllTracks": "כל המסלולים",
+  "achievementsStatusUnlocked": "נפתח!",
+  "achievementsStatusComingSoon": "בקרוב!",
+  "achievementsStatusLocked": "נעול",
+  "achievementsUnlockedAtPoints": "נפתח ב־{points} נקודות",
+  "@achievementsUnlockedAtPoints": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
+  "achievementsUltimateGoal": "היעד האולטימטיבי.",
+  "achievementsProTipTitle": "טיפ!",
+  "achievementsProTipBody": "המשיכו ללמוד במסלולים כדי לטפס בסולם הפרסים.",
+  "achievementsActivityAndPoints": "פעילות ונקודות",
   "rewardCatalog": "קטלוג פרסים",
   "noRewardsConfigured": "עדיין לא הוגדרו פרסים",
   "addReward": "הוסף פרס",
@@ -384,6 +410,9 @@
   "manageTracksForChildSubtitle": "הוספה, עריכה או ארכיון של מסלולי הילד",
   "pointConfiguration": "הגדרת נקודות",
   "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",
+  "pointConfigPerTaskTitle": "נקודות לכל משימה שהושלמה",
+  "pointConfigPerTaskDescription": "לכל מסלול למידה פעיל, הגדירו כמה נקודות הילד מקבל כשהוא משלים משימה אחת מהרשימה היומית. הסכום תלוי בשלב המשימה (למשל לימוד ראשון מול חזרה).",
+  "pointConfigNoActiveTracksBody": "לא נמצאו מסלולי למידה פעילים עם שלבים לילד הזה. הפעילו מקצועות והגדירו מסלולים תחת ניהול מסלולים, ואז חזרו לכאן כדי לקבוע נקודות לכל משימה.",
   "sectionAccountSafety": "בטיחות חשבון",
   "bottomNavTracks": "מסלולים",
   "bottomNavRewards": "פרסים",
@@ -518,5 +547,6 @@
   "signInCta": "התחברות",
   "signInWithGoogleCta": "התחברות עם גוגל",
   "signInNewToQuest": "חדשים בקווסט? ",
-  "signInRegisterHere": "הרשמה כאן"
+  "signInRegisterHere": "הרשמה כאן",
+  "chartFailedToLoad": "נכשל בטעינת הנתונים"
 }

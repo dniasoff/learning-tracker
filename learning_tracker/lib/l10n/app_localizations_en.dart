@@ -126,6 +126,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardRewardsGallery => 'Rewards Gallery';
 
   @override
+  String get dashboardChildPointsTab => 'Points';
+
+  @override
   String get dashboardSeeAllRewards => 'SEE ALL';
 
   @override
@@ -149,6 +152,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gamification => 'Gamification';
+
+  @override
+  String get myAchievementsTitle => 'My Achievements';
+
+  @override
+  String get achievementsYourProgress => 'YOUR PROGRESS';
+
+  @override
+  String achievementsRewardsCount(int unlocked, int total) {
+    return '$unlocked / $total Rewards';
+  }
+
+  @override
+  String get achievementsAcrossAllTracks => 'Across all your tracks.';
+
+  @override
+  String get achievementsTrackSection => 'TRACK';
+
+  @override
+  String get achievementsAllTracks => 'All Tracks';
+
+  @override
+  String get achievementsStatusUnlocked => 'Unlocked!';
+
+  @override
+  String get achievementsStatusComingSoon => 'Coming soon!';
+
+  @override
+  String get achievementsStatusLocked => 'Locked';
+
+  @override
+  String achievementsUnlockedAtPoints(String points) {
+    return 'Unlocked at $points points';
+  }
+
+  @override
+  String get achievementsUltimateGoal => 'The Ultimate Goal.';
+
+  @override
+  String get achievementsProTipTitle => 'Pro Tip!';
+
+  @override
+  String get achievementsProTipBody =>
+      'Keep learning on your tracks to climb the reward ladder.';
+
+  @override
+  String get achievementsActivityAndPoints => 'Activity & points';
 
   @override
   String get rewardCatalog => 'Reward Catalog';
@@ -827,6 +877,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Set how many points activities are worth';
 
   @override
+  String get pointConfigPerTaskTitle => 'Points per completed task';
+
+  @override
+  String get pointConfigPerTaskDescription =>
+      'For each active learning track, set how many points your child earns when they complete one task from their daily list. The amount depends on the task stage (for example first learn vs review).';
+
+  @override
+  String get pointConfigNoActiveTracksBody =>
+      'No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.';
+
+  @override
   String get sectionAccountSafety => 'ACCOUNT SAFETY';
 
   @override
@@ -1165,4 +1226,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signInRegisterHere => 'Register Here';
+
+  @override
+  String get chartFailedToLoad => 'Failed to load data';
 }
