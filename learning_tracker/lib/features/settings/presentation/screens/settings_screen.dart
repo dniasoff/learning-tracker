@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
-import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
@@ -18,10 +17,9 @@ import 'package:learning_tracker/features/settings/presentation/providers/hebrew
 import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 // TODO(DNI-105): Replace with dynamic version from package_info_plus
 // once the dependency is added to pubspec.yaml.
@@ -43,6 +41,8 @@ class SettingsScreen extends ConsumerWidget {
         .firstOrNull;
     final isChildProfile = activeProfile?.mode == 'child';
     final isAdultProfile = activeProfile?.mode == 'adult';
+    final hasPasswordProvider = user != null &&
+        user.providerData.any((info) => info.providerId == 'password');
 
     return Scaffold(
       body: SafeArea(
@@ -59,38 +59,42 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const _SectionHeader(title: 'TRACKS'),
-            const SizedBox(height: 10),
-            _SurfaceCard(
-              child: _SettingsTile(
-                icon: Icons.route_rounded,
-                iconColor: AppTheme.brandBlueBright,
-                iconBackground: AppTheme.brandBlueSoft,
-                title: 'Manage tracks',
-                subtitle: 'Create and edit your learning tracks',
-                onTap: () => context.pushRoute(TrackManagementHubRoute()),
+            if (!isChildProfile) ...[
+              const _SectionHeader(title: 'TRACKS'),
+              const SizedBox(height: 10),
+              _SurfaceCard(
+                child: _SettingsTile(
+                  icon: Icons.route_rounded,
+                  iconColor: AppTheme.brandBlueBright,
+                  iconBackground: AppTheme.brandBlueSoft,
+                  title: 'Manage tracks',
+                  subtitle: 'Create and edit your learning tracks',
+                  onTap: () => context.pushRoute(TrackManagementHubRoute()),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+            ],
             const _SectionHeader(title: 'LEARNING'),
             const SizedBox(height: 10),
             _SurfaceCard(
               child: Column(
                 children: [
                   _HebrewDateTile(theme: theme),
-                  _tileDivider(theme),
-                  _SettingsTile(
-                    icon: Icons.menu_book_rounded,
-                    iconColor: AppTheme.brandGoldDeep,
-                    iconBackground: AppTheme.brandGoldSoft,
-                    title: 'Add what you\'ve learned',
-                    subtitle: 'Log custom Mitzvot or Torah studies',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const LifetimeMarkingScreen(),
+                  if (!isChildProfile) ...[
+                    _tileDivider(theme),
+                    _SettingsTile(
+                      icon: Icons.menu_book_rounded,
+                      iconColor: AppTheme.brandGoldDeep,
+                      iconBackground: AppTheme.brandGoldSoft,
+                      title: 'Add what you\'ve learned',
+                      subtitle: 'Log custom Mitzvot or Torah studies',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const LifetimeMarkingScreen(),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -107,56 +111,61 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             const _SurfaceCard(child: _LanguageTile()),
-            const SizedBox(height: 16),
-            const _BackupSyncSection(),
+            if (!isChildProfile) ...[
+              const SizedBox(height: 16),
+              const BackupSyncSection(),
+            ],
             const SizedBox(height: 24),
             _ParentalControlsSection(
               user: user,
               isChildProfile: isChildProfile,
             ),
-            const _SectionHeader(title: 'ACCOUNT'),
-            const SizedBox(height: 10),
-            if (user != null &&
-                user.providerData.any((info) => info.providerId == 'password'))
-              Column(
-                children: [
-                  _SurfaceCard(
-                    child: _SettingsTile(
-                      icon: Icons.vpn_key_outlined,
-                      iconColor: AppTheme.brandInkMuted,
-                      iconBackground: theme.colorScheme.secondaryContainer,
-                      title: 'Change Password',
-                      onTap: () => _showChangePasswordFlow(context, ref, user),
+            if (!isChildProfile || hasPasswordProvider) ...[
+              const _SectionHeader(title: 'ACCOUNT'),
+              const SizedBox(height: 10),
+              if (hasPasswordProvider)
+                Column(
+                  children: [
+                    _SurfaceCard(
+                      child: _SettingsTile(
+                        icon: Icons.vpn_key_outlined,
+                        iconColor: AppTheme.brandInkMuted,
+                        iconBackground: theme.colorScheme.secondaryContainer,
+                        title: 'Change Password',
+                        onTap: () =>
+                            _showChangePasswordFlow(context, ref, user),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ),
-            _SurfaceCard(
-              child: _SettingsTile(
-                icon: Icons.logout_rounded,
-                iconColor: theme.colorScheme.error,
-                iconBackground: theme.colorScheme.errorContainer,
-                title: 'Sign Out',
-                titleColor: theme.colorScheme.error,
-                trailing: const SizedBox.shrink(),
-                onTap: () => _showSignOutConfirmation(context, ref),
-              ),
-            ),
-            if (isAdultProfile && user != null) ...[
-              const SizedBox(height: 12),
-              _SurfaceCard(
-                child: _SettingsTile(
-                  icon: Icons.delete_forever_rounded,
-                  iconColor: theme.colorScheme.error,
-                  iconBackground: theme.colorScheme.errorContainer,
-                  title: 'Delete Account',
-                  subtitle: 'Permanently remove this account and cloud data',
-                  titleColor: theme.colorScheme.error,
-                  trailing: const SizedBox.shrink(),
-                  onTap: () => showDeleteAccountFlow(context, ref, user),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-              ),
+              if (!isChildProfile)
+                _SurfaceCard(
+                  child: _SettingsTile(
+                    icon: Icons.logout_rounded,
+                    iconColor: theme.colorScheme.error,
+                    iconBackground: theme.colorScheme.errorContainer,
+                    title: 'Sign Out',
+                    titleColor: theme.colorScheme.error,
+                    trailing: const SizedBox.shrink(),
+                    onTap: () => showSignOutConfirmation(context, ref),
+                  ),
+                ),
+              if (!isChildProfile && isAdultProfile && user != null) ...[
+                const SizedBox(height: 12),
+                _SurfaceCard(
+                  child: _SettingsTile(
+                    icon: Icons.delete_forever_rounded,
+                    iconColor: theme.colorScheme.error,
+                    iconBackground: theme.colorScheme.errorContainer,
+                    title: 'Delete Account',
+                    subtitle: 'Permanently remove this account and cloud data',
+                    titleColor: theme.colorScheme.error,
+                    trailing: const SizedBox.shrink(),
+                    onTap: () => showDeleteAccountFlow(context, ref, user),
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: 24),
             Center(
@@ -164,6 +173,7 @@ class SettingsScreen extends ConsumerWidget {
                 'v$_appVersion',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 15,
                 ),
               ),
             ),
@@ -174,6 +184,7 @@ class SettingsScreen extends ConsumerWidget {
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -213,238 +224,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Displays sync status and account creation CTA for local-only users.
-///
-/// DNI-188: Optional Account Creation in Settings.
-class _BackupSyncSection extends ConsumerWidget {
-  const _BackupSyncSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final syncStatus = ref.watch(syncStatusProvider);
-    final authState = ref.watch(authStateProvider);
-    return switch (syncStatus) {
-      SyncStatusLocalOnly() => _buildLocalOnlyCard(
-        context,
-        theme,
-        isLocalAuth: authState.isLocalBorn,
-      ),
-      SyncStatusSynced(:final lastSyncedAt) => _buildCloudStatusCard(
-        context,
-        theme,
-        icon: Icons.cloud_done_rounded,
-        subtitle: 'Last synced ${_formatTimeAgo(lastSyncedAt)}',
-      ),
-      SyncStatusSyncing() => _buildCloudStatusCard(
-        context,
-        theme,
-        icon: Icons.sync_rounded,
-        subtitle: 'Syncing...',
-      ),
-      SyncStatusPending(:final pendingChanges) => _buildCloudStatusCard(
-        context,
-        theme,
-        icon: Icons.schedule_rounded,
-        subtitle: '$pendingChanges changes pending',
-      ),
-      SyncStatusOffline(:final pendingChanges) => _buildCloudStatusCard(
-        context,
-        theme,
-        icon: Icons.cloud_off_rounded,
-        subtitle: pendingChanges > 0
-            ? '$pendingChanges changes queued'
-            : 'Offline',
-      ),
-      SyncStatusError(:final message) => _buildCloudStatusCard(
-        context,
-        theme,
-        icon: Icons.warning_amber_rounded,
-        subtitle: 'Sync error: $message',
-      ),
-    };
-  }
-
-  Widget _buildLocalOnlyCard(
-    BuildContext context,
-    ThemeData theme, {
-    required bool isLocalAuth,
-  }) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B3FB4),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x30053698),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Color(0x3A8EA4ED),
-                  child: Icon(
-                    Icons.cloud_upload_outlined,
-                    size: 17,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  'Backup & Sync',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 30,
-                    height: 1.05,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Your learning progress is currently\nLOCAL ONLY. Upgrade to sync\nacross all devices.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.88),
-                height: 1.35,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (isLocalAuth)
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFF3D4A5),
-                    foregroundColor: const Color(0xFF2C2A26),
-                    minimumSize: const Size.fromHeight(42),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    textStyle: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                      color: const Color(0xFF2C2A26),
-                    ),
-                  ),
-                  onPressed: () =>
-                      context.pushRoute(const UpgradeToCloudRoute()),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF322A23),
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.arrow_upward_rounded,
-                          color: Color(0xFFF3D4A5),
-                          size: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Upgrade to Cloud'),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCloudStatusCard(
-    BuildContext context,
-    ThemeData theme, {
-    required IconData icon,
-    required String subtitle,
-  }) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B3FB4),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x30053698),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: const Color(0x3A8EA4ED),
-              child: Icon(icon, size: 17, color: Colors.white),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Backup & Sync',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 22,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.88),
-                      height: 1.3,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: () => context.pushRoute(const DeviceRestoreRoute()),
-              icon: const Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatTimeAgo(DateTime dateTime) {
-    final diff = DateTime.now().difference(dateTime);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
-  }
-}
-
-/// Calendar preference tile with explicit Hebrew / Gregorian choice.
+/// Calendar preference: tab-style [SegmentedButton] (Gregorian vs Hebrew).
 class _HebrewDateTile extends ConsumerWidget {
   const _HebrewDateTile({required this.theme});
 
@@ -453,49 +233,81 @@ class _HebrewDateTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final useHebrew = ref.watch(useHebrewDateProvider);
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-      minLeadingWidth: 0,
-      leading: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: AppTheme.brandBlueSoft,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.calendar_month_rounded,
-          color: theme.colorScheme.primary,
-          size: 16,
-        ),
-      ),
-      title: Text(
-        'Calendar Preference',
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          fontSize: 16,
-          color: const Color(0xFF1D2432),
-        ),
-      ),
-      subtitle: Text(
-        'Switch between Gregorian/Hebrew',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: const Color(0xFF929BAA),
-          fontSize: 11.5,
-        ),
-      ),
-      trailing: Transform.scale(
-        scale: 0.9,
-        child: Switch(
-          value: useHebrew,
-          activeThumbColor: Colors.white,
-          activeTrackColor: AppTheme.brandBlueBright,
-          inactiveThumbColor: Colors.white,
-          inactiveTrackColor: const Color(0xFFD7DEEA),
-          onChanged: (value) =>
-              ref.read(useHebrewDateProvider.notifier).setUseHebrewDate(value),
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.brandBlueSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.calendar_month_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Calendar Preference',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 19,
+                        color: const Color(0xFF1D2432),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Goals, deadlines, and date pickers',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF929BAA),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment<bool>(
+                value: false,
+                label: Text('Gregorian'),
+              ),
+              ButtonSegment<bool>(
+                value: true,
+                label: Text('Hebrew'),
+              ),
+            ],
+            selected: {useHebrew},
+            onSelectionChanged: (selected) {
+              if (selected.isEmpty) return;
+              ref
+                  .read(useHebrewDateProvider.notifier)
+                  .setUseHebrewDate(selected.first);
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppTheme.brandBlueBright,
+              selectedForegroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFFD7DEEA)),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -515,7 +327,7 @@ class _SectionHeader extends StatelessWidget {
         title,
         style: theme.textTheme.labelMedium?.copyWith(
           color: const Color(0xFF8E97A6),
-          fontSize: 10,
+          fontSize: 13,
           fontWeight: FontWeight.w700,
           letterSpacing: 2,
         ),
@@ -591,7 +403,7 @@ class _SettingsTile extends StatelessWidget {
         style: theme.textTheme.titleSmall?.copyWith(
           color: titleColor,
           fontWeight: FontWeight.w600,
-          fontSize: 16,
+          fontSize: 19,
         ),
       ),
       subtitle: subtitle == null
@@ -600,7 +412,7 @@ class _SettingsTile extends StatelessWidget {
               subtitle!,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF929BAA),
-                fontSize: 11.5,
+                fontSize: 15,
               ),
             ),
       trailing:
@@ -714,7 +526,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                       maxLines: 1,
                       style: TextStyle(
                         color: theme.colorScheme.primary,
-                        fontSize: 24,
+                        fontSize: 27,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -736,7 +548,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                       'PRO',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 7.5,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.3,
                       ),
@@ -758,7 +570,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                         displayName,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
-                          fontSize: 22,
+                          fontSize: 25,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -778,7 +590,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                           'SELF-LEARNER',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
-                            fontSize: 8,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
                           ),
@@ -791,7 +603,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                       user.email!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF8E97A6),
-                        fontSize: 13,
+                        fontSize: 16,
                       ),
                     ),
                   const SizedBox(height: 4),
@@ -848,7 +660,7 @@ class _LocalBornProfileRow extends ConsumerWidget {
                     maxLines: 1,
                     style: TextStyle(
                       color: theme.colorScheme.primary,
-                      fontSize: 24,
+                      fontSize: 27,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -864,12 +676,14 @@ class _LocalBornProfileRow extends ConsumerWidget {
                     displayName,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      fontSize: 25,
                     ),
                   ),
                   Text(
                     authUser.email,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -983,158 +797,6 @@ class _ParentalControlsSectionState
   }
 }
 
-Future<void> _showSignOutConfirmation(
-  BuildContext context,
-  WidgetRef ref,
-) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.46),
-    builder: (context) {
-      final theme = Theme.of(context);
-      return Dialog(
-        elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
-          decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
-            borderRadius: BorderRadius.circular(34),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFDE7EA),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.logout_rounded,
-                      color: Color(0xFFB43A4A),
-                      size: 40,
-                    ),
-                  ),
-                  Positioned(
-                    top: -1,
-                    right: -2,
-                    child: Container(
-                      width: 23,
-                      height: 23,
-                      decoration: BoxDecoration(
-                        color: AppTheme.brandBlue,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTheme.brandCreamCard,
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.question_mark_rounded,
-                        size: 13,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Sign Out',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: AppTheme.brandBlueDeep,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Are you sure you want to sign out?\n'
-                'Your data will be preserved for when\n'
-                'you sign back in.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.brandBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: const Text('Sign Out'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.brandInkMuted,
-                    backgroundColor: const Color(0xFFF0F1F5),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  child: const Text('Cancel'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-
-  if (confirmed != true || !context.mounted) return;
-
-  try {
-    final service = ref.read(accountManagementServiceProvider);
-    await service.signOut();
-    ref.read(authStateProvider.notifier).signOut();
-
-    // Epic 21.10: route to account picker when other accounts
-    // remain on device, or to welcome when this was the last one.
-    if (context.mounted) {
-      final registry = ref.read(deviceRegistryProvider);
-      final accounts = await registry.getAllAccounts();
-      if (!context.mounted) return;
-      if (accounts.isNotEmpty) {
-        await context.router.replaceAll([const AccountPickerRoute()]);
-      } else {
-        await context.router.replaceAll([const SignInRoute()]);
-      }
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to sign out. Please try again.'),
-          backgroundColor: AppTheme.brandCoralDeep,
-        ),
-      );
-    }
-  }
-}
-
 Future<void> _showChangePasswordFlow(
   BuildContext context,
   WidgetRef ref,
@@ -1243,6 +905,7 @@ class _NoBackupInlineText extends StatelessWidget {
           style: theme.textTheme.labelSmall?.copyWith(
             color: const Color(0xFFCE8A41),
             fontWeight: FontWeight.w600,
+            fontSize: 14,
           ),
         ),
       ],

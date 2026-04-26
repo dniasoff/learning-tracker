@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
@@ -122,6 +123,21 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     return _getUnitLabel(widget.curriculumId);
   }
 
+  String _formatDateLine(DateTime? d, {required bool useHebrew}) {
+    if (d == null) return 'Tap to choose a date';
+    if (useHebrew) {
+      return HebrewCalendarUtils.gregorianToHebrew(d.toLocal());
+    }
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
+  String _formatYmdLine(DateTime d, {required bool useHebrew}) {
+    if (useHebrew) {
+      return HebrewCalendarUtils.gregorianToHebrew(d.toLocal());
+    }
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   void dispose() {
     _descriptionController.dispose();
@@ -178,15 +194,14 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   }
 
   Widget _buildDeadlineSection() {
+    final useHebrew = ref.watch(useHebrewDateProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Date selection — pick a date immediately
         Card(
           child: InkWell(
-            onTap: ref.read(useHebrewDateProvider)
-                ? _pickHebrewDate
-                : _pickGregorianDate,
+            onTap: useHebrew ? _pickHebrewDate : _pickGregorianDate,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -199,9 +214,10 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      _targetDate != null
-                          ? '${_targetDate!.day}/${_targetDate!.month}/${_targetDate!.year}'
-                          : 'Tap to choose a date',
+                      _formatDateLine(
+                        _targetDate,
+                        useHebrew: useHebrew,
+                      ),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
@@ -275,6 +291,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   }
 
   Widget _buildPaceSection() {
+    final useHebrew = ref.watch(useHebrewDateProvider);
     final unitLabel = _unitDisplayLabel;
     final perLabel = _paceUnit == 'per_day' ? 'per day' : 'per week';
 
@@ -330,8 +347,10 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
               }
               final daysToComplete = (remainingItems / dailyRate).ceil();
               final projectedDate = _now().add(Duration(days: daysToComplete));
-              final formattedDate =
-                  '${projectedDate.year}-${projectedDate.month.toString().padLeft(2, '0')}-${projectedDate.day.toString().padLeft(2, '0')}';
+              final formattedDate = _formatYmdLine(
+                projectedDate,
+                useHebrew: useHebrew,
+              );
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),

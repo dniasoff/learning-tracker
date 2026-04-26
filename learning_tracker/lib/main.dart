@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/auth/presentation/providers/magic_link
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -109,6 +110,11 @@ void main() {
           stack,
         );
       }
+
+      // Single prefs read so Hebrew date preference is in sync on first build
+      // of [useHebrewDateProvider] (deadline / goal date pickers).
+      final appPrefs = await SharedPreferences.getInstance();
+      syncHebrewCalendarPreferenceFromPrefs(appPrefs);
 
       final container = ProviderContainer(
         overrides: [

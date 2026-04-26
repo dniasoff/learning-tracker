@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -21,6 +22,8 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/learni
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
+import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
@@ -2337,7 +2340,7 @@ class _StudyDaysReadOnly extends StatelessWidget {
   }
 }
 
-class _SelfPacedGoalStep extends StatefulWidget {
+class _SelfPacedGoalStep extends ConsumerStatefulWidget {
   const _SelfPacedGoalStep({
     required this.curriculumId,
     required this.onComplete,
@@ -2347,10 +2350,10 @@ class _SelfPacedGoalStep extends StatefulWidget {
   final ValueChanged<GoalFormResult?> onComplete;
 
   @override
-  State<_SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
+  ConsumerState<_SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
 }
 
-class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
+class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
   int _paceValue = 1;
   String _paceUnit = 'per_week';
   DateTime? _deadline;
@@ -2378,21 +2381,38 @@ class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
     _ => 'units',
   };
 
-  String _formatDate(DateTime value) {
+  String _formatDate(DateTime value, {required bool useHebrew}) {
+    if (useHebrew) {
+      return HebrewCalendarUtils.gregorianToHebrew(value.toLocal());
+    }
     final dd = value.day.toString().padLeft(2, '0');
     final mm = value.month.toString().padLeft(2, '0');
     final yyyy = value.year.toString();
     return '$dd/$mm/$yyyy';
   }
 
-  String get _projectedFinish {
+  String _projectedFinishLabel(bool useHebrew) {
     final weeklyPace = _paceUnit == 'per_day' ? _paceValue * 7 : _paceValue;
     final days = (weeklyPace <= 0 ? 14 : (120 / weeklyPace * 7)).ceil();
     final projected = DateTime.now().add(Duration(days: days));
-    return _formatDate(projected);
+    return _formatDate(projected, useHebrew: useHebrew);
   }
 
   Future<void> _pickDeadline() async {
+    final useHebrew = ref.read(useHebrewDateProvider);
+    if (useHebrew) {
+      final picked = await HebrewDatePicker.show(
+        context,
+        initialDate: _deadline,
+      );
+      if (picked != null) {
+        setState(() {
+          _deadline = picked;
+          _mode = 'deadline';
+        });
+      }
+      return;
+    }
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -2416,11 +2436,13 @@ class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
         ).showSnackBar(const SnackBar(content: Text('Pick a deadline first.')));
         return;
       }
+      final useHebrew = ref.read(useHebrewDateProvider);
       widget.onComplete(
         GoalFormResult(
           targetPercent: 100,
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
+          dateType: useHebrew ? 'hebrew' : 'gregorian',
           learningUnit:
               widget.curriculumId == CurriculumId.bavli ||
                   widget.curriculumId == CurriculumId.yerushalmi
@@ -2449,6 +2471,7 @@ class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final useHebrew = ref.watch(useHebrewDateProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
@@ -2559,7 +2582,7 @@ class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
                     ],
                   ),
                   Text(
-                    'Estimated finish: $_projectedFinish',
+                    'Estimated finish: ${_projectedFinishLabel(useHebrew)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                       fontStyle: FontStyle.italic,
@@ -2622,7 +2645,10 @@ class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
                       child: Row(
                         children: [
                           Text(
-                            _formatDate(_deadline ?? DateTime.now()),
+                            _formatDate(
+                              _deadline ?? DateTime.now(),
+                              useHebrew: useHebrew,
+                            ),
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: _mode == 'deadline'
                                   ? AppTheme.brandInk
@@ -2642,7 +2668,7 @@ class _SelfPacedGoalStepState extends State<_SelfPacedGoalStep> {
                   if (_deadline != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Deadline goal set for ${_formatDate(_deadline!)}.',
+                      'Deadline goal set for ${_formatDate(_deadline!, useHebrew: useHebrew)}.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppTheme.brandInkMuted,
                       ),
