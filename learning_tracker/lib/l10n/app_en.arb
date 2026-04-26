@@ -51,6 +51,22 @@
   "noRewardsYet": "No rewards earned yet. Keep learning!",
   "mysteryReward": "Mystery Reward!",
   "totalPoints": "Total Points",
+  "dashboardRewardsGallery": "Rewards Gallery",
+  "dashboardSeeAllRewards": "SEE ALL",
+  "dashboardMysteryChest": "Mystery Chest",
+  "dashboardTapToUnlockAtPts": "TAP TO UNLOCK AT {points} PTS",
+  "@dashboardTapToUnlockAtPts": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
+  "dashboardPointsValue": "{count} Points",
+  "@dashboardPointsValue": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "dashboardBubbleDone": "DONE",
   "complete": "complete",
   "gamification": "Gamification",
   "rewardCatalog": "Reward Catalog",
@@ -116,6 +132,7 @@
   "error": "Error",
   "loading": "Loading...",
   "manageTracks": "Manage Tracks",
+  "manageTracksDetail": "Create and edit your learning tracks",
   "addTrack": "Add Track",
   "noActiveCurricula": "No active curricula",
   "errorLoadingCurricula": "Error loading curricula: {error}",
@@ -181,5 +198,223 @@
       "days": {"type": "int"}
     }
   },
-  "paceOnPace": "OK"
+  "paceOnPace": "OK",
+  "progressNoDataTitle": "No progress yet",
+  "progressNoDataSubtitle": "Start learning to see your progress here.",
+  "statCompletions": "COMPLETIONS",
+  "statUnitsDone": "UNITS DONE",
+  "statDayStreak": "DAY STREAK",
+  "statActiveTracks": "ACTIVE TRACKS",
+  "progressChartsTile": "Progress Charts",
+  "progressChartsTileSubtitle": "Completions, trends, and more",
+  "curriculumMastery": "Curriculum Mastery",
+  "masteryDoneBadge": "DONE",
+  "learningLifetime": "Learning Lifetime",
+  "learningLifetimeExpandHint": "Per curriculum: expand to browse what you have learned",
+  "addWhatYouLearned": "Add what you've learned",
+  "addWhatYouLearnedSettingsSubtitle": "Log custom Mitzvot or Torah studies",
+  "lifetimeLearning": "Lifetime Learning",
+  "lifetimeAddHeaderTitle": "Add what you've learned",
+  "lifetimeAddHeaderSubtitle": "Mark what you already studied — in print or anywhere — as lifetime learning.",
+  "lifetimeHowItWorksTitle": "How it works",
+  "lifetimeHowItWorksBody": "Open a curriculum, then use the folder list to select sections. Green = selected for saving; open a subfolder with the arrow when there is more inside.",
+  "lifetimeSelectScreenTitle": "Select what you've learned",
+  "lifetimeSelectScreenSubtitle": "Check sections to include; open folders to go deeper.",
+  "lifetimeMarkAsLearnedTitle": "Mark as lifetime learned",
+  "lifetimeMarkAsLearnedLine": "Selected: {count} • level {level}",
+  "@lifetimeMarkAsLearnedLine": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "level": { "type": "int" }
+    }
+  },
+  "selectAllInThisList": "Select all in this list",
+  "deselectAllInThisList": "Deselect all in this list",
+  "clearSelection": "Clear selection",
+  "contentLoadError": "Unable to load curriculum content: {error}",
+  "@contentLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "noItemsAtThisLevel": "No items at this level",
+  "breadcrumbsRoot": "Root",
+  "lifetimeMarkSavedCount": "Marked {count} lifetime selection(s).",
+  "@lifetimeMarkSavedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lifetimeMarkSaveError": "Could not save lifetime marks: {error}",
+  "@lifetimeMarkSaveError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "dashboardStats": "STATS",
+  "learningLifetimeAllCurricula": "Learning lifetime (all curricula)",
+  "lifetimeSectionsSummary": "{learned} / {total} sections — {n} curricula",
+  "@lifetimeSectionsSummary": {
+    "placeholders": {
+      "learned": { "type": "String" },
+      "total": { "type": "String" },
+      "n": { "type": "int" }
+    }
+  },
+  "greetingHelloName": "Shalom, {name}!",
+  "@greetingHelloName": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "noFocusTag": "NO FOCUS TAG",
+  "todaysMissions": "Today’s Missions",
+  "noTasksInLane": "No tasks in this lane",
+  "reviewSection": "REVIEW SECTION",
+  "chazaraReview": "Chazara/Review",
+  "urgent": "URGENT",
+  "missedOverdue": "Missed/Overdue",
+  "bubbleOverdue": "OVERDUE",
+  "bubbleTodayDue": "TODAY\nDUE",
+  "bubbleChazara": "CHAZARA",
+  "mainFocus": "MAIN FOCUS",
+  "carouselCompletion": "Completion",
+  "continueCta": "CONTINUE",
+  "tabSchedule": "Schedule",
+  "dueToday": "Due today",
+  "nothingDueInQueue": "Nothing due in this queue right now.",
+  "selfPacedScopeTitle": "All of it, or just a section?",
+  "learnEntireCurriculumCta": "I want to learn everything!",
+  "learnEntireCurriculumSubtitle": "Select the entire {name}",
+  "@learnEntireCurriculumSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "faster": "FASTER!",
+  "level1Selection": "{name} → {levelLabel} selection",
+  "@level1Selection": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "levelLabel": { "type": "String" }
+    }
+  },
+  "scopeSelectedBadge": "SELECTED",
+  "selectAtLeastOne": "Select at least one",
+  "continueWithSelectionCount": "Continue with {count} selected",
+  "@continueWithSelectionCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sectionLearning": "LEARNING",
+  "notificationSettings": "Notification Settings",
+  "notificationSettingsSubtitle": "Push, email, and study sound alerts",
+  "pointsAbbrev": "{count} pts",
+  "@pointsAbbrev": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sectionTracks": "TRACKS",
+  "sectionAccount": "ACCOUNT",
+  "sectionParentalControls": "PARENTAL CONTROLS",
+  "changePassword": "Change Password",
+  "signOut": "Sign Out",
+  "deleteAccountTitle": "Delete Account",
+  "deleteAccountSubtitle": "Permanently remove this account and cloud data",
+  "settingsHandcraftedTagline": "Handcrafted for your Torah journey",
+  "calendarPreference": "Calendar Preference",
+  "calendarPreferenceSubtitle": "Goals, deadlines, and date pickers",
+  "calendarGregorian": "Gregorian",
+  "calendarHebrew": "Hebrew",
+  "parentMode": "Parent Mode",
+  "parentModeSubtitle": "Switch to admin (PIN-guarded)",
+  "parentPin": "Parent PIN",
+  "parentPinSubtitle": "Change your security PIN",
+  "passwordChangedSuccessfully": "Password changed successfully.",
+  "notSignedIn": "Not signed in",
+  "userFallbackDisplayName": "User",
+  "proBadge": "PRO",
+  "selfLearnerBadge": "SELF-LEARNER",
+  "noBackup": "No Backup",
+  "chooseLanguageTitle": "Choose Language",
+  "preferredLanguageForContent": "Preferred language for content",
+  "profilePickerTitle": "Who is learning?",
+  "profilePickerSubtitle": "Choose a profile to continue your\njourney",
+  "addProfile": "Add Profile",
+  "createProfile": "Create Profile",
+  "enterNameHint": "Enter name",
+  "chooseMode": "Choose Mode",
+  "childModeCardTitle": "Child Mode",
+  "childModeCardSubtitleFunRewards": "Fun & Rewards",
+  "adultModeCardTitle": "Adult Mode",
+  "adultModeCardSubtitleDeepFocused": "Deep & Focused",
+  "profileBadgeChildMode": "CHILD MODE",
+  "profileBadgeAdultMode": "ADULT MODE",
+  "profileNameTaken": "A profile named \"{name}\" already exists",
+  "@profileNameTaken": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "maxProfilesReached": "Maximum 10 profiles reached",
+  "renameAction": "Rename",
+  "mustKeepOneProfile": "You must have at least one profile",
+  "profileNameAlreadyExists": "A profile with this name already exists",
+  "renameProfileTitle": "Rename Profile",
+  "displayName": "Display Name",
+  "deleteProfileTitle": "Delete Profile?",
+  "deleteProfileConfirm": "Permanently delete \"{name}\" and ALL associated learning data? This cannot be undone.",
+  "@deleteProfileConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "cannotDeleteOnlyProfile": "Cannot delete your only profile",
+  "tapToContinue": "Tap to\ncontinue",
+  "maxProfilesLabel": "Max Profiles",
+  "addProfileCardTitle": "Add\nProfile",
+  "maxProfilesSubtitle": "Maximum reached",
+  "createNewLearner": "Create new\nlearner",
+  "profilesLabel": "Profiles",
+  "syncTitle": "Sync",
+  "syncScreenBody": "Sync status and settings will appear here.",
+  "parentDashboard": "Parent Dashboard",
+  "parentSettingsTitle": "Parent Settings",
+  "addChildTooltip": "Add Child",
+  "errorLoadingDashboard": "Error loading dashboard: {error}",
+  "@errorLoadingDashboard": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTracksForChildSubtitle": "Add, edit, or archive your child's tracks",
+  "pointConfiguration": "Point Configuration",
+  "pointConfigurationSubtitle": "Set how many points activities are worth",
+  "parentDashboardCardSubtitle": "See your child's learning progress at a glance",
+  "sectionAccountSafety": "ACCOUNT SAFETY",
+  "bottomNavTracks": "Tracks",
+  "bottomNavRewards": "Rewards",
+  "bottomNavParent": "Parent",
+  "enterParentPin": "Enter Parent PIN",
+  "changeParentPin": "Change Parent PIN",
+  "pinChangedSuccessfully": "PIN changed successfully",
+  "deviceRestoreChecking": "Checking device...",
+  "deviceRestoreComplete": "Restore complete!",
+  "deviceRestoreFailed": "Restore failed",
+  "deviceRestoreStep": "Step {completed} of {total}",
+  "@deviceRestoreStep": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "skipAndContinue": "Skip & continue",
+  "noActiveProfile": "No active profile",
+  "incorrectPin": "Incorrect PIN",
+  "enterCurrentPin": "Enter Current PIN",
+  "enterNewPin": "Enter New PIN",
+  "confirmNewPin": "Confirm New PIN",
+  "pinsDoNotMatch": "PINs do not match"
 }

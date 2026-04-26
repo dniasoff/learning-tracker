@@ -11,6 +11,14 @@ import 'package:learning_tracker/features/gamification/domain/services/reward_mi
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
+/// Matches [PointConfigDao.seedDefaults] descending defaults per stage order.
+int _defaultPointsForStageOrder(int stageOrder) {
+  const defaultPoints = [10, 5, 3, 2, 1];
+  final idx = stageOrder - 1;
+  if (idx >= 0 && idx < defaultPoints.length) return defaultPoints[idx];
+  return 1;
+}
+
 class _StagePointConfig {
   const _StagePointConfig({required this.stage, required this.config});
 
@@ -55,8 +63,10 @@ final _pointConfigDataProvider = FutureProvider<List<_TrackPointData>>((
 ) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  final sync = ref.read(syncEngineProvider);
   final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
 
+  var wroteConfigs = false;
   final result = <_TrackPointData>[];
   for (final track in activeTracks) {
     final curriculum = CurriculumId.values.firstWhere(
@@ -65,6 +75,10 @@ final _pointConfigDataProvider = FutureProvider<List<_TrackPointData>>((
     final stages = await db.stageDao.getStageDefinitionsByCurriculum(
       curriculum.storageKey,
     );
+    if (stages.isEmpty) {
+      continue;
+    }
+
     final configs = await db.pointConfigDao.getConfigsByCurriculum(
       curriculum.storageKey,
       profileId: profileId,
@@ -73,10 +87,31 @@ final _pointConfigDataProvider = FutureProvider<List<_TrackPointData>>((
 
     final stageConfigs = <_StagePointConfig>[];
     for (final stage in stages) {
-      final config = configs.cast<PointConfig?>().firstWhere(
-        (c) => c?.stageOrder == stage.stageOrder,
-        orElse: () => null,
-      );
+      PointConfig? config;
+      for (final c in configs) {
+        if (c.stageOrder == stage.stageOrder) {
+          config = c;
+          break;
+        }
+      }
+      if (config == null) {
+        await db.pointConfigDao.upsertConfig(
+          PointConfigsCompanion.insert(
+            profileId: Value(profileId),
+            curriculumId: curriculum.storageKey,
+            trackId: track.id,
+            stageOrder: stage.stageOrder,
+            points: _defaultPointsForStageOrder(stage.stageOrder),
+          ),
+        );
+        wroteConfigs = true;
+        config = await db.pointConfigDao.getConfig(
+          curriculum.storageKey,
+          stage.stageOrder,
+          profileId: profileId,
+          trackId: track.id,
+        );
+      }
       if (config != null) {
         stageConfigs.add(_StagePointConfig(stage: stage, config: config));
       }
@@ -91,6 +126,9 @@ final _pointConfigDataProvider = FutureProvider<List<_TrackPointData>>((
         stages: stageConfigs,
       ),
     );
+  }
+  if (wroteConfigs) {
+    await sync?.pushGamificationSettingsSnapshot();
   }
   return result;
 });
@@ -146,23 +184,40 @@ class PointConfigScreen extends ConsumerWidget {
               error: (error, stack) => Center(child: Text('Error: $error')),
               data: (rewardData) {
                 if (pointData.isEmpty) {
-                  return const Center(child: Text('No active curricula'));
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'No learning tracks with stages found for this child. '
+                        'Activate a curriculum and add tracks in Manage Tracks, '
+                        'then set points per learning stage here. '
+                        'Completions use these values; reward milestones below '
+                        'unlock when total track points reach each threshold.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                  );
                 }
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 24),
                   children: [
                     const ListTile(
-                      title: Text('Points by Track & Stage'),
+                      title: Text('Points per task (by stage)'),
                       subtitle: Text(
-                        'Set how many points each stage is worth per active track.',
+                        'For each active curriculum track, set how many points '
+                        'the child earns when they complete a task in each '
+                        'stage (e.g. Learn, Chazara). Totals feed rewards below.',
                       ),
                     ),
                     ...pointData.map((data) => _TrackPointTile(data: data)),
                     const Divider(height: 24),
                     const ListTile(
-                      title: Text('Reward Milestones'),
+                      title: Text('Reward cards (milestones)'),
                       subtitle: Text(
-                        'Unlock rewards when track points reach milestone thresholds.',
+                        'Add milestones for this child’s track; when their '
+                        'total points on that track reach each threshold, the '
+                        'reward unlocks (shown in Rewards / gamification).',
                       ),
                     ),
                     ...rewardData.map((data) => _RewardTrackTile(data: data)),

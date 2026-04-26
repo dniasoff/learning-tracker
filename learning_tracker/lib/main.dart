@@ -193,7 +193,8 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
 
     return SyncLifecycleObserver(
       child: MaterialApp.router(
-        title: 'Torah Learning Tracker',
+        onGenerateTitle: (context) =>
+            AppLocalizations.of(context)?.appTitle ?? 'Torah Learning Tracker',
         theme: AppTheme.themeFor(
           brightness: Brightness.light,
           isChildMode: isChildMode,

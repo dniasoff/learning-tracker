@@ -1,19 +1,35 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
+
+/// Closest upcoming reward milestone for the child dashboard mystery card.
+class DashboardChildNextReward {
+  const DashboardChildNextReward({
+    required this.trackId,
+    required this.trackPoints,
+    required this.threshold,
+    required this.title,
+  });
+
+  final int trackId;
+  final int trackPoints;
+  final int threshold;
+  final String title;
+}
 
 /// Provider for the CrossCurriculumAggregator instance.
 @riverpod
@@ -90,7 +106,9 @@ Future<double> dashboardCompletionPercentage(
   );
   if (stages.isEmpty) return 0.0;
 
-  final totalItems = await ref.watch(scopedItemCountProvider(curriculum).future);
+  final totalItems = await ref.watch(
+    scopedItemCountProvider(curriculum).future,
+  );
   final denominator = totalItems * stages.length;
   if (denominator == 0) return 0.0;
 
@@ -137,6 +155,42 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao.getCompletionsByProfile(profileId);
   return completions.fold<int>(0, (sum, c) => sum + c.points);
+}
+
+/// Next reward milestone for the child dashboard (closest threshold not yet met).
+@riverpod
+Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
+  final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
+  if (userMode != UserMode.child) return null;
+
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final service = RewardMilestoneService(db, profileId: profileId);
+  final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
+
+  DashboardChildNextReward? best;
+  var bestGap = 1 << 30;
+
+  for (final track in tracks) {
+    await service.ensureDefaultsForTrack(track.id);
+    final trackPoints = await service.getTrackPointsTotal(track.id);
+    final milestones = await service.getMilestonesForTrack(track.id);
+    for (final m in milestones) {
+      if (!m.isEnabled) continue;
+      if (trackPoints >= m.thresholdPoints) continue;
+      final gap = m.thresholdPoints - trackPoints;
+      if (gap < bestGap) {
+        bestGap = gap;
+        best = DashboardChildNextReward(
+          trackId: track.id,
+          trackPoints: trackPoints,
+          threshold: m.thresholdPoints,
+          title: m.title,
+        );
+      }
+    }
+  }
+  return best;
 }
 
 /// Streak recovery info — whether the streak was just saved by grace period.
@@ -226,8 +280,8 @@ Future<PaceStatus?> dashboardPaceStatus(
 }
 
 /// Whether the active profile has a programmed enrollment for a curriculum.
-final dashboardHasProgramEnrollmentProvider =
-    FutureProvider.autoDispose.family<bool, CurriculumId>((ref, curriculum) async {
+final dashboardHasProgramEnrollmentProvider = FutureProvider.autoDispose
+    .family<bool, CurriculumId>((ref, curriculum) async {
       final db = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       final enrollment = await db.profileProgramDao

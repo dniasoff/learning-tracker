@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class ProgressScreen extends ConsumerWidget {
@@ -35,6 +36,7 @@ class ProgressScreen extends ConsumerWidget {
     );
     final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
 
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
       body: Theme(
@@ -45,12 +47,14 @@ class ProgressScreen extends ConsumerWidget {
         child: SafeArea(
           child: activeCurriculaAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(child: Text('Error: $error')),
+            error: (error, _) => Center(
+              child: Text(l10n.errorWithMessage(error.toString())),
+            ),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
-                return const EmptyState(
-                  message: 'No progress yet',
-                  subtitle: 'Start learning to see your progress here.',
+                return EmptyState(
+                  message: l10n.progressNoDataTitle,
+                  subtitle: l10n.progressNoDataSubtitle,
                   icon: Icons.trending_up_outlined,
                 );
               }
@@ -84,7 +88,7 @@ class ProgressScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(25, 8, 25, 20),
                   children: [
                     Text(
-                      'Progress',
+                      l10n.progress,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
@@ -127,6 +131,7 @@ class _StatGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GridView.count(
       crossAxisCount: 2,
       crossAxisSpacing: 12,
@@ -139,26 +144,26 @@ class _StatGrid extends StatelessWidget {
           icon: Icons.verified_outlined,
           iconColor: const Color(0xFFF8C146),
           value: '$totalCompletions',
-          label: 'COMPLETIONS',
+          label: l10n.statCompletions,
         ),
         _OverviewStatCard(
           icon: Icons.menu_book_outlined,
           iconColor: AppTheme.brandBlue,
           value: '$totalUniqueUnits',
-          label: 'UNITS DONE',
+          label: l10n.statUnitsDone,
         ),
         _OverviewStatCard(
           icon: Icons.local_fire_department_rounded,
           iconColor: Colors.white,
           value: '$currentStreak',
-          label: 'DAY STREAK',
+          label: l10n.statDayStreak,
           highlighted: true,
         ),
         _OverviewStatCard(
           icon: Icons.hub_outlined,
           iconColor: const Color(0xFFF8C146),
           value: '$activeTracks',
-          label: 'ACTIVE TRACKS',
+          label: l10n.statActiveTracks,
         ),
       ],
     );
@@ -258,6 +263,7 @@ class _ProgressChartsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => context.router.push(const ProgressChartsRoute()),
@@ -295,13 +301,13 @@ class _ProgressChartsTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Progress Charts',
+                    l10n.progressChartsTile,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   Text(
-                    'Completions, trends, and more',
+                    l10n.progressChartsTileSubtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                     ),
@@ -327,11 +333,12 @@ class _CurriculaMasterySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Curriculum Mastery',
+          l10n.curriculumMastery,
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -354,6 +361,7 @@ class _CurriculumProgressTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final completionAsync = ref.watch(
       dashboardCompletionPercentageProvider(curriculum),
     );
@@ -417,7 +425,7 @@ class _CurriculumProgressTile extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '$percentageText DONE',
+                    '$percentageText ${l10n.masteryDoneBadge}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: const Color(0xFF243053),
                       fontWeight: FontWeight.w700,
@@ -460,6 +468,7 @@ class _LearningLifetimeTreeCardState extends State<_LearningLifetimeTreeCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (widget.summaries.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -479,9 +488,9 @@ class _LearningLifetimeTreeCardState extends State<_LearningLifetimeTreeCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const LifetimeFolderPageHeader(
-            title: 'Learning Lifetime',
-            subtitle: 'Per curriculum: expand to browse what you have learned',
+          LifetimeFolderPageHeader(
+            title: l10n.learningLifetime,
+            subtitle: l10n.learningLifetimeExpandHint,
           ),
           const SizedBox(height: 12),
           for (var i = 0; i < withProgress.length; i++) ...[

@@ -314,6 +314,42 @@ abstract class AppLocalizations {
   /// **'Total Points'**
   String get totalPoints;
 
+  /// No description provided for @dashboardRewardsGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards Gallery'**
+  String get dashboardRewardsGallery;
+
+  /// No description provided for @dashboardSeeAllRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'SEE ALL'**
+  String get dashboardSeeAllRewards;
+
+  /// No description provided for @dashboardMysteryChest.
+  ///
+  /// In en, this message translates to:
+  /// **'Mystery Chest'**
+  String get dashboardMysteryChest;
+
+  /// No description provided for @dashboardTapToUnlockAtPts.
+  ///
+  /// In en, this message translates to:
+  /// **'TAP TO UNLOCK AT {points} PTS'**
+  String dashboardTapToUnlockAtPts(String points);
+
+  /// No description provided for @dashboardPointsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Points'**
+  String dashboardPointsValue(String count);
+
+  /// No description provided for @dashboardBubbleDone.
+  ///
+  /// In en, this message translates to:
+  /// **'DONE'**
+  String get dashboardBubbleDone;
+
   /// No description provided for @complete.
   ///
   /// In en, this message translates to:
@@ -674,6 +710,12 @@ abstract class AppLocalizations {
   /// **'Manage Tracks'**
   String get manageTracks;
 
+  /// No description provided for @manageTracksDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and edit your learning tracks'**
+  String get manageTracksDetail;
+
   /// No description provided for @addTrack.
   ///
   /// In en, this message translates to:
@@ -829,6 +871,864 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'OK'**
   String get paceOnPace;
+
+  /// No description provided for @progressNoDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No progress yet'**
+  String get progressNoDataTitle;
+
+  /// No description provided for @progressNoDataSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start learning to see your progress here.'**
+  String get progressNoDataSubtitle;
+
+  /// No description provided for @statCompletions.
+  ///
+  /// In en, this message translates to:
+  /// **'COMPLETIONS'**
+  String get statCompletions;
+
+  /// No description provided for @statUnitsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'UNITS DONE'**
+  String get statUnitsDone;
+
+  /// No description provided for @statDayStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'DAY STREAK'**
+  String get statDayStreak;
+
+  /// No description provided for @statActiveTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTIVE TRACKS'**
+  String get statActiveTracks;
+
+  /// No description provided for @progressChartsTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress Charts'**
+  String get progressChartsTile;
+
+  /// No description provided for @progressChartsTileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Completions, trends, and more'**
+  String get progressChartsTileSubtitle;
+
+  /// No description provided for @curriculumMastery.
+  ///
+  /// In en, this message translates to:
+  /// **'Curriculum Mastery'**
+  String get curriculumMastery;
+
+  /// No description provided for @masteryDoneBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'DONE'**
+  String get masteryDoneBadge;
+
+  /// No description provided for @learningLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Lifetime'**
+  String get learningLifetime;
+
+  /// No description provided for @learningLifetimeExpandHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Per curriculum: expand to browse what you have learned'**
+  String get learningLifetimeExpandHint;
+
+  /// No description provided for @addWhatYouLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Add what you\'ve learned'**
+  String get addWhatYouLearned;
+
+  /// No description provided for @addWhatYouLearnedSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log custom Mitzvot or Torah studies'**
+  String get addWhatYouLearnedSettingsSubtitle;
+
+  /// No description provided for @lifetimeLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime Learning'**
+  String get lifetimeLearning;
+
+  /// No description provided for @lifetimeAddHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add what you\'ve learned'**
+  String get lifetimeAddHeaderTitle;
+
+  /// No description provided for @lifetimeAddHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark what you already studied — in print or anywhere — as lifetime learning.'**
+  String get lifetimeAddHeaderSubtitle;
+
+  /// No description provided for @lifetimeHowItWorksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How it works'**
+  String get lifetimeHowItWorksTitle;
+
+  /// No description provided for @lifetimeHowItWorksBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a curriculum, then use the folder list to select sections. Green = selected for saving; open a subfolder with the arrow when there is more inside.'**
+  String get lifetimeHowItWorksBody;
+
+  /// No description provided for @lifetimeSelectScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select what you\'ve learned'**
+  String get lifetimeSelectScreenTitle;
+
+  /// No description provided for @lifetimeSelectScreenSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check sections to include; open folders to go deeper.'**
+  String get lifetimeSelectScreenSubtitle;
+
+  /// No description provided for @lifetimeMarkAsLearnedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as lifetime learned'**
+  String get lifetimeMarkAsLearnedTitle;
+
+  /// No description provided for @lifetimeMarkAsLearnedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected: {count} • level {level}'**
+  String lifetimeMarkAsLearnedLine(int count, int level);
+
+  /// No description provided for @selectAllInThisList.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all in this list'**
+  String get selectAllInThisList;
+
+  /// No description provided for @deselectAllInThisList.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect all in this list'**
+  String get deselectAllInThisList;
+
+  /// No description provided for @clearSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get clearSelection;
+
+  /// No description provided for @contentLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load curriculum content: {error}'**
+  String contentLoadError(String error);
+
+  /// No description provided for @noItemsAtThisLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'No items at this level'**
+  String get noItemsAtThisLevel;
+
+  /// No description provided for @breadcrumbsRoot.
+  ///
+  /// In en, this message translates to:
+  /// **'Root'**
+  String get breadcrumbsRoot;
+
+  /// No description provided for @lifetimeMarkSavedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked {count} lifetime selection(s).'**
+  String lifetimeMarkSavedCount(int count);
+
+  /// No description provided for @lifetimeMarkSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save lifetime marks: {error}'**
+  String lifetimeMarkSaveError(String error);
+
+  /// No description provided for @dashboardStats.
+  ///
+  /// In en, this message translates to:
+  /// **'STATS'**
+  String get dashboardStats;
+
+  /// No description provided for @learningLifetimeAllCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning lifetime (all curricula)'**
+  String get learningLifetimeAllCurricula;
+
+  /// No description provided for @lifetimeSectionsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{learned} / {total} sections — {n} curricula'**
+  String lifetimeSectionsSummary(String learned, String total, int n);
+
+  /// No description provided for @greetingHelloName.
+  ///
+  /// In en, this message translates to:
+  /// **'Shalom, {name}!'**
+  String greetingHelloName(String name);
+
+  /// No description provided for @noFocusTag.
+  ///
+  /// In en, this message translates to:
+  /// **'NO FOCUS TAG'**
+  String get noFocusTag;
+
+  /// No description provided for @todaysMissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Today’s Missions'**
+  String get todaysMissions;
+
+  /// No description provided for @noTasksInLane.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks in this lane'**
+  String get noTasksInLane;
+
+  /// No description provided for @reviewSection.
+  ///
+  /// In en, this message translates to:
+  /// **'REVIEW SECTION'**
+  String get reviewSection;
+
+  /// No description provided for @chazaraReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Chazara/Review'**
+  String get chazaraReview;
+
+  /// No description provided for @urgent.
+  ///
+  /// In en, this message translates to:
+  /// **'URGENT'**
+  String get urgent;
+
+  /// No description provided for @missedOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed/Overdue'**
+  String get missedOverdue;
+
+  /// No description provided for @bubbleOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'OVERDUE'**
+  String get bubbleOverdue;
+
+  /// No description provided for @bubbleTodayDue.
+  ///
+  /// In en, this message translates to:
+  /// **'TODAY\nDUE'**
+  String get bubbleTodayDue;
+
+  /// No description provided for @bubbleChazara.
+  ///
+  /// In en, this message translates to:
+  /// **'CHAZARA'**
+  String get bubbleChazara;
+
+  /// No description provided for @mainFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'MAIN FOCUS'**
+  String get mainFocus;
+
+  /// No description provided for @carouselCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion'**
+  String get carouselCompletion;
+
+  /// No description provided for @continueCta.
+  ///
+  /// In en, this message translates to:
+  /// **'CONTINUE'**
+  String get continueCta;
+
+  /// No description provided for @tabSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get tabSchedule;
+
+  /// No description provided for @dueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get dueToday;
+
+  /// No description provided for @nothingDueInQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due in this queue right now.'**
+  String get nothingDueInQueue;
+
+  /// No description provided for @selfPacedScopeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All of it, or just a section?'**
+  String get selfPacedScopeTitle;
+
+  /// No description provided for @learnEntireCurriculumCta.
+  ///
+  /// In en, this message translates to:
+  /// **'I want to learn everything!'**
+  String get learnEntireCurriculumCta;
+
+  /// No description provided for @learnEntireCurriculumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the entire {name}'**
+  String learnEntireCurriculumSubtitle(String name);
+
+  /// No description provided for @faster.
+  ///
+  /// In en, this message translates to:
+  /// **'FASTER!'**
+  String get faster;
+
+  /// No description provided for @level1Selection.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} → {levelLabel} selection'**
+  String level1Selection(String name, String levelLabel);
+
+  /// No description provided for @scopeSelectedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'SELECTED'**
+  String get scopeSelectedBadge;
+
+  /// No description provided for @selectAtLeastOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one'**
+  String get selectAtLeastOne;
+
+  /// No description provided for @continueWithSelectionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with {count} selected'**
+  String continueWithSelectionCount(int count);
+
+  /// No description provided for @sectionLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'LEARNING'**
+  String get sectionLearning;
+
+  /// No description provided for @notificationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Settings'**
+  String get notificationSettings;
+
+  /// No description provided for @notificationSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Push, email, and study sound alerts'**
+  String get notificationSettingsSubtitle;
+
+  /// No description provided for @pointsAbbrev.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pts'**
+  String pointsAbbrev(int count);
+
+  /// No description provided for @sectionTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'TRACKS'**
+  String get sectionTracks;
+
+  /// No description provided for @sectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'ACCOUNT'**
+  String get sectionAccount;
+
+  /// No description provided for @sectionParentalControls.
+  ///
+  /// In en, this message translates to:
+  /// **'PARENTAL CONTROLS'**
+  String get sectionParentalControls;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePassword;
+
+  /// No description provided for @signOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get signOut;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently remove this account and cloud data'**
+  String get deleteAccountSubtitle;
+
+  /// No description provided for @settingsHandcraftedTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Handcrafted for your Torah journey'**
+  String get settingsHandcraftedTagline;
+
+  /// No description provided for @calendarPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar Preference'**
+  String get calendarPreference;
+
+  /// No description provided for @calendarPreferenceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals, deadlines, and date pickers'**
+  String get calendarPreferenceSubtitle;
+
+  /// No description provided for @calendarGregorian.
+  ///
+  /// In en, this message translates to:
+  /// **'Gregorian'**
+  String get calendarGregorian;
+
+  /// No description provided for @calendarHebrew.
+  ///
+  /// In en, this message translates to:
+  /// **'Hebrew'**
+  String get calendarHebrew;
+
+  /// No description provided for @parentMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Mode'**
+  String get parentMode;
+
+  /// No description provided for @parentModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to admin (PIN-guarded)'**
+  String get parentModeSubtitle;
+
+  /// No description provided for @parentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent PIN'**
+  String get parentPin;
+
+  /// No description provided for @parentPinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change your security PIN'**
+  String get parentPinSubtitle;
+
+  /// No description provided for @passwordChangedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed successfully.'**
+  String get passwordChangedSuccessfully;
+
+  /// No description provided for @notSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Not signed in'**
+  String get notSignedIn;
+
+  /// No description provided for @userFallbackDisplayName.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get userFallbackDisplayName;
+
+  /// No description provided for @proBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'PRO'**
+  String get proBadge;
+
+  /// No description provided for @selfLearnerBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'SELF-LEARNER'**
+  String get selfLearnerBadge;
+
+  /// No description provided for @noBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'No Backup'**
+  String get noBackup;
+
+  /// No description provided for @chooseLanguageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Language'**
+  String get chooseLanguageTitle;
+
+  /// No description provided for @preferredLanguageForContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred language for content'**
+  String get preferredLanguageForContent;
+
+  /// No description provided for @profilePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Who is learning?'**
+  String get profilePickerTitle;
+
+  /// No description provided for @profilePickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a profile to continue your\njourney'**
+  String get profilePickerSubtitle;
+
+  /// No description provided for @addProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Profile'**
+  String get addProfile;
+
+  /// No description provided for @createProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Profile'**
+  String get createProfile;
+
+  /// No description provided for @enterNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter name'**
+  String get enterNameHint;
+
+  /// No description provided for @chooseMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Mode'**
+  String get chooseMode;
+
+  /// No description provided for @childModeCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Child Mode'**
+  String get childModeCardTitle;
+
+  /// No description provided for @childModeCardSubtitleFunRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Fun & Rewards'**
+  String get childModeCardSubtitleFunRewards;
+
+  /// No description provided for @adultModeCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adult Mode'**
+  String get adultModeCardTitle;
+
+  /// No description provided for @adultModeCardSubtitleDeepFocused.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep & Focused'**
+  String get adultModeCardSubtitleDeepFocused;
+
+  /// No description provided for @profileBadgeChildMode.
+  ///
+  /// In en, this message translates to:
+  /// **'CHILD MODE'**
+  String get profileBadgeChildMode;
+
+  /// No description provided for @profileBadgeAdultMode.
+  ///
+  /// In en, this message translates to:
+  /// **'ADULT MODE'**
+  String get profileBadgeAdultMode;
+
+  /// No description provided for @profileNameTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'A profile named \"{name}\" already exists'**
+  String profileNameTaken(String name);
+
+  /// No description provided for @maxProfilesReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 10 profiles reached'**
+  String get maxProfilesReached;
+
+  /// No description provided for @renameAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get renameAction;
+
+  /// No description provided for @mustKeepOneProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'You must have at least one profile'**
+  String get mustKeepOneProfile;
+
+  /// No description provided for @profileNameAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'A profile with this name already exists'**
+  String get profileNameAlreadyExists;
+
+  /// No description provided for @renameProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename Profile'**
+  String get renameProfileTitle;
+
+  /// No description provided for @displayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display Name'**
+  String get displayName;
+
+  /// No description provided for @deleteProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Profile?'**
+  String get deleteProfileTitle;
+
+  /// No description provided for @deleteProfileConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete \"{name}\" and ALL associated learning data? This cannot be undone.'**
+  String deleteProfileConfirm(String name);
+
+  /// No description provided for @cannotDeleteOnlyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot delete your only profile'**
+  String get cannotDeleteOnlyProfile;
+
+  /// No description provided for @tapToContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to\ncontinue'**
+  String get tapToContinue;
+
+  /// No description provided for @maxProfilesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Profiles'**
+  String get maxProfilesLabel;
+
+  /// No description provided for @addProfileCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add\nProfile'**
+  String get addProfileCardTitle;
+
+  /// No description provided for @maxProfilesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum reached'**
+  String get maxProfilesSubtitle;
+
+  /// No description provided for @createNewLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Create new\nlearner'**
+  String get createNewLearner;
+
+  /// No description provided for @profilesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles'**
+  String get profilesLabel;
+
+  /// No description provided for @syncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync'**
+  String get syncTitle;
+
+  /// No description provided for @syncScreenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync status and settings will appear here.'**
+  String get syncScreenBody;
+
+  /// No description provided for @parentDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Dashboard'**
+  String get parentDashboard;
+
+  /// No description provided for @parentSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Settings'**
+  String get parentSettingsTitle;
+
+  /// No description provided for @addChildTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Child'**
+  String get addChildTooltip;
+
+  /// No description provided for @errorLoadingDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading dashboard: {error}'**
+  String errorLoadingDashboard(String error);
+
+  /// No description provided for @manageTracksForChildSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add, edit, or archive your child\'s tracks'**
+  String get manageTracksForChildSubtitle;
+
+  /// No description provided for @pointConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'Point Configuration'**
+  String get pointConfiguration;
+
+  /// No description provided for @pointConfigurationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set how many points activities are worth'**
+  String get pointConfigurationSubtitle;
+
+  /// No description provided for @parentDashboardCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See your child\'s learning progress at a glance'**
+  String get parentDashboardCardSubtitle;
+
+  /// No description provided for @sectionAccountSafety.
+  ///
+  /// In en, this message translates to:
+  /// **'ACCOUNT SAFETY'**
+  String get sectionAccountSafety;
+
+  /// No description provided for @bottomNavTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks'**
+  String get bottomNavTracks;
+
+  /// No description provided for @bottomNavRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards'**
+  String get bottomNavRewards;
+
+  /// No description provided for @bottomNavParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent'**
+  String get bottomNavParent;
+
+  /// No description provided for @enterParentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Parent PIN'**
+  String get enterParentPin;
+
+  /// No description provided for @changeParentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Parent PIN'**
+  String get changeParentPin;
+
+  /// No description provided for @pinChangedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN changed successfully'**
+  String get pinChangedSuccessfully;
+
+  /// No description provided for @deviceRestoreChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking device...'**
+  String get deviceRestoreChecking;
+
+  /// No description provided for @deviceRestoreComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore complete!'**
+  String get deviceRestoreComplete;
+
+  /// No description provided for @deviceRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore failed'**
+  String get deviceRestoreFailed;
+
+  /// No description provided for @deviceRestoreStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {completed} of {total}'**
+  String deviceRestoreStep(int completed, int total);
+
+  /// No description provided for @skipAndContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip & continue'**
+  String get skipAndContinue;
+
+  /// No description provided for @noActiveProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'No active profile'**
+  String get noActiveProfile;
+
+  /// No description provided for @incorrectPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect PIN'**
+  String get incorrectPin;
+
+  /// No description provided for @enterCurrentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Current PIN'**
+  String get enterCurrentPin;
+
+  /// No description provided for @enterNewPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter New PIN'**
+  String get enterNewPin;
+
+  /// No description provided for @confirmNewPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm New PIN'**
+  String get confirmNewPin;
+
+  /// No description provided for @pinsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'PINs do not match'**
+  String get pinsDoNotMatch;
 }
 
 class _AppLocalizationsDelegate

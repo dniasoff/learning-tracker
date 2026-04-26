@@ -123,6 +123,28 @@ class AppLocalizationsHe extends AppLocalizations {
   String get totalPoints => 'סה״כ נקודות';
 
   @override
+  String get dashboardRewardsGallery => 'גלריית פרסים';
+
+  @override
+  String get dashboardSeeAllRewards => 'הצג הכול';
+
+  @override
+  String get dashboardMysteryChest => 'תיבת מסתורין';
+
+  @override
+  String dashboardTapToUnlockAtPts(String points) {
+    return 'לחיצה לפתיחה ב־$points נק׳';
+  }
+
+  @override
+  String dashboardPointsValue(String count) {
+    return '$count נקודות';
+  }
+
+  @override
+  String get dashboardBubbleDone => 'בוצע';
+
+  @override
   String get complete => 'הושלם';
 
   @override
@@ -305,6 +327,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageTracks => 'ניהול מסלולים';
 
   @override
+  String get manageTracksDetail => 'יצירה ועריכה של מסלולי הלמידה';
+
+  @override
   String get addTrack => 'הוסף מסלול';
 
   @override
@@ -397,4 +422,468 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get paceOnPace => 'בקצב';
+
+  @override
+  String get progressNoDataTitle => 'עדיין אין התקדמות';
+
+  @override
+  String get progressNoDataSubtitle =>
+      'התחילו ללמוד כדי לראות את ההתקדמות כאן.';
+
+  @override
+  String get statCompletions => 'השלמות';
+
+  @override
+  String get statUnitsDone => 'יחידות';
+
+  @override
+  String get statDayStreak => 'רצף ימים';
+
+  @override
+  String get statActiveTracks => 'מסלולים פעילים';
+
+  @override
+  String get progressChartsTile => 'גרפי התקדמות';
+
+  @override
+  String get progressChartsTileSubtitle => 'השלמות, מגמות ועוד';
+
+  @override
+  String get curriculumMastery => 'מאסטרי תוכנית';
+
+  @override
+  String get masteryDoneBadge => 'הושלם';
+
+  @override
+  String get learningLifetime => 'לימוד לאורך חיים';
+
+  @override
+  String get learningLifetimeExpandHint =>
+      'לפי תוכנית: פתחו כדי לעיין במה נלמד';
+
+  @override
+  String get addWhatYouLearned => 'הוסיפו מה שלמדתם';
+
+  @override
+  String get addWhatYouLearnedSettingsSubtitle =>
+      'רישום מצוות או לימוד תורה מותאם אישית';
+
+  @override
+  String get lifetimeLearning => 'לימוד חיים';
+
+  @override
+  String get lifetimeAddHeaderTitle => 'הוסיפו מה שלמדתם';
+
+  @override
+  String get lifetimeAddHeaderSubtitle =>
+      'סמנו מה שלמדתם כבר — מדפוס או מכל מקום — כלימוד לכל החיים.';
+
+  @override
+  String get lifetimeHowItWorksTitle => 'איך זה עובד';
+
+  @override
+  String get lifetimeHowItWorksBody =>
+      'בחרו תוכנית, ואז השתמשו ברשימת התיקיות לבחירת חלקים. ירוק = נבחר לשמירה; פתחו תת־תיקייה עם החץ אם יש עוד בפנים.';
+
+  @override
+  String get lifetimeSelectScreenTitle => 'בחרו מה שלמדתם';
+
+  @override
+  String get lifetimeSelectScreenSubtitle =>
+      'סמנו חלקים לכלול; פתחו תיקיות כדי לרדת לעומק.';
+
+  @override
+  String get lifetimeMarkAsLearnedTitle => 'סמן כלומד לכל החיים';
+
+  @override
+  String lifetimeMarkAsLearnedLine(int count, int level) {
+    return 'נבחרו: $count • רמה $level';
+  }
+
+  @override
+  String get selectAllInThisList => 'בחר הכל ברשימה';
+
+  @override
+  String get deselectAllInThisList => 'בטל בחירה בכל הרשימה';
+
+  @override
+  String get clearSelection => 'נקה בחירה';
+
+  @override
+  String contentLoadError(String error) {
+    return 'לא ניתן לטעון את תוכן התוכנית: $error';
+  }
+
+  @override
+  String get noItemsAtThisLevel => 'אין פריטים ברמה זו';
+
+  @override
+  String get breadcrumbsRoot => 'שורש';
+
+  @override
+  String lifetimeMarkSavedCount(int count) {
+    return 'סומנו $count בחירה(ות) לכל החיים.';
+  }
+
+  @override
+  String lifetimeMarkSaveError(String error) {
+    return 'לא ניתן לשמור סימונים: $error';
+  }
+
+  @override
+  String get dashboardStats => 'סטטיסטיקה';
+
+  @override
+  String get learningLifetimeAllCurricula => 'לימוד לכל החיים (כל התוכניות)';
+
+  @override
+  String lifetimeSectionsSummary(String learned, String total, int n) {
+    return '$learned / $total חלקים — $n תוכניות';
+  }
+
+  @override
+  String greetingHelloName(String name) {
+    return 'שלום, $name!';
+  }
+
+  @override
+  String get noFocusTag => 'ללא תג מיקוד';
+
+  @override
+  String get todaysMissions => 'המשימות של היום';
+
+  @override
+  String get noTasksInLane => 'אין משימות במסלול הזה';
+
+  @override
+  String get reviewSection => 'מקטע חזרה';
+
+  @override
+  String get chazaraReview => 'חזרה';
+
+  @override
+  String get urgent => 'דחוף';
+
+  @override
+  String get missedOverdue => 'החמצה / איחור';
+
+  @override
+  String get bubbleOverdue => 'איחור';
+
+  @override
+  String get bubbleTodayDue => 'היום';
+
+  @override
+  String get bubbleChazara => 'חזרה';
+
+  @override
+  String get mainFocus => 'מיקוד ראשי';
+
+  @override
+  String get carouselCompletion => 'השלמה';
+
+  @override
+  String get continueCta => 'המשך';
+
+  @override
+  String get tabSchedule => 'לוח';
+
+  @override
+  String get dueToday => 'להיום';
+
+  @override
+  String get nothingDueInQueue => 'אין כרגע משימות בתור הזה.';
+
+  @override
+  String get selfPacedScopeTitle => 'הכול, או רק חלק?';
+
+  @override
+  String get learnEntireCurriculumCta => 'רוצה ללמוד את הכול!';
+
+  @override
+  String learnEntireCurriculumSubtitle(String name) {
+    return 'בחרו את כל $name';
+  }
+
+  @override
+  String get faster => 'מהר יותר!';
+
+  @override
+  String level1Selection(String name, String levelLabel) {
+    return '$name ← $levelLabel בחירה';
+  }
+
+  @override
+  String get scopeSelectedBadge => 'נבחר';
+
+  @override
+  String get selectAtLeastOne => 'בחרו לפחות אחד';
+
+  @override
+  String continueWithSelectionCount(int count) {
+    return 'המשך עם $count נבחרים';
+  }
+
+  @override
+  String get sectionLearning => 'למידה';
+
+  @override
+  String get notificationSettings => 'הגדרות התראות';
+
+  @override
+  String get notificationSettingsSubtitle => 'דחיפה, אימייל והתראות קול ללימוד';
+
+  @override
+  String pointsAbbrev(int count) {
+    return '$count נק׳';
+  }
+
+  @override
+  String get sectionTracks => 'מסלולים';
+
+  @override
+  String get sectionAccount => 'חשבון';
+
+  @override
+  String get sectionParentalControls => 'הורה';
+
+  @override
+  String get changePassword => 'שינוי סיסמה';
+
+  @override
+  String get signOut => 'התנתקות';
+
+  @override
+  String get deleteAccountTitle => 'מחיקת חשבון';
+
+  @override
+  String get deleteAccountSubtitle => 'הסרה לצמיתות של החשבון ונתוני הענן';
+
+  @override
+  String get settingsHandcraftedTagline => 'נוצר ביד עבור מסע התורה שלכם';
+
+  @override
+  String get calendarPreference => 'העדפת לוח שנה';
+
+  @override
+  String get calendarPreferenceSubtitle => 'יעדים, מועדים ובוררי תאריך';
+
+  @override
+  String get calendarGregorian => 'גרגוריאני';
+
+  @override
+  String get calendarHebrew => 'עברי';
+
+  @override
+  String get parentMode => 'מצב הורה';
+
+  @override
+  String get parentModeSubtitle => 'מעבר למנהל (מוגן בקוד)';
+
+  @override
+  String get parentPin => 'קוד הורה';
+
+  @override
+  String get parentPinSubtitle => 'שינוי קוד האבטחה';
+
+  @override
+  String get passwordChangedSuccessfully => 'הסיסמה שונתה בהצלחה.';
+
+  @override
+  String get notSignedIn => 'לא מחוברים';
+
+  @override
+  String get userFallbackDisplayName => 'משתמש';
+
+  @override
+  String get proBadge => 'PRO';
+
+  @override
+  String get selfLearnerBadge => 'לומד עצמאי';
+
+  @override
+  String get noBackup => 'אין גיבוי';
+
+  @override
+  String get chooseLanguageTitle => 'בחירת שפה';
+
+  @override
+  String get preferredLanguageForContent => 'שפה מועדפת לתוכן';
+
+  @override
+  String get profilePickerTitle => 'מי לומד?';
+
+  @override
+  String get profilePickerSubtitle => 'בחרו פרופיל כדי להמשיך\nאת המסע';
+
+  @override
+  String get addProfile => 'הוספת פרופיל';
+
+  @override
+  String get createProfile => 'יצירת פרופיל';
+
+  @override
+  String get enterNameHint => 'הזינו שם';
+
+  @override
+  String get chooseMode => 'בחירת מצב';
+
+  @override
+  String get childModeCardTitle => 'מצב ילדים';
+
+  @override
+  String get childModeCardSubtitleFunRewards => 'כיף ופרסים';
+
+  @override
+  String get adultModeCardTitle => 'מצב מבוגרים';
+
+  @override
+  String get adultModeCardSubtitleDeepFocused => 'עומק ומיקוד';
+
+  @override
+  String get profileBadgeChildMode => 'מצב ילדים';
+
+  @override
+  String get profileBadgeAdultMode => 'מצב מבוגרים';
+
+  @override
+  String profileNameTaken(String name) {
+    return 'כבר קיים פרופיל בשם \"$name\"';
+  }
+
+  @override
+  String get maxProfilesReached => 'הגעתם למקסימום — 10 פרופילים';
+
+  @override
+  String get renameAction => 'שינוי שם';
+
+  @override
+  String get mustKeepOneProfile => 'חייב להישאר לפחות פרופיל אחד';
+
+  @override
+  String get profileNameAlreadyExists => 'כבר קיים פרופיל עם השם הזה';
+
+  @override
+  String get renameProfileTitle => 'שינוי שם פרופיל';
+
+  @override
+  String get displayName => 'שם תצוגה';
+
+  @override
+  String get deleteProfileTitle => 'למחוק את הפרופיל?';
+
+  @override
+  String deleteProfileConfirm(String name) {
+    return 'למחוק לצמיתות את \"$name\" ואת כל נתוני הלמידה הקשורים? לא ניתן לבטל.';
+  }
+
+  @override
+  String get cannotDeleteOnlyProfile => 'לא ניתן למחוק את הפרופיל היחיד';
+
+  @override
+  String get tapToContinue => 'הקשו כדי\nלהמשיך';
+
+  @override
+  String get maxProfilesLabel => 'מקס׳ פרופילים';
+
+  @override
+  String get addProfileCardTitle => 'הוספת\nפרופיל';
+
+  @override
+  String get maxProfilesSubtitle => 'הגעתם למקסימום';
+
+  @override
+  String get createNewLearner => 'ליצור לומד\nחדש';
+
+  @override
+  String get profilesLabel => 'פרופילים';
+
+  @override
+  String get syncTitle => 'סנכרון';
+
+  @override
+  String get syncScreenBody => 'מצב הסנכרון וההגדרות יופיעו כאן.';
+
+  @override
+  String get parentDashboard => 'לוח הורה';
+
+  @override
+  String get parentSettingsTitle => 'הגדרות הורה';
+
+  @override
+  String get addChildTooltip => 'הוספת ילד';
+
+  @override
+  String errorLoadingDashboard(String error) {
+    return 'שגיאה בטעינת לוח הבקרה: $error';
+  }
+
+  @override
+  String get manageTracksForChildSubtitle =>
+      'הוספה, עריכה או ארכיון של מסלולי הילד';
+
+  @override
+  String get pointConfiguration => 'הגדרת נקודות';
+
+  @override
+  String get pointConfigurationSubtitle => 'כמה נקודות שווה כל פעילות';
+
+  @override
+  String get parentDashboardCardSubtitle => 'מבט על התקדמות הלמידה של הילד';
+
+  @override
+  String get sectionAccountSafety => 'בטיחות חשבון';
+
+  @override
+  String get bottomNavTracks => 'מסלולים';
+
+  @override
+  String get bottomNavRewards => 'פרסים';
+
+  @override
+  String get bottomNavParent => 'הורה';
+
+  @override
+  String get enterParentPin => 'הזינו קוד הורה';
+
+  @override
+  String get changeParentPin => 'שינוי קוד הורה';
+
+  @override
+  String get pinChangedSuccessfully => 'הקוד שונה בהצלחה';
+
+  @override
+  String get deviceRestoreChecking => 'בודקים מכשיר...';
+
+  @override
+  String get deviceRestoreComplete => 'השחזור הושלם!';
+
+  @override
+  String get deviceRestoreFailed => 'השחזור נכשל';
+
+  @override
+  String deviceRestoreStep(int completed, int total) {
+    return 'שלב $completed מתוך $total';
+  }
+
+  @override
+  String get skipAndContinue => 'דלגו והמשיכו';
+
+  @override
+  String get noActiveProfile => 'אין פרופיל פעיל';
+
+  @override
+  String get incorrectPin => 'קוד שגוי';
+
+  @override
+  String get enterCurrentPin => 'הזינו את הקוד הנוכחי';
+
+  @override
+  String get enterNewPin => 'הזינו קוד חדש';
+
+  @override
+  String get confirmNewPin => 'אשרו את הקוד החדש';
+
+  @override
+  String get pinsDoNotMatch => 'הקודים אינם תואמים';
 }

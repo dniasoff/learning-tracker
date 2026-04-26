@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/settings/presentation/utils/account_ac
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // TODO(DNI-105): Replace with dynamic version from package_info_plus
 // once the dependency is added to pubspec.yaml.
@@ -31,6 +32,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(firebaseAuthProvider).currentUser;
     final theme = Theme.of(context);
 
@@ -60,21 +62,21 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             if (!isChildProfile) ...[
-              const _SectionHeader(title: 'TRACKS'),
+              _SectionHeader(title: l10n.sectionTracks),
               const SizedBox(height: 10),
               _SurfaceCard(
                 child: _SettingsTile(
                   icon: Icons.route_rounded,
                   iconColor: AppTheme.brandBlueBright,
                   iconBackground: AppTheme.brandBlueSoft,
-                  title: 'Manage tracks',
-                  subtitle: 'Create and edit your learning tracks',
+                  title: l10n.manageTracks,
+                  subtitle: l10n.manageTracksDetail,
                   onTap: () => context.pushRoute(TrackManagementHubRoute()),
                 ),
               ),
               const SizedBox(height: 12),
             ],
-            const _SectionHeader(title: 'LEARNING'),
+            _SectionHeader(title: l10n.sectionLearning),
             const SizedBox(height: 10),
             _SurfaceCard(
               child: Column(
@@ -86,8 +88,8 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.menu_book_rounded,
                       iconColor: AppTheme.brandGoldDeep,
                       iconBackground: AppTheme.brandGoldSoft,
-                      title: 'Add what you\'ve learned',
-                      subtitle: 'Log custom Mitzvot or Torah studies',
+                      title: l10n.addWhatYouLearned,
+                      subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const LifetimeMarkingScreen(),
@@ -104,8 +106,8 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.notifications_active_outlined,
                 iconColor: AppTheme.brandCoralDeep,
                 iconBackground: theme.colorScheme.errorContainer,
-                title: 'Notification Settings',
-                subtitle: 'Push, email, and study sound alerts',
+                title: l10n.notificationSettings,
+                subtitle: l10n.notificationSettingsSubtitle,
                 onTap: () => context.pushRoute(const NotificationsRoute()),
               ),
             ),
@@ -121,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
               isChildProfile: isChildProfile,
             ),
             if (!isChildProfile || hasPasswordProvider) ...[
-              const _SectionHeader(title: 'ACCOUNT'),
+              _SectionHeader(title: l10n.sectionAccount),
               const SizedBox(height: 10),
               if (hasPasswordProvider)
                 Column(
@@ -131,7 +133,7 @@ class SettingsScreen extends ConsumerWidget {
                         icon: Icons.vpn_key_outlined,
                         iconColor: AppTheme.brandInkMuted,
                         iconBackground: theme.colorScheme.secondaryContainer,
-                        title: 'Change Password',
+                        title: l10n.changePassword,
                         onTap: () =>
                             _showChangePasswordFlow(context, ref, user),
                       ),
@@ -145,7 +147,7 @@ class SettingsScreen extends ConsumerWidget {
                     icon: Icons.logout_rounded,
                     iconColor: theme.colorScheme.error,
                     iconBackground: theme.colorScheme.errorContainer,
-                    title: 'Sign Out',
+                    title: l10n.signOut,
                     titleColor: theme.colorScheme.error,
                     trailing: const SizedBox.shrink(),
                     onTap: () => showSignOutConfirmation(context, ref),
@@ -158,8 +160,8 @@ class SettingsScreen extends ConsumerWidget {
                     icon: Icons.delete_forever_rounded,
                     iconColor: theme.colorScheme.error,
                     iconBackground: theme.colorScheme.errorContainer,
-                    title: 'Delete Account',
-                    subtitle: 'Permanently remove this account and cloud data',
+                    title: l10n.deleteAccountTitle,
+                    subtitle: l10n.deleteAccountSubtitle,
                     titleColor: theme.colorScheme.error,
                     trailing: const SizedBox.shrink(),
                     onTap: () => showDeleteAccountFlow(context, ref, user),
@@ -180,7 +182,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 2),
             Center(
               child: Text(
-                'Handcrafted for your Torah journey',
+                l10n.settingsHandcraftedTagline,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
@@ -232,6 +234,7 @@ class _HebrewDateTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final useHebrew = ref.watch(useHebrewDateProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
@@ -261,7 +264,7 @@ class _HebrewDateTile extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Calendar Preference',
+                      l10n.calendarPreference,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: 19,
@@ -270,7 +273,7 @@ class _HebrewDateTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Goals, deadlines, and date pickers',
+                      l10n.calendarPreferenceSubtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF929BAA),
                         fontSize: 15,
@@ -284,14 +287,14 @@ class _HebrewDateTile extends ConsumerWidget {
           const SizedBox(height: 12),
           SegmentedButton<bool>(
             showSelectedIcon: false,
-            segments: const [
+            segments: [
               ButtonSegment<bool>(
                 value: false,
-                label: Text('Gregorian'),
+                label: Text(l10n.calendarGregorian),
               ),
               ButtonSegment<bool>(
                 value: true,
-                label: Text('Hebrew'),
+                label: Text(l10n.calendarHebrew),
               ),
             ],
             selected: {useHebrew},
@@ -462,6 +465,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     final user = _user;
 
@@ -470,13 +474,13 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
     if (user == null) {
       final authState = ref.watch(authStateProvider);
       if (!authState.isSignedIn || !authState.isLocalBorn) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Row(
             children: [
-              Icon(Icons.person_outline, size: 48),
-              SizedBox(width: 16),
-              Text('Not signed in'),
+              const Icon(Icons.person_outline, size: 48),
+              const SizedBox(width: 16),
+              Text(l10n.notSignedIn),
             ],
           ),
         );
@@ -499,7 +503,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
         activeProfile?.displayName ??
         user.displayName ??
         user.email?.split('@').first ??
-        'User';
+        l10n.userFallbackDisplayName;
     final profileInitial = _profileInitial(displayName);
 
     return _SurfaceCard(
@@ -544,9 +548,9 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                       color: theme.colorScheme.error,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'PRO',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.proBadge,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
@@ -587,7 +591,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          'SELF-LEARNER',
+                          l10n.selfLearnerBadge,
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontSize: 11,
@@ -749,19 +753,20 @@ class _ParentalControlsSectionState
     }
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionHeader(title: 'PARENTAL CONTROLS'),
+        _SectionHeader(title: l10n.sectionParentalControls),
         const SizedBox(height: 10),
         _SurfaceCard(
           child: _SettingsTile(
             icon: Icons.admin_panel_settings_outlined,
             iconColor: AppTheme.brandCoralDeep,
             iconBackground: const Color(0xFFF8E3E7),
-            title: 'Parent Mode',
-            subtitle: 'Switch to admin (PIN-guarded)',
+            title: l10n.parentMode,
+            subtitle: l10n.parentModeSubtitle,
             trailing: Icon(
               _hasPin ? Icons.lock : Icons.lock_open,
               color: theme.colorScheme.onSurfaceVariant,
@@ -780,8 +785,8 @@ class _ParentalControlsSectionState
             icon: Icons.pin_outlined,
             iconColor: AppTheme.brandInkMuted,
             iconBackground: AppTheme.brandCreamSoft,
-            title: 'Parent PIN',
-            subtitle: 'Change your security PIN',
+            title: l10n.parentPin,
+            subtitle: l10n.parentPinSubtitle,
             onTap: () async {
               final route = _hasPin
                   ? const PinChangeRoute()
@@ -816,8 +821,9 @@ Future<void> _showChangePasswordFlow(
     service: service,
   );
   if ((changed ?? false) && context.mounted) {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password changed successfully.')),
+      SnackBar(content: Text(l10n.passwordChangedSuccessfully)),
     );
   }
 }
@@ -827,6 +833,7 @@ class _LanguageTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final current = ref.watch(languageProvider);
     final label = supportedLanguages[current] ?? current;
 
@@ -834,7 +841,7 @@ class _LanguageTile extends ConsumerWidget {
       icon: Icons.language_rounded,
       iconColor: AppTheme.brandInkMuted,
       iconBackground: AppTheme.brandCreamSoft,
-      title: 'Language',
+      title: l10n.language,
       subtitle: label,
       onTap: () => _showLanguagePicker(context, ref, current),
     );
@@ -849,6 +856,7 @@ class _LanguageTile extends ConsumerWidget {
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
+        final sheetL10n = AppLocalizations.of(context)!;
         return SafeArea(
           child: ListView(
             shrinkWrap: true,
@@ -856,14 +864,14 @@ class _LanguageTile extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                 child: Text(
-                  'Choose Language',
+                  sheetL10n.chooseLanguageTitle,
                   style: theme.textTheme.titleMedium,
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
-                  'Preferred language for content',
+                  sheetL10n.preferredLanguageForContent,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -901,7 +909,7 @@ class _NoBackupInlineText extends StatelessWidget {
         const Icon(Icons.cloud_off, size: 12, color: Color(0xFFCE8A41)),
         const SizedBox(width: 4),
         Text(
-          'No Backup',
+          AppLocalizations.of(context)!.noBackup,
           style: theme.textTheme.labelSmall?.copyWith(
             color: const Color(0xFFCE8A41),
             fontWeight: FontWeight.w600,

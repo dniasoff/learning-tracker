@@ -51,6 +51,22 @@
   "noRewardsYet": "עדיין אין פרסים. המשיכו ללמוד!",
   "mysteryReward": "!פרס מסתורי",
   "totalPoints": "סה״כ נקודות",
+  "dashboardRewardsGallery": "גלריית פרסים",
+  "dashboardSeeAllRewards": "הצג הכול",
+  "dashboardMysteryChest": "תיבת מסתורין",
+  "dashboardTapToUnlockAtPts": "לחיצה לפתיחה ב־{points} נק׳",
+  "@dashboardTapToUnlockAtPts": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
+  "dashboardPointsValue": "{count} נקודות",
+  "@dashboardPointsValue": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "dashboardBubbleDone": "בוצע",
   "complete": "הושלם",
   "gamification": "הישגים ופרסים",
   "rewardCatalog": "קטלוג פרסים",
@@ -116,6 +132,7 @@
   "error": "שגיאה",
   "loading": "...טוען",
   "manageTracks": "ניהול מסלולים",
+  "manageTracksDetail": "יצירה ועריכה של מסלולי הלמידה",
   "addTrack": "הוסף מסלול",
   "noActiveCurricula": "אין תוכניות לימוד פעילות",
   "errorLoadingCurricula": "שגיאה בטעינת תוכניות הלימוד: {error}",
@@ -181,5 +198,223 @@
       "days": {"type": "int"}
     }
   },
-  "paceOnPace": "בקצב"
+  "paceOnPace": "בקצב",
+  "progressNoDataTitle": "עדיין אין התקדמות",
+  "progressNoDataSubtitle": "התחילו ללמוד כדי לראות את ההתקדמות כאן.",
+  "statCompletions": "השלמות",
+  "statUnitsDone": "יחידות",
+  "statDayStreak": "רצף ימים",
+  "statActiveTracks": "מסלולים פעילים",
+  "progressChartsTile": "גרפי התקדמות",
+  "progressChartsTileSubtitle": "השלמות, מגמות ועוד",
+  "curriculumMastery": "מאסטרי תוכנית",
+  "masteryDoneBadge": "הושלם",
+  "learningLifetime": "לימוד לאורך חיים",
+  "learningLifetimeExpandHint": "לפי תוכנית: פתחו כדי לעיין במה נלמד",
+  "addWhatYouLearned": "הוסיפו מה שלמדתם",
+  "addWhatYouLearnedSettingsSubtitle": "רישום מצוות או לימוד תורה מותאם אישית",
+  "lifetimeLearning": "לימוד חיים",
+  "lifetimeAddHeaderTitle": "הוסיפו מה שלמדתם",
+  "lifetimeAddHeaderSubtitle": "סמנו מה שלמדתם כבר — מדפוס או מכל מקום — כלימוד לכל החיים.",
+  "lifetimeHowItWorksTitle": "איך זה עובד",
+  "lifetimeHowItWorksBody": "בחרו תוכנית, ואז השתמשו ברשימת התיקיות לבחירת חלקים. ירוק = נבחר לשמירה; פתחו תת־תיקייה עם החץ אם יש עוד בפנים.",
+  "lifetimeSelectScreenTitle": "בחרו מה שלמדתם",
+  "lifetimeSelectScreenSubtitle": "סמנו חלקים לכלול; פתחו תיקיות כדי לרדת לעומק.",
+  "lifetimeMarkAsLearnedTitle": "סמן כלומד לכל החיים",
+  "lifetimeMarkAsLearnedLine": "נבחרו: {count} • רמה {level}",
+  "@lifetimeMarkAsLearnedLine": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "level": { "type": "int" }
+    }
+  },
+  "selectAllInThisList": "בחר הכל ברשימה",
+  "deselectAllInThisList": "בטל בחירה בכל הרשימה",
+  "clearSelection": "נקה בחירה",
+  "contentLoadError": "לא ניתן לטעון את תוכן התוכנית: {error}",
+  "@contentLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "noItemsAtThisLevel": "אין פריטים ברמה זו",
+  "breadcrumbsRoot": "שורש",
+  "lifetimeMarkSavedCount": "סומנו {count} בחירה(ות) לכל החיים.",
+  "@lifetimeMarkSavedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lifetimeMarkSaveError": "לא ניתן לשמור סימונים: {error}",
+  "@lifetimeMarkSaveError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "dashboardStats": "סטטיסטיקה",
+  "learningLifetimeAllCurricula": "לימוד לכל החיים (כל התוכניות)",
+  "lifetimeSectionsSummary": "{learned} / {total} חלקים — {n} תוכניות",
+  "@lifetimeSectionsSummary": {
+    "placeholders": {
+      "learned": { "type": "String" },
+      "total": { "type": "String" },
+      "n": { "type": "int" }
+    }
+  },
+  "greetingHelloName": "שלום, {name}!",
+  "@greetingHelloName": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "noFocusTag": "ללא תג מיקוד",
+  "todaysMissions": "המשימות של היום",
+  "noTasksInLane": "אין משימות במסלול הזה",
+  "reviewSection": "מקטע חזרה",
+  "chazaraReview": "חזרה",
+  "urgent": "דחוף",
+  "missedOverdue": "החמצה / איחור",
+  "bubbleOverdue": "איחור",
+  "bubbleTodayDue": "היום",
+  "bubbleChazara": "חזרה",
+  "mainFocus": "מיקוד ראשי",
+  "carouselCompletion": "השלמה",
+  "continueCta": "המשך",
+  "tabSchedule": "לוח",
+  "dueToday": "להיום",
+  "nothingDueInQueue": "אין כרגע משימות בתור הזה.",
+  "selfPacedScopeTitle": "הכול, או רק חלק?",
+  "learnEntireCurriculumCta": "רוצה ללמוד את הכול!",
+  "learnEntireCurriculumSubtitle": "בחרו את כל {name}",
+  "@learnEntireCurriculumSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "faster": "מהר יותר!",
+  "level1Selection": "{name} ← {levelLabel} בחירה",
+  "@level1Selection": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "levelLabel": { "type": "String" }
+    }
+  },
+  "scopeSelectedBadge": "נבחר",
+  "selectAtLeastOne": "בחרו לפחות אחד",
+  "continueWithSelectionCount": "המשך עם {count} נבחרים",
+  "@continueWithSelectionCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sectionLearning": "למידה",
+  "notificationSettings": "הגדרות התראות",
+  "notificationSettingsSubtitle": "דחיפה, אימייל והתראות קול ללימוד",
+  "pointsAbbrev": "{count} נק׳",
+  "@pointsAbbrev": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sectionTracks": "מסלולים",
+  "sectionAccount": "חשבון",
+  "sectionParentalControls": "הורה",
+  "changePassword": "שינוי סיסמה",
+  "signOut": "התנתקות",
+  "deleteAccountTitle": "מחיקת חשבון",
+  "deleteAccountSubtitle": "הסרה לצמיתות של החשבון ונתוני הענן",
+  "settingsHandcraftedTagline": "נוצר ביד עבור מסע התורה שלכם",
+  "calendarPreference": "העדפת לוח שנה",
+  "calendarPreferenceSubtitle": "יעדים, מועדים ובוררי תאריך",
+  "calendarGregorian": "גרגוריאני",
+  "calendarHebrew": "עברי",
+  "parentMode": "מצב הורה",
+  "parentModeSubtitle": "מעבר למנהל (מוגן בקוד)",
+  "parentPin": "קוד הורה",
+  "parentPinSubtitle": "שינוי קוד האבטחה",
+  "passwordChangedSuccessfully": "הסיסמה שונתה בהצלחה.",
+  "notSignedIn": "לא מחוברים",
+  "userFallbackDisplayName": "משתמש",
+  "proBadge": "PRO",
+  "selfLearnerBadge": "לומד עצמאי",
+  "noBackup": "אין גיבוי",
+  "chooseLanguageTitle": "בחירת שפה",
+  "preferredLanguageForContent": "שפה מועדפת לתוכן",
+  "profilePickerTitle": "מי לומד?",
+  "profilePickerSubtitle": "בחרו פרופיל כדי להמשיך\nאת המסע",
+  "addProfile": "הוספת פרופיל",
+  "createProfile": "יצירת פרופיל",
+  "enterNameHint": "הזינו שם",
+  "chooseMode": "בחירת מצב",
+  "childModeCardTitle": "מצב ילדים",
+  "childModeCardSubtitleFunRewards": "כיף ופרסים",
+  "adultModeCardTitle": "מצב מבוגרים",
+  "adultModeCardSubtitleDeepFocused": "עומק ומיקוד",
+  "profileBadgeChildMode": "מצב ילדים",
+  "profileBadgeAdultMode": "מצב מבוגרים",
+  "profileNameTaken": "כבר קיים פרופיל בשם \"{name}\"",
+  "@profileNameTaken": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "maxProfilesReached": "הגעתם למקסימום — 10 פרופילים",
+  "renameAction": "שינוי שם",
+  "mustKeepOneProfile": "חייב להישאר לפחות פרופיל אחד",
+  "profileNameAlreadyExists": "כבר קיים פרופיל עם השם הזה",
+  "renameProfileTitle": "שינוי שם פרופיל",
+  "displayName": "שם תצוגה",
+  "deleteProfileTitle": "למחוק את הפרופיל?",
+  "deleteProfileConfirm": "למחוק לצמיתות את \"{name}\" ואת כל נתוני הלמידה הקשורים? לא ניתן לבטל.",
+  "@deleteProfileConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "cannotDeleteOnlyProfile": "לא ניתן למחוק את הפרופיל היחיד",
+  "tapToContinue": "הקשו כדי\nלהמשיך",
+  "maxProfilesLabel": "מקס׳ פרופילים",
+  "addProfileCardTitle": "הוספת\nפרופיל",
+  "maxProfilesSubtitle": "הגעתם למקסימום",
+  "createNewLearner": "ליצור לומד\nחדש",
+  "profilesLabel": "פרופילים",
+  "syncTitle": "סנכרון",
+  "syncScreenBody": "מצב הסנכרון וההגדרות יופיעו כאן.",
+  "parentDashboard": "לוח הורה",
+  "parentSettingsTitle": "הגדרות הורה",
+  "addChildTooltip": "הוספת ילד",
+  "errorLoadingDashboard": "שגיאה בטעינת לוח הבקרה: {error}",
+  "@errorLoadingDashboard": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTracksForChildSubtitle": "הוספה, עריכה או ארכיון של מסלולי הילד",
+  "pointConfiguration": "הגדרת נקודות",
+  "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",
+  "parentDashboardCardSubtitle": "מבט על התקדמות הלמידה של הילד",
+  "sectionAccountSafety": "בטיחות חשבון",
+  "bottomNavTracks": "מסלולים",
+  "bottomNavRewards": "פרסים",
+  "bottomNavParent": "הורה",
+  "enterParentPin": "הזינו קוד הורה",
+  "changeParentPin": "שינוי קוד הורה",
+  "pinChangedSuccessfully": "הקוד שונה בהצלחה",
+  "deviceRestoreChecking": "בודקים מכשיר...",
+  "deviceRestoreComplete": "השחזור הושלם!",
+  "deviceRestoreFailed": "השחזור נכשל",
+  "deviceRestoreStep": "שלב {completed} מתוך {total}",
+  "@deviceRestoreStep": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "skipAndContinue": "דלגו והמשיכו",
+  "noActiveProfile": "אין פרופיל פעיל",
+  "incorrectPin": "קוד שגוי",
+  "enterCurrentPin": "הזינו את הקוד הנוכחי",
+  "enterNewPin": "הזינו קוד חדש",
+  "confirmNewPin": "אשרו את הקוד החדש",
+  "pinsDoNotMatch": "הקודים אינם תואמים"
 }

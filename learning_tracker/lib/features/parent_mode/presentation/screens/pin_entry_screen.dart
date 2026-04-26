@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Full-screen PIN entry for accessing parent mode.
 ///
@@ -45,9 +46,10 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   }
 
   Future<void> _onPinEntered(String pin) async {
+    final l10n = AppLocalizations.of(context)!;
     final profileId = ref.read(selectedProfileIdProvider);
     if (profileId == null) {
-      setState(() => _errorMessage = 'No active profile');
+      setState(() => _errorMessage = l10n.noActiveProfile);
       return;
     }
     final pinService = ref.read(pinServiceProvider);
@@ -57,7 +59,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
         ref.read(routerProvider).parentPinGuard.markAuthenticated(profileId);
         if (mounted) await context.router.maybePop(true);
       } else {
-        setState(() => _errorMessage = 'Incorrect PIN');
+        setState(() => _errorMessage = l10n.incorrectPin);
       }
     } on PinLockoutException catch (e) {
       setState(() {
@@ -70,15 +72,16 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Enter Parent PIN')),
+      appBar: AppBar(title: AppBarTitle(text: l10n.enterParentPin)),
       body: SafeArea(
         top: false,
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: PinEntryWidget(
-              title: 'Enter Parent PIN',
+              title: l10n.enterParentPin,
               errorMessage: _errorMessage,
               isLockedOut: _isLockedOut,
               lockoutRemainingMinutes: _lockoutRemainingMinutes,

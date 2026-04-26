@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/parent_mode/presentation/widgets/paren
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class ProfilePickerScreen extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Use future provider instead of stream provider to avoid the
     // InheritedElement '_dependents.isEmpty' assertion that fires when
     // a stream-triggered rebuild races with dialog/overlay dismissal.
@@ -47,7 +49,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           top: false,
           child: profilesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error: $e')),
+            error: (e, s) => Center(child: Text(l10n.errorWithMessage(e.toString()))),
             data: (profiles) => _buildBody(context, profiles),
           ),
         ),
@@ -57,6 +59,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   Widget _buildBody(BuildContext context, List<ProfileModel> profiles) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Expanded(
@@ -69,7 +72,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 children: [
                   const SizedBox(height: 16),
                   Text(
-                    'Who is learning?',
+                    l10n.profilePickerTitle,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontSize: 48,
@@ -81,7 +84,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Choose a profile to continue your\njourney',
+                    l10n.profilePickerSubtitle,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: AppTheme.brandInkMuted,
@@ -172,6 +175,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       useRootNavigator: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
+          final l10n = AppLocalizations.of(ctx)!;
           Future<void> check() async {
             set(() {});
             final n = ctrl.text.trim();
@@ -183,7 +187,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               final exists = await profileDao.profileExistsByName(1, n);
               set(
                 () => err = exists
-                    ? 'A profile with this name already exists'
+                    ? l10n.profileNameAlreadyExists
                     : null,
               );
             } catch (_) {
@@ -215,7 +219,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              child: const Text('Create Profile'),
+              child: Text(l10n.createProfile),
             ),
           );
           final createProfileCta = canSubmit
@@ -264,7 +268,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Add Profile',
+                          l10n.addProfile,
                           style: theme.textTheme.titleLarge?.copyWith(
                             color: AppTheme.brandBlueDeep,
                             fontWeight: FontWeight.w700,
@@ -272,7 +276,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                         ),
                         const SizedBox(height: 22),
                         Text(
-                          "What's your name?",
+                          l10n.whatsYourName,
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: labelGrey,
                             fontWeight: FontWeight.w600,
@@ -288,7 +292,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Enter name',
+                            hintText: l10n.enterNameHint,
                             hintStyle: theme.textTheme.bodyLarge?.copyWith(
                               color: AppTheme.brandInkSoft,
                               fontWeight: FontWeight.w400,
@@ -336,7 +340,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Choose Mode',
+                          l10n.chooseMode,
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: labelGrey,
                             fontWeight: FontWeight.w600,
@@ -351,8 +355,8 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                                 selected: mode == 'child',
                                 onTap: () => set(() => mode = 'child'),
                                 icon: Icons.rocket_launch_rounded,
-                                title: 'Child Mode',
-                                subtitle: 'Fun & Rewards',
+                                title: l10n.childModeCardTitle,
+                                subtitle: l10n.childModeCardSubtitleFunRewards,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -361,8 +365,8 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                                 selected: mode == 'adult',
                                 onTap: () => set(() => mode = 'adult'),
                                 icon: Icons.menu_book_rounded,
-                                title: 'Adult Mode',
-                                subtitle: 'Deep & Focused',
+                                title: l10n.adultModeCardTitle,
+                                subtitle: l10n.adultModeCardSubtitleDeepFocused,
                               ),
                             ),
                           ],
@@ -378,7 +382,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          child: const Text('Cancel'),
+                          child: Text(l10n.cancel),
                         ),
                       ],
                     ),
@@ -428,16 +432,18 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       }
     } on DuplicateProfileNameException {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('A profile named "${result.n}" already exists'),
+            content: Text(l10n.profileNameTaken(result.n)),
           ),
         );
       }
     } on MaxProfilesExceededException {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maximum 10 profiles reached')),
+          SnackBar(content: Text(l10n.maxProfilesReached)),
         );
       }
     }
@@ -448,13 +454,15 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
   Future<void> _showManageSheet(ProfileModel profile, int profileCount) async {
     final action = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => SafeArea(
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.edit),
-              title: const Text('Rename'),
+              title: Text(l10n.renameAction),
               onTap: () => Navigator.pop(ctx, 'rename'),
             ),
             ListTile(
@@ -463,12 +471,12 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 color: Theme.of(ctx).colorScheme.error,
               ),
               title: Text(
-                'Delete',
+                l10n.delete,
                 style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
               enabled: profileCount > 1,
               subtitle: profileCount <= 1
-                  ? const Text('You must have at least one profile')
+                  ? Text(l10n.mustKeepOneProfile)
                   : null,
               onTap: profileCount > 1
                   ? () => Navigator.pop(ctx, 'delete')
@@ -476,7 +484,8 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             ),
           ],
         ),
-      ),
+        );
+      },
     );
     if (!mounted || action == null) return;
     if (action == 'rename') {
@@ -499,6 +508,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       useRootNavigator: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
+          final l10n = AppLocalizations.of(ctx)!;
           Future<void> check() async {
             final n = ctrl.text.trim();
             if (n.isEmpty) {
@@ -513,7 +523,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               );
               set(
                 () => err = exists
-                    ? 'A profile with this name already exists'
+                    ? l10n.profileNameAlreadyExists
                     : null,
               );
             } catch (_) {
@@ -522,13 +532,13 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           }
 
           return AlertDialog(
-            title: const Text('Rename Profile'),
+            title: Text(l10n.renameProfileTitle),
             content: TextField(
               controller: ctrl,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
-                labelText: 'Display Name',
+                labelText: l10n.displayName,
                 border: const OutlineInputBorder(),
                 errorText: err,
               ),
@@ -537,13 +547,13 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: ctrl.text.trim().isNotEmpty && err == null
                     ? () => Navigator.pop(ctx, ctrl.text.trim())
                     : null,
-                child: const Text('Save'),
+                child: Text(l10n.save),
               ),
             ],
           );
@@ -560,8 +570,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       if (mounted) ref.invalidate(profileListProvider);
     } on DuplicateProfileNameException {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('A profile named "$name" already exists')),
+          SnackBar(content: Text(l10n.profileNameTaken(name))),
         );
       }
     }
@@ -575,26 +586,28 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     final ok = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Profile?'),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+        title: Text(l10n.deleteProfileTitle),
         content: Text(
-          'Permanently delete "${profile.displayName}" and ALL associated '
-          'learning data? This cannot be undone.',
+          l10n.deleteProfileConfirm(profile.displayName),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
-      ),
+        );
+      },
     );
     if (!(ok ?? false) || !mounted) return;
     try {
@@ -606,8 +619,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       ref.invalidate(profileListProvider);
     } on LastProfileException {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cannot delete your only profile')),
+          SnackBar(content: Text(l10n.cannotDeleteOnlyProfile)),
         );
       }
     }
@@ -629,6 +643,7 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final isChild = profile.mode == 'child';
     const modeColor = AppTheme.brandBlue;
     final trimmedName = profile.displayName.trim();
@@ -672,7 +687,7 @@ class _ProfileCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      isChild ? 'CHILD MODE' : 'ADULT MODE',
+                      isChild ? l10n.profileBadgeChildMode : l10n.profileBadgeAdultMode,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -763,7 +778,7 @@ class _ProfileCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Tap to\ncontinue',
+                      l10n.tapToContinue,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppTheme.brandInkMuted,
@@ -903,6 +918,7 @@ class _AddProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -950,7 +966,7 @@ class _AddProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    isDisabled ? 'Max Profiles' : 'Add\nProfile',
+                    isDisabled ? l10n.maxProfilesLabel : l10n.addProfileCardTitle,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       color: AppTheme.brandInk,
                       fontWeight: FontWeight.w700,
@@ -960,7 +976,7 @@ class _AddProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isDisabled ? 'Maximum reached' : 'Create new\nlearner',
+                    isDisabled ? l10n.maxProfilesSubtitle : l10n.createNewLearner,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                       fontSize: 12,
@@ -985,6 +1001,7 @@ class _PickerBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -1017,7 +1034,7 @@ class _PickerBottomBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Profiles',
+                    l10n.profilesLabel,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandBlueDeep,
                       fontWeight: FontWeight.w700,
@@ -1047,7 +1064,7 @@ class _PickerBottomBar extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Settings',
+                      l10n.settings,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppTheme.brandInkMuted.withValues(alpha: 0.85),
                         fontWeight: FontWeight.w600,

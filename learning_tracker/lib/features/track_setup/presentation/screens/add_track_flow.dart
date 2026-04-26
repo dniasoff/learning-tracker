@@ -30,6 +30,7 @@ import 'package:learning_tracker/features/track_setup/domain/services/track_crea
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/program_selection_step.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kAddTrackStep = 'add_track_step';
@@ -1488,6 +1489,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final contentAsync = ref.watch(
       curriculumContentProvider(widget.curriculumId),
     );
@@ -1499,7 +1501,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'All of it, or just a section?',
+            l10n.selfPacedScopeTitle,
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
@@ -1577,6 +1579,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   /// Top-level: "Learn All" + list of level 1 items to drill into or select.
   Widget _buildTopLevel(List<ContentItem> items) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final values = _valuesAtCurrentLevel(items);
 
@@ -1614,7 +1617,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'I want to learn everything!',
+                                l10n.learnEntireCurriculumCta,
                                 style: theme.textTheme.headlineSmall?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
@@ -1622,7 +1625,9 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Select the entire ${widget.curriculumId.displayNameHe}',
+                                l10n.learnEntireCurriculumSubtitle(
+                                  widget.curriculumId.displayNameHe,
+                                ),
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white.withValues(alpha: 0.86),
                                 ),
@@ -1652,9 +1657,9 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                           color: const Color(0xFFFF6C78),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Text(
-                          'FASTER!',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.faster,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -1695,7 +1700,10 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${_labelForLevel(1)} Selection',
+                  l10n.level1Selection(
+                    widget.curriculumId.displayNameEn,
+                    _labelForLevel(1),
+                  ),
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: AppTheme.brandInk,
                   ),
@@ -1718,8 +1726,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
               ),
               label: Text(
                 _allValuesDirectlySelected(values)
-                    ? 'Deselect all in this list'
-                    : 'Select all in this list',
+                    ? l10n.deselectAllInThisList
+                    : l10n.selectAllInThisList,
               ),
             ),
           ),
@@ -1740,7 +1748,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                     '$count ${_labelForLevel(2)} • ${_scopeDescription(value)}',
                 icon: _scopeIcon(value),
                 selected: selected,
-                badgeText: selected ? 'SELECTED' : null,
+                badgeText: selected ? l10n.scopeSelectedBadge : null,
                 onCheck: () => _toggleSelection(value),
                 canDrill: canDrillDeeper,
                 onDrill: canDrillDeeper ? () => _drillInto(value, items) : null,
@@ -1759,8 +1767,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
           ),
           child: Text(
             _selections.isEmpty
-                ? 'Select at least one'
-                : 'Continue with $_totalSelectionCount selected',
+                ? l10n.selectAtLeastOne
+                : l10n.continueWithSelectionCount(_totalSelectionCount),
           ),
         ),
       ],
@@ -1769,6 +1777,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   /// Drill-down view with breadcrumbs and item list.
   Widget _buildHierarchyView(List<ContentItem> items) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final values = _valuesAtCurrentLevel(items);
     final canDrillDeeper = _currentLevel < _maxSelectableLevel;
@@ -1817,8 +1826,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
               ),
               label: Text(
                 _allValuesDirectlySelected(values)
-                    ? 'Deselect all in this list'
-                    : 'Select all in this list',
+                    ? l10n.deselectAllInThisList
+                    : l10n.selectAllInThisList,
               ),
             ),
           ),
@@ -1848,8 +1857,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
           ),
           child: Text(
             _selections.isEmpty
-                ? 'Select at least one'
-                : 'Continue with $_totalSelectionCount selected',
+                ? l10n.selectAtLeastOne
+                : l10n.continueWithSelectionCount(_totalSelectionCount),
           ),
         ),
       ],

@@ -123,6 +123,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get totalPoints => 'Total Points';
 
   @override
+  String get dashboardRewardsGallery => 'Rewards Gallery';
+
+  @override
+  String get dashboardSeeAllRewards => 'SEE ALL';
+
+  @override
+  String get dashboardMysteryChest => 'Mystery Chest';
+
+  @override
+  String dashboardTapToUnlockAtPts(String points) {
+    return 'TAP TO UNLOCK AT $points PTS';
+  }
+
+  @override
+  String dashboardPointsValue(String count) {
+    return '$count Points';
+  }
+
+  @override
+  String get dashboardBubbleDone => 'DONE';
+
+  @override
   String get complete => 'complete';
 
   @override
@@ -307,6 +329,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageTracks => 'Manage Tracks';
 
   @override
+  String get manageTracksDetail => 'Create and edit your learning tracks';
+
+  @override
   String get addTrack => 'Add Track';
 
   @override
@@ -400,4 +425,475 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paceOnPace => 'OK';
+
+  @override
+  String get progressNoDataTitle => 'No progress yet';
+
+  @override
+  String get progressNoDataSubtitle =>
+      'Start learning to see your progress here.';
+
+  @override
+  String get statCompletions => 'COMPLETIONS';
+
+  @override
+  String get statUnitsDone => 'UNITS DONE';
+
+  @override
+  String get statDayStreak => 'DAY STREAK';
+
+  @override
+  String get statActiveTracks => 'ACTIVE TRACKS';
+
+  @override
+  String get progressChartsTile => 'Progress Charts';
+
+  @override
+  String get progressChartsTileSubtitle => 'Completions, trends, and more';
+
+  @override
+  String get curriculumMastery => 'Curriculum Mastery';
+
+  @override
+  String get masteryDoneBadge => 'DONE';
+
+  @override
+  String get learningLifetime => 'Learning Lifetime';
+
+  @override
+  String get learningLifetimeExpandHint =>
+      'Per curriculum: expand to browse what you have learned';
+
+  @override
+  String get addWhatYouLearned => 'Add what you\'ve learned';
+
+  @override
+  String get addWhatYouLearnedSettingsSubtitle =>
+      'Log custom Mitzvot or Torah studies';
+
+  @override
+  String get lifetimeLearning => 'Lifetime Learning';
+
+  @override
+  String get lifetimeAddHeaderTitle => 'Add what you\'ve learned';
+
+  @override
+  String get lifetimeAddHeaderSubtitle =>
+      'Mark what you already studied — in print or anywhere — as lifetime learning.';
+
+  @override
+  String get lifetimeHowItWorksTitle => 'How it works';
+
+  @override
+  String get lifetimeHowItWorksBody =>
+      'Open a curriculum, then use the folder list to select sections. Green = selected for saving; open a subfolder with the arrow when there is more inside.';
+
+  @override
+  String get lifetimeSelectScreenTitle => 'Select what you\'ve learned';
+
+  @override
+  String get lifetimeSelectScreenSubtitle =>
+      'Check sections to include; open folders to go deeper.';
+
+  @override
+  String get lifetimeMarkAsLearnedTitle => 'Mark as lifetime learned';
+
+  @override
+  String lifetimeMarkAsLearnedLine(int count, int level) {
+    return 'Selected: $count • level $level';
+  }
+
+  @override
+  String get selectAllInThisList => 'Select all in this list';
+
+  @override
+  String get deselectAllInThisList => 'Deselect all in this list';
+
+  @override
+  String get clearSelection => 'Clear selection';
+
+  @override
+  String contentLoadError(String error) {
+    return 'Unable to load curriculum content: $error';
+  }
+
+  @override
+  String get noItemsAtThisLevel => 'No items at this level';
+
+  @override
+  String get breadcrumbsRoot => 'Root';
+
+  @override
+  String lifetimeMarkSavedCount(int count) {
+    return 'Marked $count lifetime selection(s).';
+  }
+
+  @override
+  String lifetimeMarkSaveError(String error) {
+    return 'Could not save lifetime marks: $error';
+  }
+
+  @override
+  String get dashboardStats => 'STATS';
+
+  @override
+  String get learningLifetimeAllCurricula =>
+      'Learning lifetime (all curricula)';
+
+  @override
+  String lifetimeSectionsSummary(String learned, String total, int n) {
+    return '$learned / $total sections — $n curricula';
+  }
+
+  @override
+  String greetingHelloName(String name) {
+    return 'Shalom, $name!';
+  }
+
+  @override
+  String get noFocusTag => 'NO FOCUS TAG';
+
+  @override
+  String get todaysMissions => 'Today’s Missions';
+
+  @override
+  String get noTasksInLane => 'No tasks in this lane';
+
+  @override
+  String get reviewSection => 'REVIEW SECTION';
+
+  @override
+  String get chazaraReview => 'Chazara/Review';
+
+  @override
+  String get urgent => 'URGENT';
+
+  @override
+  String get missedOverdue => 'Missed/Overdue';
+
+  @override
+  String get bubbleOverdue => 'OVERDUE';
+
+  @override
+  String get bubbleTodayDue => 'TODAY\nDUE';
+
+  @override
+  String get bubbleChazara => 'CHAZARA';
+
+  @override
+  String get mainFocus => 'MAIN FOCUS';
+
+  @override
+  String get carouselCompletion => 'Completion';
+
+  @override
+  String get continueCta => 'CONTINUE';
+
+  @override
+  String get tabSchedule => 'Schedule';
+
+  @override
+  String get dueToday => 'Due today';
+
+  @override
+  String get nothingDueInQueue => 'Nothing due in this queue right now.';
+
+  @override
+  String get selfPacedScopeTitle => 'All of it, or just a section?';
+
+  @override
+  String get learnEntireCurriculumCta => 'I want to learn everything!';
+
+  @override
+  String learnEntireCurriculumSubtitle(String name) {
+    return 'Select the entire $name';
+  }
+
+  @override
+  String get faster => 'FASTER!';
+
+  @override
+  String level1Selection(String name, String levelLabel) {
+    return '$name → $levelLabel selection';
+  }
+
+  @override
+  String get scopeSelectedBadge => 'SELECTED';
+
+  @override
+  String get selectAtLeastOne => 'Select at least one';
+
+  @override
+  String continueWithSelectionCount(int count) {
+    return 'Continue with $count selected';
+  }
+
+  @override
+  String get sectionLearning => 'LEARNING';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get notificationSettingsSubtitle =>
+      'Push, email, and study sound alerts';
+
+  @override
+  String pointsAbbrev(int count) {
+    return '$count pts';
+  }
+
+  @override
+  String get sectionTracks => 'TRACKS';
+
+  @override
+  String get sectionAccount => 'ACCOUNT';
+
+  @override
+  String get sectionParentalControls => 'PARENTAL CONTROLS';
+
+  @override
+  String get changePassword => 'Change Password';
+
+  @override
+  String get signOut => 'Sign Out';
+
+  @override
+  String get deleteAccountTitle => 'Delete Account';
+
+  @override
+  String get deleteAccountSubtitle =>
+      'Permanently remove this account and cloud data';
+
+  @override
+  String get settingsHandcraftedTagline => 'Handcrafted for your Torah journey';
+
+  @override
+  String get calendarPreference => 'Calendar Preference';
+
+  @override
+  String get calendarPreferenceSubtitle => 'Goals, deadlines, and date pickers';
+
+  @override
+  String get calendarGregorian => 'Gregorian';
+
+  @override
+  String get calendarHebrew => 'Hebrew';
+
+  @override
+  String get parentMode => 'Parent Mode';
+
+  @override
+  String get parentModeSubtitle => 'Switch to admin (PIN-guarded)';
+
+  @override
+  String get parentPin => 'Parent PIN';
+
+  @override
+  String get parentPinSubtitle => 'Change your security PIN';
+
+  @override
+  String get passwordChangedSuccessfully => 'Password changed successfully.';
+
+  @override
+  String get notSignedIn => 'Not signed in';
+
+  @override
+  String get userFallbackDisplayName => 'User';
+
+  @override
+  String get proBadge => 'PRO';
+
+  @override
+  String get selfLearnerBadge => 'SELF-LEARNER';
+
+  @override
+  String get noBackup => 'No Backup';
+
+  @override
+  String get chooseLanguageTitle => 'Choose Language';
+
+  @override
+  String get preferredLanguageForContent => 'Preferred language for content';
+
+  @override
+  String get profilePickerTitle => 'Who is learning?';
+
+  @override
+  String get profilePickerSubtitle =>
+      'Choose a profile to continue your\njourney';
+
+  @override
+  String get addProfile => 'Add Profile';
+
+  @override
+  String get createProfile => 'Create Profile';
+
+  @override
+  String get enterNameHint => 'Enter name';
+
+  @override
+  String get chooseMode => 'Choose Mode';
+
+  @override
+  String get childModeCardTitle => 'Child Mode';
+
+  @override
+  String get childModeCardSubtitleFunRewards => 'Fun & Rewards';
+
+  @override
+  String get adultModeCardTitle => 'Adult Mode';
+
+  @override
+  String get adultModeCardSubtitleDeepFocused => 'Deep & Focused';
+
+  @override
+  String get profileBadgeChildMode => 'CHILD MODE';
+
+  @override
+  String get profileBadgeAdultMode => 'ADULT MODE';
+
+  @override
+  String profileNameTaken(String name) {
+    return 'A profile named \"$name\" already exists';
+  }
+
+  @override
+  String get maxProfilesReached => 'Maximum 10 profiles reached';
+
+  @override
+  String get renameAction => 'Rename';
+
+  @override
+  String get mustKeepOneProfile => 'You must have at least one profile';
+
+  @override
+  String get profileNameAlreadyExists =>
+      'A profile with this name already exists';
+
+  @override
+  String get renameProfileTitle => 'Rename Profile';
+
+  @override
+  String get displayName => 'Display Name';
+
+  @override
+  String get deleteProfileTitle => 'Delete Profile?';
+
+  @override
+  String deleteProfileConfirm(String name) {
+    return 'Permanently delete \"$name\" and ALL associated learning data? This cannot be undone.';
+  }
+
+  @override
+  String get cannotDeleteOnlyProfile => 'Cannot delete your only profile';
+
+  @override
+  String get tapToContinue => 'Tap to\ncontinue';
+
+  @override
+  String get maxProfilesLabel => 'Max Profiles';
+
+  @override
+  String get addProfileCardTitle => 'Add\nProfile';
+
+  @override
+  String get maxProfilesSubtitle => 'Maximum reached';
+
+  @override
+  String get createNewLearner => 'Create new\nlearner';
+
+  @override
+  String get profilesLabel => 'Profiles';
+
+  @override
+  String get syncTitle => 'Sync';
+
+  @override
+  String get syncScreenBody => 'Sync status and settings will appear here.';
+
+  @override
+  String get parentDashboard => 'Parent Dashboard';
+
+  @override
+  String get parentSettingsTitle => 'Parent Settings';
+
+  @override
+  String get addChildTooltip => 'Add Child';
+
+  @override
+  String errorLoadingDashboard(String error) {
+    return 'Error loading dashboard: $error';
+  }
+
+  @override
+  String get manageTracksForChildSubtitle =>
+      'Add, edit, or archive your child\'s tracks';
+
+  @override
+  String get pointConfiguration => 'Point Configuration';
+
+  @override
+  String get pointConfigurationSubtitle =>
+      'Set how many points activities are worth';
+
+  @override
+  String get parentDashboardCardSubtitle =>
+      'See your child\'s learning progress at a glance';
+
+  @override
+  String get sectionAccountSafety => 'ACCOUNT SAFETY';
+
+  @override
+  String get bottomNavTracks => 'Tracks';
+
+  @override
+  String get bottomNavRewards => 'Rewards';
+
+  @override
+  String get bottomNavParent => 'Parent';
+
+  @override
+  String get enterParentPin => 'Enter Parent PIN';
+
+  @override
+  String get changeParentPin => 'Change Parent PIN';
+
+  @override
+  String get pinChangedSuccessfully => 'PIN changed successfully';
+
+  @override
+  String get deviceRestoreChecking => 'Checking device...';
+
+  @override
+  String get deviceRestoreComplete => 'Restore complete!';
+
+  @override
+  String get deviceRestoreFailed => 'Restore failed';
+
+  @override
+  String deviceRestoreStep(int completed, int total) {
+    return 'Step $completed of $total';
+  }
+
+  @override
+  String get skipAndContinue => 'Skip & continue';
+
+  @override
+  String get noActiveProfile => 'No active profile';
+
+  @override
+  String get incorrectPin => 'Incorrect PIN';
+
+  @override
+  String get enterCurrentPin => 'Enter Current PIN';
+
+  @override
+  String get enterNewPin => 'Enter New PIN';
+
+  @override
+  String get confirmNewPin => 'Confirm New PIN';
+
+  @override
+  String get pinsDoNotMatch => 'PINs do not match';
 }

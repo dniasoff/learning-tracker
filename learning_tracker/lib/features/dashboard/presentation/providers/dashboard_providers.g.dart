@@ -483,6 +483,53 @@ final class DashboardGlobalPointsProvider
 String _$dashboardGlobalPointsHash() =>
     r'80339f89a44a01285030b260fa253b3b1547c3f7';
 
+/// Next reward milestone for the child dashboard (closest threshold not yet met).
+
+@ProviderFor(dashboardChildNextReward)
+final dashboardChildNextRewardProvider = DashboardChildNextRewardProvider._();
+
+/// Next reward milestone for the child dashboard (closest threshold not yet met).
+
+final class DashboardChildNextRewardProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<DashboardChildNextReward?>,
+          DashboardChildNextReward?,
+          FutureOr<DashboardChildNextReward?>
+        >
+    with
+        $FutureModifier<DashboardChildNextReward?>,
+        $FutureProvider<DashboardChildNextReward?> {
+  /// Next reward milestone for the child dashboard (closest threshold not yet met).
+  DashboardChildNextRewardProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dashboardChildNextRewardProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dashboardChildNextRewardHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<DashboardChildNextReward?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<DashboardChildNextReward?> create(Ref ref) {
+    return dashboardChildNextReward(ref);
+  }
+}
+
+String _$dashboardChildNextRewardHash() =>
+    r'04a353e0e676e69debae86384835f15947363fa6';
+
 /// Streak recovery info — whether the streak was just saved by grace period.
 
 @ProviderFor(dashboardStreakRecovery)

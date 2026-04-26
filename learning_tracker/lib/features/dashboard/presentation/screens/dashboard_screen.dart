@@ -63,6 +63,7 @@ class DashboardScreen extends ConsumerWidget {
                   ref.invalidate(dashboardUserModeProvider);
                   ref.invalidate(dashboardStreakProvider);
                   ref.invalidate(dashboardGlobalPointsProvider);
+                  ref.invalidate(dashboardChildNextRewardProvider);
                   ref.invalidate(allDailyTasksProvider);
                   ref.invalidate(
                     lifetimeTotalsAcrossAllCurriculaProvider(profileId),
@@ -166,10 +167,12 @@ class _DashboardBody extends ConsumerWidget {
     final numberFormat = NumberFormat.decimalPattern();
     final lifetimePercentStr = formatFractionAsPercent(cumulativeLifetime);
     final lifetimeSectionsStr = lifetimeTotals == null
-        ? '0 / 0 sections — ${CurriculumId.values.length} curricula'
-        : '${numberFormat.format(lifetimeTotals.learnedSections)} / '
-              '${numberFormat.format(lifetimeTotals.totalSections)} sections — '
-              '${CurriculumId.values.length} curricula';
+        ? l10n.lifetimeSectionsSummary('0', '0', CurriculumId.values.length)
+        : l10n.lifetimeSectionsSummary(
+            numberFormat.format(lifetimeTotals.learnedSections),
+            numberFormat.format(lifetimeTotals.totalSections),
+            CurriculumId.values.length,
+          );
 
     if (activeCurricula.isEmpty) {
       final isChildMode =
@@ -195,7 +198,7 @@ class _DashboardBody extends ConsumerWidget {
               .take(2)
               .map((t) => t.curriculumId.displayNameEn.toUpperCase())
               .join(' / ')
-        : 'NO FOCUS TAG';
+        : l10n.noFocusTag;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
@@ -209,7 +212,7 @@ class _DashboardBody extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Shalom, $name!',
+                    l10n.greetingHelloName(name),
                     style: _iosTextStyle(
                       context,
                       size: 27,
@@ -263,7 +266,55 @@ class _DashboardBody extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
+        if (userMode == UserMode.child) ...[
+          _ChildTotalPointsPill(
+            totalPoints: totalPoints,
+            l10n: l10n,
+            numberFormat: numberFormat,
+          ),
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.dashboardRewardsGallery,
+                    style: _iosTextStyle(
+                      context,
+                      size: 22,
+                      weight: FontWeight.w800,
+                      color: AppTheme.brandInk,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      context.router.push(const GamificationRoute()),
+                  child: Text(
+                    l10n.dashboardSeeAllRewards,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: AppTheme.brandBlueBright,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ChildMysteryChestCard(
+            nextRewardAsync: ref.watch(dashboardChildNextRewardProvider),
+            globalPointsFallback: totalPoints,
+            l10n: l10n,
+            theme: theme,
+            numberFormat: numberFormat,
+            onOpenRewards: () => context.router.push(const GamificationRoute()),
+          ),
+          const SizedBox(height: 12),
+        ],
         _DashboardLevelPointsCard(
+          userMode: userMode,
           level: level,
           totalPoints: totalPoints,
           overdueCount: overdueCount,
@@ -278,7 +329,7 @@ class _DashboardBody extends ConsumerWidget {
           children: [
             Expanded(
               child: Text(
-                'Today’s Missions',
+                l10n.todaysMissions,
                 style: _iosTextStyle(
                   context,
                   size: 28,
@@ -308,13 +359,13 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         _MainFocusMissionCard(
-          title: 'Today’s Tasks',
+          title: l10n.todaysTasks,
           subtitle: groupedTasks.todayTasks.isNotEmpty
               ? groupedTasks.todayTasks
                     .take(2)
                     .map((t) => t.curriculumId.displayNameEn)
                     .join(' / ')
-              : 'No tasks in this lane',
+              : l10n.noTasksInLane,
           focusLabel: focusLabel,
           count: todayCount,
           onTap: () {
@@ -326,8 +377,8 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         _CompactMissionCard(
-          label: 'REVIEW SECTION',
-          title: 'Chazara/Review',
+          label: l10n.reviewSection,
+          title: l10n.chazaraReview,
           count: reviewCount,
           color: AppTheme.brandGold,
           backgroundColor: const Color(0xFFF1F2F5),
@@ -341,8 +392,8 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         _CompactMissionCard(
-          label: 'URGENT',
-          title: 'Missed/Overdue',
+          label: l10n.urgent,
+          title: l10n.missedOverdue,
           count: overdueCount,
           color: const Color(0xFFD63C3C),
           labelColor: const Color(0xFFD63C3C),
@@ -380,8 +431,201 @@ class _DashboardBody extends ConsumerWidget {
   }
 }
 
+class _ChildTotalPointsPill extends StatelessWidget {
+  const _ChildTotalPointsPill({
+    required this.totalPoints,
+    required this.l10n,
+    required this.numberFormat,
+  });
+
+  final int totalPoints;
+  final AppLocalizations l10n;
+  final NumberFormat numberFormat;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.brandBlueDeep, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandBlue.withValues(alpha: 0.1),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFD54F),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.emoji_events_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.totalPoints.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppTheme.brandBlueDeep,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.dashboardPointsValue(numberFormat.format(totalPoints)),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChildMysteryChestCard extends StatelessWidget {
+  const _ChildMysteryChestCard({
+    required this.nextRewardAsync,
+    required this.globalPointsFallback,
+    required this.l10n,
+    required this.theme,
+    required this.numberFormat,
+    required this.onOpenRewards,
+  });
+
+  final AsyncValue<DashboardChildNextReward?> nextRewardAsync;
+  final int globalPointsFallback;
+  final AppLocalizations l10n;
+  final ThemeData theme;
+  final NumberFormat numberFormat;
+  final VoidCallback onOpenRewards;
+
+  @override
+  Widget build(BuildContext context) {
+    return nextRewardAsync.when(
+      loading: () => const SizedBox(
+        height: 140,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (next) {
+        const defaultThreshold = 1500;
+        final threshold = next?.threshold ?? defaultThreshold;
+        final progressPoints = next?.trackPoints ?? globalPointsFallback;
+        final pct = threshold > 0
+            ? (progressPoints / threshold).clamp(0.0, 1.0)
+            : 0.0;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onOpenRewards,
+            borderRadius: BorderRadius.circular(28),
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF3949AB), Color(0xFF1A237E)],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.card_giftcard_rounded,
+                        color: Color(0xFFFFD54F),
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      l10n.dashboardMysteryChest,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.dashboardTapToUnlockAtPts(
+                        numberFormat.format(threshold),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.7,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        minHeight: 7,
+                        backgroundColor: Colors.white.withValues(alpha: 0.22),
+                        color: const Color(0xFF66BB6A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _DashboardLevelPointsCard extends StatelessWidget {
   const _DashboardLevelPointsCard({
+    required this.userMode,
     required this.level,
     required this.totalPoints,
     required this.overdueCount,
@@ -392,6 +636,7 @@ class _DashboardLevelPointsCard extends StatelessWidget {
     required this.cumulativeLifetime,
   });
 
+  final UserMode userMode;
   final int level;
   final int totalPoints;
   final int overdueCount;
@@ -404,11 +649,18 @@ class _DashboardLevelPointsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bubbleData = [
-      ('OVERDUE', '$overdueCount', Colors.white),
-      ('TODAY\nDUE', '$todayCount', Colors.white),
-      ('CHAZARA', '$reviewCount', const Color(0xFF76F4A7)),
-    ];
+    final l10n = AppLocalizations.of(context)!;
+    final bubbleData = userMode == UserMode.child
+        ? [
+            (l10n.bubbleOverdue, '$overdueCount', Colors.white),
+            (l10n.bubbleTodayDue, '$todayCount', Colors.white),
+            (l10n.dashboardBubbleDone, doneDisplay, const Color(0xFF76F4A7)),
+          ]
+        : [
+            (l10n.bubbleOverdue, '$overdueCount', Colors.white),
+            (l10n.bubbleTodayDue, '$todayCount', Colors.white),
+            (l10n.bubbleChazara, '$reviewCount', const Color(0xFF76F4A7)),
+          ];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
@@ -433,7 +685,7 @@ class _DashboardLevelPointsCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'STATS',
+                l10n.dashboardStats,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: Colors.white.withValues(alpha: 0.85),
                   fontWeight: FontWeight.w700,
@@ -442,7 +694,7 @@ class _DashboardLevelPointsCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '$totalPoints pts',
+                l10n.pointsAbbrev(totalPoints),
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: Colors.white.withValues(alpha: 0.92),
                   fontWeight: FontWeight.w700,
@@ -470,7 +722,7 @@ class _DashboardLevelPointsCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Learning lifetime (all curricula)',
+                  l10n.learningLifetimeAllCurricula,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w700,
@@ -584,6 +836,7 @@ class _MainFocusMissionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -609,7 +862,7 @@ class _MainFocusMissionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'MAIN FOCUS',
+                l10n.mainFocus,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: AppTheme.brandInkMuted,
                   fontWeight: FontWeight.w700,
@@ -676,10 +929,10 @@ class _MainFocusMissionCard extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Text('Start Learning'),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded, size: 18),
+                      children: [
+                        Text(l10n.startLearning),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded, size: 18),
                       ],
                     ),
                   ),
@@ -1229,7 +1482,7 @@ class _CurriculumCard extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      'Completion',
+                      l10n.carouselCompletion,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: AppTheme.brandInkMuted,
                         fontWeight: FontWeight.w700,
@@ -1272,7 +1525,7 @@ class _CurriculumCard extends ConsumerWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: const Text('CONTINUE'),
+                      child: Text(l10n.continueCta),
                     ),
                   ),
                 ],
@@ -1309,7 +1562,7 @@ class _ProgrammedDueFoot extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Schedule',
+          l10n.tabSchedule,
           style: theme.textTheme.labelSmall?.copyWith(
             color: AppTheme.brandInkMuted,
             fontWeight: FontWeight.w700,
@@ -1369,7 +1622,7 @@ class _ProgrammedDueFoot extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Due today',
+                        l10n.dueToday,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -1399,7 +1652,7 @@ class _ProgrammedDueFoot extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Nothing due in this queue right now.',
+              l10n.nothingDueInQueue,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(

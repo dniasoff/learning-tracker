@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class LifetimeMarkingScreen extends ConsumerWidget {
@@ -21,13 +22,14 @@ class LifetimeMarkingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final summariesAsync = ref.watch(
       globalLifetimeCurriculaProvider(ref.watch(activeProfileIdProvider)),
     );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
-      appBar: AppBar(title: const AppBarTitle(text: 'Lifetime Learning')),
+      appBar: AppBar(title: AppBarTitle(text: l10n.lifetimeLearning)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -35,23 +37,19 @@ class LifetimeMarkingScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const LifetimeFolderPageHeader(
-                  title: 'Add what you\'ve learned',
-                  subtitle:
-                      'Mark what you already studied — in print or anywhere — as lifetime learning.',
+                LifetimeFolderPageHeader(
+                  title: l10n.lifetimeAddHeaderTitle,
+                  subtitle: l10n.lifetimeAddHeaderSubtitle,
                 ),
                 const SizedBox(height: 12),
-                const LifetimeFolderFrostedHint(
-                  leading: Icon(
+                LifetimeFolderFrostedHint(
+                  leading: const Icon(
                     Icons.info_outline,
                     color: Colors.white,
                     size: 22,
                   ),
-                  title: 'How it works',
-                  subtitle:
-                      'Open a curriculum, then use the folder list to select '
-                      'sections. Green = selected for saving; open a subfolder '
-                      'with the arrow when there is more inside.',
+                  title: l10n.lifetimeHowItWorksTitle,
+                  subtitle: l10n.lifetimeHowItWorksBody,
                 ),
                 const SizedBox(height: 14),
                 for (var i = 0; i < CurriculumId.values.length; i++) ...[
@@ -226,6 +224,7 @@ class _LifetimeCurriculumMarkingScreenState
 
   Future<void> _markSelections(List<ScopeEntry> selections) async {
     if (_saving) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _saving = true);
     try {
       final repo = ref.read(learningLedgerRepositoryProvider);
@@ -251,13 +250,15 @@ class _LifetimeCurriculumMarkingScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Marked ${unique.length} lifetime selection(s).'),
+          content: Text(l10n.lifetimeMarkSavedCount(unique.length)),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save lifetime marks: $e')),
+        SnackBar(
+          content: Text(l10n.lifetimeMarkSaveError(e.toString())),
+        ),
       );
     } finally {
       if (mounted) {
@@ -279,6 +280,7 @@ class _LifetimeCurriculumMarkingScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final contentAsync = ref.watch(curriculumContentProvider(_curriculum));
     const cream = Color(0xFFF4F6FB);
 
@@ -295,7 +297,7 @@ class _LifetimeCurriculumMarkingScreenState
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('Unable to load curriculum content: $e'),
+            child: Text(l10n.contentLoadError(e.toString())),
           ),
         ),
         data: (allItems) {
@@ -317,10 +319,9 @@ class _LifetimeCurriculumMarkingScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const LifetimeFolderPageHeader(
-                            title: 'Select what you\'ve learned',
-                            subtitle:
-                                'Check sections to include; open folders to go deeper.',
+                          LifetimeFolderPageHeader(
+                            title: l10n.lifetimeSelectScreenTitle,
+                            subtitle: l10n.lifetimeSelectScreenSubtitle,
                             icon: Icons.playlist_add_check_outlined,
                           ),
                           const SizedBox(height: 10),
@@ -329,9 +330,11 @@ class _LifetimeCurriculumMarkingScreenState
                               Icons.draw_outlined,
                               color: Colors.white.withValues(alpha: 0.9),
                             ),
-                            title: 'Mark as lifetime learned',
-                            subtitle:
-                                'Selected: ${_selections.length} • level $_currentLevel',
+                            title: l10n.lifetimeMarkAsLearnedTitle,
+                            subtitle: l10n.lifetimeMarkAsLearnedLine(
+                              _selections.length,
+                              _currentLevel,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           OutlinedButton.icon(
@@ -343,7 +346,7 @@ class _LifetimeCurriculumMarkingScreenState
                               side: const BorderSide(color: Colors.white54),
                             ),
                             icon: const Icon(Icons.select_all, size: 20),
-                            label: const Text('Select all in this list'),
+                            label: Text(l10n.selectAllInThisList),
                           ),
                           if (_breadcrumbs.isNotEmpty) ...[
                             const SizedBox(height: 6),
@@ -356,9 +359,11 @@ class _LifetimeCurriculumMarkingScreenState
                                     onPressed: () {
                                       setState(_breadcrumbs.clear);
                                     },
-                                    child: const Text(
-                                      'Root',
-                                      style: TextStyle(color: Colors.white),
+                                    child: Text(
+                                      l10n.breadcrumbsRoot,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                   for (var i = 0; i < _breadcrumbs.length; i++)
@@ -392,7 +397,7 @@ class _LifetimeCurriculumMarkingScreenState
                               child: values.isEmpty
                                   ? Center(
                                       child: Text(
-                                        'No items at this level',
+                                        l10n.noItemsAtThisLevel,
                                         style: TextStyle(
                                           color: Colors.white.withValues(
                                             alpha: 0.75,
@@ -441,7 +446,7 @@ class _LifetimeCurriculumMarkingScreenState
                                       color: Colors.white38,
                                     ),
                                   ),
-                                  child: const Text('Clear selection'),
+                                  child: Text(l10n.clearSelection),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -465,7 +470,7 @@ class _LifetimeCurriculumMarkingScreenState
                                             color: AppTheme.brandBlue,
                                           ),
                                         )
-                                      : const Text('Save'),
+                                      : Text(l10n.save),
                                 ),
                               ),
                             ],
