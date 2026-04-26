@@ -127,25 +127,76 @@ class RewardMilestoneService {
     await _writeMilestones(filtered, updatedAt: now);
   }
 
+  /// Default eight-tier ladder (points thresholds) used by the achievements UI.
+  static const List<({String title, int thresholdPoints})>
+      defaultMilestoneLadder = [
+    (title: 'Bronze Star', thresholdPoints: 500),
+    (title: 'Silver Star', thresholdPoints: 1000),
+    (title: 'Gold Star', thresholdPoints: 3000),
+    (title: 'Platinum Star', thresholdPoints: 5000),
+    (title: 'Premium Star', thresholdPoints: 10000),
+    (title: 'Diamond Star', thresholdPoints: 15000),
+    (title: 'Elite Star', thresholdPoints: 25000),
+    (title: 'Legend Star', thresholdPoints: 50000),
+  ];
+
   Future<void> ensureDefaultsForTrack(int trackId) async {
-    final existing = await getMilestonesForTrack(trackId);
+    var existing = await getMilestonesForTrack(trackId);
+    if (_isLegacyThreeTierLadder(existing)) {
+      await _migrateLegacyThreeTierToDefaultEight(trackId, existing);
+      existing = await getMilestonesForTrack(trackId);
+    }
     if (existing.isNotEmpty) return;
 
-    await upsertMilestone(
-      trackId: trackId,
-      title: 'Bronze Star',
-      thresholdPoints: 50,
+    for (final tier in defaultMilestoneLadder) {
+      await upsertMilestone(
+        trackId: trackId,
+        title: tier.title,
+        thresholdPoints: tier.thresholdPoints,
+      );
+    }
+  }
+
+  bool _isLegacyThreeTierLadder(List<RewardMilestone> trackMilestones) {
+    if (trackMilestones.length != 3) return false;
+    final sorted = [...trackMilestones]..sort(
+      (a, b) => a.thresholdPoints.compareTo(b.thresholdPoints),
     );
-    await upsertMilestone(
-      trackId: trackId,
-      title: 'Silver Star',
-      thresholdPoints: 150,
+    return sorted[0].thresholdPoints == 50 &&
+        sorted[1].thresholdPoints == 150 &&
+        sorted[2].thresholdPoints == 300;
+  }
+
+  /// Replaces the original 50/150/300 ladder with [defaultMilestoneLadder].
+  ///
+  /// Drops unlock rows that pointed at removed milestone ids so the UI stays
+  /// consistent with the new thresholds.
+  Future<void> _migrateLegacyThreeTierToDefaultEight(
+    int trackId,
+    List<RewardMilestone> legacy,
+  ) async {
+    final now = DateTimeFactory.nowUtc();
+    final removedIds = legacy.map((m) => m.id).toSet();
+
+    final allMilestones = List<RewardMilestone>.from(await getAllMilestones());
+    allMilestones.removeWhere(
+      (m) => m.trackId == trackId && removedIds.contains(m.id),
     );
-    await upsertMilestone(
-      trackId: trackId,
-      title: 'Gold Star',
-      thresholdPoints: 300,
-    );
+    await _writeMilestones(allMilestones, updatedAt: now);
+
+    final unlocks = await getAllUnlocks();
+    final kept = unlocks
+        .where((u) => !removedIds.contains(u.milestoneId))
+        .toList();
+    await _writeUnlocks(kept, updatedAt: now);
+
+    for (final tier in defaultMilestoneLadder) {
+      await upsertMilestone(
+        trackId: trackId,
+        title: tier.title,
+        thresholdPoints: tier.thresholdPoints,
+      );
+    }
   }
 
   Future<int> getTrackPointsTotal(int trackId) async {
