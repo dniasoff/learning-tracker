@@ -80,7 +80,28 @@
     }
   },
   "achievementsAcrossAllTracks": "בכל המסלולים שלך.",
-  "achievementsTrackSection": "מסלול",
+  "achievementsEncouragement": "המשך ככה, מצוין!",
+  "achievementsRewardsFraction": "{unlocked} / {total}",
+  "@achievementsRewardsFraction": {
+    "placeholders": {
+      "unlocked": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "achievementsRewardsLabelWord": "פרסים",
+  "achievementsMilestonePoints": "{points} נק׳",
+  "@achievementsMilestonePoints": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
+  "achievementsProgressPercent": "{percent}%",
+  "@achievementsProgressPercent": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "achievementsTrackSection": "בחירת מסלול",
   "achievementsAllTracks": "כל המסלולים",
   "achievementsStatusUnlocked": "נפתח!",
   "achievementsStatusComingSoon": "בקרוב!",

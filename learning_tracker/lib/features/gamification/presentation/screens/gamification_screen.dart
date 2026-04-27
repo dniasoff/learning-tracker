@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,8 @@ import 'package:learning_tracker/features/gamification/presentation/providers/ac
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -79,7 +83,7 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _AchievementsHeader(l10n: l10n),
+            const _AchievementsHeader(),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -260,22 +264,63 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
   }
 }
 
-class _AchievementsHeader extends StatelessWidget {
-  const _AchievementsHeader({required this.l10n});
-
-  final AppLocalizations l10n;
+class _AchievementsHeader extends ConsumerWidget {
+  const _AchievementsHeader();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final profileAsync = ref.watch(selectedProfileProvider);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Text(
-        l10n.myAchievementsTitle,
-        textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.3,
-        ),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      child: Row(
+        children: [
+          profileAsync.when(
+            data: (p) => ProfileAvatar(
+              avatarIndex: p?.avatarIndex ?? 0,
+              radius: 20,
+            ),
+            loading: () => const CircleAvatar(
+              radius: 20,
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (_, __) => const ProfileAvatar(avatarIndex: 0, radius: 20),
+          ),
+          Expanded(
+            child: Text(
+              l10n.myAchievementsTitle,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                color: const Color(0xFF1A1A1A),
+              ),
+            ),
+          ),
+          Material(
+            color: _kBrandBlue,
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: () {},
+              customBorder: const CircleBorder(),
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(
+                  Icons.star_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -334,18 +379,40 @@ class _ProgressSummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                l10n.achievementsRewardsCount(unlocked, total),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
+              Directionality(
+                textDirection: ui.TextDirection.ltr,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      l10n.achievementsRewardsFraction(unlocked, total),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                          ),
+                    ),
+                    Text(
+                      ' ${l10n.achievementsRewardsLabelWord}',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontStyle: FontStyle.italic,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
-                l10n.achievementsAcrossAllTracks,
+                l10n.achievementsEncouragement,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.88),
+                  color: Colors.white.withValues(alpha: 0.92),
+                  height: 1.3,
                 ),
               ),
             ],
@@ -484,27 +551,44 @@ class _AchievementTierCard extends StatelessWidget {
     return (row.trackPoints / th).clamp(0.0, 1.0);
   }
 
+  int get _percentRounded {
+    if (row.isUnlocked) return 100;
+    final th = row.milestone.thresholdPoints;
+    if (th <= 0) return 0;
+    return (row.trackPoints / th * 100).round().clamp(0, 100);
+  }
+
   String get _statusLabel {
     if (row.isUnlocked) return l10n.achievementsStatusUnlocked;
     if (row.isNextUp) return l10n.achievementsStatusComingSoon;
     return l10n.achievementsStatusLocked;
   }
 
-  String _pointsLine(BuildContext context) {
+  String _milestonePointsLine(BuildContext context) {
     final locale = Localizations.localeOf(context).toString();
     final fmt = NumberFormat.decimalPattern(locale);
-    return l10n.achievementsUnlockedAtPoints(
+    return l10n.achievementsMilestonePoints(
       fmt.format(row.milestone.thresholdPoints),
     );
+  }
+
+  Color _statusTextColor(_TierStyle scheme) {
+    if (row.isLegendTier) {
+      if (row.isUnlocked) return const Color(0xFF69F0AE);
+      if (row.isNextUp) return Colors.white;
+      return Colors.white70;
+    }
+    if (row.isUnlocked) return const Color(0xFF2E7D32);
+    if (row.isNextUp) return _kBrandBlue;
+    return const Color(0xFF90A4AE);
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = _TierStyle.forTitle(row.milestone.title, row.isLegendTier);
-    final showLockCorner = !row.isUnlocked;
 
-    Widget cardContent = Padding(
-      padding: const EdgeInsets.all(14),
+    final cardContent = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -518,53 +602,40 @@ class _AchievementTierCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Expanded(
-                      child: Text(
-                        row.milestone.title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: scheme.titleColor,
+                    Padding(
+                      padding: const EdgeInsets.only(right: 96),
+                      child: Align(
+                        alignment: AlignmentDirectional.topStart,
+                        child: Text(
+                          row.milestone.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: scheme.titleColor,
+                                height: 1.2,
+                              ),
                         ),
                       ),
                     ),
-                    if (showLockCorner)
-                      Icon(
-                        Icons.lock_outline_rounded,
-                        size: 18,
-                        color: scheme.mutedIconColor,
-                      ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: _TrackTagChip(label: trackTag, scheme: scheme),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                _TrackTagChip(label: trackTag, scheme: scheme),
-                const SizedBox(height: 8),
-                Text(
-                  _pointsLine(context),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: row.isLegendTier
-                        ? Colors.white.withValues(alpha: 0.85)
-                        : const Color(0xFF5C6B7A),
-                  ),
-                ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   _statusLabel,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: row.isLegendTier
-                        ? (row.isUnlocked
-                              ? const Color(0xFF69F0AE)
-                              : row.isNextUp
-                              ? Colors.white
-                              : Colors.white70)
-                        : row.isUnlocked
-                        ? const Color(0xFF2E7D32)
-                        : row.isNextUp
-                        ? _kBrandBlue
-                        : const Color(0xFF90A4AE),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontStyle: FontStyle.italic,
+                    color: _statusTextColor(scheme),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -572,19 +643,47 @@ class _AchievementTierCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: _progressFraction,
-                    minHeight: 8,
+                    minHeight: 7,
                     backgroundColor: scheme.barBg,
-                    color: row.isUnlocked
-                        ? (row.isLegendTier
-                              ? const Color(0xFF69F0AE)
-                              : const Color(0xFF43A047))
-                        : (row.isLegendTier
+                    color: row.isLegendTier && row.isUnlocked
+                        ? const Color(0xFF69F0AE)
+                        : scheme.barFill,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Directionality(
+                  textDirection: ui.TextDirection.ltr,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _milestonePointsLine(context),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                                color: row.isLegendTier
+                                    ? Colors.white.withValues(alpha: 0.9)
+                                    : const Color(0xFF4A5568),
+                              ),
+                        ),
+                      ),
+                      Text(
+                        l10n.achievementsProgressPercent(_percentRounded),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: row.isLegendTier
                               ? Colors.white.withValues(alpha: 0.9)
-                              : _kBrandBlue),
+                              : const Color(0xFF4A5568),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 if (row.isLegendTier) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     l10n.achievementsUltimateGoal,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -601,7 +700,7 @@ class _AchievementTierCard extends StatelessWidget {
     );
 
     if (row.isLegendTier) {
-      return Container(
+      return DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           gradient: const LinearGradient(
@@ -646,20 +745,28 @@ class _TierIconBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLocked = !unlocked;
+    final borderColor = (comingSoon && isLocked)
+        ? const Color(0xFFB0BEC5)
+        : scheme.iconBorder;
     return Container(
-      width: 56,
-      height: 56,
+      width: 58,
+      height: 58,
       decoration: BoxDecoration(
         color: scheme.iconBg,
         borderRadius: BorderRadius.circular(14),
-        border: comingSoon && !unlocked
-            ? Border.all(color: const Color(0xFFCFD8DC), width: 1.5)
-            : Border.all(color: scheme.iconBorder, width: 1),
+        border: isLocked
+            ? Border.all(color: borderColor, width: 1.5)
+            : Border.all(color: scheme.iconBorder, width: 1.2),
       ),
-      child: Icon(
-        scheme.icon,
-        size: 30,
-        color: unlocked ? scheme.iconFg : scheme.iconFg.withValues(alpha: 0.45),
+      child: Center(
+        child: Icon(
+          isLocked ? Icons.lock_rounded : scheme.unlockedIcon,
+          size: isLocked ? 28 : 30,
+          color: isLocked
+              ? scheme.lockIconColor
+              : scheme.iconFg,
+        ),
       ),
     );
   }
@@ -674,15 +781,19 @@ class _TrackTagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: scheme.tagBg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
+          letterSpacing: 0.4,
           color: scheme.tagFg,
         ),
       ),
@@ -700,9 +811,11 @@ class _TierStyle {
     required this.titleColor,
     required this.mutedIconColor,
     required this.barBg,
+    required this.barFill,
     required this.tagBg,
     required this.tagFg,
-    required this.icon,
+    required this.unlockedIcon,
+    required this.lockIconColor,
   });
 
   final Color cardBg;
@@ -713,9 +826,11 @@ class _TierStyle {
   final Color titleColor;
   final Color mutedIconColor;
   final Color barBg;
+  final Color barFill;
   final Color tagBg;
   final Color tagFg;
-  final IconData icon;
+  final IconData unlockedIcon;
+  final Color lockIconColor;
 
   static _TierStyle forTitle(String title, bool isLegend) {
     final t = title.trim();
@@ -723,15 +838,17 @@ class _TierStyle {
       return _TierStyle(
         cardBg: Colors.transparent,
         borderColor: Colors.transparent,
-        iconBg: Colors.white.withValues(alpha: 0.15),
+        iconBg: Colors.white.withValues(alpha: 0.12),
         iconFg: Colors.white,
-        iconBorder: Colors.white24,
+        iconBorder: Colors.white30,
         titleColor: Colors.white,
         mutedIconColor: Colors.white70,
-        barBg: Colors.white24,
-        tagBg: Colors.white24,
+        barBg: const Color(0xFF404060),
+        barFill: const Color(0xFF9E9E9E),
+        tagBg: Colors.white.withValues(alpha: 0.2),
         tagFg: Colors.white,
-        icon: Icons.workspace_premium_rounded,
+        unlockedIcon: Icons.workspace_premium_rounded,
+        lockIconColor: Colors.white70,
       );
     }
     switch (t) {
@@ -739,57 +856,65 @@ class _TierStyle {
         return _TierStyle(
           cardBg: const Color(0xFFF5E6D3),
           borderColor: const Color(0xFFE8D5C4),
-          iconBg: const Color(0xFFBCAAA4),
-          iconFg: const Color(0xFF5D4037),
-          iconBorder: const Color(0xFF8D6E63),
+          iconBg: const Color(0xFF8D6E63),
+          iconFg: Colors.white,
+          iconBorder: const Color(0xFF6D4C41),
           titleColor: const Color(0xFF4E342E),
           mutedIconColor: const Color(0xFF8D6E63),
-          barBg: const Color(0xFFD7CCC8),
+          barBg: const Color(0xFFFFE0B2),
+          barFill: const Color(0xFF6D4C41),
           tagBg: const Color(0xFFFFE0B2),
-          tagFg: const Color(0xFFE65100),
-          icon: Icons.star_rounded,
+          tagFg: const Color(0xFFBF360C),
+          unlockedIcon: Icons.military_tech_rounded,
+          lockIconColor: const Color(0xFF5D4037),
         );
       case 'Silver Star':
         return _TierStyle(
           cardBg: Colors.white,
           borderColor: const Color(0xFFECEFF1),
-          iconBg: const Color(0xFFECEFF1),
-          iconFg: const Color(0xFF607D8B),
-          iconBorder: const Color(0xFFB0BEC5),
+          iconBg: const Color(0xFF90A4AE),
+          iconFg: Colors.white,
+          iconBorder: const Color(0xFF78909C),
           titleColor: const Color(0xFF37474F),
           mutedIconColor: const Color(0xFF90A4AE),
-          barBg: const Color(0xFFECEFF1),
+          barBg: const Color(0xFFE8ECEF),
+          barFill: const Color(0xFF546E7A),
           tagBg: const Color(0xFFCFD8DC),
           tagFg: const Color(0xFF455A64),
-          icon: Icons.star_rate_rounded,
+          unlockedIcon: Icons.star_rounded,
+          lockIconColor: const Color(0xFF607D8B),
         );
       case 'Gold Star':
         return _TierStyle(
           cardBg: const Color(0xFFFFF9E6),
           borderColor: const Color(0xFFFFECB3),
-          iconBg: const Color(0xFFFFD54F),
+          iconBg: const Color(0xFFFFC400),
           iconFg: Colors.white,
-          iconBorder: const Color(0xFFFFC107),
+          iconBorder: const Color(0xFFFFA000),
           titleColor: const Color(0xFFF57F17),
           mutedIconColor: const Color(0xFFFFB300),
           barBg: const Color(0xFFFFE082),
-          tagBg: const Color(0xFFFFF59D),
-          tagFg: const Color(0xFFF9A825),
-          icon: Icons.star_rounded,
+          barFill: const Color(0xFFFF8F00),
+          tagBg: const Color(0xFFFFF3C4),
+          tagFg: const Color(0xFFE65100),
+          unlockedIcon: Icons.emoji_events_rounded,
+          lockIconColor: const Color(0xFFF9A825),
         );
       case 'Platinum Star':
         return _TierStyle(
-          cardBg: Colors.white,
-          borderColor: const Color(0xFFE0E0E0),
-          iconBg: const Color(0xFFF5F5F5),
-          iconFg: const Color(0xFF78909C),
-          iconBorder: const Color(0xFFB0BEC5),
-          titleColor: const Color(0xFF455A64),
-          mutedIconColor: const Color(0xFF90A4AE),
-          barBg: const Color(0xFFECEFF1),
-          tagBg: const Color(0xFFECEFF1),
-          tagFg: const Color(0xFF546E7A),
-          icon: Icons.military_tech_rounded,
+          cardBg: const Color(0xFFFAFCFF),
+          borderColor: const Color(0xFFBBDEFB),
+          iconBg: const Color(0xFFE3F2FD),
+          iconFg: const Color(0xFF42A5F5),
+          iconBorder: const Color(0xFF64B5F6),
+          titleColor: const Color(0xFF1565C0),
+          mutedIconColor: const Color(0xFF64B5F6),
+          barBg: const Color(0xFFBBDEFB),
+          barFill: const Color(0xFF2196F3),
+          tagBg: const Color(0xFFE1F5FE),
+          tagFg: const Color(0xFF0277BD),
+          unlockedIcon: Icons.military_tech,
+          lockIconColor: const Color(0xFF5C6BC0),
         );
       case 'Premium Star':
         return _TierStyle(
@@ -800,38 +925,44 @@ class _TierStyle {
           iconBorder: const Color(0xFFB39DDB),
           titleColor: const Color(0xFF4527A0),
           mutedIconColor: const Color(0xFF9575CD),
-          barBg: const Color(0xFFD1C4E9),
+          barBg: const Color(0xFFCE93D8),
+          barFill: const Color(0xFF7B1FA2),
           tagBg: const Color(0xFFE1BEE7),
-          tagFg: const Color(0xFF6A1B9A),
-          icon: Icons.emoji_events_outlined,
+          tagFg: const Color(0xFF4A148C),
+          unlockedIcon: Icons.diamond_outlined,
+          lockIconColor: const Color(0xFF6A1B9A),
         );
       case 'Diamond Star':
         return _TierStyle(
-          cardBg: const Color(0xFFE3F2FD),
-          borderColor: const Color(0xFFBBDEFB),
-          iconBg: const Color(0xFFE1F5FE),
-          iconFg: const Color(0xFF0288D1),
-          iconBorder: const Color(0xFF4FC3F7),
-          titleColor: const Color(0xFF01579B),
-          mutedIconColor: const Color(0xFF29B6F6),
-          barBg: const Color(0xFFB3E5FC),
-          tagBg: const Color(0xFFBBDEFB),
-          tagFg: const Color(0xFF0277BD),
-          icon: Icons.diamond_outlined,
+          cardBg: const Color(0xFFE0F7FF),
+          borderColor: const Color(0xFF80DEEA),
+          iconBg: const Color(0xFFE0F7FA),
+          iconFg: const Color(0xFF00BCD4),
+          iconBorder: const Color(0xFF4DD0E1),
+          titleColor: const Color(0xFF006064),
+          mutedIconColor: const Color(0xFF00ACC1),
+          barBg: const Color(0xFF80DEEA),
+          barFill: const Color(0xFF00ACC1),
+          tagBg: const Color(0xFFB2EBF2),
+          tagFg: const Color(0xFF00838F),
+          unlockedIcon: Icons.diamond_outlined,
+          lockIconColor: const Color(0xFF0097A7),
         );
       case 'Elite Star':
         return _TierStyle(
           cardBg: const Color(0xFFFCE4EC),
           borderColor: const Color(0xFFF8BBD0),
-          iconBg: const Color(0xFFFCE4EC),
+          iconBg: const Color(0xFFF8BBD0),
           iconFg: const Color(0xFFEC407A),
           iconBorder: const Color(0xFFF48FB1),
           titleColor: const Color(0xFFAD1457),
           mutedIconColor: const Color(0xFFF06292),
           barBg: const Color(0xFFF8BBD0),
+          barFill: const Color(0xFFE91E63),
           tagBg: const Color(0xFFF8BBD0),
-          tagFg: const Color(0xFFC2185B),
-          icon: Icons.local_fire_department_outlined,
+          tagFg: const Color(0xFFAD1457),
+          unlockedIcon: Icons.local_fire_department_outlined,
+          lockIconColor: const Color(0xFFC2185B),
         );
       default:
         return _TierStyle(
@@ -843,9 +974,11 @@ class _TierStyle {
           titleColor: const Color(0xFF37474F),
           mutedIconColor: const Color(0xFF90A4AE),
           barBg: const Color(0xFFECEFF1),
+          barFill: _kBrandBlue,
           tagBg: const Color(0xFFECEFF1),
           tagFg: const Color(0xFF546E7A),
-          icon: Icons.star_outline_rounded,
+          unlockedIcon: Icons.star_rounded,
+          lockIconColor: const Color(0xFF78909C),
         );
     }
   }
@@ -858,41 +991,57 @@ class _ProTipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0),
+        color: const Color(0xFFFFEFD5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFE0B2)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFFFF8F00)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.achievementsProTipTitle,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFFE65100),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.achievementsProTipBody,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF5D4037),
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
+        border: Border.all(color: const Color(0xFFFFCC80)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 1),
+              child: Icon(
+                Icons.lightbulb_rounded,
+                size: 26,
+                color: Color(0xFF212121),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF4E342E),
+                    height: 1.4,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '${l10n.achievementsProTipTitle} ',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFBF360C),
+                      ),
+                    ),
+                    TextSpan(
+                      text: l10n.achievementsProTipBody,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

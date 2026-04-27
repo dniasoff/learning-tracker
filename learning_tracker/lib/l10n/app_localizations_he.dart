@@ -168,7 +168,28 @@ class AppLocalizationsHe extends AppLocalizations {
   String get achievementsAcrossAllTracks => 'בכל המסלולים שלך.';
 
   @override
-  String get achievementsTrackSection => 'מסלול';
+  String get achievementsEncouragement => 'המשך ככה, מצוין!';
+
+  @override
+  String achievementsRewardsFraction(int unlocked, int total) {
+    return '$unlocked / $total';
+  }
+
+  @override
+  String get achievementsRewardsLabelWord => 'פרסים';
+
+  @override
+  String achievementsMilestonePoints(String points) {
+    return '$points נק׳';
+  }
+
+  @override
+  String achievementsProgressPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get achievementsTrackSection => 'בחירת מסלול';
 
   @override
   String get achievementsAllTracks => 'כל המסלולים';

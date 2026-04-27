@@ -168,7 +168,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementsAcrossAllTracks => 'Across all your tracks.';
 
   @override
-  String get achievementsTrackSection => 'TRACK';
+  String get achievementsEncouragement => 'Keep it up, you\'re doing great!';
+
+  @override
+  String achievementsRewardsFraction(int unlocked, int total) {
+    return '$unlocked / $total';
+  }
+
+  @override
+  String get achievementsRewardsLabelWord => 'Rewards';
+
+  @override
+  String achievementsMilestonePoints(String points) {
+    return '$points PTS';
+  }
+
+  @override
+  String achievementsProgressPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get achievementsTrackSection => 'TRACK SELECTION';
 
   @override
   String get achievementsAllTracks => 'All Tracks';

@@ -392,10 +392,40 @@ abstract class AppLocalizations {
   /// **'Across all your tracks.'**
   String get achievementsAcrossAllTracks;
 
+  /// No description provided for @achievementsEncouragement.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it up, you\'re doing great!'**
+  String get achievementsEncouragement;
+
+  /// No description provided for @achievementsRewardsFraction.
+  ///
+  /// In en, this message translates to:
+  /// **'{unlocked} / {total}'**
+  String achievementsRewardsFraction(int unlocked, int total);
+
+  /// No description provided for @achievementsRewardsLabelWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards'**
+  String get achievementsRewardsLabelWord;
+
+  /// No description provided for @achievementsMilestonePoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} PTS'**
+  String achievementsMilestonePoints(String points);
+
+  /// No description provided for @achievementsProgressPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}%'**
+  String achievementsProgressPercent(int percent);
+
   /// No description provided for @achievementsTrackSection.
   ///
   /// In en, this message translates to:
-  /// **'TRACK'**
+  /// **'TRACK SELECTION'**
   String get achievementsTrackSection;
 
   /// No description provided for @achievementsAllTracks.

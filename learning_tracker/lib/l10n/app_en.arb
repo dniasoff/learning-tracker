@@ -80,7 +80,28 @@
     }
   },
   "achievementsAcrossAllTracks": "Across all your tracks.",
-  "achievementsTrackSection": "TRACK",
+  "achievementsEncouragement": "Keep it up, you're doing great!",
+  "achievementsRewardsFraction": "{unlocked} / {total}",
+  "@achievementsRewardsFraction": {
+    "placeholders": {
+      "unlocked": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "achievementsRewardsLabelWord": "Rewards",
+  "achievementsMilestonePoints": "{points} PTS",
+  "@achievementsMilestonePoints": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
+  "achievementsProgressPercent": "{percent}%",
+  "@achievementsProgressPercent": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "achievementsTrackSection": "TRACK SELECTION",
   "achievementsAllTracks": "All Tracks",
   "achievementsStatusUnlocked": "Unlocked!",
   "achievementsStatusComingSoon": "Coming soon!",
