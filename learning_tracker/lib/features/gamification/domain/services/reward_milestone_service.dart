@@ -212,9 +212,33 @@ class RewardMilestoneService {
     return row.read(totalExpr) ?? 0;
   }
 
+  /// True when this track is a **programmed** (yeshiva cycle) or **self-paced**
+  /// (has a learning goal) track. Momentum-only "browse" tracks — and lifetime
+  /// learning (ledger only, no completions) — do not count toward reward points.
+  Future<bool> trackCountsTowardRewardPoints(int trackId) async {
+    final track = await _database.trackDao.getTrackById(trackId);
+    if (track == null) return false;
+
+    final program = await _database.profileProgramDao
+        .getProgramForProfileAndCurriculum(profileId, track.curriculumId);
+    if (program != null) return true;
+
+    final goal = await _database.goalDao.getGoalByTrack(trackId);
+    return goal != null;
+  }
+
+  /// Points total used for reward milestones: zero when [trackCountsTowardRewardPoints] is false.
+  Future<int> getTrackPointsTotalForRewards(int trackId) async {
+    if (!await trackCountsTowardRewardPoints(trackId)) return 0;
+    return getTrackPointsTotal(trackId);
+  }
+
   /// Unlock any enabled milestones crossed by the track's current points.
   Future<List<RewardUnlockRecord>> evaluateUnlocksForTrack(int trackId) async {
-    final trackPoints = await getTrackPointsTotal(trackId);
+    if (!await trackCountsTowardRewardPoints(trackId)) {
+      return const [];
+    }
+    final trackPoints = await getTrackPointsTotalForRewards(trackId);
     final milestones = await getMilestonesForTrack(trackId);
     if (milestones.isEmpty) return const [];
 

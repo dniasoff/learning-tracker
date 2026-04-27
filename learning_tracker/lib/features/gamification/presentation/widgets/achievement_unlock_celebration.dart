@@ -5,13 +5,37 @@ import 'dart:math';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+CurriculumId? _curriculumForStorageKey(String key) {
+  for (final c in CurriculumId.values) {
+    if (c.storageKey == key) return c;
+  }
+  return null;
+}
+
+Future<String> _resolveTrackLabel(
+  WidgetRef ref,
+  String languageCode,
+  int trackId,
+) async {
+  final db = ref.read(userDatabaseProvider);
+  final track = await db.trackDao.getTrackById(trackId);
+  if (track == null) return '';
+  final c = _curriculumForStorageKey(track.curriculumId);
+  if (c != null) {
+    return languageCode == 'he' ? c.displayNameHe : c.displayNameEn;
+  }
+  return track.curriculumId;
+}
 
 /// Full-screen confetti + dialog when a reward milestone is newly unlocked.
 class AchievementUnlockCelebration {
@@ -62,20 +86,23 @@ class AchievementUnlockCelebration {
     final service = RewardMilestoneService(db, profileId: profileId);
     final unlocks = await service.getAllUnlocks();
 
-    var milestoneTitle = '';
+    RewardUnlockRecord? picked;
     for (final u in unlocks) {
       if (fresh.contains(u.milestoneId)) {
-        milestoneTitle = u.title;
+        picked = u;
         break;
       }
     }
-    if (milestoneTitle.isEmpty) {
-      milestoneTitle = unlockedRows
-          .firstWhere((r) => fresh.contains(r.milestone.id))
-          .milestone
-          .title;
-    }
+    final row = unlockedRows.firstWhere((r) => fresh.contains(r.milestone.id));
+    final milestoneTitle = picked?.title ?? row.milestone.title;
 
+    if (!context.mounted) return;
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final trackLabel = await _resolveTrackLabel(
+      ref,
+      languageCode,
+      picked?.trackId ?? row.trackId,
+    );
     if (!context.mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
@@ -102,6 +129,7 @@ class AchievementUnlockCelebration {
           return _UnlockPartyDialog(
             displayName: displayName,
             milestoneTitle: milestoneTitle,
+            trackLabel: trackLabel,
             l10n: l10n,
           );
         },
@@ -131,11 +159,13 @@ class _UnlockPartyDialog extends StatefulWidget {
   const _UnlockPartyDialog({
     required this.displayName,
     required this.milestoneTitle,
+    required this.trackLabel,
     required this.l10n,
   });
 
   final String displayName;
   final String milestoneTitle;
+  final String trackLabel;
   final AppLocalizations l10n;
 
   @override
@@ -145,6 +175,7 @@ class _UnlockPartyDialog extends StatefulWidget {
 class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
   late final ConfettiController _burstCenter;
   late final ConfettiController _shower;
+  Timer? _autoClose;
 
   @override
   void initState() {
@@ -157,10 +188,14 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
       _burstCenter.play();
       _shower.play();
     });
+    _autoClose = Timer(const Duration(seconds: 5), () {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   @override
   void dispose() {
+    _autoClose?.cancel();
     _burstCenter.stop();
     _shower.stop();
     _burstCenter.dispose();
@@ -267,6 +302,7 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
                           widget.l10n.achievementsUnlockPartyMessage(
                             widget.displayName,
                             widget.milestoneTitle,
+                            widget.trackLabel,
                           ),
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleMedium?.copyWith(

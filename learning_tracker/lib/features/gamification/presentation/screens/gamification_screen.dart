@@ -14,8 +14,6 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/achi
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -277,63 +275,27 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
   }
 }
 
-class _AchievementsHeader extends ConsumerWidget {
+class _AchievementsHeader extends StatelessWidget {
   const _AchievementsHeader();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final profileAsync = ref.watch(selectedProfileProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      child: Row(
-        children: [
-          profileAsync.when(
-            data: (p) => ProfileAvatar(
-              avatarIndex: p?.avatarIndex ?? 0,
-              radius: 20,
-            ),
-            loading: () => const CircleAvatar(
-              radius: 20,
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-            error: (_, __) => const ProfileAvatar(avatarIndex: 0, radius: 20),
+      child: Center(
+        child: Text(
+          l10n.myAchievementsTitle,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+            color: const Color(0xFF1A1A1A),
           ),
-          Expanded(
-            child: Text(
-              l10n.myAchievementsTitle,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
-                color: const Color(0xFF1A1A1A),
-              ),
-            ),
-          ),
-          Material(
-            color: _kBrandBlue,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: () {},
-              customBorder: const CircleBorder(),
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(
-                  Icons.star_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

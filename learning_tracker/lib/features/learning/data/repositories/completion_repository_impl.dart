@@ -101,8 +101,16 @@ class CompletionRepositoryImpl implements CompletionRepository {
         trackType: request.trackType,
       );
 
-      // 4. Calculate points for this stage
-      final points = isChildProfile
+      // 4. Calculate points for this stage (child only; programmed or self-paced
+      //    tracks with a goal — not momentum-only / browse tracks.)
+      final rewardService = RewardMilestoneService(
+        _database,
+        profileId: _activeProfileId,
+      );
+      final eligibleForRewards = await rewardService.trackCountsTowardRewardPoints(
+        trackId,
+      );
+      final points = isChildProfile && eligibleForRewards
           ? await _calculatePoints(
               curriculumId: request.curriculumId,
               stageOrder: request.stageId,
@@ -235,7 +243,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
       trackType: request.trackType,
     );
 
-    final points = isChildProfile
+    final rewardService = RewardMilestoneService(
+      _database,
+      profileId: _activeProfileId,
+    );
+    final eligibleForRewards = await rewardService.trackCountsTowardRewardPoints(
+      trackId,
+    );
+    final points = isChildProfile && eligibleForRewards
         ? await _calculatePoints(
             curriculumId: request.curriculumId,
             stageOrder: request.stageId,

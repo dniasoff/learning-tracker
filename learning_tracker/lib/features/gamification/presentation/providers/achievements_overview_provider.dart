@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -74,75 +75,82 @@ String _trackLabelEn(CurriculumId? c, String rawKey) {
   return rawKey;
 }
 
-final achievementsOverviewProvider =
-    FutureProvider<AchievementsOverview>((ref) async {
-      final db = ref.watch(userDatabaseProvider);
-      final profileId = ref.watch(activeProfileIdProvider);
-      final service = RewardMilestoneService(db, profileId: profileId);
-      final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
+final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
+  ref,
+) async {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final service = RewardMilestoneService(db, profileId: profileId);
+  final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
+  final rewardTracks = <CurriculumTrack>[];
+  for (final track in tracks) {
+    if (await service.trackCountsTowardRewardPoints(track.id)) {
+      rewardTracks.add(track);
+    }
+  }
 
-      for (final track in tracks) {
-        await service.ensureDefaultsForTrack(track.id);
-        await service.evaluateUnlocksForTrack(track.id);
+  for (final track in rewardTracks) {
+    await service.ensureDefaultsForTrack(track.id);
+    await service.evaluateUnlocksForTrack(track.id);
+  }
+
+  final unlocks = await service.getAllUnlocks();
+  final unlockedIds = unlocks.map((u) => u.milestoneId).toSet();
+
+  final rows = <AchievementRowVm>[];
+  final filterOptions = <AchievementTrackFilterVm>[];
+
+  for (final track in rewardTracks) {
+    final curriculum = _curriculumForStorageKey(track.curriculumId);
+    final label = _trackLabelEn(curriculum, track.curriculumId);
+    filterOptions.add(
+      AchievementTrackFilterVm(
+        trackId: track.id,
+        curriculumId: curriculum,
+        sortLabel: label,
+      ),
+    );
+
+    final milestones = await service.getMilestonesForTrack(track.id);
+    final enabled = milestones.where((m) => m.isEnabled).toList()
+      ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
+
+    final trackPoints = await service.getTrackPointsTotalForRewards(track.id);
+
+    RewardMilestone? firstLocked;
+    for (final m in enabled) {
+      if (!unlockedIds.contains(m.id)) {
+        firstLocked = m;
+        break;
       }
+    }
 
-      final unlocks = await service.getAllUnlocks();
-      final unlockedIds = unlocks.map((u) => u.milestoneId).toSet();
-
-      final rows = <AchievementRowVm>[];
-      final filterOptions = <AchievementTrackFilterVm>[];
-
-      for (final track in tracks) {
-        final curriculum = _curriculumForStorageKey(track.curriculumId);
-        final label = _trackLabelEn(curriculum, track.curriculumId);
-        filterOptions.add(
-          AchievementTrackFilterVm(
-            trackId: track.id,
-            curriculumId: curriculum,
-            sortLabel: label,
-          ),
-        );
-
-        final milestones = await service.getMilestonesForTrack(track.id);
-        final enabled = milestones.where((m) => m.isEnabled).toList()
-          ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
-
-        final trackPoints = await service.getTrackPointsTotal(track.id);
-
-        RewardMilestone? firstLocked;
-        for (final m in enabled) {
-          if (!unlockedIds.contains(m.id)) {
-            firstLocked = m;
-            break;
-          }
-        }
-
-        for (final m in enabled) {
-          final unlocked = unlockedIds.contains(m.id);
-          final isNext = !unlocked && firstLocked?.id == m.id;
-          rows.add(
-            AchievementRowVm(
-              trackId: track.id,
-              trackLabel: label,
-              curriculumId: curriculum,
-              milestone: m,
-              trackPoints: trackPoints,
-              isUnlocked: unlocked,
-              isNextUp: isNext,
-              isLegendTier: m.title.trim() == 'Legend Star',
-            ),
-          );
-        }
-      }
-
-      filterOptions.sort((a, b) => a.sortLabel.compareTo(b.sortLabel));
-
-      final unlockedCount = rows.where((r) => r.isUnlocked).length;
-
-      return AchievementsOverview(
-        rows: rows,
-        unlockedCount: unlockedCount,
-        totalMilestones: rows.length,
-        trackFilterOptions: filterOptions,
+    for (final m in enabled) {
+      final unlocked = unlockedIds.contains(m.id);
+      final isNext = !unlocked && firstLocked?.id == m.id;
+      rows.add(
+        AchievementRowVm(
+          trackId: track.id,
+          trackLabel: label,
+          curriculumId: curriculum,
+          milestone: m,
+          trackPoints: trackPoints,
+          isUnlocked: unlocked,
+          isNextUp: isNext,
+          isLegendTier: m.title.trim() == 'Legend Star',
+        ),
       );
-    });
+    }
+  }
+
+  filterOptions.sort((a, b) => a.sortLabel.compareTo(b.sortLabel));
+
+  final unlockedCount = rows.where((r) => r.isUnlocked).length;
+
+  return AchievementsOverview(
+    rows: rows,
+    unlockedCount: unlockedCount,
+    totalMilestones: rows.length,
+    trackFilterOptions: filterOptions,
+  );
+});
