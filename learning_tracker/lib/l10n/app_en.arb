@@ -116,6 +116,16 @@
   "achievementsProTipTitle": "Pro Tip!",
   "achievementsProTipBody": "Keep learning on your tracks to climb the reward ladder.",
   "achievementsActivityAndPoints": "Activity & points",
+  "achievementsUnlockPartyTitle": "Wow! Amazing!",
+  "achievementsUnlockPartyMessage": "Congratulations, {name}! You unlocked {milestone} — keep going!",
+  "@achievementsUnlockPartyMessage": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "milestone": {"type": "String"}
+    }
+  },
+  "achievementsUnlockPartyButton": "Yay! Let's go!",
+  "achievementsUnlockPartyNameFallback": "friend",
   "rewardCatalog": "Reward Catalog",
   "noRewardsConfigured": "No rewards configured yet",
   "addReward": "Add Reward",

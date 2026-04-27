@@ -89,6 +89,7 @@ dependencies:
 
   # Typography (Playfair Display headlines + Inter body for Mesorah Heritage theme)
   google_fonts: ^6.2.1
+  confetti: ^0.8.0
 
 dev_dependencies:
   flutter_test:

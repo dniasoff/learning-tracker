@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
@@ -9,6 +10,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -68,6 +70,17 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    ref.listen(achievementsOverviewProvider, (previous, next) {
+      next.whenData((overview) {
+        unawaited(
+          AchievementUnlockCelebration.showIfNeeded(
+            ref: ref,
+            context: context,
+            overview: overview,
+          ),
+        );
+      });
+    });
     final achievementsAsync = ref.watch(achievementsOverviewProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);

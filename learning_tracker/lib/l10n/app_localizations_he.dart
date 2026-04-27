@@ -222,6 +222,20 @@ class AppLocalizationsHe extends AppLocalizations {
   String get achievementsActivityAndPoints => 'פעילות ונקודות';
 
   @override
+  String get achievementsUnlockPartyTitle => 'וואו! איזה כיף!';
+
+  @override
+  String achievementsUnlockPartyMessage(String name, String milestone) {
+    return 'כל הכבוד, $name! פתחת את $milestone — המשך ככה!';
+  }
+
+  @override
+  String get achievementsUnlockPartyButton => 'יאללה! בואו נמשיך';
+
+  @override
+  String get achievementsUnlockPartyNameFallback => 'חבר';
+
+  @override
   String get rewardCatalog => 'קטלוג פרסים';
 
   @override

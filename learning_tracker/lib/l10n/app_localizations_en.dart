@@ -222,6 +222,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementsActivityAndPoints => 'Activity & points';
 
   @override
+  String get achievementsUnlockPartyTitle => 'Wow! Amazing!';
+
+  @override
+  String achievementsUnlockPartyMessage(String name, String milestone) {
+    return 'Congratulations, $name! You unlocked $milestone — keep going!';
+  }
+
+  @override
+  String get achievementsUnlockPartyButton => 'Yay! Let\'s go!';
+
+  @override
+  String get achievementsUnlockPartyNameFallback => 'friend';
+
+  @override
   String get rewardCatalog => 'Reward Catalog';
 
   @override

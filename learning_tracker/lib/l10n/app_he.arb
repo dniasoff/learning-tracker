@@ -116,6 +116,16 @@
   "achievementsProTipTitle": "טיפ!",
   "achievementsProTipBody": "המשיכו ללמוד במסלולים כדי לטפס בסולם הפרסים.",
   "achievementsActivityAndPoints": "פעילות ונקודות",
+  "achievementsUnlockPartyTitle": "וואו! איזה כיף!",
+  "achievementsUnlockPartyMessage": "כל הכבוד, {name}! פתחת את {milestone} — המשך ככה!",
+  "@achievementsUnlockPartyMessage": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "milestone": {"type": "String"}
+    }
+  },
+  "achievementsUnlockPartyButton": "יאללה! בואו נמשיך",
+  "achievementsUnlockPartyNameFallback": "חבר",
   "rewardCatalog": "קטלוג פרסים",
   "noRewardsConfigured": "עדיין לא הוגדרו פרסים",
   "addReward": "הוסף פרס",

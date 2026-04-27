@@ -482,6 +482,30 @@ abstract class AppLocalizations {
   /// **'Activity & points'**
   String get achievementsActivityAndPoints;
 
+  /// No description provided for @achievementsUnlockPartyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wow! Amazing!'**
+  String get achievementsUnlockPartyTitle;
+
+  /// No description provided for @achievementsUnlockPartyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations, {name}! You unlocked {milestone} — keep going!'**
+  String achievementsUnlockPartyMessage(String name, String milestone);
+
+  /// No description provided for @achievementsUnlockPartyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Yay! Let\'s go!'**
+  String get achievementsUnlockPartyButton;
+
+  /// No description provided for @achievementsUnlockPartyNameFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'friend'**
+  String get achievementsUnlockPartyNameFallback;
+
   /// No description provided for @rewardCatalog.
   ///
   /// In en, this message translates to:
