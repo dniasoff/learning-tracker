@@ -10,12 +10,14 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Configuration hub shown to a parent when their child profile is active.
 ///
-/// Surfaces parent-only controls — managing tracks for the child, tuning
-/// reward points, backup/sync, and lifetime learning entries.
+/// Includes the same profile header as Settings (avatar, name, account email;
+/// tap opens profile picker). Surfaces parent-only controls: managing tracks,
+/// point configuration, backup/sync, and lifetime learning entries.
 @RoutePage()
 class ParentSettingsScreen extends ConsumerWidget {
   const ParentSettingsScreen({super.key});
@@ -37,9 +39,6 @@ class ParentSettingsScreen extends ConsumerWidget {
     final activeProfile = profilesAsync.asData?.value
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
-    final initials = _initialsFromName(
-      activeProfile?.displayName ?? user?.displayName ?? user?.email ?? 'U',
-    );
 
     return Scaffold(
       backgroundColor: _pageBg,
@@ -62,22 +61,6 @@ class ParentSettingsScreen extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: AppTheme.brandBlueSoft,
-              child: Text(
-                initials,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: AppTheme.brandBlueDeep,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -85,6 +68,16 @@ class ParentSettingsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => context.pushRoute(const ProfilePickerRoute()),
+                  child: UserProfileHeaderCard(
+                    user: user,
+                    activeProfile: activeProfile,
+                    surface: UserProfileHeaderSurface.parent,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 _WhitePanel(
                   child: Column(
                     children: [
@@ -246,18 +239,6 @@ class ParentSettingsScreen extends ConsumerWidget {
       endIndent: 16,
       color: Color(0xFFE9ECF2),
     );
-  }
-
-  static String _initialsFromName(String raw) {
-    final parts = raw.trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty);
-    final list = parts.toList();
-    if (list.isEmpty) return 'U';
-    if (list.length == 1) {
-      final s = list.first;
-      if (s.length >= 2) return s.substring(0, 2).toUpperCase();
-      return s.substring(0, 1).toUpperCase();
-    }
-    return '${list.first[0]}${list[1][0]}'.toUpperCase();
   }
 }
 

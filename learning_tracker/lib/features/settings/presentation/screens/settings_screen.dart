@@ -7,9 +7,6 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
@@ -20,6 +17,7 @@ import 'package:learning_tracker/features/settings/presentation/utils/account_ac
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // TODO(DNI-105): Replace with dynamic version from package_info_plus
@@ -52,15 +50,18 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => context.pushRoute(const ProfilePickerRoute()),
-              child: _UserProfileSection(
-                user: user,
-                activeProfile: activeProfile,
+            if (!isChildProfile) ...[
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.pushRoute(const ProfilePickerRoute()),
+                child: UserProfileHeaderCard(
+                  user: user,
+                  activeProfile: activeProfile,
+                  surface: UserProfileHeaderSurface.settings,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
             if (!isChildProfile) ...[
               _SectionHeader(title: l10n.sectionTracks),
               const SizedBox(height: 10),
@@ -433,275 +434,6 @@ class _SettingsTile extends StatelessWidget {
 Widget _tileDivider(ThemeData theme) =>
     Divider(height: 1, indent: 62, endIndent: 14, color: theme.dividerColor);
 
-/// Displays user profile info with avatar, name, email, and badge.
-class _UserProfileSection extends ConsumerStatefulWidget {
-  const _UserProfileSection({required this.user, required this.activeProfile});
-
-  final User? user;
-  final ProfileModel? activeProfile;
-
-  @override
-  ConsumerState<_UserProfileSection> createState() =>
-      _UserProfileSectionState();
-}
-
-class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
-  User? _user;
-
-  @override
-  void initState() {
-    super.initState();
-    _user = widget.user;
-  }
-
-  @override
-  void didUpdateWidget(covariant _UserProfileSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.user != oldWidget.user) {
-      _user = widget.user;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    final user = _user;
-
-    // Local-born fallback: when no Firebase user, render from the
-    // auth-state user (populated by LocalAuthService sign-in/sign-up).
-    if (user == null) {
-      final authState = ref.watch(authStateProvider);
-      if (!authState.isSignedIn || !authState.isLocalBorn) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Row(
-            children: [
-              const Icon(Icons.person_outline, size: 48),
-              const SizedBox(width: 16),
-              Text(l10n.notSignedIn),
-            ],
-          ),
-        );
-      }
-      return _LocalBornProfileRow(
-        theme: theme,
-        authUser: authState.currentUser!,
-      );
-    }
-
-    final activeProfileId = ref.watch(activeProfileIdProvider);
-    final profilesAsync = ref.watch(profileListStreamProvider);
-    final activeProfile =
-        widget.activeProfile ??
-        profilesAsync.asData?.value
-            .where((p) => p.id == activeProfileId)
-            .firstOrNull;
-
-    final displayName =
-        activeProfile?.displayName ??
-        user.displayName ??
-        user.email?.split('@').first ??
-        l10n.userFallbackDisplayName;
-    final profileInitial = _profileInitial(displayName);
-
-    return _SurfaceCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Row(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFCFD8EA),
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Container(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                    alignment: Alignment.center,
-                    child: Text(
-                      profileInitial,
-                      maxLines: 1,
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontSize: 27,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: -2,
-                  left: -2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.error,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      l10n.proBadge,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        displayName,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 25,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.12,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          l10n.selfLearnerBadge,
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (user.email != null)
-                    Text(
-                      user.email!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF8E97A6),
-                        fontSize: 16,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  const _NoBackupInlineText(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Profile row for local-born accounts. Mirrors the layout of the
-/// Firebase-user row but reads from [AuthUser] (no Firebase user
-/// exists for local-born accounts) and hides the edit-name button
-/// since that path goes through Firebase.
-class _LocalBornProfileRow extends ConsumerWidget {
-  const _LocalBornProfileRow({required this.theme, required this.authUser});
-
-  final ThemeData theme;
-  final AuthUser authUser;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeProfileId = ref.watch(activeProfileIdProvider);
-    final profilesAsync = ref.watch(profileListStreamProvider);
-    final activeProfile = profilesAsync.asData?.value
-        .where((p) => p.id == activeProfileId)
-        .firstOrNull;
-
-    final displayName =
-        activeProfile?.displayName ??
-        (authUser.displayName.isNotEmpty
-            ? authUser.displayName
-            : authUser.email.split('@').first);
-    final profileInitial = _profileInitial(displayName);
-
-    return _SurfaceCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    profileInitial,
-                    maxLines: 1,
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontSize: 27,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    displayName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 25,
-                    ),
-                  ),
-                  Text(
-                    authUser.email,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const _NoBackupInlineText(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Parental controls section — only rendered when the signed-in user is in
 /// child mode. Surfaces tiles to enter parent mode and manage the parent PIN.
 ///
@@ -895,34 +627,4 @@ class _LanguageTile extends ConsumerWidget {
       },
     );
   }
-}
-
-class _NoBackupInlineText extends StatelessWidget {
-  const _NoBackupInlineText();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.cloud_off, size: 12, color: Color(0xFFCE8A41)),
-        const SizedBox(width: 4),
-        Text(
-          AppLocalizations.of(context)!.noBackup,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: const Color(0xFFCE8A41),
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-String _profileInitial(String fullName) {
-  final normalized = fullName.trim();
-  if (normalized.isEmpty) return 'U';
-  return normalized.substring(0, 1).toUpperCase();
 }
