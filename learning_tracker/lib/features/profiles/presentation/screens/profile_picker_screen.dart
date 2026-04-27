@@ -49,7 +49,8 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           top: false,
           child: profilesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text(l10n.errorWithMessage(e.toString()))),
+            error: (e, s) =>
+                Center(child: Text(l10n.errorWithMessage(e.toString()))),
             data: (profiles) => _buildBody(context, profiles),
           ),
         ),
@@ -60,81 +61,66 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
   Widget _buildBody(BuildContext context, List<ProfileModel> profiles) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        Expanded(
-          child: SafeArea(
-            bottom: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.profilePickerTitle,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.brandBlueDeep,
-                      letterSpacing: -0.8,
-                      height: 1.03,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    l10n.profilePickerSubtitle,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      fontWeight: FontWeight.w500,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.71,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                        ),
-                    itemCount: profiles.length + 1,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemBuilder: (_, index) {
-                      if (index == profiles.length) {
-                        return _AddProfileCard(
-                          onTap: () => _showAddDialog(profiles.length),
-                          isDisabled: profiles.length >= 10,
-                        );
-                      }
-                      final profile = profiles[index];
-                      return _ProfileCard(
-                        profile: profile,
-                        onTap: _isSelectingProfile
-                            ? () {}
-                            : () => unawaited(_selectProfile(profile.id)),
-                        onLongPress: () =>
-                            _showManageSheet(profile, profiles.length),
-                      );
-                    },
-                  ),
-                ],
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              l10n.profilePickerTitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontSize: 48,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.brandBlueDeep,
+                letterSpacing: -0.8,
+                height: 1.03,
               ),
             ),
-          ),
+            const SizedBox(height: 10),
+            Text(
+              l10n.profilePickerSubtitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: AppTheme.brandInkMuted,
+                fontWeight: FontWeight.w500,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 20),
+            GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.71,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+              ),
+              itemCount: profiles.length + 1,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (_, index) {
+                if (index == profiles.length) {
+                  return _AddProfileCard(
+                    onTap: () => _showAddDialog(profiles.length),
+                    isDisabled: profiles.length >= 10,
+                  );
+                }
+                final profile = profiles[index];
+                return _ProfileCard(
+                  profile: profile,
+                  onTap: _isSelectingProfile
+                      ? () {}
+                      : () => unawaited(_selectProfile(profile.id)),
+                  onLongPress: () => _showManageSheet(profile, profiles.length),
+                );
+              },
+            ),
+          ],
         ),
-        const SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 22),
-            child: _PickerBottomBar(),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -185,11 +171,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             }
             try {
               final exists = await profileDao.profileExistsByName(1, n);
-              set(
-                () => err = exists
-                    ? l10n.profileNameAlreadyExists
-                    : null,
-              );
+              set(() => err = exists ? l10n.profileNameAlreadyExists : null);
             } catch (_) {
               set(() => err = null);
             }
@@ -434,17 +416,15 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.profileNameTaken(result.n)),
-          ),
+          SnackBar(content: Text(l10n.profileNameTaken(result.n))),
         );
       }
     } on MaxProfilesExceededException {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.maxProfilesReached)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.maxProfilesReached)));
       }
     }
   }
@@ -457,33 +437,33 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;
         return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: Text(l10n.renameAction),
-              onTap: () => Navigator.pop(ctx, 'rename'),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete,
-                color: Theme.of(ctx).colorScheme.error,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: Text(l10n.renameAction),
+                onTap: () => Navigator.pop(ctx, 'rename'),
               ),
-              title: Text(
-                l10n.delete,
-                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+              ListTile(
+                leading: Icon(
+                  Icons.delete,
+                  color: Theme.of(ctx).colorScheme.error,
+                ),
+                title: Text(
+                  l10n.delete,
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                ),
+                enabled: profileCount > 1,
+                subtitle: profileCount <= 1
+                    ? Text(l10n.mustKeepOneProfile)
+                    : null,
+                onTap: profileCount > 1
+                    ? () => Navigator.pop(ctx, 'delete')
+                    : null,
               ),
-              enabled: profileCount > 1,
-              subtitle: profileCount <= 1
-                  ? Text(l10n.mustKeepOneProfile)
-                  : null,
-              onTap: profileCount > 1
-                  ? () => Navigator.pop(ctx, 'delete')
-                  : null,
-            ),
-          ],
-        ),
+            ],
+          ),
         );
       },
     );
@@ -521,11 +501,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 n,
                 excludeId: profile.id,
               );
-              set(
-                () => err = exists
-                    ? l10n.profileNameAlreadyExists
-                    : null,
-              );
+              set(() => err = exists ? l10n.profileNameAlreadyExists : null);
             } catch (_) {
               set(() => err = null);
             }
@@ -571,9 +547,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     } on DuplicateProfileNameException {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileNameTaken(name))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profileNameTaken(name))));
       }
     }
   }
@@ -589,23 +565,21 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;
         return AlertDialog(
-        title: Text(l10n.deleteProfileTitle),
-        content: Text(
-          l10n.deleteProfileConfirm(profile.displayName),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
+          title: Text(l10n.deleteProfileTitle),
+          content: Text(l10n.deleteProfileConfirm(profile.displayName)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.delete),
-          ),
-        ],
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.delete),
+            ),
+          ],
         );
       },
     );
@@ -620,9 +594,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     } on LastProfileException {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.cannotDeleteOnlyProfile)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.cannotDeleteOnlyProfile)));
       }
     }
   }
@@ -687,7 +661,9 @@ class _ProfileCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      isChild ? l10n.profileBadgeChildMode : l10n.profileBadgeAdultMode,
+                      isChild
+                          ? l10n.profileBadgeChildMode
+                          : l10n.profileBadgeAdultMode,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -966,7 +942,9 @@ class _AddProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    isDisabled ? l10n.maxProfilesLabel : l10n.addProfileCardTitle,
+                    isDisabled
+                        ? l10n.maxProfilesLabel
+                        : l10n.addProfileCardTitle,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       color: AppTheme.brandInk,
                       fontWeight: FontWeight.w700,
@@ -976,7 +954,9 @@ class _AddProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isDisabled ? l10n.maxProfilesSubtitle : l10n.createNewLearner,
+                    isDisabled
+                        ? l10n.maxProfilesSubtitle
+                        : l10n.createNewLearner,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                       fontSize: 12,
@@ -990,92 +970,6 @@ class _AddProfileCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PickerBottomBar extends StatelessWidget {
-  const _PickerBottomBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.brandInk.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppTheme.brandBlueSoft.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.supervised_user_circle_rounded,
-                    color: AppTheme.brandBlueDeep,
-                    size: 20,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.profilesLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandBlueDeep,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => context.router.push(const SettingsRoute()),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.settings_rounded,
-                      color: AppTheme.brandInkMuted.withValues(alpha: 0.7),
-                      size: 20,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.settings,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted.withValues(alpha: 0.85),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
