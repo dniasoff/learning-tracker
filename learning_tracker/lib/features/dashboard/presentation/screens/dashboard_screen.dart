@@ -1401,13 +1401,13 @@ class _ActiveTrackCard extends ConsumerWidget {
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = formatFractionAsPercent(percentage);
     final profileId = ref.watch(activeProfileIdProvider);
-    final trackMetricsAsync = ref.watch(
-      trackDualProgressMetricsProvider(profileId),
+    final lifetimeSummariesAsync = ref.watch(
+      globalLifetimeCurriculaProvider(profileId),
     );
-    final lifetimeFraction = trackMetricsAsync.when(
-      data: (metrics) {
-        for (final m in metrics) {
-          if (m.trackId == track.id) return m.lifetimePercentage;
+    final lifetimeFraction = lifetimeSummariesAsync.when(
+      data: (summaries) {
+        for (final s in summaries) {
+          if (s.curriculumId == curriculum) return s.percentage;
         }
         return 0.0;
       },
