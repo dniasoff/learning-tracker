@@ -32,7 +32,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: false,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandBlueDeep,
+        backgroundColor: LifetimeFolderGradients.settingsAppBar,
         foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -41,11 +41,14 @@ class LifetimeMarkingScreen extends ConsumerWidget {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(gradient: LifetimeFolderGradients.pageBackground),
+        decoration: BoxDecoration(
+          gradient: LifetimeFolderGradients.settingsPageBackground,
+        ),
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
           LifetimeFolderSurface(
+            gradient: LifetimeFolderGradients.settingsCard,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -312,7 +315,7 @@ class _LifetimeCurriculumMarkingScreenState
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandBlueDeep,
+        backgroundColor: LifetimeFolderGradients.settingsAppBar,
         foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -323,7 +326,9 @@ class _LifetimeCurriculumMarkingScreenState
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(gradient: LifetimeFolderGradients.pageBackground),
+        decoration: BoxDecoration(
+          gradient: LifetimeFolderGradients.settingsPageBackground,
+        ),
         child: contentAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -348,6 +353,7 @@ class _LifetimeCurriculumMarkingScreenState
                 children: [
                   Expanded(
                     child: LifetimeFolderSurface(
+                      gradient: LifetimeFolderGradients.settingsCard,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -492,7 +498,7 @@ class _LifetimeCurriculumMarkingScreenState
                                 child: FilledButton(
                                   style: FilledButton.styleFrom(
                                     backgroundColor: Colors.white,
-                                    foregroundColor: AppTheme.brandBlue,
+                                    foregroundColor: AppTheme.brandGoldDeep,
                                   ),
                                   onPressed: _saving || _selections.isEmpty
                                       ? null
@@ -505,7 +511,7 @@ class _LifetimeCurriculumMarkingScreenState
                                           height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            color: AppTheme.brandBlue,
+                                            color: AppTheme.brandGoldDeep,
                                           ),
                                         )
                                       : Text(l10n.save),

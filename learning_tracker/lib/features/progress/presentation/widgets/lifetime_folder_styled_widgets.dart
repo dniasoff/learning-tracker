@@ -3,7 +3,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
-/// Blue gradient used by Learning lifetime / mark-what-you-learned flows.
+/// Gradients for Learning lifetime on Progress (blue) and Settings (warm, no blue).
 class LifetimeFolderGradients {
   static LinearGradient get card {
     return const LinearGradient(
@@ -18,7 +18,7 @@ class LifetimeFolderGradients {
     );
   }
 
-  /// Full-screen soft background behind lifetime marking / progress panels.
+  /// Full-screen soft background behind lifetime panels on Progress.
   static LinearGradient get pageBackground {
     return const LinearGradient(
       begin: Alignment.topCenter,
@@ -30,14 +30,52 @@ class LifetimeFolderGradients {
       ],
     );
   }
+
+  /// App bar on Settings lifetime screens (forest charcoal, no blue).
+  static const Color settingsAppBar = Color(0xFF2C382F);
+
+  /// Settings → Add what you've learned: warm paper tone, no blue.
+  static LinearGradient get settingsPageBackground {
+    return const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color(0xFFEDE8E1),
+        Color(0xFFF4F1EA),
+        Color(0xFFFAF8F5),
+      ],
+    );
+  }
+
+  /// Settings lifetime card: forest / sage (matches growth metaphor, no blue).
+  static LinearGradient get settingsCard {
+    return const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF263529),
+        Color(0xFF3A5240),
+        Color(0xFF5C7560),
+      ],
+      stops: [0.0, 0.48, 1.0],
+    );
+  }
 }
 
 /// Rounded [Card] with the shared learning-lifetime look.
 class LifetimeFolderSurface extends StatelessWidget {
-  const LifetimeFolderSurface({super.key, required this.child, this.padding});
+  const LifetimeFolderSurface({
+    super.key,
+    required this.child,
+    this.padding,
+    this.gradient,
+  });
 
   final Widget child;
   final EdgeInsetsGeometry? padding;
+
+  /// When null, uses [LifetimeFolderGradients.card] (Progress lifetime tree).
+  final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +85,7 @@ class LifetimeFolderSurface extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LifetimeFolderGradients.card,
+          gradient: gradient ?? LifetimeFolderGradients.card,
         ),
         child: Padding(
           padding: padding ?? const EdgeInsets.all(16),

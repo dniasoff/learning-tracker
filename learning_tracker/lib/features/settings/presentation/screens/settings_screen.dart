@@ -84,6 +84,8 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _HebrewDateTile(theme: theme),
+                  _tileDivider(theme),
+                  _LanguagePreferenceTile(theme: theme),
                   if (!isChildProfile) ...[
                     _tileDivider(theme),
                     _SettingsTile(
@@ -113,8 +115,6 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.pushRoute(const NotificationsRoute()),
               ),
             ),
-            const SizedBox(height: 12),
-            const _SurfaceCard(child: _LanguageTile()),
             if (!isChildProfile) ...[
               const SizedBox(height: 16),
               const BackupSyncSection(),
@@ -305,6 +305,94 @@ class _HebrewDateTile extends ConsumerWidget {
               ref
                   .read(useHebrewDateProvider.notifier)
                   .setUseHebrewDate(selected.first);
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppTheme.brandBlueBright,
+              selectedForegroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFFD7DEEA)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// App language: same layout as [_HebrewDateTile] — [SegmentedButton] for en/he.
+class _LanguagePreferenceTile extends ConsumerWidget {
+  const _LanguagePreferenceTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final current = ref.watch(languageProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.brandBlueSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.language_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.language,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 19,
+                        color: const Color(0xFF1D2432),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.preferredLanguageForContent,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF929BAA),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<String>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment<String>(
+                value: 'en',
+                label: Text(supportedLanguages['en']!),
+              ),
+              ButtonSegment<String>(
+                value: 'he',
+                label: Text(supportedLanguages['he']!),
+              ),
+            ],
+            selected: {current},
+            onSelectionChanged: (selected) {
+              if (selected.isEmpty) return;
+              ref.read(languageProvider.notifier).setLanguage(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,
@@ -567,75 +655,6 @@ Future<void> _showChangePasswordFlow(
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.passwordChangedSuccessfully)),
-    );
-  }
-}
-
-class _LanguageTile extends ConsumerWidget {
-  const _LanguageTile();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final current = ref.watch(languageProvider);
-    final label = supportedLanguages[current] ?? current;
-
-    return _SettingsTile(
-      icon: Icons.language_rounded,
-      iconColor: AppTheme.brandInkMuted,
-      iconBackground: AppTheme.brandCreamSoft,
-      title: l10n.language,
-      subtitle: label,
-      onTap: () => _showLanguagePicker(context, ref, current),
-    );
-  }
-
-  void _showLanguagePicker(
-    BuildContext context,
-    WidgetRef ref,
-    String current,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (context) {
-        final theme = Theme.of(context);
-        final sheetL10n = AppLocalizations.of(context)!;
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text(
-                  sheetL10n.chooseLanguageTitle,
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Text(
-                  sheetL10n.preferredLanguageForContent,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              for (final entry in supportedLanguages.entries)
-                ListTile(
-                  title: Text(entry.value),
-                  trailing: current == entry.key
-                      ? Icon(Icons.check, color: theme.colorScheme.primary)
-                      : null,
-                  onTap: () {
-                    ref.read(languageProvider.notifier).setLanguage(entry.key);
-                    Navigator.pop(context);
-                  },
-                ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
     );
   }
 }
