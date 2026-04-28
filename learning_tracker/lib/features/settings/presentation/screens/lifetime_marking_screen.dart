@@ -37,12 +37,18 @@ class LifetimeMarkingScreen extends ConsumerWidget {
         elevation: 0,
         toolbarHeight: 56,
         centerTitle: true,
+        // Balance default leading (56px) so the title is visually centered on screen.
+        leadingWidth: 56,
+        actions: const [
+          SizedBox(width: 56, height: 56),
+        ],
         title: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.center,
           child: Text(
             l10n.addWhatYouLearned,
             textAlign: TextAlign.center,
+            maxLines: 2,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   fontSize: 26,
