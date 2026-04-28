@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
 /// Rich track row used on [TrackManagementHubScreen] and
 /// [ParentTrackManagementScreen] (same visual design).
+///
+/// Progress bar uses [TrackDualProgressMetric.lifetimePercentage] (ledger +
+/// completions within the track scope), same metric as the dashboard track
+/// rows — not the stage-cycle-only completion percentage.
 class LearningTrackCard extends ConsumerWidget {
   const LearningTrackCard({
     super.key,
@@ -34,10 +39,19 @@ class LearningTrackCard extends ConsumerWidget {
     }
     final hebrewName = curriculum?.displayNameHe ?? track.curriculumId;
     final englishName = curriculum?.displayNameEn ?? track.curriculumId;
-    final completion = curriculum == null
-        ? const AsyncData<double>(0.0)
-        : ref.watch(dashboardCompletionPercentageProvider(curriculum));
-    final progress = completion.asData?.value ?? 0.0;
+
+    final profileId = ref.watch(activeProfileIdProvider);
+    final metricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
+    final progress = metricsAsync.when(
+      data: (metrics) {
+        for (final m in metrics) {
+          if (m.trackId == track.id) return m.lifetimePercentage;
+        }
+        return 0.0;
+      },
+      loading: () => 0.0,
+      error: (_, __) => 0.0,
+    );
 
     final accent = trackAccentForType(track.trackType);
     final icon = trackTypeIconData(track.trackType);
