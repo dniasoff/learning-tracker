@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/constants/app_assets.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,10 +22,10 @@ const _kBadgeBg = Color(0xFFE8ECFF);
 const _kMysteryBg = Color(0xFFFFF3E0);
 
 /// End padding so scroll content clears the overlaid bottom CTA (not in Column flex).
-const _kIntroScrollCtaSpacer = 100.0;
+const _kIntroScrollCtaSpacer = 112.0;
 
-/// Overlaid CTA: bottom padding + 48px button (matches `_GlowingButton` height) + small gap.
-const _kIntroCtaOverlayReserve = 64.0;
+/// Overlaid CTA: bottom inset + `_GlowingButton` height + small gap.
+const _kIntroCtaOverlayReserve = 82.0;
 
 @RoutePage()
 class AppIntroScreen extends StatefulWidget {
@@ -127,7 +126,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
             Positioned(
               left: 24,
               right: 24,
-              bottom: 8,
+              bottom: 20,
               child: _GlowingButton(
                 onTap: _nextPage,
                 label: isLast ? 'Get Started' : 'Continue Journey',
@@ -152,41 +151,20 @@ class _IntroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Image.asset(
-                kAppLogoAsset,
-                height: 28,
-                fit: BoxFit.contain,
-                semanticLabel: 'Learning Tracker',
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Learning Tracker',
-                style: GoogleFonts.plusJakartaSans(
-                  color: _kNavy,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 17,
-                ),
-              ),
-            ],
-          ),
-          TextButton(
-            onPressed: onSkip,
-            style: TextButton.styleFrom(foregroundColor: AppTheme.brandInkSoft),
-            child: Text(
-              'Skip',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.brandInkSoft,
-              ),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          onPressed: onSkip,
+          style: TextButton.styleFrom(foregroundColor: AppTheme.brandInkSoft),
+          child: Text(
+            'Skip',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.brandInkSoft,
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1238,10 +1216,10 @@ class _GlowingButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 48,
+      height: 54,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(27),
           color: _kNavy,
           boxShadow: [
             BoxShadow(
@@ -1255,7 +1233,7 @@ class _GlowingButton extends StatelessWidget {
           type: MaterialType.transparency,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(27),
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1272,7 +1250,7 @@ class _GlowingButton extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.brandCreamCard,
-                          fontSize: 16,
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1281,7 +1259,7 @@ class _GlowingButton extends StatelessWidget {
                         const Icon(
                           Icons.arrow_forward_rounded,
                           color: AppTheme.brandCreamCard,
-                          size: 20,
+                          size: 22,
                         ),
                       ],
                     ],
