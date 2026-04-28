@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -157,7 +158,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
 
   Future<void> _pickGregorianDate() async {
     final now = _now();
-    final picked = await showDatePicker(
+    final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: _targetDate ?? now.add(const Duration(days: 30)),
       firstDate: now,

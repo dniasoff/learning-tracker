@@ -930,6 +930,41 @@ abstract class AppLocalizations {
   /// **'Create and edit your learning tracks'**
   String get manageTracksDetail;
 
+  /// No description provided for @addTrackGoalTapToUseDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Target pace is on — tap here to use a deadline instead'**
+  String get addTrackGoalTapToUseDeadline;
+
+  /// No description provided for @addTrackGoalTapToUsePace.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline is on — tap here to use target pace instead'**
+  String get addTrackGoalTapToUsePace;
+
+  /// No description provided for @addTrackGoalDeadlinePaceLine.
+  ///
+  /// In en, this message translates to:
+  /// **'About {items} {unit} per study day, across {studyDays} study days to finish the scope by the deadline (≈{totalItems} items).'**
+  String addTrackGoalDeadlinePaceLine(
+    int items,
+    String unit,
+    int studyDays,
+    int totalItems,
+  );
+
+  /// No description provided for @addTrackGoalDeadlineNoStudyDaysInWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'No study day in your week falls in the range to this deadline. Add study days or move the deadline later.'**
+  String get addTrackGoalDeadlineNoStudyDaysInWindow;
+
+  /// No description provided for @addTrackGoalDeadlinePaceLineLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading scope size to estimate per study day…'**
+  String get addTrackGoalDeadlinePaceLineLoading;
+
   /// No description provided for @addTrack.
   ///
   /// In en, this message translates to:

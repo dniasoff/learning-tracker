@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,7 @@ import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -23,6 +25,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/progre
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -47,6 +50,42 @@ const _dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shabbos'];
 
 /// ISO day numbers in Jewish week order.
 const _dayNumbers = [7, 1, 2, 3, 4, 5, 6];
+
+/// Inclusive count of dates in [startInclusive, endInclusive] whose weekday
+/// is a study day per [studyDays] map (same keys as kDefaultStudyDays).
+int _countStudyDaysInInclusiveMapRange(
+  Map<int, String> studyDays,
+  DateTime startInclusive,
+  DateTime endInclusive,
+) {
+  final studyWeekdays = <int>{
+    for (final e in studyDays.entries)
+      if (e.value == 'study') e.key,
+  };
+  if (studyWeekdays.isEmpty) {
+    for (var i = 1; i <= 7; i++) {
+      studyWeekdays.add(i);
+    }
+  }
+  var d = DateTime(
+    startInclusive.year,
+    startInclusive.month,
+    startInclusive.day,
+  );
+  final end = DateTime(endInclusive.year, endInclusive.month, endInclusive.day);
+  if (d.isAfter(end)) return 0;
+  var n = 0;
+  while (!d.isAfter(end)) {
+    if (studyWeekdays.contains(d.weekday)) n++;
+    d = d.add(const Duration(days: 1));
+  }
+  return n;
+}
+
+DateTime _localDateOnlyFromDt(DateTime utc) {
+  final l = utc.toLocal();
+  return DateTime(l.year, l.month, l.day);
+}
 
 /// A standalone, reusable 8-step wizard for configuring a single learning track.
 ///
@@ -946,6 +985,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     if (_state.curriculumId == null) return const SizedBox.shrink();
     return _SelfPacedGoalStep(
       curriculumId: _state.curriculumId!,
+      studyDays: _state.studyDays ?? kDefaultStudyDays,
       onComplete: _onGoalComplete,
     );
   }
@@ -2355,10 +2395,12 @@ class _StudyDaysReadOnly extends StatelessWidget {
 class _SelfPacedGoalStep extends ConsumerStatefulWidget {
   const _SelfPacedGoalStep({
     required this.curriculumId,
+    required this.studyDays,
     required this.onComplete,
   });
 
   final CurriculumId curriculumId;
+  final Map<int, String> studyDays;
   final ValueChanged<GoalFormResult?> onComplete;
 
   @override
@@ -2426,7 +2468,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
       return;
     }
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: _deadline ?? DateTime(now.year, now.month, now.day),
       firstDate: DateTime(now.year, now.month, now.day),
@@ -2438,6 +2480,302 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
         _mode = 'deadline';
       });
     }
+  }
+
+  /// Switches to deadline mode and opens the date picker (from frozen card).
+  Future<void> _activateDeadlineMode() async {
+    setState(() => _mode = 'deadline');
+    await _pickDeadline();
+  }
+
+  /// When the other goal mode is active, show a blurred, non-interactive card
+  /// with a hint; tap activates that mode.
+  Widget _blurInactiveGoalOption({
+    required BuildContext context,
+    required String hint,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    final theme = Theme.of(context);
+    return Semantics(
+      button: true,
+      label: hint,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                  child: Opacity(
+                    opacity: 0.4,
+                    child: AbsorbPointer(child: child),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Material(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    elevation: 2,
+                    shadowColor: Colors.black26,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Text(
+                        hint,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.brandBlueDeep,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaceCard(ThemeData theme, bool useHebrew) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: _mode == 'pace'
+              ? AppTheme.brandBlueBright
+              : const Color(0xFFE9ECF2),
+          width: _mode == 'pace' ? 2 : 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Color(0xFFE5E9FF),
+                  child: Icon(
+                    Icons.speed_rounded,
+                    size: 16,
+                    color: AppTheme.brandBlueDeep,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Target Pace',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${_unitSingular[0].toUpperCase()}${_unitSingular.substring(1)} $_unitPlural ${_paceUnit == 'per_day' ? 'per day' : 'per week'}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.brandInkMuted,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'per_day', label: Text('Per day')),
+                ButtonSegment(value: 'per_week', label: Text('Per week')),
+              ],
+              selected: {_paceUnit},
+              onSelectionChanged: (value) {
+                setState(() {
+                  _mode = 'pace';
+                  _paceUnit = value.first;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _mode = 'pace';
+                      if (_paceValue > 1) _paceValue -= 1;
+                    });
+                  },
+                  icon: const Icon(Icons.remove_circle_outline_rounded),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      '$_paceValue',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _mode = 'pace';
+                      _paceValue += 1;
+                    });
+                  },
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                ),
+              ],
+            ),
+            Text(
+              'Estimated finish: ${_projectedFinishLabel(useHebrew)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppTheme.brandInkMuted,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatUnitForEstimate(int perStudyDay) {
+    final s = perStudyDay == 1 ? _unitSingular : _unitPlural;
+    return s[0].toUpperCase() + s.substring(1);
+  }
+
+  Widget _buildDeadlineCard(
+    ThemeData theme,
+    bool useHebrew,
+    AppLocalizations l10n, {
+    required int studyDaysInWindow,
+    required int itemsPerStudyDay,
+    required int totalScopeItems,
+    bool scopeIsLoading = false,
+  }) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: _mode == 'deadline'
+              ? AppTheme.brandBlueBright
+              : const Color(0xFFE9ECF2),
+          width: _mode == 'deadline' ? 2 : 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Color(0xFFF9E4C8),
+                  child: Icon(
+                    Icons.calendar_month_rounded,
+                    size: 16,
+                    color: Color(0xFF7D5411),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Set Deadline',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: _pickDeadline,
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4F5F8),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      _formatDate(
+                        _deadline ?? DateTime.now(),
+                        useHebrew: useHebrew,
+                      ),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: _mode == 'deadline'
+                            ? AppTheme.brandInk
+                            : AppTheme.brandInkMuted,
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 17,
+                      color: AppTheme.brandInkMuted,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_deadline != null) ...[
+              const SizedBox(height: 8),
+              if (scopeIsLoading)
+                Text(
+                  l10n.addTrackGoalDeadlinePaceLineLoading,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              else if (studyDaysInWindow <= 0)
+                Text(
+                  l10n.addTrackGoalDeadlineNoStudyDaysInWindow,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              else
+                Text(
+                  l10n.addTrackGoalDeadlinePaceLine(
+                    itemsPerStudyDay,
+                    _formatUnitForEstimate(itemsPerStudyDay),
+                    studyDaysInWindow,
+                    totalScopeItems,
+                  ),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontStyle: FontStyle.italic,
+                    height: 1.35,
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   void _continue() {
@@ -2483,7 +2821,34 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final useHebrew = ref.watch(useHebrewDateProvider);
+    final scopeCountAsync = ref.watch(
+      scopedItemCountProvider(widget.curriculumId),
+    );
+    final start = _localDateOnlyFromDt(DateTime.now());
+    final end = _deadline != null
+        ? _localDateOnlyFromDt(_deadline!.toLocal())
+        : null;
+    final studyDaysInWindow = end != null
+        ? _countStudyDaysInInclusiveMapRange(widget.studyDays, start, end)
+        : 0;
+    final scopeLoading = scopeCountAsync.isLoading;
+    final totalScopeItems = scopeCountAsync.asData?.value ?? 120;
+    final itemsPerStudyDay = studyDaysInWindow > 0
+        ? (totalScopeItems / studyDaysInWindow).ceil().clamp(1, 999999)
+        : 0;
+
+    final paceCard = _buildPaceCard(theme, useHebrew);
+    final deadlineCard = _buildDeadlineCard(
+      theme,
+      useHebrew,
+      l10n,
+      studyDaysInWindow: studyDaysInWindow,
+      itemsPerStudyDay: itemsPerStudyDay,
+      totalScopeItems: totalScopeItems,
+      scopeIsLoading: scopeLoading,
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
@@ -2503,193 +2868,23 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
             ),
           ),
           const SizedBox(height: 18),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: _mode == 'pace'
-                    ? AppTheme.brandBlueBright
-                    : const Color(0xFFE9ECF2),
-                width: _mode == 'pace' ? 2 : 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Color(0xFFE5E9FF),
-                        child: Icon(
-                          Icons.speed_rounded,
-                          size: 16,
-                          color: AppTheme.brandBlueDeep,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Target Pace',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${_unitSingular[0].toUpperCase()}${_unitSingular.substring(1)} $_unitPlural ${_paceUnit == 'per_day' ? 'per day' : 'per week'}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'per_day', label: Text('Per day')),
-                      ButtonSegment(value: 'per_week', label: Text('Per week')),
-                    ],
-                    selected: {_paceUnit},
-                    onSelectionChanged: (value) {
-                      setState(() {
-                        _mode = 'pace';
-                        _paceUnit = value.first;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _mode = 'pace';
-                            if (_paceValue > 1) _paceValue -= 1;
-                          });
-                        },
-                        icon: const Icon(Icons.remove_circle_outline_rounded),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            '$_paceValue',
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _mode = 'pace';
-                            _paceValue += 1;
-                          });
-                        },
-                        icon: const Icon(Icons.add_circle_outline_rounded),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'Estimated finish: ${_projectedFinishLabel(useHebrew)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _mode == 'pace'
+              ? paceCard
+              : _blurInactiveGoalOption(
+                  context: context,
+                  hint: l10n.addTrackGoalTapToUsePace,
+                  onTap: () => setState(() => _mode = 'pace'),
+                  child: paceCard,
+                ),
           const SizedBox(height: 12),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: _mode == 'deadline'
-                    ? AppTheme.brandBlueBright
-                    : const Color(0xFFE9ECF2),
-                width: _mode == 'deadline' ? 2 : 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Color(0xFFF9E4C8),
-                        child: Icon(
-                          Icons.calendar_month_rounded,
-                          size: 16,
-                          color: Color(0xFF7D5411),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Set Deadline',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  InkWell(
-                    onTap: _pickDeadline,
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF4F5F8),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            _formatDate(
-                              _deadline ?? DateTime.now(),
-                              useHebrew: useHebrew,
-                            ),
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: _mode == 'deadline'
-                                  ? AppTheme.brandInk
-                                  : AppTheme.brandInkMuted,
-                            ),
-                          ),
-                          const Spacer(),
-                          const Icon(
-                            Icons.calendar_today_rounded,
-                            size: 17,
-                            color: AppTheme.brandInkMuted,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (_deadline != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Deadline goal set for ${_formatDate(_deadline!, useHebrew: useHebrew)}.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+          _mode == 'deadline'
+              ? deadlineCard
+              : _blurInactiveGoalOption(
+                  context: context,
+                  hint: l10n.addTrackGoalTapToUseDeadline,
+                  onTap: () => unawaited(_activateDeadlineMode()),
+                  child: deadlineCard,
+                ),
           const Spacer(),
           FilledButton(
             onPressed: _continue,

@@ -212,6 +212,19 @@
   "loading": "...טוען",
   "manageTracks": "ניהול מסלולים",
   "manageTracksDetail": "יצירה ועריכה של מסלולי הלמידה",
+  "addTrackGoalTapToUseDeadline": "מצב קצב יעד פעיל — יש ללחוץ כאן ליעד לפי תאריך יעד",
+  "addTrackGoalTapToUsePace": "מצב תאריך יעד פעיל — יש ללחוץ כאן לקצב יעד",
+  "addTrackGoalDeadlinePaceLine": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays} ימי לימוד עד תאריך היעד (בערך {totalItems} יחידות בתחום).",
+  "@addTrackGoalDeadlinePaceLine": {
+    "placeholders": {
+      "items": { "type": "int" },
+      "unit": { "type": "String" },
+      "studyDays": { "type": "int" },
+      "totalItems": { "type": "int" }
+    }
+  },
+  "addTrackGoalDeadlineNoStudyDaysInWindow": "אין יום לימוד בטווח עד תאריך היעד. הוסיפו ימי לימוד או בחרו תאריך מאוחר יותר.",
+  "addTrackGoalDeadlinePaceLineLoading": "טוען גודל תחום לחישוב לכל יום לימוד…",
   "addTrack": "הוסף מסלול",
   "noActiveCurricula": "אין תוכניות לימוד פעילות",
   "errorLoadingCurricula": "שגיאה בטעינת תוכניות הלימוד: {error}",

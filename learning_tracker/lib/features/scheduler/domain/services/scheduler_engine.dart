@@ -387,9 +387,16 @@ class SchedulerEngine {
         // Past deadline — push harder
         baseRate = (remainingNewItems * 0.1).ceil();
       } else {
-        // Spread remaining items across study days only
-        final studyDaysRemaining = (daysRemaining * config.studyDaysPerWeek / 7)
-            .ceil();
+        // Prefer an exact count of study days through the deadline window
+        // (see [ScheduleConfig.studyDaysInDeadlineWindow]).
+        final int studyDaysRemaining;
+        final exact = config.studyDaysInDeadlineWindow;
+        if (exact != null && exact > 0) {
+          studyDaysRemaining = exact;
+        } else {
+          final approx = (daysRemaining * config.studyDaysPerWeek / 7).ceil();
+          studyDaysRemaining = approx > 0 ? approx : 1;
+        }
         if (studyDaysRemaining <= 0) {
           baseRate = (remainingNewItems * 0.1).ceil();
         } else {

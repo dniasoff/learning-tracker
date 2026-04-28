@@ -380,13 +380,13 @@ Future<bool> _snapshotMissingProgramAssignments({
     final trackId = trackIdsByCurriculum[curriculum];
     if (trackId == null) continue;
 
-    final enrollment = await db.profileProgramDao.getProgramForProfileAndCurriculum(
-      profileId,
-      curriculum.storageKey,
-    );
+    final enrollment = await db.profileProgramDao
+        .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
     final programId = enrollment?.programId;
     if (programId == null) continue;
-    final program = LearningProgramRepository.instance.getProgramById(programId);
+    final program = LearningProgramRepository.instance.getProgramById(
+      programId,
+    );
     final apiKey = program?.apiProgramKey;
     if (program == null || apiKey == null || apiKey.isEmpty) continue;
 
@@ -526,12 +526,13 @@ Future<List<DailyTask>> _buildFreshPlan({
 
   final isStudyDayMap = <CurriculumId, bool>{};
   final studyDaysPerWeekMap = <CurriculumId, int>{};
+  final localWeekday = now.toLocal().weekday;
   for (final curriculum in activeCurricula) {
     final trackId = trackIds[curriculum];
     if (trackId != null) {
       isStudyDayMap[curriculum] = await db.studyDayConfigDao.isStudyDayForTrack(
         trackId: trackId,
-        dayOfWeek: now.weekday,
+        dayOfWeek: localWeekday,
       );
       studyDaysPerWeekMap[curriculum] = await db.studyDayConfigDao
           .getStudyDaysPerWeekForTrack(trackId: trackId);
@@ -539,13 +540,33 @@ Future<List<DailyTask>> _buildFreshPlan({
       isStudyDayMap[curriculum] = await db.studyDayConfigDao.isStudyDay(
         profileId: profileId,
         curriculumId: curriculum.storageKey,
-        dayOfWeek: now.weekday,
+        dayOfWeek: localWeekday,
       );
       studyDaysPerWeekMap[curriculum] = await db.studyDayConfigDao
           .getStudyDaysPerWeek(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
           );
+    }
+  }
+
+  // Exact study-day count from today through deadline (per track pattern).
+  final studyDaysInDeadlineWindowMap = <CurriculumId, int>{};
+  for (final curriculum in activeCurricula) {
+    if (pacePerDayMap.containsKey(curriculum)) continue;
+    final deadline = goalDeadlines[curriculum];
+    final trackId = trackIds[curriculum];
+    if (deadline == null || trackId == null) continue;
+    final start = _localDateOnly(now);
+    final end = _localDateOnly(deadline);
+    final n = await db.studyDayConfigDao
+        .countStudyDaysInInclusiveDateRangeForTrack(
+          trackId: trackId,
+          startInclusive: start,
+          endInclusive: end,
+        );
+    if (n > 0) {
+      studyDaysInDeadlineWindowMap[curriculum] = n;
     }
   }
 
@@ -556,6 +577,7 @@ Future<List<DailyTask>> _buildFreshPlan({
     pacePerDayMap: pacePerDayMap,
     isStudyDayMap: isStudyDayMap,
     studyDaysPerWeekMap: studyDaysPerWeekMap,
+    studyDaysInDeadlineWindowMap: studyDaysInDeadlineWindowMap,
     trackIds: trackIds,
     trackLabels: trackLabels,
   );
@@ -687,7 +709,8 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
             reason: reason,
             stageName: firstStage.stageName,
             trackId: trackId,
-            trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
+            trackLabel:
+                trackLabels[curriculum] ?? TrackType.personal.storageKey,
             estimatedEffortMinutes: 5,
           );
         }),
@@ -717,8 +740,10 @@ Set<String> _resolveProgramTodayRefs(
     ..._refVariants(todayRef),
     ..._expandSimpleRange(todayRef),
     ..._expandDafLikeRange(todayRef),
-    for (final variant in _refVariants(todayRef)) ..._expandSimpleRange(variant),
-    for (final variant in _refVariants(todayRef)) ..._expandDafLikeRange(variant),
+    for (final variant in _refVariants(todayRef))
+      ..._expandSimpleRange(variant),
+    for (final variant in _refVariants(todayRef))
+      ..._expandDafLikeRange(variant),
   };
 
   final matches = <String>{};
@@ -761,10 +786,7 @@ Set<String> _resolvedOrFallbackProgramRefs({
 }
 
 String _displayProgramRef(String ref) {
-  return ref
-      .replaceAll('_', ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
+  return ref.replaceAll('_', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
 Set<String> _refVariants(String ref) {
@@ -800,7 +822,10 @@ Set<String> _refVariants(String ref) {
     variants.add('Jerusalem Talmud $trimmed');
   }
 
-  return variants.where((v) => v.trim().isNotEmpty).map((v) => v.trim()).toSet();
+  return variants
+      .where((v) => v.trim().isNotEmpty)
+      .map((v) => v.trim())
+      .toSet();
 }
 
 String _matchOriginalCasing(String original, String lowerValue) {
@@ -926,7 +951,9 @@ Set<String> _resolveIndexedUnitRefs(
   if (!_normalizeRef(rawTitle).startsWith('jerusalem talmud ')) return const {};
 
   final topContainer = contentItems.firstWhere(
-    (item) => !item.isLeaf && _normalizeRef(item.sefariaRef) == _normalizeRef(rawTitle),
+    (item) =>
+        !item.isLeaf &&
+        _normalizeRef(item.sefariaRef) == _normalizeRef(rawTitle),
     orElse: () => const ContentItem(
       curriculumId: '',
       level1: '',
@@ -942,26 +969,32 @@ Set<String> _resolveIndexedUnitRefs(
   final leaves = _leafChildrenForContainer(topContainer, contentItems).toList()
     ..sort((a, b) {
       final aOrder = contentItems
-          .firstWhere((i) => i.sefariaRef == a, orElse: () => const ContentItem(
-                curriculumId: '',
-                level1: '',
-                displayNameHe: '',
-                displayNameEn: '',
-                sefariaRef: '',
-                sortOrder: 0,
-                isLeaf: true,
-              ))
+          .firstWhere(
+            (i) => i.sefariaRef == a,
+            orElse: () => const ContentItem(
+              curriculumId: '',
+              level1: '',
+              displayNameHe: '',
+              displayNameEn: '',
+              sefariaRef: '',
+              sortOrder: 0,
+              isLeaf: true,
+            ),
+          )
           .sortOrder;
       final bOrder = contentItems
-          .firstWhere((i) => i.sefariaRef == b, orElse: () => const ContentItem(
-                curriculumId: '',
-                level1: '',
-                displayNameHe: '',
-                displayNameEn: '',
-                sefariaRef: '',
-                sortOrder: 0,
-                isLeaf: true,
-              ))
+          .firstWhere(
+            (i) => i.sefariaRef == b,
+            orElse: () => const ContentItem(
+              curriculumId: '',
+              level1: '',
+              displayNameHe: '',
+              displayNameEn: '',
+              sefariaRef: '',
+              sortOrder: 0,
+              isLeaf: true,
+            ),
+          )
           .sortOrder;
       return aOrder.compareTo(bOrder);
     });
@@ -977,9 +1010,12 @@ Set<String> _leafChildrenForContainer(
   final leaves = contentItems.where((item) {
     if (!item.isLeaf) return false;
     if (item.level1 != container.level1) return false;
-    if (container.level2 != null && item.level2 != container.level2) return false;
-    if (container.level3 != null && item.level3 != container.level3) return false;
-    if (container.level4 != null && item.level4 != container.level4) return false;
+    if (container.level2 != null && item.level2 != container.level2)
+      return false;
+    if (container.level3 != null && item.level3 != container.level3)
+      return false;
+    if (container.level4 != null && item.level4 != container.level4)
+      return false;
     return true;
   }).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   return leaves.map((leaf) => leaf.sefariaRef).toSet();
@@ -996,7 +1032,9 @@ ContentItem? _findFuzzyContainerMatch(
   if (title.isEmpty || address.isEmpty) return null;
 
   final normalizedTitle = _normalizeTitle(title);
-  final possibleContainers = contentItems.where((item) => !item.isLeaf).toList();
+  final possibleContainers = contentItems
+      .where((item) => !item.isLeaf)
+      .toList();
   ContentItem? best;
   var bestScore = -1;
 
@@ -1047,4 +1085,10 @@ int _titleSimilarityScore(String a, String b) {
   final bWords = b.split(' ').where((w) => w.isNotEmpty).toSet();
   final overlap = aWords.intersection(bWords).length;
   return overlap;
+}
+
+/// Calendar date in the user's local timezone (time stripped).
+DateTime _localDateOnly(DateTime utc) {
+  final l = utc.toLocal();
+  return DateTime(l.year, l.month, l.day);
 }

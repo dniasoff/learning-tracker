@@ -456,6 +456,32 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageTracksDetail => 'יצירה ועריכה של מסלולי הלמידה';
 
   @override
+  String get addTrackGoalTapToUseDeadline =>
+      'מצב קצב יעד פעיל — יש ללחוץ כאן ליעד לפי תאריך יעד';
+
+  @override
+  String get addTrackGoalTapToUsePace =>
+      'מצב תאריך יעד פעיל — יש ללחוץ כאן לקצב יעד';
+
+  @override
+  String addTrackGoalDeadlinePaceLine(
+    int items,
+    String unit,
+    int studyDays,
+    int totalItems,
+  ) {
+    return 'בערך $items $unit בכל יום לימוד, על פני $studyDays ימי לימוד עד תאריך היעד (בערך $totalItems יחידות בתחום).';
+  }
+
+  @override
+  String get addTrackGoalDeadlineNoStudyDaysInWindow =>
+      'אין יום לימוד בטווח עד תאריך היעד. הוסיפו ימי לימוד או בחרו תאריך מאוחר יותר.';
+
+  @override
+  String get addTrackGoalDeadlinePaceLineLoading =>
+      'טוען גודל תחום לחישוב לכל יום לימוד…';
+
+  @override
   String get addTrack => 'הוסף מסלול';
 
   @override

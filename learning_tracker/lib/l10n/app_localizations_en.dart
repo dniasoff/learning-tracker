@@ -459,6 +459,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageTracksDetail => 'Create and edit your learning tracks';
 
   @override
+  String get addTrackGoalTapToUseDeadline =>
+      'Target pace is on — tap here to use a deadline instead';
+
+  @override
+  String get addTrackGoalTapToUsePace =>
+      'Deadline is on — tap here to use target pace instead';
+
+  @override
+  String addTrackGoalDeadlinePaceLine(
+    int items,
+    String unit,
+    int studyDays,
+    int totalItems,
+  ) {
+    return 'About $items $unit per study day, across $studyDays study days to finish the scope by the deadline (≈$totalItems items).';
+  }
+
+  @override
+  String get addTrackGoalDeadlineNoStudyDaysInWindow =>
+      'No study day in your week falls in the range to this deadline. Add study days or move the deadline later.';
+
+  @override
+  String get addTrackGoalDeadlinePaceLineLoading =>
+      'Loading scope size to estimate per study day…';
+
+  @override
   String get addTrack => 'Add Track';
 
   @override

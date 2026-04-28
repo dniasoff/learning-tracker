@@ -158,6 +158,48 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     return configs.where((c) => c.dayType == 'study').length;
   }
 
+  /// Inclusive count of dates in [startInclusive, endInclusive] (calendar
+  /// days, time ignored) whose [DateTime.weekday] is a study day for [trackId].
+  ///
+  /// Used to spread deadline goals across actual study days (not a 5/7
+  /// approximation). Monday = 1 … Sunday = 7 (Dart [DateTime.weekday]).
+  Future<int> countStudyDaysInInclusiveDateRangeForTrack({
+    required int trackId,
+    required DateTime startInclusive,
+    required DateTime endInclusive,
+  }) async {
+    final configs = await getConfigsByTrack(trackId);
+    final Set<int> studyWeekdays;
+    if (configs.isEmpty) {
+      studyWeekdays = {1, 2, 3, 4, 5, 6, 7};
+    } else {
+      studyWeekdays = {
+        for (final c in configs)
+          if (c.dayType == 'study') c.dayOfWeek,
+      };
+    }
+    if (studyWeekdays.isEmpty) return 0;
+
+    var d = DateTime(
+      startInclusive.year,
+      startInclusive.month,
+      startInclusive.day,
+    );
+    final end = DateTime(
+      endInclusive.year,
+      endInclusive.month,
+      endInclusive.day,
+    );
+    if (d.isAfter(end)) return 0;
+
+    var n = 0;
+    while (!d.isAfter(end)) {
+      if (studyWeekdays.contains(d.weekday)) n++;
+      d = d.add(const Duration(days: 1));
+    }
+    return n;
+  }
+
   /// Seed default 7-day 'study' configs for a track.
   ///
   /// Per Epic 20 / DNI-212 — track-only API. Looks up the owning profile

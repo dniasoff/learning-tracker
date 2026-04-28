@@ -30,7 +30,13 @@ abstract class ScheduleConfig with _$ScheduleConfig {
     /// Whether today is a study day. False suppresses new learning tasks.
     @Default(true) bool isStudyDay,
 
-    /// Number of study days per week (1-7). Used by pace calculation.
+    /// Number of study days per week (1-7). Used for legacy fallback pacing.
     @Default(7) int studyDaysPerWeek,
+
+    /// Inclusive count of future study days from "today" through the goal
+    /// deadline, per the track's study-day pattern. When set, deadline
+    /// pacing divides remaining items by this count instead of approximating
+    /// with [studyDaysPerWeek].
+    int? studyDaysInDeadlineWindow,
   }) = _ScheduleConfig;
 }
