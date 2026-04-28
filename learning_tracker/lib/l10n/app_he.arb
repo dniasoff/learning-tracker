@@ -304,6 +304,19 @@
   "addWhatYouLearned": "הוסיפו מה שלמדתם",
   "addWhatYouLearnedSettingsSubtitle": "רישום מצוות או לימוד תורה מותאם אישית",
   "lifetimeLearning": "לימוד חיים",
+  "lifetimeLearningHubSection": "מרכז הלמידה",
+  "lifetimeXpTotal": "{points} נקודות XP בסך הכל",
+  "@lifetimeXpTotal": {
+    "placeholders": {
+      "points": { "type": "String" }
+    }
+  },
+  "lifetimeStartAdding": "התחל להוסיף",
+  "lifetimeBrowseFullLibrary": "עיון בספרייה המלאה",
+  "lifetimeHowItWorksStep1": "בחרו קטגוריה מרשת הקטגוריות כדי לראות את כל המסלולים.",
+  "lifetimeHowItWorksStep2": "סמנו יחידות שסיימתם כדי לעדכן את מפת ההתקדמות לכל החיים.",
+  "lifetimeHowItWorksStep3": "קבלו תגי אבן דרך מיוחדים על השלמת ספרים או מסכתות שלמות.",
+  "lifetimeNotStarted": "טרם התחיל",
   "lifetimeAddHeaderTitle": "הוסיפו מה שלמדתם",
   "lifetimeAddHeaderSubtitle": "סמנו מה שלמדתם כבר — מדפוס או מכל מקום — כלימוד לכל החיים.",
   "lifetimeHowItWorksTitle": "איך זה עובד",

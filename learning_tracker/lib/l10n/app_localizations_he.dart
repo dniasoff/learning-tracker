@@ -618,6 +618,35 @@ class AppLocalizationsHe extends AppLocalizations {
   String get lifetimeLearning => 'לימוד חיים';
 
   @override
+  String get lifetimeLearningHubSection => 'מרכז הלמידה';
+
+  @override
+  String lifetimeXpTotal(String points) {
+    return '$points נקודות XP בסך הכל';
+  }
+
+  @override
+  String get lifetimeStartAdding => 'התחל להוסיף';
+
+  @override
+  String get lifetimeBrowseFullLibrary => 'עיון בספרייה המלאה';
+
+  @override
+  String get lifetimeHowItWorksStep1 =>
+      'בחרו קטגוריה מרשת הקטגוריות כדי לראות את כל המסלולים.';
+
+  @override
+  String get lifetimeHowItWorksStep2 =>
+      'סמנו יחידות שסיימתם כדי לעדכן את מפת ההתקדמות לכל החיים.';
+
+  @override
+  String get lifetimeHowItWorksStep3 =>
+      'קבלו תגי אבן דרך מיוחדים על השלמת ספרים או מסכתות שלמות.';
+
+  @override
+  String get lifetimeNotStarted => 'טרם התחיל';
+
+  @override
   String get lifetimeAddHeaderTitle => 'הוסיפו מה שלמדתם';
 
   @override

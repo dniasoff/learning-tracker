@@ -622,11 +622,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lifetimeLearning => 'Lifetime Learning';
 
   @override
+  String get lifetimeLearningHubSection => 'LEARNING HUB';
+
+  @override
+  String lifetimeXpTotal(String points) {
+    return '$points XP Total';
+  }
+
+  @override
+  String get lifetimeStartAdding => 'Start Adding';
+
+  @override
+  String get lifetimeBrowseFullLibrary => 'Browse Full Library';
+
+  @override
+  String get lifetimeHowItWorksStep1 =>
+      'Select a category from the library grid to see all available tracks.';
+
+  @override
+  String get lifetimeHowItWorksStep2 =>
+      'Toggle units you\'ve finished to update your lifetime progress map.';
+
+  @override
+  String get lifetimeHowItWorksStep3 =>
+      'Earn special milestone badges for completing whole volumes or tractates.';
+
+  @override
+  String get lifetimeNotStarted => 'Not started';
+
+  @override
   String get lifetimeAddHeaderTitle => 'Add what you\'ve learned';
 
   @override
   String get lifetimeAddHeaderSubtitle =>
-      'Mark what you already studied — in print or anywhere — as lifetime learning.';
+      'Mark what you\'ve already studied — in print or anywhere — as lifetime learning.';
 
   @override
   String get lifetimeHowItWorksTitle => 'How it works';

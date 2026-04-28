@@ -317,26 +317,36 @@ class LifetimeFolderListPanel extends StatelessWidget {
     super.key,
     this.maxHeight,
     required this.child,
+    this.insetBackground = true,
   });
 
   final double? maxHeight;
   final Widget child;
 
+  /// When false (e.g. light marking sheet), no grey inset behind the list.
+  final bool insetBackground;
+
   @override
   Widget build(BuildContext context) {
+    final padded = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      child: child,
+    );
+
     return ConstrainedBox(
       constraints: maxHeight != null
           ? BoxConstraints(maxHeight: maxHeight!)
           : const BoxConstraints(),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: child,
-      ),
+      child: insetBackground
+          ? Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: padded,
+            )
+          : padded,
     );
   }
 }
@@ -472,6 +482,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
     required this.onToggle,
     this.isImplicit = false,
     this.isPersisted = false,
+    this.lightSurface = false,
     this.onDrill,
   });
 
@@ -485,6 +496,9 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
 
   /// Saved in learning ledger — green like Progress tree, checkbox read-only.
   final bool isPersisted;
+
+  /// Light sheet behind rows (no dark [LifetimeFolderListPanel] inset).
+  final bool lightSurface;
   final VoidCallback? onDrill;
 
   @override
@@ -494,7 +508,9 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
         : switch (visual) {
             MarkingRowVisual.direct => const Color(0xFF3BDD87),
             MarkingRowVisual.implicit => const Color(0xFFFFD26A),
-            MarkingRowVisual.none => Colors.white.withValues(alpha: 0.5),
+            MarkingRowVisual.none => lightSurface
+                ? const Color(0xFFB8C0CC)
+                : Colors.white.withValues(alpha: 0.5),
           };
     final selected = isPersisted ||
         visual == MarkingRowVisual.direct ||
@@ -568,7 +584,9 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
                       primary,
                       maxLines: 2,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.95),
+                        color: lightSurface
+                            ? AppTheme.brandInk
+                            : Colors.white.withValues(alpha: 0.95),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -579,7 +597,9 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: lightSurface
+                              ? AppTheme.brandInkMuted
+                              : Colors.white.withValues(alpha: 0.7),
                           fontStyle: isImplicit ? FontStyle.italic : null,
                         ),
                       ),

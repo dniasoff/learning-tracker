@@ -1199,6 +1199,54 @@ abstract class AppLocalizations {
   /// **'Lifetime Learning'**
   String get lifetimeLearning;
 
+  /// No description provided for @lifetimeLearningHubSection.
+  ///
+  /// In en, this message translates to:
+  /// **'LEARNING HUB'**
+  String get lifetimeLearningHubSection;
+
+  /// No description provided for @lifetimeXpTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} XP Total'**
+  String lifetimeXpTotal(String points);
+
+  /// No description provided for @lifetimeStartAdding.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Adding'**
+  String get lifetimeStartAdding;
+
+  /// No description provided for @lifetimeBrowseFullLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Full Library'**
+  String get lifetimeBrowseFullLibrary;
+
+  /// No description provided for @lifetimeHowItWorksStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a category from the library grid to see all available tracks.'**
+  String get lifetimeHowItWorksStep1;
+
+  /// No description provided for @lifetimeHowItWorksStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle units you\'ve finished to update your lifetime progress map.'**
+  String get lifetimeHowItWorksStep2;
+
+  /// No description provided for @lifetimeHowItWorksStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn special milestone badges for completing whole volumes or tractates.'**
+  String get lifetimeHowItWorksStep3;
+
+  /// No description provided for @lifetimeNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get lifetimeNotStarted;
+
   /// No description provided for @lifetimeAddHeaderTitle.
   ///
   /// In en, this message translates to:
@@ -1208,7 +1256,7 @@ abstract class AppLocalizations {
   /// No description provided for @lifetimeAddHeaderSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Mark what you already studied — in print or anywhere — as lifetime learning.'**
+  /// **'Mark what you\'ve already studied — in print or anywhere — as lifetime learning.'**
   String get lifetimeAddHeaderSubtitle;
 
   /// No description provided for @lifetimeHowItWorksTitle.

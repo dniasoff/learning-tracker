@@ -304,8 +304,21 @@
   "addWhatYouLearned": "Add what you've learned",
   "addWhatYouLearnedSettingsSubtitle": "Log custom Mitzvot or Torah studies",
   "lifetimeLearning": "Lifetime Learning",
+  "lifetimeLearningHubSection": "LEARNING HUB",
+  "lifetimeXpTotal": "{points} XP Total",
+  "@lifetimeXpTotal": {
+    "placeholders": {
+      "points": { "type": "String" }
+    }
+  },
+  "lifetimeStartAdding": "Start Adding",
+  "lifetimeBrowseFullLibrary": "Browse Full Library",
+  "lifetimeHowItWorksStep1": "Select a category from the library grid to see all available tracks.",
+  "lifetimeHowItWorksStep2": "Toggle units you've finished to update your lifetime progress map.",
+  "lifetimeHowItWorksStep3": "Earn special milestone badges for completing whole volumes or tractates.",
+  "lifetimeNotStarted": "Not started",
   "lifetimeAddHeaderTitle": "Add what you've learned",
-  "lifetimeAddHeaderSubtitle": "Mark what you already studied — in print or anywhere — as lifetime learning.",
+  "lifetimeAddHeaderSubtitle": "Mark what you've already studied — in print or anywhere — as lifetime learning.",
   "lifetimeHowItWorksTitle": "How it works",
   "lifetimeHowItWorksBody": "Open a curriculum, then use the folder list to select sections. Green = selected for saving; open a subfolder with the arrow when there is more inside.",
   "lifetimeSelectScreenTitle": "Select what you've learned",
