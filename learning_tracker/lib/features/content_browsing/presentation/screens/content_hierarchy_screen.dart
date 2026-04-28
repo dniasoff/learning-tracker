@@ -104,29 +104,25 @@ class _ContentHierarchyScreenState
       ),
     );
 
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const AppBarTitle(text: 'Browse Content'),
+        title: AppBarTitle(
+          child: Text(
+            'Browse Content',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 24,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _navigationStack.isNotEmpty
               ? _navigateUp
               : () => context.router.maybePop(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Search',
-            onPressed: () => context.router.push(
-              ContentSearchRoute(curriculumId: curriculum.storageKey),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.grid_view),
-            tooltip: 'View options',
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [

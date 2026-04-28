@@ -47,19 +47,27 @@ class ContentItemTile extends ConsumerWidget {
             .value ??
         0;
 
+    final isFolder = !item.isLeaf;
     return ListTile(
+      minLeadingWidth: isFolder ? 48 : 40,
+      minVerticalPadding: isFolder ? 14 : 8,
       leading: _buildLeadingIcon(theme, count),
       title: Text(
         item.displayNameHe,
-        style: theme.textTheme.titleMedium,
+        style: isFolder
+            ? theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)
+            : theme.textTheme.titleMedium,
         textDirection: TextDirection.rtl,
         textAlign: TextAlign.right,
       ),
       subtitle: Text(
         item.displayNameEn,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        style:
+            (isFolder ? theme.textTheme.titleSmall : theme.textTheme.bodyMedium)
+                ?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: isFolder ? FontWeight.w500 : null,
+                ),
       ),
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
@@ -94,7 +102,7 @@ class ContentItemTile extends ConsumerWidget {
             : theme.colorScheme.outline,
       );
     } else {
-      return Icon(Icons.folder, color: theme.colorScheme.primary);
+      return Icon(Icons.folder, color: theme.colorScheme.primary, size: 32);
     }
   }
 
