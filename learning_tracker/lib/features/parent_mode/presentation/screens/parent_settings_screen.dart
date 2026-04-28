@@ -123,19 +123,10 @@ class ParentSettingsScreen extends ConsumerWidget {
                     leadingSquare: true,
                     title: l10n.addWhatYouLearned,
                     subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
-                    trailing: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F2F6),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFD7DEE8)),
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Color(0xFF8B95A5),
-                        size: 22,
-                      ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _chevronMuted,
+                      size: 26,
                     ),
                     onTap: () =>
                         context.pushRoute(const LifetimeMarkingRoute()),

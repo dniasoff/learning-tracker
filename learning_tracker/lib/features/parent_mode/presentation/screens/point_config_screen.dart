@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -75,10 +76,18 @@ final _pointConfigDataProvider = FutureProvider<List<_TrackPointData>>((
   var wroteConfigs = false;
   final result = <_TrackPointData>[];
   for (final track in activeTracks) {
-    final curriculum = CurriculumId.values.firstWhere(
-      (c) => c.storageKey == track.curriculumId,
-    );
-    final stages = await db.stageDao.getStagesByTrack(track.id);
+    final curriculum = CurriculumId.values
+        .where((c) => c.storageKey == track.curriculumId)
+        .firstOrNull;
+    if (curriculum == null) continue;
+
+    var stages = await db.stageDao.getStagesByTrack(track.id);
+    if (stages.isEmpty) {
+      await ref
+          .read(stageDefinitionRepositoryProvider(curriculum))
+          .initializeDefaults(curriculum, trackId: track.id);
+      stages = await db.stageDao.getStagesByTrack(track.id);
+    }
     if (stages.isEmpty) {
       continue;
     }

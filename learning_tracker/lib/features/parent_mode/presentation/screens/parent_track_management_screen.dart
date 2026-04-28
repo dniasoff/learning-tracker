@@ -5,7 +5,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -53,6 +52,13 @@ class _ParentTrackManagementScreenState
     final activeAsync = ref.watch(tm.activeTracksProvider);
     final archivedAsync = ref.watch(tm.archivedTracksProvider);
 
+    final hideFabForCenterEmptyState = activeAsync.maybeWhen(
+      data: (tracks) => tracks.isEmpty && !_showArchived,
+      orElse: () => false,
+    );
+    final showAddTrackFab =
+        !activeAsync.isLoading && !hideFabForCenterEmptyState;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),
       appBar: AppBar(
@@ -93,7 +99,7 @@ class _ParentTrackManagementScreenState
           ),
         ],
       ),
-      floatingActionButton: (activeAsync.asData?.value.isNotEmpty ?? false)
+      floatingActionButton: showAddTrackFab
           ? FloatingActionButton.extended(
               onPressed: () => setState(() => _addingTrack = true),
               icon: Container(
@@ -142,7 +148,6 @@ class _ParentTrackManagementScreenState
                     child: LearningTrackCard(
                       track: track,
                       showProgress: true,
-                      onTap: () => _onTrackTap(track),
                       onLongPress: () => _showArchiveDialog(track),
                     ),
                   ),
@@ -291,15 +296,6 @@ class _ParentTrackManagementScreenState
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.trackCreated(result.label))),
-    );
-  }
-
-  void _onTrackTap(CurriculumTrack track) {
-    context.router.push(
-      TrackDetailRoute(
-        curriculumId: track.curriculumId,
-        trackType: track.trackType,
-      ),
     );
   }
 

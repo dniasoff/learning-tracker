@@ -79,8 +79,9 @@ class LearningProcessWizardService {
     required int profileId,
     required int trackId,
   }) async {
-    // Clear any existing stages for this curriculum first.
-    await _stageDao.deleteAllForCurriculum(result.curriculumId.storageKey);
+    // Replace stages for this track only — other active tracks for the same
+    // curriculum keep their own stage rows (Story 20.2 track-scoping).
+    await _stageDao.deleteStagesForTrack(trackId);
 
     switch (result.choice) {
       case WizardChoice.preset:

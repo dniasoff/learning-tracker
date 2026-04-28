@@ -5,7 +5,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -15,7 +14,7 @@ import 'package:learning_tracker/features/track_setup/presentation/providers/tra
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
 
-/// Central hub for viewing, adding, editing, and archiving tracks.
+/// Central hub for viewing, adding, and archiving tracks.
 ///
 /// Replaces the old per-curriculum TrackManagementScreen.
 @RoutePage()
@@ -143,7 +142,6 @@ class _TrackManagementHubScreenState
                     child: LearningTrackCard(
                       track: track,
                       showProgress: true,
-                      onTap: () => _onTrackTap(track),
                       onLongPress: () => _showArchiveDialog(track),
                     ),
                   ),
@@ -293,15 +291,6 @@ class _TrackManagementHubScreenState
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Track "${result.label}" created')));
-  }
-
-  void _onTrackTap(CurriculumTrack track) {
-    context.router.push(
-      TrackDetailRoute(
-        curriculumId: track.curriculumId,
-        trackType: track.trackType,
-      ),
-    );
   }
 
   Future<void> _showArchiveDialog(CurriculumTrack track) async {

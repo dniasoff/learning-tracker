@@ -176,9 +176,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     CurriculumId curriculumId, {
     required int trackId,
   }) async {
-    final existing = await _stageDao.getStageDefinitionsByCurriculum(
-      curriculumId.storageKey,
-    );
+    final existing = await _stageDao.getStagesByTrack(trackId);
     if (existing.isNotEmpty) return;
 
     for (final d in _defaults) {

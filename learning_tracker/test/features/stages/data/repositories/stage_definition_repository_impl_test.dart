@@ -262,10 +262,10 @@ void main() {
       );
     });
 
-    // Scenario 8: initializeDefaults is no-op when stages exist
+    // Scenario 8: initializeDefaults is no-op when stages exist for this track
     test('initializeDefaults is a no-op when stages already exist', () async {
       when(
-        () => mockStageDao.getStageDefinitionsByCurriculum(curriculumKey),
+        () => mockStageDao.getStagesByTrack(1),
       ).thenAnswer((_) async => [makeRow(id: 1)]);
 
       await repository.initializeDefaults(curriculum, trackId: 1);
@@ -273,12 +273,12 @@ void main() {
       verifyNever(() => mockStageDao.insertStageDefinition(any()));
     });
 
-    // Scenario 8b: initializeDefaults inserts defaults when empty
+    // Scenario 8b: initializeDefaults inserts defaults when track has no stages
     test(
-      'initializeDefaults inserts 3 defaults when curriculum is empty',
+      'initializeDefaults inserts 3 defaults when track is empty',
       () async {
         when(
-          () => mockStageDao.getStageDefinitionsByCurriculum(curriculumKey),
+          () => mockStageDao.getStagesByTrack(1),
         ).thenAnswer((_) async => []);
         when(
           () => mockStageDao.insertStageDefinition(any()),
