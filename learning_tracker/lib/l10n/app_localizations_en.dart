@@ -65,6 +65,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activeTracks => 'Active tracks';
 
   @override
+  String get activeTracksSubtitle =>
+      'Keep up the great work on your learning goals';
+
+  @override
+  String get activeTrackNextTask => 'NEXT TASK';
+
+  @override
+  String get activeTrackCurrentFocus => 'CURRENT FOCUS';
+
+  @override
+  String activeTrackPaceAhead(int days) {
+    return 'Ahead ${days}d';
+  }
+
+  @override
+  String activeTrackPaceBehind(int days) {
+    return 'Behind ${days}d';
+  }
+
+  @override
+  String get activeTrackPaceOk => 'OK';
+
+  @override
+  String get activeTrackMetricChazara => 'CHAZARA';
+
+  @override
+  String get activeTrackMetricDueToday => 'DUE TODAY';
+
+  @override
+  String get activeTrackMetricOverdue => 'OVERDUE';
+
+  @override
   String get trackLifetimeLearning => 'Lifetime learning';
 
   @override

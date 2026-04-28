@@ -34,6 +34,18 @@ String _trackTypeLabel(String trackTypeStorageKey) {
   }
 }
 
+/// Primary blue for active-track CTA and pace "OK" pill (design spec).
+const Color _kActiveTrackPrimaryBlue = Color(0xFF122FA0);
+
+/// Red pace badge when ahead of schedule.
+const Color _kActiveTrackPaceAheadBg = Color(0xFFE85D5D);
+
+/// Green completion bar (self-paced card).
+const Color _kActiveTrackCompletionGreen = Color(0xFF22C55E);
+
+/// Grey pill behind next-task / current-focus content.
+const Color _kActiveTrackFocusPillBg = Color(0xFFF1F2F5);
+
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -392,9 +404,10 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 30),
         SizedBox(
-          height: 400,
+          height: 460,
           child: _ActiveTracksCarouselSection(
             title: l10n.activeTracks,
+            subtitle: l10n.activeTracksSubtitle,
             activeTracks: activeTracks,
             allTasks: allTasks,
             titleStyle: _iosTextStyle(
@@ -1110,12 +1123,14 @@ class _CompactMissionCard extends StatelessWidget {
 class _ActiveTracksCarouselSection extends StatefulWidget {
   const _ActiveTracksCarouselSection({
     required this.title,
+    required this.subtitle,
     required this.activeTracks,
     required this.allTasks,
     required this.titleStyle,
   });
 
   final String title;
+  final String subtitle;
   final List<CurriculumTrack> activeTracks;
   final List<DailyTask> allTasks;
   final TextStyle titleStyle;
@@ -1144,16 +1159,34 @@ class _ActiveTracksCarouselSectionState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
-                widget.title,
-                style: widget.titleStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: widget.titleStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      fontWeight: FontWeight.w500,
+                      height: 1.25,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
@@ -1375,7 +1408,7 @@ _TrackTaskBuckets _bucketTrackTasks(List<DailyTask> tasks) {
   );
 }
 
-/// AC-1, 2, 6: Active track card with pace badge and real task data.
+/// Active track card: program (task metrics) vs self-paced (completion) layouts.
 class _ActiveTrackCard extends ConsumerWidget {
   final CurriculumTrack track;
   final List<DailyTask> allTasks;
@@ -1388,9 +1421,14 @@ class _ActiveTrackCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final curriculum = _curriculumIdForTrack(track);
     final displayNamePrimary =
-        '${curriculum.displayNameHe} · ${_trackTypeLabel(track.trackType)}';
+        '${_trackTypeLabel(track.trackType)} · ${curriculum.displayNameHe}';
     final displayNameSecondary = curriculum.displayNameEn;
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
+    final bookIconBg = Color.lerp(
+      _kActiveTrackPrimaryBlue.withValues(alpha: 0.2),
+      curriculumColor.withValues(alpha: 0.2),
+      0.45,
+    )!;
     final completionAsync = ref.watch(
       dashboardTrackCompletionPercentageProvider(track.id),
     );
@@ -1418,499 +1456,541 @@ class _ActiveTrackCard extends ConsumerWidget {
         ? '…'
         : formatFractionAsPercent(lifetimeFraction);
 
-    // AC-6: Tasks for this track only
     final curriculumTasks = allTasks
         .where((t) => t.trackId == track.id)
         .toList();
     final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
     final hasProgramEnrollment =
         hasProgramEnrollmentAsync.asData?.value ?? false;
-
-    // AC-1: Get pace status
     final paceStatus = paceAsync.asData?.value;
-
     final taskBuckets = _bucketTrackTasks(curriculumTasks);
+    final focusLabel = hasProgramEnrollment
+        ? l10n.activeTrackNextTask
+        : l10n.activeTrackCurrentFocus;
+    final focusValue = todayTask?.contentItemSefariaRef ?? l10n.noProjection;
+    final lifetimeFull =
+        lifetimeFraction != null && (lifetimeFraction - 1.0).abs() < 1e-6;
 
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: AppTheme.brandOutline.withValues(alpha: 0.4)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: () {
-          context.router.push(
-            ContentHierarchyRoute(curriculumId: curriculum.storageKey),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      elevation: 5,
+      shadowColor: Colors.black26,
+      surfaceTintColor: Colors.transparent,
+      color: AppTheme.brandCreamCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      margin: EdgeInsets.zero,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () {
+              context.router.push(
+                ContentHierarchyRoute(curriculumId: curriculum.storageKey),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: curriculumColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.menu_book_rounded,
-                      color: curriculumColor,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      displayNamePrimary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (hasProgramEnrollment)
-                    // Show task counts for programmed tracks
-                    if (paceAsync.isLoading)
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: curriculumColor.withValues(alpha: 0.5),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayNamePrimary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.brandInk,
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              displayNameSecondary,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.brandInk,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                      )
-                    else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.brandCreamSoft,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: _MiniPaceBadge(paceStatus: paceStatus),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: bookIconBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.menu_book_rounded,
+                          color: _kActiveTrackPrimaryBlue,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _ActiveTrackFocusPill(label: focusLabel, value: focusValue),
+                  const SizedBox(height: 10),
+                  if (hasProgramEnrollment) ...[
+                    _ProgrammedTrackMetricsRow(
+                      chazara: taskBuckets.review,
+                      dueToday: taskBuckets.dueTodayLane,
+                      overdue: taskBuckets.missedProgram,
+                      l10n: l10n,
+                    ),
+                    if (taskBuckets.total == 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          l10n.nothingDueInQueue,
+                          maxLines: 2,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppTheme.brandInkMuted,
+                            height: 1.2,
                           ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            alignment: WrapAlignment.end,
-                            children: [
-                              if (taskBuckets.missedProgram > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFD63C3C,
-                                    ).withValues(alpha: 0.14),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '${taskBuckets.missedProgram} ${l10n.overdue}',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: const Color(0xFFD63C3C),
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                              if (taskBuckets.dueTodayLane > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.brandBlue.withValues(
-                                      alpha: 0.14,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '${taskBuckets.dueTodayLane} ${l10n.dueToday}',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: AppTheme.brandBlue,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                              if (taskBuckets.review > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.brandGold.withValues(
-                                      alpha: 0.16,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '${taskBuckets.review} ${l10n.activeTrackChazaraLabel}',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: AppTheme.brandGoldDeep,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                        ),
+                      ),
+                  ] else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          pctDisplay,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: AppTheme.brandInk,
+                            fontWeight: FontWeight.w800,
                           ),
-                        ],
-                      )
-                  else
-                  // Show pace badge for self-paced tracks
-                  if (paceAsync.isLoading)
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: curriculumColor.withValues(alpha: 0.5),
-                      ),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.brandCreamSoft,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: _MiniPaceBadge(paceStatus: paceStatus),
+                        ),
+                        Text(
+                          l10n.carouselCompletion,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppTheme.brandInkMuted,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                displayNameSecondary,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                todayTask?.contentItemSefariaRef ?? l10n.noProjection,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 10),
-              if (hasProgramEnrollment)
-                _ProgrammedDueFoot(
-                  missedProgram: taskBuckets.missedProgram,
-                  dueTodayLane: taskBuckets.dueTodayLane,
-                  review: taskBuckets.review,
-                  l10n: l10n,
-                )
-              else ...[
-                Row(
-                  children: [
-                    Text(
-                      l10n.carouselCompletion,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      pctDisplay,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: AppTheme.brandInk,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    const SizedBox(height: 6),
+                    _ActiveTrackGreenProgress(value: percentage),
                   ],
-                ),
-                const SizedBox(height: 6),
-                AnimatedProgressBar(
-                  value: percentage,
-                  color: curriculumColor,
-                  backgroundColor: AppTheme.brandCreamSoft,
-                  height: 10,
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOut,
-                ),
-              ],
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    l10n.trackLifetimeLearning,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    lifetimePercentDisplay,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppTheme.brandInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Row(
-                children: [
                   Expanded(
-                    child: FilledButton(
-                      onPressed: () =>
-                          context.router.navigate(const LearningRoute()),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 34),
-                        padding: EdgeInsets.zero,
-                        backgroundColor: const Color(0xFFE4E8F0),
-                        foregroundColor: AppTheme.brandBlue,
-                        textStyle: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${l10n.trackLifetimeLearning} \u2022 $lifetimePercentDisplay',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: AppTheme.brandInkMuted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (lifetimeFraction == null)
+                              const SizedBox.shrink()
+                            else
+                              Icon(
+                                lifetimeFull
+                                    ? Icons.check_circle_rounded
+                                    : Icons.show_chart_rounded,
+                                size: 20,
+                                color: lifetimeFull
+                                    ? _kActiveTrackCompletionGreen
+                                    : AppTheme.brandInkMuted,
+                              ),
+                          ],
                         ),
-                      ),
-                      child: Text(l10n.continueCta),
+                        const SizedBox(height: 8),
+                        FilledButton(
+                          onPressed: () =>
+                              context.router.navigate(const LearningRoute()),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kActiveTrackPrimaryBlue,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 48),
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                          child: Text(l10n.continueCta),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (paceAsync.isLoading)
+            PositionedDirectional(
+              top: 8,
+              end: 8,
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: curriculumColor.withValues(alpha: 0.5),
+                ),
+              ),
+            )
+          else
+            _ActiveTrackPaceBadge(
+              top: 8,
+              end: 12,
+              paceStatus: paceStatus,
+              l10n: l10n,
+            ),
+        ],
       ),
     );
   }
 }
 
-/// Footer for programmed tracks: missed program, due today, and chazara.
-class _ProgrammedDueFoot extends StatelessWidget {
-  const _ProgrammedDueFoot({
-    required this.missedProgram,
-    required this.dueTodayLane,
-    required this.review,
-    required this.l10n,
-  });
+class _ActiveTrackFocusPill extends StatelessWidget {
+  const _ActiveTrackFocusPill({required this.label, required this.value});
 
-  final int missedProgram;
-  final int dueTodayLane;
-  final int review;
-  final AppLocalizations l10n;
-
-  static const _overdueColor = Color(0xFFD63C3C);
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalDue = missedProgram + dueTodayLane + review;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          l10n.tabSchedule,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: AppTheme.brandInkMuted,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                decoration: BoxDecoration(
-                  color: missedProgram > 0
-                      ? _overdueColor.withValues(alpha: 0.1)
-                      : AppTheme.brandCreamSoft,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.overdue,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '$missedProgram',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: missedProgram > 0
-                            ? _overdueColor
-                            : AppTheme.brandInk,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                decoration: BoxDecoration(
-                  color: dueTodayLane > 0
-                      ? AppTheme.brandBlue.withValues(alpha: 0.1)
-                      : AppTheme.brandCreamSoft,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.dueToday,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '$dueTodayLane',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: dueTodayLane > 0
-                            ? AppTheme.brandBlue
-                            : AppTheme.brandInk,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                decoration: BoxDecoration(
-                  color: review > 0
-                      ? AppTheme.brandGold.withValues(alpha: 0.12)
-                      : AppTheme.brandCreamSoft,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.activeTrackChazaraLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '$review',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: review > 0
-                            ? AppTheme.brandGoldDeep
-                            : AppTheme.brandInk,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        if (totalDue == 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: _kActiveTrackFocusPillBg,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: AlignmentDirectional.topEnd,
             child: Text(
-              l10n.nothingDueInQueue,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              label,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: AppTheme.brandInkMuted,
-                height: 1.2,
+                color: _kActiveTrackPrimaryBlue,
+                fontWeight: FontWeight.w800,
+                fontSize: 10,
+                letterSpacing: 0.4,
               ),
             ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppTheme.brandInk,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgrammedTrackMetricsRow extends StatelessWidget {
+  const _ProgrammedTrackMetricsRow({
+    required this.chazara,
+    required this.dueToday,
+    required this.overdue,
+    required this.l10n,
+  });
+
+  final int chazara;
+  final int dueToday;
+  final int overdue;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: _ActiveTrackMetricBox(
+            count: chazara,
+            label: l10n.activeTrackMetricChazara,
+            valueColor: chazara > 0
+                ? const Color(0xFFB45309)
+                : AppTheme.brandInk,
+            valueBg: const Color(0xFFFFE7D1),
+            labelStyle: theme.textTheme.labelSmall,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ActiveTrackMetricBox(
+            count: dueToday,
+            label: l10n.activeTrackMetricDueToday,
+            valueColor: dueToday > 0
+                ? _kActiveTrackPrimaryBlue
+                : AppTheme.brandInk,
+            valueBg: const Color(0xFFDFE9FD),
+            labelStyle: theme.textTheme.labelSmall,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ActiveTrackMetricBox(
+            count: overdue,
+            label: l10n.activeTrackMetricOverdue,
+            valueColor: const Color(0xFFD63C3C),
+            valueBg: const Color(0xFFFFE0EB),
+            labelStyle: theme.textTheme.labelSmall,
+            countMutedWhenZero: true,
+          ),
+        ),
       ],
     );
   }
 }
 
-/// Compact pace badge for the curriculum card header.
-class _MiniPaceBadge extends StatelessWidget {
-  const _MiniPaceBadge({required this.paceStatus});
+class _ActiveTrackMetricBox extends StatelessWidget {
+  const _ActiveTrackMetricBox({
+    required this.count,
+    required this.label,
+    required this.valueColor,
+    required this.valueBg,
+    required this.labelStyle,
+    this.countMutedWhenZero = false,
+  });
 
-  final PaceStatus? paceStatus;
+  final int count;
+  final String label;
+  final Color valueColor;
+  final Color valueBg;
+  final TextStyle? labelStyle;
+  final bool countMutedWhenZero;
 
   @override
   Widget build(BuildContext context) {
-    if (paceStatus == null) return const SizedBox.shrink();
-
-    final (label, color, icon) = switch (paceStatus!.status) {
-      PaceStatusType.ahead => (
-        '${paceStatus!.daysDelta}d',
-        AppTheme.brandGold,
-        Icons.trending_up,
+    final theme = Theme.of(context);
+    final displayColor = countMutedWhenZero && count == 0
+        ? AppTheme.brandInk
+        : valueColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+      decoration: BoxDecoration(
+        color: valueBg,
+        borderRadius: BorderRadius.circular(14),
       ),
-      PaceStatusType.behind => (
-        '${paceStatus!.daysDelta.abs()}d',
-        AppTheme.brandCoralDeep,
-        Icons.trending_down,
-      ),
-      PaceStatusType.onPace => ('OK', AppTheme.brandBlue, Icons.trending_flat),
-    };
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 2),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: displayColor,
+              fontSize: 19,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: labelStyle?.copyWith(
+              color: AppTheme.brandInkMuted,
+              fontWeight: FontWeight.w800,
+              fontSize: 9.5,
+              height: 1.1,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
     );
+  }
+}
+
+class _ActiveTrackGreenProgress extends StatelessWidget {
+  const _ActiveTrackGreenProgress({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final p = value.clamp(0.0, 1.0);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: SizedBox(
+            height: 10,
+            child: Stack(
+              children: [
+                Container(color: const Color(0xFFE3E3E3)),
+                FractionallySizedBox(
+                  widthFactor: p,
+                  child: const ColoredBox(color: _kActiveTrackCompletionGreen),
+                ),
+                if (p > 0.02)
+                  const Positioned(
+                    left: 2,
+                    top: 2,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 1,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: SizedBox(width: 6, height: 6),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ActiveTrackPaceBadge extends StatelessWidget {
+  const _ActiveTrackPaceBadge({
+    required this.paceStatus,
+    required this.l10n,
+    this.top = 0,
+    this.end = 0,
+  });
+
+  final PaceStatus? paceStatus;
+  final AppLocalizations l10n;
+  final double top;
+  final double end;
+
+  @override
+  Widget build(BuildContext context) {
+    if (paceStatus == null) {
+      return const SizedBox.shrink();
+    }
+    final ps = paceStatus!;
+
+    switch (ps.status) {
+      case PaceStatusType.ahead:
+        return PositionedDirectional(
+          top: top,
+          end: end,
+          child: Material(
+            color: _kActiveTrackPaceAheadBg,
+            borderRadius: BorderRadius.circular(99),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.trending_up, size: 12, color: Colors.white),
+                  const SizedBox(width: 2),
+                  Text(
+                    l10n.activeTrackPaceAhead(ps.daysDelta),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      case PaceStatusType.behind:
+        return PositionedDirectional(
+          top: top,
+          end: end,
+          child: Material(
+            color: const Color(0xFFC23B5A),
+            borderRadius: BorderRadius.circular(99),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.trending_down,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    l10n.activeTrackPaceBehind(ps.daysDelta.abs()),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      case PaceStatusType.onPace:
+        return PositionedDirectional(
+          top: top,
+          end: end,
+          child: Material(
+            color: _kActiveTrackPrimaryBlue,
+            borderRadius: BorderRadius.circular(99),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check, size: 14, color: Colors.white),
+                  const SizedBox(width: 3),
+                  Text(
+                    l10n.activeTrackPaceOk,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+    }
   }
 }
 

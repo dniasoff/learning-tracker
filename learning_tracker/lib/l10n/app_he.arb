@@ -23,6 +23,25 @@
   "noTasksRemaining": "אין משימות נוספות להיום.",
   "activeCurricula": "תוכניות לימוד פעילות",
   "activeTracks": "מסלולים פעילים",
+  "activeTracksSubtitle": "המשיכו בצורה מעולה ביעדי הלמידה",
+  "activeTrackNextTask": "המשימה הבאה",
+  "activeTrackCurrentFocus": "מיקוד נוכחי",
+  "activeTrackPaceAhead": "לפני {days} ימים",
+  "@activeTrackPaceAhead": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "activeTrackPaceBehind": "אחרי {days} ימים",
+  "@activeTrackPaceBehind": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "activeTrackPaceOk": "במסלול",
+  "activeTrackMetricChazara": "חזרה",
+  "activeTrackMetricDueToday": "להיום",
+  "activeTrackMetricOverdue": "באיחור",
   "trackLifetimeLearning": "לימוד לאורך חיים",
   "continueLearning": "המשך לימוד",
   "recentActivity": "פעילות אחרונה",

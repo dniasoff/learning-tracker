@@ -65,6 +65,37 @@ class AppLocalizationsHe extends AppLocalizations {
   String get activeTracks => 'מסלולים פעילים';
 
   @override
+  String get activeTracksSubtitle => 'המשיכו בצורה מעולה ביעדי הלמידה';
+
+  @override
+  String get activeTrackNextTask => 'המשימה הבאה';
+
+  @override
+  String get activeTrackCurrentFocus => 'מיקוד נוכחי';
+
+  @override
+  String activeTrackPaceAhead(int days) {
+    return 'לפני $days ימים';
+  }
+
+  @override
+  String activeTrackPaceBehind(int days) {
+    return 'אחרי $days ימים';
+  }
+
+  @override
+  String get activeTrackPaceOk => 'במסלול';
+
+  @override
+  String get activeTrackMetricChazara => 'חזרה';
+
+  @override
+  String get activeTrackMetricDueToday => 'להיום';
+
+  @override
+  String get activeTrackMetricOverdue => 'באיחור';
+
+  @override
   String get trackLifetimeLearning => 'לימוד לאורך חיים';
 
   @override

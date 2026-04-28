@@ -23,6 +23,25 @@
   "noTasksRemaining": "No tasks remaining for today.",
   "activeCurricula": "Active Curricula",
   "activeTracks": "Active tracks",
+  "activeTracksSubtitle": "Keep up the great work on your learning goals",
+  "activeTrackNextTask": "NEXT TASK",
+  "activeTrackCurrentFocus": "CURRENT FOCUS",
+  "activeTrackPaceAhead": "Ahead {days}d",
+  "@activeTrackPaceAhead": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "activeTrackPaceBehind": "Behind {days}d",
+  "@activeTrackPaceBehind": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "activeTrackPaceOk": "OK",
+  "activeTrackMetricChazara": "CHAZARA",
+  "activeTrackMetricDueToday": "DUE TODAY",
+  "activeTrackMetricOverdue": "OVERDUE",
   "trackLifetimeLearning": "Lifetime learning",
   "continueLearning": "Continue Learning",
   "recentActivity": "Recent Activity",

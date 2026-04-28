@@ -206,6 +206,60 @@ abstract class AppLocalizations {
   /// **'Active tracks'**
   String get activeTracks;
 
+  /// No description provided for @activeTracksSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep up the great work on your learning goals'**
+  String get activeTracksSubtitle;
+
+  /// No description provided for @activeTrackNextTask.
+  ///
+  /// In en, this message translates to:
+  /// **'NEXT TASK'**
+  String get activeTrackNextTask;
+
+  /// No description provided for @activeTrackCurrentFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'CURRENT FOCUS'**
+  String get activeTrackCurrentFocus;
+
+  /// No description provided for @activeTrackPaceAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'Ahead {days}d'**
+  String activeTrackPaceAhead(int days);
+
+  /// No description provided for @activeTrackPaceBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'Behind {days}d'**
+  String activeTrackPaceBehind(int days);
+
+  /// No description provided for @activeTrackPaceOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get activeTrackPaceOk;
+
+  /// No description provided for @activeTrackMetricChazara.
+  ///
+  /// In en, this message translates to:
+  /// **'CHAZARA'**
+  String get activeTrackMetricChazara;
+
+  /// No description provided for @activeTrackMetricDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'DUE TODAY'**
+  String get activeTrackMetricDueToday;
+
+  /// No description provided for @activeTrackMetricOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'OVERDUE'**
+  String get activeTrackMetricOverdue;
+
   /// No description provided for @trackLifetimeLearning.
   ///
   /// In en, this message translates to:
