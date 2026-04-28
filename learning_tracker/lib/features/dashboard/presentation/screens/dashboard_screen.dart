@@ -15,7 +15,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -34,11 +33,8 @@ String _trackTypeLabel(String trackTypeStorageKey) {
   }
 }
 
-/// Primary blue for active-track CTA and pace "OK" pill (design spec).
+/// Primary blue for active-track CTA (design spec).
 const Color _kActiveTrackPrimaryBlue = Color(0xFF122FA0);
-
-/// Red pace badge when ahead of schedule.
-const Color _kActiveTrackPaceAheadBg = Color(0xFFE85D5D);
 
 /// Green completion bar (self-paced card).
 const Color _kActiveTrackCompletionGreen = Color(0xFF22C55E);
@@ -1435,7 +1431,6 @@ class _ActiveTrackCard extends ConsumerWidget {
     final hasProgramEnrollmentAsync = ref.watch(
       dashboardHasProgramEnrollmentProvider(curriculum),
     );
-    final paceAsync = ref.watch(dashboardPaceStatusProvider(curriculum));
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = formatFractionAsPercent(percentage);
     final profileId = ref.watch(activeProfileIdProvider);
@@ -1462,7 +1457,6 @@ class _ActiveTrackCard extends ConsumerWidget {
     final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
     final hasProgramEnrollment =
         hasProgramEnrollmentAsync.asData?.value ?? false;
-    final paceStatus = paceAsync.asData?.value;
     final taskBuckets = _bucketTrackTasks(curriculumTasks);
     final focusLabel = hasProgramEnrollment
         ? l10n.activeTrackNextTask
@@ -1478,195 +1472,170 @@ class _ActiveTrackCard extends ConsumerWidget {
       color: AppTheme.brandCreamCard,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       margin: EdgeInsets.zero,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () {
-              context.router.push(
-                ContentHierarchyRoute(curriculumId: curriculum.storageKey),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () {
+          context.router.push(
+            ContentHierarchyRoute(curriculumId: curriculum.storageKey),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              displayNamePrimary,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.brandInk,
-                                letterSpacing: -0.1,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              displayNameSecondary,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.brandInk,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 48,
-                        height: 48,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: bookIconBg,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.menu_book_rounded,
-                          color: _kActiveTrackPrimaryBlue,
-                          size: 24,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  _ActiveTrackFocusPill(label: focusLabel, value: focusValue),
-                  const SizedBox(height: 10),
-                  if (hasProgramEnrollment) ...[
-                    _ProgrammedTrackMetricsRow(
-                      chazara: taskBuckets.review,
-                      dueToday: taskBuckets.dueTodayLane,
-                      overdue: taskBuckets.missedProgram,
-                      l10n: l10n,
-                    ),
-                    if (taskBuckets.total == 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          l10n.nothingDueInQueue,
-                          maxLines: 2,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.brandInkMuted,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                  ] else ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          pctDisplay,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: AppTheme.brandInk,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          l10n.carouselCompletion,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.brandInkMuted,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    _ActiveTrackGreenProgress(value: percentage),
-                  ],
                   Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.max,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${l10n.trackLifetimeLearning} \u2022 $lifetimePercentDisplay',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: AppTheme.brandInkMuted,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            if (lifetimeFraction == null)
-                              const SizedBox.shrink()
-                            else
-                              Icon(
-                                lifetimeFull
-                                    ? Icons.check_circle_rounded
-                                    : Icons.show_chart_rounded,
-                                size: 20,
-                                color: lifetimeFull
-                                    ? _kActiveTrackCompletionGreen
-                                    : AppTheme.brandInkMuted,
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton(
-                          onPressed: () =>
-                              context.router.navigate(const LearningRoute()),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _kActiveTrackPrimaryBlue,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 48),
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.4,
-                            ),
+                        Text(
+                          displayNamePrimary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandInk,
+                            letterSpacing: -0.1,
                           ),
-                          child: Text(l10n.continueCta),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          displayNameSecondary,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandInk,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: bookIconBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.menu_book_rounded,
+                      color: _kActiveTrackPrimaryBlue,
+                      size: 24,
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
-          if (paceAsync.isLoading)
-            PositionedDirectional(
-              top: 8,
-              end: 8,
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: curriculumColor.withValues(alpha: 0.5),
+              const SizedBox(height: 10),
+              _ActiveTrackFocusPill(label: focusLabel, value: focusValue),
+              const SizedBox(height: 10),
+              if (hasProgramEnrollment) ...[
+                _ProgrammedTrackMetricsRow(
+                  chazara: taskBuckets.review,
+                  dueToday: taskBuckets.dueTodayLane,
+                  overdue: taskBuckets.missedProgram,
+                  l10n: l10n,
+                ),
+                if (taskBuckets.total == 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      l10n.nothingDueInQueue,
+                      maxLines: 2,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+              ] else ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      pctDisplay,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: AppTheme.brandInk,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      l10n.carouselCompletion,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                _ActiveTrackGreenProgress(value: percentage),
+              ],
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${l10n.trackLifetimeLearning} \u2022 $lifetimePercentDisplay',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (lifetimeFraction == null)
+                          const SizedBox.shrink()
+                        else
+                          Icon(
+                            lifetimeFull
+                                ? Icons.check_circle_rounded
+                                : Icons.show_chart_rounded,
+                            size: 20,
+                            color: lifetimeFull
+                                ? _kActiveTrackCompletionGreen
+                                : AppTheme.brandInkMuted,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: () =>
+                          context.router.navigate(const LearningRoute()),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _kActiveTrackPrimaryBlue,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      child: Text(l10n.continueCta),
+                    ),
+                  ],
                 ),
               ),
-            )
-          else
-            _ActiveTrackPaceBadge(
-              top: 8,
-              end: 12,
-              paceStatus: paceStatus,
-              l10n: l10n,
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1881,116 +1850,6 @@ class _ActiveTrackGreenProgress extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-class _ActiveTrackPaceBadge extends StatelessWidget {
-  const _ActiveTrackPaceBadge({
-    required this.paceStatus,
-    required this.l10n,
-    this.top = 0,
-    this.end = 0,
-  });
-
-  final PaceStatus? paceStatus;
-  final AppLocalizations l10n;
-  final double top;
-  final double end;
-
-  @override
-  Widget build(BuildContext context) {
-    if (paceStatus == null) {
-      return const SizedBox.shrink();
-    }
-    final ps = paceStatus!;
-
-    switch (ps.status) {
-      case PaceStatusType.ahead:
-        return PositionedDirectional(
-          top: top,
-          end: end,
-          child: Material(
-            color: _kActiveTrackPaceAheadBg,
-            borderRadius: BorderRadius.circular(99),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.trending_up, size: 12, color: Colors.white),
-                  const SizedBox(width: 2),
-                  Text(
-                    l10n.activeTrackPaceAhead(ps.daysDelta),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      case PaceStatusType.behind:
-        return PositionedDirectional(
-          top: top,
-          end: end,
-          child: Material(
-            color: const Color(0xFFC23B5A),
-            borderRadius: BorderRadius.circular(99),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.trending_down,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    l10n.activeTrackPaceBehind(ps.daysDelta.abs()),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      case PaceStatusType.onPace:
-        return PositionedDirectional(
-          top: top,
-          end: end,
-          child: Material(
-            color: _kActiveTrackPrimaryBlue,
-            borderRadius: BorderRadius.circular(99),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.check, size: 14, color: Colors.white),
-                  const SizedBox(width: 3),
-                  Text(
-                    l10n.activeTrackPaceOk,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-    }
   }
 }
 
