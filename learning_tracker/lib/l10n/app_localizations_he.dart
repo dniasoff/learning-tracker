@@ -546,6 +546,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get markComplete => 'סמן כהושלם';
 
   @override
+  String get textReaderNextDailyTask => 'המשימה הבאה';
+
+  @override
   String get noProjection => 'אין תחזית';
 
   @override

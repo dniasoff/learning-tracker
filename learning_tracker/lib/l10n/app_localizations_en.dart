@@ -549,6 +549,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markComplete => 'Mark complete';
 
   @override
+  String get textReaderNextDailyTask => 'Next daily task';
+
+  @override
   String get noProjection => 'No projection';
 
   @override

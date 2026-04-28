@@ -1073,6 +1073,12 @@ abstract class AppLocalizations {
   /// **'Mark complete'**
   String get markComplete;
 
+  /// No description provided for @textReaderNextDailyTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Next daily task'**
+  String get textReaderNextDailyTask;
+
   /// No description provided for @noProjection.
   ///
   /// In en, this message translates to:

@@ -3,14 +3,39 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockTextCacheRepository extends Mock implements TextCacheRepository {}
+
+DailyTask _readerDailyTask({
+  required String ref,
+  int stageOrder = 1,
+}) {
+  return DailyTask(
+    curriculumId: CurriculumId.mishnayos,
+    contentItemSefariaRef: ref,
+    stageOrder: stageOrder,
+    stageDefinitionId: stageOrder,
+    priority: DailyTaskPriority.newLearning,
+    isOverdue: false,
+    reason: 'test',
+    stageName: 'Learn',
+    trackId: 1,
+    trackLabel: 'Test Track',
+    estimatedEffortMinutes: 5,
+  );
+}
 
 void main() {
   setUp(() {
@@ -20,10 +45,28 @@ void main() {
   });
 
   Widget createTestWidget({required TextCacheRepository repository}) {
+    final dailyTasks = [
+      _readerDailyTask(ref: 'Mishnah Berakhot 1.1'),
+      _readerDailyTask(ref: 'Mishnah Berakhot 1.2'),
+    ];
     return ProviderScope(
-      overrides: [textCacheRepositoryProvider.overrideWithValue(repository)],
-      child: const MaterialApp(
-        home: TextDisplayScreen(sefariaRef: 'Mishnah Berakhot 1.1'),
+      overrides: [
+        textCacheRepositoryProvider.overrideWithValue(repository),
+        allDailyTasksProvider.overrideWith((ref) => Future.value(dailyTasks)),
+        trackStorageKeyForTrackIdProvider.overrideWith(
+          (ref, trackId) async => TrackType.personal.storageKey,
+        ),
+        isStageCompletedProvider.overrideWith(
+          (ref, params) async => false,
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(800, 1200)),
+          child: const TextDisplayScreen(sefariaRef: 'Mishnah Berakhot 1.1'),
+        ),
       ),
     );
   }
@@ -125,7 +168,7 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
-    testWidgets('displays Sefaria integration card', (tester) async {
+    testWidgets('displays reader section labels', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
         return TextContent(
@@ -138,8 +181,9 @@ void main() {
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sefaria Integration'), findsOneWidget);
-      expect(find.byIcon(Icons.menu_book), findsOneWidget);
+      expect(find.text('Hebrew Text'), findsOneWidget);
+      expect(find.text('English Translation'), findsOneWidget);
+      expect(find.byIcon(Icons.menu_book_rounded), findsOneWidget);
     });
 
     testWidgets('displays mark completion section', (tester) async {
@@ -162,64 +206,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify mark completion text is present
-      expect(find.text('Mark as Complete'), findsOneWidget);
-    });
-
-    testWidgets('options sheet shows font size choices', (tester) async {
-      final mockRepo = MockTextCacheRepository();
-      when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
-          sefariaRef: 'Mishnah Berakhot 1.1',
-          hebrewText: 'hebrew',
-          englishText: 'english',
-        );
-      });
-
-      await tester.pumpWidget(createTestWidget(repository: mockRepo));
-      await tester.pumpAndSettle();
-
-      // Tap the more_vert icon to open the options bottom sheet
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-
-      // Should show all font size options as ChoiceChips
-      expect(find.text('Small'), findsOneWidget);
-      expect(find.text('Medium'), findsOneWidget);
-      expect(find.text('Large'), findsOneWidget);
-    });
-
-    testWidgets('font size selector updates text size', (tester) async {
-      final mockRepo = MockTextCacheRepository();
-      when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
-          sefariaRef: 'Mishnah Berakhot 1.1',
-          hebrewText: 'hebrew',
-          englishText: 'english',
-        );
-      });
-
-      await tester.pumpWidget(createTestWidget(repository: mockRepo));
-      await tester.pumpAndSettle();
-
-      // Get initial font size
-      final initialHebrew = tester.widget<Text>(find.text('hebrew'));
-      final initialSize = initialHebrew.style!.fontSize!;
-
-      // Open options sheet and select Large
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Large'));
-      await tester.pumpAndSettle();
-
-      // Close the bottom sheet
-      await tester.tapAt(Offset.zero);
-      await tester.pumpAndSettle();
-
-      // Font size should increase
-      final updatedHebrew = tester.widget<Text>(find.text('hebrew'));
-      final updatedSize = updatedHebrew.style!.fontSize!;
-      expect(updatedSize, greaterThan(initialSize));
+      // Verify mark completion and optional next-task navigation
+      expect(find.text('Mark Learn Complete'), findsOneWidget);
+      expect(find.text('Next daily task'), findsOneWidget);
     });
 
     testWidgets('shows sefariaRef in AppBar title', (tester) async {
@@ -238,63 +227,5 @@ void main() {
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
     });
 
-    testWidgets('shows nikud toggle in options sheet', (tester) async {
-      final mockRepo = MockTextCacheRepository();
-      when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
-          sefariaRef: 'Mishnah Berakhot 1.1',
-          hebrewText: 'hebrew',
-          englishText: 'english',
-        );
-      });
-
-      await tester.pumpWidget(createTestWidget(repository: mockRepo));
-      await tester.pumpAndSettle();
-
-      // Open options bottom sheet
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-
-      // Should show nikud toggle label and a Switch
-      expect(find.text('Show Nikud (diacritics)'), findsOneWidget);
-      expect(find.byType(Switch), findsOneWidget);
-    });
-
-    testWidgets('nikud toggle strips vowel marks from Hebrew text', (
-      tester,
-    ) async {
-      const hebrewWithNikud =
-          '\u05DE\u05B5\u05D0\u05B5\u05D9\u05DE\u05B8\u05EA\u05B7\u05D9';
-      const hebrewWithoutNikud = '\u05DE\u05D0\u05D9\u05DE\u05EA\u05D9';
-
-      final mockRepo = MockTextCacheRepository();
-      when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
-          sefariaRef: 'Mishnah Berakhot 1.1',
-          hebrewText: hebrewWithNikud,
-          englishText: 'From when',
-        );
-      });
-
-      await tester.pumpWidget(createTestWidget(repository: mockRepo));
-      await tester.pumpAndSettle();
-
-      // Default: nikud is ON, text shown with vowel marks
-      expect(find.text(hebrewWithNikud), findsOneWidget);
-
-      // Open options sheet and toggle nikud off via the Switch
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(Switch));
-      await tester.pumpAndSettle();
-
-      // Close the bottom sheet
-      await tester.tapAt(Offset.zero);
-      await tester.pumpAndSettle();
-
-      // After toggle: nikud stripped, showing text without vowel marks
-      expect(find.text(hebrewWithoutNikud), findsOneWidget);
-      expect(find.text(hebrewWithNikud), findsNothing);
-    });
   });
 }

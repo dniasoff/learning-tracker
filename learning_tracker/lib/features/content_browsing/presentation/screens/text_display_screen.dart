@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
@@ -20,6 +21,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class TextDisplayScreen extends ConsumerWidget {
@@ -405,6 +407,21 @@ class _ReaderSectionCard extends StatelessWidget {
   }
 }
 
+/// Next distinct daily-task item in [tasks] after any entries that share
+/// [currentRef] (same reader URL).
+DailyTask? _nextDailyTaskAfter(List<DailyTask> tasks, String currentRef) {
+  final firstIdx = tasks.indexWhere(
+    (t) => t.contentItemSefariaRef == currentRef,
+  );
+  if (firstIdx < 0) return null;
+  var i = firstIdx;
+  while (i < tasks.length && tasks[i].contentItemSefariaRef == currentRef) {
+    i++;
+  }
+  if (i >= tasks.length) return null;
+  return tasks[i];
+}
+
 /// Mark completion section. Resolves the curriculum + stage for this sefariaRef
 /// from today's scheduled tasks, then records the completion directly via
 /// [markCompletionUseCaseProvider] and invalidates dashboard providers so
@@ -426,6 +443,10 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
     setState(() => _saving = true);
 
     try {
+      final tasksBefore = await ref.read(allDailyTasksProvider.future);
+      final nextAfterComplete =
+          _nextDailyTaskAfter(tasksBefore, widget.sefariaRef);
+
       final useCase = ref.read(markCompletionUseCaseProvider);
       final result = await useCase(
         CompletionRequest(
@@ -478,6 +499,15 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             newUnlocks: result.newMilestoneUnlocks,
           );
         }
+      }
+
+      if (mounted && nextAfterComplete != null) {
+        await context.router.replace(
+          TextDisplayRoute(
+            sefariaRef: nextAfterComplete.contentItemSefariaRef,
+          ),
+        );
+        return;
       }
 
       if (mounted) {
@@ -553,6 +583,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         }
 
         final task = matches.first;
+        final nextTask = _nextDailyTaskAfter(tasks, widget.sefariaRef);
         final trackTypeAsync = ref.watch(
           trackStorageKeyForTrackIdProvider(task.trackId),
         );
@@ -587,54 +618,88 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 (isCompletedByOrderAsync.asData?.value ?? false) ||
                 (isCompletedByDefinitionIdAsync.asData?.value ?? false);
 
-            return SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: (_saving || isDone)
-                    ? null
-                    : () => _handleComplete(task, trackType),
-                style: FilledButton.styleFrom(
-                  backgroundColor:
-                      isDone ? AppTheme.brandGoldDeep : AppTheme.brandBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
+            final nextLabel =
+                AppLocalizations.of(context)?.textReaderNextDailyTask ??
+                    'Next daily task';
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton(
+                  onPressed: (_saving || isDone)
+                      ? null
+                      : () => _handleComplete(task, trackType),
+                  style: FilledButton.styleFrom(
+                    backgroundColor:
+                        isDone ? AppTheme.brandGoldDeep : AppTheme.brandBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    elevation: 2,
                   ),
-                  elevation: 2,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_saving)
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.brandCreamCard,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_saving)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.brandCreamCard,
+                          ),
+                        )
+                      else
+                        Icon(
+                          isDone
+                              ? Icons.check_circle
+                              : Icons.check_circle_outline_rounded,
+                          size: 20,
                         ),
-                      )
-                    else
-                      Icon(
+                      const SizedBox(width: 10),
+                      Text(
                         isDone
-                            ? Icons.check_circle
-                            : Icons.check_circle_outline_rounded,
-                        size: 20,
+                            ? 'Completed (${task.stageName})'
+                            : 'Mark Learn Complete',
+                        style: const TextStyle(
+                          fontSize: 31 / 2,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    const SizedBox(width: 10),
-                    Text(
-                      isDone
-                          ? 'Completed (${task.stageName})'
-                          : 'Mark Learn Complete',
+                    ],
+                  ),
+                ),
+                if (nextTask != null) ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => context.router.replace(
+                      TextDisplayRoute(
+                        sefariaRef: nextTask.contentItemSefariaRef,
+                      ),
+                    ),
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                    label: Text(
+                      nextLabel,
                       style: const TextStyle(
                         fontSize: 31 / 2,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
-                ),
-              ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.brandBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      side: BorderSide(
+                        color: AppTheme.brandBlue.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             );
           },
         );
