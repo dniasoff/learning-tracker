@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -28,11 +29,22 @@ class LifetimeMarkingScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      appBar: AppBar(title: AppBarTitle(text: l10n.lifetimeLearning)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: false,
+      appBar: AppBar(
+        backgroundColor: AppTheme.brandBlueDeep,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: AppBarTitle(text: l10n.lifetimeLearning),
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(gradient: LifetimeFolderGradients.pageBackground),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
           LifetimeFolderSurface(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,6 +76,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -96,6 +109,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
       titleEn: curriculum.displayNameEn,
       titleHe: curriculum.displayNameHe,
       trailingPercent: percentTextForCurriculum(summary) ?? '—',
+      showLearnedBadge: summary.learnedLeafCount > 0,
       isExpandableListStyle: false,
       onTap: () {
         Navigator.of(context).push(
@@ -214,7 +228,16 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
-  MarkingRowVisual _visualFor(String value) {
+  bool _ledgerHasUnit(List<LearningLedgerData> ledger, int level, String value) {
+    return ledger.any(
+      (e) => e.unitType == 'level$level' && e.unitIdentifier == value,
+    );
+  }
+
+  MarkingRowVisual _visualFor(String value, List<LearningLedgerData> ledger) {
+    if (_ledgerHasUnit(ledger, _currentLevel, value)) {
+      return MarkingRowVisual.direct;
+    }
     final selected = _isSelected(value);
     final implicit = selected && !_isDirectlySelected(value);
     if (implicit) return MarkingRowVisual.implicit;
@@ -276,23 +299,32 @@ class _LifetimeCurriculumMarkingScreenState
     ref.invalidate(dashboardCompletionPercentageProvider(_curriculum));
     ref.invalidate(dashboardLastCompletionProvider(_curriculum));
     ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
+    ref.invalidate(curriculumLedgerProvider(widget.curriculumId));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final contentAsync = ref.watch(curriculumContentProvider(_curriculum));
-    const cream = Color(0xFFF4F6FB);
+    final ledgerAsync = ref.watch(curriculumLedgerProvider(widget.curriculumId));
+    final ledger = ledgerAsync.asData?.value ?? const <LearningLedgerData>[];
 
     return Scaffold(
-      backgroundColor: cream,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandCreamCard,
+        backgroundColor: AppTheme.brandBlueDeep,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         title: AppBarTitle(
           text: '${_curriculum.displayNameHe} • ${_curriculum.displayNameEn}',
         ),
       ),
-      body: contentAsync.when(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(gradient: LifetimeFolderGradients.pageBackground),
+        child: contentAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Padding(
@@ -412,12 +444,18 @@ class _LifetimeCurriculumMarkingScreenState
                                           const SizedBox.shrink(),
                                       itemBuilder: (context, index) {
                                         final value = values[index];
+                                        final persisted = _ledgerHasUnit(
+                                          ledger,
+                                          _currentLevel,
+                                          value,
+                                        );
                                         return LifetimeMarkingScopeRow(
                                           primary: value,
                                           secondary: valueToEnglish[value],
                                           hasDrill: canDrill,
-                                          visual: _visualFor(value),
-                                          isImplicit:
+                                          visual: _visualFor(value, ledger),
+                                          isPersisted: persisted,
+                                          isImplicit: !persisted &&
                                               _isSelected(value) &&
                                               !_isDirectlySelected(value),
                                           onDrill: canDrill
@@ -484,6 +522,7 @@ class _LifetimeCurriculumMarkingScreenState
             ),
           );
         },
+      ),
       ),
     );
   }

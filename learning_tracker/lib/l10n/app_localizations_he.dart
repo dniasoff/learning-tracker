@@ -544,12 +544,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get progressChartsTileSubtitle => 'השלמות, מגמות ועוד';
 
   @override
-  String get curriculumMastery => 'מאסטרי תוכנית';
-
-  @override
-  String get masteryDoneBadge => 'הושלם';
-
-  @override
   String get learningLifetime => 'לימוד לאורך חיים';
 
   @override
@@ -655,6 +649,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chazaraReview => 'חזרה';
+
+  @override
+  String get activeTrackChazaraLabel => 'חזרה';
 
   @override
   String get urgent => 'דחוף';

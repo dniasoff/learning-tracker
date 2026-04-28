@@ -547,12 +547,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progressChartsTileSubtitle => 'Completions, trends, and more';
 
   @override
-  String get curriculumMastery => 'Curriculum Mastery';
-
-  @override
-  String get masteryDoneBadge => 'DONE';
-
-  @override
   String get learningLifetime => 'Learning Lifetime';
 
   @override
@@ -659,6 +653,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chazaraReview => 'Chazara/Review';
+
+  @override
+  String get activeTrackChazaraLabel => 'Chazara';
 
   @override
   String get urgent => 'URGENT';

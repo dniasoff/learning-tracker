@@ -392,7 +392,7 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 30),
         SizedBox(
-          height: 320,
+          height: 400,
           child: _ActiveTracksCarouselSection(
             title: l10n.activeTracks,
             activeTracks: activeTracks,
@@ -1448,256 +1448,233 @@ class _ActiveTrackCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
+              Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: curriculumColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.menu_book_rounded,
+                      color: curriculumColor,
+                      size: 16,
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      displayNamePrimary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (hasProgramEnrollment)
+                    // Show task counts for programmed tracks
+                    if (paceAsync.isLoading)
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: curriculumColor.withValues(alpha: 0.5),
+                        ),
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Container(
-                            width: 30,
-                            height: 30,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: curriculumColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
+                              color: AppTheme.brandCreamSoft,
+                              borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Icon(
-                              Icons.menu_book_rounded,
-                              color: curriculumColor,
-                              size: 16,
-                            ),
+                            child: _MiniPaceBadge(paceStatus: paceStatus),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              displayNamePrimary,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          if (hasProgramEnrollment)
-                            // Show task counts for programmed tracks
-                            if (paceAsync.isLoading)
-                              SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: curriculumColor.withValues(alpha: 0.5),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            alignment: WrapAlignment.end,
+                            children: [
+                              if (taskBuckets.missedProgram > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFD63C3C,
+                                    ).withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${taskBuckets.missedProgram} ${l10n.overdue}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: const Color(0xFFD63C3C),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
+                                  ),
                                 ),
-                              )
-                            else
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 3,
+                              if (taskBuckets.dueTodayLane > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.brandBlue.withValues(
+                                      alpha: 0.14,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.brandCreamSoft,
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: _MiniPaceBadge(
-                                      paceStatus: paceStatus,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${taskBuckets.dueTodayLane} ${l10n.dueToday}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: AppTheme.brandBlue,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                    spacing: 4,
-                                    runSpacing: 4,
-                                    alignment: WrapAlignment.end,
-                                    children: [
-                                      if (taskBuckets.missedProgram > 0)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 5,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(
-                                              0xFFD63C3C,
-                                            ).withValues(alpha: 0.14),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '${taskBuckets.missedProgram} ${l10n.overdue}',
-                                            style: theme.textTheme.labelSmall
-                                                ?.copyWith(
-                                                  color: const Color(
-                                                    0xFFD63C3C,
-                                                  ),
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 10,
-                                                ),
-                                          ),
-                                        ),
-                                      if (taskBuckets.dueTodayLane > 0)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 5,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.brandBlue
-                                                .withValues(alpha: 0.14),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '${taskBuckets.dueTodayLane} ${l10n.dueToday}',
-                                            style: theme.textTheme.labelSmall
-                                                ?.copyWith(
-                                                  color: AppTheme.brandBlue,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 10,
-                                                ),
-                                          ),
-                                        ),
-                                      if (taskBuckets.review > 0)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 5,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.brandGold
-                                                .withValues(alpha: 0.16),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '${taskBuckets.review} ${l10n.chazaraReview}',
-                                            style: theme.textTheme.labelSmall
-                                                ?.copyWith(
-                                                  color: AppTheme.brandGoldDeep,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 10,
-                                                ),
-                                          ),
-                                        ),
-                                    ],
+                                ),
+                              if (taskBuckets.review > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
                                   ),
-                                ],
-                              )
-                          else
-                          // Show pace badge for self-paced tracks
-                          if (paceAsync.isLoading)
-                            SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: curriculumColor.withValues(alpha: 0.5),
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.brandCreamSoft,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: _MiniPaceBadge(paceStatus: paceStatus),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        displayNameSecondary,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        todayTask?.contentItemSefariaRef ?? l10n.noProjection,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 10),
-                      if (hasProgramEnrollment)
-                        _ProgrammedDueFoot(
-                          missedProgram: taskBuckets.missedProgram,
-                          dueTodayLane: taskBuckets.dueTodayLane,
-                          review: taskBuckets.review,
-                          l10n: l10n,
-                        )
-                      else ...[
-                        Row(
-                          children: [
-                            Text(
-                              l10n.carouselCompletion,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppTheme.brandInkMuted,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              pctDisplay,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: AppTheme.brandInk,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        AnimatedProgressBar(
-                          value: percentage,
-                          color: curriculumColor,
-                          backgroundColor: AppTheme.brandCreamSoft,
-                          height: 10,
-                          duration: const Duration(milliseconds: 800),
-                          curve: Curves.easeOut,
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Text(
-                            l10n.trackLifetimeLearning,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            lifetimePercentDisplay,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: AppTheme.brandInk,
-                              fontWeight: FontWeight.w700,
-                            ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.brandGold.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${taskBuckets.review} ${l10n.activeTrackChazaraLabel}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: AppTheme.brandGoldDeep,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
+                      )
+                  else
+                  // Show pace badge for self-paced tracks
+                  if (paceAsync.isLoading)
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: curriculumColor.withValues(alpha: 0.5),
                       ),
-                    ],
-                  ),
-                ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.brandCreamSoft,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: _MiniPaceBadge(paceStatus: paceStatus),
+                    ),
+                ],
               ),
+              const SizedBox(height: 8),
+              Text(
+                displayNameSecondary,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                todayTask?.contentItemSefariaRef ?? l10n.noProjection,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 10),
+              if (hasProgramEnrollment)
+                _ProgrammedDueFoot(
+                  missedProgram: taskBuckets.missedProgram,
+                  dueTodayLane: taskBuckets.dueTodayLane,
+                  review: taskBuckets.review,
+                  l10n: l10n,
+                )
+              else ...[
+                Row(
+                  children: [
+                    Text(
+                      l10n.carouselCompletion,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      pctDisplay,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppTheme.brandInk,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                AnimatedProgressBar(
+                  value: percentage,
+                  color: curriculumColor,
+                  backgroundColor: AppTheme.brandCreamSoft,
+                  height: 10,
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOut,
+                ),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    l10n.trackLifetimeLearning,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    lifetimePercentDisplay,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppTheme.brandInk,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
               Row(
                 children: [
                   Expanded(
@@ -1727,7 +1704,7 @@ class _ActiveTrackCard extends ConsumerWidget {
   }
 }
 
-/// Footer for programmed tracks: missed program vs due today vs chazara/review.
+/// Footer for programmed tracks: missed program, due today, and chazara.
 class _ProgrammedDueFoot extends StatelessWidget {
   const _ProgrammedDueFoot({
     required this.missedProgram,
@@ -1851,7 +1828,7 @@ class _ProgrammedDueFoot extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        l10n.chazaraReview,
+                        l10n.activeTrackChazaraLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelSmall?.copyWith(

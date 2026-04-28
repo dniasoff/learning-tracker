@@ -6,12 +6,27 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 /// Blue gradient used by Learning lifetime / mark-what-you-learned flows.
 class LifetimeFolderGradients {
   static LinearGradient get card {
-    return LinearGradient(
+    return const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        AppTheme.brandBlue.withValues(alpha: 0.95),
-        AppTheme.brandBlueBright.withValues(alpha: 0.85),
+        Color(0xFF153E8C),
+        AppTheme.brandBlue,
+        Color(0xFF3D7DDA),
+      ],
+      stops: [0.0, 0.45, 1.0],
+    );
+  }
+
+  /// Full-screen soft background behind lifetime marking / progress panels.
+  static LinearGradient get pageBackground {
+    return const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color(0xFFE8EEF8),
+        Color(0xFFF2F6FD),
+        Color(0xFFF8FAFF),
       ],
     );
   }
@@ -157,6 +172,7 @@ class LifetimeCurriculumFolderRow extends StatelessWidget {
     this.trailingPercent,
     this.isExpanded = false,
     this.isExpandableListStyle = true,
+    this.showLearnedBadge = false,
     this.onTap,
   });
 
@@ -167,6 +183,9 @@ class LifetimeCurriculumFolderRow extends StatelessWidget {
 
   /// When true, shows expand/less like Progress; when false, always a forward chevron (e.g. navigation).
   final bool isExpandableListStyle;
+
+  /// Green check when this curriculum already has lifetime marks (Progress parity).
+  final bool showLearnedBadge;
   final VoidCallback? onTap;
 
   @override
@@ -218,6 +237,14 @@ class LifetimeCurriculumFolderRow extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (showLearnedBadge) ...[
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    size: 20,
+                    color: Color(0xFF3BDD87),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 if (trailingPercent != null) ...[
                   Text(
                     trailingPercent!,
@@ -406,6 +433,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
     this.hasDrill = true,
     required this.onToggle,
     this.isImplicit = false,
+    this.isPersisted = false,
     this.onDrill,
   });
 
@@ -416,16 +444,21 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
   final bool hasDrill;
   final VoidCallback onToggle;
   final bool isImplicit;
+
+  /// Saved in learning ledger — green like Progress tree, checkbox read-only.
+  final bool isPersisted;
   final VoidCallback? onDrill;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (visual) {
-      MarkingRowVisual.direct => const Color(0xFF3BDD87),
-      MarkingRowVisual.implicit => const Color(0xFFFFD26A),
-      MarkingRowVisual.none => Colors.white.withValues(alpha: 0.5),
-    };
-    final selected =
+    final color = isPersisted
+        ? const Color(0xFF3BDD87)
+        : switch (visual) {
+            MarkingRowVisual.direct => const Color(0xFF3BDD87),
+            MarkingRowVisual.implicit => const Color(0xFFFFD26A),
+            MarkingRowVisual.none => Colors.white.withValues(alpha: 0.5),
+          };
+    final selected = isPersisted ||
         visual == MarkingRowVisual.direct ||
         visual == MarkingRowVisual.implicit;
 
@@ -445,7 +478,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
               child: Center(
                 child: Checkbox(
                   value: selected,
-                  onChanged: isImplicit
+                  onChanged: isPersisted || isImplicit
                       ? null
                       : (_) {
                           onToggle();
@@ -489,7 +522,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: InkWell(
-                onTap: onToggle,
+                onTap: isPersisted || isImplicit ? null : onToggle,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

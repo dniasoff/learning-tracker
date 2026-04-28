@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -74,11 +73,6 @@ class ProgressScreen extends ConsumerWidget {
                   ref.invalidate(dashboardStreakProvider);
                   ref.invalidate(progressOverviewStatsProvider);
                   ref.invalidate(globalLifetimeCurriculaProvider(profileId));
-                  for (final curriculum in activeCurricula) {
-                    ref.invalidate(
-                      dashboardCompletionPercentageProvider(curriculum),
-                    );
-                  }
                   ref.invalidate(
                     lifetimeTotalsAcrossAllCurriculaProvider(profileId),
                   );
@@ -102,8 +96,6 @@ class ProgressScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     const _ProgressChartsTile(),
                     const SizedBox(height: 20),
-                    _CurriculaMasterySection(activeCurricula: activeCurricula),
-                    const SizedBox(height: 18),
                     _LearningLifetimeTreeCard(summaries: lifetimeSummaries),
                   ],
                 ),
@@ -318,132 +310,6 @@ class _ProgressChartsTile extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               color: AppTheme.brandInkMuted,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CurriculaMasterySection extends ConsumerWidget {
-  const _CurriculaMasterySection({required this.activeCurricula});
-
-  final List<CurriculumId> activeCurricula;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.curriculumMastery,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        for (final curriculum in activeCurricula)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _CurriculumProgressTile(curriculum: curriculum),
-          ),
-      ],
-    );
-  }
-}
-
-class _CurriculumProgressTile extends ConsumerWidget {
-  const _CurriculumProgressTile({required this.curriculum});
-
-  final CurriculumId curriculum;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final completionAsync = ref.watch(
-      dashboardCompletionPercentageProvider(curriculum),
-    );
-    final percentage = completionAsync.asData?.value ?? 0.0;
-    final percentageText = formatFractionAsPercent(percentage);
-    final color = AppTheme.getCurriculumColor(curriculum);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () {
-        context.router.push(
-          CurriculumProgressRoute(curriculumId: curriculum.storageKey),
-        );
-      },
-      child: Ink(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF03174C).withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        curriculum.displayNameEn,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF172347),
-                        ),
-                      ),
-                      Text(
-                        curriculum.displayNameHe,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF8A92A4),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$percentageText ${l10n.masteryDoneBadge}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF243053),
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: percentage,
-                minHeight: 9,
-                backgroundColor: const Color(0xFFE8ECF3),
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-              ),
             ),
           ],
         ),

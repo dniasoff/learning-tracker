@@ -1080,18 +1080,6 @@ abstract class AppLocalizations {
   /// **'Completions, trends, and more'**
   String get progressChartsTileSubtitle;
 
-  /// No description provided for @curriculumMastery.
-  ///
-  /// In en, this message translates to:
-  /// **'Curriculum Mastery'**
-  String get curriculumMastery;
-
-  /// No description provided for @masteryDoneBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'DONE'**
-  String get masteryDoneBadge;
-
   /// No description provided for @learningLifetime.
   ///
   /// In en, this message translates to:
@@ -1271,6 +1259,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Chazara/Review'**
   String get chazaraReview;
+
+  /// No description provided for @activeTrackChazaraLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Chazara'**
+  String get activeTrackChazaraLabel;
 
   /// No description provided for @urgent.
   ///
