@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/stages/domain/models/schedule_type.dar
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
+import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/program_selection_step.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -530,6 +531,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         result: result,
         profileId: widget.profileId,
       );
+
+      await invalidateAfterTrackDataChange(ref, widget.profileId);
 
       if (!_isProgramTrack && priorCompletionSelection != null) {
         unawaited(

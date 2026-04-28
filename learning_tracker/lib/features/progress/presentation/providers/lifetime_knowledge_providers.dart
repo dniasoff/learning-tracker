@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -52,6 +53,8 @@ class TrackDualProgressMetric {
   final String trackLabel;
   final CurriculumId curriculumId;
   final double currentCyclePercentage;
+  /// Learned leaf units ÷ leaf units in this track’s [curriculum_scopes] slice
+  /// (falls back to full curriculum when no scope is set).
   final double lifetimePercentage;
   final bool isProgramTrack;
   final int? todayDueCount;
@@ -137,7 +140,16 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
           (c) => c.storageKey == track.curriculumId,
           orElse: () => CurriculumId.mishnayos,
         );
-        final leaves = await _safeLoadLeaves(repo, curriculum);
+        // Denominator = leaf count **within this track's curriculum scope** (not the
+        // whole curriculum), so "lifetime %" reflects completion of *this track's*
+        // slice — otherwise full-curriculum denominators yield tiny fractions.
+        final leaves = await _safeLoadLeavesForTrack(
+          repo,
+          db,
+          profileId,
+          curriculum,
+          track.id,
+        );
         if (leaves == null) continue;
         final denominator = leaves.length;
         if (denominator == 0) continue;
@@ -149,16 +161,14 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         final currentCycleRefs = trackCompletions.map((c) => c.sefariaRef).toSet();
         final currentCyclePct = currentCycleRefs.length / denominator;
 
-        final curriculumCompletions = await db.completionDao
-            .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
-        final curriculumLedger = await db.learningLedgerDao.getEntriesByCurriculum(
+        final trackLedger = await db.learningLedgerDao.getEntriesByTrack(
+          track.id,
           profileId,
-          curriculum.storageKey,
         );
         final lifetimeRefs = _learnedLeafRefs(
           leaves: leaves,
-          completedRefs: curriculumCompletions.map((c) => c.sefariaRef).toSet(),
-          ledgerEntries: curriculumLedger,
+          completedRefs: trackCompletions.map((c) => c.sefariaRef).toSet(),
+          ledgerEntries: trackLedger,
         );
         final lifetimePct = lifetimeRefs.length / denominator;
         final enrollment = await db.profileProgramDao
@@ -245,6 +255,58 @@ Future<List<ContentItem>?> _safeLoadLeaves(
   } catch (_) {
     // Some curricula may not ship local hierarchy assets in this build.
     // Skip them so one missing asset doesn't break the entire view.
+    return null;
+  }
+}
+
+/// Leaf items for [trackId]'s scope: same idea as [scopedCurriculumContentProvider],
+/// but resolved per track (with legacy fallbacks when [trackId] on scope rows is 0).
+Future<List<ContentItem>?> _safeLoadLeavesForTrack(
+  ContentRepository repo,
+  UserDatabase db,
+  int profileId,
+  CurriculumId curriculum,
+  int trackId,
+) async {
+  var scopes = await db.curriculumScopeDao.getScopesByTrack(trackId);
+  if (scopes.isEmpty) {
+    final forProfile = await db.curriculumScopeDao.getScopes(
+      profileId,
+      curriculum,
+    );
+    scopes = forProfile.where((s) => s.trackId == trackId).toList();
+  }
+  if (scopes.isEmpty) {
+    final forProfile = await db.curriculumScopeDao.getScopes(
+      profileId,
+      curriculum,
+    );
+    if (forProfile.isNotEmpty) {
+      final allZero = forProfile.every((s) => s.trackId == 0);
+      if (allZero) {
+        final inCur = (await db.trackDao.getActiveTracksForProfile(
+              profileId,
+            ))
+            .where((t) => t.curriculumId == curriculum.storageKey)
+            .toList();
+        if (inCur.length == 1 && inCur.single.id == trackId) {
+          scopes = forProfile;
+        }
+      }
+    }
+  }
+
+  try {
+    if (scopes.isEmpty) {
+      return _safeLoadLeaves(repo, curriculum);
+    }
+    final allItems = await repo.getScopedContent(
+      curriculumId: curriculum,
+      scopeLevel: scopes.first.scopeLevel,
+      scopeValues: scopes.map((s) => s.scopeValue).toList(),
+    );
+    return allItems.where((item) => item.isLeaf).toList();
+  } catch (_) {
     return null;
   }
 }

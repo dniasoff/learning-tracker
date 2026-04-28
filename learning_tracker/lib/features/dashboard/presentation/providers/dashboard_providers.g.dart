@@ -207,6 +207,96 @@ final class DashboardActiveCurriculaStreamProvider
 String _$dashboardActiveCurriculaStreamHash() =>
     r'9689fa138119b78a0b3bf8ad2013549a05ca3d37';
 
+/// Stage-based completion for one track (same denominator as
+/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+
+@ProviderFor(dashboardTrackCompletionPercentage)
+final dashboardTrackCompletionPercentageProvider =
+    DashboardTrackCompletionPercentageFamily._();
+
+/// Stage-based completion for one track (same denominator as
+/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+
+final class DashboardTrackCompletionPercentageProvider
+    extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
+    with $FutureModifier<double>, $FutureProvider<double> {
+  /// Stage-based completion for one track (same denominator as
+  /// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+  DashboardTrackCompletionPercentageProvider._({
+    required DashboardTrackCompletionPercentageFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'dashboardTrackCompletionPercentageProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() =>
+      _$dashboardTrackCompletionPercentageHash();
+
+  @override
+  String toString() {
+    return r'dashboardTrackCompletionPercentageProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<double> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<double> create(Ref ref) {
+    final argument = this.argument as int;
+    return dashboardTrackCompletionPercentage(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DashboardTrackCompletionPercentageProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$dashboardTrackCompletionPercentageHash() =>
+    r'5a4725fcc043ebe6690ee63615c78dc6fbd99fbc';
+
+/// Stage-based completion for one track (same denominator as
+/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+
+final class DashboardTrackCompletionPercentageFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<double>, int> {
+  DashboardTrackCompletionPercentageFamily._()
+    : super(
+        retry: null,
+        name: r'dashboardTrackCompletionPercentageProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Stage-based completion for one track (same denominator as
+  /// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+
+  DashboardTrackCompletionPercentageProvider call(int trackId) =>
+      DashboardTrackCompletionPercentageProvider._(
+        argument: trackId,
+        from: this,
+      );
+
+  @override
+  String toString() => r'dashboardTrackCompletionPercentageProvider';
+}
+
 /// Per-curriculum completion percentage, scoped to active profile.
 ///
 /// Formula: `completions.length / (totalLeafItems * totalStages)`.

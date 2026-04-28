@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -84,6 +85,37 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
         .whereType<CurriculumId>()
         .toList();
   });
+}
+
+/// Stage-based completion for one track (same denominator as
+/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+@riverpod
+Future<double> dashboardTrackCompletionPercentage(
+  Ref ref,
+  int trackId,
+) async {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final track = await db.trackDao.getTrackById(trackId);
+  if (track == null) return 0.0;
+  final curriculum = CurriculumId.values.firstWhere(
+    (c) => c.storageKey == track.curriculumId,
+    orElse: () => CurriculumId.mishnayos,
+  );
+  final completions = await db.completionDao.getCompletionsByTrackAndProfile(
+    trackId,
+    profileId,
+  );
+  final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+    curriculum.storageKey,
+  );
+  if (stages.isEmpty) return 0.0;
+  final totalItems = await ref.watch(
+    scopedItemCountProvider(curriculum).future,
+  );
+  final denominator = totalItems * stages.length;
+  if (denominator == 0) return 0.0;
+  return (completions.length / denominator).clamp(0.0, 1.0);
 }
 
 /// Per-curriculum completion percentage, scoped to active profile.
@@ -288,3 +320,14 @@ final dashboardHasProgramEnrollmentProvider = FutureProvider.autoDispose
           .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
       return enrollment != null;
     });
+
+/// Active (non-archived) profile tracks for the dashboard carousel.
+///
+/// Implemented as a hand-written [StreamProvider] because
+/// [CurriculumTrack] (Drift) is not supported as an `@riverpod` return type.
+final dashboardActiveTracksStreamProvider =
+    StreamProvider.autoDispose<List<CurriculumTrack>>((ref) {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return db.trackDao.watchActiveTracksForProfile(profileId);
+});

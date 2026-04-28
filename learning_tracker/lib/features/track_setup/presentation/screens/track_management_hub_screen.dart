@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
@@ -287,7 +288,7 @@ class _TrackManagementHubScreenState
 
   void _onAddTrackComplete(AddTrackResult result) {
     setState(() => _addingTrack = false);
-    ref.invalidate(activeTracksProvider);
+    // Refresh is handled in AddTrackFlow after createTrack (plan clear + provider invalidation).
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Track "${result.label}" created')));
@@ -344,8 +345,7 @@ class _TrackManagementHubScreenState
                 .firstOrNull ??
             TrackType.personal,
       );
-      ref.invalidate(activeTracksProvider);
-      ref.invalidate(archivedTracksProvider);
+      await invalidateAfterTrackDataChange(ref, track.profileId);
     }
   }
 
@@ -385,8 +385,7 @@ class _TrackManagementHubScreenState
                 .firstOrNull ??
             TrackType.personal,
       );
-      ref.invalidate(activeTracksProvider);
-      ref.invalidate(archivedTracksProvider);
+      await invalidateAfterTrackDataChange(ref, track.profileId);
     }
   }
 }

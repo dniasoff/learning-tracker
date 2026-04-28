@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart'
     as tm;
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
@@ -290,8 +291,7 @@ class _ParentTrackManagementScreenState
 
   void _onAddTrackComplete(AddTrackResult result) {
     setState(() => _addingTrack = false);
-    ref.invalidate(tm.activeTracksProvider);
-    ref.invalidate(tm.archivedTracksProvider);
+    // Refresh is handled in AddTrackFlow after createTrack (plan clear + invalidation).
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -351,8 +351,7 @@ class _ParentTrackManagementScreenState
                 .firstOrNull ??
             TrackType.personal,
       );
-      ref.invalidate(tm.activeTracksProvider);
-      ref.invalidate(tm.archivedTracksProvider);
+      await invalidateAfterTrackDataChange(ref, track.profileId);
     }
   }
 
@@ -392,8 +391,7 @@ class _ParentTrackManagementScreenState
                 .firstOrNull ??
             TrackType.personal,
       );
-      ref.invalidate(tm.activeTracksProvider);
-      ref.invalidate(tm.archivedTracksProvider);
+      await invalidateAfterTrackDataChange(ref, track.profileId);
     }
   }
 }
