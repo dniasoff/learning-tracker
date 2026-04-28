@@ -2,7 +2,9 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -17,15 +19,28 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+CurriculumId _curriculumIdForTrack(CurriculumTrack track) {
+  return CurriculumId.values.firstWhere(
+    (c) => c.storageKey == track.curriculumId,
+    orElse: () => CurriculumId.mishnayos,
+  );
+}
+
+String _trackTypeLabel(String trackTypeStorageKey) {
+  try {
+    return TrackType.fromStorageKey(trackTypeStorageKey).displayNameEn;
+  } on Object {
+    return trackTypeStorageKey;
+  }
+}
+
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCurriculaAsync = ref.watch(
-      dashboardActiveCurriculaStreamProvider,
-    );
+    final activeTracksAsync = ref.watch(dashboardActiveTracksStreamProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final selectedProfileAsync = ref.watch(selectedProfileProvider);
@@ -47,11 +62,11 @@ class DashboardScreen extends ConsumerWidget {
         ),
         child: SafeArea(
           top: false,
-          child: activeCurriculaAsync.when(
+          child: activeTracksAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, s) =>
                 Center(child: Text(l10n.errorWithMessage(e.toString()))),
-            data: (activeCurricula) {
+            data: (activeTracks) {
               final userMode = userModeAsync.asData?.value ?? UserMode.adult;
               final streakData = streakAsync.asData?.value;
               final currentStreak = streakData?.currentStreak ?? 0;
@@ -59,7 +74,7 @@ class DashboardScreen extends ConsumerWidget {
 
               return RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(dashboardActiveCurriculaStreamProvider);
+                  ref.invalidate(dashboardActiveTracksStreamProvider);
                   ref.invalidate(dashboardUserModeProvider);
                   ref.invalidate(dashboardStreakProvider);
                   ref.invalidate(dashboardGlobalPointsProvider);
@@ -69,14 +84,18 @@ class DashboardScreen extends ConsumerWidget {
                     lifetimeTotalsAcrossAllCurriculaProvider(profileId),
                   );
                   ref.invalidate(globalLifetimeCurriculaProvider(profileId));
-                  for (final c in activeCurricula) {
-                    ref.invalidate(dashboardCompletionPercentageProvider(c));
+                  ref.invalidate(trackDualProgressMetricsProvider(profileId));
+                  for (final t in activeTracks) {
+                    ref.invalidate(
+                      dashboardTrackCompletionPercentageProvider(t.id),
+                    );
+                    final c = _curriculumIdForTrack(t);
                     ref.invalidate(dashboardLastCompletionProvider(c));
                     ref.invalidate(dashboardPaceStatusProvider(c));
                   }
                 },
                 child: _DashboardBody(
-                  activeCurricula: activeCurricula,
+                  activeTracks: activeTracks,
                   userMode: userMode,
                   currentStreak: currentStreak,
                   profileName: profileName,
@@ -91,13 +110,13 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _DashboardBody extends ConsumerWidget {
-  final List<CurriculumId> activeCurricula;
+  final List<CurriculumTrack> activeTracks;
   final UserMode userMode;
   final int currentStreak;
   final String? profileName;
 
   const _DashboardBody({
-    required this.activeCurricula,
+    required this.activeTracks,
     required this.userMode,
     required this.currentStreak,
     this.profileName,
@@ -174,7 +193,7 @@ class _DashboardBody extends ConsumerWidget {
             CurriculumId.values.length,
           );
 
-    if (activeCurricula.isEmpty) {
+    if (activeTracks.isEmpty) {
       final isChildMode =
           ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
       return _EmptyDashboard(
@@ -323,7 +342,6 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         _MainFocusMissionCard(
-          title: l10n.todaysTasks,
           subtitle: groupedTasks.todayTasks.isNotEmpty
               ? groupedTasks.todayTasks
                     .take(2)
@@ -345,6 +363,7 @@ class _DashboardBody extends ConsumerWidget {
           title: l10n.chazaraReview,
           count: reviewCount,
           color: AppTheme.brandGold,
+          labelColor: AppTheme.brandGoldDeep,
           backgroundColor: const Color(0xFFF1F2F5),
           borderColor: const Color(0xFFD4D7DE),
           onTap: () {
@@ -374,9 +393,9 @@ class _DashboardBody extends ConsumerWidget {
         const SizedBox(height: 30),
         SizedBox(
           height: 320,
-          child: _CurriculaCarouselSection(
-            title: l10n.activeCurricula,
-            activeCurricula: activeCurricula,
+          child: _ActiveTracksCarouselSection(
+            title: l10n.activeTracks,
+            activeTracks: activeTracks,
             allTasks: allTasks,
             titleStyle: _iosTextStyle(
               context,
@@ -681,12 +700,12 @@ class _DashboardLevelPointsCard extends StatelessWidget {
         ? [
             (l10n.bubbleOverdue, '$overdueCount', Colors.white),
             (l10n.bubbleTodayDue, '$todayCount', Colors.white),
-            (l10n.dashboardBubbleDone, doneDisplay, const Color(0xFF76F4A7)),
+            (l10n.bubbleChazara, '$reviewCount', const Color(0xFFFFC107)),
           ]
         : [
             (l10n.bubbleOverdue, '$overdueCount', Colors.white),
             (l10n.bubbleTodayDue, '$todayCount', Colors.white),
-            (l10n.bubbleChazara, '$reviewCount', const Color(0xFF76F4A7)),
+            (l10n.bubbleChazara, '$reviewCount', const Color(0xFFFFC107)),
           ];
 
     return Container(
@@ -864,14 +883,12 @@ class _DashboardStatBubble extends StatelessWidget {
 
 class _MainFocusMissionCard extends StatelessWidget {
   const _MainFocusMissionCard({
-    required this.title,
     required this.subtitle,
     required this.focusLabel,
     required this.count,
     required this.onTap,
   });
 
-  final String title;
   final String subtitle;
   final String focusLabel;
   final int count;
@@ -906,11 +923,11 @@ class _MainFocusMissionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.mainFocus,
+                l10n.dueToday,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
+                  color: AppTheme.brandBlue,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
+                  letterSpacing: 0.8,
                 ),
               ),
 
@@ -1090,25 +1107,26 @@ class _CompactMissionCard extends StatelessWidget {
   }
 }
 
-class _CurriculaCarouselSection extends StatefulWidget {
-  const _CurriculaCarouselSection({
+class _ActiveTracksCarouselSection extends StatefulWidget {
+  const _ActiveTracksCarouselSection({
     required this.title,
-    required this.activeCurricula,
+    required this.activeTracks,
     required this.allTasks,
     required this.titleStyle,
   });
 
   final String title;
-  final List<CurriculumId> activeCurricula;
+  final List<CurriculumTrack> activeTracks;
   final List<DailyTask> allTasks;
   final TextStyle titleStyle;
 
   @override
-  State<_CurriculaCarouselSection> createState() =>
-      _CurriculaCarouselSectionState();
+  State<_ActiveTracksCarouselSection> createState() =>
+      _ActiveTracksCarouselSectionState();
 }
 
-class _CurriculaCarouselSectionState extends State<_CurriculaCarouselSection> {
+class _ActiveTracksCarouselSectionState
+    extends State<_ActiveTracksCarouselSection> {
   late final PageController _controller;
   int _activeIndex = 0;
 
@@ -1154,8 +1172,8 @@ class _CurriculaCarouselSectionState extends State<_CurriculaCarouselSection> {
             const SizedBox(width: 6),
             _ArrowButton(
               icon: Icons.chevron_right_rounded,
-              isEnabled: _activeIndex < widget.activeCurricula.length - 1,
-              onTap: _activeIndex < widget.activeCurricula.length - 1
+              isEnabled: _activeIndex < widget.activeTracks.length - 1,
+              onTap: _activeIndex < widget.activeTracks.length - 1
                   ? () {
                       _controller.nextPage(
                         duration: const Duration(milliseconds: 260),
@@ -1170,7 +1188,7 @@ class _CurriculaCarouselSectionState extends State<_CurriculaCarouselSection> {
         Expanded(
           child: PageView.builder(
             controller: _controller,
-            itemCount: widget.activeCurricula.length,
+            itemCount: widget.activeTracks.length,
             onPageChanged: (value) {
               setState(() {
                 _activeIndex = value;
@@ -1179,8 +1197,8 @@ class _CurriculaCarouselSectionState extends State<_CurriculaCarouselSection> {
             itemBuilder: (context, index) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: _CurriculumCard(
-                  curriculum: widget.activeCurricula[index],
+                child: _ActiveTrackCard(
+                  track: widget.activeTracks[index],
                   allTasks: widget.allTasks,
                 ),
               );
@@ -1312,22 +1330,69 @@ _DashboardTaskGroups _groupTasks(List<DailyTask> tasks) {
   );
 }
 
-/// AC-1, 2, 6: Curriculum card with pace badge and real task data.
-class _CurriculumCard extends ConsumerWidget {
-  final CurriculumId curriculum;
+class _TrackTaskBuckets {
+  const _TrackTaskBuckets({
+    required this.missedProgram,
+    required this.dueTodayLane,
+    required this.review,
+  });
+
+  /// Missed program days (non-review overdue), aligned with dashboard lanes.
+  final int missedProgram;
+
+  /// On-time program + new learning (not chazara).
+  final int dueTodayLane;
+
+  /// All chazara / review tasks for this track.
+  final int review;
+
+  int get total => missedProgram + dueTodayLane + review;
+}
+
+_TrackTaskBuckets _bucketTrackTasks(List<DailyTask> tasks) {
+  var missedProgram = 0;
+  var dueTodayLane = 0;
+  var review = 0;
+
+  bool isReview(DailyTask t) =>
+      t.priority == DailyTaskPriority.overdueChazara ||
+      t.priority == DailyTaskPriority.scheduledChazara;
+
+  for (final t in tasks) {
+    if (isReview(t)) {
+      review++;
+    } else if (t.isOverdue) {
+      missedProgram++;
+    } else {
+      dueTodayLane++;
+    }
+  }
+
+  return _TrackTaskBuckets(
+    missedProgram: missedProgram,
+    dueTodayLane: dueTodayLane,
+    review: review,
+  );
+}
+
+/// AC-1, 2, 6: Active track card with pace badge and real task data.
+class _ActiveTrackCard extends ConsumerWidget {
+  final CurriculumTrack track;
   final List<DailyTask> allTasks;
 
-  const _CurriculumCard({required this.curriculum, required this.allTasks});
+  const _ActiveTrackCard({required this.track, required this.allTasks});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final displayNamePrimary = curriculum.displayNameHe;
+    final curriculum = _curriculumIdForTrack(track);
+    final displayNamePrimary =
+        '${curriculum.displayNameHe} · ${_trackTypeLabel(track.trackType)}';
     final displayNameSecondary = curriculum.displayNameEn;
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final completionAsync = ref.watch(
-      dashboardCompletionPercentageProvider(curriculum),
+      dashboardTrackCompletionPercentageProvider(track.id),
     );
     final hasProgramEnrollmentAsync = ref.watch(
       dashboardHasProgramEnrollmentProvider(curriculum),
@@ -1336,11 +1401,26 @@ class _CurriculumCard extends ConsumerWidget {
     final percentage = completionAsync.asData?.value ?? 0.0;
     final pctDisplay = formatFractionAsPercent(percentage);
     final profileId = ref.watch(activeProfileIdProvider);
-    ref.watch(globalLifetimeCurriculaProvider(profileId));
+    final trackMetricsAsync = ref.watch(
+      trackDualProgressMetricsProvider(profileId),
+    );
+    final lifetimeFraction = trackMetricsAsync.when(
+      data: (metrics) {
+        for (final m in metrics) {
+          if (m.trackId == track.id) return m.lifetimePercentage;
+        }
+        return 0.0;
+      },
+      loading: () => null,
+      error: (_, __) => 0.0,
+    );
+    final lifetimePercentDisplay = lifetimeFraction == null
+        ? '…'
+        : formatFractionAsPercent(lifetimeFraction);
 
-    // AC-6: Compute per-curriculum task count and today's study item
+    // AC-6: Tasks for this track only
     final curriculumTasks = allTasks
-        .where((t) => t.curriculumId == curriculum)
+        .where((t) => t.trackId == track.id)
         .toList();
     final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
     final hasProgramEnrollment =
@@ -1349,9 +1429,7 @@ class _CurriculumCard extends ConsumerWidget {
     // AC-1: Get pace status
     final paceStatus = paceAsync.asData?.value;
 
-    // Count overdue and today tasks for programmed tracks
-    final overdueTasks = curriculumTasks.where((t) => t.isOverdue).length;
-    final todayTasks = curriculumTasks.where((t) => !t.isOverdue).length;
+    final taskBuckets = _bucketTrackTasks(curriculumTasks);
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -1370,189 +1448,256 @@ class _CurriculumCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: curriculumColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.menu_book_rounded,
-                      color: curriculumColor,
-                      size: 16,
-                    ),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      displayNamePrimary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (hasProgramEnrollment)
-                    // Show task counts for programmed tracks
-                    if (paceAsync.isLoading)
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: curriculumColor.withValues(alpha: 0.5),
-                        ),
-                      )
-                    else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
+                            width: 30,
+                            height: 30,
                             decoration: BoxDecoration(
-                              color: AppTheme.brandCreamSoft,
-                              borderRadius: BorderRadius.circular(999),
+                              color: curriculumColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: _MiniPaceBadge(paceStatus: paceStatus),
+                            child: Icon(
+                              Icons.menu_book_rounded,
+                              color: curriculumColor,
+                              size: 16,
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (overdueTasks > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFD63C3C,
-                                    ).withValues(alpha: 0.14),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '$overdueTasks overdue',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: const Color(0xFFD63C3C),
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                )
-                              else if (todayTasks > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.brandBlue.withValues(
-                                      alpha: 0.14,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '$todayTasks today',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: AppTheme.brandBlue,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
-                                    ),
-                                  ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              displayNamePrimary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          if (hasProgramEnrollment)
+                            // Show task counts for programmed tracks
+                            if (paceAsync.isLoading)
+                              SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: curriculumColor.withValues(alpha: 0.5),
                                 ),
-                            ],
+                              )
+                            else
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.brandCreamSoft,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: _MiniPaceBadge(
+                                      paceStatus: paceStatus,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 4,
+                                    runSpacing: 4,
+                                    alignment: WrapAlignment.end,
+                                    children: [
+                                      if (taskBuckets.missedProgram > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFFD63C3C,
+                                            ).withValues(alpha: 0.14),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${taskBuckets.missedProgram} ${l10n.overdue}',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFFD63C3C,
+                                                  ),
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 10,
+                                                ),
+                                          ),
+                                        ),
+                                      if (taskBuckets.dueTodayLane > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.brandBlue
+                                                .withValues(alpha: 0.14),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${taskBuckets.dueTodayLane} ${l10n.dueToday}',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: AppTheme.brandBlue,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 10,
+                                                ),
+                                          ),
+                                        ),
+                                      if (taskBuckets.review > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.brandGold
+                                                .withValues(alpha: 0.16),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${taskBuckets.review} ${l10n.chazaraReview}',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: AppTheme.brandGoldDeep,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 10,
+                                                ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              )
+                          else
+                          // Show pace badge for self-paced tracks
+                          if (paceAsync.isLoading)
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: curriculumColor.withValues(alpha: 0.5),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.brandCreamSoft,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: _MiniPaceBadge(paceStatus: paceStatus),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        displayNameSecondary,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        todayTask?.contentItemSefariaRef ?? l10n.noProjection,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      if (hasProgramEnrollment)
+                        _ProgrammedDueFoot(
+                          missedProgram: taskBuckets.missedProgram,
+                          dueTodayLane: taskBuckets.dueTodayLane,
+                          review: taskBuckets.review,
+                          l10n: l10n,
+                        )
+                      else ...[
+                        Row(
+                          children: [
+                            Text(
+                              l10n.carouselCompletion,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: AppTheme.brandInkMuted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              pctDisplay,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: AppTheme.brandInk,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        AnimatedProgressBar(
+                          value: percentage,
+                          color: curriculumColor,
+                          backgroundColor: AppTheme.brandCreamSoft,
+                          height: 10,
+                          duration: const Duration(milliseconds: 800),
+                          curve: Curves.easeOut,
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text(
+                            l10n.trackLifetimeLearning,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            lifetimePercentDisplay,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: AppTheme.brandInk,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
-                      )
-                  else
-                  // Show pace badge for self-paced tracks
-                  if (paceAsync.isLoading)
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: curriculumColor.withValues(alpha: 0.5),
                       ),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.brandCreamSoft,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: _MiniPaceBadge(paceStatus: paceStatus),
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                displayNameSecondary,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                todayTask?.contentItemSefariaRef ?? l10n.noProjection,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 10),
-              if (hasProgramEnrollment)
-                _ProgrammedDueFoot(
-                  overdueTasks: overdueTasks,
-                  todayTasks: todayTasks,
-                  l10n: l10n,
-                )
-              else ...[
-                Row(
-                  children: [
-                    Text(
-                      l10n.carouselCompletion,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      pctDisplay,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: AppTheme.brandInk,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                AnimatedProgressBar(
-                  value: percentage,
-                  color: curriculumColor,
-                  backgroundColor: AppTheme.brandCreamSoft,
-                  height: 10,
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOut,
-                ),
-              ],
-              const Spacer(),
               Row(
                 children: [
                   Expanded(
@@ -1582,16 +1727,18 @@ class _CurriculumCard extends ConsumerWidget {
   }
 }
 
-/// Footer for programmed tracks: overdue vs due today (not leaf completion %).
+/// Footer for programmed tracks: missed program vs due today vs chazara/review.
 class _ProgrammedDueFoot extends StatelessWidget {
   const _ProgrammedDueFoot({
-    required this.overdueTasks,
-    required this.todayTasks,
+    required this.missedProgram,
+    required this.dueTodayLane,
+    required this.review,
     required this.l10n,
   });
 
-  final int overdueTasks;
-  final int todayTasks;
+  final int missedProgram;
+  final int dueTodayLane;
+  final int review;
   final AppLocalizations l10n;
 
   static const _overdueColor = Color(0xFFD63C3C);
@@ -1599,7 +1746,7 @@ class _ProgrammedDueFoot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalDue = overdueTasks + todayTasks;
+    final totalDue = missedProgram + dueTodayLane + review;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1619,7 +1766,7 @@ class _ProgrammedDueFoot extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                 decoration: BoxDecoration(
-                  color: overdueTasks > 0
+                  color: missedProgram > 0
                       ? _overdueColor.withValues(alpha: 0.1)
                       : AppTheme.brandCreamSoft,
                   borderRadius: BorderRadius.circular(10),
@@ -1639,11 +1786,11 @@ class _ProgrammedDueFoot extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$overdueTasks',
+                      '$missedProgram',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         fontSize: 15,
-                        color: overdueTasks > 0
+                        color: missedProgram > 0
                             ? _overdueColor
                             : AppTheme.brandInk,
                       ),
@@ -1657,7 +1804,7 @@ class _ProgrammedDueFoot extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                 decoration: BoxDecoration(
-                  color: todayTasks > 0
+                  color: dueTodayLane > 0
                       ? AppTheme.brandBlue.withValues(alpha: 0.1)
                       : AppTheme.brandCreamSoft,
                   borderRadius: BorderRadius.circular(10),
@@ -1677,12 +1824,50 @@ class _ProgrammedDueFoot extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$todayTasks',
+                      '$dueTodayLane',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         fontSize: 15,
-                        color: todayTasks > 0
+                        color: dueTodayLane > 0
                             ? AppTheme.brandBlue
+                            : AppTheme.brandInk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: review > 0
+                      ? AppTheme.brandGold.withValues(alpha: 0.12)
+                      : AppTheme.brandCreamSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.chazaraReview,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$review',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: review > 0
+                            ? AppTheme.brandGoldDeep
                             : AppTheme.brandInk,
                       ),
                     ),

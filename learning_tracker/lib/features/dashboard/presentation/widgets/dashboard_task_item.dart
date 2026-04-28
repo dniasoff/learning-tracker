@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Individual task item card for the dashboard task list.
 class DashboardTaskItem extends StatelessWidget {
@@ -52,7 +53,7 @@ class DashboardTaskItem extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     // Line 2: stageName [· N day(s) overdue]
-                    _buildSubtitle(theme),
+                    _buildSubtitle(context, theme),
                   ],
                 ),
               ),
@@ -72,33 +73,59 @@ class DashboardTaskItem extends StatelessWidget {
     );
   }
 
-  Widget _buildSubtitle(ThemeData theme) {
+  Widget _buildSubtitle(BuildContext context, ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
+    final baseStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final overdueStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.error,
+      fontWeight: FontWeight.w600,
+    );
+    final dueTodayStyle = theme.textTheme.bodySmall?.copyWith(
+      color: AppTheme.brandBlue,
+      fontWeight: FontWeight.w600,
+    );
+    final reviewStyle = theme.textTheme.bodySmall?.copyWith(
+      color: AppTheme.brandGoldDeep,
+      fontWeight: FontWeight.w600,
+    );
+
+    final isReview =
+        task.priority == DailyTaskPriority.overdueChazara ||
+        task.priority == DailyTaskPriority.scheduledChazara;
+    final showDueToday =
+        !task.isOverdue &&
+        (task.priority == DailyTaskPriority.todayProgram ||
+            task.priority == DailyTaskPriority.scheduledChazara);
+
+    final suffixSpans = <InlineSpan>[];
     if (task.isOverdue) {
-      return Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: task.stageName,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            TextSpan(
-              text: ' · overdue',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+      suffixSpans.add(
+        TextSpan(text: ' · ${l10n.overdue}', style: overdueStyle),
+      );
+    }
+    if (showDueToday) {
+      suffixSpans.add(
+        TextSpan(text: ' · ${l10n.dueToday}', style: dueTodayStyle),
+      );
+    }
+    if (isReview) {
+      suffixSpans.add(
+        TextSpan(text: ' · ${l10n.chazaraReview}', style: reviewStyle),
       );
     }
 
-    return Text(
-      task.stageName,
-      style: theme.textTheme.bodySmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
+    if (suffixSpans.isEmpty) {
+      return Text(task.stageName, style: baseStyle);
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: task.stageName, style: baseStyle),
+          ...suffixSpans,
+        ],
       ),
     );
   }
