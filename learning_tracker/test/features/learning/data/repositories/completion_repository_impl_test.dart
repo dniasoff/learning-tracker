@@ -88,7 +88,7 @@ void main() {
         trackType: 'personal',
       );
 
-      final completion = await repository.markComplete(request);
+      final completion = (await repository.markComplete(request)).completion;
 
       expect(completion.curriculumId, curriculumId);
       expect(completion.sefariaRef, sefariaRef);
@@ -138,8 +138,8 @@ void main() {
         trackType: 'personal',
       );
 
-      final first = await repository.markComplete(request);
-      final second = await repository.markComplete(request);
+      final first = (await repository.markComplete(request)).completion;
+      final second = (await repository.markComplete(request)).completion;
 
       expect(second.id, first.id);
       expect(second.completedAt, first.completedAt);
@@ -163,14 +163,15 @@ void main() {
 
       // Stage 1 on a different track should succeed without requiring
       // stage 1 to be completed on that track first.
-      final chavrusaCompletion = await repository.markComplete(
+      final chavrusaCompletion = (await repository.markComplete(
         const CompletionRequest(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: 1,
           trackType: 'personal',
         ),
-      );
+      ))
+          .completion;
       expect(chavrusaCompletion.trackType, 'personal');
     });
 
@@ -200,24 +201,26 @@ void main() {
         );
 
         // Stage 1 completion
-        final c1 = await repository.markComplete(
+        final c1 = (await repository.markComplete(
           const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: 'Mishnah Berachot 1:1',
             stageId: 1,
             trackType: 'personal',
           ),
-        );
+        ))
+            .completion;
 
         // Stage 2 completion (same ref, different stage)
-        final c2 = await repository.markComplete(
+        final c2 = (await repository.markComplete(
           const CompletionRequest(
             curriculumId: curriculumId,
             sefariaRef: 'Mishnah Berachot 1:1',
             stageId: 2,
             trackType: 'personal',
           ),
-        );
+        ))
+            .completion;
 
         // Points differ by stage: Learn=10, Chazara1=5 (default config)
         expect(c1.points, isNot(equals(c2.points)));

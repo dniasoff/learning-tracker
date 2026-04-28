@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -46,14 +45,12 @@ class AchievementUnlockCelebration {
 
   static bool _dialogInFlight = false;
 
-  static Future<void> showIfNeeded({
-    required WidgetRef ref,
-    required BuildContext context,
-    required AchievementsOverview overview,
-  }) async {
-    if (!context.mounted) return;
-    if (_dialogInFlight) return;
-
+  /// One-time: seed "already seen" milestone ids from server/overview so an
+  /// open of My Achievements does not show a surprise party. No confetti.
+  static Future<void> migrateDoneKeysIfNeeded(
+    WidgetRef ref,
+    AchievementsOverview overview,
+  ) async {
     final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     final migratedKey = '$_migratedPrefix$profileId';
@@ -65,11 +62,18 @@ class AchievementUnlockCelebration {
     if (prefs.getBool(migratedKey) != true) {
       await prefs.setString(doneKey, jsonEncode(currentIds.toList()..sort()));
       await prefs.setBool(migratedKey, true);
-      return;
     }
+  }
 
-    final doneRaw = prefs.getString(doneKey);
+  static Future<void> _mergeMilestoneIdsIntoDonePrefs(
+    int profileId,
+    Set<String> addIds,
+  ) async {
+    if (addIds.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final doneKey = '$_donePrefix$profileId';
     var done = <String>{};
+    final doneRaw = prefs.getString(doneKey);
     if (doneRaw != null && doneRaw.isNotEmpty) {
       try {
         final list = jsonDecode(doneRaw) as List<dynamic>?;
@@ -78,30 +82,31 @@ class AchievementUnlockCelebration {
         }
       } catch (_) {}
     }
+    final merged = done.union(addIds);
+    await prefs.setString(doneKey, jsonEncode(merged.toList()..sort()));
+  }
 
-    final fresh = currentIds.difference(done);
-    if (fresh.isEmpty) return;
+  /// Call after "Mark learn complete" when [newUnlocks] is non-empty.
+  /// Shows full-screen confetti on the **reading** screen, not on My Achievements.
+  static Future<void> showForUnlockedMilestones({
+    required BuildContext context,
+    required WidgetRef ref,
+    required List<RewardUnlockRecord> newUnlocks,
+  }) async {
+    if (!context.mounted) return;
+    if (newUnlocks.isEmpty) return;
+    if (_dialogInFlight) return;
 
-    final db = ref.read(userDatabaseProvider);
-    final service = RewardMilestoneService(db, profileId: profileId);
-    final unlocks = await service.getAllUnlocks();
-
-    RewardUnlockRecord? picked;
-    for (final u in unlocks) {
-      if (fresh.contains(u.milestoneId)) {
-        picked = u;
-        break;
-      }
-    }
-    final row = unlockedRows.firstWhere((r) => fresh.contains(r.milestone.id));
-    final milestoneTitle = picked?.title ?? row.milestone.title;
+    final profileId = ref.read(activeProfileIdProvider);
+    final first = newUnlocks.first;
+    final milestoneTitle = first.title;
 
     if (!context.mounted) return;
     final languageCode = Localizations.localeOf(context).languageCode;
     final trackLabel = await _resolveTrackLabel(
       ref,
       languageCode,
-      picked?.trackId ?? row.trackId,
+      first.trackId,
     );
     if (!context.mounted) return;
 
@@ -139,9 +144,10 @@ class AchievementUnlockCelebration {
     }
 
     if (!context.mounted) return;
-    final merged = done.union(fresh);
-    final prefsAfter = await SharedPreferences.getInstance();
-    await prefsAfter.setString(doneKey, jsonEncode(merged.toList()..sort()));
+    await _mergeMilestoneIdsIntoDonePrefs(
+      profileId,
+      newUnlocks.map((u) => u.milestoneId).toSet(),
+    );
   }
 }
 

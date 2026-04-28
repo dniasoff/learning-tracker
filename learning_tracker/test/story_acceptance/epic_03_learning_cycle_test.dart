@@ -92,14 +92,15 @@ void main() {
       'completing a content item records a DB row with correct fields',
       () async {
         const sefariaRef = 'Mishnah Berachot 1:1';
-        final completion = await repo.markComplete(
+        final completion = (await repo.markComplete(
           const CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: sefariaRef,
             stageId: 1,
             trackType: 'personal',
           ),
-        );
+        ))
+            .completion;
 
         expect(completion.id, greaterThan(0));
         expect(completion.curriculumId, 'mishnayos');
@@ -134,22 +135,24 @@ void main() {
         ),
       );
 
-      final c1 = await repo.markComplete(
+      final c1 = (await repo.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
           stageId: 1,
           trackType: 'personal',
         ),
-      );
-      final c2 = await repo.markComplete(
+      ))
+          .completion;
+      final c2 = (await repo.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
           stageId: 2,
           trackType: 'personal',
         ),
-      );
+      ))
+          .completion;
 
       // Points differ by stage: Learn=10, Chazara1=5 (default config)
       expect(c1.points, isNot(equals(c2.points)));
@@ -163,8 +166,8 @@ void main() {
         trackType: 'personal',
       );
 
-      final first = await repo.markComplete(request);
-      final second = await repo.markComplete(request);
+      final first = (await repo.markComplete(request)).completion;
+      final second = (await repo.markComplete(request)).completion;
 
       expect(second.id, first.id);
       verify(() => syncEngine.pushCompletion(any())).called(1);
@@ -238,14 +241,15 @@ void main() {
           ),
         );
 
-        final c2 = await repo.markComplete(
+        final c2 = (await repo.markComplete(
           const CompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRef: sefariaRef,
             stageId: 2,
             trackType: 'personal',
           ),
-        );
+        ))
+            .completion;
         expect(c2.stageId, 2);
       },
     );

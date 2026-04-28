@@ -1,5 +1,5 @@
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 
 /// Use case for marking a single content item as completed.
@@ -13,10 +13,10 @@ class MarkCompletionUseCase {
 
   /// Execute the use case to mark a content item as completed.
   ///
-  /// Returns the created completion record.
+  /// Returns the completion record and any new reward milestone unlocks.
   ///
   /// Throws [StageProgressionException] if stage progression is violated.
-  Future<Completion> call(CompletionRequest request) async {
-    return await _repository.markComplete(request);
+  Future<MarkCompletionResult> call(CompletionRequest request) async {
+    return _repository.markComplete(request);
   }
 }

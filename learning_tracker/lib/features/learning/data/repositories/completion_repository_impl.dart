@@ -6,9 +6,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
@@ -44,7 +46,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _activeProfileId = activeProfileId;
 
   @override
-  Future<Completion> markComplete(CompletionRequest request) async {
+  Future<MarkCompletionResult> markComplete(CompletionRequest request) async {
     final isChildProfile = await _isChildProfile();
 
     // Perform DB operations in a single transaction for atomicity.
@@ -132,6 +134,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
       return (completion: created, isNew: true);
     });
 
+    var newMilestoneUnlocks = <RewardUnlockRecord>[];
+
     // Only run side effects for genuinely new completions
     if (isNew) {
       // 6. Advance bookmark (outside transaction — uses content repo cache)
@@ -158,12 +162,19 @@ class CompletionRepositoryImpl implements CompletionRepository {
       }
 
       if (isChildProfile) {
-        unawaited(_rewardMilestoneService?.evaluateUnlocksForTrack(completion.trackId));
+        newMilestoneUnlocks =
+            await _rewardMilestoneService?.evaluateUnlocksForTrack(
+                  completion.trackId,
+                ) ??
+                const [];
         unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
       }
     }
 
-    return completion;
+    return MarkCompletionResult(
+      completion: completion,
+      newMilestoneUnlocks: newMilestoneUnlocks,
+    );
   }
 
   @override

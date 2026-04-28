@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -9,11 +10,14 @@ import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
@@ -417,46 +421,63 @@ class _CompletionSection extends ConsumerStatefulWidget {
 class _CompletionSectionState extends ConsumerState<_CompletionSection> {
   bool _saving = false;
 
-  Future<void> _handleComplete(DailyTask task) async {
+  Future<void> _handleComplete(DailyTask task, String trackType) async {
     if (_saving) return;
     setState(() => _saving = true);
 
     try {
       final useCase = ref.read(markCompletionUseCaseProvider);
-      await useCase(
+      final result = await useCase(
         CompletionRequest(
           curriculumId: task.curriculumId.storageKey,
           sefariaRef: widget.sefariaRef,
           stageId: task.stageOrder,
-          trackType: 'personal',
+          trackType: trackType,
         ),
       );
 
+      final profileId = ref.read(activeProfileIdProvider);
       ref.invalidate(allDailyTasksProvider);
       ref.invalidate(dashboardStreakProvider);
       ref.invalidate(dashboardGlobalPointsProvider);
       ref.invalidate(dashboardCompletionPercentageProvider(task.curriculumId));
       ref.invalidate(dashboardLastCompletionProvider(task.curriculumId));
+      ref.invalidate(dashboardPaceStatusProvider(task.curriculumId));
+      ref.invalidate(dashboardChildNextRewardProvider);
+      ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
+      ref.invalidate(globalLifetimeCurriculaProvider(profileId));
       ref.invalidate(progressOverviewStatsProvider);
-      final profileId = ref.read(activeProfileIdProvider);
       ref.invalidate(journeyViewModelProvider(profileId));
+      ref.invalidate(achievementsOverviewProvider);
       ref.invalidate(
         isStageCompletedProvider((
           sefariaRef: widget.sefariaRef,
           stageId: task.stageOrder,
-          trackType: 'personal',
+          trackType: trackType,
         )),
       );
       ref.invalidate(
         isStageCompletedProvider((
           sefariaRef: widget.sefariaRef,
           stageId: task.stageDefinitionId,
-          trackType: 'personal',
+          trackType: trackType,
         )),
       );
 
       if (mounted) {
         setState(() => _saving = false);
+      }
+
+      if (mounted) {
+        final userMode = ref.read(dashboardUserModeProvider).asData?.value;
+        if (userMode == UserMode.child &&
+            result.newMilestoneUnlocks.isNotEmpty) {
+          await AchievementUnlockCelebration.showForUnlockedMilestones(
+            context: context,
+            ref: ref,
+            newUnlocks: result.newMilestoneUnlocks,
+          );
+        }
       }
 
       if (mounted) {
@@ -532,62 +553,90 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         }
 
         final task = matches.first;
-        final isCompletedByOrderAsync = ref.watch(
-          isStageCompletedProvider((
-            sefariaRef: widget.sefariaRef,
-            stageId: task.stageOrder,
-            trackType: 'personal',
-          )),
+        final trackTypeAsync = ref.watch(
+          trackStorageKeyForTrackIdProvider(task.trackId),
         );
-        final isCompletedByDefinitionIdAsync = ref.watch(
-          isStageCompletedProvider((
-            sefariaRef: widget.sefariaRef,
-            stageId: task.stageDefinitionId,
-            trackType: 'personal',
-          )),
-        );
-        final isDone =
-            (isCompletedByOrderAsync.asData?.value ?? false) ||
-            (isCompletedByDefinitionIdAsync.asData?.value ?? false);
-
-        return SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: (_saving || isDone) ? null : () => _handleComplete(task),
-            style: FilledButton.styleFrom(
-              backgroundColor: isDone ? AppTheme.brandGoldDeep : AppTheme.brandBlue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
+        return trackTypeAsync.when(
+          loading: () => const SizedBox(
+            height: 44,
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              elevation: 2,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_saving)
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppTheme.brandCreamCard,
-                    ),
-                  )
-                else
-                  Icon(
-                    isDone ? Icons.check_circle : Icons.check_circle_outline_rounded,
-                    size: 20,
-                  ),
-                const SizedBox(width: 10),
-                Text(
-                  isDone ? 'Completed (${task.stageName})' : 'Mark Learn Complete',
-                  style: const TextStyle(fontSize: 31/2, fontWeight: FontWeight.w700),
-                ),
-              ],
             ),
           ),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (trackType) {
+            final isCompletedByOrderAsync = ref.watch(
+              isStageCompletedProvider((
+                sefariaRef: widget.sefariaRef,
+                stageId: task.stageOrder,
+                trackType: trackType,
+              )),
+            );
+            final isCompletedByDefinitionIdAsync = ref.watch(
+              isStageCompletedProvider((
+                sefariaRef: widget.sefariaRef,
+                stageId: task.stageDefinitionId,
+                trackType: trackType,
+              )),
+            );
+            final isDone =
+                (isCompletedByOrderAsync.asData?.value ?? false) ||
+                (isCompletedByDefinitionIdAsync.asData?.value ?? false);
+
+            return SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: (_saving || isDone)
+                    ? null
+                    : () => _handleComplete(task, trackType),
+                style: FilledButton.styleFrom(
+                  backgroundColor:
+                      isDone ? AppTheme.brandGoldDeep : AppTheme.brandBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  elevation: 2,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_saving)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.brandCreamCard,
+                        ),
+                      )
+                    else
+                      Icon(
+                        isDone
+                            ? Icons.check_circle
+                            : Icons.check_circle_outline_rounded,
+                        size: 20,
+                      ),
+                    const SizedBox(width: 10),
+                    Text(
+                      isDone
+                          ? 'Completed (${task.stageName})'
+                          : 'Mark Learn Complete',
+                      style: const TextStyle(
+                        fontSize: 31 / 2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

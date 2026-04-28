@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 
 /// Repository interface for completion operations.
 ///
@@ -21,7 +22,7 @@ abstract class CompletionRepository {
   ///
   /// Throws [StageProgressionException] if attempting to complete stage N+1
   /// before stage N for the same content item.
-  Future<Completion> markComplete(CompletionRequest request);
+  Future<MarkCompletionResult> markComplete(CompletionRequest request);
 
   /// Mark multiple content items as completed in a single transaction.
   ///

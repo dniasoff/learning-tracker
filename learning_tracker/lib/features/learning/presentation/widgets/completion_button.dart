@@ -115,7 +115,8 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
         trackType: widget.trackType,
       );
 
-      final completion = await useCase(request);
+      final result = await useCase(request);
+      final completion = result.completion;
 
       // --- Lazy provider invalidation (non-blocking) ---
       final curriculumEnum = CurriculumId.values.where(

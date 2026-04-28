@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -16,6 +17,15 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_providers.g.dart';
+
+/// Storage key for [CurriculumTracks.trackType] (e.g. [TrackType.personal.storageKey]).
+final trackStorageKeyForTrackIdProvider = FutureProvider.autoDispose
+    .family<String, int>((ref, trackId) async {
+      final db = ref.watch(userDatabaseProvider);
+      final row = await db.trackDao.getTrackById(trackId);
+      if (row == null) return TrackType.personal.storageKey;
+      return row.trackType;
+    });
 
 /// Provider family to check whether a specific stage is already completed.
 ///

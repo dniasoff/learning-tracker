@@ -71,11 +71,7 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
     ref.listen(achievementsOverviewProvider, (previous, next) {
       next.whenData((overview) {
         unawaited(
-          AchievementUnlockCelebration.showIfNeeded(
-            ref: ref,
-            context: context,
-            overview: overview,
-          ),
+          AchievementUnlockCelebration.migrateDoneKeysIfNeeded(ref, overview),
         );
       });
     });
