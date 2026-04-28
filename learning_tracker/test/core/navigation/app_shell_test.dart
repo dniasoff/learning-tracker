@@ -55,7 +55,7 @@ AppRouter _createAuthenticatedRouter() {
     ),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
-      promptForPin: () async => null,
+      promptForPin: () async => false,
       getProfileId: () => 1,
     ),
   );
@@ -87,7 +87,7 @@ AppRouter _createUnauthenticatedRouter() {
     ),
     parentPinGuard: ParentPinGuard(
       pinService: mockPinService,
-      promptForPin: () async => null,
+      promptForPin: () async => false,
       getProfileId: () => 1,
     ),
   );

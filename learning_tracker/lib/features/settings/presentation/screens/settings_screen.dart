@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
@@ -520,11 +521,21 @@ class _ParentalControlsSectionState
             title: l10n.parentPin,
             subtitle: l10n.parentPinSubtitle,
             onTap: () async {
-              final route = _hasPin
-                  ? const PinChangeRoute()
-                  : const PinSetupRoute();
-              final result = (await context.pushRoute<bool>(route)) ?? false;
-              if (result && mounted) await _load();
+              final profileId = ref.read(selectedProfileIdProvider);
+              final pinService = ref.read(pinServiceProvider);
+              if (profileId == null) return;
+              final bool ok;
+              if (_hasPin) {
+                ok = await showParentPinChangeDialog(
+                  context,
+                  profileId: profileId,
+                  pinService: pinService,
+                );
+              } else {
+                ok = (await context.pushRoute<bool>(const PinSetupRoute())) ??
+                    false;
+              }
+              if (ok && mounted) await _load();
             },
           ),
         ),

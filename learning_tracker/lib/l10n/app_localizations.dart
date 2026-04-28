@@ -200,6 +200,18 @@ abstract class AppLocalizations {
   /// **'Active Curricula'**
   String get activeCurricula;
 
+  /// No description provided for @activeTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Active tracks'**
+  String get activeTracks;
+
+  /// No description provided for @trackLifetimeLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime learning'**
+  String get trackLifetimeLearning;
+
   /// No description provided for @continueLearning.
   ///
   /// In en, this message translates to:
@@ -1913,6 +1925,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter Parent PIN'**
   String get enterParentPin;
+
+  /// No description provided for @enterParentPinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your 4-digit PIN to access parent settings.'**
+  String get enterParentPinSubtitle;
+
+  /// No description provided for @enterNewPinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new 4-digit PIN.'**
+  String get enterNewPinSubtitle;
+
+  /// No description provided for @confirmNewPinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the same PIN again to confirm.'**
+  String get confirmNewPinSubtitle;
 
   /// No description provided for @changeParentPin.
   ///

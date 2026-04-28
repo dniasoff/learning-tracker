@@ -62,6 +62,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get activeCurricula => 'תוכניות לימוד פעילות';
 
   @override
+  String get activeTracks => 'מסלולים פעילים';
+
+  @override
+  String get trackLifetimeLearning => 'לימוד לאורך חיים';
+
+  @override
   String get continueLearning => 'המשך לימוד';
 
   @override
@@ -995,6 +1001,16 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get enterParentPin => 'הזינו קוד הורה';
+
+  @override
+  String get enterParentPinSubtitle =>
+      'הזינו קוד בן 4 ספרות כדי לגשת להגדרות הורה.';
+
+  @override
+  String get enterNewPinSubtitle => 'בחרו קוד חדש בן 4 ספרות.';
+
+  @override
+  String get confirmNewPinSubtitle => 'הזינו שוב את אותו קוד לאישור.';
 
   @override
   String get changeParentPin => 'שינוי קוד הורה';

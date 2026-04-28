@@ -62,6 +62,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activeCurricula => 'Active Curricula';
 
   @override
+  String get activeTracks => 'Active tracks';
+
+  @override
+  String get trackLifetimeLearning => 'Lifetime learning';
+
+  @override
   String get continueLearning => 'Continue Learning';
 
   @override
@@ -1004,6 +1010,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enterParentPin => 'Enter Parent PIN';
+
+  @override
+  String get enterParentPinSubtitle =>
+      'Enter your 4-digit PIN to access parent settings.';
+
+  @override
+  String get enterNewPinSubtitle => 'Choose a new 4-digit PIN.';
+
+  @override
+  String get confirmNewPinSubtitle => 'Enter the same PIN again to confirm.';
 
   @override
   String get changeParentPin => 'Change Parent PIN';

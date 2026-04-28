@@ -18,9 +18,9 @@ class ParentPinGuard extends AutoRouteGuard {
 
   final PinService pinService;
 
-  /// Opens a UI prompt asking the user to enter their PIN. Returns the
-  /// entered PIN string, or `null` if the user cancelled.
-  final Future<String?> Function() promptForPin;
+  /// Opens a UI prompt where the user enters and verifies their PIN.
+  /// Returns `true` if the PIN was correct, `false` if cancelled or wrong.
+  final Future<bool> Function() promptForPin;
 
   /// Resolves the currently active profile id, or `null` if none selected.
   final int? Function() getProfileId;
@@ -37,7 +37,7 @@ class ParentPinGuard extends AutoRouteGuard {
   }
 
   /// Marks [profileId] as authenticated for the current session. Call this
-  /// from flows that verify the PIN outside the guard (e.g. [PinEntryScreen])
+  /// from flows that verify the PIN outside the guard (e.g. PIN entry route)
   /// so subsequent guarded navigations don't re-prompt.
   void markAuthenticated(int profileId) {
     _authenticatedProfileId = profileId;
@@ -68,18 +68,8 @@ class ParentPinGuard extends AutoRouteGuard {
       return;
     }
 
-    final enteredPin = await promptForPin();
-    if (enteredPin == null) {
-      resolver.next(false);
-      return;
-    }
-
-    try {
-      final verified = await pinService.verifyProfilePin(profileId, enteredPin);
-      if (verified) _authenticatedProfileId = profileId;
-      resolver.next(verified);
-    } on PinLockoutException {
-      resolver.next(false);
-    }
+    final verified = await promptForPin();
+    if (verified) _authenticatedProfileId = profileId;
+    resolver.next(verified);
   }
 }

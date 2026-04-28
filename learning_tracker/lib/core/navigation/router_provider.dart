@@ -9,8 +9,8 @@ import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
-import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Riverpod provider that creates and owns the [AppRouter] singleton.
@@ -47,10 +47,16 @@ final routerProvider = Provider<AppRouter>((ref) {
     ),
     parentPinGuard: ParentPinGuard(
       pinService: pinSvc,
-      promptForPin: () {
+      promptForPin: () async {
         final context = navigatorKey.currentContext;
-        if (context == null) return Future.value(null);
-        return _showPinDialog(context, 'Enter Parent PIN');
+        if (context == null) return false;
+        final profileId = ref.read(selectedProfileIdProvider);
+        if (profileId == null) return false;
+        return showParentPinVerificationDialog(
+          context,
+          profileId: profileId,
+          pinService: pinSvc,
+        );
       },
       getProfileId: () => ref.read(selectedProfileIdProvider),
     ),
@@ -61,40 +67,3 @@ final routerProvider = Provider<AppRouter>((ref) {
 /// this key's [BuildContext] to show PIN entry dialogs from outside the
 /// widget tree (the guard callback doesn't have its own context).
 final navigatorKey = GlobalKey<NavigatorState>();
-
-/// Shows a modal dialog with a [PinEntryWidget] and returns the entered PIN,
-/// or `null` if the user dismissed without submitting.
-Future<String?> _showPinDialog(BuildContext context, String title) {
-  return showDialog<String>(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => _PinDialog(title: title),
-  );
-}
-
-class _PinDialog extends StatefulWidget {
-  const _PinDialog({required this.title});
-
-  final String title;
-
-  @override
-  State<_PinDialog> createState() => _PinDialogState();
-}
-
-class _PinDialogState extends State<_PinDialog> {
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      content: PinEntryWidget(
-        title: widget.title,
-        onPinComplete: (pin) => Navigator.of(context).pop(pin),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('Cancel'),
-        ),
-      ],
-    );
-  }
-}
