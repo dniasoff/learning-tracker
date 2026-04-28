@@ -2,11 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/utils/percentage_formatter.dart';
-import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -84,8 +81,6 @@ class LearningScreen extends ConsumerWidget {
                       onViewAll: () =>
                           context.router.push(const SchedulerRoute()),
                     ),
-                    const SizedBox(height: 24),
-                    _CurriculaSection(activeCurricula: activeCurricula),
                   ],
                 ),
               );
@@ -469,150 +464,6 @@ class _LearnTaskCard extends StatelessWidget {
       DailyTaskPriority.scheduledChazara => Icons.history_rounded,
       DailyTaskPriority.newLearning => Icons.auto_stories_rounded,
     };
-  }
-}
-
-class _CurriculaSection extends StatelessWidget {
-  const _CurriculaSection({required this.activeCurricula});
-
-  final List<CurriculumId> activeCurricula;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'My Curricula',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 36,
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 170,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: activeCurricula.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              return _CurriculumTile(curriculum: activeCurricula[index]);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CurriculumTile extends ConsumerWidget {
-  const _CurriculumTile({required this.curriculum});
-
-  final CurriculumId curriculum;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final completionAsync = ref.watch(
-      dashboardCompletionPercentageProvider(curriculum),
-    );
-    final percentage = completionAsync.asData?.value ?? 0.0;
-    final curriculumColor = AppTheme.getCurriculumColor(curriculum);
-
-    return InkWell(
-      onTap: () => context.router.push(
-        ContentHierarchyRoute(curriculumId: curriculum.storageKey),
-      ),
-      borderRadius: BorderRadius.circular(20),
-      child: Ink(
-        width: 220,
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: curriculumColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.menu_book_rounded,
-                    color: curriculumColor,
-                    size: 22,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.open_in_new_rounded,
-                  size: 20,
-                  color: AppTheme.brandBlue.withValues(alpha: 0.85),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '${curriculum.displayNameEn} (${curriculum.displayNameHe})',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                height: 1.2,
-                fontSize: 17,
-              ),
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                Text(
-                  'PROGRESS',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF717A88),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  formatFractionAsPercent(percentage),
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: AnimatedProgressBar(
-                value: percentage,
-                color: curriculumColor,
-                backgroundColor: curriculumColor.withValues(alpha: 0.2),
-                duration: const Duration(milliseconds: 700),
-                curve: Curves.easeOutCubic,
-                height: 8,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
