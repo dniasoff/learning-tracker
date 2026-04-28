@@ -489,6 +489,14 @@
   "bottomNavTracks": "Tracks",
   "bottomNavRewards": "Rewards",
   "bottomNavParent": "Parent",
+  "addProfileDialogSubtitle": "Enter a name and select Child mode or Adult mode.",
+  "setParentPinDialogTitle": "Set Parent PIN",
+  "setParentPinDialogSubtitle": "Set a 4-digit PIN to access parent controls for {name}. The PIN is stored only on this device.",
+  "@setParentPinDialogSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "enterParentPin": "Enter Parent PIN",
   "enterParentPinSubtitle": "Enter your 4-digit PIN to access parent settings.",
   "enterNewPinSubtitle": "Choose a new 4-digit PIN.",

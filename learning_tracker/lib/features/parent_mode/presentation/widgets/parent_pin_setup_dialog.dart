@@ -1,15 +1,16 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
-import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Shows a modal dialog that walks the parent through setting a 4-digit
-/// parent PIN for [profileId]. The PIN is hashed and persisted via
-/// [PinService.setProfilePin]. Setting a PIN is mandatory for child
-/// profiles — the dialog has no cancel or skip action and cannot be
-/// dismissed by tapping outside or pressing back.
+/// Shows a modal that walks the parent through setting a 4-digit parent PIN
+/// for [profileId], using the same keypad UI as “Enter parent PIN”.
+/// [PinService.setProfilePin] persists the hash. Required for child profiles.
 ///
-/// Resolves to `true` once a PIN has been saved.
+/// Resolves to `true` once a PIN has been saved. No skip, no outside tap.
 Future<bool> showParentPinSetupDialog(
   BuildContext context,
   WidgetRef ref, {
@@ -46,78 +47,105 @@ class _ParentPinSetupDialogState extends ConsumerState<_ParentPinSetupDialog> {
   String? _firstPin;
   String? _errorMessage;
   bool _isConfirmStep = false;
+  String _digits = '';
+  bool _busy = false;
 
-  void _onFirstPinEntered(String pin) {
+  void _appendDigit(String d) {
+    if (_busy) return;
+    if (_digits.length >= 4) return;
     setState(() {
-      _firstPin = pin;
-      _isConfirmStep = true;
+      _digits += d;
       _errorMessage = null;
     });
+    if (_digits.length == 4) {
+      unawaited(_onFourDigits());
+    }
   }
 
-  Future<void> _onConfirmPinEntered(String pin) async {
-    if (pin != _firstPin) {
+  Future<void> _onFourDigits() async {
+    if (_busy) return;
+    if (_digits.length != 4) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final pin = _digits;
+
+    if (!_isConfirmStep) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'PINs do not match — please try again';
-        _isConfirmStep = false;
-        _firstPin = null;
+        _firstPin = pin;
+        _isConfirmStep = true;
+        _digits = '';
       });
       return;
     }
+
+    if (pin != _firstPin) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = l10n.pinsDoNotMatch;
+        _isConfirmStep = false;
+        _firstPin = null;
+        _digits = '';
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _busy = true;
+      _errorMessage = null;
+    });
 
     try {
       await ref.read(pinServiceProvider).setProfilePin(widget.profileId, pin);
       if (mounted) Navigator.of(context).pop(true);
     } on ArgumentError catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.message as String?;
         _isConfirmStep = false;
         _firstPin = null;
+        _digits = '';
+        _busy = false;
       });
     }
   }
 
+  void _backspace() {
+    if (_busy) return;
+    if (_digits.isEmpty) return;
+    setState(() {
+      _digits = _digits.substring(0, _digits.length - 1);
+      _errorMessage = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final childName = widget.profileName ?? 'this child';
-    final subtitle = _isConfirmStep
-        ? 'Re-enter the same 4-digit PIN to confirm'
-        : 'Set a 4-digit PIN to access parent controls for $childName. '
-              'The PIN is stored only on this device.';
+    final l10n = AppLocalizations.of(context)!;
+    final name = widget.profileName ?? l10n.userFallbackDisplayName;
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Set Parent PIN', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 12),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                PinEntryWidget(
-                  title: _isConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
-                  errorMessage: _errorMessage,
-                  onPinComplete: _isConfirmStep
-                      ? _onConfirmPinEntered
-                      : _onFirstPinEntered,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final title = _isConfirmStep
+        ? l10n.confirmNewPin
+        : l10n.setParentPinDialogTitle;
+    final subtitle = _isConfirmStep
+        ? l10n.confirmNewPinSubtitle
+        : l10n.setParentPinDialogSubtitle(name);
+
+    return PinKeypadDialogFrame(
+      title: title,
+      subtitle: subtitle,
+      digits: _digits,
+      errorMessage: _errorMessage,
+      lockedOut: false,
+      lockoutMinutes: 0,
+      busy: _busy,
+      onClose: () {},
+      onDigit: _appendDigit,
+      onBackspace: _backspace,
+      onCancel: () {},
+      showCloseButton: false,
+      showKeypadCancel: false,
     );
   }
 }

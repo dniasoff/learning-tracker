@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_mode_dialog_frame.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -219,167 +220,121 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                   child: createProfileButton,
                 )
               : createProfileButton;
-          return Dialog(
-            elevation: 0,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-            backgroundColor: Colors.transparent,
-            child: Stack(
-              clipBehavior: Clip.none,
+          return ParentModeDialogFrame(
+            title: l10n.addProfile,
+            subtitle: l10n.addProfileDialogSubtitle,
+            onClose: () => Navigator.pop(ctx),
+            showCloseButton: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.07),
-                        blurRadius: 28,
-                        offset: const Offset(0, 14),
-                      ),
-                      BoxShadow(
-                        color: AppTheme.brandBlue.withValues(alpha: 0.08),
-                        blurRadius: 36,
-                        offset: const Offset(0, 18),
-                      ),
-                    ],
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          l10n.addProfile,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: AppTheme.brandBlueDeep,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 22),
-                        Text(
-                          l10n.whatsYourName,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: labelGrey,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: ctrl,
-                          autofocus: true,
-                          textCapitalization: TextCapitalization.words,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: AppTheme.brandInk,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: l10n.enterNameHint,
-                            hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.brandInkSoft,
-                              fontWeight: FontWeight.w400,
-                            ),
-                            filled: true,
-                            fillColor: surfaceGrey,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: const BorderSide(
-                                color: AppTheme.brandBlue,
-                                width: 2,
-                              ),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: BorderSide(
-                                color: theme.colorScheme.error,
-                              ),
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: BorderSide(
-                                color: theme.colorScheme.error,
-                                width: 2,
-                              ),
-                            ),
-                            errorText: err,
-                            errorStyle: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.error,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                          ),
-                          onChanged: (_) => check(),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          l10n.chooseMode,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: labelGrey,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: AddProfileModePickCard(
-                                selected: mode == 'child',
-                                onTap: () => set(() => mode = 'child'),
-                                icon: Icons.rocket_launch_rounded,
-                                title: l10n.childModeCardTitle,
-                                subtitle: l10n.childModeCardSubtitleFunRewards,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: AddProfileModePickCard(
-                                selected: mode == 'adult',
-                                onTap: () => set(() => mode = 'adult'),
-                                icon: Icons.menu_book_rounded,
-                                title: l10n.adultModeCardTitle,
-                                subtitle: l10n.adultModeCardSubtitleDeepFocused,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 22),
-                        createProfileCta,
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.brandInkMuted,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            textStyle: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          child: Text(l10n.cancel),
-                        ),
-                      ],
-                    ),
+                Text(
+                  l10n.whatsYourName,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: labelGrey,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                Positioned(
-                  right: 10,
-                  bottom: 8,
-                  child: IgnorePointer(
-                    child: Icon(
-                      Icons.auto_awesome_rounded,
-                      size: 34,
-                      color: AppTheme.brandBlueSoft.withValues(alpha: 0.55),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: ctrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: l10n.enterNameHint,
+                    hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.brandInkSoft,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    filled: true,
+                    fillColor: surfaceGrey,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: const BorderSide(
+                        color: AppTheme.brandBlue,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide(color: theme.colorScheme.error),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.error,
+                        width: 2,
+                      ),
+                    ),
+                    errorText: err,
+                    errorStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
                     ),
                   ),
+                  onChanged: (_) => check(),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  l10n.chooseMode,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: labelGrey,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: AddProfileModePickCard(
+                        selected: mode == 'child',
+                        onTap: () => set(() => mode = 'child'),
+                        icon: Icons.rocket_launch_rounded,
+                        title: l10n.childModeCardTitle,
+                        subtitle: l10n.childModeCardSubtitleFunRewards,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: AddProfileModePickCard(
+                        selected: mode == 'adult',
+                        onTap: () => set(() => mode = 'adult'),
+                        icon: Icons.menu_book_rounded,
+                        title: l10n.adultModeCardTitle,
+                        subtitle: l10n.adultModeCardSubtitleDeepFocused,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                createProfileCta,
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.brandInkMuted,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    textStyle: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: Text(l10n.cancel),
                 ),
               ],
             ),

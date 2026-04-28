@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_mode_dialog_frame.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows the redesigned parent PIN keypad, verifies against [profileId],
@@ -32,10 +33,8 @@ Future<bool> showParentPinChangeDialog(
     context: context,
     barrierDismissible: false,
     useRootNavigator: true,
-    builder: (ctx) => _ParentPinChangeDialog(
-      profileId: profileId,
-      pinService: pinService,
-    ),
+    builder: (ctx) =>
+        _ParentPinChangeDialog(profileId: profileId, pinService: pinService),
   );
   return result ?? false;
 }
@@ -43,7 +42,6 @@ Future<bool> showParentPinChangeDialog(
 // --- Design tokens (match product spec: navy, gray, light surfaces) ---------
 
 const Color _pinNavy = AppTheme.brandInk;
-const Color _pinMuted = AppTheme.brandInkMuted;
 const Color _pinKeyFill = AppTheme.brandCreamSoft;
 const Color _pinDotEmpty = Color(0xFFE8EBF0);
 const Color _pinDotInner = Color(0xFFC9D0DA);
@@ -82,8 +80,10 @@ class _ParentPinVerificationDialogState
     });
     final l10n = AppLocalizations.of(context)!;
     try {
-      final ok =
-          await widget.pinService.verifyProfilePin(widget.profileId, _digits);
+      final ok = await widget.pinService.verifyProfilePin(
+        widget.profileId,
+        _digits,
+      );
       if (!mounted) return;
       if (ok) {
         Navigator.of(context).pop(true);
@@ -134,7 +134,7 @@ class _ParentPinVerificationDialogState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return _PinKeypadDialogFrame(
+    return PinKeypadDialogFrame(
       title: l10n.enterParentPin,
       subtitle: l10n.enterParentPinSubtitle,
       digits: _digits,
@@ -162,8 +162,7 @@ class _ParentPinChangeDialog extends StatefulWidget {
   final PinService pinService;
 
   @override
-  State<_ParentPinChangeDialog> createState() =>
-      _ParentPinChangeDialogState();
+  State<_ParentPinChangeDialog> createState() => _ParentPinChangeDialogState();
 }
 
 class _ParentPinChangeDialogState extends State<_ParentPinChangeDialog> {
@@ -209,8 +208,10 @@ class _ParentPinChangeDialogState extends State<_ParentPinChangeDialog> {
     switch (_step) {
       case _ChangeStep.verifyCurrent:
         try {
-          final ok =
-              await widget.pinService.verifyProfilePin(widget.profileId, pin);
+          final ok = await widget.pinService.verifyProfilePin(
+            widget.profileId,
+            pin,
+          );
           if (!mounted) return;
           if (ok) {
             setState(() {
@@ -259,9 +260,9 @@ class _ParentPinChangeDialogState extends State<_ParentPinChangeDialog> {
         }
         await widget.pinService.setProfilePin(widget.profileId, pin);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.pinChangedSuccessfully)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.pinChangedSuccessfully)));
         Navigator.of(context).pop(true);
     }
   }
@@ -294,7 +295,7 @@ class _ParentPinChangeDialogState extends State<_ParentPinChangeDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return _PinKeypadDialogFrame(
+    return PinKeypadDialogFrame(
       title: _title(l10n),
       subtitle: _subtitle(l10n),
       digits: _digits,
@@ -310,10 +311,12 @@ class _ParentPinChangeDialogState extends State<_ParentPinChangeDialog> {
   }
 }
 
-// --- Shared chrome -----------------------------------------------------------
+// --- Keypad + dots (re-exported for parent PIN setup) ----------------------
 
-class _PinKeypadDialogFrame extends StatelessWidget {
-  const _PinKeypadDialogFrame({
+/// Keypad and dot row in the same modal style as [parent_mode_dialog_frame].
+class PinKeypadDialogFrame extends StatelessWidget {
+  const PinKeypadDialogFrame({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.digits,
@@ -325,6 +328,8 @@ class _PinKeypadDialogFrame extends StatelessWidget {
     required this.onDigit,
     required this.onBackspace,
     required this.onCancel,
+    this.showCloseButton = true,
+    this.showKeypadCancel = true,
   });
 
   final String title;
@@ -338,6 +343,8 @@ class _PinKeypadDialogFrame extends StatelessWidget {
   final void Function(String digit) onDigit;
   final VoidCallback onBackspace;
   final VoidCallback onCancel;
+  final bool showCloseButton;
+  final bool showKeypadCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -346,53 +353,16 @@ class _PinKeypadDialogFrame extends StatelessWidget {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) onClose();
       },
-      child: Dialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: IconButton(
-                    onPressed: onClose,
-                    icon: const Icon(
-                      Icons.close,
-                      color: _pinMuted,
-                      size: 22,
-                    ),
-                    tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  ),
-                ),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: _pinNavy,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: _pinMuted,
-                    fontSize: 15,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                if (lockedOut)
-                  _LockoutPanel(minutes: lockoutMinutes)
-                else ...[
+      child: ParentModeDialogFrame(
+        showCloseButton: showCloseButton,
+        onClose: onClose,
+        title: title,
+        subtitle: subtitle,
+        child: lockedOut
+            ? _LockoutPanel(minutes: lockoutMinutes)
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   _PinDotsRow(length: digits.length),
                   const SizedBox(height: 12),
                   if (errorMessage != null)
@@ -414,12 +384,10 @@ class _PinKeypadDialogFrame extends StatelessWidget {
                     onBackspace: onBackspace,
                     onCancel: onCancel,
                     busy: busy,
+                    showCancel: showKeypadCancel,
                   ),
                 ],
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
@@ -514,12 +482,14 @@ class _PinKeypad extends StatelessWidget {
     required this.onBackspace,
     required this.onCancel,
     required this.busy,
+    this.showCancel = true,
   });
 
   final void Function(String digit) onDigit;
   final VoidCallback onBackspace;
   final VoidCallback onCancel;
   final bool busy;
+  final bool showCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -527,18 +497,18 @@ class _PinKeypad extends StatelessWidget {
     const spacing = 10.0;
 
     Widget digitBtn(String d) => Expanded(
-          child: _KeypadChip(
-            onTap: busy ? null : () => onDigit(d),
-            child: Text(
-              d,
-              style: const TextStyle(
-                color: _pinNavy,
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+      child: _KeypadChip(
+        onTap: busy ? null : () => onDigit(d),
+        child: Text(
+          d,
+          style: const TextStyle(
+            color: _pinNavy,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
           ),
-        );
+        ),
+      ),
+    );
 
     return Column(
       children: [
@@ -575,23 +545,26 @@ class _PinKeypad extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Expanded(
-              child: TextButton(
-                onPressed: busy ? null : onCancel,
-                style: TextButton.styleFrom(
-                  foregroundColor: _pinNavy,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text(
-                  l10n.cancel,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+            if (showCancel)
+              Expanded(
+                child: TextButton(
+                  onPressed: busy ? null : onCancel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: _pinNavy,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    l10n.cancel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: spacing),
+              )
+            else
+              const Expanded(child: SizedBox()),
+            if (showCancel) const SizedBox(width: spacing),
             digitBtn('0'),
             const SizedBox(width: spacing),
             Expanded(
@@ -626,10 +599,7 @@ class _KeypadChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: SizedBox(
-          height: 52,
-          child: Center(child: child),
-        ),
+        child: SizedBox(height: 52, child: Center(child: child)),
       ),
     );
   }

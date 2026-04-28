@@ -1038,6 +1038,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bottomNavParent => 'Parent';
 
   @override
+  String get addProfileDialogSubtitle =>
+      'Enter a name and select Child mode or Adult mode.';
+
+  @override
+  String get setParentPinDialogTitle => 'Set Parent PIN';
+
+  @override
+  String setParentPinDialogSubtitle(String name) {
+    return 'Set a 4-digit PIN to access parent controls for $name. The PIN is stored only on this device.';
+  }
+
+  @override
   String get enterParentPin => 'Enter Parent PIN';
 
   @override

@@ -1028,6 +1028,17 @@ class AppLocalizationsHe extends AppLocalizations {
   String get bottomNavParent => 'הורה';
 
   @override
+  String get addProfileDialogSubtitle => 'הזינו שם ובחרו מצב ילד או מבוגר.';
+
+  @override
+  String get setParentPinDialogTitle => 'הגדרת קוד הורה';
+
+  @override
+  String setParentPinDialogSubtitle(String name) {
+    return 'הגדירו קוד בן 4 ספרות לשליטה הורית עבור $name. הקוד נשמר רק במכשיר זה.';
+  }
+
+  @override
   String get enterParentPin => 'הזינו קוד הורה';
 
   @override

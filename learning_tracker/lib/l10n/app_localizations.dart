@@ -1968,6 +1968,24 @@ abstract class AppLocalizations {
   /// **'Parent'**
   String get bottomNavParent;
 
+  /// No description provided for @addProfileDialogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name and select Child mode or Adult mode.'**
+  String get addProfileDialogSubtitle;
+
+  /// No description provided for @setParentPinDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Parent PIN'**
+  String get setParentPinDialogTitle;
+
+  /// No description provided for @setParentPinDialogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a 4-digit PIN to access parent controls for {name}. The PIN is stored only on this device.'**
+  String setParentPinDialogSubtitle(String name);
+
   /// No description provided for @enterParentPin.
   ///
   /// In en, this message translates to:
