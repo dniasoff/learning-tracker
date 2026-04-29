@@ -39,6 +39,15 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       trackId = await _insertTrack(db);
+      final now = DateTime.now();
+      await db.into(db.goals).insert(
+            GoalsCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackId: trackId,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
       pointsService = PointsService(db);
     });
 
@@ -85,14 +94,17 @@ void main() {
       final learn = await pointsService.getPointsForStage(
         curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 1,
+        trackId: trackId,
       );
       final chazara1 = await pointsService.getPointsForStage(
         curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 2,
+        trackId: trackId,
       );
       final chazara2 = await pointsService.getPointsForStage(
         curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 3,
+        trackId: trackId,
       );
 
       expect(learn, 10);

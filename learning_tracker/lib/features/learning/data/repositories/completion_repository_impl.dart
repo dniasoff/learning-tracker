@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
+import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
@@ -101,6 +102,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       final trackId = await _resolveTrackId(
         curriculumId: request.curriculumId,
         trackType: request.trackType,
+        profileId: _activeProfileId,
       );
 
       // 4. Calculate points for this stage (child only; programmed or self-paced
@@ -117,6 +119,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
               curriculumId: request.curriculumId,
               stageOrder: request.stageId,
               trackId: trackId,
+              profileId: _activeProfileId,
             )
           : 0;
 
@@ -125,6 +128,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         request: request,
         trackId: trackId,
         points: points,
+        profileId: _activeProfileId,
       );
 
       // 6. Update cached streak table so the dashboard reflects the new
@@ -181,8 +185,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<List<Completion>> bulkMarkComplete(
     BulkCompletionRequest request,
   ) async {
-    // Perform all operations in a single transaction
-    final isChildProfile = await _isChildProfile();
+    final effectiveProfileId = request.profileId ?? _activeProfileId;
+    final isChildProfile = await _isProfileChild(effectiveProfileId);
     final completions = await _database.transaction(() async {
       final completions = <Completion>[];
 
@@ -194,12 +198,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
           trackType: request.trackType,
         );
 
-        // Use the same logic as single completion
-        // Note: We're already in a transaction, so nested transactions
-        // will be handled by Drift's transaction management
         final completion = await _markCompleteSingleInTransaction(
           singleRequest,
           isChildProfile: isChildProfile,
+          profileId: effectiveProfileId,
+          awardGamificationPoints: request.awardGamificationPoints,
         );
         completions.add(completion);
       }
@@ -207,22 +210,33 @@ class CompletionRepositoryImpl implements CompletionRepository {
       return completions;
     });
 
-    // Bulk flows (e.g. prior-learning mark) should not advance/sync bookmark
-    // on every item. Advance once after the batch to keep UX responsive.
     if (completions.isNotEmpty) {
       await _advanceBookmark(
         curriculumId: request.curriculumId,
         trackType: request.trackType,
         completedSefariaRef: request.sefariaRefs.last,
+        bookmarkProfileId: effectiveProfileId,
       );
     }
 
     if (isChildProfile && completions.isNotEmpty) {
-      final affectedTrackIds = completions.map((c) => c.trackId).toSet();
-      for (final trackId in affectedTrackIds) {
-        unawaited(_rewardMilestoneService?.evaluateUnlocksForTrack(trackId));
+      final RewardMilestoneService? rewardSvc;
+      if (request.profileId != null &&
+          request.profileId != _activeProfileId) {
+        rewardSvc = RewardMilestoneService(
+          _database,
+          profileId: effectiveProfileId,
+        );
+      } else {
+        rewardSvc = _rewardMilestoneService;
       }
-      unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
+      if (rewardSvc != null) {
+        final affectedTrackIds = completions.map((c) => c.trackId).toSet();
+        for (final trackId in affectedTrackIds) {
+          await rewardSvc.evaluateUnlocksForTrack(trackId);
+        }
+        await _syncEngine?.pushGamificationSettingsSnapshot();
+      }
     }
 
     return completions;
@@ -232,18 +246,21 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<Completion> _markCompleteSingleInTransaction(
     CompletionRequest request, {
     required bool isChildProfile,
+    required int profileId,
+    bool awardGamificationPoints = true,
   }) async {
-    // Same logic as markComplete but assumes we're already in a transaction
     await _validateStageProgression(
       sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
+      profileId: profileId,
     );
 
     final existing = await _getExistingCompletion(
       sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
+      profileId: profileId,
     );
     if (existing != null) {
       return existing;
@@ -252,20 +269,24 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final trackId = await _resolveTrackId(
       curriculumId: request.curriculumId,
       trackType: request.trackType,
+      profileId: profileId,
     );
 
     final rewardService = RewardMilestoneService(
       _database,
-      profileId: _activeProfileId,
+      profileId: profileId,
     );
     final eligibleForRewards = await rewardService.trackCountsTowardRewardPoints(
       trackId,
     );
-    final points = isChildProfile && eligibleForRewards
+    final allowPoints =
+        awardGamificationPoints && isChildProfile && eligibleForRewards;
+    final points = allowPoints
         ? await _calculatePoints(
             curriculumId: request.curriculumId,
             stageOrder: request.stageId,
             trackId: trackId,
+            profileId: profileId,
           )
         : 0;
 
@@ -273,12 +294,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
       request: request,
       trackId: trackId,
       points: points,
+      profileId: profileId,
     );
 
-    await _streakService?.recordCompletion(completion.completedAt);
+    final streak = StreakService(_database, profileId: profileId);
+    await streak.recordCompletion(completion.completedAt);
 
-    // Offline-first: do not block bulk-mark UX on network push.
-    // SyncEngine will queue/push in the background.
     unawaited(_syncCompletion(completion));
 
     return completion;
@@ -292,11 +313,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required String sefariaRef,
     required int stageId,
     required String trackType,
+    required int profileId,
   }) async {
     // Get completions scoped to the active profile — stage progression
     // must not be blocked by another profile's history for the same item.
     final completions = await _database.completionDao
-        .getCompletionsForContentAndProfile(sefariaRef, _activeProfileId);
+        .getCompletionsForContentAndProfile(sefariaRef, profileId);
 
     final trackCompletions = completions
         .where((c) => c.trackType == trackType)
@@ -336,9 +358,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required String sefariaRef,
     required int stageId,
     required String trackType,
+    required int profileId,
   }) async {
     final completions = await _database.completionDao
-        .getCompletionsForContentAndProfile(sefariaRef, _activeProfileId);
+        .getCompletionsForContentAndProfile(sefariaRef, profileId);
 
     final matches = completions.where(
       (c) => c.stageId == stageId && c.trackType == trackType,
@@ -355,12 +378,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required String curriculumId,
     required int stageOrder,
     required int trackId,
+    required int profileId,
   }) async {
     // Check point_configs table for configured value
     final config = await _database.pointConfigDao.getConfig(
       curriculumId,
       stageOrder,
-      profileId: _activeProfileId,
+      profileId: profileId,
       trackId: trackId,
     );
     if (config != null) return config.points;
@@ -378,12 +402,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<int> _resolveTrackId({
     required String curriculumId,
     required String trackType,
+    required int profileId,
   }) async {
     final track =
         await (_database.select(_database.curriculumTracks)
               ..where(
                 (t) =>
-                    t.profileId.equals(_activeProfileId) &
+                    t.profileId.equals(profileId) &
                     t.curriculumId.equals(curriculumId) &
                     t.trackType.equals(trackType),
               )
@@ -391,7 +416,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
             .getSingleOrNull();
     if (track == null) {
       throw StateError(
-        'No curriculum track found for profile=$_activeProfileId, '
+        'No curriculum track found for profile=$profileId, '
         'curriculum=$curriculumId, trackType=$trackType',
       );
     }
@@ -403,12 +428,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required CompletionRequest request,
     required int trackId,
     required int points,
+    required int profileId,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
 
     final id = await _database.completionDao.insertCompletion(
       CompletionsCompanion.insert(
-        profileId: drift.Value(_activeProfileId),
+        profileId: drift.Value(profileId),
         curriculumId: request.curriculumId,
         sefariaRef: request.sefariaRef,
         stageId: request.stageId,
@@ -422,7 +448,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // Tee the completion into the append-only streak event log
     // so the streak reducer can derive state independent of the
     // cached Streaks table. Unique keys swallow duplicates silently.
-    await _appendStreakEvent(profileId: _activeProfileId, at: now);
+    await _appendStreakEvent(profileId: profileId, at: now);
 
     // Retrieve the created completion
     final completion = await _database.completionDao.getCompletionById(id);
@@ -455,113 +481,51 @@ class CompletionRepositoryImpl implements CompletionRepository {
     }
   }
 
-  /// True when the active profile is child mode.
-  Future<bool> _isChildProfile() async {
-    final profile = await _database.profileDao.getProfileById(_activeProfileId);
+  /// True when the session active profile is child mode.
+  Future<bool> _isChildProfile() async => _isProfileChild(_activeProfileId);
+
+  Future<bool> _isProfileChild(int profileId) async {
+    final profile = await _database.profileDao.getProfileById(profileId);
     return profile?.mode == 'child';
   }
 
   /// Advance the bookmark to the next item in learning order.
   ///
-  /// Delegates to [BookmarkRepository] when available so that Firestore sync
-  /// is triggered. Falls back to direct DAO access when no repository is
-  /// injected (e.g. during tests that don't need sync).
+  /// Uses the injected [BookmarkRepository] when it matches [bookmarkProfileId]
+  /// (or the session active profile); otherwise builds a profile-scoped
+  /// [BookmarkRepositoryImpl] so delegated flows (e.g. parent + child track) sync
+  /// the correct bookmark.
   Future<void> _advanceBookmark({
     required String curriculumId,
     required String trackType,
     required String completedSefariaRef,
+    int? bookmarkProfileId,
   }) async {
-    if (_bookmarkRepository != null) {
-      // Use BookmarkRepository so Firestore sync is triggered
-      final curriculum = CurriculumId.values.firstWhere(
-        (c) => c.storageKey == curriculumId,
-        orElse: () =>
-            throw ArgumentError('Unknown curriculumId: $curriculumId'),
+    final pid = bookmarkProfileId ?? _activeProfileId;
+
+    final injected = _bookmarkRepository;
+    late final BookmarkRepository bookmarkRepo;
+    if (injected != null && pid == _activeProfileId) {
+      bookmarkRepo = injected;
+    } else {
+      bookmarkRepo = BookmarkRepositoryImpl(
+        database: _database,
+        syncEngine: _syncEngine,
+        contentRepository: _contentRepository,
+        profileId: pid,
       );
-      final track = TrackType.fromStorageKey(trackType);
-      await _bookmarkRepository.advanceBookmark(
-        curriculumId: curriculum,
-        trackType: track,
-        completedSefariaRef: completedSefariaRef,
-      );
-      return;
     }
 
-    // Fallback: direct DAO access scoped to active profile (no Firestore sync)
-    final bookmark = await _database.bookmarkDao
-        .getBookmarkByCurriculumTrackAndProfile(
-          curriculumId,
-          trackType,
-          _activeProfileId,
-        );
-
-    if (bookmark == null) {
-      final nextSefariaRef = await _getNextItemId(
-        curriculumId: curriculumId,
-        currentSefariaRef: completedSefariaRef,
-      );
-
-      if (nextSefariaRef != null) {
-        await _database.bookmarkDao.insertBookmark(
-          BookmarksCompanion.insert(
-            profileId: drift.Value(_activeProfileId),
-            curriculumId: curriculumId,
-            sefariaRef: nextSefariaRef,
-            trackType: trackType,
-            updatedAt: DateTimeFactory.nowUtc(),
-          ),
-        );
-      }
-    } else if (bookmark.sefariaRef == completedSefariaRef) {
-      final nextSefariaRef = await _getNextItemId(
-        curriculumId: curriculumId,
-        currentSefariaRef: completedSefariaRef,
-      );
-
-      if (nextSefariaRef != null) {
-        await _database.bookmarkDao.updateBookmark(
-          BookmarksCompanion(
-            id: drift.Value(bookmark.id),
-            profileId: drift.Value(bookmark.profileId),
-            curriculumId: drift.Value(bookmark.curriculumId),
-            trackType: drift.Value(bookmark.trackType),
-            sefariaRef: drift.Value(nextSefariaRef),
-            updatedAt: drift.Value(DateTimeFactory.nowUtc()),
-          ),
-        );
-      }
-    }
-    // else: bookmark is on a different item, don't change it
-  }
-
-  /// Get the next content item sefariaRef in learning order.
-  Future<String?> _getNextItemId({
-    required String curriculumId,
-    required String currentSefariaRef,
-  }) async {
-    // Parse curriculumId string to CurriculumId enum
     final curriculum = CurriculumId.values.firstWhere(
       (c) => c.storageKey == curriculumId,
+      orElse: () => throw ArgumentError('Unknown curriculumId: $curriculumId'),
     );
-
-    // Get all leaf items for this curriculum from ContentRepository
-    final allItems = await _contentRepository.getContentForCurriculum(
-      curriculum,
+    final track = TrackType.fromStorageKey(trackType);
+    await bookmarkRepo.advanceBookmark(
+      curriculumId: curriculum,
+      trackType: track,
+      completedSefariaRef: completedSefariaRef,
     );
-
-    // Filter to only leaf items and sort by sortOrder
-    final leafItems = allItems.where((item) => item.isLeaf).toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-    // Find current item's position
-    final currentIndex = leafItems.indexWhere(
-      (item) => item.sefariaRef == currentSefariaRef,
-    );
-    if (currentIndex == -1 || currentIndex == leafItems.length - 1) {
-      return null; // Current item not found or is the last item
-    }
-
-    return leafItems[currentIndex + 1].sefariaRef;
   }
 
   /// Queue completion for Firestore sync.
@@ -583,11 +547,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   @override
   Future<List<Completion>> getCompletionsByCurriculum(
-    String curriculumId,
-  ) async {
+    String curriculumId, {
+    int? profileId,
+  }) async {
+    final pid = profileId ?? _activeProfileId;
     return await _database.completionDao.getCompletionsByCurriculumAndProfile(
       curriculumId,
-      _activeProfileId,
+      pid,
     );
   }
 

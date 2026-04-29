@@ -535,16 +535,25 @@ final class DashboardStreakProvider
 String _$dashboardStreakHash() => r'57d98ffb0171ffdee4b35d132f16c664e828f662';
 
 /// Global points total, scoped to active profile.
+///
+/// Only completions on reward-eligible tracks (programmed or self-paced with a
+/// goal); excludes onboarding bulk prior marks and browse-only tracks.
 
 @ProviderFor(dashboardGlobalPoints)
 final dashboardGlobalPointsProvider = DashboardGlobalPointsProvider._();
 
 /// Global points total, scoped to active profile.
+///
+/// Only completions on reward-eligible tracks (programmed or self-paced with a
+/// goal); excludes onboarding bulk prior marks and browse-only tracks.
 
 final class DashboardGlobalPointsProvider
     extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
     with $FutureModifier<int>, $FutureProvider<int> {
   /// Global points total, scoped to active profile.
+  ///
+  /// Only completions on reward-eligible tracks (programmed or self-paced with a
+  /// goal); excludes onboarding bulk prior marks and browse-only tracks.
   DashboardGlobalPointsProvider._()
     : super(
         from: null,
@@ -571,7 +580,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'80339f89a44a01285030b260fa253b3b1547c3f7';
+    r'c43526771961c0076acd51f60182f620a839860a';
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 

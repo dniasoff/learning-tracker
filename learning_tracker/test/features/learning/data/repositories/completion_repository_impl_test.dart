@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -25,31 +26,44 @@ void main() {
   late MockContentRepository mockContentRepository;
   late CompletionRepositoryImpl repository;
   late int trackId;
+  late int learnerId;
 
   setUp(() async {
     database = createTestDatabase();
     mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
 
+    final now = DateTime.now();
+    final profileRow = await database.into(database.profiles).insertReturning(
+      ProfilesCompanion.insert(
+        accountId: 1,
+        displayName: 'Tester',
+        mode: 'child',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    learnerId = profileRow.id;
+
     final trackRow = await database
         .into(database.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
+            profileId: Value(learnerId),
             curriculumId: 'mishnayos',
             trackType: 'personal',
-            activatedAt: DateTime.now(),
+            activatedAt: now,
           ),
         );
     trackId = trackRow.id;
 
-    // Also create a school track for tests that use it
-    await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
+    await database.into(database.goals).insert(
+          GoalsCompanion.insert(
+            profileId: Value(learnerId),
             curriculumId: 'mishnayos',
-            trackType: 'personal',
-            activatedAt: DateTime.now(),
+            trackId: trackId,
+            createdAt: now,
+            updatedAt: now,
           ),
         );
 
@@ -57,7 +71,8 @@ void main() {
       database: database,
       syncEngine: mockSyncEngine,
       contentRepository: mockContentRepository,
-      streakService: StreakService(database),
+      streakService: StreakService(database, profileId: learnerId),
+      activeProfileId: learnerId,
     );
 
     // Default: no content items (bookmark advance is a no-op)
@@ -68,6 +83,12 @@ void main() {
     // Sync engine stubs
     when(
       () => mockSyncEngine.pushCompletion(any()),
+    ).thenAnswer((_) async => Future.value());
+    when(
+      () => mockSyncEngine.pushBookmark(any()),
+    ).thenAnswer((_) async => Future.value());
+    when(
+      () => mockSyncEngine.pushGamificationSettingsSnapshot(),
     ).thenAnswer((_) async => Future.value());
   });
 
@@ -250,12 +271,27 @@ void main() {
       expect(completions.map((c) => c.sefariaRef).toList(), refs);
       verify(() => mockSyncEngine.pushCompletion(any())).called(3);
     });
+
+    test('bulk prior flag yields zero points even when track is reward-eligible',
+        () async {
+      final completions = await repository.bulkMarkComplete(
+        BulkCompletionRequest(
+          curriculumId: 'mishnayos',
+          sefariaRefs: ['Mishnah Berachot 1:1'],
+          stageId: 1,
+          trackType: 'personal',
+          awardGamificationPoints: false,
+        ),
+      );
+
+      expect(completions.single.points, 0);
+    });
   });
 
   group('streak integration', () {
     test('updates cached streak table on first completion', () async {
       // Streak table empty before any completion
-      expect(await database.streakDao.getStreak(), isNull);
+      expect(await database.streakDao.getStreakByProfile(learnerId), isNull);
 
       await repository.markComplete(
         const CompletionRequest(
@@ -266,7 +302,7 @@ void main() {
         ),
       );
 
-      final streak = await database.streakDao.getStreak();
+      final streak = await database.streakDao.getStreakByProfile(learnerId);
       expect(streak, isNotNull);
       expect(streak!.currentStreak, 1);
       expect(streak.maxStreak, 1);
@@ -283,7 +319,7 @@ void main() {
       await repository.markComplete(request);
       await repository.markComplete(request); // idempotent path
 
-      final streak = await database.streakDao.getStreak();
+      final streak = await database.streakDao.getStreakByProfile(learnerId);
       expect(streak!.currentStreak, 1);
     });
   });
@@ -355,6 +391,7 @@ void main() {
       // Create a bookmark on ref1
       await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: Value(learnerId),
           curriculumId: curriculumId,
           sefariaRef: ref1,
           trackType: 'personal',
@@ -372,7 +409,11 @@ void main() {
       );
 
       final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumAndTrack(curriculumId, 'personal');
+          .getBookmarkByCurriculumTrackAndProfile(
+            curriculumId,
+            'personal',
+            learnerId,
+          );
       expect(bookmark?.sefariaRef, ref2);
     });
   });

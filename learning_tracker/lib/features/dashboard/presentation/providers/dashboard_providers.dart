@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -178,6 +179,9 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
 }
 
 /// Global points total, scoped to active profile.
+///
+/// Only completions on reward-eligible tracks (programmed or self-paced with a
+/// goal); excludes onboarding bulk prior marks and browse-only tracks.
 @riverpod
 Future<int> dashboardGlobalPoints(Ref ref) async {
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
@@ -185,8 +189,8 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final completions = await db.completionDao.getCompletionsByProfile(profileId);
-  return completions.fold<int>(0, (sum, c) => sum + c.points);
+  final service = PointsService(db, profileId: profileId);
+  return service.getGlobalTotal();
 }
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).

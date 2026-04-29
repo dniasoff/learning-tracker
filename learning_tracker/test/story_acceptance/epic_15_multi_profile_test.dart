@@ -1452,6 +1452,16 @@ void main() {
             mode: 'child',
           );
 
+          final now = DateTime.now().toUtc();
+          await db.goalDao.insertGoal(
+            GoalsCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackId: trackId,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
           // P1 earns 10 points
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(

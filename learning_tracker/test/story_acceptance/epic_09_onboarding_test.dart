@@ -219,6 +219,7 @@ void main() {
         final activationService = CurriculumActivationService(
           database: db,
           pushActiveCurricula: (_) async {},
+          pushCurriculumTrack: (_) async {},
           trackRepository: mockTrackRepo,
         );
         final importService = CurriculumImportService(
@@ -276,6 +277,7 @@ void main() {
       () async {
         final targetDate = DateTime.utc(2027, 6, 15);
         final goal = await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           targetPercent: 100.0,
@@ -356,6 +358,7 @@ void main() {
 
       // Set goal for first, skip second
       await goalRepo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
@@ -436,6 +439,7 @@ void main() {
 
     test('goals saved to database and retrievable', () async {
       final goal = await goalRepo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.chumash,
         trackId: trackId,
         targetPercent: 100.0,
@@ -452,6 +456,7 @@ void main() {
     test('user can modify goals later from goal management', () async {
       // Create during onboarding
       final goal = await goalRepo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
@@ -478,6 +483,7 @@ void main() {
 
         // Set goal with deadline for mishnayos
         await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           targetPercent: 100.0,
@@ -509,6 +515,7 @@ void main() {
     late _MockContentRepository mockContentRepo;
     late _MockCompletionRepository mockCompletionRepo;
     late _MockBookmarkRepository mockBookmarkRepo;
+    late UserDatabase bulkServiceDb;
     late BulkPriorCompletionService service;
 
     List<ContentItem> makeMishnayosItems() {
@@ -587,10 +594,13 @@ void main() {
       mockContentRepo = _MockContentRepository();
       mockCompletionRepo = _MockCompletionRepository();
       mockBookmarkRepo = _MockBookmarkRepository();
+      bulkServiceDb = UserDatabase(NativeDatabase.memory());
       service = BulkPriorCompletionService(
         contentRepository: mockContentRepo,
         completionRepository: mockCompletionRepo,
         bookmarkRepository: mockBookmarkRepo,
+        database: bulkServiceDb,
+        syncEngine: null,
       );
 
       when(
@@ -731,6 +741,7 @@ void main() {
       final req = captured.first as BulkCompletionRequest;
       expect(req.sefariaRefs, hasLength(2));
       expect(req.trackType, 'personal');
+      expect(req.awardGamificationPoints, isFalse);
     });
 
     test('selecting individual items for partial completions', () async {
@@ -767,6 +778,7 @@ void main() {
       ).captured;
       final req = captured.first as BulkCompletionRequest;
       expect(req.trackType, 'personal');
+      expect(req.awardGamificationPoints, isFalse);
     });
 
     test('hierarchy selection at masechta level resolves correctly', () async {
@@ -808,5 +820,9 @@ void main() {
         expect(result.bookmarkSefariaRef, 'Mishnah Yevamos 1:1');
       },
     );
+
+    tearDown(() async {
+      await bulkServiceDb.close();
+    });
   });
 }

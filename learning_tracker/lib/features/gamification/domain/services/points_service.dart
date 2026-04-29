@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 
 /// Record of a single points award event.
 class PointsHistoryEntry {
@@ -49,18 +50,25 @@ class PointsService {
   }
 
   /// Total points earned for a specific curriculum, scoped to active profile.
+  ///
+  /// Only includes completions on tracks that count toward gamification
+  /// (programmed enrollment or self-paced with a learning goal) — not
+  /// momentum-only browse tracks.
   Future<int> getCurriculumTotal(String curriculumId) async {
     final completions = await _database.completionDao
         .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
-    return completions.fold<int>(0, (sum, c) => sum + c.points);
+    return _sumPointsForRewardEligibleTracks(completions);
   }
 
   /// Total points earned across all curricula, scoped to active profile.
+  ///
+  /// Only includes completions on tracks that count toward gamification
+  /// (programmed enrollment or self-paced with a learning goal).
   Future<int> getGlobalTotal() async {
     final completions = await _database.completionDao.getCompletionsByProfile(
       profileId,
     );
-    return completions.fold<int>(0, (sum, c) => sum + c.points);
+    return _sumPointsForRewardEligibleTracks(completions);
   }
 
   /// Per-curriculum breakdown of points totals.
@@ -75,8 +83,8 @@ class PointsService {
     return totals;
   }
 
-  /// Points history log — all point award events ordered by timestamp,
-  /// scoped to active profile.
+  /// Points history log — point awards from reward-eligible tracks only,
+  /// ordered by timestamp, scoped to active profile.
   Future<List<PointsHistoryEntry>> getPointsHistory({
     String? curriculumId,
   }) async {
@@ -87,9 +95,13 @@ class PointsService {
           )
         : await _database.completionDao.getCompletionsByProfile(profileId);
 
-    // Only include completions that actually earned points
+    final eligibility = await _rewardEligibilityByTrackId(completions);
+
     return completions
-        .where((c) => c.points > 0)
+        .where(
+          (c) =>
+              c.points > 0 && (eligibility[c.trackId] ?? false),
+        )
         .map(
           (c) => PointsHistoryEntry(
             timestamp: c.completedAt,
@@ -101,6 +113,29 @@ class PointsService {
         )
         .toList()
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  }
+
+  Future<Map<int, bool>> _rewardEligibilityByTrackId(
+    List<Completion> completions,
+  ) async {
+    final reward = RewardMilestoneService(_database, profileId: profileId);
+    final ids = completions.map((c) => c.trackId).toSet();
+    final map = <int, bool>{};
+    for (final id in ids) {
+      map[id] = await reward.trackCountsTowardRewardPoints(id);
+    }
+    return map;
+  }
+
+  Future<int> _sumPointsForRewardEligibleTracks(
+    List<Completion> completions,
+  ) async {
+    if (completions.isEmpty) return 0;
+    final eligibility = await _rewardEligibilityByTrackId(completions);
+    return completions.fold<int>(0, (sum, c) {
+      if (!(eligibility[c.trackId] ?? false)) return sum;
+      return sum + c.points;
+    });
   }
 
   /// Seed default point configs for a curriculum if none exist.

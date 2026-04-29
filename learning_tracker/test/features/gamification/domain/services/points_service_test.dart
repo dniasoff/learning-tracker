@@ -25,6 +25,15 @@ void main() {
           ),
         );
     trackId = trackRow.id;
+    final now = DateTime.now();
+    await db.goalDao.insertGoal(
+      GoalsCompanion.insert(
+        curriculumId: 'mishnayos',
+        trackId: trackId,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
   });
 
   tearDown(() async {
@@ -39,6 +48,7 @@ void main() {
     required int points,
     String trackType = 'personal',
     DateTime? completedAt,
+    int? completionTrackId,
   }) async {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
@@ -46,7 +56,7 @@ void main() {
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
-        trackId: trackId,
+        trackId: completionTrackId ?? trackId,
         completedAt: completedAt ?? DateTime.now(),
         points: Value(points),
       ),
@@ -60,6 +70,7 @@ void main() {
         final points = await service.getPointsForStage(
           curriculumId: CurriculumId.mishnayos.storageKey,
           stageOrder: 1,
+          trackId: trackId,
         );
         expect(points, 10);
       },
@@ -69,14 +80,17 @@ void main() {
       final learn = await service.getPointsForStage(
         curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 1,
+        trackId: trackId,
       );
       final chazara1 = await service.getPointsForStage(
         curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 2,
+        trackId: trackId,
       );
       final chazara2 = await service.getPointsForStage(
         curriculumId: CurriculumId.mishnayos.storageKey,
         stageOrder: 3,
+        trackId: trackId,
       );
       expect(learn, 10);
       expect(chazara1, 5);
@@ -99,6 +113,7 @@ void main() {
         final points = await service.getPointsForStage(
           curriculumId: CurriculumId.mishnayos.storageKey,
           stageOrder: 1,
+          trackId: trackId,
         );
         expect(points, 20);
 
@@ -106,6 +121,7 @@ void main() {
         final bavliPoints = await service.getPointsForStage(
           curriculumId: CurriculumId.bavli.storageKey,
           stageOrder: 1,
+          trackId: trackId,
         );
         expect(bavliPoints, 10);
       },
@@ -208,6 +224,38 @@ void main() {
       expect(breakdown[CurriculumId.bavli], 15);
       expect(breakdown.containsKey(CurriculumId.chumash), isFalse);
     });
+
+    test(
+      'global total excludes browse-only track completions (no goal)',
+      () async {
+        final browseTrack = await db.into(db.curriculumTracks).insertReturning(
+              CurriculumTracksCompanion.insert(
+                curriculumId: CurriculumId.bavli.storageKey,
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
+        await insertCompletion(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.1',
+          stageId: 1,
+          points: 10,
+        );
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: CurriculumId.bavli.storageKey,
+            sefariaRef: 'Berakhot 2a',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: browseTrack.id,
+            completedAt: DateTime.now(),
+            points: Value(99),
+          ),
+        );
+
+        expect(await service.getGlobalTotal(), 10);
+      },
+    );
 
     test('ensureDefaultConfigs seeds configs only when empty', () async {
       final currId = CurriculumId.mishnayos.storageKey;

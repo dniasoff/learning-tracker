@@ -1,10 +1,13 @@
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Result of a bulk prior completion operation.
 class BulkPriorCompletionResult {
@@ -28,6 +31,8 @@ class BulkPriorCompletionService {
   final ContentRepository _contentRepository;
   final CompletionRepository _completionRepository;
   final BookmarkRepository _bookmarkRepository;
+  final UserDatabase _database;
+  final SyncEngine? _syncEngine;
 
   /// Cached content items from the last [resolveSelections] call.
   List<ContentItem>? _cachedAllItems;
@@ -37,9 +42,13 @@ class BulkPriorCompletionService {
     required ContentRepository contentRepository,
     required CompletionRepository completionRepository,
     required BookmarkRepository bookmarkRepository,
+    required UserDatabase database,
+    SyncEngine? syncEngine,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
-       _bookmarkRepository = bookmarkRepository;
+       _bookmarkRepository = bookmarkRepository,
+       _database = database,
+       _syncEngine = syncEngine;
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -96,6 +105,7 @@ class BulkPriorCompletionService {
     required CurriculumId curriculumId,
     required List<ContentItem> resolvedItems,
     required List<int> stageIds,
+    int? profileId,
   }) async {
     final sefariaRefs = resolvedItems.map((item) => item.sefariaRef).toList();
     var totalCompletions = 0;
@@ -107,6 +117,8 @@ class BulkPriorCompletionService {
         sefariaRefs: sefariaRefs,
         stageId: stageId,
         trackType: TrackType.personal.storageKey,
+        profileId: profileId,
+        awardGamificationPoints: false,
       );
       final completions = await _completionRepository.bulkMarkComplete(request);
       totalCompletions += completions.length;
@@ -114,7 +126,10 @@ class BulkPriorCompletionService {
 
     // Query DB for all existing completions for this curriculum
     final existingCompletions = await _completionRepository
-        .getCompletionsByCurriculum(curriculumId.storageKey);
+        .getCompletionsByCurriculum(
+          curriculumId.storageKey,
+          profileId: profileId,
+        );
     final allCompletedRefs = {
       ...sefariaRefs,
       ...existingCompletions.map((c) => c.sefariaRef),
@@ -127,7 +142,15 @@ class BulkPriorCompletionService {
     );
 
     if (bookmarkRef != null) {
-      await _bookmarkRepository.setBookmark(
+      final bookmarkRepo = profileId != null
+          ? BookmarkRepositoryImpl(
+              database: _database,
+              syncEngine: _syncEngine,
+              contentRepository: _contentRepository,
+              profileId: profileId,
+            )
+          : _bookmarkRepository;
+      await bookmarkRepo.setBookmark(
         curriculumId: curriculumId,
         trackType: TrackType.personal,
         sefariaRef: bookmarkRef,
