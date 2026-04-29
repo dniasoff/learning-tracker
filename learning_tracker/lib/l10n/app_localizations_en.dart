@@ -1058,29 +1058,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pointSettingsNothingToSaveSnackbar => 'No changes to save.';
 
   @override
-  String get pointSettingsOtherStages => 'Other stages (reviews)';
-
-  @override
-  String get pointSettingsResetTrackTitle => 'Reset to defaults';
-
-  @override
-  String get pointSettingsResetConfirm => 'Reset';
-
-  @override
-  String get pointSettingsResetTrackMessage =>
-      'Reset all point values for this track to the default ladder?';
-
-  @override
-  String get pointSettingsResetAllTitle => 'Reset all tracks';
-
-  @override
-  String get pointSettingsResetAllMessage =>
-      'Reset point values for every active track to defaults?';
-
-  @override
-  String get pointSettingsMenuResetAll => 'Reset all tracks…';
-
-  @override
   String get pointSettingsPrimaryStageLabel => 'First completion (daily task)';
 
   @override

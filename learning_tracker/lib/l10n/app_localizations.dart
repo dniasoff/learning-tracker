@@ -1985,48 +1985,6 @@ abstract class AppLocalizations {
   /// **'No changes to save.'**
   String get pointSettingsNothingToSaveSnackbar;
 
-  /// No description provided for @pointSettingsOtherStages.
-  ///
-  /// In en, this message translates to:
-  /// **'Other stages (reviews)'**
-  String get pointSettingsOtherStages;
-
-  /// No description provided for @pointSettingsResetTrackTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset to defaults'**
-  String get pointSettingsResetTrackTitle;
-
-  /// No description provided for @pointSettingsResetConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset'**
-  String get pointSettingsResetConfirm;
-
-  /// No description provided for @pointSettingsResetTrackMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset all point values for this track to the default ladder?'**
-  String get pointSettingsResetTrackMessage;
-
-  /// No description provided for @pointSettingsResetAllTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset all tracks'**
-  String get pointSettingsResetAllTitle;
-
-  /// No description provided for @pointSettingsResetAllMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset point values for every active track to defaults?'**
-  String get pointSettingsResetAllMessage;
-
-  /// No description provided for @pointSettingsMenuResetAll.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset all tracks…'**
-  String get pointSettingsMenuResetAll;
-
   /// No description provided for @pointSettingsPrimaryStageLabel.
   ///
   /// In en, this message translates to:

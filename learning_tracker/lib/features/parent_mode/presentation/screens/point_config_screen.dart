@@ -59,12 +59,6 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
   );
 }
 
-List<_StagePointConfig> _nonPrimaryStages(_TrackPointData data) {
-  final primaryOrder = _primaryStageRow(data).stage.stageOrder;
-  return data.stages.where((s) => s.stage.stageOrder != primaryOrder).toList()
-    ..sort((a, b) => a.stage.stageOrder.compareTo(b.stage.stageOrder));
-}
-
 final _pointConfigDataProvider = FutureProvider<List<_TrackPointData>>((
   ref,
 ) async {
@@ -218,79 +212,10 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     setState(() => _pendingPrimaryByTrackId[data.trackId] = next);
   }
 
-  Future<void> _confirmResetTrack(_TrackPointData data) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.pointSettingsResetTrackTitle),
-        content: Text(l10n.pointSettingsResetTrackMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.pointSettingsResetConfirm),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final db = ref.read(userDatabaseProvider);
-    await db.pointConfigDao.deleteAllForTrack(data.trackId);
-    await db.pointConfigDao.seedDefaults(
-      data.curriculum.storageKey,
-      data.trackId,
-      profileId: data.profileId,
-    );
-    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
-    setState(() => _pendingPrimaryByTrackId.remove(data.trackId));
-    ref.invalidate(_pointConfigDataProvider);
-  }
-
-  Future<void> _confirmResetAll(List<_TrackPointData> tracks) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.pointSettingsResetAllTitle),
-        content: Text(l10n.pointSettingsResetAllMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.pointSettingsResetConfirm),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final db = ref.read(userDatabaseProvider);
-    for (final t in tracks) {
-      await db.pointConfigDao.deleteAllForTrack(t.trackId);
-      await db.pointConfigDao.seedDefaults(
-        t.curriculum.storageKey,
-        t.trackId,
-        profileId: t.profileId,
-      );
-    }
-    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
-    setState(() => _pendingPrimaryByTrackId.clear());
-    ref.invalidate(_pointConfigDataProvider);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final pointsAsync = ref.watch(_pointConfigDataProvider);
-    final tracks = pointsAsync.asData?.value;
 
     return Scaffold(
       backgroundColor: _kScreenBg,
@@ -312,26 +237,6 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          if (tracks != null && tracks.isNotEmpty)
-            PopupMenuButton<String>(
-              icon: Icon(
-                Icons.settings_outlined,
-                color: AppTheme.brandBlueDeep,
-              ),
-              onSelected: (value) {
-                if (value == 'resetAll') {
-                  _confirmResetAll(tracks);
-                }
-              },
-              itemBuilder: (ctx) => [
-                PopupMenuItem(
-                  value: 'resetAll',
-                  child: Text(l10n.pointSettingsMenuResetAll),
-                ),
-              ],
-            ),
-        ],
       ),
       body: pointsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -398,27 +303,6 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                                   ? () => _bumpPrimary(data, -1)
                                   : null,
                               onIncrement: () => _bumpPrimary(data, 1),
-                              onReset: () => _confirmResetTrack(data),
-                              otherStages: _nonPrimaryStages(data),
-                              onOtherStageSave:
-                                  (_StagePointConfig sp, int newPoints) async {
-                                    final db = ref.read(userDatabaseProvider);
-                                    await db.pointConfigDao.upsertConfig(
-                                      PointConfigsCompanion(
-                                        profileId: Value(data.profileId),
-                                        curriculumId: Value(
-                                          data.curriculum.storageKey,
-                                        ),
-                                        trackId: Value(data.trackId),
-                                        stageOrder: Value(sp.stage.stageOrder),
-                                        points: Value(newPoints),
-                                      ),
-                                    );
-                                    await ref
-                                        .read(syncEngineProvider)
-                                        ?.pushGamificationSettingsSnapshot();
-                                    ref.invalidate(_pointConfigDataProvider);
-                                  },
                             ),
                           );
                         }, childCount: pointData.length),
@@ -555,9 +439,6 @@ class _CurriculumPointsCard extends StatelessWidget {
     required this.primaryStageName,
     required this.onDecrement,
     required this.onIncrement,
-    required this.onReset,
-    required this.otherStages,
-    required this.onOtherStageSave,
   });
 
   final AppLocalizations l10n;
@@ -567,10 +448,6 @@ class _CurriculumPointsCard extends StatelessWidget {
   final String primaryStageName;
   final VoidCallback? onDecrement;
   final VoidCallback onIncrement;
-  final VoidCallback onReset;
-  final List<_StagePointConfig> otherStages;
-  final Future<void> Function(_StagePointConfig sp, int newPoints)
-  onOtherStageSave;
 
   @override
   Widget build(BuildContext context) {
@@ -610,22 +487,6 @@ class _CurriculumPointsCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.restore_rounded,
-                    color: AppTheme.brandInkMuted,
-                    size: 22,
-                  ),
-                  tooltip: l10n.pointSettingsResetTrackTitle,
-                  onPressed: onReset,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                ),
-                const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -716,32 +577,6 @@ class _CurriculumPointsCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (otherStages.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Theme(
-                data: theme.copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                  key: ValueKey<String>('point-other-stages-${data.trackId}'),
-                  tilePadding: EdgeInsets.zero,
-                  childrenPadding: const EdgeInsets.only(bottom: 4),
-                  title: Text(
-                    l10n.pointSettingsOtherStages,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: AppTheme.brandBlue,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  children: otherStages
-                      .map(
-                        (sp) => _OtherStageRow(
-                          stagePoint: sp,
-                          onSave: (v) => onOtherStageSave(sp, v),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -836,45 +671,6 @@ class _RoundStepButton extends StatelessWidget {
   }
 }
 
-class _OtherStageRow extends StatelessWidget {
-  const _OtherStageRow({required this.stagePoint, required this.onSave});
-
-  final _StagePointConfig stagePoint;
-  final Future<void> Function(int) onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      title: Text(stagePoint.stage.stageName),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${stagePoint.config.points}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit, size: 22),
-            onPressed: () => _showEditDialog(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showEditDialog(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      builder: (context) => _PointEditDialog(
-        stageName: stagePoint.stage.stageName,
-        currentPoints: stagePoint.config.points,
-        onSave: onSave,
-      ),
-    );
-  }
-}
-
 class _SaveBar extends StatelessWidget {
   const _SaveBar({
     required this.l10n,
@@ -951,77 +747,5 @@ class _SaveBar extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _PointEditDialog extends StatefulWidget {
-  const _PointEditDialog({
-    required this.stageName,
-    required this.currentPoints,
-    required this.onSave,
-  });
-
-  final String stageName;
-  final int currentPoints;
-  final Future<void> Function(int) onSave;
-
-  @override
-  State<_PointEditDialog> createState() => _PointEditDialogState();
-}
-
-class _PointEditDialogState extends State<_PointEditDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.currentPoints.toString());
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Edit ${widget.stageName} Points'),
-      content: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _controller,
-          decoration: const InputDecoration(labelText: 'Point Value'),
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Point value is required';
-            }
-            final n = int.tryParse(value.trim());
-            if (n == null || n <= 0) {
-              return 'Must be a positive integer';
-            }
-            return null;
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
-      ],
-    );
-  }
-
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    final value = int.parse(_controller.text.trim());
-    await widget.onSave(value);
-    if (mounted) Navigator.of(context).pop();
   }
 }

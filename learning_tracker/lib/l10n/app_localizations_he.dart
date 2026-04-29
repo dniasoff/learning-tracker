@@ -1048,29 +1048,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get pointSettingsNothingToSaveSnackbar => 'אין שינויים לשמירה.';
 
   @override
-  String get pointSettingsOtherStages => 'שלבים נוספים (חזרות)';
-
-  @override
-  String get pointSettingsResetTrackTitle => 'איפוס לברירת מחדל';
-
-  @override
-  String get pointSettingsResetConfirm => 'איפוס';
-
-  @override
-  String get pointSettingsResetTrackMessage =>
-      'לאפס את כל ערכי הנקודות למסלול הזה לסולם ברירת המחדל?';
-
-  @override
-  String get pointSettingsResetAllTitle => 'איפוס כל המסלולים';
-
-  @override
-  String get pointSettingsResetAllMessage =>
-      'לאפס את ערכי הנקודות לכל המסלולים הפעילים לברירת המחדל?';
-
-  @override
-  String get pointSettingsMenuResetAll => 'איפוס כל המסלולים…';
-
-  @override
   String get pointSettingsPrimaryStageLabel => 'השלמה ראשונה (משימה יומית)';
 
   @override

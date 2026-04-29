@@ -99,17 +99,15 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
 
   /// Seed default point configs for a curriculum.
   ///
-  /// Queries stage definitions for the curriculum to determine how many stages
-  /// exist, then assigns descending point values: first stage gets 10 points,
-  /// subsequent stages get decreasing values (minimum 1).
+  /// Uses [trackId]-scoped stage definitions only. Querying by curriculum alone
+  /// would include other profiles' tracks and duplicate [stageOrder] rows when
+  /// inserting for this track, violating the unique key on point_configs.
   Future<void> seedDefaults(
     String curriculumId,
     int trackId, {
     required int profileId,
   }) async {
-    final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-      curriculumId,
-    );
+    final stages = await db.stageDao.getStagesByTrack(trackId);
 
     // Fallback to 3 hardcoded stages if no stage definitions exist yet
     if (stages.isEmpty) {

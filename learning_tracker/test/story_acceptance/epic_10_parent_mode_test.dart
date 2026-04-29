@@ -682,7 +682,7 @@ void main() {
 
     // ── Widget: Config screen lists all curricula with expandable stage rows ──
 
-    testWidgets('config screen lists curricula with expandable stage rows', (
+    testWidgets('config screen lists active curricula with primary stage points', (
       tester,
     ) async {
       _pointConfigLargeSurface(tester);
@@ -721,118 +721,46 @@ void main() {
       await tester.pumpAndSettle();
 
       // Both curricula visible (English titles + Hebrew subtitles).
-      // Cards may be below the fold — do not skip offstage finders.
       expect(find.text('Mishnayos', skipOffstage: false), findsOneWidget);
       expect(
         find.textContaining('תלמוד בבלי', skipOffstage: false),
         findsOneWidget,
       );
 
-      // Primary row shows stage name; expand Mishnayos card's other stages
+      // Primary (lowest stage order) label and default learn points (10).
       expect(find.textContaining('Learning', skipOffstage: false), findsWidgets);
-      await tester.tap(find.byKey(ValueKey('point-other-stages-$trackId')));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Chazara 1', skipOffstage: false),
-        findsAtLeastNWidgets(1),
-      );
-    });
-
-    // ── Widget: Each stage row shows editable point value field ──
-
-    testWidgets('each stage row shows editable point value field', (
-      tester,
-    ) async {
-      _pointConfigLargeSurface(tester);
-      await tester.pumpWidget(
-        _pointConfigTestApp(db, const PointConfigScreen()),
-      );
-      await tester.pumpAndSettle();
-
-      // Primary stepper shows 10; expand other stages for 5 and 3
       expect(find.text('10', skipOffstage: false), findsWidgets);
-      await tester.tap(find.byKey(ValueKey('point-other-stages-$trackId')));
-      await tester.pumpAndSettle();
-      expect(find.text('5', skipOffstage: false), findsOneWidget);
-      expect(find.text('3', skipOffstage: false), findsOneWidget);
     });
 
-    // ── Widget: Reset button with confirmation restores defaults ──
+    // ── Widget: Primary stepper shows learn-stage points ──
 
-    testWidgets('reset button with confirmation restores defaults', (
+    testWidgets('primary stepper shows learn-stage point value', (
       tester,
     ) async {
       _pointConfigLargeSurface(tester);
-      // Change a point value first
-      await db.pointConfigDao.upsertConfig(
-        PointConfigsCompanion(
-          profileId: const Value(testProfileId),
-          curriculumId: Value(CurriculumId.mishnayos.storageKey),
-          trackId: Value(trackId),
-          stageOrder: const Value(1),
-          points: const Value(99),
-        ),
-      );
-
       await tester.pumpWidget(
         _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
-      // Per-track reset (restore icon on card)
-      await tester.tap(find.byIcon(Icons.restore_rounded, skipOffstage: false));
-      await tester.pumpAndSettle();
-
-      // Confirmation dialog
-      expect(find.text('Reset to defaults'), findsOneWidget);
-
-      // Confirm
-      await tester.tap(find.text('Reset'));
-      await tester.pumpAndSettle();
-
-      // Values should be back to defaults
-      final configs = await db.pointConfigDao.getConfigsByCurriculum(
-        CurriculumId.mishnayos.storageKey,
-        profileId: testProfileId,
-        trackId: trackId,
-      );
-      expect(configs[0].points, 10);
-      expect(configs[1].points, 5);
-      expect(configs[2].points, 3);
+      expect(find.text('10', skipOffstage: false), findsWidgets);
     });
 
-    // ── Widget: Validation prevents zero or negative values ──
+    // ── Widget: Primary points cannot go below 1 ──
 
-    testWidgets('validation prevents zero or negative values', (tester) async {
+    testWidgets('primary stepper does not go below 1', (tester) async {
       _pointConfigLargeSurface(tester);
       await tester.pumpWidget(
         _pointConfigTestApp(db, const PointConfigScreen()),
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(ValueKey('point-other-stages-$trackId')));
-      await tester.pumpAndSettle();
-
-      // Tap edit on the first non-primary stage row
-      final editButtons = find.byIcon(Icons.edit, skipOffstage: false);
-      await tester.tap(editButtons.first);
-      await tester.pumpAndSettle();
-
-      // Clear and enter 0
-      final textField = find.byType(TextFormField);
-      await tester.enterText(textField.first, '0');
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Must be a positive integer'), findsOneWidget);
-
-      // Enter negative
-      await tester.enterText(textField.first, '-5');
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Must be a positive integer'), findsOneWidget);
+      final minus = find.byIcon(Icons.remove, skipOffstage: false);
+      for (var i = 0; i < 15; i++) {
+        await tester.tap(minus.first);
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('1', skipOffstage: false), findsWidgets);
     });
 
     // ── Integration: Change points, complete item, verify new points ──

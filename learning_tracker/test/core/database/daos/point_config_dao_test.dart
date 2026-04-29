@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -34,7 +35,12 @@ void main() {
         ),
       );
 
-      final config = await database.pointConfigDao.getConfig('bavli', 1);
+      final config = await database.pointConfigDao.getConfig(
+        'bavli',
+        1,
+        profileId: 0,
+        trackId: trackId,
+      );
       expect(config, isNotNull);
       expect(config!.curriculumId, 'bavli');
       expect(config.stageOrder, 1);
@@ -42,7 +48,12 @@ void main() {
     });
 
     test('getConfig returns null for non-existent config', () async {
-      final config = await database.pointConfigDao.getConfig('bavli', 1);
+      final config = await database.pointConfigDao.getConfig(
+        'bavli',
+        1,
+        profileId: 0,
+        trackId: trackId,
+      );
       expect(config, isNull);
     });
 
@@ -116,7 +127,12 @@ void main() {
         ),
       );
 
-      final config = await database.pointConfigDao.getConfig('bavli', 1);
+      final config = await database.pointConfigDao.getConfig(
+        'bavli',
+        1,
+        profileId: 0,
+        trackId: trackId,
+      );
       expect(config, isNotNull);
       expect(config!.points, 10);
     });
@@ -140,7 +156,12 @@ void main() {
         ),
       );
 
-      final config = await database.pointConfigDao.getConfig('bavli', 1);
+      final config = await database.pointConfigDao.getConfig(
+        'bavli',
+        1,
+        profileId: 0,
+        trackId: trackId,
+      );
       expect(config!.points, 20);
     });
 
@@ -182,7 +203,11 @@ void main() {
     test(
       'seedDefaults creates fallback configs when no stages exist',
       () async {
-        await database.pointConfigDao.seedDefaults('bavli', trackId);
+        await database.pointConfigDao.seedDefaults(
+          'bavli',
+          trackId,
+          profileId: 0,
+        );
 
         final configs = await database.pointConfigDao.getConfigsByCurriculum(
           'bavli',
@@ -191,6 +216,65 @@ void main() {
         expect(configs[0].points, 10);
         expect(configs[1].points, 5);
         expect(configs[2].points, 3);
+      },
+    );
+
+    test(
+      'seedDefaults uses only stages for the target track when multiple '
+      'profiles share a curriculum',
+      () async {
+        final trackAdult = await database.into(database.curriculumTracks).insert(
+              CurriculumTracksCompanion.insert(
+                profileId: const Value(1),
+                curriculumId: 'mishnayos',
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
+        final trackChild = await database.into(database.curriculumTracks).insert(
+              CurriculumTracksCompanion.insert(
+                profileId: const Value(2),
+                curriculumId: 'mishnayos',
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
+
+        for (final tid in [trackAdult, trackChild]) {
+          await database.stageDao.insertStageDefinition(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackId: tid,
+              stageOrder: 1,
+              stageName: 'Learn',
+              delayDays: 0,
+            ),
+          );
+          await database.stageDao.insertStageDefinition(
+            StageDefinitionsCompanion.insert(
+              curriculumId: 'mishnayos',
+              trackId: tid,
+              stageOrder: 2,
+              stageName: 'Review',
+              delayDays: 1,
+            ),
+          );
+        }
+
+        await database.pointConfigDao.seedDefaults(
+          'mishnayos',
+          trackChild,
+          profileId: 2,
+        );
+
+        final childConfigs = await database.pointConfigDao.getConfigsByCurriculum(
+          'mishnayos',
+          profileId: 2,
+          trackId: trackChild,
+        );
+        expect(childConfigs, hasLength(2));
+        expect(childConfigs[0].stageOrder, 1);
+        expect(childConfigs[1].stageOrder, 2);
       },
     );
   });
