@@ -85,6 +85,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
       );
     }
 
+    final authState = ref.watch(authStateProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final activeProfile = widget.activeProfile ??
@@ -104,55 +105,27 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFCFD8EA),
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Container(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                    alignment: Alignment.center,
-                    child: Text(
-                      profileInitial,
-                      maxLines: 1,
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontSize: 27,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFCFD8EA),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Container(
+                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                alignment: Alignment.center,
+                child: Text(
+                  profileInitial,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                Positioned(
-                  bottom: -2,
-                  left: -2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.error,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      l10n.proBadge,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -202,8 +175,10 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                         fontSize: 16,
                       ),
                     ),
-                  const SizedBox(height: 4),
-                  const _NoBackupInlineText(),
+                  if (authState.isLocalBorn) ...[
+                    const SizedBox(height: 4),
+                    const _NoBackupInlineText(),
+                  ],
                 ],
               ),
             ),
