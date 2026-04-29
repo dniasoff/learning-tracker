@@ -17,6 +17,9 @@ void main() {
     db = createTestDatabase();
     mockSyncEngine = _MockSyncEngine();
     when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
+    when(() => mockSyncEngine.pushLedgerEntriesBatch(any())).thenAnswer(
+      (_) async {},
+    );
   });
 
   tearDown(() async {
@@ -204,6 +207,40 @@ void main() {
         );
 
         expect(entry.trackId, 42);
+      });
+    });
+
+    group('recordCompletionsBatch', () {
+      test('inserts multiple rows and pushes one ledger batch', () async {
+        final repo = createRepo();
+        final entries = await repo.recordCompletionsBatch([
+          const LedgerManualBatchItem(
+            curriculumId: 'mishna',
+            unitType: 'level1',
+            unitIdentifier: 'A',
+            unitDisplayNameHe: 'א',
+            unitDisplayNameEn: 'A',
+            trackType: 'personal',
+            markedBy: 1,
+            isManual: true,
+          ),
+          const LedgerManualBatchItem(
+            curriculumId: 'mishna',
+            unitType: 'level1',
+            unitIdentifier: 'B',
+            unitDisplayNameHe: 'ב',
+            unitDisplayNameEn: 'B',
+            trackType: 'personal',
+            markedBy: 1,
+            isManual: true,
+          ),
+        ]);
+
+        expect(entries, hasLength(2));
+        expect(entries.first.completionNumber, 1);
+        expect(entries.last.completionNumber, 1);
+        verifyNever(() => mockSyncEngine.pushLedgerEntry(any()));
+        verify(() => mockSyncEngine.pushLedgerEntriesBatch(any())).called(1);
       });
     });
 

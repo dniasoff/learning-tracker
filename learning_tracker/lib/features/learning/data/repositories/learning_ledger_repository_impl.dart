@@ -25,6 +25,36 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
        _activeProfileId = activeProfileId,
        _activeProfileMode = activeProfileMode;
 
+  void _assertManualMarkPermission({
+    required int markedBy,
+    required bool isManual,
+  }) {
+    if (isManual &&
+        _activeProfileMode == 'child' &&
+        markedBy == _activeProfileId &&
+        !parentPinSessionMatchesActiveProfile) {
+      throw const ChildSelfMarkException();
+    }
+  }
+
+  Map<String, dynamic> _ledgerDataToSyncMap(LearningLedgerData entry) => {
+    'curriculumId': entry.curriculumId,
+    'unitType': entry.unitType,
+    'unitIdentifier': entry.unitIdentifier,
+    'unitDisplayNameHe': entry.unitDisplayNameHe,
+    'unitDisplayNameEn': entry.unitDisplayNameEn,
+    'trackType': entry.trackType,
+    'trackId': entry.trackId,
+    'completedAt': entry.completedAt.toIso8601String(),
+    'completionNumber': entry.completionNumber,
+    'markedBy': entry.markedBy,
+    'isManual': entry.isManual,
+  };
+
+  Future<void> _syncLedgerEntry(LearningLedgerData entry) async {
+    await _syncEngine?.pushLedgerEntry(_ledgerDataToSyncMap(entry));
+  }
+
   @override
   Future<LearningLedgerData> recordCompletion({
     required String curriculumId,
@@ -37,15 +67,8 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     required int markedBy,
     required bool isManual,
   }) async {
-    // Permission check: children cannot self-mark (unless parent PIN session)
-    if (isManual &&
-        _activeProfileMode == 'child' &&
-        markedBy == _activeProfileId &&
-        !parentPinSessionMatchesActiveProfile) {
-      throw const ChildSelfMarkException();
-    }
+    _assertManualMarkPermission(markedBy: markedBy, isManual: isManual);
 
-    // Auto-calculate completion number
     final existingCount = await _database.learningLedgerDao.getCompletionCount(
       _activeProfileId,
       curriculumId,
@@ -72,16 +95,74 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
       ),
     );
 
-    // Retrieve the created entry
-    final entries = await _database.learningLedgerDao.getEntriesByProfile(
-      _activeProfileId,
-    );
-    final entry = entries.firstWhere((e) => e.id == id);
+    final entry = await _database.learningLedgerDao.getEntryById(id);
+    if (entry == null) {
+      throw StateError('Failed to load ledger row after insert (id=$id)');
+    }
 
-    // Push to sync queue
     await _syncLedgerEntry(entry);
 
     return entry;
+  }
+
+  @override
+  Future<List<LearningLedgerData>> recordCompletionsBatch(
+    List<LedgerManualBatchItem> items,
+  ) async {
+    if (items.isEmpty) return const [];
+
+    for (final item in items) {
+      _assertManualMarkPermission(
+        markedBy: item.markedBy,
+        isManual: item.isManual,
+      );
+    }
+
+    final results = <LearningLedgerData>[];
+
+    await _database.transaction(() async {
+      for (final item in items) {
+        final existingCount = await _database.learningLedgerDao.getCompletionCount(
+          _activeProfileId,
+          item.curriculumId,
+          item.unitIdentifier,
+        );
+        final completionNumber = existingCount + 1;
+
+        final now = DateTimeFactory.nowUtc();
+
+        final id = await _database.learningLedgerDao.insertEntry(
+          LearningLedgerCompanion.insert(
+            profileId: drift.Value(_activeProfileId),
+            curriculumId: item.curriculumId,
+            unitType: item.unitType,
+            unitIdentifier: item.unitIdentifier,
+            unitDisplayNameHe: item.unitDisplayNameHe,
+            unitDisplayNameEn: item.unitDisplayNameEn,
+            trackType: item.trackType,
+            trackId: drift.Value(item.trackId),
+            completedAt: now,
+            completionNumber: completionNumber,
+            markedBy: item.markedBy,
+            isManual: drift.Value(item.isManual),
+          ),
+        );
+
+        final entry = await _database.learningLedgerDao.getEntryById(id);
+        if (entry == null) {
+          throw StateError('Failed to load ledger row after insert (id=$id)');
+        }
+        results.add(entry);
+      }
+    });
+
+    if (results.isNotEmpty) {
+      await _syncEngine?.pushLedgerEntriesBatch(
+        results.map(_ledgerDataToSyncMap).toList(),
+      );
+    }
+
+    return results;
   }
 
   @override
@@ -103,23 +184,5 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     final auto = entries.where((e) => !e.isManual).length;
 
     return {'total': entries.length, 'manual': manual, 'auto': auto};
-  }
-
-  Future<void> _syncLedgerEntry(LearningLedgerData entry) async {
-    final data = {
-      'curriculumId': entry.curriculumId,
-      'unitType': entry.unitType,
-      'unitIdentifier': entry.unitIdentifier,
-      'unitDisplayNameHe': entry.unitDisplayNameHe,
-      'unitDisplayNameEn': entry.unitDisplayNameEn,
-      'trackType': entry.trackType,
-      'trackId': entry.trackId,
-      'completedAt': entry.completedAt.toIso8601String(),
-      'completionNumber': entry.completionNumber,
-      'markedBy': entry.markedBy,
-      'isManual': entry.isManual,
-    };
-
-    await _syncEngine?.pushLedgerEntry(data);
   }
 }

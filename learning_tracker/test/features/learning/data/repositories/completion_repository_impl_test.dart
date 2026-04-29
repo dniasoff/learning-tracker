@@ -89,6 +89,9 @@ void main() {
       () => mockSyncEngine.pushCompletion(any()),
     ).thenAnswer((_) async => Future.value());
     when(
+      () => mockSyncEngine.pushCompletionsBatch(any()),
+    ).thenAnswer((_) async => Future.value());
+    when(
       () => mockSyncEngine.pushBookmark(any()),
     ).thenAnswer((_) async => Future.value());
     when(
@@ -270,7 +273,7 @@ void main() {
 
       expect(completions.length, 3);
       expect(completions.map((c) => c.sefariaRef).toList(), refs);
-      verify(() => mockSyncEngine.pushCompletion(any())).called(3);
+      verify(() => mockSyncEngine.pushCompletionsBatch(any())).called(1);
     });
 
     test(
@@ -308,6 +311,7 @@ void main() {
 
         expect(completions.length, 60);
         expect(completions.every((c) => c.points == 0), isTrue);
+        verify(() => mockSyncEngine.pushCompletionsBatch(any())).called(1);
         final rows = await database.completionDao
             .getCompletionsByCurriculumAndProfile(curriculumId, learnerId);
         expect(rows.length, 60);

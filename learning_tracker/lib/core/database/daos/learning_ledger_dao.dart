@@ -17,6 +17,12 @@ class LearningLedgerDao extends DatabaseAccessor<UserDatabase>
   Future<int> insertEntry(LearningLedgerCompanion entry) =>
       into(learningLedger).insert(entry);
 
+  /// Fetch a single row by primary key (used after insert instead of loading
+  /// the full profile ledger — avoids O(n²) when recording many units).
+  Future<LearningLedgerData?> getEntryById(int id) =>
+      (select(learningLedger)..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+
   /// Get all ledger entries for a specific profile.
   Future<List<LearningLedgerData>> getEntriesByProfile(int profileId) =>
       (select(learningLedger)

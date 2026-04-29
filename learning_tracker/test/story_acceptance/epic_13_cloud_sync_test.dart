@@ -26,6 +26,23 @@ class MockConnectivityService extends Mock implements ConnectivityService {}
 class MockCurriculumImportService extends Mock
     implements CurriculumImportService {}
 
+/// Stubs every [FirestoreDataSource] method used by [SyncEngine.pullOnLaunch].
+void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
+  when(() => mock.fetchCompletions()).thenAnswer((_) async => []);
+  when(() => mock.fetchBookmarks()).thenAnswer((_) async => []);
+  when(() => mock.fetchSettings()).thenAnswer((_) async => []);
+  when(() => mock.fetchGoals()).thenAnswer((_) async => []);
+  when(() => mock.fetchProfilePrograms()).thenAnswer((_) async => []);
+  when(() => mock.fetchStreak()).thenAnswer((_) async => null);
+  when(() => mock.fetchProfile()).thenAnswer((_) async => null);
+  when(() => mock.fetchLedgerEntries()).thenAnswer((_) async => []);
+  when(() => mock.fetchActiveCurricula()).thenAnswer((_) async => []);
+  when(() => mock.fetchCurriculumTracks()).thenAnswer((_) async => []);
+  when(() => mock.fetchLearnerProfiles()).thenAnswer((_) async => []);
+  when(() => mock.fetchNotificationSettings()).thenAnswer((_) async => null);
+  when(() => mock.fetchGamificationSettings()).thenAnswer((_) async => null);
+}
+
 UserDatabase _createInMemoryDatabase() {
   return UserDatabase(NativeDatabase.memory());
 }
@@ -71,6 +88,7 @@ void main() {
         );
         when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
         when(() => mockFirestore.isAuthenticated).thenReturn(true);
+        when(() => mockFirestore.profileId).thenReturn(1);
         syncEngine = SyncEngine(
           database: database,
           firestoreDataSource: mockFirestore,
@@ -86,7 +104,7 @@ void main() {
       });
 
       test('local write creates corresponding sync_queue entry', () async {
-        // Go offline so pushCompletion queues instead of pushing
+        // Offline: enqueue only; Firestore is not called until reconnect/flush
         when(
           () => mockFirestore.pushCompletion(any()),
         ).thenThrow(Exception('offline'));
@@ -104,6 +122,29 @@ void main() {
         final count = await database.syncQueueDao.getPendingCount();
         expect(count, 1);
       });
+
+      test(
+        'online local write enqueues then background flush reaches Firestore',
+        () async {
+          when(() => mockFirestore.pushCompletion(any())).thenAnswer(
+            (_) async {},
+          );
+
+          final data = <String, dynamic>{
+            'curriculum_id': 'mishnayos',
+            'content_item_id': 'mishna-1',
+            'stage_id': 1,
+            'track_type': 'personal',
+          };
+          await syncEngine.pushCompletion(data);
+          // Background flush is scheduled without awaiting Firestore on caller.
+          await Future<void>.delayed(Duration.zero);
+          await Future<void>.delayed(Duration.zero);
+
+          verify(() => mockFirestore.pushCompletion(any())).called(1);
+          expect(await database.syncQueueDao.getPendingCount(), 0);
+        },
+      );
 
       test('queue processes entries in FIFO order', () async {
         final pushOrder = <String>[];
@@ -244,6 +285,7 @@ void main() {
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       when(() => mockFirestore.isAuthenticated).thenReturn(true);
+      when(() => mockFirestore.profileId).thenReturn(1);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -259,18 +301,7 @@ void main() {
     });
 
     void stubEmptyFetches() {
-      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
-      when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
-      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
-      when(
-        () => mockFirestore.fetchLedgerEntries(),
-      ).thenAnswer((_) async => []);
-      when(
-        () => mockFirestore.fetchLearnerProfiles(),
-      ).thenAnswer((_) async => []);
+      stubFirestorePullOnLaunchEmpty(mockFirestore);
     }
 
     test('pull fetches all user data collections from Firestore', () async {
@@ -282,9 +313,15 @@ void main() {
       verify(() => mockFirestore.fetchBookmarks()).called(1);
       verify(() => mockFirestore.fetchSettings()).called(1);
       verify(() => mockFirestore.fetchGoals()).called(1);
+      verify(() => mockFirestore.fetchProfilePrograms()).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
       verify(() => mockFirestore.fetchLedgerEntries()).called(1);
+      verify(() => mockFirestore.fetchActiveCurricula()).called(1);
+      verify(() => mockFirestore.fetchCurriculumTracks()).called(1);
+      verify(() => mockFirestore.fetchLearnerProfiles()).called(1);
+      verify(() => mockFirestore.fetchNotificationSettings()).called(1);
+      verify(() => mockFirestore.fetchGamificationSettings()).called(1);
     });
 
     test('additive merge adds remote completions not present locally '
@@ -458,6 +495,7 @@ void main() {
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       when(() => mockFirestore.isAuthenticated).thenReturn(true);
+      when(() => mockFirestore.profileId).thenReturn(1);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -699,21 +737,7 @@ void main() {
     late DeviceRestoreService restoreService;
 
     void stubEmptyFetches() {
-      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
-      when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
-      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
-      when(
-        () => mockFirestore.fetchLedgerEntries(),
-      ).thenAnswer((_) async => []);
-      when(
-        () => mockFirestore.fetchActiveCurricula(),
-      ).thenAnswer((_) async => []);
-      when(
-        () => mockFirestore.fetchLearnerProfiles(),
-      ).thenAnswer((_) async => []);
+      stubFirestorePullOnLaunchEmpty(mockFirestore);
     }
 
     setUp(() async {
@@ -730,6 +754,7 @@ void main() {
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       when(() => mockFirestore.isAuthenticated).thenReturn(true);
+      when(() => mockFirestore.profileId).thenReturn(1);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,

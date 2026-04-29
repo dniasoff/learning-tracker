@@ -25,6 +25,14 @@ abstract class LearningLedgerRepository {
     required bool isManual,
   });
 
+  /// Batch-insert manual ledger rows (e.g. lifetime marking UI).
+  ///
+  /// Same permission rules as [recordCompletion]. Uses one DB transaction and
+  /// a single cloud sync batch so large selections stay responsive.
+  Future<List<LearningLedgerData>> recordCompletionsBatch(
+    List<LedgerManualBatchItem> items,
+  );
+
   /// Get the full lifetime ledger for a profile.
   Future<List<LearningLedgerData>> getLifetimeLedger(int profileId);
 
@@ -35,6 +43,31 @@ abstract class LearningLedgerRepository {
     int profileId,
     String curriculumId,
   );
+}
+
+/// One row for [LearningLedgerRepository.recordCompletionsBatch].
+class LedgerManualBatchItem {
+  const LedgerManualBatchItem({
+    required this.curriculumId,
+    required this.unitType,
+    required this.unitIdentifier,
+    required this.unitDisplayNameHe,
+    required this.unitDisplayNameEn,
+    required this.trackType,
+    this.trackId,
+    required this.markedBy,
+    required this.isManual,
+  });
+
+  final String curriculumId;
+  final String unitType;
+  final String unitIdentifier;
+  final String unitDisplayNameHe;
+  final String unitDisplayNameEn;
+  final String trackType;
+  final int? trackId;
+  final int markedBy;
+  final bool isManual;
 }
 
 /// Thrown when a child profile attempts to self-mark a manual completion.

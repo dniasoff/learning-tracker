@@ -18,10 +18,12 @@ import 'package:talker/talker.dart';
 /// Orchestrates sync between local SQLite and Firestore.
 ///
 /// Implements D4 hybrid push/pull architecture:
-/// - **Push-on-write**: Local writes trigger Firestore push (queued if offline)
+/// - **Push-on-write**: Local writes enqueue to `sync_queue`, then a background
+///   flush pushes to Firestore (never blocking the UI on network). Only used when
+///   [SyncEngine] is wired—cloud-born / upgraded accounts (`sync_providers`).
 /// - **Pull-on-launch**: App startup pulls latest data and merges locally
 /// - **Foreground listeners**: Real-time sync while app is in foreground
-/// - **Offline queue**: Writes are queued when offline, flushed on reconnect
+/// - **Offline queue**: When offline or push-suppressed, writes stay queued until flush
 class SyncEngine {
   SyncEngine({
     required UserDatabase database,
@@ -398,6 +400,37 @@ class SyncEngine {
     }
   }
 
+  /// After a local enqueue, update status and flush in the background when
+  /// online and allowed to push. The caller never awaits Firestore.
+  ///
+  /// Used for all cloud sync writes: [SyncEngine] is only constructed for
+  /// cloud-born (or upgraded) accounts. Queue rows live in the active
+  /// [UserDatabase] and payloads include `profile_id` / `_target_profile_id`
+  /// so work is not mixed across device accounts or learner profiles.
+  Future<void> _afterEnqueueForBackgroundFlush({String context = 'queue'}) async {
+    await _emitPendingStatus();
+    if (_isQueueOnlyMode) {
+      await _updateQueueOnlyStatus();
+      return;
+    }
+    unawaited(_runBackgroundFlush(context: context));
+  }
+
+  Future<void> _runBackgroundFlush({required String context}) async {
+    try {
+      final batchSize = _isBatterySaverMode ? 5 : null;
+      final synced = await _offlineQueue.flush(batchSize: batchSize);
+      if (synced > 0) {
+        _consecutivePushPermissionErrors = 0;
+        _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
+      }
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
+      _trackPushError(e);
+      _logger.warning('Background $context flush failed', e);
+    }
+  }
+
   Map<String, dynamic> _withQueueTargetProfile(Map<String, dynamic> payload) {
     if (payload.containsKey('profile_id') ||
         payload.containsKey('_target_profile_id')) {
@@ -509,27 +542,23 @@ class SyncEngine {
 
   /// Push a completion to Firestore after local write.
   Future<void> pushCompletion(Map<String, dynamic> completion) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueCompletion(
-        _withQueueTargetProfile(completion),
-      );
-      await _updateQueueOnlyStatus();
-      return;
-    }
+    await _offlineQueue.enqueueCompletion(
+      _withQueueTargetProfile(completion),
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'completion');
+  }
 
-    try {
-      await _firestoreDataSource.pushCompletion(completion);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed completion to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push completion, queuing for later', e);
-      await _offlineQueue.enqueueCompletion(
-        _withQueueTargetProfile(completion),
-      );
-      await _emitPendingStatus();
+  /// After bulk local completion inserts (prior learning / batch marks),
+  /// enqueue all payloads and run a single background flush instead of N
+  /// separate schedules.
+  Future<void> pushCompletionsBatch(
+    List<Map<String, dynamic>> completions,
+  ) async {
+    if (completions.isEmpty) return;
+    for (final c in completions) {
+      await _offlineQueue.enqueueCompletion(_withQueueTargetProfile(c));
     }
+    await _afterEnqueueForBackgroundFlush(context: 'completion batch');
   }
 
   /// Push a ledger entry to Firestore after local write.
@@ -542,28 +571,20 @@ class SyncEngine {
 
     // Always queue first so UI never blocks on network for lifetime marking.
     await _offlineQueue.enqueueLedgerEntry(_withQueueTargetProfile(entry));
-    await _emitPendingStatus();
+    await _afterEnqueueForBackgroundFlush(context: 'ledger entry');
+  }
 
-    if (_isQueueOnlyMode || !_isOnline) {
-      await _updateQueueOnlyStatus();
+  /// After many ledger inserts (e.g. lifetime marking batch), enqueue once.
+  Future<void> pushLedgerEntriesBatch(List<Map<String, dynamic>> entries) async {
+    if (entries.isEmpty) return;
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.debug('Skipping ledger batch sync: user not authenticated');
       return;
     }
-
-    // Best-effort background flush while online. Do not block caller.
-    unawaited(() async {
-      try {
-        final batchSize = _isBatterySaverMode ? 5 : null;
-        final synced = await _offlineQueue.flush(batchSize: batchSize);
-        if (synced > 0) {
-          _consecutivePushPermissionErrors = 0;
-          _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
-        }
-      } catch (e) {
-        // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-        _trackPushError(e);
-        _logger.warning('Background ledger queue flush failed', e);
-      }
-    }());
+    for (final e in entries) {
+      await _offlineQueue.enqueueLedgerEntry(_withQueueTargetProfile(e));
+    }
+    await _afterEnqueueForBackgroundFlush(context: 'ledger batch');
   }
 
   /// Fetch all bookmarks for the current user from Firestore.
@@ -581,108 +602,33 @@ class SyncEngine {
 
     // Always queue first so UI never blocks on network during track creation.
     await _offlineQueue.enqueueBookmark(_withQueueTargetProfile(bookmark));
-    await _emitPendingStatus();
-
-    if (_isQueueOnlyMode || !_isOnline) {
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    unawaited(() async {
-      try {
-        final batchSize = _isBatterySaverMode ? 5 : null;
-        final synced = await _offlineQueue.flush(batchSize: batchSize);
-        if (synced > 0) {
-          _consecutivePushPermissionErrors = 0;
-          _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
-        }
-      } catch (e) {
-        // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-        _trackPushError(e);
-        _logger.warning('Background bookmark queue flush failed', e);
-      }
-    }());
+    await _afterEnqueueForBackgroundFlush(context: 'bookmark');
   }
 
   /// Push settings to Firestore after local write.
   Future<void> pushSettings(Map<String, dynamic> settings) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueSettings(_withQueueTargetProfile(settings));
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushSettings(settings);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed settings to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push settings, queuing for later', e);
-      await _offlineQueue.enqueueSettings(_withQueueTargetProfile(settings));
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueSettings(_withQueueTargetProfile(settings));
+    await _afterEnqueueForBackgroundFlush(context: 'settings');
   }
 
   /// Push notification settings to Firestore after local write.
   Future<void> pushNotificationSettings(
     Map<String, dynamic> notificationSettings,
   ) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueNotificationSettings(
-        _withQueueTargetProfile(notificationSettings),
-      );
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushNotificationSettings(notificationSettings);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed notification settings to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning(
-        'Failed to push notification settings, queuing for later',
-        e,
-      );
-      await _offlineQueue.enqueueNotificationSettings(
-        _withQueueTargetProfile(notificationSettings),
-      );
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueNotificationSettings(
+      _withQueueTargetProfile(notificationSettings),
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'notification settings');
   }
 
   /// Push gamification settings to Firestore after local write.
   Future<void> pushGamificationSettings(
     Map<String, dynamic> gamificationSettings,
   ) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueGamificationSettings(
-        _withQueueTargetProfile(gamificationSettings),
-      );
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushGamificationSettings(gamificationSettings);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed gamification settings to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning(
-        'Failed to push gamification settings, queuing for later',
-        e,
-      );
-      await _offlineQueue.enqueueGamificationSettings(
-        _withQueueTargetProfile(gamificationSettings),
-      );
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueGamificationSettings(
+      _withQueueTargetProfile(gamificationSettings),
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'gamification settings');
   }
 
   /// Build and push the current gamification snapshot from local storage.
@@ -707,44 +653,14 @@ class SyncEngine {
 
   /// Push streak data to Firestore after local write.
   Future<void> pushStreak(Map<String, dynamic> streak) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueStreak(_withQueueTargetProfile(streak));
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushStreak(streak);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed streak to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push streak, queuing for later', e);
-      await _offlineQueue.enqueueStreak(_withQueueTargetProfile(streak));
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueStreak(_withQueueTargetProfile(streak));
+    await _afterEnqueueForBackgroundFlush(context: 'streak');
   }
 
   /// Push profile to Firestore after local write.
   Future<void> pushProfile(Map<String, dynamic> profile) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueProfile(_withQueueTargetProfile(profile));
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushProfile(profile);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed profile to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push profile, queuing for later', e);
-      await _offlineQueue.enqueueProfile(_withQueueTargetProfile(profile));
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueProfile(_withQueueTargetProfile(profile));
+    await _afterEnqueueForBackgroundFlush(context: 'profile');
   }
 
   /// Push a learner profile (profiles table) to Firestore.
@@ -752,64 +668,20 @@ class SyncEngine {
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
     final payload = await _enrichLearnerProfilePayload(profile);
 
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueLearnerProfile(payload);
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushLearnerProfile(payload);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed learner profile to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push learner profile, queuing for later', e);
-      await _offlineQueue.enqueueLearnerProfile(payload);
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueLearnerProfile(payload);
+    await _afterEnqueueForBackgroundFlush(context: 'learner profile');
   }
 
   /// Delete a learner profile from Firestore.
   Future<void> deleteLearnerProfile(int profileId) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueLearnerProfileDelete(profileId);
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.deleteLearnerProfile(profileId);
-      _consecutivePushPermissionErrors = 0;
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to delete learner profile, queuing for later', e);
-      await _offlineQueue.enqueueLearnerProfileDelete(profileId);
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueLearnerProfileDelete(profileId);
+    await _afterEnqueueForBackgroundFlush(context: 'learner profile delete');
   }
 
   /// Push a goal to Firestore after local write.
   Future<void> pushGoal(Map<String, dynamic> goal) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueGoal(_withQueueTargetProfile(goal));
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushGoal(goal);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed goal to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push goal, queuing for later', e);
-      await _offlineQueue.enqueueGoal(_withQueueTargetProfile(goal));
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueGoal(_withQueueTargetProfile(goal));
+    await _afterEnqueueForBackgroundFlush(context: 'goal');
   }
 
   /// Push a profile-program assignment to Firestore after local write.
@@ -823,80 +695,25 @@ class SyncEngine {
     await _offlineQueue.enqueueProfileProgram(
       _withQueueTargetProfile(profileProgram),
     );
-    await _emitPendingStatus();
-
-    if (_isQueueOnlyMode || !_isOnline) {
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    unawaited(() async {
-      try {
-        final batchSize = _isBatterySaverMode ? 5 : null;
-        final synced = await _offlineQueue.flush(batchSize: batchSize);
-        if (synced > 0) {
-          _consecutivePushPermissionErrors = 0;
-          _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
-        }
-      } catch (e) {
-        // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-        _trackPushError(e);
-        _logger.warning('Background profile program queue flush failed', e);
-      }
-    }());
+    await _afterEnqueueForBackgroundFlush(context: 'profile program');
   }
 
   /// Push active curricula list to Firestore after local write.
   Future<void> pushActiveCurricula(List<String> activeCurricula) async {
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueActiveCurricula(
-        activeCurricula,
-        targetProfileId: _firestoreDataSource.profileId,
-      );
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushActiveCurricula(activeCurricula);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed active curricula to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push active curricula, queuing for later', e);
-      await _offlineQueue.enqueueActiveCurricula(
-        activeCurricula,
-        targetProfileId: _firestoreDataSource.profileId,
-      );
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueActiveCurricula(
+      activeCurricula,
+      targetProfileId: _firestoreDataSource.profileId,
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'active curricula');
   }
 
   /// Push curriculum-track state to Firestore after local write.
   Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {
     final payload = await _withTrackProgressSchema(trackData);
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueCurriculumTrack(
-        _withQueueTargetProfile(payload),
-      );
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushCurriculumTrack(payload);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug('Pushed curriculum track to Firestore');
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning('Failed to push curriculum track, queuing for later', e);
-      await _offlineQueue.enqueueCurriculumTrack(
-        _withQueueTargetProfile(payload),
-      );
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueCurriculumTrack(
+      _withQueueTargetProfile(payload),
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'curriculum track');
   }
 
   // ========== Conflict Resolution & Merge ==========
@@ -2389,32 +2206,10 @@ class SyncEngine {
       'imported_at': importedAt.toIso8601String(),
     };
 
-    if (_isQueueOnlyMode) {
-      await _offlineQueue.enqueueCurriculumImportMetadata(
-        _withQueueTargetProfile(metadata),
-      );
-      await _updateQueueOnlyStatus();
-      return;
-    }
-
-    try {
-      await _firestoreDataSource.pushCurriculumImportMetadata(metadata);
-      _consecutivePushPermissionErrors = 0;
-      _logger.debug(
-        'Pushed curriculum import metadata to Firestore: $curriculumId',
-      );
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _trackPushError(e);
-      _logger.warning(
-        'Failed to push curriculum import metadata, queuing for later',
-        e,
-      );
-      await _offlineQueue.enqueueCurriculumImportMetadata(
-        _withQueueTargetProfile(metadata),
-      );
-      await _emitPendingStatus();
-    }
+    await _offlineQueue.enqueueCurriculumImportMetadata(
+      _withQueueTargetProfile(metadata),
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'curriculum import metadata');
   }
 
   // ========== Timestamp Persistence ==========

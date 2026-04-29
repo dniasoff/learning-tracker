@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
@@ -393,27 +394,32 @@ class _LifetimeCurriculumMarkingScreenState
       final repo = ref.read(learningLedgerRepositoryProvider);
       final profileId = ref.read(activeProfileIdProvider);
       final unique = <String>{};
+      final batchItems = <LedgerManualBatchItem>[];
       for (final selection in selections) {
         final key = '${selection.level}:${selection.value}';
         if (!unique.add(key)) continue;
-        await repo.recordCompletion(
-          curriculumId: _curriculum.storageKey,
-          unitType: 'level${selection.level}',
-          unitIdentifier: selection.value,
-          unitDisplayNameHe: selection.value,
-          unitDisplayNameEn: selection.value,
-          trackType: 'personal',
-          trackId: null,
-          markedBy: profileId,
-          isManual: true,
+        batchItems.add(
+          LedgerManualBatchItem(
+            curriculumId: _curriculum.storageKey,
+            unitType: 'level${selection.level}',
+            unitIdentifier: selection.value,
+            unitDisplayNameHe: selection.value,
+            unitDisplayNameEn: selection.value,
+            trackType: 'personal',
+            trackId: null,
+            markedBy: profileId,
+            isManual: true,
+          ),
         );
       }
+
+      await repo.recordCompletionsBatch(batchItems);
 
       _invalidateComputedViews();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.lifetimeMarkSavedCount(unique.length)),
+          content: Text(l10n.lifetimeMarkSavedCount(batchItems.length)),
         ),
       );
     } catch (e) {

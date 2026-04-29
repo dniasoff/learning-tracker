@@ -224,6 +224,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
       return completions;
     });
 
+    final syncEngine = _syncEngine;
+    if (completions.isNotEmpty && syncEngine != null) {
+      await syncEngine.pushCompletionsBatch(
+        completions.map(_completionToSyncPayload).toList(),
+      );
+    }
+
     if (completions.isNotEmpty) {
       await _advanceBookmark(
         curriculumId: request.curriculumId,
@@ -327,10 +334,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
     };
 
     final insertedRefSet = toInsertUnique.toSet();
+    final toSync = <Completion>[];
     for (final c in allRows) {
       if (insertedRefSet.contains(c.sefariaRef)) {
-        unawaited(_syncCompletion(c));
+        toSync.add(c);
       }
+    }
+    final syncEngine = _syncEngine;
+    if (toSync.isNotEmpty && syncEngine != null) {
+      await syncEngine.pushCompletionsBatch(
+        toSync.map(_completionToSyncPayload).toList(),
+      );
     }
 
     final ordered = request.sefariaRefs.map((r) => byRef[r]!).toList();
@@ -404,10 +418,19 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final streak = StreakService(_database, profileId: profileId);
     await streak.recordCompletion(completion.completedAt);
 
-    unawaited(_syncCompletion(completion));
-
     return completion;
   }
+
+  Map<String, dynamic> _completionToSyncPayload(Completion completion) => {
+    'profile_id': completion.profileId,
+    'curriculum_id': completion.curriculumId,
+    'content_item_id': completion.sefariaRef,
+    'stage_id': completion.stageId,
+    'track_type': completion.trackType,
+    'track_id': completion.trackId,
+    'completed_at': completion.completedAt.toIso8601String(),
+    'points': completion.points,
+  };
 
   /// Validate that stage progression rules are followed.
   ///
@@ -634,19 +657,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Queue completion for Firestore sync.
   Future<void> _syncCompletion(Completion completion) async {
-    // Convert to Firestore document format (snake_case to match merge logic)
-    final completionData = {
-      'profile_id': completion.profileId,
-      'curriculum_id': completion.curriculumId,
-      'content_item_id': completion.sefariaRef,
-      'stage_id': completion.stageId,
-      'track_type': completion.trackType,
-      'track_id': completion.trackId,
-      'completed_at': completion.completedAt.toIso8601String(),
-      'points': completion.points,
-    };
-
-    await _syncEngine?.pushCompletion(completionData);
+    await _syncEngine?.pushCompletion(_completionToSyncPayload(completion));
   }
 
   @override
