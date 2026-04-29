@@ -17,19 +17,26 @@ import 'package:learning_tracker/features/track_setup/presentation/providers/tra
 /// already be active), so the frozen snapshot would otherwise miss the new
 /// track until the next day — we clear **today’s** plan rows for [profileId]
 /// so the next read rebuilds the task list.
-Future<void> invalidateAfterTrackDataChange(WidgetRef ref, int profileId) async {
+Future<void> invalidateAfterTrackDataChange(
+  WidgetRef ref,
+  int profileId,
+) async {
   final now = ref.read(clockProvider);
   final planDate = DateUtils.extractLocalDate(now);
   final db = ref.read(userDatabaseProvider);
+
+  // Rebuild track lists first so dashboard/hub show the new row without waiting
+  // on daily-plan deletion and the broad invalidation sweep below.
+  ref.invalidate(dashboardActiveTracksStreamProvider);
+  ref.invalidate(activeTracksProvider);
+  ref.invalidate(archivedTracksProvider);
+
   await db.dailyPlanDao.deletePlanForDay(
     profileId: profileId,
     planDate: planDate,
   );
 
   ref.invalidate(allDailyTasksProvider);
-  ref.invalidate(dashboardActiveTracksStreamProvider);
-  ref.invalidate(activeTracksProvider);
-  ref.invalidate(archivedTracksProvider);
   ref.invalidate(dashboardActiveCurriculaStreamProvider);
   ref.invalidate(trackDualProgressMetricsProvider(profileId));
   ref.invalidate(dashboardChildNextRewardProvider);

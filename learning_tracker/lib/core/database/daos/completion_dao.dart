@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -161,6 +163,79 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   /// Insert a completion record. This is the only write operation allowed.
   Future<int> insertCompletion(CompletionsCompanion entry) =>
       into(completions).insert(entry);
+
+  /// Insert many rows in one sqlite batch (single round-trip for bulk prior).
+  Future<void> insertCompletionsBatch(
+    List<CompletionsCompanion> entries,
+  ) async {
+    if (entries.isEmpty) return;
+    await db.batch((batch) {
+      for (final entry in entries) {
+        batch.insert(completions, entry);
+      }
+    });
+  }
+
+  static const int _kInChunkSize = 400;
+
+  /// Sefaria refs in [sefariaRefs] that already have a completion for this
+  /// profile, curriculum, stage, and track (for idempotent bulk prior).
+  Future<Set<String>> getExistingSefariaRefsForBulkStage({
+    required int profileId,
+    required String curriculumId,
+    required int stageId,
+    required String trackType,
+    required List<String> sefariaRefs,
+  }) async {
+    if (sefariaRefs.isEmpty) return {};
+    final out = <String>{};
+    for (var i = 0; i < sefariaRefs.length; i += _kInChunkSize) {
+      final end = math.min(i + _kInChunkSize, sefariaRefs.length);
+      final part = sefariaRefs.sublist(i, end);
+      final rows =
+          await (select(completions)..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.stageId.equals(stageId) &
+                    t.trackType.equals(trackType) &
+                    t.sefariaRef.isIn(part),
+              ))
+              .get();
+      for (final r in rows) {
+        out.add(r.sefariaRef);
+      }
+    }
+    return out;
+  }
+
+  /// Load completion rows for the given keys (chunked `IN` queries).
+  Future<List<Completion>> getCompletionsForRefsBulkStage({
+    required int profileId,
+    required String curriculumId,
+    required int stageId,
+    required String trackType,
+    required List<String> sefariaRefs,
+  }) async {
+    if (sefariaRefs.isEmpty) return [];
+    final out = <Completion>[];
+    for (var i = 0; i < sefariaRefs.length; i += _kInChunkSize) {
+      final end = math.min(i + _kInChunkSize, sefariaRefs.length);
+      final part = sefariaRefs.sublist(i, end);
+      final rows =
+          await (select(completions)..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.stageId.equals(stageId) &
+                    t.trackType.equals(trackType) &
+                    t.sefariaRef.isIn(part),
+              ))
+              .get();
+      out.addAll(rows);
+    }
+    return out;
+  }
 
   /// Get completions within a date range.
   Future<List<Completion>> getCompletionsByDateRange(

@@ -34,15 +34,17 @@ void main() {
     mockContentRepository = MockContentRepository();
 
     final now = DateTime.now();
-    final profileRow = await database.into(database.profiles).insertReturning(
-      ProfilesCompanion.insert(
-        accountId: 1,
-        displayName: 'Tester',
-        mode: 'child',
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
+    final profileRow = await database
+        .into(database.profiles)
+        .insertReturning(
+          ProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Tester',
+            mode: 'child',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
     learnerId = profileRow.id;
 
     final trackRow = await database
@@ -57,7 +59,9 @@ void main() {
         );
     trackId = trackRow.id;
 
-    await database.into(database.goals).insert(
+    await database
+        .into(database.goals)
+        .insert(
           GoalsCompanion.insert(
             profileId: Value(learnerId),
             curriculumId: 'mishnayos',
@@ -191,8 +195,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
         ),
-      ))
-          .completion;
+      )).completion;
       expect(chavrusaCompletion.trackType, 'personal');
     });
 
@@ -229,8 +232,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
           ),
-        ))
-            .completion;
+        )).completion;
 
         // Stage 2 completion (same ref, different stage)
         final c2 = (await repository.markComplete(
@@ -240,8 +242,7 @@ void main() {
             stageId: 2,
             trackType: 'personal',
           ),
-        ))
-            .completion;
+        )).completion;
 
         // Points differ by stage: Learn=10, Chazara1=5 (default config)
         expect(c1.points, isNot(equals(c2.points)));
@@ -272,20 +273,46 @@ void main() {
       verify(() => mockSyncEngine.pushCompletion(any())).called(3);
     });
 
-    test('bulk prior flag yields zero points even when track is reward-eligible',
-        () async {
-      final completions = await repository.bulkMarkComplete(
-        BulkCompletionRequest(
-          curriculumId: 'mishnayos',
-          sefariaRefs: ['Mishnah Berachot 1:1'],
-          stageId: 1,
-          trackType: 'personal',
-          awardGamificationPoints: false,
-        ),
-      );
+    test(
+      'bulk prior flag yields zero points even when track is reward-eligible',
+      () async {
+        final completions = await repository.bulkMarkComplete(
+          BulkCompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRefs: ['Mishnah Berachot 1:1'],
+            stageId: 1,
+            trackType: 'personal',
+            awardGamificationPoints: false,
+          ),
+        );
 
-      expect(completions.single.points, 0);
-    });
+        expect(completions.single.points, 0);
+      },
+    );
+
+    test(
+      'bulk prior fast path handles many stage-1 refs with batch inserts',
+      () async {
+        const curriculumId = 'mishnayos';
+        final refs = List.generate(60, (i) => 'Mishnah Berachot 1:${i + 1}');
+
+        final completions = await repository.bulkMarkComplete(
+          BulkCompletionRequest(
+            curriculumId: curriculumId,
+            sefariaRefs: refs,
+            stageId: 1,
+            trackType: 'personal',
+            awardGamificationPoints: false,
+          ),
+        );
+
+        expect(completions.length, 60);
+        expect(completions.every((c) => c.points == 0), isTrue);
+        final rows = await database.completionDao
+            .getCompletionsByCurriculumAndProfile(curriculumId, learnerId);
+        expect(rows.length, 60);
+      },
+    );
   });
 
   group('streak integration', () {

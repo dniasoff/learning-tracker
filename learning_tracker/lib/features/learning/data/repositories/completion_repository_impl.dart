@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -111,9 +112,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
         _database,
         profileId: _activeProfileId,
       );
-      final eligibleForRewards = await rewardService.trackCountsTowardRewardPoints(
-        trackId,
-      );
+      final eligibleForRewards = await rewardService
+          .trackCountsTowardRewardPoints(trackId);
       final points = isChildProfile && eligibleForRewards
           ? await _calculatePoints(
               curriculumId: request.curriculumId,
@@ -168,9 +168,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
       if (isChildProfile) {
         newMilestoneUnlocks =
             await _rewardMilestoneService?.evaluateUnlocksForTrack(
-                  completion.trackId,
-                ) ??
-                const [];
+              completion.trackId,
+            ) ??
+            const [];
         unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
       }
     }
@@ -181,12 +181,26 @@ class CompletionRepositoryImpl implements CompletionRepository {
     );
   }
 
+  /// Bulk inserts with zero points (onboarding prior): batched sqlite writes,
+  /// one duplicate prefetch, single streak/update — avoid O(N) per-row path.
+  static const int _kBulkInsertChunkSize = 800;
+
   @override
   Future<List<Completion>> bulkMarkComplete(
     BulkCompletionRequest request,
   ) async {
     final effectiveProfileId = request.profileId ?? _activeProfileId;
     final isChildProfile = await _isProfileChild(effectiveProfileId);
+
+    if (!request.awardGamificationPoints &&
+        request.stageId == 1 &&
+        request.sefariaRefs.isNotEmpty) {
+      return _bulkMarkCompletePriorOptimized(
+        request,
+        effectiveProfileId: effectiveProfileId,
+      );
+    }
+
     final completions = await _database.transaction(() async {
       final completions = <Completion>[];
 
@@ -219,10 +233,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
       );
     }
 
-    if (isChildProfile && completions.isNotEmpty) {
+    if (isChildProfile &&
+        completions.isNotEmpty &&
+        request.awardGamificationPoints) {
       final RewardMilestoneService? rewardSvc;
-      if (request.profileId != null &&
-          request.profileId != _activeProfileId) {
+      if (request.profileId != null && request.profileId != _activeProfileId) {
         rewardSvc = RewardMilestoneService(
           _database,
           profileId: effectiveProfileId,
@@ -242,7 +257,97 @@ class CompletionRepositoryImpl implements CompletionRepository {
     return completions;
   }
 
-  /// Internal method to mark a single completion within an existing transaction.
+  Future<List<Completion>> _bulkMarkCompletePriorOptimized(
+    BulkCompletionRequest request, {
+    required int effectiveProfileId,
+  }) async {
+    final trackId = await _resolveTrackId(
+      curriculumId: request.curriculumId,
+      trackType: request.trackType,
+      profileId: effectiveProfileId,
+    );
+
+    final existingRefs = await _database.completionDao
+        .getExistingSefariaRefsForBulkStage(
+          profileId: effectiveProfileId,
+          curriculumId: request.curriculumId,
+          stageId: request.stageId,
+          trackType: request.trackType,
+          sefariaRefs: request.sefariaRefs,
+        );
+
+    final toInsertUnique = <String>[];
+    final dedupe = <String>{};
+    for (final r in request.sefariaRefs) {
+      if (existingRefs.contains(r)) continue;
+      if (!dedupe.add(r)) continue;
+      toInsertUnique.add(r);
+    }
+
+    final now = DateTimeFactory.nowUtc();
+
+    for (var i = 0; i < toInsertUnique.length; i += _kBulkInsertChunkSize) {
+      final end = math.min(i + _kBulkInsertChunkSize, toInsertUnique.length);
+      final chunk = toInsertUnique.sublist(i, end);
+      await _database.transaction(() async {
+        final companions = chunk
+            .map(
+              (ref) => CompletionsCompanion.insert(
+                profileId: drift.Value(effectiveProfileId),
+                curriculumId: request.curriculumId,
+                sefariaRef: ref,
+                stageId: request.stageId,
+                trackType: request.trackType,
+                trackId: trackId,
+                completedAt: now,
+                points: const drift.Value(0),
+              ),
+            )
+            .toList();
+        await _database.completionDao.insertCompletionsBatch(companions);
+      });
+    }
+
+    await _appendStreakEvent(profileId: effectiveProfileId, at: now);
+
+    final streak = StreakService(_database, profileId: effectiveProfileId);
+    await streak.recordCompletion(now);
+
+    final uniqueRefs = request.sefariaRefs.toSet().toList();
+    final allRows = await _database.completionDao
+        .getCompletionsForRefsBulkStage(
+          profileId: effectiveProfileId,
+          curriculumId: request.curriculumId,
+          stageId: request.stageId,
+          trackType: request.trackType,
+          sefariaRefs: uniqueRefs,
+        );
+    final byRef = <String, Completion>{
+      for (final c in allRows) c.sefariaRef: c,
+    };
+
+    final insertedRefSet = toInsertUnique.toSet();
+    for (final c in allRows) {
+      if (insertedRefSet.contains(c.sefariaRef)) {
+        unawaited(_syncCompletion(c));
+      }
+    }
+
+    final ordered = request.sefariaRefs.map((r) => byRef[r]!).toList();
+
+    if (ordered.isNotEmpty) {
+      await _advanceBookmark(
+        curriculumId: request.curriculumId,
+        trackType: request.trackType,
+        completedSefariaRef: request.sefariaRefs.last,
+        bookmarkProfileId: effectiveProfileId,
+      );
+    }
+
+    return ordered;
+  }
+
+  /// Internal method used by the slow [bulkMarkComplete] path only.
   Future<Completion> _markCompleteSingleInTransaction(
     CompletionRequest request, {
     required bool isChildProfile,
@@ -276,9 +381,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
       _database,
       profileId: profileId,
     );
-    final eligibleForRewards = await rewardService.trackCountsTowardRewardPoints(
-      trackId,
-    );
+    final eligibleForRewards = await rewardService
+        .trackCountsTowardRewardPoints(trackId);
     final allowPoints =
         awardGamificationPoints && isChildProfile && eligibleForRewards;
     final points = allowPoints
@@ -605,10 +709,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
       final knownOrders = knownOrdersByCurriculum[curriculumId]!;
       final idToOrder = stageOrderByCurriculum[curriculumId]!;
-      final normalizedStage =
-          knownOrders.contains(completion.stageId)
-              ? completion.stageId
-              : idToOrder[completion.stageId];
+      final normalizedStage = knownOrders.contains(completion.stageId)
+          ? completion.stageId
+          : idToOrder[completion.stageId];
       if (normalizedStage == stageId) return true;
     }
 
