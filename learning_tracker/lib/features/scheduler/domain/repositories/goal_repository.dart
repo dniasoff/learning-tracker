@@ -7,7 +7,11 @@ abstract class GoalRepository {
   ///
   /// [targetDate] is stored as UTC per P5. If the date originates from a
   /// Hebrew date picker, it must be converted to Gregorian UTC before calling.
+  ///
+  /// [profileId] is the learner profile that owns the goal (must match the
+  /// track's profile when creating from add-track / onboarding).
   Future<GoalEntity> createGoal({
+    required int profileId,
     required CurriculumId curriculumId,
     required int trackId,
     required double targetPercent,

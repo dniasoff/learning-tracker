@@ -5,24 +5,31 @@ import 'package:learning_tracker/features/learning/domain/repositories/learning_
 ///
 /// Permission rules:
 /// - Adult profile → can self-mark (markedBy = own profileId)
-/// - Child profile → CANNOT self-mark (rejected with error)
-/// - Parent mode → can mark for any child profile
+/// - Child profile → CANNOT self-mark (rejected with error), unless a parent
+///   PIN session is active for this profile (same device session as
+///   [ParentPinGuard]).
+/// - Parent acting on child (adult profile active) → can mark for child via
+///   repository target semantics where applicable.
 class ManualCompletionUseCase {
   final LearningLedgerRepository _repository;
   final int _activeProfileId;
   final String _activeProfileMode;
+  final bool _parentPinSessionMatchesActiveProfile;
 
   ManualCompletionUseCase({
     required LearningLedgerRepository repository,
     required int activeProfileId,
     required String activeProfileMode,
+    bool parentPinSessionMatchesActiveProfile = false,
   }) : _repository = repository,
        _activeProfileId = activeProfileId,
-       _activeProfileMode = activeProfileMode;
+       _activeProfileMode = activeProfileMode,
+       _parentPinSessionMatchesActiveProfile = parentPinSessionMatchesActiveProfile;
 
   /// Mark a unit as manually complete (siyum).
   ///
-  /// Throws [ChildSelfMarkException] if a child tries to self-mark.
+  /// Throws [ChildSelfMarkException] if a child tries to self-mark without a
+  /// parent PIN session for this profile.
   Future<LearningLedgerData> call({
     required String curriculumId,
     required String unitType,
@@ -36,8 +43,8 @@ class ManualCompletionUseCase {
     // Determine who is being marked
     final markedBy = _activeProfileId;
 
-    // Permission check: child cannot self-mark
-    if (_activeProfileMode == 'child') {
+    // Permission check: child cannot self-mark without parent PIN session
+    if (_activeProfileMode == 'child' && !_parentPinSessionMatchesActiveProfile) {
       throw const ChildSelfMarkException();
     }
 

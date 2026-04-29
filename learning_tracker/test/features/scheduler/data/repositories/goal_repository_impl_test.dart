@@ -46,6 +46,7 @@ void main() {
     test('createGoal creates and returns a goal entity', () async {
       final targetDate = DateTime(2026, 12, 31);
       final goal = await repo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
@@ -62,11 +63,13 @@ void main() {
 
     test('getGoals returns goals for specific curriculum', () async {
       await repo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 50.0,
       );
       await repo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.bavli,
         trackId: bavliTrackId,
         targetPercent: 25.0,
@@ -82,6 +85,7 @@ void main() {
 
     test('updateGoal modifies existing goal', () async {
       final goal = await repo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 50.0,
@@ -99,6 +103,7 @@ void main() {
 
     test('deleteGoal removes the goal', () async {
       final goal = await repo.createGoal(
+        profileId: 0,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
@@ -118,6 +123,7 @@ void main() {
     group('pace goal fields', () {
       test('createGoal with pace fields persists correctly', () async {
         final goal = await repo.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
@@ -134,6 +140,7 @@ void main() {
 
       test('createGoal defaults to deadline goalType', () async {
         final goal = await repo.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
@@ -146,6 +153,7 @@ void main() {
 
       test('updateGoal changes pace fields', () async {
         final goal = await repo.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
@@ -166,6 +174,7 @@ void main() {
 
       test('updateGoal with clearPace nulls out pace fields', () async {
         final goal = await repo.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
@@ -187,6 +196,7 @@ void main() {
 
       test('updateGoal preserves pace fields when not clearing', () async {
         final goal = await repo.createGoal(
+          profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,

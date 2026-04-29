@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
@@ -59,6 +60,14 @@ final routerProvider = Provider<AppRouter>((ref) {
         );
       },
       getProfileId: () => ref.read(selectedProfileIdProvider),
+      onSessionAuthenticated: (id) {
+        ref
+            .read(parentPinAuthenticatedProfileIdProvider.notifier)
+            .setAuthenticated(id);
+      },
+      onSessionLocked: () {
+        ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
+      },
     ),
   );
 });

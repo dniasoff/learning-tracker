@@ -27,17 +27,20 @@ void main() {
   ManualCompletionUseCase createUseCase({
     int profileId = 1,
     String profileMode = 'adult',
+    bool parentPinSessionMatchesActiveProfile = false,
   }) {
     final repo = LearningLedgerRepositoryImpl(
       database: db,
       syncEngine: mockSyncEngine,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
+      parentPinSessionMatchesActiveProfile: parentPinSessionMatchesActiveProfile,
     );
     return ManualCompletionUseCase(
       repository: repo,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
+      parentPinSessionMatchesActiveProfile: parentPinSessionMatchesActiveProfile,
     );
   }
 
@@ -56,6 +59,25 @@ void main() {
       expect(entry.isManual, true);
       expect(entry.markedBy, 1);
       expect(entry.completionNumber, 1);
+    });
+
+    test('child can self-mark when parent PIN session is active', () async {
+      final useCase = createUseCase(
+        profileId: 5,
+        profileMode: 'child',
+        parentPinSessionMatchesActiveProfile: true,
+      );
+      final entry = await useCase(
+        curriculumId: 'mishna',
+        unitType: 'masechta',
+        unitIdentifier: 'Berakhot',
+        unitDisplayNameHe: 'ברכות',
+        unitDisplayNameEn: 'Berakhot',
+        trackType: 'personal',
+      );
+
+      expect(entry.isManual, true);
+      expect(entry.markedBy, 5);
     });
 
     test('child is rejected from self-marking', () async {

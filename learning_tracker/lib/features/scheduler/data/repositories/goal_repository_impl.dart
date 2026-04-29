@@ -22,6 +22,7 @@ class GoalRepositoryImpl implements GoalRepository {
 
   @override
   Future<GoalEntity> createGoal({
+    required int profileId,
     required CurriculumId curriculumId,
     required int trackId,
     required double targetPercent,
@@ -38,7 +39,7 @@ class GoalRepositoryImpl implements GoalRepository {
 
       final id = await _database.goalDao.insertGoal(
         GoalsCompanion.insert(
-          profileId: drift.Value(_profileId),
+          profileId: drift.Value(profileId),
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           targetPercent: drift.Value(targetPercent),

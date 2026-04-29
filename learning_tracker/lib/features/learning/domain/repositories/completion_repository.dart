@@ -33,7 +33,12 @@ abstract class CompletionRepository {
   Future<List<Completion>> bulkMarkComplete(BulkCompletionRequest request);
 
   /// Get all completions for a specific curriculum.
-  Future<List<Completion>> getCompletionsByCurriculum(String curriculumId);
+  ///
+  /// [profileId] defaults to the repository's session profile when omitted.
+  Future<List<Completion>> getCompletionsByCurriculum(
+    String curriculumId, {
+    int? profileId,
+  });
 
   /// Get all completions for a specific content item by sefariaRef.
   Future<List<Completion>> getCompletionsForContentItem(String sefariaRef);

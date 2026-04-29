@@ -14,6 +14,8 @@ class ParentPinGuard extends AutoRouteGuard {
     required this.pinService,
     required this.promptForPin,
     required this.getProfileId,
+    this.onSessionAuthenticated,
+    this.onSessionLocked,
   });
 
   final PinService pinService;
@@ -25,6 +27,12 @@ class ParentPinGuard extends AutoRouteGuard {
   /// Resolves the currently active profile id, or `null` if none selected.
   final int? Function() getProfileId;
 
+  /// Called when a profile becomes parent-PIN authenticated this session.
+  final void Function(int profileId)? onSessionAuthenticated;
+
+  /// Called when the parent PIN session is cleared (e.g. leaving parent mode).
+  final void Function()? onSessionLocked;
+
   /// Profile id that successfully entered its PIN in the current session.
   /// Subsequent navigations to parent-mode routes for the same profile skip
   /// the prompt. Cleared via [lock] (e.g. on sign-out or leaving parent mode).
@@ -34,6 +42,7 @@ class ParentPinGuard extends AutoRouteGuard {
   /// navigation to prompt for the PIN again.
   void lock() {
     _authenticatedProfileId = null;
+    onSessionLocked?.call();
   }
 
   /// Marks [profileId] as authenticated for the current session. Call this
@@ -41,6 +50,7 @@ class ParentPinGuard extends AutoRouteGuard {
   /// so subsequent guarded navigations don't re-prompt.
   void markAuthenticated(int profileId) {
     _authenticatedProfileId = profileId;
+    onSessionAuthenticated?.call(profileId);
   }
 
   @override
@@ -63,13 +73,19 @@ class ParentPinGuard extends AutoRouteGuard {
     if (!hasPinSet) {
       final result = await router.push<bool>(const PinSetupRoute());
       final ok = result ?? false;
-      if (ok) _authenticatedProfileId = profileId;
+      if (ok) {
+        _authenticatedProfileId = profileId;
+        onSessionAuthenticated?.call(profileId);
+      }
       resolver.next(ok);
       return;
     }
 
     final verified = await promptForPin();
-    if (verified) _authenticatedProfileId = profileId;
+    if (verified) {
+      _authenticatedProfileId = profileId;
+      onSessionAuthenticated?.call(profileId);
+    }
     resolver.next(verified);
   }
 }

@@ -26,12 +26,14 @@ void main() {
   LearningLedgerRepositoryImpl createRepo({
     int profileId = 1,
     String profileMode = 'adult',
+    bool parentPinSessionMatches = false,
   }) {
     return LearningLedgerRepositoryImpl(
       database: db,
       syncEngine: mockSyncEngine,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
+      parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
     );
   }
 
@@ -94,6 +96,28 @@ void main() {
         );
 
         verify(() => mockSyncEngine.pushLedgerEntry(any())).called(1);
+      });
+
+      test('allows manual completion for child when parent PIN session active',
+          () async {
+        final repo = createRepo(
+          profileId: 5,
+          profileMode: 'child',
+          parentPinSessionMatches: true,
+        );
+        final entry = await repo.recordCompletion(
+          curriculumId: 'mishna',
+          unitType: 'masechta',
+          unitIdentifier: 'Berakhot',
+          unitDisplayNameHe: 'ברכות',
+          unitDisplayNameEn: 'Berakhot',
+          trackType: 'personal',
+          markedBy: 5,
+          isManual: true,
+        );
+
+        expect(entry.isManual, true);
+        expect(entry.markedBy, 5);
       });
 
       test('rejects child self-mark for manual completions', () async {

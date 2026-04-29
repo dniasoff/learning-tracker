@@ -122,6 +122,7 @@ class TrackCreationService {
       if (result.goalResult is GoalFormResult) {
         final goal = result.goalResult! as GoalFormResult;
         await _goalRepository.createGoal(
+          profileId: profileId,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: goal.targetPercent,
@@ -135,7 +136,7 @@ class TrackCreationService {
         );
       }
 
-      // Seed default point configs for child mode tracks
+      // Gamification: seed per-stage point defaults only for child profiles.
       await _seedPointConfigsIfNeeded(
         profileId: profileId,
         curriculumId: curriculum,
@@ -272,6 +273,9 @@ class TrackCreationService {
     required CurriculumId curriculumId,
     required int trackId,
   }) async {
+    final profile = await _database.profileDao.getProfileById(profileId);
+    if (profile?.mode != 'child') return;
+
     final existing = await _database.pointConfigDao.getConfigsByCurriculum(
       curriculumId.storageKey,
       profileId: profileId,

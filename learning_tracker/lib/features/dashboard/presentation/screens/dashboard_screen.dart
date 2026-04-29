@@ -1811,44 +1811,13 @@ class _ActiveTrackGreenProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final p = value.clamp(0.0, 1.0);
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: SizedBox(
-            height: 10,
-            child: Stack(
-              children: [
-                Container(color: const Color(0xFFE3E3E3)),
-                FractionallySizedBox(
-                  widthFactor: p,
-                  child: const ColoredBox(color: _kActiveTrackCompletionGreen),
-                ),
-                if (p > 0.02)
-                  const Positioned(
-                    left: 2,
-                    top: 2,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 1,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: SizedBox(width: 6, height: 6),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+    return AnimatedProgressBar(
+      value: value.clamp(0.0, 1.0),
+      color: _kActiveTrackCompletionGreen,
+      backgroundColor: _kActiveTrackCompletionGreen.withValues(alpha: 0.22),
+      height: 10,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
     );
   }
 }

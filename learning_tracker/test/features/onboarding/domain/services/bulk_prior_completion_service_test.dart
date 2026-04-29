@@ -1,3 +1,4 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -59,6 +60,7 @@ void main() {
   late MockContentRepository contentRepo;
   late MockCompletionRepository completionRepo;
   late MockBookmarkRepository bookmarkRepo;
+  late UserDatabase memoryDb;
   late BulkPriorCompletionService service;
 
   const curriculum = CurriculumId.mishnayos;
@@ -77,6 +79,7 @@ void main() {
   });
 
   setUp(() {
+    memoryDb = UserDatabase(NativeDatabase.memory());
     contentRepo = MockContentRepository();
     completionRepo = MockCompletionRepository();
     bookmarkRepo = MockBookmarkRepository();
@@ -84,7 +87,13 @@ void main() {
       contentRepository: contentRepo,
       completionRepository: completionRepo,
       bookmarkRepository: bookmarkRepo,
+      database: memoryDb,
+      syncEngine: null,
     );
+  });
+
+  tearDown(() async {
+    await memoryDb.close();
   });
 
   group('resolveSelections', () {

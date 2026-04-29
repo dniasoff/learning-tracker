@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -141,6 +142,7 @@ Future<void> showSignOutConfirmation(
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
     ref.read(authStateProvider.notifier).signOut();
+    ref.read(routerProvider).parentPinGuard.lock();
 
     if (context.mounted) {
       final registry = ref.read(deviceRegistryProvider);

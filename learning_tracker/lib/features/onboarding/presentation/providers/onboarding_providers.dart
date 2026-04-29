@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'onboarding_providers.g.dart';
@@ -48,10 +49,14 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     final contentRepo = ref.watch(contentRepositoryProvider);
     final completionRepo = ref.watch(completionRepositoryProvider);
     final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
+    final db = ref.watch(userDatabaseProvider);
+    final syncEngine = ref.watch(syncEngineProvider);
     return BulkPriorCompletionService(
       contentRepository: contentRepo,
       completionRepository: completionRepo,
       bookmarkRepository: bookmarkRepo,
+      database: db,
+      syncEngine: syncEngine,
     );
   },
 );

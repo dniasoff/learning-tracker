@@ -95,7 +95,6 @@ class AddTrackFlow extends ConsumerStatefulWidget {
   const AddTrackFlow({
     required this.profileId,
     required this.isOnboarding,
-    required this.isChildMode,
     this.onComplete,
     this.onCancel,
     super.key,
@@ -103,7 +102,6 @@ class AddTrackFlow extends ConsumerStatefulWidget {
 
   final int profileId;
   final bool isOnboarding;
-  final bool isChildMode;
   final ValueChanged<AddTrackResult>? onComplete;
   final VoidCallback? onCancel;
 
@@ -637,6 +635,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       curriculumId: curriculum,
       resolvedItems: resolved,
       stageIds: const [1],
+      profileId: widget.profileId,
     );
 
     // Refresh dashboard/progress/task views immediately.

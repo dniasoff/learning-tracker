@@ -462,6 +462,7 @@ void main() {
       () async {
         final targetDate = DateTime(2027, 1, 1, 12, 0); // local time
         final goal = await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
@@ -484,6 +485,7 @@ void main() {
         // (Hebrew date conversion is done by kosher_dart before calling repo)
         final hebrewConverted = DateTime.utc(2027, 9, 16); // 13 Tishrei 5788
         final goal = await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
@@ -503,18 +505,21 @@ void main() {
         final date3 = DateTime.utc(2027, 12, 1);
 
         await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
           targetDate: date1,
         );
         await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 50.0,
           targetDate: date2,
         );
         await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 75.0,
@@ -534,6 +539,7 @@ void main() {
       'GoalRepository.updateGoal updates deadline and target percentage',
       () async {
         final goal = await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
@@ -595,12 +601,14 @@ void main() {
       'Goal data keyed by CurriculumId.storageKey — goals independent',
       () async {
         await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
           targetDate: DateTime.utc(2027, 1, 1),
         );
         await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: chumash,
           trackId: trackId,
           targetPercent: 50.0,
@@ -623,6 +631,7 @@ void main() {
       'Create Mishnayos goal 100% by 2027-01-01, complete 10 of 4192 items',
       () async {
         final goal = await goalRepo.createGoal(
+          profileId: 0,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,

@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -27,12 +28,16 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final syncEngine = ref.watch(syncEngineProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
+  final pinSessionProfileId = ref.watch(parentPinAuthenticatedProfileIdProvider);
+  final parentPinSessionMatches =
+      pinSessionProfileId != null && pinSessionProfileId == profileId;
 
   return LearningLedgerRepositoryImpl(
     database: database,
     syncEngine: syncEngine,
     activeProfileId: profileId,
     activeProfileMode: profileMode,
+    parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
   );
 }
 
@@ -42,10 +47,14 @@ ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
   final repository = ref.watch(learningLedgerRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
+  final pinSessionProfileId = ref.watch(parentPinAuthenticatedProfileIdProvider);
+  final parentPinSessionMatches =
+      pinSessionProfileId != null && pinSessionProfileId == profileId;
   return ManualCompletionUseCase(
     repository: repository,
     activeProfileId: profileId,
     activeProfileMode: profileMode,
+    parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
   );
 }
 

@@ -120,6 +120,7 @@ void main() {
     test('upsertConfig inserts when config does not exist', () async {
       await database.pointConfigDao.upsertConfig(
         PointConfigsCompanion.insert(
+          profileId: const Value(0),
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -149,6 +150,7 @@ void main() {
 
       await database.pointConfigDao.upsertConfig(
         PointConfigsCompanion.insert(
+          profileId: const Value(0),
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -187,6 +189,7 @@ void main() {
 
         final deleted = await database.pointConfigDao.deleteAllForCurriculum(
           'bavli',
+          profileId: 0,
         );
         expect(deleted, 1);
 

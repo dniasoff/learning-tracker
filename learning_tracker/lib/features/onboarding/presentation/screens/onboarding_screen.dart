@@ -839,7 +839,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return AddTrackFlow(
       profileId: _createdProfileId ?? 0,
       isOnboarding: true,
-      isChildMode: _isChildMode,
       onComplete: _onAddTrackComplete,
       onCancel: _onAddTrackCancel,
     );

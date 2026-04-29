@@ -11,7 +11,8 @@ abstract class LearningLedgerRepository {
   /// Validates permissions based on profile mode (AC 5).
   /// Pushes to sync queue after insert.
   ///
-  /// Throws [ChildSelfMarkException] if a child profile attempts to self-mark.
+  /// Throws [ChildSelfMarkException] if a child profile attempts to self-mark
+  /// without an active parent PIN session for this profile.
   Future<LearningLedgerData> recordCompletion({
     required String curriculumId,
     required String unitType,

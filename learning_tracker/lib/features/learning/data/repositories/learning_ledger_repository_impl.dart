@@ -11,11 +11,15 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   final int _activeProfileId;
   final String _activeProfileMode;
 
+  /// When true, parent PIN was verified this session for [_activeProfileId].
+  final bool parentPinSessionMatchesActiveProfile;
+
   LearningLedgerRepositoryImpl({
     required UserDatabase database,
     required SyncEngine? syncEngine,
     required int activeProfileId,
     required String activeProfileMode,
+    this.parentPinSessionMatchesActiveProfile = false,
   }) : _database = database,
        _syncEngine = syncEngine,
        _activeProfileId = activeProfileId,
@@ -33,10 +37,11 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     required int markedBy,
     required bool isManual,
   }) async {
-    // Permission check: children cannot self-mark
+    // Permission check: children cannot self-mark (unless parent PIN session)
     if (isManual &&
         _activeProfileMode == 'child' &&
-        markedBy == _activeProfileId) {
+        markedBy == _activeProfileId &&
+        !parentPinSessionMatchesActiveProfile) {
       throw const ChildSelfMarkException();
     }
 
