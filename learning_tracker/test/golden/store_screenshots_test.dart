@@ -46,7 +46,8 @@ Future<void> loadFonts() async {
   }
 
   // Load MaterialIcons
-  const iconsPath = '$fontDir/MaterialIcons-Regular.otf';
+  // ignore: prefer_const_declarations
+  final iconsPath = '$fontDir/MaterialIcons-Regular.otf';
   if (File(iconsPath).existsSync()) {
     final loader = FontLoader('MaterialIcons');
     final bytes = File(iconsPath).readAsBytesSync();
