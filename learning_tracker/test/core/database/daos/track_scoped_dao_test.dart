@@ -49,7 +49,11 @@ void main() {
   // ── CompletionDao ──
 
   group('CompletionDao track-scoped', () {
-    Future<void> insertCompletion(int trackId, int profileId, String ref) async {
+    Future<void> insertCompletion(
+      int trackId,
+      int profileId,
+      String ref,
+    ) async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           profileId: Value(profileId),
