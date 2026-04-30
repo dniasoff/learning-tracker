@@ -60,95 +60,95 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
   );
 }
 
-final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>((
-  ref,
-) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final sync = ref.read(syncEngineProvider);
+final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>(
+  (ref) async {
+    final db = ref.watch(userDatabaseProvider);
+    final profileId = ref.watch(activeProfileIdProvider);
+    final sync = ref.read(syncEngineProvider);
 
-  // Same query as [activeTracksProvider] / dashboard; watch the stream so we
-  // rebuild when tracks change, but avoid awaiting another provider's .future
-  // (can stall tests). Fall back to a one-shot read while the stream is idle.
-  final tracksAsync = ref.watch(activeTracksProvider);
-  final activeTracks = switch (tracksAsync) {
-    AsyncData(:final value) => value,
-    AsyncLoading() => await db.trackDao.getActiveTracksForProfile(profileId),
-    AsyncError() => await db.trackDao.getActiveTracksForProfile(profileId),
-  };
+    // Same query as [activeTracksProvider] / dashboard; watch the stream so we
+    // rebuild when tracks change, but avoid awaiting another provider's .future
+    // (can stall tests). Fall back to a one-shot read while the stream is idle.
+    final tracksAsync = ref.watch(activeTracksProvider);
+    final activeTracks = switch (tracksAsync) {
+      AsyncData(:final value) => value,
+      AsyncLoading() => await db.trackDao.getActiveTracksForProfile(profileId),
+      AsyncError() => await db.trackDao.getActiveTracksForProfile(profileId),
+    };
 
-  var wroteConfigs = false;
-  final result = <_TrackPointData>[];
-  for (final track in activeTracks) {
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
-    if (curriculum == null) continue;
+    var wroteConfigs = false;
+    final result = <_TrackPointData>[];
+    for (final track in activeTracks) {
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
+      if (curriculum == null) continue;
 
-    var stages = await db.stageDao.getStagesByTrack(track.id);
-    if (stages.isEmpty) {
-      await ref
-          .read(stageDefinitionRepositoryProvider(curriculum))
-          .initializeDefaults(curriculum, trackId: track.id);
-      stages = await db.stageDao.getStagesByTrack(track.id);
-    }
-    if (stages.isEmpty) {
-      continue;
-    }
-
-    final configs = await db.pointConfigDao.getConfigsByCurriculum(
-      curriculum.storageKey,
-      profileId: profileId,
-      trackId: track.id,
-    );
-
-    final stageConfigs = <_StagePointConfig>[];
-    for (final stage in stages) {
-      PointConfig? config;
-      for (final c in configs) {
-        if (c.stageOrder == stage.stageOrder) {
-          config = c;
-          break;
-        }
+      var stages = await db.stageDao.getStagesByTrack(track.id);
+      if (stages.isEmpty) {
+        await ref
+            .read(stageDefinitionRepositoryProvider(curriculum))
+            .initializeDefaults(curriculum, trackId: track.id);
+        stages = await db.stageDao.getStagesByTrack(track.id);
       }
-      if (config == null) {
-        await db.pointConfigDao.upsertConfig(
-          PointConfigsCompanion.insert(
-            profileId: Value(profileId),
-            curriculumId: curriculum.storageKey,
-            trackId: track.id,
-            stageOrder: stage.stageOrder,
-            points: _defaultPointsForStageOrder(stage.stageOrder),
-          ),
-        );
-        wroteConfigs = true;
-        config = await db.pointConfigDao.getConfig(
-          curriculum.storageKey,
-          stage.stageOrder,
-          profileId: profileId,
-          trackId: track.id,
-        );
+      if (stages.isEmpty) {
+        continue;
       }
-      if (config != null) {
-        stageConfigs.add(_StagePointConfig(stage: stage, config: config));
-      }
-    }
 
-    result.add(
-      _TrackPointData(
-        curriculum: curriculum,
+      final configs = await db.pointConfigDao.getConfigsByCurriculum(
+        curriculum.storageKey,
         profileId: profileId,
         trackId: track.id,
-        trackType: track.trackType,
-        stages: stageConfigs,
-      ),
-    );
-  }
-  if (wroteConfigs) {
-    await sync?.pushGamificationSettingsSnapshot();
-  }
-  return result;
-});
+      );
+
+      final stageConfigs = <_StagePointConfig>[];
+      for (final stage in stages) {
+        PointConfig? config;
+        for (final c in configs) {
+          if (c.stageOrder == stage.stageOrder) {
+            config = c;
+            break;
+          }
+        }
+        if (config == null) {
+          await db.pointConfigDao.upsertConfig(
+            PointConfigsCompanion.insert(
+              profileId: Value(profileId),
+              curriculumId: curriculum.storageKey,
+              trackId: track.id,
+              stageOrder: stage.stageOrder,
+              points: _defaultPointsForStageOrder(stage.stageOrder),
+            ),
+          );
+          wroteConfigs = true;
+          config = await db.pointConfigDao.getConfig(
+            curriculum.storageKey,
+            stage.stageOrder,
+            profileId: profileId,
+            trackId: track.id,
+          );
+        }
+        if (config != null) {
+          stageConfigs.add(_StagePointConfig(stage: stage, config: config));
+        }
+      }
+
+      result.add(
+        _TrackPointData(
+          curriculum: curriculum,
+          profileId: profileId,
+          trackId: track.id,
+          trackType: track.trackType,
+          stages: stageConfigs,
+        ),
+      );
+    }
+    if (wroteConfigs) {
+      await sync?.pushGamificationSettingsSnapshot();
+    }
+    return result;
+  },
+);
 
 @RoutePage()
 class PointConfigScreen extends ConsumerStatefulWidget {

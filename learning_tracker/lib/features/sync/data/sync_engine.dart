@@ -305,8 +305,7 @@ class SyncEngine {
     try {
       _logger.info('Pull-on-launch: Fetching data from Firestore');
 
-      final learnerProfiles =
-          await _firestoreDataSource.fetchLearnerProfiles();
+      final learnerProfiles = await _firestoreDataSource.fetchLearnerProfiles();
       await _mergeLearnerProfiles(learnerProfiles);
 
       final accountProfile = await _firestoreDataSource.fetchProfile();
@@ -314,8 +313,7 @@ class SyncEngine {
         await _mergeProfile(accountProfile);
       }
 
-      final localProfiles =
-          await _database.profileDao.getProfilesByAccount(1);
+      final localProfiles = await _database.profileDao.getProfilesByAccount(1);
       final sortedIds = localProfiles.map((p) => p.id).toList()..sort();
 
       if (sortedIds.isEmpty) {
@@ -463,7 +461,9 @@ class SyncEngine {
   /// cloud-born (or upgraded) accounts. Queue rows live in the active
   /// [UserDatabase] and payloads include `profile_id` / `_target_profile_id`
   /// so work is not mixed across device accounts or learner profiles.
-  Future<void> _afterEnqueueForBackgroundFlush({String context = 'queue'}) async {
+  Future<void> _afterEnqueueForBackgroundFlush({
+    String context = 'queue',
+  }) async {
     await _emitPendingStatus();
     if (_isQueueOnlyMode) {
       await _updateQueueOnlyStatus();
@@ -516,8 +516,8 @@ class SyncEngine {
         _asInt(enriched['profile_id']) ?? _firestoreDataSource.profileId;
     final trackId = _asInt(enriched['track_id']);
     final curriculumId = (enriched['curriculum_id'] ?? '').toString();
-    final trackType =
-        (enriched['track_type'] ?? TrackType.personal.storageKey).toString();
+    final trackType = (enriched['track_type'] ?? TrackType.personal.storageKey)
+        .toString();
 
     if (curriculumId.isEmpty) {
       return enriched;
@@ -540,14 +540,11 @@ class SyncEngine {
         profileId: profileId,
         planDate: planDate,
       );
-      final offsetDays = _parseOffsetDaysFromRef(enrollment.trackingStartRef) ?? 0;
+      final offsetDays =
+          _parseOffsetDaysFromRef(enrollment.trackingStartRef) ?? 0;
       final deferredUntil = enrollment.trackingStartDate;
       final relevantRows = trackId == null
-          ? rows
-                .where(
-                  (r) => r.curriculumId == curriculumId,
-                )
-                .toList()
+          ? rows.where((r) => r.curriculumId == curriculumId).toList()
           : rows.where((r) => r.trackId == trackId).toList();
 
       final overdueCount = relevantRows
@@ -579,9 +576,7 @@ class SyncEngine {
           ? (await _database.completionDao.getCompletionsByCurriculumAndProfile(
               curriculumId,
               profileId,
-            ))
-                .where((c) => c.trackType == trackType)
-                .length
+            )).where((c) => c.trackType == trackType).length
           : await _database.completionDao.getAggregateCountByTrack(
               trackId,
               profileId,
@@ -598,9 +593,7 @@ class SyncEngine {
 
   /// Push a completion to Firestore after local write.
   Future<void> pushCompletion(Map<String, dynamic> completion) async {
-    await _offlineQueue.enqueueCompletion(
-      _withQueueTargetProfile(completion),
-    );
+    await _offlineQueue.enqueueCompletion(_withQueueTargetProfile(completion));
     await _afterEnqueueForBackgroundFlush(context: 'completion');
   }
 
@@ -631,7 +624,9 @@ class SyncEngine {
   }
 
   /// After many ledger inserts (e.g. lifetime marking batch), enqueue once.
-  Future<void> pushLedgerEntriesBatch(List<Map<String, dynamic>> entries) async {
+  Future<void> pushLedgerEntriesBatch(
+    List<Map<String, dynamic>> entries,
+  ) async {
     if (entries.isEmpty) return;
     if (!_firestoreDataSource.isAuthenticated) {
       _logger.debug('Skipping ledger batch sync: user not authenticated');
@@ -1035,10 +1030,7 @@ class SyncEngine {
         // predicate to merge_rules.remoteIsNewer so every pull path
         // uses the same rule.
         if (remoteUpdatedAt != null) {
-          final localTs = await _getSettingsTimestamp(
-            curriculumId,
-            profileId,
-          );
+          final localTs = await _getSettingsTimestamp(curriculumId, profileId);
           if (!remoteIsNewer(
             localUpdatedAt: localTs,
             remoteUpdatedAt: remoteUpdatedAt,
@@ -1072,11 +1064,7 @@ class SyncEngine {
 
         // Persist the remote timestamp as the new local settings timestamp
         if (remoteUpdatedAt != null) {
-          await _setSettingsTimestamp(
-            curriculumId,
-            remoteUpdatedAt,
-            profileId,
-          );
+          await _setSettingsTimestamp(curriculumId, remoteUpdatedAt, profileId);
         }
 
         // Merge study day config if present
@@ -1346,10 +1334,7 @@ class SyncEngine {
       final stamp =
           remoteUpdatedAt?.millisecondsSinceEpoch ??
           DateTime.now().toUtc().millisecondsSinceEpoch;
-      await prefs.setInt(
-        _gamificationLocalUpdatedAtKey(profileId),
-        stamp,
-      );
+      await prefs.setInt(_gamificationLocalUpdatedAtKey(profileId), stamp);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
       _logger.warning('Failed to merge gamification settings: $e');
@@ -2070,10 +2055,7 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug('Received ${settings.length} settings from listener');
-      await _mergeSettings(
-        settings,
-        profileId: _firestoreDataSource.profileId,
-      );
+      await _mergeSettings(settings, profileId: _firestoreDataSource.profileId);
     } finally {
       _mergingSettings = false;
     }
@@ -2098,10 +2080,7 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug('Received ${goals.length} goals from listener');
-      await _mergeGoals(
-        goals,
-        profileId: _firestoreDataSource.profileId,
-      );
+      await _mergeGoals(goals, profileId: _firestoreDataSource.profileId);
     } finally {
       _mergingGoals = false;
     }
@@ -2338,7 +2317,9 @@ class SyncEngine {
     await _offlineQueue.enqueueCurriculumImportMetadata(
       _withQueueTargetProfile(metadata),
     );
-    await _afterEnqueueForBackgroundFlush(context: 'curriculum import metadata');
+    await _afterEnqueueForBackgroundFlush(
+      context: 'curriculum import metadata',
+    );
   }
 
   // ========== Timestamp Persistence ==========

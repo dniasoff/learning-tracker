@@ -39,7 +39,10 @@ class DailyTaskCard extends ConsumerWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         color: theme.colorScheme.outline.withValues(alpha: 0.2),
-        child: Icon(Icons.skip_next_rounded, color: theme.colorScheme.onSurface),
+        child: Icon(
+          Icons.skip_next_rounded,
+          color: theme.colorScheme.onSurface,
+        ),
       ),
       child: Material(
         color: Colors.transparent,

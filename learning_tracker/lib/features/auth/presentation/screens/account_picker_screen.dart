@@ -119,9 +119,7 @@ class _BottomAddAccountSection extends StatelessWidget {
             _DashedOutlineButton(
               onTap: () => context.router.push(SignupRoute()),
               child: Text(
-                l10n.accountPickerAddAnother(
-                  kMaxDeviceAccounts - accountCount,
-                ),
+                l10n.accountPickerAddAnother(kMaxDeviceAccounts - accountCount),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: AppTheme.brandBlueDeep,
@@ -271,7 +269,9 @@ class _AccountTile extends ConsumerWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.brandOutline.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: AppTheme.brandOutline.withValues(alpha: 0.4),
+              ),
             ),
             child: Row(
               children: [
@@ -367,11 +367,7 @@ class _AccountTile extends ConsumerWidget {
     return AppTheme.brandBlueDeep;
   }
 
-  String _pillText(
-    AppLocalizations l10n,
-    bool isCloud,
-    bool hasValidSession,
-  ) {
+  String _pillText(AppLocalizations l10n, bool isCloud, bool hasValidSession) {
     if (!isCloud) return l10n.badgeLocalAccount;
     if (!hasValidSession) return l10n.badgeSignInAgain;
     return l10n.badgeCloudAccount;
@@ -479,10 +475,7 @@ class _AccountTile extends ConsumerWidget {
     }
   }
 
-  Future<bool> _confirmDismiss(
-    BuildContext context,
-    bool isCloud,
-  ) async {
+  Future<bool> _confirmDismiss(BuildContext context, bool isCloud) async {
     return await showDialog<bool>(
           context: context,
           builder: (ctx) {

@@ -682,55 +682,59 @@ void main() {
 
     // ── Widget: Config screen lists all curricula with expandable stage rows ──
 
-    testWidgets('config screen lists active curricula with primary stage points', (
-      tester,
-    ) async {
-      _pointConfigLargeSurface(tester);
-      // Second active track (Bavli) with its own stages and point configs
-      await db.activeCurriculumDao.activate(CurriculumId.bavli);
-      final bavliTrackRow = await db
-          .into(db.curriculumTracks)
-          .insertReturning(
-            CurriculumTracksCompanion.insert(
+    testWidgets(
+      'config screen lists active curricula with primary stage points',
+      (tester) async {
+        _pointConfigLargeSurface(tester);
+        // Second active track (Bavli) with its own stages and point configs
+        await db.activeCurriculumDao.activate(CurriculumId.bavli);
+        final bavliTrackRow = await db
+            .into(db.curriculumTracks)
+            .insertReturning(
+              CurriculumTracksCompanion.insert(
+                curriculumId: CurriculumId.bavli.storageKey,
+                trackType: 'personal',
+                activatedAt: DateTime.now(),
+              ),
+            );
+        final bavliTrackId = bavliTrackRow.id;
+        for (var i = 1; i <= 2; i++) {
+          await db.stageDao.insertStageDefinition(
+            StageDefinitionsCompanion.insert(
               curriculumId: CurriculumId.bavli.storageKey,
-              trackType: 'personal',
-              activatedAt: DateTime.now(),
+              trackId: bavliTrackId,
+              stageOrder: i,
+              stageName: i == 1 ? 'Learning' : 'Chazara 1',
+              delayDays: 0,
             ),
           );
-      final bavliTrackId = bavliTrackRow.id;
-      for (var i = 1; i <= 2; i++) {
-        await db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            curriculumId: CurriculumId.bavli.storageKey,
-            trackId: bavliTrackId,
-            stageOrder: i,
-            stageName: i == 1 ? 'Learning' : 'Chazara 1',
-            delayDays: 0,
-          ),
+        }
+        await db.pointConfigDao.seedDefaults(
+          CurriculumId.bavli.storageKey,
+          bavliTrackId,
+          profileId: testProfileId,
         );
-      }
-      await db.pointConfigDao.seedDefaults(
-        CurriculumId.bavli.storageKey,
-        bavliTrackId,
-        profileId: testProfileId,
-      );
 
-      await tester.pumpWidget(
-        _pointConfigTestApp(db, const PointConfigScreen()),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _pointConfigTestApp(db, const PointConfigScreen()),
+        );
+        await tester.pumpAndSettle();
 
-      // Both curricula visible (English titles + Hebrew subtitles).
-      expect(find.text('Mishnayos', skipOffstage: false), findsOneWidget);
-      expect(
-        find.textContaining('תלמוד בבלי', skipOffstage: false),
-        findsOneWidget,
-      );
+        // Both curricula visible (English titles + Hebrew subtitles).
+        expect(find.text('Mishnayos', skipOffstage: false), findsOneWidget);
+        expect(
+          find.textContaining('תלמוד בבלי', skipOffstage: false),
+          findsOneWidget,
+        );
 
-      // Primary (lowest stage order) label and default learn points (10).
-      expect(find.textContaining('Learning', skipOffstage: false), findsWidgets);
-      expect(find.text('10', skipOffstage: false), findsWidgets);
-    });
+        // Primary (lowest stage order) label and default learn points (10).
+        expect(
+          find.textContaining('Learning', skipOffstage: false),
+          findsWidgets,
+        );
+        expect(find.text('10', skipOffstage: false), findsWidgets);
+      },
+    );
 
     // ── Widget: Primary stepper shows learn-stage points ──
 

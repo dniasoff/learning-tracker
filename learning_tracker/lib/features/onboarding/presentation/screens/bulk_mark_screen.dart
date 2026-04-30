@@ -292,7 +292,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       });
 
       // Refresh progress surfaces immediately after bulk mark.
-      ref.invalidate(dashboardCompletionPercentageProvider(widget.curriculumId));
+      ref.invalidate(
+        dashboardCompletionPercentageProvider(widget.curriculumId),
+      );
       ref.invalidate(dashboardLastCompletionProvider(widget.curriculumId));
       ref.invalidate(progressOverviewStatsProvider);
       ref.invalidate(allDailyTasksProvider);

@@ -59,7 +59,8 @@ class DashboardTaskList extends ConsumerWidget {
             }
 
             final grouped = _groupTasks(tasks);
-            final hasSplitSections = grouped.overdueProgram.isNotEmpty ||
+            final hasSplitSections =
+                grouped.overdueProgram.isNotEmpty ||
                 grouped.todayProgram.isNotEmpty ||
                 grouped.overdueReview.isNotEmpty ||
                 grouped.todayReview.isNotEmpty;

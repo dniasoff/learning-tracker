@@ -33,20 +33,14 @@ Future<Set<DateTime>> streakCalendar(Ref ref) async {
 const Color _kBrandBlue = Color(0xFF0038A8);
 const Color _kPageBg = Color(0xFFF0F2F5);
 
-String _curriculumLabel(
-  BuildContext context,
-  AchievementRowVm row,
-) {
+String _curriculumLabel(BuildContext context, AchievementRowVm row) {
   final c = row.curriculumId;
   if (c == null) return row.trackLabel;
   final code = Localizations.localeOf(context).languageCode;
   return code == 'he' ? c.displayNameHe : c.displayNameEn;
 }
 
-String _filterChipLabel(
-  BuildContext context,
-  AchievementTrackFilterVm opt,
-) {
+String _filterChipLabel(BuildContext context, AchievementTrackFilterVm opt) {
   final c = opt.curriculumId;
   if (c == null) return opt.sortLabel;
   final code = Localizations.localeOf(context).languageCode;
@@ -99,7 +93,8 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                   ref.invalidate(streakCalendarProvider);
                 },
                 child: achievementsAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(24),
@@ -116,16 +111,17 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                         : overview.rows
                               .where((r) => r.trackId == _trackFilterId)
                               .toList();
-                    final sorted = [...filtered]..sort((a, b) {
-                      final byTh = a.milestone.thresholdPoints.compareTo(
-                        b.milestone.thresholdPoints,
-                      );
-                      if (byTh != 0) return byTh;
-                      return _curriculumLabel(
-                        context,
-                        a,
-                      ).compareTo(_curriculumLabel(context, b));
-                    });
+                    final sorted = [...filtered]
+                      ..sort((a, b) {
+                        final byTh = a.milestone.thresholdPoints.compareTo(
+                          b.milestone.thresholdPoints,
+                        );
+                        if (byTh != 0) return byTh;
+                        return _curriculumLabel(
+                          context,
+                          a,
+                        ).compareTo(_curriculumLabel(context, b));
+                      });
 
                     return CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -171,31 +167,33 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                           SliverPadding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final row = sorted[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _AchievementTierCard(
-                                      l10n: l10n,
-                                      row: row,
-                                      trackTag: _curriculumLabel(context, row),
-                                    ),
-                                  );
-                                },
-                                childCount: sorted.length,
-                              ),
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final row = sorted[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _AchievementTierCard(
+                                    l10n: l10n,
+                                    row: row,
+                                    trackTag: _curriculumLabel(context, row),
+                                  ),
+                                );
+                              }, childCount: sorted.length),
                             ),
                           ),
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                          sliver: SliverToBoxAdapter(child: _ProTipCard(l10n: l10n)),
+                          sliver: SliverToBoxAdapter(
+                            child: _ProTipCard(l10n: l10n),
+                          ),
                         ),
                         SliverToBoxAdapter(
                           child: Theme(
-                            data: Theme.of(context).copyWith(
-                              dividerColor: Colors.transparent,
-                            ),
+                            data: Theme.of(
+                              context,
+                            ).copyWith(dividerColor: Colors.transparent),
                             child: ExpansionTile(
                               tilePadding: const EdgeInsets.symmetric(
                                 horizontal: 20,
@@ -335,7 +333,11 @@ class _ProgressSummaryCard extends StatelessWidget {
                 color: Color(0xFFE53935),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+              child: const Icon(
+                Icons.auto_awesome,
+                color: Colors.white,
+                size: 16,
+              ),
             ),
           ),
           Column(
@@ -476,9 +478,7 @@ class _FilterChip extends StatelessWidget {
             color: selected ? _kBrandBlue : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: selected
-                  ? _kBrandBlue
-                  : const Color(0xFFE0E4E8),
+              color: selected ? _kBrandBlue : const Color(0xFFE0E4E8),
             ),
             boxShadow: selected
                 ? const [
@@ -629,9 +629,7 @@ class _AchievementTierCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           _milestonePointsLine(context),
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
+                          style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.3,
@@ -734,9 +732,7 @@ class _TierIconBox extends StatelessWidget {
         child: Icon(
           isLocked ? Icons.lock_rounded : scheme.unlockedIcon,
           size: isLocked ? 28 : 30,
-          color: isLocked
-              ? scheme.lockIconColor
-              : scheme.iconFg,
+          color: isLocked ? scheme.lockIconColor : scheme.iconFg,
         ),
       ),
     );
@@ -1004,9 +1000,7 @@ class _ProTipCard extends StatelessWidget {
                         color: Color(0xFFBF360C),
                       ),
                     ),
-                    TextSpan(
-                      text: l10n.achievementsProTipBody,
-                    ),
+                    TextSpan(text: l10n.achievementsProTipBody),
                   ],
                 ),
               ),

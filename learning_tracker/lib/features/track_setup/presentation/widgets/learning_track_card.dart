@@ -56,10 +56,10 @@ class LearningTrackCard extends ConsumerWidget {
 
     final hasProgramEnrollment = curriculum != null
         ? (ref
-                .watch(dashboardHasProgramEnrollmentProvider(curriculum))
-                .asData
-                ?.value ??
-            false)
+                  .watch(dashboardHasProgramEnrollmentProvider(curriculum))
+                  .asData
+                  ?.value ??
+              false)
         : false;
 
     final lifetimeSummariesAsync = ref.watch(
@@ -175,10 +175,10 @@ class LearningTrackCard extends ConsumerWidget {
                             child: Text(
                               'ARCHIVED',
                               style: theme.textTheme.labelSmall?.copyWith(
-                                    color: AppTheme.brandInkMuted,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                  ),
+                                color: AppTheme.brandInkMuted,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
                         ),

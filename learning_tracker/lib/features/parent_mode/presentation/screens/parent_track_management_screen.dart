@@ -87,10 +87,13 @@ class _ParentTrackManagementScreenState
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFFDEE4FF),
                 foregroundColor: AppTheme.brandBlueDeep,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
                 ),
+                textStyle: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -123,7 +126,8 @@ class _ParentTrackManagementScreenState
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: activeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(l10n.errorWithMessage(e.toString()))),
+        error: (e, _) =>
+            Center(child: Text(l10n.errorWithMessage(e.toString()))),
         data: (activeTracks) {
           if (activeTracks.isEmpty && !_showArchived) {
             return _buildEmptyState(l10n);
@@ -163,9 +167,8 @@ class _ParentTrackManagementScreenState
                         padding: const EdgeInsets.fromLTRB(0, 18, 0, 10),
                         child: Text(
                           'No archived tracks',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.brandInkMuted,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.brandInkMuted),
                         ),
                       );
                     }
@@ -290,9 +293,9 @@ class _ParentTrackManagementScreenState
     // Refresh is handled in AddTrackFlow after createTrack (plan clear + invalidation).
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.trackCreated(result.label))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.trackCreated(result.label))));
   }
 
   Future<void> _showArchiveDialog(CurriculumTrack track) async {
@@ -303,9 +306,7 @@ class _ParentTrackManagementScreenState
     if (activeCount <= 1) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot archive your only active track'),
-        ),
+        const SnackBar(content: Text('Cannot archive your only active track')),
       );
       return;
     }

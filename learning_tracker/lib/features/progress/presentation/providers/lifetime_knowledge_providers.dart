@@ -53,6 +53,7 @@ class TrackDualProgressMetric {
   final String trackLabel;
   final CurriculumId curriculumId;
   final double currentCyclePercentage;
+
   /// Learned leaf units ÷ leaf units in this track’s [curriculum_scopes] slice
   /// (falls back to full curriculum when no scope is set).
   final double lifetimePercentage;
@@ -78,9 +79,8 @@ class LifetimeTotals {
   final int totalCurricula;
 
   /// Pooled completion: completed sections / total sections in app content.
-  double get percentage => totalSections > 0
-      ? learnedSections / totalSections
-      : 0.0;
+  double get percentage =>
+      totalSections > 0 ? learnedSections / totalSections : 0.0;
 }
 
 final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
@@ -94,10 +94,11 @@ final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
         if (leaves == null) continue;
         if (leaves.isEmpty) continue;
 
-        final completions = await db.completionDao.getCompletionsByCurriculumAndProfile(
-          curriculum.storageKey,
-          profileId,
-        );
+        final completions = await db.completionDao
+            .getCompletionsByCurriculumAndProfile(
+              curriculum.storageKey,
+              profileId,
+            );
         final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
           profileId,
           curriculum.storageKey,
@@ -154,11 +155,11 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         final denominator = leaves.length;
         if (denominator == 0) continue;
 
-        final trackCompletions = await db.completionDao.getCompletionsByTrackAndProfile(
-          track.id,
-          profileId,
-        );
-        final currentCycleRefs = trackCompletions.map((c) => c.sefariaRef).toSet();
+        final trackCompletions = await db.completionDao
+            .getCompletionsByTrackAndProfile(track.id, profileId);
+        final currentCycleRefs = trackCompletions
+            .map((c) => c.sefariaRef)
+            .toSet();
         final currentCyclePct = currentCycleRefs.length / denominator;
 
         final trackLedger = await db.learningLedgerDao.getEntriesByTrack(
@@ -172,7 +173,10 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         );
         final lifetimePct = lifetimeRefs.length / denominator;
         final enrollment = await db.profileProgramDao
-            .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+            .getProgramForProfileAndCurriculum(
+              profileId,
+              curriculum.storageKey,
+            );
         int? todayDueCount;
         int? overdueCount;
         if (enrollment != null) {
@@ -219,10 +223,11 @@ final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
         final leaves = await _safeLoadLeaves(repo, curriculum);
         if (leaves == null || leaves.isEmpty) continue;
 
-        final completions = await db.completionDao.getCompletionsByCurriculumAndProfile(
-          curriculum.storageKey,
-          profileId,
-        );
+        final completions = await db.completionDao
+            .getCompletionsByCurriculumAndProfile(
+              curriculum.storageKey,
+              profileId,
+            );
         final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
           profileId,
           curriculum.storageKey,
@@ -285,10 +290,8 @@ Future<List<ContentItem>?> _safeLoadLeavesForTrack(
       final allZero = forProfile.every((s) => s.trackId == 0);
       if (allZero) {
         final inCur = (await db.trackDao.getActiveTracksForProfile(
-              profileId,
-            ))
-            .where((t) => t.curriculumId == curriculum.storageKey)
-            .toList();
+          profileId,
+        )).where((t) => t.curriculumId == curriculum.storageKey).toList();
         if (inCur.length == 1 && inCur.single.id == trackId) {
           scopes = forProfile;
         }
@@ -328,7 +331,9 @@ Set<String> _learnedLeafRefs({
     final unitId = (entry.unitIdentifier ?? '').toString();
     if (unitId.isEmpty) continue;
     final isUnmark = unitType.startsWith('unmark_');
-    final resolvedType = isUnmark ? unitType.substring('unmark_'.length) : unitType;
+    final resolvedType = isUnmark
+        ? unitType.substring('unmark_'.length)
+        : unitType;
     final action = !isUnmark;
     switch (resolvedType) {
       case 'seder':
@@ -373,12 +378,22 @@ Set<String> _learnedLeafRefs({
         learnedRefs.contains(leaf.level2) ||
         learnedRefs.contains(leaf.level1);
     final refAction = refActions[leaf.sefariaRef];
-    final level4Action = leaf.level4 != null ? level4Actions[leaf.level4!] : null;
-    final level3Action = leaf.level3 != null ? level3Actions[leaf.level3!] : null;
-    final level2Action = leaf.level2 != null ? level2Actions[leaf.level2!] : null;
+    final level4Action = leaf.level4 != null
+        ? level4Actions[leaf.level4!]
+        : null;
+    final level3Action = leaf.level3 != null
+        ? level3Actions[leaf.level3!]
+        : null;
+    final level2Action = leaf.level2 != null
+        ? level2Actions[leaf.level2!]
+        : null;
     final level1Action = level1Actions[leaf.level1];
     final scopedAction =
-        refAction ?? level4Action ?? level3Action ?? level2Action ?? level1Action;
+        refAction ??
+        level4Action ??
+        level3Action ??
+        level2Action ??
+        level1Action;
     if (completedDirectly || scopedAction == true) {
       learnedRefs.add(leaf.sefariaRef);
     } else if (scopedAction == false) {
@@ -389,10 +404,15 @@ Set<String> _learnedLeafRefs({
   return learnedRefs.where((r) => leaves.any((l) => l.sefariaRef == r)).toSet();
 }
 
-List<LifetimeTreeNode> _buildTree(List<ContentItem> leaves, Set<String> learnedRefs) {
+List<LifetimeTreeNode> _buildTree(
+  List<ContentItem> leaves,
+  Set<String> learnedRefs,
+) {
   LifetimeNodeState stateForLeaves(List<ContentItem> bucket) {
     if (bucket.isEmpty) return LifetimeNodeState.none;
-    final learned = bucket.where((l) => learnedRefs.contains(l.sefariaRef)).length;
+    final learned = bucket
+        .where((l) => learnedRefs.contains(l.sefariaRef))
+        .length;
     if (learned == 0) return LifetimeNodeState.none;
     if (learned == bucket.length) return LifetimeNodeState.full;
     return LifetimeNodeState.partial;
@@ -423,7 +443,8 @@ List<LifetimeTreeNode> _buildTree(List<ContentItem> leaves, Set<String> learnedR
 
     final nodes = <LifetimeTreeNode>[];
     for (final entry in grouped.entries) {
-      final hasDeeper = entry.value.any((item) => levelValue(item) != item.sefariaRef) &&
+      final hasDeeper =
+          entry.value.any((item) => levelValue(item) != item.sefariaRef) &&
           level < 4 &&
           entry.value.any((item) {
             switch (level + 1) {
@@ -437,14 +458,20 @@ List<LifetimeTreeNode> _buildTree(List<ContentItem> leaves, Set<String> learnedR
                 return false;
             }
           });
-      final children = hasDeeper ? buildAtLevel(entry.value, level + 1) : const <LifetimeTreeNode>[];
+      final children = hasDeeper
+          ? buildAtLevel(entry.value, level + 1)
+          : const <LifetimeTreeNode>[];
       LifetimeNodeState nodeState;
       if (children.isEmpty) {
         nodeState = stateForLeaves(entry.value);
       } else {
-        final allFull = children.every((c) => c.state == LifetimeNodeState.full);
+        final allFull = children.every(
+          (c) => c.state == LifetimeNodeState.full,
+        );
         final anyDone = children.any(
-          (c) => c.state == LifetimeNodeState.full || c.state == LifetimeNodeState.partial,
+          (c) =>
+              c.state == LifetimeNodeState.full ||
+              c.state == LifetimeNodeState.partial,
         );
         nodeState = allFull
             ? LifetimeNodeState.full

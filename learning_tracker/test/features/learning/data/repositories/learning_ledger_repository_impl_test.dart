@@ -17,9 +17,9 @@ void main() {
     db = createTestDatabase();
     mockSyncEngine = _MockSyncEngine();
     when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
-    when(() => mockSyncEngine.pushLedgerEntriesBatch(any())).thenAnswer(
-      (_) async {},
-    );
+    when(
+      () => mockSyncEngine.pushLedgerEntriesBatch(any()),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -101,27 +101,29 @@ void main() {
         verify(() => mockSyncEngine.pushLedgerEntry(any())).called(1);
       });
 
-      test('allows manual completion for child when parent PIN session active',
-          () async {
-        final repo = createRepo(
-          profileId: 5,
-          profileMode: 'child',
-          parentPinSessionMatches: true,
-        );
-        final entry = await repo.recordCompletion(
-          curriculumId: 'mishna',
-          unitType: 'masechta',
-          unitIdentifier: 'Berakhot',
-          unitDisplayNameHe: 'ברכות',
-          unitDisplayNameEn: 'Berakhot',
-          trackType: 'personal',
-          markedBy: 5,
-          isManual: true,
-        );
+      test(
+        'allows manual completion for child when parent PIN session active',
+        () async {
+          final repo = createRepo(
+            profileId: 5,
+            profileMode: 'child',
+            parentPinSessionMatches: true,
+          );
+          final entry = await repo.recordCompletion(
+            curriculumId: 'mishna',
+            unitType: 'masechta',
+            unitIdentifier: 'Berakhot',
+            unitDisplayNameHe: 'ברכות',
+            unitDisplayNameEn: 'Berakhot',
+            trackType: 'personal',
+            markedBy: 5,
+            isManual: true,
+          );
 
-        expect(entry.isManual, true);
-        expect(entry.markedBy, 5);
-      });
+          expect(entry.isManual, true);
+          expect(entry.markedBy, 5);
+        },
+      );
 
       test('rejects child self-mark for manual completions', () async {
         final repo = createRepo(profileId: 5, profileMode: 'child');

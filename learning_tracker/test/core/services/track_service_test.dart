@@ -25,13 +25,10 @@ void main() {
       },
     );
 
-    test(
-      'getAutoAssignedTrack returns personal (the only track)',
-      () async {
-        final track = await service.getAutoAssignedTrack('mishnayos');
-        expect(track, TrackType.personal);
-      },
-    );
+    test('getAutoAssignedTrack returns personal (the only track)', () async {
+      final track = await service.getAutoAssignedTrack('mishnayos');
+      expect(track, TrackType.personal);
+    });
 
     test('tracks are scoped per curriculum', () async {
       final mishnayosTracks = await service.getActiveTracks('mishnayos');

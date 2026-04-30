@@ -116,10 +116,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _retry,
-                  child: Text(l10n.retry),
-                ),
+                ElevatedButton(onPressed: _retry, child: Text(l10n.retry)),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: _navigateToApp,

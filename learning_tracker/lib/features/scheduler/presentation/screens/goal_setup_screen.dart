@@ -215,10 +215,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      _formatDateLine(
-                        _targetDate,
-                        useHebrew: useHebrew,
-                      ),
+                      _formatDateLine(_targetDate, useHebrew: useHebrew),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),

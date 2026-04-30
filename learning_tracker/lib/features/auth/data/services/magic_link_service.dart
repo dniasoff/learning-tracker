@@ -121,7 +121,8 @@ class MagicLinkService {
     for (var i = 0; i < 3; i++) {
       // Stop once we have an actionable Firebase auth link.
       final mode = current.queryParameters['mode'];
-      final hasActionCode = (current.queryParameters['oobCode'] ?? '').isNotEmpty;
+      final hasActionCode =
+          (current.queryParameters['oobCode'] ?? '').isNotEmpty;
       if (mode != null && mode.isNotEmpty && hasActionCode) {
         return current;
       }

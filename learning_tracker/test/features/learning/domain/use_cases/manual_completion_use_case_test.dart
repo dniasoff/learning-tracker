@@ -34,13 +34,15 @@ void main() {
       syncEngine: mockSyncEngine,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
-      parentPinSessionMatchesActiveProfile: parentPinSessionMatchesActiveProfile,
+      parentPinSessionMatchesActiveProfile:
+          parentPinSessionMatchesActiveProfile,
     );
     return ManualCompletionUseCase(
       repository: repo,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
-      parentPinSessionMatchesActiveProfile: parentPinSessionMatchesActiveProfile,
+      parentPinSessionMatchesActiveProfile:
+          parentPinSessionMatchesActiveProfile,
     );
   }
 

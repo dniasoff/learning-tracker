@@ -161,10 +161,11 @@ List<MilestoneAchievement> _detectMilestones(
     for (final entry in sederGroups.entries) {
       if (entry.value.every((unit) => completedUnits.contains(unit))) {
         // Find the latest completion date for this seder
-        final sederCompletions = unitLevelEntries
-            .where((e) => entry.value.contains(e.unitIdentifier))
-            .toList()
-          ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+        final sederCompletions =
+            unitLevelEntries
+                .where((e) => entry.value.contains(e.unitIdentifier))
+                .toList()
+              ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
         if (sederCompletions.isNotEmpty) {
           milestones.add(
             MilestoneAchievement(

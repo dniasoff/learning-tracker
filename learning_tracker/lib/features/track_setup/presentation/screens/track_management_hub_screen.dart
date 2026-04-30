@@ -78,10 +78,13 @@ class _TrackManagementHubScreenState
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFFDEE4FF),
                 foregroundColor: AppTheme.brandBlueDeep,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
                 ),
+                textStyle: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -129,10 +132,7 @@ class _TrackManagementHubScreenState
             ),
             children: [
               if (activeTracks.isNotEmpty) ...[
-                _buildActiveHeader(
-                  context,
-                  activeTracks.length,
-                ),
+                _buildActiveHeader(context, activeTracks.length),
                 ...activeTracks.map(
                   (track) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -157,9 +157,8 @@ class _TrackManagementHubScreenState
                         padding: const EdgeInsets.fromLTRB(0, 18, 0, 10),
                         child: Text(
                           'No archived tracks',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.brandInkMuted,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.brandInkMuted),
                         ),
                       );
                     }
@@ -189,10 +188,7 @@ class _TrackManagementHubScreenState
     );
   }
 
-  Widget _buildActiveHeader(
-    BuildContext context,
-    int activeCount,
-  ) {
+  Widget _buildActiveHeader(BuildContext context, int activeCount) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(

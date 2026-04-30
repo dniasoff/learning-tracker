@@ -217,10 +217,7 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Daily Tasks',
-      style: titleStyle,
-    );
+    return Text('Daily Tasks', style: titleStyle);
   }
 }
 
@@ -292,7 +289,9 @@ class _GoalCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                isGroupedView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                isGroupedView
+                    ? Icons.view_list_rounded
+                    : Icons.grid_view_rounded,
                 color: Colors.white,
               ),
             ),

@@ -40,9 +40,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
         centerTitle: true,
         // Balance default leading (56px) so the title is visually centered on screen.
         leadingWidth: 56,
-        actions: const [
-          SizedBox(width: 56, height: 56),
-        ],
+        actions: const [SizedBox(width: 56, height: 56)],
         title: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.center,
@@ -51,12 +49,12 @@ class LifetimeMarkingScreen extends ConsumerWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 26,
-                  height: 1.15,
-                  color: AppTheme.brandInk,
-                  letterSpacing: -0.3,
-                ),
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              height: 1.15,
+              color: AppTheme.brandInk,
+              letterSpacing: -0.3,
+            ),
           ),
         ),
       ),
@@ -185,7 +183,11 @@ class _LifetimeLibraryCategoryCard extends StatelessWidget {
                       color: color.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(_curriculumIcon(curriculum), color: color, size: 24),
+                    child: Icon(
+                      _curriculumIcon(curriculum),
+                      color: color,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -369,7 +371,11 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
-  bool _ledgerHasUnit(List<LearningLedgerData> ledger, int level, String value) {
+  bool _ledgerHasUnit(
+    List<LearningLedgerData> ledger,
+    int level,
+    String value,
+  ) {
     return ledger.any(
       (e) => e.unitType == 'level$level' && e.unitIdentifier == value,
     );
@@ -418,16 +424,12 @@ class _LifetimeCurriculumMarkingScreenState
       _invalidateComputedViews();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.lifetimeMarkSavedCount(batchItems.length)),
-        ),
+        SnackBar(content: Text(l10n.lifetimeMarkSavedCount(batchItems.length))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.lifetimeMarkSaveError(e.toString())),
-        ),
+        SnackBar(content: Text(l10n.lifetimeMarkSaveError(e.toString()))),
       );
     } finally {
       if (mounted) {
@@ -452,7 +454,9 @@ class _LifetimeCurriculumMarkingScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final contentAsync = ref.watch(curriculumContentProvider(_curriculum));
-    final ledgerAsync = ref.watch(curriculumLedgerProvider(widget.curriculumId));
+    final ledgerAsync = ref.watch(
+      curriculumLedgerProvider(widget.curriculumId),
+    );
     final ledger = ledgerAsync.asData?.value ?? const <LearningLedgerData>[];
 
     final theme = Theme.of(context);
@@ -646,21 +650,22 @@ class _LifetimeCurriculumMarkingScreenState
                                         ),
                                       ),
                                     ),
-                                    for (var i = 0;
-                                        i < _breadcrumbs.length;
-                                        i++)
+                                    for (
+                                      var i = 0;
+                                      i < _breadcrumbs.length;
+                                      i++
+                                    )
                                       TextButton(
-                                        onPressed:
-                                            i < _breadcrumbs.length - 1
-                                                ? () {
-                                                    setState(() {
-                                                      _breadcrumbs.removeRange(
-                                                        i + 1,
-                                                        _breadcrumbs.length,
-                                                      );
-                                                    });
-                                                  }
-                                                : null,
+                                        onPressed: i < _breadcrumbs.length - 1
+                                            ? () {
+                                                setState(() {
+                                                  _breadcrumbs.removeRange(
+                                                    i + 1,
+                                                    _breadcrumbs.length,
+                                                  );
+                                                });
+                                              }
+                                            : null,
                                         child: Text(
                                           _breadcrumbs[i].value,
                                           maxLines: 1,
@@ -708,7 +713,8 @@ class _LifetimeCurriculumMarkingScreenState
                                             hasDrill: canDrill,
                                             visual: _visualFor(value, ledger),
                                             isPersisted: persisted,
-                                            isImplicit: !persisted &&
+                                            isImplicit:
+                                                !persisted &&
                                                 _isSelected(value) &&
                                                 !_isDirectlySelected(value),
                                             lightSurface: true,

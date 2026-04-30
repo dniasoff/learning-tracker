@@ -91,10 +91,7 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
 /// Stage-based completion for one track (same denominator as
 /// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
 @riverpod
-Future<double> dashboardTrackCompletionPercentage(
-  Ref ref,
-  int trackId,
-) async {
+Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final track = await db.trackDao.getTrackById(trackId);
@@ -331,7 +328,7 @@ final dashboardHasProgramEnrollmentProvider = FutureProvider.autoDispose
 /// [CurriculumTrack] (Drift) is not supported as an `@riverpod` return type.
 final dashboardActiveTracksStreamProvider =
     StreamProvider.autoDispose<List<CurriculumTrack>>((ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.trackDao.watchActiveTracksForProfile(profileId);
-});
+      final db = ref.watch(userDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      return db.trackDao.watchActiveTracksForProfile(profileId);
+    });

@@ -98,10 +98,7 @@ class PointsService {
     final eligibility = await _rewardEligibilityByTrackId(completions);
 
     return completions
-        .where(
-          (c) =>
-              c.points > 0 && (eligibility[c.trackId] ?? false),
-        )
+        .where((c) => c.points > 0 && (eligibility[c.trackId] ?? false))
         .map(
           (c) => PointsHistoryEntry(
             timestamp: c.completedAt,

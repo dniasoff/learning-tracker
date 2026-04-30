@@ -62,7 +62,10 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
   }
 
   /// Check if a curriculum is currently active for a specific profile.
-  Future<bool> isActiveForProfile(CurriculumId curriculum, int profileId) async {
+  Future<bool> isActiveForProfile(
+    CurriculumId curriculum,
+    int profileId,
+  ) async {
     final query = select(activeCurricula)
       ..where(
         (t) =>

@@ -136,9 +136,7 @@ class TrackCard extends StatelessWidget {
     if (progress.variant == TrackProgressVariant.programCalendar &&
         progress.calendarPos != null) {
       final delta = progress.calendarPos!.delta;
-      final overduePrevious = delta < 0
-          ? (-delta - 1).clamp(0, 9999)
-          : 0;
+      final overduePrevious = delta < 0 ? (-delta - 1).clamp(0, 9999) : 0;
       final todayDue = delta < 0 ? 1 : 0;
       return Text(
         'Overdue: $overduePrevious  •  Today due: $todayDue',

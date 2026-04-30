@@ -172,7 +172,10 @@ void main() {
 
       // Verify both tracks are active
       final activeTracks = await trackService.getActiveTracks(curriculumId);
-      expect(activeTracks, containsAll([TrackType.personal, TrackType.personal]));
+      expect(
+        activeTracks,
+        containsAll([TrackType.personal, TrackType.personal]),
+      );
     });
 
     test('duplicate check scopes correctly to curriculum', () async {

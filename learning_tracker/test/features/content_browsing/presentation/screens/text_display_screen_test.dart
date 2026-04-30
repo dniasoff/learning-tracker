@@ -18,10 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class MockTextCacheRepository extends Mock implements TextCacheRepository {}
 
-DailyTask _readerDailyTask({
-  required String ref,
-  int stageOrder = 1,
-}) {
+DailyTask _readerDailyTask({required String ref, int stageOrder = 1}) {
   return DailyTask(
     curriculumId: CurriculumId.mishnayos,
     contentItemSefariaRef: ref,
@@ -56,9 +53,7 @@ void main() {
         trackStorageKeyForTrackIdProvider.overrideWith(
           (ref, trackId) async => TrackType.personal.storageKey,
         ),
-        isStageCompletedProvider.overrideWith(
-          (ref, params) async => false,
-        ),
+        isStageCompletedProvider.overrideWith((ref, params) async => false),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -226,6 +221,5 @@ void main() {
 
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
     });
-
   });
 }

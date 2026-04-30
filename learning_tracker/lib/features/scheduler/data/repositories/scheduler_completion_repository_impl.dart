@@ -25,10 +25,11 @@ class SchedulerCompletionRepositoryImpl
   Future<List<SchedulerCompletion>> getCompletions(
     CurriculumId curriculumId,
   ) async {
-    final completions = await _completionDao.getCompletionsByCurriculumAndProfile(
-      curriculumId.storageKey,
-      _profileId,
-    );
+    final completions = await _completionDao
+        .getCompletionsByCurriculumAndProfile(
+          curriculumId.storageKey,
+          _profileId,
+        );
     final stages = await _stageDao.getStageDefinitionsByCurriculum(
       curriculumId.storageKey,
     );

@@ -46,9 +46,8 @@ class ProgressScreen extends ConsumerWidget {
         child: SafeArea(
           child: activeCurriculaAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Text(l10n.errorWithMessage(error.toString())),
-            ),
+            error: (error, _) =>
+                Center(child: Text(l10n.errorWithMessage(error.toString()))),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
                 return EmptyState(

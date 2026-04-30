@@ -42,7 +42,8 @@ class SettingsScreen extends ConsumerWidget {
         .firstOrNull;
     final isChildProfile = activeProfile?.mode == 'child';
     final isAdultProfile = activeProfile?.mode == 'adult';
-    final hasPasswordProvider = user != null &&
+    final hasPasswordProvider =
+        user != null &&
         user.providerData.any((info) => info.providerId == 'password');
 
     return Scaffold(
@@ -620,7 +621,8 @@ class _ParentalControlsSectionState
                   pinService: pinService,
                 );
               } else {
-                ok = (await context.pushRoute<bool>(const PinSetupRoute())) ??
+                ok =
+                    (await context.pushRoute<bool>(const PinSetupRoute())) ??
                     false;
               }
               if (ok && mounted) await _load();
@@ -653,8 +655,8 @@ Future<void> _showChangePasswordFlow(
   );
   if ((changed ?? false) && context.mounted) {
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.passwordChangedSuccessfully)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.passwordChangedSuccessfully)));
   }
 }

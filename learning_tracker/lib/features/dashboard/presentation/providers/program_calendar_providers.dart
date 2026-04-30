@@ -25,10 +25,8 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   if (track == null) throw StateError('Track $trackId not found');
 
   // 2. Resolve the track's enrolled program
-  final enrollment = await db.profileProgramDao.getProgramForProfileAndCurriculum(
-    profileId,
-    track.curriculumId,
-  );
+  final enrollment = await db.profileProgramDao
+      .getProgramForProfileAndCurriculum(profileId, track.curriculumId);
   if (enrollment == null) {
     throw StateError('Track $trackId has no program enrollment');
   }
@@ -50,18 +48,22 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
       CalendarProgramRegistry.byApiKey(apiKey)?.id ??
       CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
   if (programKey == null) {
-    throw StateError('Unable to resolve calendar key for program ${program.name}');
+    throw StateError(
+      'Unable to resolve calendar key for program ${program.name}',
+    );
   }
 
   // 3. Resolve start date anchor (today by default; may be offset).
   final now = DateTime.now();
-  final startDate = enrollment.trackingStartDate ?? (() {
-    final rawRef = enrollment.trackingStartRef;
-    if (rawRef == null || !rawRef.startsWith('offset:')) return now;
-    final parsed = int.tryParse(rawRef.substring('offset:'.length));
-    if (parsed == null) return now;
-    return now.add(Duration(days: parsed.clamp(-30, 30)));
-  })();
+  final startDate =
+      enrollment.trackingStartDate ??
+      (() {
+        final rawRef = enrollment.trackingStartRef;
+        if (rawRef == null || !rawRef.startsWith('offset:')) return now;
+        final parsed = int.tryParse(rawRef.substring('offset:'.length));
+        if (parsed == null) return now;
+        return now.add(Duration(days: parsed.clamp(-30, 30)));
+      })();
 
   // 4. Resolve today's program assignment + cycle size from local calendar rows.
   final todayEntry = await calendarService.getEntry(programKey, now);

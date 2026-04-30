@@ -29,37 +29,43 @@ void main() {
       buildCount = 0;
     });
 
-    test('runs buildPlan once per local day — second read serves snapshot', () async {
-      final now = DateTime.utc(2026, 4, 19, 10, 0);
+    test(
+      'runs buildPlan once per local day — second read serves snapshot',
+      () async {
+        final now = DateTime.utc(2026, 4, 19, 10, 0);
 
-      Future<List<DailyTask>> build() async {
-        buildCount++;
-        return [mkTask('Mishnah Berachot 1:1'), mkTask('Mishnah Berachot 1:2')];
-      }
+        Future<List<DailyTask>> build() async {
+          buildCount++;
+          return [
+            mkTask('Mishnah Berachot 1:1'),
+            mkTask('Mishnah Berachot 1:2'),
+          ];
+        }
 
-      final first = await repo.getOrSnapshotPlan(
-        profileId: 1,
-        now: now,
-        buildPlan: build,
-      );
-      expect(buildCount, 1);
-      expect(first.map((t) => t.contentItemSefariaRef).toList(), [
-        'Mishnah Berachot 1:1',
-        'Mishnah Berachot 1:2',
-      ]);
+        final first = await repo.getOrSnapshotPlan(
+          profileId: 1,
+          now: now,
+          buildPlan: build,
+        );
+        expect(buildCount, 1);
+        expect(first.map((t) => t.contentItemSefariaRef).toList(), [
+          'Mishnah Berachot 1:1',
+          'Mishnah Berachot 1:2',
+        ]);
 
-      // Second read on the same local day must not call build again.
-      final second = await repo.getOrSnapshotPlan(
-        profileId: 1,
-        now: now.add(const Duration(hours: 5)),
-        buildPlan: build,
-      );
-      expect(buildCount, 1);
-      expect(second.map((t) => t.contentItemSefariaRef).toList(), [
-        'Mishnah Berachot 1:1',
-        'Mishnah Berachot 1:2',
-      ]);
-    });
+        // Second read on the same local day must not call build again.
+        final second = await repo.getOrSnapshotPlan(
+          profileId: 1,
+          now: now.add(const Duration(hours: 5)),
+          buildPlan: build,
+        );
+        expect(buildCount, 1);
+        expect(second.map((t) => t.contentItemSefariaRef).toList(), [
+          'Mishnah Berachot 1:1',
+          'Mishnah Berachot 1:2',
+        ]);
+      },
+    );
 
     test('completions do not change the snapshot', () async {
       final now = DateTime.utc(2026, 4, 19, 10, 0);
@@ -86,7 +92,11 @@ void main() {
         now: now,
         buildPlan: build,
       );
-      expect(buildCount, 1, reason: 'buildPlan should not have been called again');
+      expect(
+        buildCount,
+        1,
+        reason: 'buildPlan should not have been called again',
+      );
       expect(second.map((t) => t.contentItemSefariaRef).toList(), [
         'Item 1',
         'Item 2',

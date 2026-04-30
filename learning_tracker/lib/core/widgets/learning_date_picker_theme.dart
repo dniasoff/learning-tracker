@@ -72,10 +72,7 @@ ThemeData _learningDatePickerTheme(ThemeData base) {
 /// Use as [showDatePicker] `builder` to apply [learning date picker] styling.
 Widget learningDatePickerThemeBuilder(BuildContext context, Widget? child) {
   if (child == null) return const SizedBox.shrink();
-  return Theme(
-    data: _learningDatePickerTheme(Theme.of(context)),
-    child: child,
-  );
+  return Theme(data: _learningDatePickerTheme(Theme.of(context)), child: child);
 }
 
 /// Same visual treatment as the add-track / parent-mode modals, for Gregorian.

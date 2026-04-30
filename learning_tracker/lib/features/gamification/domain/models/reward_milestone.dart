@@ -62,9 +62,11 @@ class RewardMilestone {
       title: (json['title'] ?? '').toString(),
       thresholdPoints: _asInt(json['threshold_points']) ?? 0,
       isEnabled: json['is_enabled'] as bool? ?? true,
-      createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()) ??
+      createdAt:
+          DateTime.tryParse((json['created_at'] ?? '').toString()) ??
           DateTime.now().toUtc(),
-      updatedAt: DateTime.tryParse((json['updated_at'] ?? '').toString()) ??
+      updatedAt:
+          DateTime.tryParse((json['updated_at'] ?? '').toString()) ??
           DateTime.now().toUtc(),
     );
   }
@@ -117,7 +119,7 @@ class RewardUnlockRecord {
       pointsAtUnlock: RewardMilestone._asInt(json['points_at_unlock']) ?? 0,
       unlockedAt:
           DateTime.tryParse((json['unlocked_at'] ?? '').toString()) ??
-              DateTime.now().toUtc(),
+          DateTime.now().toUtc(),
     );
   }
 }

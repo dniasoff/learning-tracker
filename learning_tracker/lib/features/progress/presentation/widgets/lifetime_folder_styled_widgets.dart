@@ -9,11 +9,7 @@ class LifetimeFolderGradients {
     return const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF153E8C),
-        AppTheme.brandBlue,
-        Color(0xFF3D7DDA),
-      ],
+      colors: [Color(0xFF153E8C), AppTheme.brandBlue, Color(0xFF3D7DDA)],
       stops: [0.0, 0.45, 1.0],
     );
   }
@@ -23,11 +19,7 @@ class LifetimeFolderGradients {
     return const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [
-        Color(0xFFE8EEF8),
-        Color(0xFFF2F6FD),
-        Color(0xFFF8FAFF),
-      ],
+      colors: [Color(0xFFE8EEF8), Color(0xFFF2F6FD), Color(0xFFF8FAFF)],
     );
   }
 
@@ -39,11 +31,7 @@ class LifetimeFolderGradients {
     return const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [
-        Color(0xFFEDE8E1),
-        Color(0xFFF4F1EA),
-        Color(0xFFFAF8F5),
-      ],
+      colors: [Color(0xFFEDE8E1), Color(0xFFF4F1EA), Color(0xFFFAF8F5)],
     );
   }
 
@@ -52,11 +40,7 @@ class LifetimeFolderGradients {
     return const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF263529),
-        Color(0xFF3A5240),
-        Color(0xFF5C7560),
-      ],
+      colors: [Color(0xFF263529), Color(0xFF3A5240), Color(0xFF5C7560)],
       stops: [0.0, 0.48, 1.0],
     );
   }
@@ -508,11 +492,13 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
         : switch (visual) {
             MarkingRowVisual.direct => const Color(0xFF3BDD87),
             MarkingRowVisual.implicit => const Color(0xFFFFD26A),
-            MarkingRowVisual.none => lightSurface
-                ? const Color(0xFFB8C0CC)
-                : Colors.white.withValues(alpha: 0.5),
+            MarkingRowVisual.none =>
+              lightSurface
+                  ? const Color(0xFFB8C0CC)
+                  : Colors.white.withValues(alpha: 0.5),
           };
-    final selected = isPersisted ||
+    final selected =
+        isPersisted ||
         visual == MarkingRowVisual.direct ||
         visual == MarkingRowVisual.implicit;
 

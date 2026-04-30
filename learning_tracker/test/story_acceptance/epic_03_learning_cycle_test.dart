@@ -99,8 +99,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
           ),
-        ))
-            .completion;
+        )).completion;
 
         expect(completion.id, greaterThan(0));
         expect(completion.curriculumId, 'mishnayos');
@@ -142,8 +141,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
         ),
-      ))
-          .completion;
+      )).completion;
       final c2 = (await repo.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
@@ -151,8 +149,7 @@ void main() {
           stageId: 2,
           trackType: 'personal',
         ),
-      ))
-          .completion;
+      )).completion;
 
       // Points differ by stage: Learn=10, Chazara1=5 (default config)
       expect(c1.points, isNot(equals(c2.points)));
@@ -248,8 +245,7 @@ void main() {
             stageId: 2,
             trackType: 'personal',
           ),
-        ))
-            .completion;
+        )).completion;
         expect(c2.stageId, 2);
       },
     );

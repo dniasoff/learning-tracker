@@ -40,7 +40,9 @@ void main() {
       db = createTestDatabase();
       trackId = await _insertTrack(db);
       final now = DateTime.now();
-      await db.into(db.goals).insert(
+      await db
+          .into(db.goals)
+          .insert(
             GoalsCompanion.insert(
               curriculumId: 'mishnayos',
               trackId: trackId,

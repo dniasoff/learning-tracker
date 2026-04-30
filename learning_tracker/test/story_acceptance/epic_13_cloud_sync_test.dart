@@ -35,12 +35,16 @@ void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
   when(() => mock.fetchBookmarks(pageSize: ps)).thenAnswer((_) async => []);
   when(() => mock.fetchSettings(pageSize: ps)).thenAnswer((_) async => []);
   when(() => mock.fetchGoals(pageSize: ps)).thenAnswer((_) async => []);
-  when(() => mock.fetchProfilePrograms(pageSize: ps)).thenAnswer((_) async => []);
+  when(
+    () => mock.fetchProfilePrograms(pageSize: ps),
+  ).thenAnswer((_) async => []);
   when(() => mock.fetchStreak()).thenAnswer((_) async => null);
   when(() => mock.fetchProfile()).thenAnswer((_) async => null);
   when(() => mock.fetchLedgerEntries(pageSize: ps)).thenAnswer((_) async => []);
   when(() => mock.fetchActiveCurricula()).thenAnswer((_) async => []);
-  when(() => mock.fetchCurriculumTracks(pageSize: ps)).thenAnswer((_) async => []);
+  when(
+    () => mock.fetchCurriculumTracks(pageSize: ps),
+  ).thenAnswer((_) async => []);
   when(() => mock.fetchLearnerProfiles()).thenAnswer((_) async => []);
   when(() => mock.fetchNotificationSettings()).thenAnswer((_) async => null);
   when(() => mock.fetchGamificationSettings()).thenAnswer((_) async => null);
@@ -130,9 +134,9 @@ void main() {
       test(
         'online local write enqueues then background flush reaches Firestore',
         () async {
-          when(() => mockFirestore.pushCompletion(any())).thenAnswer(
-            (_) async {},
-          );
+          when(
+            () => mockFirestore.pushCompletion(any()),
+          ).thenAnswer((_) async {});
 
           final data = <String, dynamic>{
             'curriculum_id': 'mishnayos',
@@ -431,10 +435,10 @@ void main() {
 
         stubEmptyFetches();
         when(
-        () => mockFirestore.fetchBookmarks(
-          pageSize: FirestoreDataSource.defaultPageSize,
-        ),
-      ).thenAnswer(
+          () => mockFirestore.fetchBookmarks(
+            pageSize: FirestoreDataSource.defaultPageSize,
+          ),
+        ).thenAnswer(
           (_) async => [
             {
               'curriculum_id': 'mishnayos',
@@ -477,10 +481,10 @@ void main() {
         expect(completions.length, 1);
         // No Firestore calls
         verifyNever(
-        () => mockFirestore.fetchCompletions(
-          pageSize: FirestoreDataSource.defaultPageSize,
-        ),
-      );
+          () => mockFirestore.fetchCompletions(
+            pageSize: FirestoreDataSource.defaultPageSize,
+          ),
+        );
       },
     );
 
@@ -499,272 +503,277 @@ void main() {
 
   // ── Story 13.3: Real-Time Foreground Listeners ──────────────
 
-  group('Story 13.3 -- Real-Time Foreground Listeners', tags: ['story_13_3'], () {
-    late UserDatabase database;
-    late int trackId;
-    late MockFirestoreDataSource mockFirestore;
-    late MockConnectivityService mockConnectivity;
-    late Talker logger;
-    late OfflineQueue offlineQueue;
-    late SyncEngine syncEngine;
+  group(
+    'Story 13.3 -- Real-Time Foreground Listeners',
+    tags: ['story_13_3'],
+    () {
+      late UserDatabase database;
+      late int trackId;
+      late MockFirestoreDataSource mockFirestore;
+      late MockConnectivityService mockConnectivity;
+      late Talker logger;
+      late OfflineQueue offlineQueue;
+      late SyncEngine syncEngine;
 
-    setUp(() async {
-      database = _createInMemoryDatabase();
-      trackId = await _insertTrack(database);
-      mockFirestore = MockFirestoreDataSource();
-      mockConnectivity = MockConnectivityService();
-      logger = Talker();
-      offlineQueue = OfflineQueue(
-        database: database,
-        firestoreDataSource: mockFirestore,
-        logger: logger,
+      setUp(() async {
+        database = _createInMemoryDatabase();
+        trackId = await _insertTrack(database);
+        mockFirestore = MockFirestoreDataSource();
+        mockConnectivity = MockConnectivityService();
+        logger = Talker();
+        offlineQueue = OfflineQueue(
+          database: database,
+          firestoreDataSource: mockFirestore,
+          logger: logger,
+        );
+        when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
+        when(() => mockFirestore.isAuthenticated).thenReturn(true);
+        when(() => mockFirestore.profileId).thenReturn(1);
+        when(() => mockFirestore.forProfile(any())).thenReturn(mockFirestore);
+        syncEngine = SyncEngine(
+          database: database,
+          firestoreDataSource: mockFirestore,
+          offlineQueue: offlineQueue,
+          logger: logger,
+          connectivityService: mockConnectivity,
+        );
+      });
+
+      tearDown(() async {
+        await syncEngine.dispose();
+        await database.close();
+      });
+
+      void stubListeners({
+        Stream<List<Map<String, dynamic>>>? completions,
+        Stream<List<Map<String, dynamic>>>? bookmarks,
+        Stream<List<Map<String, dynamic>>>? settings,
+        Stream<Map<String, dynamic>?>? streak,
+        Stream<List<Map<String, dynamic>>>? goals,
+        Stream<List<Map<String, dynamic>>>? rewards,
+        Stream<List<Map<String, dynamic>>>? ledgerEntries,
+      }) {
+        when(
+          () => mockFirestore.listenToCompletions(),
+        ).thenAnswer((_) => completions ?? Stream.value([]));
+        when(
+          () => mockFirestore.listenToBookmarks(),
+        ).thenAnswer((_) => bookmarks ?? Stream.value([]));
+        when(
+          () => mockFirestore.listenToSettings(),
+        ).thenAnswer((_) => settings ?? Stream.value([]));
+        when(
+          () => mockFirestore.listenToStreak(),
+        ).thenAnswer((_) => streak ?? Stream.value(null));
+        when(
+          () => mockFirestore.listenToGoals(),
+        ).thenAnswer((_) => goals ?? Stream.value([]));
+        when(
+          () => mockFirestore.listenToProfilePrograms(),
+        ).thenAnswer((_) => Stream.value([]));
+        when(
+          () => mockFirestore.listenToActiveCurricula(),
+        ).thenAnswer((_) => Stream.value([]));
+        when(
+          () => mockFirestore.listenToLedgerEntries(),
+        ).thenAnswer((_) => ledgerEntries ?? Stream.value([]));
+        when(
+          () => mockFirestore.listenToCurriculumTracks(),
+        ).thenAnswer((_) => Stream.value([]));
+        when(
+          () => mockFirestore.listenToNotificationSettings(),
+        ).thenAnswer((_) => Stream.value(null));
+        when(
+          () => mockFirestore.listenToGamificationSettings(),
+        ).thenAnswer((_) => Stream.value(null));
+      }
+
+      test(
+        'listener activates on app foreground, pauses on background',
+        () async {
+          stubListeners();
+
+          // Attach listeners (foreground)
+          await syncEngine.attachListeners();
+
+          // Detach listeners (background)
+          await syncEngine.detachListeners();
+
+          // Re-attach should call listeners again
+          await syncEngine.attachListeners();
+          verify(() => mockFirestore.listenToCompletions()).called(2);
+          verify(() => mockFirestore.listenToGoals()).called(2);
+        },
       );
-      when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
-      when(() => mockFirestore.isAuthenticated).thenReturn(true);
-      when(() => mockFirestore.profileId).thenReturn(1);
-      when(() => mockFirestore.forProfile(any())).thenReturn(mockFirestore);
-      syncEngine = SyncEngine(
-        database: database,
-        firestoreDataSource: mockFirestore,
-        offlineQueue: offlineQueue,
-        logger: logger,
-        connectivityService: mockConnectivity,
-      );
-    });
 
-    tearDown(() async {
-      await syncEngine.dispose();
-      await database.close();
-    });
+      test('incoming completion from remote is merged to local DB', () async {
+        final controller =
+            StreamController<List<Map<String, dynamic>>>.broadcast();
 
-    void stubListeners({
-      Stream<List<Map<String, dynamic>>>? completions,
-      Stream<List<Map<String, dynamic>>>? bookmarks,
-      Stream<List<Map<String, dynamic>>>? settings,
-      Stream<Map<String, dynamic>?>? streak,
-      Stream<List<Map<String, dynamic>>>? goals,
-      Stream<List<Map<String, dynamic>>>? rewards,
-      Stream<List<Map<String, dynamic>>>? ledgerEntries,
-    }) {
-      when(
-        () => mockFirestore.listenToCompletions(),
-      ).thenAnswer((_) => completions ?? Stream.value([]));
-      when(
-        () => mockFirestore.listenToBookmarks(),
-      ).thenAnswer((_) => bookmarks ?? Stream.value([]));
-      when(
-        () => mockFirestore.listenToSettings(),
-      ).thenAnswer((_) => settings ?? Stream.value([]));
-      when(
-        () => mockFirestore.listenToStreak(),
-      ).thenAnswer((_) => streak ?? Stream.value(null));
-      when(
-        () => mockFirestore.listenToGoals(),
-      ).thenAnswer((_) => goals ?? Stream.value([]));
-      when(
-        () => mockFirestore.listenToProfilePrograms(),
-      ).thenAnswer((_) => Stream.value([]));
-      when(
-        () => mockFirestore.listenToActiveCurricula(),
-      ).thenAnswer((_) => Stream.value([]));
-      when(
-        () => mockFirestore.listenToLedgerEntries(),
-      ).thenAnswer((_) => ledgerEntries ?? Stream.value([]));
-      when(
-        () => mockFirestore.listenToCurriculumTracks(),
-      ).thenAnswer((_) => Stream.value([]));
-      when(
-        () => mockFirestore.listenToNotificationSettings(),
-      ).thenAnswer((_) => Stream.value(null));
-      when(
-        () => mockFirestore.listenToGamificationSettings(),
-      ).thenAnswer((_) => Stream.value(null));
-    }
+        stubListeners(completions: controller.stream);
 
-    test(
-      'listener activates on app foreground, pauses on background',
-      () async {
+        await syncEngine.attachListeners();
+
+        // Emit a remote completion
+        controller.add([
+          {
+            'curriculum_id': 'mishnayos',
+            'content_item_id': 'mishna-5',
+            'stage_id': 1,
+            'track_type': 'personal',
+            'completed_at': '2026-03-15T10:00:00.000Z',
+            'points': 10,
+          },
+        ]);
+
+        // Allow async merge to process
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        final completions = await database.completionDao.getAllCompletions();
+        expect(completions.length, 1);
+        expect(completions.first.sefariaRef, 'mishna-5');
+
+        await controller.close();
+      });
+
+      test('incoming mutable data update uses last-write-wins merge', () async {
+        // Insert older local goal
+        await database.goalDao.upsertGoalByTrack(
+          profileId: 1,
+          trackId: trackId,
+          curriculumId: 'mishnayos',
+          description: 'finish by pesach',
+          targetPercent: 50.0,
+          targetDate: null,
+          createdAt: DateTime.utc(2026, 3, 1),
+          updatedAt: DateTime.utc(2026, 3, 1),
+        );
+
+        final controller =
+            StreamController<List<Map<String, dynamic>>>.broadcast();
+
+        stubListeners(goals: controller.stream);
+
+        await syncEngine.attachListeners();
+
+        // Emit a newer remote goal (same track = upsert match)
+        controller.add([
+          {
+            'curriculum_id': 'mishnayos',
+            'track_id': trackId,
+            'description': 'finish by pesach',
+            'target_percent': 80.0,
+            'created_at': '2026-03-01T00:00:00.000Z',
+            'updated_at': '2026-03-15T00:00:00.000Z', // newer
+          },
+        ]);
+
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        final goals = await database.goalDao.getAllGoals();
+        expect(goals.length, 1);
+        expect(goals.first.targetPercent, 80.0); // Remote won
+
+        await controller.close();
+      });
+
+      test('Firebase quota exceeded triggers graceful degradation', () async {
+        // Create controllers that emit errors after listeners attach
+        final controllers = <StreamController<dynamic>>[];
+
+        StreamController<T> makeErrorController<T>() {
+          final c = StreamController<T>.broadcast();
+          controllers.add(c);
+          return c;
+        }
+
+        // ignore: close_sinks
+        final completionsCtrl =
+            makeErrorController<List<Map<String, dynamic>>>();
+        // ignore: close_sinks
+        final bookmarksCtrl = makeErrorController<List<Map<String, dynamic>>>();
+        // ignore: close_sinks
+        final settingsCtrl = makeErrorController<List<Map<String, dynamic>>>();
+        // ignore: close_sinks
+        final goalsCtrl = makeErrorController<List<Map<String, dynamic>>>();
+        // ignore: close_sinks
+        final rewardsCtrl = makeErrorController<List<Map<String, dynamic>>>();
+        // ignore: close_sinks
+        final streakCtrl = makeErrorController<Map<String, dynamic>?>();
+
+        stubListeners(
+          completions: completionsCtrl.stream,
+          bookmarks: bookmarksCtrl.stream,
+          settings: settingsCtrl.stream,
+          goals: goalsCtrl.stream,
+          rewards: rewardsCtrl.stream,
+          streak: streakCtrl.stream,
+        );
+
+        // Collect status updates
+        final statuses = <SyncStatus>[];
+        syncEngine.statusStream.listen(statuses.add);
+
+        await syncEngine.attachListeners();
+
+        // Now emit errors after listeners are attached
+        final error = Exception('RESOURCE_EXHAUSTED');
+        completionsCtrl.addError(error);
+        bookmarksCtrl.addError(error);
+        settingsCtrl.addError(error);
+        goalsCtrl.addError(error);
+
+        // Allow errors to propagate
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+
+        // After threshold errors (3), quota should be degraded
+        expect(syncEngine.isQuotaDegraded, isTrue);
+
+        // Should have emitted an error status with quota message
+        expect(
+          statuses.any(
+            (s) => s.maybeWhen(
+              error: (msg, _) => msg.contains('quota'),
+              orElse: () => false,
+            ),
+          ),
+          isTrue,
+        );
+
+        for (final c in controllers) {
+          await c.close();
+        }
+      });
+
+      test('listeners cover all required collections', () async {
         stubListeners();
 
-        // Attach listeners (foreground)
         await syncEngine.attachListeners();
 
-        // Detach listeners (background)
-        await syncEngine.detachListeners();
+        verify(() => mockFirestore.listenToCompletions()).called(1);
+        verify(() => mockFirestore.listenToBookmarks()).called(1);
+        verify(() => mockFirestore.listenToSettings()).called(1);
+        verify(() => mockFirestore.listenToStreak()).called(1);
+        verify(() => mockFirestore.listenToGoals()).called(1);
+        verify(() => mockFirestore.listenToProfilePrograms()).called(1);
+        verify(() => mockFirestore.listenToActiveCurricula()).called(1);
+        verify(() => mockFirestore.listenToLedgerEntries()).called(1);
+        verify(() => mockFirestore.listenToCurriculumTracks()).called(1);
+        verify(() => mockFirestore.listenToNotificationSettings()).called(1);
+        verify(() => mockFirestore.listenToGamificationSettings()).called(1);
+      });
 
-        // Re-attach should call listeners again
+      test('listeners not attached while offline', () async {
+        stubListeners();
+
+        syncEngine.setOnlineState(false);
         await syncEngine.attachListeners();
-        verify(() => mockFirestore.listenToCompletions()).called(2);
-        verify(() => mockFirestore.listenToGoals()).called(2);
-      },
-    );
 
-    test('incoming completion from remote is merged to local DB', () async {
-      final controller =
-          StreamController<List<Map<String, dynamic>>>.broadcast();
-
-      stubListeners(completions: controller.stream);
-
-      await syncEngine.attachListeners();
-
-      // Emit a remote completion
-      controller.add([
-        {
-          'curriculum_id': 'mishnayos',
-          'content_item_id': 'mishna-5',
-          'stage_id': 1,
-          'track_type': 'personal',
-          'completed_at': '2026-03-15T10:00:00.000Z',
-          'points': 10,
-        },
-      ]);
-
-      // Allow async merge to process
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      final completions = await database.completionDao.getAllCompletions();
-      expect(completions.length, 1);
-      expect(completions.first.sefariaRef, 'mishna-5');
-
-      await controller.close();
-    });
-
-    test('incoming mutable data update uses last-write-wins merge', () async {
-      // Insert older local goal
-      await database.goalDao.upsertGoalByTrack(
-        profileId: 1,
-        trackId: trackId,
-        curriculumId: 'mishnayos',
-        description: 'finish by pesach',
-        targetPercent: 50.0,
-        targetDate: null,
-        createdAt: DateTime.utc(2026, 3, 1),
-        updatedAt: DateTime.utc(2026, 3, 1),
-      );
-
-      final controller =
-          StreamController<List<Map<String, dynamic>>>.broadcast();
-
-      stubListeners(goals: controller.stream);
-
-      await syncEngine.attachListeners();
-
-      // Emit a newer remote goal (same track = upsert match)
-      controller.add([
-        {
-          'curriculum_id': 'mishnayos',
-          'track_id': trackId,
-          'description': 'finish by pesach',
-          'target_percent': 80.0,
-          'created_at': '2026-03-01T00:00:00.000Z',
-          'updated_at': '2026-03-15T00:00:00.000Z', // newer
-        },
-      ]);
-
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      final goals = await database.goalDao.getAllGoals();
-      expect(goals.length, 1);
-      expect(goals.first.targetPercent, 80.0); // Remote won
-
-      await controller.close();
-    });
-
-    test('Firebase quota exceeded triggers graceful degradation', () async {
-      // Create controllers that emit errors after listeners attach
-      final controllers = <StreamController<dynamic>>[];
-
-      StreamController<T> makeErrorController<T>() {
-        final c = StreamController<T>.broadcast();
-        controllers.add(c);
-        return c;
-      }
-
-      // ignore: close_sinks
-      final completionsCtrl = makeErrorController<List<Map<String, dynamic>>>();
-      // ignore: close_sinks
-      final bookmarksCtrl = makeErrorController<List<Map<String, dynamic>>>();
-      // ignore: close_sinks
-      final settingsCtrl = makeErrorController<List<Map<String, dynamic>>>();
-      // ignore: close_sinks
-      final goalsCtrl = makeErrorController<List<Map<String, dynamic>>>();
-      // ignore: close_sinks
-      final rewardsCtrl = makeErrorController<List<Map<String, dynamic>>>();
-      // ignore: close_sinks
-      final streakCtrl = makeErrorController<Map<String, dynamic>?>();
-
-      stubListeners(
-        completions: completionsCtrl.stream,
-        bookmarks: bookmarksCtrl.stream,
-        settings: settingsCtrl.stream,
-        goals: goalsCtrl.stream,
-        rewards: rewardsCtrl.stream,
-        streak: streakCtrl.stream,
-      );
-
-      // Collect status updates
-      final statuses = <SyncStatus>[];
-      syncEngine.statusStream.listen(statuses.add);
-
-      await syncEngine.attachListeners();
-
-      // Now emit errors after listeners are attached
-      final error = Exception('RESOURCE_EXHAUSTED');
-      completionsCtrl.addError(error);
-      bookmarksCtrl.addError(error);
-      settingsCtrl.addError(error);
-      goalsCtrl.addError(error);
-
-      // Allow errors to propagate
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-
-      // After threshold errors (3), quota should be degraded
-      expect(syncEngine.isQuotaDegraded, isTrue);
-
-      // Should have emitted an error status with quota message
-      expect(
-        statuses.any(
-          (s) => s.maybeWhen(
-            error: (msg, _) => msg.contains('quota'),
-            orElse: () => false,
-          ),
-        ),
-        isTrue,
-      );
-
-      for (final c in controllers) {
-        await c.close();
-      }
-    });
-
-    test('listeners cover all required collections', () async {
-      stubListeners();
-
-      await syncEngine.attachListeners();
-
-      verify(() => mockFirestore.listenToCompletions()).called(1);
-      verify(() => mockFirestore.listenToBookmarks()).called(1);
-      verify(() => mockFirestore.listenToSettings()).called(1);
-      verify(() => mockFirestore.listenToStreak()).called(1);
-      verify(() => mockFirestore.listenToGoals()).called(1);
-      verify(() => mockFirestore.listenToProfilePrograms()).called(1);
-      verify(() => mockFirestore.listenToActiveCurricula()).called(1);
-      verify(() => mockFirestore.listenToLedgerEntries()).called(1);
-      verify(() => mockFirestore.listenToCurriculumTracks()).called(1);
-      verify(() => mockFirestore.listenToNotificationSettings()).called(1);
-      verify(() => mockFirestore.listenToGamificationSettings()).called(1);
-    });
-
-    test('listeners not attached while offline', () async {
-      stubListeners();
-
-      syncEngine.setOnlineState(false);
-      await syncEngine.attachListeners();
-
-      verifyNever(() => mockFirestore.listenToCompletions());
-      verifyNever(() => mockFirestore.listenToGoals());
-    });
-  });
+        verifyNever(() => mockFirestore.listenToCompletions());
+        verifyNever(() => mockFirestore.listenToGoals());
+      });
+    },
+  );
 
   // ── Story 13.4: New Device Data Restore ─────────────────────
 

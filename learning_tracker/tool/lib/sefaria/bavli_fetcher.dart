@@ -199,9 +199,7 @@ class BavliFetcher extends SefariaFetcherBase {
   }
 
   /// Mid-masechta amudim that don't exist on Sefaria's text API.
-  static const _skipAmudim = <String>{
-    'Nazir 33b',
-  };
+  static const _skipAmudim = <String>{'Nazir 33b'};
 
   /// Known first daf for masechtos that don't start at 2a.
   static const _firstDaf = <String, ({int daf, String amud})>{

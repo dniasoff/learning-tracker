@@ -99,10 +99,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                   ),
                 ),
               ),
-              child: SizedBox(
-                height: 170,
-                child: _buildCompletionsChart(l10n),
-              ),
+              child: SizedBox(height: 170, child: _buildCompletionsChart(l10n)),
             ),
             const SizedBox(height: 14),
             _ChartSection(

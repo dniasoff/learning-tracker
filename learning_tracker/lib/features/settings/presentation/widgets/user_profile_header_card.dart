@@ -88,12 +88,14 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
     final authState = ref.watch(authStateProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
-    final activeProfile = widget.activeProfile ??
+    final activeProfile =
+        widget.activeProfile ??
         profilesAsync.asData?.value
             .where((p) => p.id == activeProfileId)
             .firstOrNull;
 
-    final displayName = activeProfile?.displayName ??
+    final displayName =
+        activeProfile?.displayName ??
         user.displayName ??
         user.email?.split('@').first ??
         l10n.userFallbackDisplayName;
@@ -151,8 +153,9 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary
-                              .withValues(alpha: 0.12),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.12,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -242,10 +245,7 @@ class _ParentProfileSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: child,
-      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: child),
     );
   }
 }
@@ -269,7 +269,8 @@ class _LocalBornProfileRow extends ConsumerWidget {
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
 
-    final displayName = activeProfile?.displayName ??
+    final displayName =
+        activeProfile?.displayName ??
         (authUser.displayName.isNotEmpty
             ? authUser.displayName
             : authUser.email.split('@').first);

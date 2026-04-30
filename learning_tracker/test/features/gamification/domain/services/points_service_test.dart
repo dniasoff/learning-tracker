@@ -228,7 +228,9 @@ void main() {
     test(
       'global total excludes browse-only track completions (no goal)',
       () async {
-        final browseTrack = await db.into(db.curriculumTracks).insertReturning(
+        final browseTrack = await db
+            .into(db.curriculumTracks)
+            .insertReturning(
               CurriculumTracksCompanion.insert(
                 curriculumId: CurriculumId.bavli.storageKey,
                 trackType: 'personal',

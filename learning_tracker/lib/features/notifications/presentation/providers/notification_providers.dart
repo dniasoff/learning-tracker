@@ -371,14 +371,16 @@ Future<void> _persistNotificationSettingsToCloud(
       'latitude': prefs.getDouble(_shabbosModeLatitudeKey) ?? 0.0,
       'longitude': prefs.getDouble(_shabbosModeLongitudeKey) ?? 0.0,
       'fixed_start_hour':
-          prefs.getInt(_shabbosModeFixedStartHourKey) ?? defaultShabbosStartHour,
+          prefs.getInt(_shabbosModeFixedStartHourKey) ??
+          defaultShabbosStartHour,
       'fixed_start_minute':
           prefs.getInt(_shabbosModeFixedStartMinuteKey) ??
           defaultShabbosStartMinute,
       'fixed_end_hour':
           prefs.getInt(_shabbosModeFixedEndHourKey) ?? defaultShabbosEndHour,
       'fixed_end_minute':
-          prefs.getInt(_shabbosModeFixedEndMinuteKey) ?? defaultShabbosEndMinute,
+          prefs.getInt(_shabbosModeFixedEndMinuteKey) ??
+          defaultShabbosEndMinute,
     },
     'updated_at': DateTime.fromMillisecondsSinceEpoch(
       updatedAtMs,

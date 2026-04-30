@@ -24,7 +24,8 @@ class ManualCompletionUseCase {
   }) : _repository = repository,
        _activeProfileId = activeProfileId,
        _activeProfileMode = activeProfileMode,
-       _parentPinSessionMatchesActiveProfile = parentPinSessionMatchesActiveProfile;
+       _parentPinSessionMatchesActiveProfile =
+           parentPinSessionMatchesActiveProfile;
 
   /// Mark a unit as manually complete (siyum).
   ///
@@ -44,7 +45,8 @@ class ManualCompletionUseCase {
     final markedBy = _activeProfileId;
 
     // Permission check: child cannot self-mark without parent PIN session
-    if (_activeProfileMode == 'child' && !_parentPinSessionMatchesActiveProfile) {
+    if (_activeProfileMode == 'child' &&
+        !_parentPinSessionMatchesActiveProfile) {
       throw const ChildSelfMarkException();
     }
 

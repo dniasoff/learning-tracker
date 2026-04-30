@@ -222,63 +222,64 @@ void main() {
       },
     );
 
-    test(
-      'seedDefaults uses only stages for the target track when multiple '
-      'profiles share a curriculum',
-      () async {
-        final trackAdult = await database.into(database.curriculumTracks).insert(
-              CurriculumTracksCompanion.insert(
-                profileId: const Value(1),
-                curriculumId: 'mishnayos',
-                trackType: 'personal',
-                activatedAt: DateTime.now(),
-              ),
-            );
-        final trackChild = await database.into(database.curriculumTracks).insert(
-              CurriculumTracksCompanion.insert(
-                profileId: const Value(2),
-                curriculumId: 'mishnayos',
-                trackType: 'personal',
-                activatedAt: DateTime.now(),
-              ),
-            );
-
-        for (final tid in [trackAdult, trackChild]) {
-          await database.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
+    test('seedDefaults uses only stages for the target track when multiple '
+        'profiles share a curriculum', () async {
+      final trackAdult = await database
+          .into(database.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: const Value(1),
               curriculumId: 'mishnayos',
-              trackId: tid,
-              stageOrder: 1,
-              stageName: 'Learn',
-              delayDays: 0,
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
             ),
           );
-          await database.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
+      final trackChild = await database
+          .into(database.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: const Value(2),
               curriculumId: 'mishnayos',
-              trackId: tid,
-              stageOrder: 2,
-              stageName: 'Review',
-              delayDays: 1,
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
             ),
           );
-        }
 
-        await database.pointConfigDao.seedDefaults(
-          'mishnayos',
-          trackChild,
-          profileId: 2,
+      for (final tid in [trackAdult, trackChild]) {
+        await database.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackId: tid,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
         );
+        await database.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            curriculumId: 'mishnayos',
+            trackId: tid,
+            stageOrder: 2,
+            stageName: 'Review',
+            delayDays: 1,
+          ),
+        );
+      }
 
-        final childConfigs = await database.pointConfigDao.getConfigsByCurriculum(
-          'mishnayos',
-          profileId: 2,
-          trackId: trackChild,
-        );
-        expect(childConfigs, hasLength(2));
-        expect(childConfigs[0].stageOrder, 1);
-        expect(childConfigs[1].stageOrder, 2);
-      },
-    );
+      await database.pointConfigDao.seedDefaults(
+        'mishnayos',
+        trackChild,
+        profileId: 2,
+      );
+
+      final childConfigs = await database.pointConfigDao.getConfigsByCurriculum(
+        'mishnayos',
+        profileId: 2,
+        trackId: trackChild,
+      );
+      expect(childConfigs, hasLength(2));
+      expect(childConfigs[0].stageOrder, 1);
+      expect(childConfigs[1].stageOrder, 2);
+    });
   });
 }

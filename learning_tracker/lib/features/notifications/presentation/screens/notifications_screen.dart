@@ -342,7 +342,9 @@ class _SettingsTimeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = enabled ? const Color(0xFF1A2340) : const Color(0xFF9CA3B4);
+    final textColor = enabled
+        ? const Color(0xFF1A2340)
+        : const Color(0xFF9CA3B4);
     return ListTile(
       key: key,
       enabled: enabled,

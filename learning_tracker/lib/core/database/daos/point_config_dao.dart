@@ -90,12 +90,13 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
   Future<int> deleteAllForCurriculum(
     String curriculumId, {
     required int profileId,
-  }) => (delete(pointConfigs)
-        ..where(
-          (t) => t.curriculumId.equals(curriculumId) &
-              t.profileId.equals(profileId),
-        ))
-      .go();
+  }) =>
+      (delete(pointConfigs)..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.profileId.equals(profileId),
+          ))
+          .go();
 
   /// Seed default point configs for a curriculum.
   ///

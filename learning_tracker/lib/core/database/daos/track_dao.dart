@@ -221,13 +221,14 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     DateTime? archivedAt,
     DateTime? paceResetDate,
   }) async {
-    final existing = await (select(curriculumTracks)..where(
-          (t) =>
-              t.profileId.equals(profileId) &
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.trackType.equals(trackType.storageKey),
-        ))
-        .getSingleOrNull();
+    final existing =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculumId.storageKey) &
+                  t.trackType.equals(trackType.storageKey),
+            ))
+            .getSingleOrNull();
 
     if (existing == null) {
       await into(curriculumTracks).insert(
@@ -243,16 +244,17 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
         ),
       );
     } else {
-      await (update(curriculumTracks)..where((t) => t.id.equals(existing.id)))
-          .write(
-            CurriculumTracksCompanion(
-              isActive: Value(isActive),
-              activatedAt: Value(activatedAt),
-              deactivatedAt: Value(deactivatedAt),
-              archivedAt: Value(archivedAt),
-              paceResetDate: Value(paceResetDate),
-            ),
-          );
+      await (update(
+        curriculumTracks,
+      )..where((t) => t.id.equals(existing.id))).write(
+        CurriculumTracksCompanion(
+          isActive: Value(isActive),
+          activatedAt: Value(activatedAt),
+          deactivatedAt: Value(deactivatedAt),
+          archivedAt: Value(archivedAt),
+          paceResetDate: Value(paceResetDate),
+        ),
+      );
     }
   }
 

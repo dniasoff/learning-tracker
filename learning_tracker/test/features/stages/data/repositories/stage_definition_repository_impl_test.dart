@@ -274,21 +274,16 @@ void main() {
     });
 
     // Scenario 8b: initializeDefaults inserts defaults when track has no stages
-    test(
-      'initializeDefaults inserts 3 defaults when track is empty',
-      () async {
-        when(
-          () => mockStageDao.getStagesByTrack(1),
-        ).thenAnswer((_) async => []);
-        when(
-          () => mockStageDao.insertStageDefinition(any()),
-        ).thenAnswer((_) async => 1);
+    test('initializeDefaults inserts 3 defaults when track is empty', () async {
+      when(() => mockStageDao.getStagesByTrack(1)).thenAnswer((_) async => []);
+      when(
+        () => mockStageDao.insertStageDefinition(any()),
+      ).thenAnswer((_) async => 1);
 
-        await repository.initializeDefaults(curriculum, trackId: 1);
+      await repository.initializeDefaults(curriculum, trackId: 1);
 
-        verify(() => mockStageDao.insertStageDefinition(any())).called(3);
-      },
-    );
+      verify(() => mockStageDao.insertStageDefinition(any())).called(3);
+    });
 
     // Scenario 9: Firestore push is called after each mutation
     test('addStage calls pushSettings after insert', () async {

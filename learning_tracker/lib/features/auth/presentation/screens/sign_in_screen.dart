@@ -437,13 +437,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 if (!mounted) return;
                 final m = AppLocalizations.of(context)!;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(m.authVerificationEmailSentAgain),
-                  ),
+                  SnackBar(content: Text(m.authVerificationEmailSentAgain)),
                 );
               } on FirebaseAuthException catch (e) {
                 if (!mounted) return;
-                _showError(_mapAuthError(e.code, AppLocalizations.of(context)!));
+                _showError(
+                  _mapAuthError(e.code, AppLocalizations.of(context)!),
+                );
               }
             },
             onCancel: () => Navigator.of(dialogContext).pop(false),
@@ -459,7 +459,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 return;
               }
               if (!mounted) return;
-              _showError(AppLocalizations.of(context)!.authEmailStillUnverified);
+              _showError(
+                AppLocalizations.of(context)!.authEmailStillUnverified,
+              );
             },
           ),
         );
@@ -486,9 +488,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         final accounts = await registry.getAllAccounts();
         if (accounts.length >= kMaxDeviceAccounts) {
           if (mounted) {
-            _showError(
-              l10n.authMaxDeviceAccounts(kMaxDeviceAccounts),
-            );
+            _showError(l10n.authMaxDeviceAccounts(kMaxDeviceAccounts));
           }
           await FirebaseAuth.instance.signOut();
           return;
@@ -499,9 +499,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final localMatch = await registry.findByEmail(googleUser.email ?? '');
       if (localMatch != null && localMatch.tier == 'localBorn') {
         if (mounted) {
-          _showError(
-            l10n.authOfflineUseUpgrade,
-          );
+          _showError(l10n.authOfflineUseUpgrade);
         }
         await FirebaseAuth.instance.signOut();
         return;
@@ -1058,9 +1056,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                             color: AppTheme.brandInkMuted,
                                           ),
                                       children: [
-                                        TextSpan(
-                                          text: l10n.signInNewToQuest,
-                                        ),
+                                        TextSpan(text: l10n.signInNewToQuest),
                                         TextSpan(
                                           text: l10n.signInRegisterHere,
                                           style: const TextStyle(

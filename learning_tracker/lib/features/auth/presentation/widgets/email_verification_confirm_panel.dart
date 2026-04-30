@@ -95,11 +95,7 @@ class _MailIllustration extends StatelessWidget {
           ),
         ),
         const _DashedIllustrationFrame(
-          child: Icon(
-            Icons.mail_rounded,
-            size: 44,
-            color: AppTheme.brandBlue,
-          ),
+          child: Icon(Icons.mail_rounded, size: 44, color: AppTheme.brandBlue),
         ),
         Positioned(
           top: -4,

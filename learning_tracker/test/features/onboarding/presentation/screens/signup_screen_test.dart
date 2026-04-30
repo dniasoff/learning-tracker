@@ -84,9 +84,7 @@ void main() {
         auth_state_mod.authStateProvider.overrideWithValue(
           const AuthState.signedOut(),
         ),
-        connectivityStreamProvider.overrideWith(
-          (ref) => Stream.value(online),
-        ),
+        connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
         userProfileServiceProvider.overrideWith((ref) {
           return UserProfileService(
             userProfileDao: database.userProfileDao,
@@ -212,10 +210,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(
-        find.textContaining('no cloud backup'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('no cloud backup'), findsOneWidget);
       expect(
         find.widgetWithText(FilledButton, 'Create Offline Account'),
         findsOneWidget,

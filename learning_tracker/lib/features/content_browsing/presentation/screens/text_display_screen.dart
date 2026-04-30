@@ -207,7 +207,9 @@ class _TextContentView extends StatelessWidget {
               value: 0.15,
               minHeight: 5,
               backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.35),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.brandBlue),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppTheme.brandBlue,
+              ),
             ),
           ),
         ),
@@ -321,7 +323,9 @@ class _TextContentView extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFF5F7FC),
             border: Border(
-              top: BorderSide(color: AppTheme.brandOutline.withValues(alpha: 0.4)),
+              top: BorderSide(
+                color: AppTheme.brandOutline.withValues(alpha: 0.4),
+              ),
             ),
           ),
           child: _CompletionSection(sefariaRef: sefariaRef),
@@ -372,7 +376,9 @@ class _ReaderSectionCard extends StatelessWidget {
                 offset: const Offset(0, 4),
               ),
             ],
-            border: Border.all(color: AppTheme.brandOutline.withValues(alpha: 0.45)),
+            border: Border.all(
+              color: AppTheme.brandOutline.withValues(alpha: 0.45),
+            ),
           ),
           child: child,
         ),
@@ -444,8 +450,10 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
     try {
       final tasksBefore = await ref.read(allDailyTasksProvider.future);
-      final nextAfterComplete =
-          _nextDailyTaskAfter(tasksBefore, widget.sefariaRef);
+      final nextAfterComplete = _nextDailyTaskAfter(
+        tasksBefore,
+        widget.sefariaRef,
+      );
 
       final useCase = ref.read(markCompletionUseCaseProvider);
       final result = await useCase(
@@ -503,9 +511,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
       if (mounted && nextAfterComplete != null) {
         await context.router.replace(
-          TextDisplayRoute(
-            sefariaRef: nextAfterComplete.contentItemSefariaRef,
-          ),
+          TextDisplayRoute(sefariaRef: nextAfterComplete.contentItemSefariaRef),
         );
         return;
       }
@@ -549,7 +555,11 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       ),
       error: (e, _) => Row(
         children: [
-          const Icon(Icons.error_outline, color: AppTheme.brandCoralDeep, size: 20),
+          const Icon(
+            Icons.error_outline,
+            color: AppTheme.brandCoralDeep,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -620,7 +630,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
             final nextLabel =
                 AppLocalizations.of(context)?.textReaderNextDailyTask ??
-                    'Next daily task';
+                'Next daily task';
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -630,8 +640,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                       ? null
                       : () => _handleComplete(task, trackType),
                   style: FilledButton.styleFrom(
-                    backgroundColor:
-                        isDone ? AppTheme.brandGoldDeep : AppTheme.brandBlue,
+                    backgroundColor: isDone
+                        ? AppTheme.brandGoldDeep
+                        : AppTheme.brandBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

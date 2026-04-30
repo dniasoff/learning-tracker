@@ -129,7 +129,7 @@ class RewardMilestoneService {
 
   /// Default eight-tier ladder (points thresholds) used by the achievements UI.
   static const List<({String title, int thresholdPoints})>
-      defaultMilestoneLadder = [
+  defaultMilestoneLadder = [
     (title: 'Bronze Star', thresholdPoints: 500),
     (title: 'Silver Star', thresholdPoints: 1000),
     (title: 'Gold Star', thresholdPoints: 3000),
@@ -159,9 +159,8 @@ class RewardMilestoneService {
 
   bool _isLegacyThreeTierLadder(List<RewardMilestone> trackMilestones) {
     if (trackMilestones.length != 3) return false;
-    final sorted = [...trackMilestones]..sort(
-      (a, b) => a.thresholdPoints.compareTo(b.thresholdPoints),
-    );
+    final sorted = [...trackMilestones]
+      ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
     return sorted[0].thresholdPoints == 50 &&
         sorted[1].thresholdPoints == 150 &&
         sorted[2].thresholdPoints == 300;

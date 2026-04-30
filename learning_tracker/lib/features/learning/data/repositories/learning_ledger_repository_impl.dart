@@ -122,11 +122,12 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
 
     await _database.transaction(() async {
       for (final item in items) {
-        final existingCount = await _database.learningLedgerDao.getCompletionCount(
-          _activeProfileId,
-          item.curriculumId,
-          item.unitIdentifier,
-        );
+        final existingCount = await _database.learningLedgerDao
+            .getCompletionCount(
+              _activeProfileId,
+              item.curriculumId,
+              item.unitIdentifier,
+            );
         final completionNumber = existingCount + 1;
 
         final now = DateTimeFactory.nowUtc();

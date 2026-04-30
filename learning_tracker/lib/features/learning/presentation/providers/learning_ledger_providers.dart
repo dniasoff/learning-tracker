@@ -28,7 +28,9 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final syncEngine = ref.watch(syncEngineProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
-  final pinSessionProfileId = ref.watch(parentPinAuthenticatedProfileIdProvider);
+  final pinSessionProfileId = ref.watch(
+    parentPinAuthenticatedProfileIdProvider,
+  );
   final parentPinSessionMatches =
       pinSessionProfileId != null && pinSessionProfileId == profileId;
 
@@ -47,7 +49,9 @@ ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
   final repository = ref.watch(learningLedgerRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
-  final pinSessionProfileId = ref.watch(parentPinAuthenticatedProfileIdProvider);
+  final pinSessionProfileId = ref.watch(
+    parentPinAuthenticatedProfileIdProvider,
+  );
   final parentPinSessionMatches =
       pinSessionProfileId != null && pinSessionProfileId == profileId;
   return ManualCompletionUseCase(
