@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // Design tokens aligned with Point Settings mock (deep blue + orange accents).
@@ -59,13 +60,22 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
   );
 }
 
-final _pointConfigDataProvider = FutureProvider<List<_TrackPointData>>((
+final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>((
   ref,
 ) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final sync = ref.read(syncEngineProvider);
-  final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
+
+  // Same query as [activeTracksProvider] / dashboard; watch the stream so we
+  // rebuild when tracks change, but avoid awaiting another provider's .future
+  // (can stall tests). Fall back to a one-shot read while the stream is idle.
+  final tracksAsync = ref.watch(activeTracksProvider);
+  final activeTracks = switch (tracksAsync) {
+    AsyncData(:final value) => value,
+    AsyncLoading() => await db.trackDao.getActiveTracksForProfile(profileId),
+    AsyncError() => await db.trackDao.getActiveTracksForProfile(profileId),
+  };
 
   var wroteConfigs = false;
   final result = <_TrackPointData>[];
