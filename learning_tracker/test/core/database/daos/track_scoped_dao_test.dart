@@ -8,6 +8,11 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:test/test.dart';
 
+/// Two tracks for the same curriculum+type require distinct profiles
+/// (UNIQUE on curriculum_tracks: profile_id, curriculum_id, track_type).
+const _p1 = 1;
+const _p2 = 2;
+
 void main() {
   late UserDatabase db;
   late int track1Id;
@@ -19,6 +24,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
+            profileId: const Value(_p1),
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -29,6 +35,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
+            profileId: const Value(_p2),
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -42,9 +49,10 @@ void main() {
   // ── CompletionDao ──
 
   group('CompletionDao track-scoped', () {
-    Future<void> insertCompletion(int trackId, String ref) async {
+    Future<void> insertCompletion(int trackId, int profileId, String ref) async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: Value(profileId),
           curriculumId: 'mishnayos',
           sefariaRef: ref,
           stageId: 1,
@@ -56,11 +64,11 @@ void main() {
     }
 
     test('getCompletionsByTrack returns only that track', () async {
-      await insertCompletion(track1Id, 'ref1');
-      await insertCompletion(track1Id, 'ref2');
-      await insertCompletion(track1Id, 'ref3');
-      await insertCompletion(track2Id, 'ref4');
-      await insertCompletion(track2Id, 'ref5');
+      await insertCompletion(track1Id, _p1, 'ref1');
+      await insertCompletion(track1Id, _p1, 'ref2');
+      await insertCompletion(track1Id, _p1, 'ref3');
+      await insertCompletion(track2Id, _p2, 'ref4');
+      await insertCompletion(track2Id, _p2, 'ref5');
 
       final t1 = await db.completionDao.getCompletionsByTrack(track1Id);
       expect(t1, hasLength(3));
@@ -71,26 +79,31 @@ void main() {
     });
 
     test('getAggregateCountByTrack returns correct count', () async {
-      await insertCompletion(track1Id, 'ref1');
-      await insertCompletion(track1Id, 'ref2');
-      await insertCompletion(track2Id, 'ref3');
+      await insertCompletion(track1Id, _p1, 'ref1');
+      await insertCompletion(track1Id, _p1, 'ref2');
+      await insertCompletion(track2Id, _p2, 'ref3');
 
       final count = await db.completionDao.getAggregateCountByTrack(
         track1Id,
-        0,
+        _p1,
       );
       expect(count, 2);
     });
 
-    test('cross-track query still returns all tracks', () async {
-      await insertCompletion(track1Id, 'ref1');
-      await insertCompletion(track2Id, 'ref2');
+    test('getCompletionsByCurriculumAndProfile is profile-scoped', () async {
+      await insertCompletion(track1Id, _p1, 'ref1');
+      await insertCompletion(track2Id, _p2, 'ref2');
 
-      final all = await db.completionDao.getCompletionsByCurriculumAndProfile(
+      final forP1 = await db.completionDao.getCompletionsByCurriculumAndProfile(
         'mishnayos',
-        0,
+        _p1,
       );
-      expect(all, hasLength(2));
+      final forP2 = await db.completionDao.getCompletionsByCurriculumAndProfile(
+        'mishnayos',
+        _p2,
+      );
+      expect(forP1, hasLength(1));
+      expect(forP2, hasLength(1));
     });
   });
 
@@ -202,7 +215,7 @@ void main() {
   group('StudyDayConfigDao track-scoped', () {
     test('getConfigsByTrack returns only that track configs', () async {
       await db.studyDayConfigDao.seedDefaults(
-        profileId: 0,
+        profileId: _p1,
         curriculumId: 'mishnayos',
         trackId: track1Id,
       );
@@ -217,7 +230,7 @@ void main() {
 
     test('isStudyDayForTrack returns correct value', () async {
       await db.studyDayConfigDao.upsertDayConfig(
-        profileId: 0,
+        profileId: _p1,
         curriculumId: 'mishnayos',
         trackId: track1Id,
         dayOfWeek: 6,
@@ -290,7 +303,7 @@ void main() {
       expect(await db.curriculumScopeDao.hasScopesForTrack(track1Id), isFalse);
 
       await db.curriculumScopeDao.setScopes(
-        0,
+        _p1,
         CurriculumId.mishnayos,
         track1Id,
         1,
@@ -302,14 +315,14 @@ void main() {
 
     test('clearScopesForTrack removes only that track', () async {
       await db.curriculumScopeDao.setScopes(
-        0,
+        _p1,
         CurriculumId.mishnayos,
         track1Id,
         1,
         ['Seder Zeraim'],
       );
       await db.curriculumScopeDao.setScopes(
-        0,
+        _p2,
         CurriculumId.mishnayos,
         track2Id,
         1,
@@ -329,6 +342,7 @@ void main() {
     test('getConfigsByTrack returns only that track configs', () async {
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: Value(_p1),
           curriculumId: 'mishnayos',
           trackId: track1Id,
           stageOrder: 1,
@@ -337,6 +351,7 @@ void main() {
       );
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: Value(_p2),
           curriculumId: 'mishnayos',
           trackId: track2Id,
           stageOrder: 1,
@@ -352,6 +367,7 @@ void main() {
     test('deleteAllForTrack removes only that track', () async {
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: Value(_p1),
           curriculumId: 'mishnayos',
           trackId: track1Id,
           stageOrder: 1,
@@ -360,6 +376,7 @@ void main() {
       );
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: Value(_p2),
           curriculumId: 'mishnayos',
           trackId: track2Id,
           stageOrder: 1,
@@ -384,6 +401,7 @@ void main() {
       final now = DateTime.now();
       await db.learningLedgerDao.insertEntry(
         LearningLedgerCompanion.insert(
+          profileId: const Value(_p1),
           curriculumId: 'mishnayos',
           unitType: 'masechta',
           unitIdentifier: 'Berachos',
@@ -393,11 +411,12 @@ void main() {
           trackId: Value(track1Id),
           completedAt: now,
           completionNumber: 1,
-          markedBy: 0,
+          markedBy: _p1,
         ),
       );
       await db.learningLedgerDao.insertEntry(
         LearningLedgerCompanion.insert(
+          profileId: const Value(_p2),
           curriculumId: 'mishnayos',
           unitType: 'masechta',
           unitIdentifier: 'Shabbos',
@@ -407,17 +426,17 @@ void main() {
           trackId: Value(track2Id),
           completedAt: now,
           completionNumber: 1,
-          markedBy: 0,
+          markedBy: _p2,
         ),
       );
 
-      final t1 = await db.learningLedgerDao.getEntriesByTrack(track1Id, 0);
+      final t1 = await db.learningLedgerDao.getEntriesByTrack(track1Id, _p1);
       expect(t1, hasLength(1));
       expect(t1.first.unitIdentifier, 'Berachos');
 
-      // Cross-track query still returns all
-      final all = await db.learningLedgerDao.getEntriesByProfile(0);
-      expect(all, hasLength(2));
+      final e1 = await db.learningLedgerDao.getEntriesByProfile(_p1);
+      final e2 = await db.learningLedgerDao.getEntriesByProfile(_p2);
+      expect(e1.length + e2.length, 2);
     });
   });
 }
