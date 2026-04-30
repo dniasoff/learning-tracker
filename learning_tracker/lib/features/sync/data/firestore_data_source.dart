@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/learner_profiles/{profileId}/bookmarks/{curriculumId}_{trackType}` - Bookmarks (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/settings/{curriculumId}` - Settings (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/goals/{id}` - Goals (LWW)
+/// - `users/{uid}/learner_profiles/{profileId}/learning_ledger/{id}` - Lifetime / cumulative progress (append-only)
 /// - `users/{uid}/learner_profiles/{profileId}/streak/data` - Streak (single doc)
 /// - `users/{uid}/learner_profiles/{profileId}/notification_settings/preferences` - Notification preferences (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/gamification_settings/config` - Points/rewards config

@@ -74,6 +74,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
   /// same curriculum can have independent goals without collision.
   /// Last-write-wins on [updatedAt].
   Future<void> upsertGoalByTrack({
+    required int profileId,
     required int trackId,
     required String curriculumId,
     required String description,
@@ -91,6 +92,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
     if (existing == null) {
       await insertGoal(
         GoalsCompanion.insert(
+          profileId: Value(profileId),
           curriculumId: curriculumId,
           trackId: trackId,
           description: Value(description),

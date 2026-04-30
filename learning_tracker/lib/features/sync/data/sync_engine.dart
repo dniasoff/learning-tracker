@@ -104,6 +104,13 @@ class SyncEngine {
       'notification_settings_updated_at_ms';
   static const _gamificationSettingsUpdatedAtMsKey =
       'gamification_settings_updated_at_ms';
+
+  String _curriculumSettingsTimestampKey(int profileId, String curriculumId) =>
+      'settings_ts_p${profileId}_$curriculumId';
+
+  String _gamificationLocalUpdatedAtKey(int profileId) =>
+      '${_gamificationSettingsUpdatedAtMsKey}_p$profileId';
+
   static const _reminderEnabledKey = 'daily_reminder_enabled';
   static const _reminderHourKey = 'daily_reminder_hour';
   static const _reminderMinuteKey = 'daily_reminder_minute';
@@ -298,54 +305,33 @@ class SyncEngine {
     try {
       _logger.info('Pull-on-launch: Fetching data from Firestore');
 
-      // Fetch all data from Firestore in parallel
-      final results = await Future.wait([
-        _firestoreDataSource.fetchCompletions(),
-        _firestoreDataSource.fetchBookmarks(),
-        _firestoreDataSource.fetchSettings(),
-        _firestoreDataSource.fetchGoals(),
-        _firestoreDataSource.fetchProfilePrograms(),
-        _firestoreDataSource.fetchStreak(),
-        _firestoreDataSource.fetchProfile(),
-        _firestoreDataSource.fetchLedgerEntries(),
-        _firestoreDataSource.fetchActiveCurricula(),
-        _firestoreDataSource.fetchCurriculumTracks(),
-        _firestoreDataSource.fetchLearnerProfiles(),
-        _firestoreDataSource.fetchNotificationSettings(),
-        _firestoreDataSource.fetchGamificationSettings(),
-      ]);
-      final completions = results[0] as List<Map<String, dynamic>>;
-      final bookmarks = results[1] as List<Map<String, dynamic>>;
-      final settings = results[2] as List<Map<String, dynamic>>;
-      final goals = results[3] as List<Map<String, dynamic>>;
-      final profilePrograms = results[4] as List<Map<String, dynamic>>;
-      final streak = results[5] as Map<String, dynamic>?;
-      final profile = results[6] as Map<String, dynamic>?;
-      final ledgerEntries = results[7] as List<Map<String, dynamic>>;
-      final activeCurricula = results[8] as List<String>;
-      final curriculumTracks = results[9] as List<Map<String, dynamic>>;
-      final learnerProfiles = results[10] as List<Map<String, dynamic>>;
-      final notificationSettings = results[11] as Map<String, dynamic>?;
-      final gamificationSettings = results[12] as Map<String, dynamic>?;
-
-      // Merge learner profiles FIRST — other rows (completions, bookmarks,
-      // goals, streaks, etc.) reference profile_id, so they need the
-      // target rows to exist before foreign-key-style lookups run.
+      final learnerProfiles =
+          await _firestoreDataSource.fetchLearnerProfiles();
       await _mergeLearnerProfiles(learnerProfiles);
 
-      // Merge with local database
-      await _mergeCompletions(completions);
-      await _mergeBookmarks(bookmarks);
-      await _mergeSettings(settings);
-      await _mergeGoals(goals);
-      await _mergeProfilePrograms(profilePrograms);
-      if (streak != null) await _mergeStreak(streak);
-      if (profile != null) await _mergeProfile(profile);
-      await _mergeLedgerEntries(ledgerEntries);
-      await _mergeActiveCurricula(activeCurricula);
-      await _mergeCurriculumTracks(curriculumTracks);
-      await _mergeNotificationSettings(notificationSettings);
-      await _mergeGamificationSettings(gamificationSettings);
+      final accountProfile = await _firestoreDataSource.fetchProfile();
+      if (accountProfile != null) {
+        await _mergeProfile(accountProfile);
+      }
+
+      final localProfiles =
+          await _database.profileDao.getProfilesByAccount(1);
+      final sortedIds = localProfiles.map((p) => p.id).toList()..sort();
+
+      if (sortedIds.isEmpty) {
+        await _pullAndMergeProfileSubtree(
+          profileId: _firestoreDataSource.profileId,
+          mergeNotificationSettings: true,
+        );
+      } else {
+        final notifSourceId = sortedIds.first;
+        for (final id in sortedIds) {
+          await _pullAndMergeProfileSubtree(
+            profileId: id,
+            mergeNotificationSettings: id == notifSourceId,
+          );
+        }
+      }
 
       _logger.info('Pull-on-launch completed successfully');
       final syncedAt = DateTime.now().toUtc();
@@ -360,6 +346,76 @@ class SyncEngine {
         ),
       );
     }
+  }
+
+  /// Fetches and merges everything under
+  /// `users/{uid}/learner_profiles/{profileId}/` for one learner.
+  ///
+  /// When [activeProfileId] is still 0 (before profile selection), scoped
+  /// reads would hit `learner_profiles/0` and return nothing; looping each
+  /// merged local profile restores tracks, completions, ledger (lifetime),
+  /// and gamification (child points/rewards) on new devices.
+  Future<void> _pullAndMergeProfileSubtree({
+    required int profileId,
+    required bool mergeNotificationSettings,
+  }) async {
+    final ds = _firestoreDataSource.forProfile(profileId);
+    final results = await Future.wait([
+      ds.fetchCompletions(),
+      ds.fetchBookmarks(),
+      ds.fetchSettings(),
+      ds.fetchGoals(),
+      ds.fetchProfilePrograms(),
+      ds.fetchStreak(),
+      ds.fetchLedgerEntries(),
+      ds.fetchActiveCurricula(),
+      ds.fetchCurriculumTracks(),
+      ds.fetchNotificationSettings(),
+      ds.fetchGamificationSettings(),
+    ]);
+
+    await _mergeCompletions(
+      results[0] as List<Map<String, dynamic>>,
+      fallbackProfileId: profileId,
+    );
+    await _mergeBookmarks(
+      results[1] as List<Map<String, dynamic>>,
+      profileId: profileId,
+    );
+    await _mergeSettings(
+      results[2] as List<Map<String, dynamic>>,
+      profileId: profileId,
+    );
+    await _mergeGoals(
+      results[3] as List<Map<String, dynamic>>,
+      profileId: profileId,
+    );
+    await _mergeProfilePrograms(
+      results[4] as List<Map<String, dynamic>>,
+      defaultProfileId: profileId,
+    );
+    final streak = results[5] as Map<String, dynamic>?;
+    if (streak != null) await _mergeStreak(streak);
+    await _mergeLedgerEntries(
+      results[6] as List<Map<String, dynamic>>,
+      fallbackProfileId: profileId,
+    );
+    await _mergeActiveCurricula(
+      results[7] as List<String>,
+      profileId: profileId,
+    );
+    await _mergeCurriculumTracks(
+      results[8] as List<Map<String, dynamic>>,
+      profileId: profileId,
+    );
+
+    if (mergeNotificationSettings) {
+      await _mergeNotificationSettings(results[9] as Map<String, dynamic>?);
+    }
+    await _mergeGamificationSettings(
+      results[10] as Map<String, dynamic>?,
+      profileId: profileId,
+    );
   }
 
   // ========== Push-on-Write ==========
@@ -732,8 +788,9 @@ class SyncEngine {
   /// Completions are append-only. For each remote completion, check if it
   /// already exists locally by composite key. If not, insert it.
   Future<void> _mergeCompletions(
-    List<Map<String, dynamic>> remoteCompletions,
-  ) async {
+    List<Map<String, dynamic>> remoteCompletions, {
+    required int fallbackProfileId,
+  }) async {
     _logger.debug(
       'Merging ${remoteCompletions.length} completions from Firestore',
     );
@@ -778,8 +835,7 @@ class SyncEngine {
             ? rawProfileId
             : rawProfileId is num
             ? rawProfileId.toInt()
-            : int.tryParse(rawProfileId?.toString() ?? '') ??
-                  _firestoreDataSource.profileId;
+            : int.tryParse(rawProfileId?.toString() ?? '') ?? fallbackProfileId;
 
         final exists = await _database.completionDao.completionExistsByProfile(
           curriculumId: curriculumId,
@@ -847,8 +903,9 @@ class SyncEngine {
   /// Ledger entries are append-only. For each remote entry, check if it
   /// already exists locally by composite key. If not, insert it.
   Future<void> _mergeLedgerEntries(
-    List<Map<String, dynamic>> remoteLedgerEntries,
-  ) async {
+    List<Map<String, dynamic>> remoteLedgerEntries, {
+    required int fallbackProfileId,
+  }) async {
     _logger.debug(
       'Merging ${remoteLedgerEntries.length} ledger entries from Firestore',
     );
@@ -860,7 +917,15 @@ class SyncEngine {
         final unitIdentifier = remote['unitIdentifier'] as String?;
         final trackType = remote['trackType'] as String?;
         final completedAt = _parseTimestamp(remote['completedAt']);
-        final profileId = remote['profileId'] as int? ?? 0;
+        final rawPid = remote['profileId'] ?? remote['profile_id'];
+        var profileId = rawPid is int
+            ? rawPid
+            : rawPid is num
+            ? rawPid.toInt()
+            : int.tryParse(rawPid?.toString() ?? '') ?? 0;
+        if (profileId == 0) {
+          profileId = fallbackProfileId;
+        }
 
         if (curriculumId == null ||
             unitIdentifier == null ||
@@ -911,8 +976,9 @@ class SyncEngine {
   /// For each remote bookmark, upsert into local DB. If local bookmark
   /// is older, update it; otherwise keep the local version.
   Future<void> _mergeBookmarks(
-    List<Map<String, dynamic>> remoteBookmarks,
-  ) async {
+    List<Map<String, dynamic>> remoteBookmarks, {
+    required int profileId,
+  }) async {
     _logger.debug('Merging ${remoteBookmarks.length} bookmarks from Firestore');
 
     for (final remote in remoteBookmarks) {
@@ -930,11 +996,12 @@ class SyncEngine {
           continue;
         }
 
-        await _database.bookmarkDao.upsertBookmark(
+        await _database.bookmarkDao.upsertBookmarkByProfile(
           curriculumId: curriculumId,
           trackType: trackType,
           sefariaRef: sefariaRef,
           updatedAt: updatedAt,
+          profileId: profileId,
         );
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
@@ -948,7 +1015,10 @@ class SyncEngine {
   /// Settings contain stage definitions per curriculum. Only replaces local
   /// stages when the remote `updated_at` is newer than the locally persisted
   /// settings timestamp for that curriculum.
-  Future<void> _mergeSettings(List<Map<String, dynamic>> remoteSettings) async {
+  Future<void> _mergeSettings(
+    List<Map<String, dynamic>> remoteSettings, {
+    required int profileId,
+  }) async {
     _logger.debug('Merging ${remoteSettings.length} settings from Firestore');
 
     for (final remote in remoteSettings) {
@@ -965,7 +1035,10 @@ class SyncEngine {
         // predicate to merge_rules.remoteIsNewer so every pull path
         // uses the same rule.
         if (remoteUpdatedAt != null) {
-          final localTs = await _getSettingsTimestamp(curriculumId);
+          final localTs = await _getSettingsTimestamp(
+            curriculumId,
+            profileId,
+          );
           if (!remoteIsNewer(
             localUpdatedAt: localTs,
             remoteUpdatedAt: remoteUpdatedAt,
@@ -999,11 +1072,15 @@ class SyncEngine {
 
         // Persist the remote timestamp as the new local settings timestamp
         if (remoteUpdatedAt != null) {
-          await _setSettingsTimestamp(curriculumId, remoteUpdatedAt);
+          await _setSettingsTimestamp(
+            curriculumId,
+            remoteUpdatedAt,
+            profileId,
+          );
         }
 
         // Merge study day config if present
-        await _mergeStudyDayConfig(remote, curriculumId);
+        await _mergeStudyDayConfig(remote, curriculumId, profileId);
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge settings: $e');
@@ -1015,12 +1092,12 @@ class SyncEngine {
   Future<void> _mergeStudyDayConfig(
     Map<String, dynamic> remote,
     String curriculumId,
+    int profileId,
   ) async {
     final studyDayConfig = remote['study_day_config'] as Map<String, dynamic>?;
     if (studyDayConfig == null) return;
 
     final remoteTs = _parseTimestamp(remote['study_day_config_updated_at']);
-    final profileId = _firestoreDataSource.profileId;
 
     // v2 §4.1 LWW via merge_rules.remoteIsNewer.
     if (remoteTs != null) {
@@ -1179,7 +1256,7 @@ class SyncEngine {
     final now = DateTime.now().toUtc();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
-      _gamificationSettingsUpdatedAtMsKey,
+      _gamificationLocalUpdatedAtKey(profileId),
       now.millisecondsSinceEpoch,
     );
 
@@ -1201,15 +1278,16 @@ class SyncEngine {
   }
 
   Future<void> _mergeGamificationSettings(
-    Map<String, dynamic>? remoteSettings,
-  ) async {
+    Map<String, dynamic>? remoteSettings, {
+    required int profileId,
+  }) async {
     if (remoteSettings == null || remoteSettings.isEmpty) return;
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final remoteUpdatedAt = _parseTimestamp(remoteSettings['updated_at']);
       final localUpdatedAtMs = prefs.getInt(
-        _gamificationSettingsUpdatedAtMsKey,
+        _gamificationLocalUpdatedAtKey(profileId),
       );
       final localUpdatedAt = localUpdatedAtMs == null
           ? null
@@ -1242,7 +1320,7 @@ class SyncEngine {
 
           await _database.pointConfigDao.upsertConfig(
             PointConfigsCompanion.insert(
-              profileId: Value(_firestoreDataSource.profileId),
+              profileId: Value(profileId),
               curriculumId: curriculumId,
               trackId: trackId,
               stageOrder: stageOrder,
@@ -1254,7 +1332,7 @@ class SyncEngine {
 
       final rewardService = RewardMilestoneService(
         _database,
-        profileId: _firestoreDataSource.profileId,
+        profileId: profileId,
       );
       final rewardSettingsRaw = remoteSettings['reward_settings'];
       await rewardService.mergeCloudPayload(
@@ -1268,7 +1346,10 @@ class SyncEngine {
       final stamp =
           remoteUpdatedAt?.millisecondsSinceEpoch ??
           DateTime.now().toUtc().millisecondsSinceEpoch;
-      await prefs.setInt(_gamificationSettingsUpdatedAtMsKey, stamp);
+      await prefs.setInt(
+        _gamificationLocalUpdatedAtKey(profileId),
+        stamp,
+      );
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
       _logger.warning('Failed to merge gamification settings: $e');
@@ -1279,32 +1360,52 @@ class SyncEngine {
   ///
   /// For each remote goal, upsert into local DB. If local goal
   /// is older, update it; otherwise keep the local version.
-  Future<void> _mergeGoals(List<Map<String, dynamic>> remoteGoals) async {
+  Future<void> _mergeGoals(
+    List<Map<String, dynamic>> remoteGoals, {
+    required int profileId,
+  }) async {
     _logger.debug('Merging ${remoteGoals.length} goals from Firestore');
 
     for (final remote in remoteGoals) {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
+        final rawTid = remote['track_id'];
+        final trackId = rawTid is int
+            ? rawTid
+            : rawTid is num
+            ? rawTid.toInt()
+            : int.tryParse(rawTid?.toString() ?? '');
         final description = remote['description'] as String? ?? '';
         final targetPercent =
             (remote['target_percent'] as num?)?.toDouble() ?? 100.0;
         final targetDate = _parseTimestamp(remote['target_date']);
         final dateType = remote['date_type'] as String? ?? 'gregorian';
+        final goalType = remote['goal_type'] as String? ?? 'deadline';
+        final paceValue = (remote['pace_value'] as num?)?.toInt();
+        final paceUnit = remote['pace_unit'] as String?;
         final createdAt = _parseTimestamp(remote['created_at']);
         final updatedAt = _parseTimestamp(remote['updated_at']);
 
-        if (curriculumId == null || createdAt == null || updatedAt == null) {
+        if (curriculumId == null ||
+            trackId == null ||
+            trackId == 0 ||
+            createdAt == null ||
+            updatedAt == null) {
           _logger.warning('Skipping invalid remote goal: $remote');
           continue;
         }
 
-        await _database.goalDao.upsertGoal(
+        await _database.goalDao.upsertGoalByTrack(
+          profileId: profileId,
+          trackId: trackId,
           curriculumId: curriculumId,
-          trackId: remote['track_id'] as int? ?? 0,
           description: description,
           targetPercent: targetPercent,
           targetDate: targetDate,
           dateType: dateType,
+          goalType: goalType,
+          paceValue: paceValue,
+          paceUnit: paceUnit,
           createdAt: createdAt,
           updatedAt: updatedAt,
         );
@@ -1317,13 +1418,13 @@ class SyncEngine {
 
   /// Merge profile-program assignments from Firestore.
   Future<void> _mergeProfilePrograms(
-    List<Map<String, dynamic>> remoteProfilePrograms,
-  ) async {
+    List<Map<String, dynamic>> remoteProfilePrograms, {
+    required int defaultProfileId,
+  }) async {
     _logger.debug(
       'Merging ${remoteProfilePrograms.length} profile programs from Firestore',
     );
 
-    final defaultProfileId = _firestoreDataSource.profileId;
     for (final remote in remoteProfilePrograms) {
       try {
         final curriculumId = remote['curriculum_id'] as String?;
@@ -1381,14 +1482,16 @@ class SyncEngine {
   /// Activates any remote curriculum not yet present locally, scoped to the
   /// syncing profile. Does not deactivate — deactivation flows through the
   /// repository so user intent is preserved.
-  Future<void> _mergeActiveCurricula(List<String> remoteCurricula) async {
+  Future<void> _mergeActiveCurricula(
+    List<String> remoteCurricula, {
+    required int profileId,
+  }) async {
     _logger.debug(
       'Merging ${remoteCurricula.length} active curricula from Firestore',
     );
     if (remoteCurricula.isEmpty) return;
 
     try {
-      final profileId = _firestoreDataSource.profileId;
       final localCurricula = await _database.activeCurriculumDao
           .getActiveCurriculaByProfile(profileId);
 
@@ -1420,14 +1523,13 @@ class SyncEngine {
   /// trackType) so track activation, deactivation, and archival state all
   /// round-trip across devices. Unknown curriculum/track keys are skipped.
   Future<void> _mergeCurriculumTracks(
-    List<Map<String, dynamic>> remoteTracks,
-  ) async {
+    List<Map<String, dynamic>> remoteTracks, {
+    required int profileId,
+  }) async {
     _logger.debug(
       'Merging ${remoteTracks.length} curriculum tracks from Firestore',
     );
     if (remoteTracks.isEmpty) return;
-
-    final profileId = _firestoreDataSource.profileId;
 
     for (final remote in remoteTracks) {
       try {
@@ -1938,7 +2040,10 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug('Received ${completions.length} completions from listener');
-      await _mergeCompletions(completions);
+      await _mergeCompletions(
+        completions,
+        fallbackProfileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingCompletions = false;
     }
@@ -1950,7 +2055,10 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug('Received ${bookmarks.length} bookmarks from listener');
-      await _mergeBookmarks(bookmarks);
+      await _mergeBookmarks(
+        bookmarks,
+        profileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingBookmarks = false;
     }
@@ -1962,7 +2070,10 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug('Received ${settings.length} settings from listener');
-      await _mergeSettings(settings);
+      await _mergeSettings(
+        settings,
+        profileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingSettings = false;
     }
@@ -1987,7 +2098,10 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug('Received ${goals.length} goals from listener');
-      await _mergeGoals(goals);
+      await _mergeGoals(
+        goals,
+        profileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingGoals = false;
     }
@@ -2003,7 +2117,10 @@ class SyncEngine {
       _logger.debug(
         'Received ${profilePrograms.length} profile programs from listener',
       );
-      await _mergeProfilePrograms(profilePrograms);
+      await _mergeProfilePrograms(
+        profilePrograms,
+        defaultProfileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingProfilePrograms = false;
     }
@@ -2017,7 +2134,10 @@ class SyncEngine {
       _logger.debug(
         'Received ${curricula.length} active curricula from listener',
       );
-      await _mergeActiveCurricula(curricula);
+      await _mergeActiveCurricula(
+        curricula,
+        profileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingActiveCurricula = false;
     }
@@ -2031,7 +2151,10 @@ class SyncEngine {
       _logger.debug(
         'Received ${ledgerEntries.length} ledger entries from listener',
       );
-      await _mergeLedgerEntries(ledgerEntries);
+      await _mergeLedgerEntries(
+        ledgerEntries,
+        fallbackProfileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingLedgerEntries = false;
     }
@@ -2047,7 +2170,10 @@ class SyncEngine {
       _logger.debug(
         'Received ${tracks.length} curriculum tracks from listener',
       );
-      await _mergeCurriculumTracks(tracks);
+      await _mergeCurriculumTracks(
+        tracks,
+        profileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingCurriculumTracks = false;
     }
@@ -2077,7 +2203,10 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug('Received gamification settings update from listener');
-      await _mergeGamificationSettings(gamificationSettings);
+      await _mergeGamificationSettings(
+        gamificationSettings,
+        profileId: _firestoreDataSource.profileId,
+      );
     } finally {
       _mergingGamificationSettings = false;
     }
@@ -2215,10 +2344,19 @@ class SyncEngine {
   // ========== Timestamp Persistence ==========
 
   /// Get the locally persisted settings timestamp for a curriculum.
-  Future<DateTime?> _getSettingsTimestamp(String curriculumId) async {
+  Future<DateTime?> _getSettingsTimestamp(
+    String curriculumId,
+    int profileId,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final ms = prefs.getInt('settings_ts_$curriculumId');
+      final newKey = _curriculumSettingsTimestampKey(profileId, curriculumId);
+      var ms = prefs.getInt(newKey);
+      if (ms == null) {
+        // Legacy key (pre–per-profile LWW) — treat as this profile’s stamp so
+        // first per-profile pull after upgrade still compares sanely.
+        ms = prefs.getInt('settings_ts_$curriculumId');
+      }
       if (ms == null) return null;
       return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
     } catch (e) {
@@ -2232,11 +2370,12 @@ class SyncEngine {
   Future<void> _setSettingsTimestamp(
     String curriculumId,
     DateTime updatedAt,
+    int profileId,
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(
-        'settings_ts_$curriculumId',
+        _curriculumSettingsTimestampKey(profileId, curriculumId),
         updatedAt.toUtc().millisecondsSinceEpoch,
       );
     } catch (e) {
@@ -2396,6 +2535,8 @@ class SyncEngine {
       final goals = await _database.goalDao.getAllGoals();
       for (final g in goals) {
         await pushGoal({
+          'profile_id': g.profileId,
+          'track_id': g.trackId,
           'curriculum_id': g.curriculumId,
           'description': g.description,
           'target_percent': g.targetPercent,

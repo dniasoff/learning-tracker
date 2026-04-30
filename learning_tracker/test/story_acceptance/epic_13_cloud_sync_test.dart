@@ -4,6 +4,7 @@ library;
 
 import 'dart:async';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -28,16 +29,18 @@ class MockCurriculumImportService extends Mock
 
 /// Stubs every [FirestoreDataSource] method used by [SyncEngine.pullOnLaunch].
 void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
-  when(() => mock.fetchCompletions()).thenAnswer((_) async => []);
-  when(() => mock.fetchBookmarks()).thenAnswer((_) async => []);
-  when(() => mock.fetchSettings()).thenAnswer((_) async => []);
-  when(() => mock.fetchGoals()).thenAnswer((_) async => []);
-  when(() => mock.fetchProfilePrograms()).thenAnswer((_) async => []);
+  final ps = FirestoreDataSource.defaultPageSize;
+  when(() => mock.forProfile(any())).thenReturn(mock);
+  when(() => mock.fetchCompletions(pageSize: ps)).thenAnswer((_) async => []);
+  when(() => mock.fetchBookmarks(pageSize: ps)).thenAnswer((_) async => []);
+  when(() => mock.fetchSettings(pageSize: ps)).thenAnswer((_) async => []);
+  when(() => mock.fetchGoals(pageSize: ps)).thenAnswer((_) async => []);
+  when(() => mock.fetchProfilePrograms(pageSize: ps)).thenAnswer((_) async => []);
   when(() => mock.fetchStreak()).thenAnswer((_) async => null);
   when(() => mock.fetchProfile()).thenAnswer((_) async => null);
-  when(() => mock.fetchLedgerEntries()).thenAnswer((_) async => []);
+  when(() => mock.fetchLedgerEntries(pageSize: ps)).thenAnswer((_) async => []);
   when(() => mock.fetchActiveCurricula()).thenAnswer((_) async => []);
-  when(() => mock.fetchCurriculumTracks()).thenAnswer((_) async => []);
+  when(() => mock.fetchCurriculumTracks(pageSize: ps)).thenAnswer((_) async => []);
   when(() => mock.fetchLearnerProfiles()).thenAnswer((_) async => []);
   when(() => mock.fetchNotificationSettings()).thenAnswer((_) async => null);
   when(() => mock.fetchGamificationSettings()).thenAnswer((_) async => null);
@@ -53,6 +56,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: const Value(1),
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -286,6 +290,7 @@ void main() {
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       when(() => mockFirestore.isAuthenticated).thenReturn(true);
       when(() => mockFirestore.profileId).thenReturn(1);
+      when(() => mockFirestore.forProfile(any())).thenReturn(mockFirestore);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -309,17 +314,19 @@ void main() {
 
       await syncEngine.pullOnLaunch();
 
-      verify(() => mockFirestore.fetchCompletions()).called(1);
-      verify(() => mockFirestore.fetchBookmarks()).called(1);
-      verify(() => mockFirestore.fetchSettings()).called(1);
-      verify(() => mockFirestore.fetchGoals()).called(1);
-      verify(() => mockFirestore.fetchProfilePrograms()).called(1);
-      verify(() => mockFirestore.fetchStreak()).called(1);
-      verify(() => mockFirestore.fetchProfile()).called(1);
-      verify(() => mockFirestore.fetchLedgerEntries()).called(1);
-      verify(() => mockFirestore.fetchActiveCurricula()).called(1);
-      verify(() => mockFirestore.fetchCurriculumTracks()).called(1);
+      final ps = FirestoreDataSource.defaultPageSize;
       verify(() => mockFirestore.fetchLearnerProfiles()).called(1);
+      verify(() => mockFirestore.fetchProfile()).called(1);
+      verify(() => mockFirestore.forProfile(1)).called(1);
+      verify(() => mockFirestore.fetchCompletions(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchBookmarks(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchSettings(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchGoals(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchProfilePrograms(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchStreak()).called(1);
+      verify(() => mockFirestore.fetchLedgerEntries(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchActiveCurricula()).called(1);
+      verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchNotificationSettings()).called(1);
       verify(() => mockFirestore.fetchGamificationSettings()).called(1);
     });
@@ -330,6 +337,7 @@ void main() {
       final completedAt = DateTime.utc(2026, 2, 9, 12);
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: const Value(1),
           curriculumId: 'mishnayos',
           sefariaRef: 'mishna-1',
           stageId: 1,
@@ -340,7 +348,11 @@ void main() {
       );
 
       stubEmptyFetches();
-      when(() => mockFirestore.fetchCompletions()).thenAnswer(
+      when(
+        () => mockFirestore.fetchCompletions(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer(
         (_) async => [
           // Same as local — should be skipped
           {
@@ -372,6 +384,7 @@ void main() {
       // Insert older local bookmark
       await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: const Value(1),
           curriculumId: 'mishnayos',
           trackType: 'personal',
           sefariaRef: 'mishna-10',
@@ -380,7 +393,11 @@ void main() {
       );
 
       stubEmptyFetches();
-      when(() => mockFirestore.fetchBookmarks()).thenAnswer(
+      when(
+        () => mockFirestore.fetchBookmarks(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer(
         (_) async => [
           {
             'curriculum_id': 'mishnayos',
@@ -394,7 +411,7 @@ void main() {
       await syncEngine.pullOnLaunch();
 
       final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
+          .getBookmarkByCurriculumTrackAndProfile('mishnayos', 'personal', 1);
       expect(bookmark!.sefariaRef, 'mishna-42'); // Remote won
     });
 
@@ -404,6 +421,7 @@ void main() {
         // Insert newer local bookmark
         await database.bookmarkDao.insertBookmark(
           BookmarksCompanion.insert(
+            profileId: const Value(1),
             curriculumId: 'mishnayos',
             trackType: 'personal',
             sefariaRef: 'mishna-99',
@@ -412,7 +430,11 @@ void main() {
         );
 
         stubEmptyFetches();
-        when(() => mockFirestore.fetchBookmarks()).thenAnswer(
+        when(
+        () => mockFirestore.fetchBookmarks(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer(
           (_) async => [
             {
               'curriculum_id': 'mishnayos',
@@ -426,7 +448,7 @@ void main() {
         await syncEngine.pullOnLaunch();
 
         final bookmark = await database.bookmarkDao
-            .getBookmarkByCurriculumAndTrack('mishnayos', 'personal');
+            .getBookmarkByCurriculumTrackAndProfile('mishnayos', 'personal', 1);
         expect(bookmark!.sefariaRef, 'mishna-99'); // Local kept
       },
     );
@@ -454,7 +476,11 @@ void main() {
         final completions = await database.completionDao.getAllCompletions();
         expect(completions.length, 1);
         // No Firestore calls
-        verifyNever(() => mockFirestore.fetchCompletions());
+        verifyNever(
+        () => mockFirestore.fetchCompletions(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      );
       },
     );
 
@@ -496,6 +522,7 @@ void main() {
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       when(() => mockFirestore.isAuthenticated).thenReturn(true);
       when(() => mockFirestore.profileId).thenReturn(1);
+      when(() => mockFirestore.forProfile(any())).thenReturn(mockFirestore);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -535,11 +562,23 @@ void main() {
         () => mockFirestore.listenToGoals(),
       ).thenAnswer((_) => goals ?? Stream.value([]));
       when(
+        () => mockFirestore.listenToProfilePrograms(),
+      ).thenAnswer((_) => Stream.value([]));
+      when(
         () => mockFirestore.listenToActiveCurricula(),
       ).thenAnswer((_) => Stream.value([]));
       when(
         () => mockFirestore.listenToLedgerEntries(),
       ).thenAnswer((_) => ledgerEntries ?? Stream.value([]));
+      when(
+        () => mockFirestore.listenToCurriculumTracks(),
+      ).thenAnswer((_) => Stream.value([]));
+      when(
+        () => mockFirestore.listenToNotificationSettings(),
+      ).thenAnswer((_) => Stream.value(null));
+      when(
+        () => mockFirestore.listenToGamificationSettings(),
+      ).thenAnswer((_) => Stream.value(null));
     }
 
     test(
@@ -550,17 +589,13 @@ void main() {
         // Attach listeners (foreground)
         await syncEngine.attachListeners();
 
-        verify(() => mockFirestore.listenToCompletions()).called(1);
-        verify(() => mockFirestore.listenToGoals()).called(1);
-        verify(() => mockFirestore.listenToSettings()).called(1);
-
         // Detach listeners (background)
         await syncEngine.detachListeners();
 
         // Re-attach should call listeners again
         await syncEngine.attachListeners();
-        verify(() => mockFirestore.listenToCompletions()).called(1);
-        verify(() => mockFirestore.listenToGoals()).called(1);
+        verify(() => mockFirestore.listenToCompletions()).called(2);
+        verify(() => mockFirestore.listenToGoals()).called(2);
       },
     );
 
@@ -596,9 +631,10 @@ void main() {
 
     test('incoming mutable data update uses last-write-wins merge', () async {
       // Insert older local goal
-      await database.goalDao.upsertGoal(
-        curriculumId: 'mishnayos',
+      await database.goalDao.upsertGoalByTrack(
+        profileId: 1,
         trackId: trackId,
+        curriculumId: 'mishnayos',
         description: 'finish by pesach',
         targetPercent: 50.0,
         targetDate: null,
@@ -613,10 +649,11 @@ void main() {
 
       await syncEngine.attachListeners();
 
-      // Emit a newer remote goal (same curriculum + description = upsert match)
+      // Emit a newer remote goal (same track = upsert match)
       controller.add([
         {
           'curriculum_id': 'mishnayos',
+          'track_id': trackId,
           'description': 'finish by pesach',
           'target_percent': 80.0,
           'created_at': '2026-03-01T00:00:00.000Z',
@@ -710,6 +747,12 @@ void main() {
       verify(() => mockFirestore.listenToSettings()).called(1);
       verify(() => mockFirestore.listenToStreak()).called(1);
       verify(() => mockFirestore.listenToGoals()).called(1);
+      verify(() => mockFirestore.listenToProfilePrograms()).called(1);
+      verify(() => mockFirestore.listenToActiveCurricula()).called(1);
+      verify(() => mockFirestore.listenToLedgerEntries()).called(1);
+      verify(() => mockFirestore.listenToCurriculumTracks()).called(1);
+      verify(() => mockFirestore.listenToNotificationSettings()).called(1);
+      verify(() => mockFirestore.listenToGamificationSettings()).called(1);
     });
 
     test('listeners not attached while offline', () async {
@@ -755,6 +798,7 @@ void main() {
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
       when(() => mockFirestore.isAuthenticated).thenReturn(true);
       when(() => mockFirestore.profileId).thenReturn(1);
+      when(() => mockFirestore.forProfile(any())).thenReturn(mockFirestore);
       syncEngine = SyncEngine(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -785,17 +829,23 @@ void main() {
 
       await restoreService.restore();
 
-      verify(() => mockFirestore.fetchCompletions()).called(1);
-      verify(() => mockFirestore.fetchBookmarks()).called(1);
-      verify(() => mockFirestore.fetchSettings()).called(1);
-      verify(() => mockFirestore.fetchGoals()).called(1);
+      final ps = FirestoreDataSource.defaultPageSize;
+      verify(() => mockFirestore.fetchCompletions(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchBookmarks(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchSettings(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchGoals(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
     });
 
     test('completions, goals, stages, rewards all populated in local DB '
         'after restore', () async {
-      when(() => mockFirestore.fetchCompletions()).thenAnswer(
+      stubEmptyFetches();
+      when(
+        () => mockFirestore.fetchCompletions(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer(
         (_) async => [
           {
             'curriculum_id': 'mishnayos',
@@ -807,8 +857,16 @@ void main() {
           },
         ],
       );
-      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchBookmarks(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchSettings(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer(
         (_) async => {
@@ -818,10 +876,15 @@ void main() {
           'updated_at': '2026-02-09T12:00:00.000Z',
         },
       );
-      when(() => mockFirestore.fetchGoals()).thenAnswer(
+      when(
+        () => mockFirestore.fetchGoals(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer(
         (_) async => [
           {
             'curriculum_id': 'mishnayos',
+            'track_id': trackId,
             'description': 'finish by pesach',
             'target_percent': 100.0,
             'created_at': '2026-02-09T12:00:00.000Z',
@@ -830,7 +893,9 @@ void main() {
         ],
       );
       when(
-        () => mockFirestore.fetchLedgerEntries(),
+        () => mockFirestore.fetchLedgerEntries(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
       ).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchActiveCurricula(),
@@ -865,19 +930,24 @@ void main() {
 
       await restoreService.restore();
 
+      final ps = FirestoreDataSource.defaultPageSize;
       // Verify only the expected fetch methods were called — no PIN
       // methods exist on FirestoreDataSource, confirming PINs are
       // excluded from the restore by design (FR99).
-      verify(() => mockFirestore.fetchCompletions()).called(1);
-      verify(() => mockFirestore.fetchBookmarks()).called(1);
-      verify(() => mockFirestore.fetchSettings()).called(1);
-      verify(() => mockFirestore.fetchGoals()).called(1);
+      verify(() => mockFirestore.fetchCompletions(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchBookmarks(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchSettings(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchGoals(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
-      verify(() => mockFirestore.fetchLedgerEntries()).called(1);
-      verify(() => mockFirestore.fetchActiveCurricula()).called(1);
+      verify(() => mockFirestore.fetchLedgerEntries(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchActiveCurricula()).called(2);
+      verify(() => mockFirestore.fetchLearnerProfiles()).called(1);
+      verify(() => mockFirestore.forProfile(1)).called(1);
+      verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(1);
+      verify(() => mockFirestore.fetchNotificationSettings()).called(1);
+      verify(() => mockFirestore.fetchGamificationSettings()).called(1);
       verify(() => mockFirestore.isAuthenticated).called(1);
-      verifyNoMoreInteractions(mockFirestore);
     });
 
     test(
@@ -924,17 +994,34 @@ void main() {
     });
 
     test('error handling with retry for partial restore failures', () async {
+      stubEmptyFetches();
       // First call fails
       when(
-        () => mockFirestore.fetchCompletions(),
+        () => mockFirestore.fetchCompletions(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
       ).thenThrow(Exception('Network error'));
-      when(() => mockFirestore.fetchBookmarks()).thenAnswer((_) async => []);
-      when(() => mockFirestore.fetchSettings()).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchBookmarks(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchSettings(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer((_) async => []);
       when(() => mockFirestore.fetchStreak()).thenAnswer((_) async => null);
       when(() => mockFirestore.fetchProfile()).thenAnswer((_) async => null);
-      when(() => mockFirestore.fetchGoals()).thenAnswer((_) async => []);
       when(
-        () => mockFirestore.fetchLedgerEntries(),
+        () => mockFirestore.fetchGoals(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchLedgerEntries(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
       ).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchActiveCurricula(),
@@ -948,7 +1035,11 @@ void main() {
       expect(restoreService.currentStatus, isA<RestoreStatusError>());
 
       // Retry succeeds
-      when(() => mockFirestore.fetchCompletions()).thenAnswer((_) async => []);
+      when(
+        () => mockFirestore.fetchCompletions(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      ).thenAnswer((_) async => []);
 
       final result2 = await restoreService.retry();
       expect(result2, isTrue);
@@ -959,6 +1050,7 @@ void main() {
       // Insert existing data — not a new device
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: const Value(1),
           curriculumId: 'mishnayos',
           sefariaRef: 'mishna-1',
           stageId: 1,
@@ -974,7 +1066,11 @@ void main() {
       expect(result, isFalse);
 
       // No Firestore calls made
-      verifyNever(() => mockFirestore.fetchCompletions());
+      verifyNever(
+        () => mockFirestore.fetchCompletions(
+          pageSize: FirestoreDataSource.defaultPageSize,
+        ),
+      );
     });
   });
 }
