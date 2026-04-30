@@ -118,12 +118,13 @@ dev_dependencies:
   crypto: ^3.0.6
 
 flutter_launcher_icons:
-  image_path: "assets/images/app_logo.png"
-  image_path_android: "assets/images/app_logo.png"
-  image_path_ios: "assets/images/app_logo.png"
+  image_path: "assets/images/icon.png"
+  image_path_android: "assets/images/icon.png"
+  image_path_ios: "assets/images/icon.png"
+  remove_alpha_ios: true
   android:
     generate: true
-    image_path: "assets/images/app_logo.png"
+    image_path: "assets/images/icon.png"
     notification_icon_background_color: "#ffffff"
   ios:
     generate: true
@@ -135,7 +136,7 @@ flutter_native_splash:
   fullscreen: true
   android_12:
     color: "#152A6E"
-    image: assets/images/app_logo.png
+    image: assets/images/icon.png
     icon_background_color: "#153A5C"
 
 flutter:
