@@ -3,8 +3,10 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -20,6 +22,7 @@ import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -111,13 +114,49 @@ Future<void> _pumpDashboard(WidgetTester tester) async {
   await tester.pump(); // rebuild
 }
 
+/// Force-disposes the widget tree and drains Drift's zero-duration cleanup
+/// timers so the test framework's `_verifyInvariants` sees no pending timers.
+Future<void> _cleanUpWidgets(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump(Duration.zero);
+}
+
+/// Wraps the router in a MaterialApp configured with the same localization
+/// delegates as production main.dart — without these, screens that call
+/// `AppLocalizations.of(context)!` crash with a null-check error.
+MaterialApp _wrapApp(RouterConfig<Object> routerConfig) {
+  return MaterialApp.router(
+    routerConfig: routerConfig,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+  );
+}
+
 void main() {
   late UserDatabase db;
 
   setUpAll(() {
+    // Prevent google_fonts from making real HTTP requests in tests.
+    // Without this, font-loading futures cause 10-minute test timeouts.
+    GoogleFonts.config.allowRuntimeFetching = false;
+
     // Suppress Drift "multiple database" warning in tests where router
     // helpers and setUp each create their own in-memory database.
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+    // Suppress google_fonts "font not found in assets" errors — PlusJakartaSans
+    // is not bundled in test assets, but navigation tests don't need real fonts.
+    final savedOnError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      final msg = details.exception.toString();
+      if (msg.contains('GoogleFonts') || msg.contains('google_fonts')) return;
+      savedOnError?.call(details);
+    };
 
     // Mock path_provider so driftDatabase can resolve in the auth guard
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -170,8 +209,8 @@ void main() {
                 ),
               ),
             ],
-            child: MaterialApp.router(
-              routerConfig: router.config(
+            child: _wrapApp(
+              router.config(
                 deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
               ),
             ),
@@ -179,37 +218,13 @@ void main() {
         );
         await _pumpDashboard(tester);
 
-        expect(find.byType(NavigationBar), findsOneWidget);
-        expect(find.byType(NavigationDestination), findsNWidgets(4));
+        // The shell renders 4 tab items with uppercase labels from l10n.
+        expect(find.text('DASHBOARD'), findsOneWidget);
+        expect(find.text('LEARN'), findsOneWidget);
+        expect(find.text('PROGRESS'), findsOneWidget);
+        expect(find.text('SETTINGS'), findsOneWidget);
 
-        expect(
-          find.descendant(
-            of: find.byType(NavigationBar),
-            matching: find.text('Dashboard'),
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(
-            of: find.byType(NavigationBar),
-            matching: find.text('Learn'),
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(
-            of: find.byType(NavigationBar),
-            matching: find.text('Progress'),
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(
-            of: find.byType(NavigationBar),
-            matching: find.text('Settings'),
-          ),
-          findsOneWidget,
-        );
+        await _cleanUpWidgets(tester);
       },
     );
 
@@ -234,8 +249,8 @@ void main() {
               ),
             ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router.config(
+          child: _wrapApp(
+            router.config(
               deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
             ),
           ),
@@ -243,14 +258,15 @@ void main() {
       );
       await _pumpDashboard(tester);
 
-      // Dashboard is shown (AppBar title + nav tab label)
-      expect(find.text('Dashboard'), findsWidgets);
+      expect(find.text('DASHBOARD'), findsOneWidget);
 
-      await tester.tap(find.text('Learn'));
+      await tester.tap(find.text('LEARN'));
       await _pumpDashboard(tester);
 
-      // LearningScreen AppBar title is 'Learn'
-      expect(find.text('Learn'), findsWidgets);
+      // Bottom nav is still rendered after the tab switch.
+      expect(find.text('LEARN'), findsOneWidget);
+
+      await _cleanUpWidgets(tester);
     });
 
     testWidgets('tapping Progress tab navigates to progress route', (
@@ -276,8 +292,8 @@ void main() {
               ),
             ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router.config(
+          child: _wrapApp(
+            router.config(
               deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
             ),
           ),
@@ -285,11 +301,12 @@ void main() {
       );
       await _pumpDashboard(tester);
 
-      await tester.tap(find.text('Progress'));
+      await tester.tap(find.text('PROGRESS'));
       await _pumpDashboard(tester);
 
-      // ProgressScreen AppBar title is 'Progress'
-      expect(find.text('Progress'), findsWidgets);
+      expect(find.text('PROGRESS'), findsOneWidget);
+
+      await _cleanUpWidgets(tester);
     });
 
     testWidgets('tapping Settings tab navigates to settings route', (
@@ -334,8 +351,8 @@ void main() {
             ],
             firebaseAuthProvider.overrideWithValue(mockAuthForProvider),
           ],
-          child: MaterialApp.router(
-            routerConfig: router.config(
+          child: _wrapApp(
+            router.config(
               deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
             ),
           ),
@@ -343,13 +360,14 @@ void main() {
       );
       await _pumpDashboard(tester);
 
-      await tester.tap(find.text('Settings'));
+      await tester.tap(find.text('SETTINGS'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
 
-      // Verify we navigated to settings — the AppBar title should be 'Settings'
-      expect(find.text('Settings'), findsWidgets);
+      expect(find.text('SETTINGS'), findsOneWidget);
+
+      await _cleanUpWidgets(tester);
     });
   });
 
@@ -377,8 +395,8 @@ void main() {
               ),
             ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router.config(
+          child: _wrapApp(
+            router.config(
               deepLinkBuilder: (_) =>
                   const DeepLink.path('/curriculum/mishnayos/browse'),
             ),
@@ -391,6 +409,8 @@ void main() {
       // renders the curriculum display name and a loading indicator
       // while content loads from the (bundled JSON) asset provider.
       expect(find.text('\u05DE\u05E9\u05E0\u05D9\u05D5\u05EA'), findsOneWidget);
+
+      await _cleanUpWidgets(tester);
     });
   });
 
@@ -412,14 +432,15 @@ void main() {
       };
       addTearDown(() => FlutterError.onError = originalOnError);
 
-      await tester.pumpWidget(
-        MaterialApp.router(routerConfig: router.config()),
-      );
+      await tester.pumpWidget(_wrapApp(router.config()));
       await _pumpDashboard(tester);
 
-      // Auth guard redirects to AppIntroRoute; the dashboard NavigationBar
-      // must NOT be present, confirming the user was redirected away.
-      expect(find.byType(NavigationBar), findsNothing);
+      // Auth guard redirects to AppIntroRoute; the shell's bottom-nav
+      // labels must NOT be present, confirming the user was redirected away.
+      expect(find.text('DASHBOARD'), findsNothing);
+      expect(find.text('LEARN'), findsNothing);
+
+      await _cleanUpWidgets(tester);
     });
 
     testWidgets('authenticated user sees dashboard with bottom navigation', (
@@ -445,14 +466,19 @@ void main() {
               ),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router.config()),
+          child: _wrapApp(router.config()),
         ),
       );
       await _pumpDashboard(tester);
 
-      // Dashboard AppBar title + navigation tab label
-      expect(find.text('Dashboard'), findsWidgets);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      // Authenticated user reaches the shell — all 4 bottom-nav labels
+      // are present.
+      expect(find.text('DASHBOARD'), findsOneWidget);
+      expect(find.text('LEARN'), findsOneWidget);
+      expect(find.text('PROGRESS'), findsOneWidget);
+      expect(find.text('SETTINGS'), findsOneWidget);
+
+      await _cleanUpWidgets(tester);
     });
   });
 }
