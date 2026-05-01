@@ -1,47 +1,59 @@
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'hebrew_date_provider.g.dart';
 
-const String _useHebrewDateKey = 'use_hebrew_calendar';
+/// In-memory mirror for profile 0 — seeded from [syncHebrewCalendarPreferenceFromPrefs].
+bool _useHebrewDateMirrorProfile0 = false;
 
-/// In-memory mirror kept in sync with [SharedPreferences] and [setUseHebrewDate].
-/// [UseHebrewDateNotifier.build] must return a correct value on the first
-/// frame—async [_loadFromPrefs] alone was too late, so date pickers read `false`
-/// and stayed on the Gregorian path until a rebuild happened.
-bool _useHebrewDateMirror = false;
-
-/// Call once from [main] right after the first [SharedPreferences.getInstance],
-/// so the first provider [build] matches stored prefs before async load finishes.
+/// Call once from [main] after [SharedPreferences.getInstance], so the first
+/// [UseHebrewDateNotifier.build] for profile 0 matches stored prefs.
 void syncHebrewCalendarPreferenceFromPrefs(SharedPreferences prefs) {
-  _useHebrewDateMirror = prefs.getBool(_useHebrewDateKey) ?? false;
+  _useHebrewDateMirrorProfile0 =
+      ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 0);
 }
 
-/// Global preference for Hebrew vs Gregorian calendar.
-///
-/// When true, all date pickers across the app use Hebrew calendar.
-/// Set during onboarding or in Settings.
-@riverpod
+/// Global preference for Hebrew vs Gregorian calendar (per learner profile).
+@Riverpod(keepAlive: true)
 class UseHebrewDateNotifier extends _$UseHebrewDateNotifier {
   @override
   bool build() {
-    _loadFromPrefs();
-    return _useHebrewDateMirror;
+    final profileId = ref.watch(activeProfileIdProvider);
+    ref.listen(activeProfileIdProvider, (prev, next) {
+      if (prev != next) {
+        _loadFromPrefs(next);
+      }
+    });
+    _loadFromPrefs(profileId);
+    return profileId == 0 ? _useHebrewDateMirrorProfile0 : false;
   }
 
-  Future<void> _loadFromPrefs() async {
+  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getBool(_useHebrewDateKey) ?? false;
-    _useHebrewDateMirror = value;
+    final value =
+        ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, profileId);
+    if (profileId == 0) {
+      _useHebrewDateMirrorProfile0 = value;
+    }
     if (value != state) {
       state = value;
     }
   }
 
   Future<void> setUseHebrewDate(bool value) async {
-    _useHebrewDateMirror = value;
+    final profileId = ref.read(activeProfileIdProvider);
     state = value;
+    if (profileId == 0) {
+      _useHebrewDateMirrorProfile0 = value;
+    }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_useHebrewDateKey, value);
+    await prefs.setBool(
+      ProfileScopedPreferenceKeys.useHebrewCalendar(profileId),
+      value,
+    );
+    await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
   }
 }

@@ -8,31 +8,22 @@ part of 'hebrew_date_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Global preference for Hebrew vs Gregorian calendar.
-///
-/// When true, all date pickers across the app use Hebrew calendar.
-/// Set during onboarding or in Settings.
+/// Global preference for Hebrew vs Gregorian calendar (per learner profile).
 
 @ProviderFor(UseHebrewDateNotifier)
 final useHebrewDateProvider = UseHebrewDateNotifierProvider._();
 
-/// Global preference for Hebrew vs Gregorian calendar.
-///
-/// When true, all date pickers across the app use Hebrew calendar.
-/// Set during onboarding or in Settings.
+/// Global preference for Hebrew vs Gregorian calendar (per learner profile).
 final class UseHebrewDateNotifierProvider
     extends $NotifierProvider<UseHebrewDateNotifier, bool> {
-  /// Global preference for Hebrew vs Gregorian calendar.
-  ///
-  /// When true, all date pickers across the app use Hebrew calendar.
-  /// Set during onboarding or in Settings.
+  /// Global preference for Hebrew vs Gregorian calendar (per learner profile).
   UseHebrewDateNotifierProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'useHebrewDateProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -54,12 +45,9 @@ final class UseHebrewDateNotifierProvider
 }
 
 String _$useHebrewDateNotifierHash() =>
-    r'cc68db06fb005a5af507d901d44c9efbbd6a542b';
+    r'66e1c72bf69f356476f337be8cbdc31dbad8efe7';
 
-/// Global preference for Hebrew vs Gregorian calendar.
-///
-/// When true, all date pickers across the app use Hebrew calendar.
-/// Set during onboarding or in Settings.
+/// Global preference for Hebrew vs Gregorian calendar (per learner profile).
 
 abstract class _$UseHebrewDateNotifier extends $Notifier<bool> {
   bool build();

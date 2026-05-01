@@ -145,15 +145,15 @@ final class TextContentFamily extends $Family
   String toString() => r'textContentProvider';
 }
 
-/// Provider for font size preference.
+/// Provider for font size preference (per learner profile).
 
 @ProviderFor(FontSizeNotifier)
 final fontSizeProvider = FontSizeNotifierProvider._();
 
-/// Provider for font size preference.
+/// Provider for font size preference (per learner profile).
 final class FontSizeNotifierProvider
     extends $NotifierProvider<FontSizeNotifier, FontSize> {
-  /// Provider for font size preference.
+  /// Provider for font size preference (per learner profile).
   FontSizeNotifierProvider._()
     : super(
         from: null,
@@ -181,9 +181,9 @@ final class FontSizeNotifierProvider
   }
 }
 
-String _$fontSizeNotifierHash() => r'1862da2c438c4c4186eb02849a8dcf91a32b72bb';
+String _$fontSizeNotifierHash() => r'18a312b6bd2a661b601046fe5e98b289119355a5';
 
-/// Provider for font size preference.
+/// Provider for font size preference (per learner profile).
 
 abstract class _$FontSizeNotifier extends $Notifier<FontSize> {
   FontSize build();
@@ -203,14 +203,14 @@ abstract class _$FontSizeNotifier extends $Notifier<FontSize> {
   }
 }
 
-/// Provider for nikud display preference.
+/// Provider for nikud display preference (per learner profile).
 
 @ProviderFor(ShowNikud)
 final showNikudProvider = ShowNikudProvider._();
 
-/// Provider for nikud display preference.
+/// Provider for nikud display preference (per learner profile).
 final class ShowNikudProvider extends $NotifierProvider<ShowNikud, bool> {
-  /// Provider for nikud display preference.
+  /// Provider for nikud display preference (per learner profile).
   ShowNikudProvider._()
     : super(
         from: null,
@@ -238,9 +238,9 @@ final class ShowNikudProvider extends $NotifierProvider<ShowNikud, bool> {
   }
 }
 
-String _$showNikudHash() => r'561659a089a71fbb9bb1603d55b2612c86d64876';
+String _$showNikudHash() => r'eeb4e600e34462cff190f4a916406fb17230a35c';
 
-/// Provider for nikud display preference.
+/// Provider for nikud display preference (per learner profile).
 
 abstract class _$ShowNikud extends $Notifier<bool> {
   bool build();

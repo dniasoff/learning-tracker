@@ -4,11 +4,13 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning_order/data/preferences/learning_order_preferences.dart';
 import 'package:learning_tracker/features/learning_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/domain/repositories/learning_order_repository.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Provides the LearningOrderRepository (stateless — curriculum passed per call).
 final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
@@ -38,9 +40,12 @@ final learningOrderProvider =
 
 /// Provides whether parent controls ordering (permission setting).
 final parentControlsOrderingProvider = FutureProvider<bool>((ref) async {
-  final prefs = LearningOrderPreferences.instance;
-  await prefs.initialize();
-  return prefs.parentControlsOrdering;
+  final profileId = ref.watch(activeProfileIdProvider);
+  final prefs = await SharedPreferences.getInstance();
+  return ProfileScopedPreferenceKeys.readLearningOrderParentControls(
+    prefs,
+    profileId,
+  );
 });
 
 /// Provides the current user's UserMode from the database.

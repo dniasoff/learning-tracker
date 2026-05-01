@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker/talker.dart';
 
@@ -62,6 +63,7 @@ class SyncEngine {
   StreamSubscription<List<Map<String, dynamic>>>? _curriculumTracksSubscription;
   StreamSubscription<Map<String, dynamic>?>? _notificationSettingsSubscription;
   StreamSubscription<Map<String, dynamic>?>? _gamificationSettingsSubscription;
+  StreamSubscription<Map<String, dynamic>?>? _uiPreferencesSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
@@ -95,6 +97,7 @@ class SyncEngine {
   bool _mergingCurriculumTracks = false;
   bool _mergingNotificationSettings = false;
   bool _mergingGamificationSettings = false;
+  bool _mergingUiPreferences = false;
 
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
@@ -245,6 +248,10 @@ class SyncEngine {
     _gamificationSettingsSubscription = _firestoreDataSource
         .listenToGamificationSettings()
         .listen(_onGamificationSettingsUpdate, onError: _handleListenerError);
+
+    _uiPreferencesSubscription = _firestoreDataSource
+        .listenToUiPreferences()
+        .listen(_onUiPreferencesUpdate, onError: _handleListenerError);
   }
 
   /// Detach foreground listeners (on app background).
@@ -268,6 +275,7 @@ class SyncEngine {
     await _curriculumTracksSubscription?.cancel();
     await _notificationSettingsSubscription?.cancel();
     await _gamificationSettingsSubscription?.cancel();
+    await _uiPreferencesSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
@@ -280,6 +288,7 @@ class SyncEngine {
     _curriculumTracksSubscription = null;
     _notificationSettingsSubscription = null;
     _gamificationSettingsSubscription = null;
+    _uiPreferencesSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -313,17 +322,24 @@ class SyncEngine {
         await _mergeProfile(accountProfile);
       }
 
-      final localProfiles = await _database.profileDao.getProfilesByAccount(1);
-      final sortedIds = localProfiles.map((p) => p.id).toList()..sort();
+      // Resolve every learner profile id we should pull subtrees for:
+      // - IDs returned from Firestore `learner_profiles` (authoritative paths)
+      // - Plus any row already in local `profiles` (covers account_id ≠ 1 and
+      //   offline-created rows). Do not rely only on getProfilesByAccount(1).
+      final idsFromRemote = _learnerProfileIdsFromRemotePayload(learnerProfiles);
+      final allLocalProfiles = await _database.select(_database.profiles).get();
+      final idsFromLocal = allLocalProfiles.map((p) => p.id).toSet();
+      final mergedProfileIds = {...idsFromRemote, ...idsFromLocal}.toList()
+        ..sort();
 
-      if (sortedIds.isEmpty) {
+      if (mergedProfileIds.isEmpty) {
         await _pullAndMergeProfileSubtree(
           profileId: _firestoreDataSource.profileId,
           mergeNotificationSettings: true,
         );
       } else {
-        final notifSourceId = sortedIds.first;
-        for (final id in sortedIds) {
+        final notifSourceId = mergedProfileIds.first;
+        for (final id in mergedProfileIds) {
           await _pullAndMergeProfileSubtree(
             profileId: id,
             mergeNotificationSettings: id == notifSourceId,
@@ -349,10 +365,9 @@ class SyncEngine {
   /// Fetches and merges everything under
   /// `users/{uid}/learner_profiles/{profileId}/` for one learner.
   ///
-  /// When [activeProfileId] is still 0 (before profile selection), scoped
-  /// reads would hit `learner_profiles/0` and return nothing; looping each
-  /// merged local profile restores tracks, completions, ledger (lifetime),
-  /// and gamification (child points/rewards) on new devices.
+  /// Pull-on-launch merges subtrees for every id returned from Firestore plus
+  /// every local `profiles` row so paths match cloud data even when
+  /// `account_id` filtering would hide rows.
   Future<void> _pullAndMergeProfileSubtree({
     required int profileId,
     required bool mergeNotificationSettings,
@@ -370,6 +385,7 @@ class SyncEngine {
       ds.fetchCurriculumTracks(),
       ds.fetchNotificationSettings(),
       ds.fetchGamificationSettings(),
+      ds.fetchUiPreferences(),
     ]);
 
     await _mergeCompletions(
@@ -412,6 +428,10 @@ class SyncEngine {
     }
     await _mergeGamificationSettings(
       results[10] as Map<String, dynamic>?,
+      profileId: profileId,
+    );
+    await _mergeUiPreferences(
+      results[11] as Map<String, dynamic>?,
       profileId: profileId,
     );
   }
@@ -499,6 +519,21 @@ class SyncEngine {
     if (raw is int) return raw;
     if (raw is num) return raw.toInt();
     return int.tryParse(raw?.toString() ?? '');
+  }
+
+  /// Document ids under Firestore `learner_profiles` — must align with paths
+  /// `users/{uid}/learner_profiles/{profileId}/…` when pulling subtrees.
+  Set<int> _learnerProfileIdsFromRemotePayload(
+    List<Map<String, dynamic>> remoteProfiles,
+  ) {
+    final ids = <int>{};
+    for (final remote in remoteProfiles) {
+      final id = _asInt(remote['id']);
+      if (id != null) {
+        ids.add(id);
+      }
+    }
+    return ids;
   }
 
   int? _parseOffsetDaysFromRef(String? trackingStartRef) {
@@ -686,6 +721,22 @@ class SyncEngine {
   Future<void> pushGamificationSettingsSnapshot() async {
     final payload = await _buildGamificationSettingsPayload();
     await pushGamificationSettings(payload);
+  }
+
+  /// Push locale / calendar / text / learning-order prefs for the active profile.
+  Future<void> pushUiPreferencesSnapshot() async {
+    final profileId = _firestoreDataSource.profileId;
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now().toUtc();
+    await prefs.setInt(
+      ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
+      now.millisecondsSinceEpoch,
+    );
+    final payload = await _readLocalUiPreferencesPayload();
+    await _offlineQueue.enqueueUiPreferences(
+      _withQueueTargetProfile(payload),
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'ui preferences');
   }
 
   /// Push study day config to Firestore as part of settings document.
@@ -1248,7 +1299,16 @@ class SyncEngine {
       now.millisecondsSinceEpoch,
     );
 
+    final totalPointsExpr = _database.completions.points.sum();
+    final totalPointsRow =
+        await (_database.selectOnly(_database.completions)
+              ..addColumns([totalPointsExpr])
+              ..where(_database.completions.profileId.equals(profileId)))
+            .getSingle();
+    final totalPointsSum = totalPointsRow.read(totalPointsExpr) ?? 0;
+
     return {
+      'schema_version': 2,
       'updated_at': now.toIso8601String(),
       'points_config': pointRows
           .map(
@@ -1262,6 +1322,9 @@ class SyncEngine {
           )
           .toList(),
       'reward_settings': rewardPayload,
+      'lifetime_stats': {
+        'total_points_from_completions': totalPointsSum,
+      },
     };
   }
 
@@ -1338,6 +1401,86 @@ class SyncEngine {
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
       _logger.warning('Failed to merge gamification settings: $e');
+    }
+  }
+
+  Future<void> _mergeUiPreferences(
+    Map<String, dynamic>? remote, {
+    required int profileId,
+  }) async {
+    if (remote == null || remote.isEmpty) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
+      final localUpdatedAtMs = prefs.getInt(
+        ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
+      );
+      final localUpdatedAt = localUpdatedAtMs == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(localUpdatedAtMs, isUtc: true);
+
+      if (remoteUpdatedAt != null &&
+          !remoteIsNewer(
+            localUpdatedAt: localUpdatedAt,
+            remoteUpdatedAt: remoteUpdatedAt,
+          )) {
+        _logger.debug('Skipping UI preferences merge: local is newer or equal');
+        return;
+      }
+
+      final locale = remote['app_locale'] as String?;
+      if (locale != null && (locale == 'en' || locale == 'he')) {
+        await prefs.setString(
+          ProfileScopedPreferenceKeys.appLocale(profileId),
+          locale,
+        );
+      }
+
+      final hebrew = remote['use_hebrew_calendar'];
+      if (hebrew is bool) {
+        await prefs.setBool(
+          ProfileScopedPreferenceKeys.useHebrewCalendar(profileId),
+          hebrew,
+        );
+      }
+
+      final textDisplay = remote['text_display'] as Map<String, dynamic>?;
+      if (textDisplay != null) {
+        final idx = textDisplay['font_size_index'];
+        if (idx is int && idx >= 0 && idx <= 2) {
+          await prefs.setInt(
+            ProfileScopedPreferenceKeys.textFontSize(profileId),
+            idx,
+          );
+        }
+        final nikud = textDisplay['show_nikud'];
+        if (nikud is bool) {
+          await prefs.setBool(
+            ProfileScopedPreferenceKeys.textShowNikud(profileId),
+            nikud,
+          );
+        }
+      }
+
+      final learningOrder = remote['learning_order_parent_controls'];
+      if (learningOrder is bool) {
+        await prefs.setBool(
+          ProfileScopedPreferenceKeys.learningOrderParentControls(profileId),
+          learningOrder,
+        );
+      }
+
+      final stamp =
+          remoteUpdatedAt?.millisecondsSinceEpoch ??
+          DateTime.now().toUtc().millisecondsSinceEpoch;
+      await prefs.setInt(
+        ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
+        stamp,
+      );
+    } catch (e) {
+      // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+      _logger.warning('Failed to merge UI preferences: $e');
     }
   }
 
@@ -2191,6 +2334,22 @@ class SyncEngine {
     }
   }
 
+  Future<void> _onUiPreferencesUpdate(Map<String, dynamic>? remote) async {
+    if (remote == null || remote.isEmpty) return;
+    if (_mergingUiPreferences) return;
+    _mergingUiPreferences = true;
+    _consecutiveListenerErrors = 0;
+    try {
+      _logger.debug('Received UI preferences update from listener');
+      await _mergeUiPreferences(
+        remote,
+        profileId: _firestoreDataSource.profileId,
+      );
+    } finally {
+      _mergingUiPreferences = false;
+    }
+  }
+
   /// Handle listener errors with quota monitoring (NFR21).
   ///
   /// After [quotaErrorThreshold] consecutive errors, disables all listeners
@@ -2411,6 +2570,43 @@ class SyncEngine {
     }
   }
 
+  /// Read UI preferences for the active learner profile (locale, calendar,
+  /// text display, learning-order flag) for Firestore `ui_preferences/data`.
+  Future<Map<String, dynamic>> _readLocalUiPreferencesPayload() async {
+    final profileId = _firestoreDataSource.profileId;
+    final prefs = await SharedPreferences.getInstance();
+    final locale =
+        ProfileScopedPreferenceKeys.readAppLocale(prefs, profileId);
+    final hebrew =
+        ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, profileId);
+    final fontIdx =
+        ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, profileId);
+    final nikud = ProfileScopedPreferenceKeys.readShowNikud(prefs, profileId);
+    final learningOrder =
+        ProfileScopedPreferenceKeys.readLearningOrderParentControls(
+      prefs,
+      profileId,
+    );
+    final updatedAtMs =
+        prefs.getInt(ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId));
+    final updatedAt = updatedAtMs == null
+        ? DateTime.now().toUtc()
+        : DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true);
+
+    return {
+      'schema_version': 2,
+      'profile_id': profileId,
+      'updated_at': updatedAt.toIso8601String(),
+      'app_locale': locale,
+      'use_hebrew_calendar': hebrew,
+      'text_display': {
+        'font_size_index': fontIdx,
+        'show_nikud': nikud,
+      },
+      'learning_order_parent_controls': learningOrder,
+    };
+  }
+
   /// Read notification preferences from local SharedPreferences and convert
   /// them into the profile-scoped Firestore notification_settings payload.
   Future<Map<String, dynamic>> _readLocalNotificationSettingsPayload() async {
@@ -2620,6 +2816,10 @@ class SyncEngine {
       // --- Gamification settings (points + reward milestones/unlocks) ---
       await pushGamificationSettingsSnapshot();
       _logger.debug('Pushed gamification settings');
+
+      // --- UI preferences (locale, Hebrew calendar, text display, learning order) ---
+      await pushUiPreferencesSnapshot();
+      _logger.debug('Pushed UI preferences');
 
       _logger.info('pushAllLocalData: completed successfully');
       final syncedAt = DateTime.now().toUtc();

@@ -3,12 +3,66 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [TrackRepository] using Drift database.
 class TrackRepositoryImpl implements TrackRepository {
-  final UserDatabase _database;
+  TrackRepositoryImpl({
+    required UserDatabase database,
+    SyncEngine? syncEngine,
+    int activeProfileId = 0,
+  }) : _database = database,
+       _syncEngine = syncEngine,
+       _activeProfileId = activeProfileId;
 
-  TrackRepositoryImpl({required UserDatabase database}) : _database = database;
+  final UserDatabase _database;
+  final SyncEngine? _syncEngine;
+  final int _activeProfileId;
+
+  Future<CurriculumTrack?> _resolveTrackRowForSync(
+    CurriculumId curriculumId,
+    TrackType trackType, {
+    required int profileId,
+  }) async {
+    final all = await _database.trackDao.getAllTracks(curriculumId);
+    final preferred = all.where(
+      (t) =>
+          t.trackType == trackType.storageKey && t.profileId == profileId,
+    );
+    if (preferred.isNotEmpty) return preferred.first;
+    final legacy = all.where((t) => t.trackType == trackType.storageKey);
+    if (legacy.isNotEmpty) return legacy.first;
+    return null;
+  }
+
+  Future<void> _pushCurriculumTrackIfCloud(
+    CurriculumId curriculumId,
+    TrackType trackType, {
+    int? profileId,
+  }) async {
+    final engine = _syncEngine;
+    if (engine == null) return;
+
+    final pid = profileId ?? _activeProfileId;
+    final row = await _resolveTrackRowForSync(
+      curriculumId,
+      trackType,
+      profileId: pid,
+    );
+    if (row == null) return;
+
+    await engine.pushCurriculumTrack({
+      'profile_id': row.profileId,
+      'track_id': row.id,
+      'curriculum_id': row.curriculumId,
+      'track_type': row.trackType,
+      'is_active': row.isActive,
+      'activated_at': row.activatedAt.toIso8601String(),
+      'deactivated_at': row.deactivatedAt?.toIso8601String(),
+      'archived_at': row.archivedAt?.toIso8601String(),
+      'pace_reset_date': row.paceResetDate?.toIso8601String(),
+    });
+  }
 
   @override
   Future<List<TrackType>> getActiveTracks(CurriculumId curriculumId) async {
@@ -24,9 +78,7 @@ class TrackRepositoryImpl implements TrackRepository {
     TrackType trackType,
   ) async {
     await _database.trackDao.activateTrack(curriculumId, trackType);
-
-    // TODO(DNI-38): Add Firestore sync for track activation
-    // See CompletionRepositoryImpl._syncCompletion for pattern
+    await _pushCurriculumTrackIfCloud(curriculumId, trackType);
   }
 
   @override
@@ -36,8 +88,7 @@ class TrackRepositoryImpl implements TrackRepository {
   ) async {
     try {
       await _database.trackDao.deactivateTrack(curriculumId, trackType);
-
-      // TODO(DNI-38): Add Firestore sync for track deactivation
+      await _pushCurriculumTrackIfCloud(curriculumId, trackType);
     } on InvalidOperationException catch (e) {
       throw InvalidTrackOperationException(e.message);
     }
@@ -60,7 +111,10 @@ class TrackRepositoryImpl implements TrackRepository {
       curriculumId,
       profileId: profileId,
     );
-
-    // TODO(DNI-38): Add Firestore sync for initial personal track
+    await _pushCurriculumTrackIfCloud(
+      curriculumId,
+      TrackType.personal,
+      profileId: profileId,
+    );
   }
 }

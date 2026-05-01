@@ -99,6 +99,13 @@ class OfflineQueue {
     _logger.info('Queued gamification settings for offline sync');
   }
 
+  /// Enqueue UI preferences (locale, calendar, text display, learning order).
+  Future<void> enqueueUiPreferences(Map<String, dynamic> uiPreferences) async {
+    final payload = jsonEncode(uiPreferences);
+    await _queue.enqueue('ui_preferences', payload);
+    _logger.info('Queued UI preferences for offline sync');
+  }
+
   /// Enqueue a streak operation.
   Future<void> enqueueStreak(Map<String, dynamic> streak) async {
     final payload = jsonEncode(streak);
@@ -269,6 +276,9 @@ class OfflineQueue {
               break;
             case 'gamification_settings':
               await dataSource.pushGamificationSettings(payload);
+              break;
+            case 'ui_preferences':
+              await dataSource.pushUiPreferences(payload);
               break;
             case 'streak':
               await dataSource.pushStreak(payload);
