@@ -1,4 +1,3 @@
-
 // ── Phase 3: Text content ────────────────────────────────────────────────
 
 Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {
@@ -241,5 +240,3 @@ String _extractText(dynamic text) {
 }
 
 String _stripHtml(String html) => html.replaceAll(RegExp('<[^>]*>'), '').trim();
-
-
