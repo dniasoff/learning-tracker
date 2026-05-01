@@ -100,7 +100,7 @@ void main() {
       expect(find.text('Overdue'), findsNothing);
     });
 
-    testWidgets('has mark-as-done button', (tester) async {
+    testWidgets('has swipe-to-skip interaction', (tester) async {
       final task = _task();
 
       await tester.pumpWidget(
@@ -109,8 +109,8 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
-      expect(find.byTooltip('Mark as done'), findsOneWidget);
+      // Dismissible wraps the card for swipe-to-skip
+      expect(find.byType(Dismissible), findsOneWidget);
     });
 
     testWidgets('swipe dismiss calls onDismissed', (tester) async {

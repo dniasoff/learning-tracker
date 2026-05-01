@@ -178,19 +178,13 @@ void main() {
       expect(seder.stageBreakdown[2].count, 1); // ref3 only
     });
 
-    test('track breakdown separates personal, school, tutor counts', () async {
+    test('track breakdown counts personal completions', () async {
       final items = [
         leaf(level1: 'Seder Zeraim', level2: 'Berachos', sefariaRef: 'ref1'),
       ];
 
       final stage = await insertStage(db, stageOrder: 0, stageName: 'Learned');
       final completions = <Completion>[
-        await insertCompletion(
-          db,
-          sefariaRef: 'ref1',
-          stageId: stage.id,
-          trackType: 'personal',
-        ),
         await insertCompletion(
           db,
           sefariaRef: 'ref1',
@@ -220,9 +214,7 @@ void main() {
       );
 
       final seder = result.hierarchyLevels[0];
-      expect(seder.trackBreakdown[TrackType.personal], 1);
-      expect(seder.trackBreakdown[TrackType.personal], 2);
-      expect(seder.trackBreakdown[TrackType.personal], 1);
+      expect(seder.trackBreakdown[TrackType.personal], 3);
     });
 
     test('overall stats categorize items correctly', () async {

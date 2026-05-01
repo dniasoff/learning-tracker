@@ -27,12 +27,12 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Select Hebrew Date'), findsOneWidget);
-      expect(find.byIcon(Icons.add), findsOneWidget);
-      expect(find.byIcon(Icons.remove), findsOneWidget);
-      expect(find.byType(DropdownButton<int>), findsNWidgets(2));
+      expect(find.text('Select Hebrew date'), findsOneWidget);
+      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.remove_rounded), findsOneWidget);
+      expect(find.byType(DropdownButtonFormField<int>), findsNWidgets(2));
       expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Select'), findsOneWidget);
+      expect(find.text('Select date'), findsOneWidget);
     });
 
     testWidgets('displays Gregorian confirmation text', (tester) async {
@@ -63,7 +63,7 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Select'));
+      await tester.tap(find.text('Select date'));
       await tester.pumpAndSettle();
 
       expect(result, isNotNull);
@@ -84,7 +84,7 @@ void main() {
       );
       final initialYear = int.parse(yearText.data!);
 
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pumpAndSettle();
 
       expect(find.text('${initialYear + 1}'), findsOneWidget);

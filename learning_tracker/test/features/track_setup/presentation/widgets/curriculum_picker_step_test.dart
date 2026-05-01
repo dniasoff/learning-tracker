@@ -16,8 +16,8 @@ void main() {
       expect(find.text(CurriculumId.mishnayos.displayNameHe), findsWidgets);
       expect(find.text(CurriculumId.bavli.displayNameHe), findsWidgets);
 
-      // Verify multiple Card widgets rendered (not all may be visible in viewport)
-      expect(find.byType(Card), findsWidgets);
+      // Verify multiple InkWell widgets rendered (one per curriculum tile)
+      expect(find.byType(InkWell), findsWidgets);
     });
 
     testWidgets('shows onboarding header when isOnboarding is true', (

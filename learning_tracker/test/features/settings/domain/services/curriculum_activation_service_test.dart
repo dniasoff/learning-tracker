@@ -17,8 +17,10 @@ class MockTrackRepository extends Mock implements TrackRepository {}
 
 Future<void> _dummyPushCurriculumTrack(Map<String, dynamic> data) async {}
 
-@Skip('TODO: Fix TrackRepositoryImpl usage in tests')
 void main() {
+  setUpAll(() {
+    registerFallbackValue(CurriculumId.mishnayos);
+  });
   late UserDatabase database;
   late CurriculumActivationService service;
   late MockFirestoreSync mockFirestore;
@@ -42,6 +44,21 @@ void main() {
     when(
       () => mockFirestore.fetchActiveCurricula(),
     ).thenAnswer((_) async => []);
+    // Mock TrackRepository to create the personal track in the test database
+    // (mirrors real impl, skips the cloud push)
+    when(
+      () => mockTrackRepository.initializeDefaultTracks(
+        any(),
+        profileId: any(named: 'profileId'),
+      ),
+    ).thenAnswer((invocation) async {
+      final curriculum = invocation.positionalArguments[0] as CurriculumId;
+      final profileId = (invocation.namedArguments[#profileId] as int?) ?? 0;
+      await database.trackDao.initializeDefaultTracks(
+        curriculum,
+        profileId: profileId,
+      );
+    });
   });
 
   tearDown(() async {

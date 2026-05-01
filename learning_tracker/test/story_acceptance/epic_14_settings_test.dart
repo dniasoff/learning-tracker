@@ -680,6 +680,17 @@ void main() {
       ).thenAnswer((_) async => mockProfilesSnapshot);
       when(() => mockProfilesSnapshot.docs).thenReturn([]);
 
+      // Mock 'learner_profiles' subcollection (canonical path)
+      final mockLearnerProfilesCollection = MockCollectionReference();
+      final mockLearnerProfilesSnapshot = MockQuerySnapshot();
+      when(
+        () => mockUserDoc.collection('learner_profiles'),
+      ).thenReturn(mockLearnerProfilesCollection);
+      when(
+        () => mockLearnerProfilesCollection.get(),
+      ).thenAnswer((_) async => mockLearnerProfilesSnapshot);
+      when(() => mockLearnerProfilesSnapshot.docs).thenReturn([]);
+
       for (final sub in [
         'completions',
         'bookmarks',
@@ -689,6 +700,10 @@ void main() {
         'learning_ledger',
         'active_curricula',
         'curriculum_imports',
+        'curriculum_tracks',
+        'profile_programs',
+        'notification_settings',
+        'gamification_settings',
         'profile',
       ]) {
         final mockSubCollection = MockCollectionReference();

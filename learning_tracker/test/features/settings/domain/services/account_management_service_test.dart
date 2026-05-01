@@ -52,17 +52,20 @@ void main() {
   });
 
   group('signOut', () {
-    test('calls authRepository.signOut', () async {
-      when(() => mockAuthRepo.signOut()).thenAnswer((_) async {});
+    test('clears onboarding state from SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({
+        'onboarding_complete': true,
+        'add_track_step': '1',
+      });
 
       await service.signOut();
 
-      verify(() => mockAuthRepo.signOut()).called(1);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey('onboarding_complete'), isFalse);
+      expect(prefs.containsKey('add_track_step'), isFalse);
     });
 
     test('preserves local database data after sign out', () async {
-      when(() => mockAuthRepo.signOut()).thenAnswer((_) async {});
-
       // Insert test profile
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'test-uid',
@@ -95,19 +98,10 @@ void main() {
       ).thenReturn(mockUsersCollection);
       when(() => mockUsersCollection.doc('test-uid')).thenReturn(mockUserDoc);
 
-      // Mock profiles subcollection (queried first for profile-scoped data)
-      final mockProfilesCollection = MockCollectionReference();
-      final mockProfilesSnapshot = MockQuerySnapshot();
-      when(
-        () => mockUserDoc.collection('profiles'),
-      ).thenReturn(mockProfilesCollection);
-      when(
-        () => mockProfilesCollection.get(),
-      ).thenAnswer((_) async => mockProfilesSnapshot);
-      when(() => mockProfilesSnapshot.docs).thenReturn([]);
-
-      // Mock legacy subcollections as empty
+      // Mock all subcollections queried by _deleteFirestoreUserData as empty
       for (final sub in [
+        'learner_profiles',
+        'profiles',
         'completions',
         'bookmarks',
         'settings',
@@ -116,6 +110,10 @@ void main() {
         'learning_ledger',
         'active_curricula',
         'curriculum_imports',
+        'curriculum_tracks',
+        'profile_programs',
+        'notification_settings',
+        'gamification_settings',
         'profile',
       ]) {
         final mockSubCollection = MockCollectionReference();

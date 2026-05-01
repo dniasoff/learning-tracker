@@ -57,7 +57,7 @@ void main() {
       );
 
       expect(find.text('Behind by 5 days'), findsOneWidget);
-      expect(find.byIcon(Icons.trending_down), findsOneWidget);
+      expect(find.byIcon(Icons.trending_down_rounded), findsOneWidget);
     });
 
     testWidgets('shows on-track status', (tester) async {
@@ -74,7 +74,7 @@ void main() {
       );
 
       expect(find.text('On pace'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
     });
 
     testWidgets('shows ahead status', (tester) async {
@@ -91,7 +91,7 @@ void main() {
       );
 
       expect(find.text('Ahead by 3 days'), findsOneWidget);
-      expect(find.byIcon(Icons.trending_up), findsOneWidget);
+      expect(find.byIcon(Icons.trending_up_rounded), findsOneWidget);
     });
   });
 
@@ -136,7 +136,7 @@ void main() {
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
 
       expect(find.text('Seder Zeraim'), findsOneWidget);
-      expect(find.text('5/10 (50%)'), findsOneWidget);
+      expect(find.text('5/10 (50.00%)'), findsOneWidget);
       expect(find.text('Learned: 5'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });

@@ -19,22 +19,22 @@ void main() {
       expect(find.text('Personal'), findsOneWidget);
     });
 
-    testWidgets('displays school track', (tester) async {
+    testWidgets('displays personal track badge color', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(body: TrackTypeBadge(trackType: TrackType.personal)),
         ),
       );
-      expect(find.text('School'), findsOneWidget);
+      expect(find.text('Personal'), findsOneWidget);
     });
 
-    testWidgets('displays tutor track', (tester) async {
+    testWidgets('personal badge is styled with a Container', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(body: TrackTypeBadge(trackType: TrackType.personal)),
         ),
       );
-      expect(find.text('Tutor'), findsOneWidget);
+      expect(find.byType(Container), findsWidgets);
     });
   });
 
@@ -317,7 +317,7 @@ void main() {
       );
 
       expect(find.byType(TrackTypeBadge), findsOneWidget);
-      expect(find.text('Tutor'), findsOneWidget);
+      expect(find.text('Personal'), findsOneWidget);
     });
   });
 }

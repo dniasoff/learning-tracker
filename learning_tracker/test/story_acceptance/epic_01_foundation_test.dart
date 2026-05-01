@@ -6,6 +6,7 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_test/flutter_test.dart' show TestWidgetsFlutterBinding;
 import 'package:kosher_dart/kosher_dart.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -60,6 +61,8 @@ Future<int> _insertTrack(UserDatabase db) async {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // ── Story 1.1: Project initialisation ──────────────────────────
 
   group('Story 1.1 -- Project initialisation', tags: ['story_1_1'], () {

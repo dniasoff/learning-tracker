@@ -3,8 +3,8 @@ import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 
 void main() {
   group('CalendarProgramRegistry', () {
-    test('has exactly 12 programs', () {
-      expect(CalendarProgramRegistry.programs.length, 12);
+    test('has exactly 15 programs', () {
+      expect(CalendarProgramRegistry.programs.length, 15);
     });
 
     group('byApiKey - Sefaria programs', () {

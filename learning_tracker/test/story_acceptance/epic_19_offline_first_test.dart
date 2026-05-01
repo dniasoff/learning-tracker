@@ -22,8 +22,8 @@ import '../helpers/test_database.dart';
 void main() {
   // ─── Story 19.1: Calendar Registry Bugs ──────────────────────────
   group('Story 19.1 — Calendar Registry Bugs Fixed', () {
-    test('all 12 programs are registered', () {
-      expect(CalendarProgramRegistry.programs.length, 12);
+    test('all 15 programs are registered', () {
+      expect(CalendarProgramRegistry.programs.length, 15);
     });
 
     test('Sefaria programs have correct apiKeys', () {
@@ -155,11 +155,11 @@ void main() {
       }
     });
 
-    test('AT-19.3.2 programs-only seed yields 18 LearningPrograms with '
+    test('AT-19.3.2 programs-only seed yields 16 LearningPrograms with '
         'api fields populated', () {
       // Programs are now served from LearningProgramRepository (compile-time).
       final rows = LearningProgramRepository.instance.getAllPrograms();
-      expect(rows, hasLength(18));
+      expect(rows, hasLength(16));
 
       final dafYomi = rows.firstWhere((p) => p.name == 'daf_yomi');
       expect(dafYomi.apiSource, 'sefaria');
@@ -367,7 +367,7 @@ void main() {
     );
 
     test('learningProgramSeeds exposes api fields for every entry', () {
-      expect(learningProgramSeeds, hasLength(18));
+      expect(learningProgramSeeds, hasLength(16));
       for (final p in learningProgramSeeds) {
         expect(
           p.containsKey('api_source'),
@@ -411,6 +411,9 @@ void main() {
         ('tanakh_yomi', 'Jeremiah 31:32-Jeremiah 32:21'),
         ('chofetz_chaim_daily', 'Chofetz Chaim, Preface 1-4'),
         ('kitzur_shulchan_aruch_yomi', 'Kitzur Shulchan Aruch 1:1-4'),
+        ('dirshu_kinyan_torah', 'Dirshu Kinyan Torah 1'),
+        ('dirshu_amud_hayomi', 'Dirshu Amud HaYomi 1'),
+        ('dirshu_kinyan_yerushalmi', 'Dirshu Kinyan Yerushalmi 1'),
       ]) {
         await calDb.customInsert(
           'INSERT INTO calendar_cycles (program_key, date_key, sefaria_ref, display_name) '
@@ -465,16 +468,16 @@ void main() {
       expect(entry.displayNameHe, def.displayNameHe);
     });
 
-    test('AT-19.4.2 getTodayPrograms returns entries for all 12 '
+    test('AT-19.4.2 getTodayPrograms returns entries for all 15 '
         'programs', () async {
       final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
-      expect(results, hasLength(12));
+      expect(results, hasLength(15));
       for (final entry in results) {
         expect(entry.todayRef, isNotEmpty);
         expect(entry.apiSource, 'local');
       }
       final ids = results.map((e) => e.programId).toSet();
-      expect(ids, hasLength(12));
+      expect(ids, hasLength(15));
       expect(ids.contains('daf_yomi'), isTrue);
       expect(ids.contains('nach_yomi'), isTrue);
       expect(ids.contains('chofetz_chaim_daily'), isTrue);
@@ -505,9 +508,9 @@ void main() {
     test(
       'AT-19.4.5 getTodayPrograms returns entries with apiSource=local',
       () async {
-        // With 12 seeded rows, getTodayPrograms returns all 12.
+        // With 15 seeded rows, getTodayPrograms returns all 15.
         final result = await engine.getTodayPrograms(DateTime(2026, 3, 29));
-        expect(result, hasLength(12));
+        expect(result, hasLength(15));
         expect(
           result.every((CalendarProgramEntry e) => e.apiSource == 'local'),
           isTrue,

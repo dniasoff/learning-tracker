@@ -733,6 +733,11 @@ void main() {
           findsWidgets,
         );
         expect(find.text('10', skipOffstage: false), findsWidgets);
+
+        // Dispose ProviderScope explicitly so Drift stream cleanup timers fire
+        // before the test framework checks for pending timers.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
       },
     );
 
@@ -748,6 +753,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('10', skipOffstage: false), findsWidgets);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
 
     // ── Widget: Primary points cannot go below 1 ──
@@ -765,6 +773,9 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(find.text('1', skipOffstage: false), findsWidgets);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
 
     // ── Integration: Change points, complete item, verify new points ──
@@ -809,6 +820,16 @@ void main() {
           CurriculumId.mishnayos.storageKey,
         );
         expect(completions.last.points, 15);
+
+        // Make the track reward-eligible so getCurriculumTotal counts it
+        await db.goalDao.insertGoal(
+          GoalsCompanion.insert(
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            trackId: trackId,
+            createdAt: DateTime.now().toUtc(),
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
 
         // Verify total
         final total = await pointsService.getCurriculumTotal(

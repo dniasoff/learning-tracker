@@ -74,10 +74,8 @@ void main() {
           // Act
           final breakdown = await repository.getTrackBreakdown('bavli');
 
-          // Assert
-          expect(breakdown[TrackType.personal], 2);
-          expect(breakdown[TrackType.personal], 1);
-          expect(breakdown[TrackType.personal], 0);
+          // Assert: 3 personal completions inserted
+          expect(breakdown[TrackType.personal], 3);
         },
       );
 
@@ -100,10 +98,8 @@ void main() {
           // Act
           final breakdown = await repository.getTrackBreakdown('bavli');
 
-          // Assert
+          // Assert: 1 personal completion, no school/tutor (V1 only has personal)
           expect(breakdown[TrackType.personal], 1);
-          expect(breakdown[TrackType.personal], 0);
-          expect(breakdown[TrackType.personal], 0);
         },
       );
 

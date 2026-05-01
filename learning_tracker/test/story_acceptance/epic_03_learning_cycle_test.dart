@@ -2,6 +2,7 @@
 @Tags(['epic_3'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -68,19 +69,21 @@ void main() {
 
   group('Story 3.1 -- Record completion', tags: ['story_3_1'], () {
     late UserDatabase db;
-    late int trackId;
     late _MockSyncEngine syncEngine;
     late _MockContentRepository contentRepo;
     late CompletionRepositoryImpl repo;
 
     setUp(() async {
       db = _db();
-      trackId = await _insertTrack(db);
+      await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
 
       when(() => syncEngine.pushCompletion(any())).thenAnswer((_) async {});
+      when(
+        () => syncEngine.pushGamificationSettingsSnapshot(),
+      ).thenAnswer((_) async {});
       when(
         () => contentRepo.getContentForCurriculum(any()),
       ).thenAnswer((_) async => []);
@@ -115,10 +118,54 @@ void main() {
     );
 
     test('completion emits points based on stage', () async {
+      // Points are only awarded to child profiles; insert a child profile
+      final childProfile = await db
+          .into(db.profiles)
+          .insertReturning(
+            ProfilesCompanion.insert(
+              accountId: 0,
+              displayName: 'Test Child',
+              mode: 'child',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+
+      // Insert a curriculum track scoped to the child profile
+      final childTrack = await db
+          .into(db.curriculumTracks)
+          .insertReturning(
+            CurriculumTracksCompanion.insert(
+              profileId: Value(childProfile.id),
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              activatedAt: DateTime.now(),
+            ),
+          );
+      final childTrackId = childTrack.id;
+
+      // Make the track reward-eligible so points are awarded
+      await db.goalDao.insertGoal(
+        GoalsCompanion.insert(
+          profileId: Value(childProfile.id),
+          curriculumId: 'mishnayos',
+          trackId: childTrackId,
+          createdAt: DateTime.now().toUtc(),
+          updatedAt: DateTime.now().toUtc(),
+        ),
+      );
+
+      final childRepo = CompletionRepositoryImpl(
+        database: db,
+        syncEngine: syncEngine,
+        contentRepository: contentRepo,
+        activeProfileId: childProfile.id,
+      );
+
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
-          trackId: trackId,
+          trackId: childTrackId,
           stageOrder: 1,
           stageName: 'Learning',
           delayDays: 0,
@@ -127,14 +174,14 @@ void main() {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           curriculumId: 'mishnayos',
-          trackId: trackId,
+          trackId: childTrackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
           delayDays: 1,
         ),
       );
 
-      final c1 = (await repo.markComplete(
+      final c1 = (await childRepo.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
@@ -142,7 +189,7 @@ void main() {
           trackType: 'personal',
         ),
       )).completion;
-      final c2 = (await repo.markComplete(
+      final c2 = (await childRepo.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berachot 1:1',
@@ -151,8 +198,9 @@ void main() {
         ),
       )).completion;
 
-      // Points differ by stage: Learn=10, Chazara1=5 (default config)
-      expect(c1.points, isNot(equals(c2.points)));
+      // Child profiles: Learn=10, Chazara1=5 (default config)
+      expect(c1.points, equals(10));
+      expect(c2.points, equals(5));
     });
 
     test('duplicate completion for same stage is idempotent', () async {
@@ -303,6 +351,7 @@ void main() {
       repo = _repo(db, syncEngine, contentRepo);
 
       when(() => syncEngine.pushCompletion(any())).thenAnswer((_) async {});
+      when(() => syncEngine.pushBookmark(any())).thenAnswer((_) async {});
       when(
         () => contentRepo.getContentForCurriculum(any()),
       ).thenAnswer((_) async => _fiveItems());

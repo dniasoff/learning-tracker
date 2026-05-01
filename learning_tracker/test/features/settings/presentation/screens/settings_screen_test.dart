@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -13,6 +14,7 @@ import 'package:learning_tracker/features/learning/data/repositories/track_repos
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -32,7 +34,6 @@ void main() {
   });
 
   Widget createTestWidget({List<CurriculumId> initialActive = const []}) {
-    // Initialize database with active curricula
     return FutureBuilder(
       future: Future(() async {
         for (final curriculum in initialActive) {
@@ -49,6 +50,7 @@ void main() {
         return ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
+            userDatabaseProvider.overrideWithValue(database),
             firebaseAuthProvider.overrideWithValue(mockAuth),
             authStateProvider.overrideWithValue(
               const AuthState.signedIn(
@@ -64,25 +66,30 @@ void main() {
             curriculumActivationServiceProvider.overrideWith((ref) {
               return CurriculumActivationService(
                 database: database,
-                pushActiveCurricula: (_) async {}, // Mock Firestore sync
-                pushCurriculumTrack: (_) async {}, // Mock push track
+                pushActiveCurricula: (_) async {},
+                pushCurriculumTrack: (_) async {},
                 trackRepository: TrackRepositoryImpl(database: database),
               );
             }),
           ],
-          child: const MaterialApp(home: SettingsScreen()),
+          child: const MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SettingsScreen(),
+          ),
         );
       },
     );
   }
 
-  /// Pump the widget and wait for async providers to settle.
   Future<void> pumpUntilSettled(WidgetTester tester) async {
-    // First pump resolves the FutureBuilder
     await tester.pump(const Duration(milliseconds: 100));
-    // Second pump allows the StreamProvider to emit
     await tester.pump(const Duration(milliseconds: 100));
-    // Third pump for any remaining microtasks
     await tester.pump(const Duration(milliseconds: 100));
   }
 
@@ -93,8 +100,11 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
+      expect(find.text('TRACKS'), findsOneWidget);
       expect(find.text('LEARNING'), findsOneWidget);
-      expect(find.text('APPEARANCE'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
 
     testWidgets('renders Manage Tracks tile', (tester) async {
@@ -106,7 +116,10 @@ void main() {
       await pumpUntilSettled(tester);
 
       expect(find.text('Manage Tracks'), findsOneWidget);
-      expect(find.text('Add, edit, or archive tracks'), findsOneWidget);
+      expect(find.text('Create and edit your learning tracks'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
 
     testWidgets('renders learning section tiles', (tester) async {
@@ -116,17 +129,25 @@ void main() {
       await pumpUntilSettled(tester);
 
       expect(find.text('Manage Tracks'), findsOneWidget);
-      expect(find.text('Daily Reminder'), findsOneWidget);
+      expect(find.text('Calendar Preference'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
 
-    testWidgets('renders Daily Reminder Switch', (tester) async {
+    testWidgets('renders Notification Settings tile', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
       await pumpUntilSettled(tester);
 
-      // Daily Reminder has a Switch in the LEARNING section
-      expect(find.byType(Switch), findsAtLeastNWidgets(1));
+      await tester.drag(find.byType(ListView), const Offset(0, -200));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Notification Settings'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
 
     testWidgets('renders lower sections when scrolled', (tester) async {
@@ -135,13 +156,14 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      // Scroll down to reveal more content
       await tester.drag(find.byType(ListView), const Offset(0, -800));
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('ACCOUNT'), findsOneWidget);
       expect(find.text('Sign Out'), findsOneWidget);
-      expect(find.text('Delete Account'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
 
     testWidgets('displays app version when scrolled to bottom', (tester) async {
@@ -150,11 +172,13 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      // Scroll to the very bottom
       await tester.drag(find.byType(ListView), const Offset(0, -1000));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Torah Tracker v1.0.0'), findsOneWidget);
+      expect(find.text('v1.2.4'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
   });
 }

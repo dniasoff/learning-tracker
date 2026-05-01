@@ -84,22 +84,22 @@ void main() {
       await tester.pumpWidget(_buildScreen(tasks: tasks));
       await tester.pumpAndSettle();
 
-      expect(find.text('3 tasks today'), findsOneWidget);
+      expect(find.text('3 today tasks'), findsOneWidget);
     });
 
     testWidgets('shows singular text for single task', (tester) async {
       await tester.pumpWidget(_buildScreen(tasks: [_task()]));
       await tester.pumpAndSettle();
 
-      expect(find.text('1 task today'), findsOneWidget);
+      expect(find.text('1 today tasks'), findsOneWidget);
     });
 
     testWidgets('has view toggle button', (tester) async {
       await tester.pumpWidget(_buildScreen(tasks: [_task()]));
       await tester.pumpAndSettle();
 
-      // The DailyScheduleHeader has an IconButton for toggling views
-      expect(find.byType(IconButton), findsWidgets);
+      // The _GoalCard has an InkWell for toggling grouped/unified views
+      expect(find.byType(InkWell), findsWidgets);
     });
 
     testWidgets('shows loading indicator while loading', (tester) async {

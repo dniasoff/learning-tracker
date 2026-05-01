@@ -158,24 +158,21 @@ void main() {
       expect(assignedTrack, TrackType.personal);
     });
 
-    test('prompts for track selection when multiple tracks active', () async {
+    test('auto-assigns personal track (V1 has only one track type)', () async {
       const curriculumId = 'mishnayos';
 
-      // Activate school track
+      // In V1, personal is the only track type; activateTrack is a no-op
       await trackService.activateTrack(curriculumId, TrackType.personal);
 
-      // Should return null to indicate user needs to select
+      // Single active track → auto-assigned, no user prompt needed
       final assignedTrack = await trackService.getAutoAssignedTrack(
         curriculumId,
       );
-      expect(assignedTrack, isNull);
+      expect(assignedTrack, TrackType.personal);
 
-      // Verify both tracks are active
+      // Verify only personal track is active
       final activeTracks = await trackService.getActiveTracks(curriculumId);
-      expect(
-        activeTracks,
-        containsAll([TrackType.personal, TrackType.personal]),
-      );
+      expect(activeTracks, equals([TrackType.personal]));
     });
 
     test('duplicate check scopes correctly to curriculum', () async {

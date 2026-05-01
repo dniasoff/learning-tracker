@@ -50,7 +50,7 @@ void main() {
     group('getDailyCompletions', () {
       test('returns zero-filled entries for empty range', () async {
         when(
-          () => mockCompletionDao.getAllCompletions(),
+          () => mockCompletionDao.getCompletionsByProfile(0),
         ).thenAnswer((_) async => []);
 
         final start = DateTime(2026, 3, 1);
@@ -65,7 +65,7 @@ void main() {
       });
 
       test('counts completions per day', () async {
-        when(() => mockCompletionDao.getAllCompletions()).thenAnswer(
+        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
           (_) async => [
             makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
             makeCompletion(completedAt: DateTime(2026, 3, 1, 14)),
@@ -86,7 +86,10 @@ void main() {
 
       test('filters by curriculumId when provided', () async {
         when(
-          () => mockCompletionDao.getCompletionsByCurriculum('bavli'),
+          () => mockCompletionDao.getCompletionsByCurriculumAndProfile(
+            'bavli',
+            0,
+          ),
         ).thenAnswer(
           (_) async => [
             makeCompletion(
@@ -104,13 +107,13 @@ void main() {
 
         expect(result, hasLength(1));
         expect(result[0].count, 1);
-        verifyNever(() => mockCompletionDao.getAllCompletions());
+        verifyNever(() => mockCompletionDao.getCompletionsByProfile(0));
       });
     });
 
     group('getCumulativeProgress', () {
       test('returns monotonically increasing totals', () async {
-        when(() => mockCompletionDao.getAllCompletions()).thenAnswer(
+        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
           (_) async => [
             makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
             makeCompletion(completedAt: DateTime(2026, 3, 2, 10)),
@@ -130,7 +133,7 @@ void main() {
       });
 
       test('includes completions before start date in baseline', () async {
-        when(() => mockCompletionDao.getAllCompletions()).thenAnswer(
+        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
           (_) async => [
             makeCompletion(completedAt: DateTime(2026, 2, 28, 10)),
             makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
@@ -159,7 +162,7 @@ void main() {
       });
 
       test('returns points per day for child mode', () async {
-        when(() => mockCompletionDao.getAllCompletions()).thenAnswer(
+        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
           (_) async => [
             makeCompletion(completedAt: DateTime(2026, 3, 1, 10), points: 5),
             makeCompletion(completedAt: DateTime(2026, 3, 1, 14), points: 3),
@@ -180,7 +183,7 @@ void main() {
 
     group('getStreakCalendar', () {
       test('returns set of active dates', () async {
-        when(() => mockCompletionDao.getAllCompletions()).thenAnswer(
+        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
           (_) async => [
             makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
             makeCompletion(completedAt: DateTime(2026, 3, 1, 14)),

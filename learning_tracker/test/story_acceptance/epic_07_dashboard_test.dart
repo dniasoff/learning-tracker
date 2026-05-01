@@ -447,7 +447,7 @@ void main() {
         );
 
         expect(find.text('משניות'), findsOneWidget);
-        expect(find.text('75% complete'), findsOneWidget);
+        expect(find.text('75.00% complete'), findsOneWidget);
         expect(find.text('Next: Berachos 1:1'), findsOneWidget);
         expect(find.byIcon(Icons.trending_up), findsOneWidget);
 
@@ -677,9 +677,8 @@ void main() {
       );
 
       final tb = result.hierarchyLevels[0].trackBreakdown;
-      expect(tb[TrackType.personal], equals(1));
-      expect(tb[TrackType.personal], equals(1));
-      expect(tb[TrackType.personal], equals(2));
+      // V1 only has personal tracks; all 4 completions are personal
+      expect(tb[TrackType.personal], equals(4));
     });
 
     test(
