@@ -26,8 +26,7 @@ class TrackRepositoryImpl implements TrackRepository {
   }) async {
     final all = await _database.trackDao.getAllTracks(curriculumId);
     final preferred = all.where(
-      (t) =>
-          t.trackType == trackType.storageKey && t.profileId == profileId,
+      (t) => t.trackType == trackType.storageKey && t.profileId == profileId,
     );
     if (preferred.isNotEmpty) return preferred.first;
     final legacy = all.where((t) => t.trackType == trackType.storageKey);

@@ -509,8 +509,8 @@ class _IntroPage extends StatelessWidget {
           ),
         );
       case _IntroPageVariant.rewards:
-        return Column(
-          children: const [
+        return const Column(
+          children: [
             _FeatureCardsRow(),
             SizedBox(height: 20),
             _ScholarLevelCard(),
@@ -576,18 +576,18 @@ class _IntroDailyPlanIllustration extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
+                    const Row(
                       children: [
                         Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: const [
+                          children: [
                             _WindowDot(c: _kCoral),
                             _WindowDot(c: Color(0xFFFFC94A)),
                             _WindowDot(c: Color(0xFF5BC0EB)),
                           ],
                         ),
-                        const Spacer(),
-                        const Icon(
+                        Spacer(),
+                        Icon(
                           Icons.calendar_today_outlined,
                           size: 14,
                           color: AppTheme.brandInkMuted,
@@ -1006,8 +1006,8 @@ class _FeatureCardsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         Expanded(
           child: _FeatureCard(
             icon: Icons.military_tech_outlined,

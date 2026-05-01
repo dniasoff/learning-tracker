@@ -231,7 +231,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             'Review History',
             style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
           ),
@@ -239,7 +239,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
           breakdownAsync.when(
             data: (breakdown) {
               if (breakdown.isEmpty) {
-                return Text(
+                return const Text(
                   'No completions yet.',
                   style: TextStyle(color: AppTheme.brandInkMuted),
                 );

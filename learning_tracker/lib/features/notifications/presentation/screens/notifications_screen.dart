@@ -36,9 +36,9 @@ class NotificationsScreen extends ConsumerWidget {
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
         actions: [
-          IconButton(
+          const IconButton(
             onPressed: null,
-            icon: const Icon(Icons.notifications, color: Color(0xFF1338A2)),
+            icon: Icon(Icons.notifications, color: Color(0xFF1338A2)),
           ),
           const SizedBox(width: 4),
         ],
@@ -310,7 +310,7 @@ class _NotificationSwitchRow extends StatelessWidget {
               ],
               Switch(
                 value: value,
-                activeColor: Colors.white,
+                activeThumbColor: Colors.white,
                 activeTrackColor: const Color(0xFF123CA5),
                 inactiveThumbColor: Colors.white,
                 inactiveTrackColor: const Color(0xFFE0E4ED),
@@ -501,7 +501,7 @@ class _SacredTimeCard extends StatelessWidget {
                     Switch(
                       key: const Key('shabbos_use_location_toggle'),
                       value: shabbosUseLocation,
-                      activeColor: Colors.white,
+                      activeThumbColor: Colors.white,
                       activeTrackColor: const Color(0xFF123CA5),
                       inactiveThumbColor: Colors.white,
                       inactiveTrackColor: const Color(0xFFE0E4ED),

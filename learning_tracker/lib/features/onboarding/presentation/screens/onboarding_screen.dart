@@ -685,7 +685,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.calendar_month_rounded,
                         size: 22,
                         color: AppTheme.brandInk,
@@ -711,7 +711,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.language_rounded,
                         size: 22,
                         color: AppTheme.brandInk,

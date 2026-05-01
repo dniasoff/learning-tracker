@@ -43,8 +43,8 @@ Future<void> showSignOutConfirmation(
                   Container(
                     width: 88,
                     height: 88,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFDE7EA),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFDE7EA),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

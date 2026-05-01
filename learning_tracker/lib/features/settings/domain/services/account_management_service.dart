@@ -162,7 +162,9 @@ class AccountManagementService {
         final legacyProfiles = await userDocRef.collection('profiles').get();
         for (final profileDoc in legacyProfiles.docs) {
           for (final sub in profileSubcollections) {
-            final subSnapshot = await profileDoc.reference.collection(sub).get();
+            final subSnapshot = await profileDoc.reference
+                .collection(sub)
+                .get();
             for (final doc in subSnapshot.docs) {
               await doc.reference.delete();
             }

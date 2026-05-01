@@ -276,7 +276,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                         child: Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.menu_book_rounded,
                               color: _kOrangeAccent,
                               size: 26,
@@ -546,7 +546,7 @@ class _CurriculumPointsCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.star_rounded,
                               color: _kOrangeAccent,
                               size: 22,

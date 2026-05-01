@@ -280,7 +280,7 @@ void main() {
       'bulk prior flag yields zero points even when track is reward-eligible',
       () async {
         final completions = await repository.bulkMarkComplete(
-          BulkCompletionRequest(
+          const BulkCompletionRequest(
             curriculumId: 'mishnayos',
             sefariaRefs: ['Mishnah Berachot 1:1'],
             stageId: 1,

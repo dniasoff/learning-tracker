@@ -10,12 +10,12 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -161,7 +161,7 @@ class _DashedOutlineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     const radius = 24.0;
     return CustomPaint(
-      painter: _DashedRRectPainter(
+      painter: const _DashedRRectPainter(
         color: AppTheme.brandBlueDeep,
         strokeWidth: 1.4,
         radius: radius,
@@ -251,7 +251,7 @@ class _AccountTile extends ConsumerWidget {
           isCloud
               ? l10n.accountRemoveFromDevice
               : l10n.accountDeleteAccountAction,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppTheme.brandCoralDeep,
             fontWeight: FontWeight.w600,
           ),
@@ -398,6 +398,7 @@ class _AccountTile extends ConsumerWidget {
         }
       } else {
         // Offline-first cloud behavior: allow local access and queue sync ops.
+        if (!context.mounted) return;
         await _activateCloudAccountFromLocalData(context, ref);
       }
     } else {

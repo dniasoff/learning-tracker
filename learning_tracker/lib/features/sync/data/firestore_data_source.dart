@@ -242,7 +242,9 @@ class FirestoreDataSource {
           if (docs.docs.isEmpty) continue;
 
           for (final doc in docs.docs) {
-            await targetCol.doc(doc.id).set(doc.data(), SetOptions(merge: true));
+            await targetCol
+                .doc(doc.id)
+                .set(doc.data(), SetOptions(merge: true));
           }
           for (final doc in docs.docs) {
             await doc.reference.delete();

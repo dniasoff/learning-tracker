@@ -55,12 +55,12 @@ void main() {
         ),
         isStageCompletedProvider.overrideWith((ref, params) async => false),
       ],
-      child: MaterialApp(
+      child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: MediaQuery(
-          data: const MediaQueryData(size: Size(800, 1200)),
-          child: const TextDisplayScreen(sefariaRef: 'Mishnah Berakhot 1.1'),
+          data: MediaQueryData(size: Size(800, 1200)),
+          child: TextDisplayScreen(sefariaRef: 'Mishnah Berakhot 1.1'),
         ),
       ),
     );

@@ -32,10 +32,10 @@ class AppShellScreen extends StatelessWidget {
           (icon: Icons.settings_rounded, label: l10n.tabBarSettings),
         ];
         return DecoratedBox(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: const [
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
               BoxShadow(
                 color: Color(0x140038A8),
                 blurRadius: 18,

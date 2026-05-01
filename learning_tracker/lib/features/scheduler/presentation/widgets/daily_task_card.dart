@@ -145,7 +145,7 @@ class DailyTaskCard extends ConsumerWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.timer_outlined,
                             size: 16,
                             color: AppTheme.brandInkMuted,
@@ -159,7 +159,7 @@ class DailyTaskCard extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          Icon(
+                          const Icon(
                             Icons.stars_rounded,
                             size: 16,
                             color: AppTheme.brandInkMuted,

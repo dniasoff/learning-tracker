@@ -33,8 +33,10 @@ class UseHebrewDateNotifier extends _$UseHebrewDateNotifier {
 
   Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    final value =
-        ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, profileId);
+    final value = ProfileScopedPreferenceKeys.readUseHebrewCalendar(
+      prefs,
+      profileId,
+    );
     if (profileId == 0) {
       _useHebrewDateMirrorProfile0 = value;
     }

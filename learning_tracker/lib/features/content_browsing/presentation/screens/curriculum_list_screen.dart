@@ -47,10 +47,10 @@ class CurriculumListScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppTheme.brandOutline),
             ),
-            child: Row(
+            child: const Row(
               children: [
                 Icon(Icons.search, color: AppTheme.brandInkMuted, size: 20),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Text(
                   'Search curricula...',
                   style: TextStyle(color: AppTheme.brandInkMuted, fontSize: 15),
@@ -61,7 +61,7 @@ class CurriculumListScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Section header
-          Text(
+          const Text(
             'CURRICULA',
             style: TextStyle(
               fontSize: 12,
@@ -83,7 +83,7 @@ class CurriculumListScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Recent Activity section
-          Text(
+          const Text(
             'RECENT ACTIVITY',
             style: TextStyle(
               fontSize: 12,
@@ -196,7 +196,7 @@ class _CurriculumCard extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         curriculum.displayNameHe,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.brandInkMuted,
@@ -280,7 +280,7 @@ class _CurriculumCard extends ConsumerWidget {
                 if (containerCount > 0) ...[
                   Text(
                     '$containerCount ${_getContainerLabel(curriculum)}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,
                       fontWeight: FontWeight.w500,
@@ -291,7 +291,7 @@ class _CurriculumCard extends ConsumerWidget {
                 if (leafCount > 0)
                   Text(
                     '$leafCount ${_getLeafLabel(curriculum)}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,
                       fontWeight: FontWeight.w500,
@@ -356,11 +356,11 @@ class _RecentActivityPlaceholder extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Start learning to see activity here',
                   style: TextStyle(
                     fontSize: 14,
@@ -368,7 +368,7 @@ class _RecentActivityPlaceholder extends StatelessWidget {
                     color: AppTheme.brandInk,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   'Your recent completions will appear below',
                   style: TextStyle(fontSize: 12, color: AppTheme.brandInkMuted),

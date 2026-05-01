@@ -380,8 +380,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                       Container(
                         width: 88,
                         height: 88,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFDE7EA),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFDE7EA),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -549,7 +549,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }) async {
     if (_isFinishing) return;
     _isFinishing = true;
-    var result = AddTrackResult(
+    final result = AddTrackResult(
       curriculumId: _state.curriculumId!,
       label: _getSmartDefault(),
       programId: _state.programId,
@@ -879,9 +879,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                         );
                         final delay = stage['delay_days'];
                         final delayLabel = switch (delay) {
-                          int value when value == 1 => 'After 1 day',
-                          int value => 'After $value days',
-                          String value => 'After $value days',
+                          final int value when value == 1 => 'After 1 day',
+                          final int value => 'After $value days',
+                          final String value => 'After $value days',
                           _ => 'Scheduled by program',
                         };
 
@@ -3266,7 +3266,7 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
     final dateLabel = '$weekday, $month ${date.day}';
     final offsetLabel = switch (_offsetDays) {
       0 => 'Today',
-      < 0 => 'Day ${_offsetDays}',
+      < 0 => 'Day $_offsetDays',
       _ => 'Day +$_offsetDays',
     };
     final directionLabel = switch (_offsetDays) {

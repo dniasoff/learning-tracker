@@ -109,7 +109,9 @@ class CumulativeLineChart extends StatelessWidget {
                 },
               ),
             ),
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             topTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),

@@ -153,7 +153,7 @@ class TrackCreationService {
       //   - "offset:N" → legacy day-offset format
       //   - a sefariaRef string (e.g. "Berakhot 42a") → content-based position
       final rawStartingRef = result.startingRef;
-      String? bookmarkRef = rawStartingRef;
+      var bookmarkRef = rawStartingRef;
       String? offsetToken;
       if (rawStartingRef != null && rawStartingRef.contains('|')) {
         for (final token in rawStartingRef.split('|')) {

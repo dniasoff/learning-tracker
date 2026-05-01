@@ -29,7 +29,7 @@ class MockCurriculumImportService extends Mock
 
 /// Stubs every [FirestoreDataSource] method used by [SyncEngine.pullOnLaunch].
 void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
-  final ps = FirestoreDataSource.defaultPageSize;
+  const ps = FirestoreDataSource.defaultPageSize;
   when(() => mock.forProfile(any())).thenReturn(mock);
   when(() => mock.fetchCompletions(pageSize: ps)).thenAnswer((_) async => []);
   when(() => mock.fetchBookmarks(pageSize: ps)).thenAnswer((_) async => []);
@@ -318,7 +318,7 @@ void main() {
 
       await syncEngine.pullOnLaunch();
 
-      final ps = FirestoreDataSource.defaultPageSize;
+      const ps = FirestoreDataSource.defaultPageSize;
       verify(() => mockFirestore.fetchLearnerProfiles()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
       verify(() => mockFirestore.forProfile(1)).called(1);
@@ -838,7 +838,7 @@ void main() {
 
       await restoreService.restore();
 
-      final ps = FirestoreDataSource.defaultPageSize;
+      const ps = FirestoreDataSource.defaultPageSize;
       verify(() => mockFirestore.fetchCompletions(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchBookmarks(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchSettings(pageSize: ps)).called(1);
@@ -939,7 +939,7 @@ void main() {
 
       await restoreService.restore();
 
-      final ps = FirestoreDataSource.defaultPageSize;
+      const ps = FirestoreDataSource.defaultPageSize;
       // Verify only the expected fetch methods were called — no PIN
       // methods exist on FirestoreDataSource, confirming PINs are
       // excluded from the restore by design (FR99).

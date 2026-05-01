@@ -326,7 +326,9 @@ class SyncEngine {
       // - IDs returned from Firestore `learner_profiles` (authoritative paths)
       // - Plus any row already in local `profiles` (covers account_id ≠ 1 and
       //   offline-created rows). Do not rely only on getProfilesByAccount(1).
-      final idsFromRemote = _learnerProfileIdsFromRemotePayload(learnerProfiles);
+      final idsFromRemote = _learnerProfileIdsFromRemotePayload(
+        learnerProfiles,
+      );
       final allLocalProfiles = await _database.select(_database.profiles).get();
       final idsFromLocal = allLocalProfiles.map((p) => p.id).toSet();
       final mergedProfileIds = {...idsFromRemote, ...idsFromLocal}.toList()
@@ -733,9 +735,7 @@ class SyncEngine {
       now.millisecondsSinceEpoch,
     );
     final payload = await _readLocalUiPreferencesPayload();
-    await _offlineQueue.enqueueUiPreferences(
-      _withQueueTargetProfile(payload),
-    );
+    await _offlineQueue.enqueueUiPreferences(_withQueueTargetProfile(payload));
     await _afterEnqueueForBackgroundFlush(context: 'ui preferences');
   }
 
@@ -1322,9 +1322,7 @@ class SyncEngine {
           )
           .toList(),
       'reward_settings': rewardPayload,
-      'lifetime_stats': {
-        'total_points_from_completions': totalPointsSum,
-      },
+      'lifetime_stats': {'total_points_from_completions': totalPointsSum},
     };
   }
 
@@ -2575,20 +2573,24 @@ class SyncEngine {
   Future<Map<String, dynamic>> _readLocalUiPreferencesPayload() async {
     final profileId = _firestoreDataSource.profileId;
     final prefs = await SharedPreferences.getInstance();
-    final locale =
-        ProfileScopedPreferenceKeys.readAppLocale(prefs, profileId);
-    final hebrew =
-        ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, profileId);
-    final fontIdx =
-        ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, profileId);
-    final nikud = ProfileScopedPreferenceKeys.readShowNikud(prefs, profileId);
-    final learningOrder =
-        ProfileScopedPreferenceKeys.readLearningOrderParentControls(
+    final locale = ProfileScopedPreferenceKeys.readAppLocale(prefs, profileId);
+    final hebrew = ProfileScopedPreferenceKeys.readUseHebrewCalendar(
       prefs,
       profileId,
     );
-    final updatedAtMs =
-        prefs.getInt(ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId));
+    final fontIdx = ProfileScopedPreferenceKeys.readFontSizeIndex(
+      prefs,
+      profileId,
+    );
+    final nikud = ProfileScopedPreferenceKeys.readShowNikud(prefs, profileId);
+    final learningOrder =
+        ProfileScopedPreferenceKeys.readLearningOrderParentControls(
+          prefs,
+          profileId,
+        );
+    final updatedAtMs = prefs.getInt(
+      ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
+    );
     final updatedAt = updatedAtMs == null
         ? DateTime.now().toUtc()
         : DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true);
@@ -2599,10 +2601,7 @@ class SyncEngine {
       'updated_at': updatedAt.toIso8601String(),
       'app_locale': locale,
       'use_hebrew_calendar': hebrew,
-      'text_display': {
-        'font_size_index': fontIdx,
-        'show_nikud': nikud,
-      },
+      'text_display': {'font_size_index': fontIdx, 'show_nikud': nikud},
       'learning_order_parent_controls': learningOrder,
     };
   }

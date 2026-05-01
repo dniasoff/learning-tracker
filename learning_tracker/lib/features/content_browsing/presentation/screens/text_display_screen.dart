@@ -564,7 +564,10 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           Expanded(
             child: Text(
               'Unable to load completion context: $e',
-              style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.brandInkMuted,
+              ),
             ),
           ),
         ],
@@ -582,7 +585,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 size: 20,
               ),
               const SizedBox(width: 12),
-              Expanded(
+              const Expanded(
                 child: Text(
                   'No open stage for today — all caught up on this item.',
                   style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),

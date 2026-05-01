@@ -27,16 +27,12 @@ class PointsOverTimeChart extends StatelessWidget {
           alignment: BarChartAlignment.spaceBetween,
           maxY: maxY,
           barTouchData: const BarTouchData(enabled: false),
-          titlesData: FlTitlesData(
+          titlesData: const FlTitlesData(
             show: false,
             bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
           gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),

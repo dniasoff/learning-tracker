@@ -317,7 +317,7 @@ Future<List<ContentItem>?> _safeLoadLeavesForTrack(
 Set<String> _learnedLeafRefs({
   required List<ContentItem> leaves,
   required Set<String> completedRefs,
-  required List<dynamic> ledgerEntries,
+  required List<LearningLedgerData> ledgerEntries,
 }) {
   final learnedRefs = <String>{...completedRefs};
   final refActions = <String, bool>{};
@@ -327,8 +327,8 @@ Set<String> _learnedLeafRefs({
   final level4Actions = <String, bool>{};
 
   for (final entry in ledgerEntries) {
-    final unitType = (entry.unitType ?? '').toString();
-    final unitId = (entry.unitIdentifier ?? '').toString();
+    final unitType = entry.unitType;
+    final unitId = entry.unitIdentifier;
     if (unitId.isEmpty) continue;
     final isUnmark = unitType.startsWith('unmark_');
     final resolvedType = isUnmark
@@ -394,7 +394,7 @@ Set<String> _learnedLeafRefs({
         level3Action ??
         level2Action ??
         level1Action;
-    if (completedDirectly || scopedAction == true) {
+    if (completedDirectly || (scopedAction ?? false)) {
       learnedRefs.add(leaf.sefariaRef);
     } else if (scopedAction == false) {
       learnedRefs.remove(leaf.sefariaRef);

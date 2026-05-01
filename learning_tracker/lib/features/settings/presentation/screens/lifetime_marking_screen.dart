@@ -527,7 +527,7 @@ class _LifetimeCurriculumMarkingScreenState
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.playlist_add_check_outlined,
                                   color: AppTheme.brandBlue,
                                   size: 26,
@@ -578,7 +578,7 @@ class _LifetimeCurriculumMarkingScreenState
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.draw_outlined,
                                     color: AppTheme.brandBlue,
                                     size: 20,
@@ -644,7 +644,7 @@ class _LifetimeCurriculumMarkingScreenState
                                       },
                                       child: Text(
                                         l10n.breadcrumbsRoot,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: AppTheme.brandBlue,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -690,7 +690,7 @@ class _LifetimeCurriculumMarkingScreenState
                                     ? Center(
                                         child: Text(
                                           l10n.noItemsAtThisLevel,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             color: AppTheme.brandInkMuted,
                                           ),
                                         ),

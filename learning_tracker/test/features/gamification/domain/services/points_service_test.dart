@@ -251,7 +251,7 @@ void main() {
             trackType: 'personal',
             trackId: browseTrack.id,
             completedAt: DateTime.now(),
-            points: Value(99),
+            points: const Value(99),
           ),
         );
 

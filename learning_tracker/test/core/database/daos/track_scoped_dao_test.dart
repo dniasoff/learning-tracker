@@ -346,7 +346,7 @@ void main() {
     test('getConfigsByTrack returns only that track configs', () async {
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: Value(_p1),
+          profileId: const Value(_p1),
           curriculumId: 'mishnayos',
           trackId: track1Id,
           stageOrder: 1,
@@ -355,7 +355,7 @@ void main() {
       );
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: Value(_p2),
+          profileId: const Value(_p2),
           curriculumId: 'mishnayos',
           trackId: track2Id,
           stageOrder: 1,
@@ -371,7 +371,7 @@ void main() {
     test('deleteAllForTrack removes only that track', () async {
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: Value(_p1),
+          profileId: const Value(_p1),
           curriculumId: 'mishnayos',
           trackId: track1Id,
           stageOrder: 1,
@@ -380,7 +380,7 @@ void main() {
       );
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: Value(_p2),
+          profileId: const Value(_p2),
           curriculumId: 'mishnayos',
           trackId: track2Id,
           stageOrder: 1,
