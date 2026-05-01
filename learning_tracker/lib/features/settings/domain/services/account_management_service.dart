@@ -157,20 +157,25 @@ class AccountManagementService {
       }
 
       // Legacy cleanup: remove any old users/{uid}/profiles/{profileId} docs.
-      final legacyProfiles = await userDocRef.collection('profiles').get();
-      for (final profileDoc in legacyProfiles.docs) {
-        for (final sub in profileSubcollections) {
-          final subSnapshot = await profileDoc.reference.collection(sub).get();
-          for (final doc in subSnapshot.docs) {
-            await doc.reference.delete();
+      // Deployed rules often deny this path; skip when not readable.
+      try {
+        final legacyProfiles = await userDocRef.collection('profiles').get();
+        for (final profileDoc in legacyProfiles.docs) {
+          for (final sub in profileSubcollections) {
+            final subSnapshot = await profileDoc.reference.collection(sub).get();
+            for (final doc in subSnapshot.docs) {
+              await doc.reference.delete();
+            }
           }
+          await profileDoc.reference.collection('streak').doc('data').delete();
+          await profileDoc.reference
+              .collection('active_curricula')
+              .doc('data')
+              .delete();
+          await profileDoc.reference.delete();
         }
-        await profileDoc.reference.collection('streak').doc('data').delete();
-        await profileDoc.reference
-            .collection('active_curricula')
-            .doc('data')
-            .delete();
-        await profileDoc.reference.delete();
+      } on FirebaseException catch (e) {
+        if (e.code != 'permission-denied') rethrow;
       }
 
       // 2. Delete legacy flat subcollections

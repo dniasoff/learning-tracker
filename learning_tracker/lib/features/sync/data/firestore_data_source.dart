@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/learner_profiles/{profileId}/streak/data` - Streak (single doc)
 /// - `users/{uid}/learner_profiles/{profileId}/notification_settings/preferences` - Notification preferences (LWW)
 /// - `users/{uid}/learner_profiles/{profileId}/gamification_settings/config` - Points/rewards config
+/// - `users/{uid}/learner_profiles/{profileId}/ui_preferences/data` - Locale, calendar, text display, learning-order prefs
 /// - `users/{uid}/learner_profiles/{profileId}/active_curricula/data` - Active curricula
 /// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state + progress schema (LWW)
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
@@ -111,6 +112,11 @@ class FirestoreDataSource {
     return _profileScopedDoc?.collection('gamification_settings').doc('config');
   }
 
+  /// UI preferences (locale, Hebrew calendar, text display, learning-order flag).
+  DocumentReference<Map<String, dynamic>>? get _uiPreferencesDoc {
+    return _profileScopedDoc?.collection('ui_preferences').doc('data');
+  }
+
   Future<void> _ensureProfilePathReady() async {
     if (_profilePathChecked) return;
     _profilePathChecked = true;
@@ -121,95 +127,43 @@ class FirestoreDataSource {
     final legacy = _legacyProfileScopedDoc;
     if (target == null || legacy == null) return;
 
-    final legacySnapshot = await legacy.get();
-    if (!legacySnapshot.exists) {
-      return;
-    }
-
-    final targetSnapshot = await target.get();
-    if (!targetSnapshot.exists) {
-      await target.set({
-        ...?legacySnapshot.data(),
-        'id': profileId,
-        'migrated_from_profiles': true,
-        'migrated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    }
-
-    const subcollections = [
-      'completions',
-      'bookmarks',
-      'settings',
-      'goals',
-      'profile_programs',
-      'streak',
-      'active_curricula',
-      'curriculum_tracks',
-      'notification_settings',
-      'gamification_settings',
-      'learning_ledger',
-      'curriculum_imports',
-    ];
-
-    for (final sub in subcollections) {
-      final legacyCol = legacy.collection(sub);
-      final targetCol = target.collection(sub);
-      final docs = await legacyCol.get();
-      if (docs.docs.isEmpty) continue;
-
-      for (final doc in docs.docs) {
-        await targetCol.doc(doc.id).set(doc.data(), SetOptions(merge: true));
+    // Legacy path `users/{uid}/profiles/{profileId}` is often denied by
+    // deployed rules (only `learner_profiles` is allowed). Skip migration
+    // when reads fail so sync can still use `learner_profiles`.
+    try {
+      final legacySnapshot = await legacy.get();
+      if (!legacySnapshot.exists) {
+        return;
       }
-      for (final doc in docs.docs) {
-        await doc.reference.delete();
-      }
-    }
-
-    await legacy.delete().catchError((_) {});
-  }
-
-  Future<void> _migrateAllLegacyProfilesIfNeeded() async {
-    if (_legacyProfilesMigrated) return;
-    _legacyProfilesMigrated = true;
-
-    final userDoc = _userDoc;
-    if (userDoc == null) return;
-
-    final legacyProfiles = await userDoc.collection('profiles').get();
-    if (legacyProfiles.docs.isEmpty) return;
-
-    const subcollections = [
-      'completions',
-      'bookmarks',
-      'settings',
-      'goals',
-      'profile_programs',
-      'streak',
-      'active_curricula',
-      'curriculum_tracks',
-      'notification_settings',
-      'gamification_settings',
-      'learning_ledger',
-      'curriculum_imports',
-    ];
-
-    for (final legacy in legacyProfiles.docs) {
-      final profileDocId = legacy.id;
-      final profileIntId = int.tryParse(profileDocId);
-      final target = userDoc.collection('learner_profiles').doc(profileDocId);
 
       final targetSnapshot = await target.get();
       if (!targetSnapshot.exists) {
         await target.set({
-          ...legacy.data(),
-          if (profileIntId != null) 'id': profileIntId,
+          ...?legacySnapshot.data(),
+          'id': profileId,
           'migrated_from_profiles': true,
           'migrated_at': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       }
 
+      const subcollections = [
+        'completions',
+        'bookmarks',
+        'settings',
+        'goals',
+        'profile_programs',
+        'streak',
+        'active_curricula',
+        'curriculum_tracks',
+        'notification_settings',
+        'gamification_settings',
+        'ui_preferences',
+        'learning_ledger',
+        'curriculum_imports',
+      ];
+
       for (final sub in subcollections) {
-        final legacyCol = legacy.reference.collection(sub);
+        final legacyCol = legacy.collection(sub);
         final targetCol = target.collection(sub);
         final docs = await legacyCol.get();
         if (docs.docs.isEmpty) continue;
@@ -222,8 +176,90 @@ class FirestoreDataSource {
         }
       }
 
-      await legacy.reference.delete().catchError((_) {});
+      await legacy.delete().catchError((_) {});
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        return;
+      }
+      rethrow;
     }
+  }
+
+  /// One-time migration from deprecated `users/{uid}/profiles` to
+  /// `users/{uid}/learner_profiles`. Rules often deny the legacy path; in that
+  /// case we skip silently so [fetchLearnerProfiles] and sync continue.
+  Future<void> _migrateAllLegacyProfilesIfNeeded() async {
+    if (_legacyProfilesMigrated) return;
+
+    final userDoc = _userDoc;
+    if (userDoc == null) {
+      _legacyProfilesMigrated = true;
+      return;
+    }
+
+    try {
+      final legacyProfiles = await userDoc.collection('profiles').get();
+      if (legacyProfiles.docs.isEmpty) {
+        _legacyProfilesMigrated = true;
+        return;
+      }
+
+      const subcollections = [
+        'completions',
+        'bookmarks',
+        'settings',
+        'goals',
+        'profile_programs',
+        'streak',
+        'active_curricula',
+        'curriculum_tracks',
+        'notification_settings',
+        'gamification_settings',
+        'ui_preferences',
+        'learning_ledger',
+        'curriculum_imports',
+      ];
+
+      for (final legacy in legacyProfiles.docs) {
+        final profileDocId = legacy.id;
+        final profileIntId = int.tryParse(profileDocId);
+        final target = userDoc.collection('learner_profiles').doc(profileDocId);
+
+        final targetSnapshot = await target.get();
+        if (!targetSnapshot.exists) {
+          await target.set({
+            ...legacy.data(),
+            if (profileIntId != null) 'id': profileIntId,
+            'migrated_from_profiles': true,
+            'migrated_at': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
+
+        for (final sub in subcollections) {
+          final legacyCol = legacy.reference.collection(sub);
+          final targetCol = target.collection(sub);
+          final docs = await legacyCol.get();
+          if (docs.docs.isEmpty) continue;
+
+          for (final doc in docs.docs) {
+            await targetCol.doc(doc.id).set(doc.data(), SetOptions(merge: true));
+          }
+          for (final doc in docs.docs) {
+            await doc.reference.delete();
+          }
+        }
+
+        await legacy.reference.delete().catchError((_) {});
+      }
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        _legacyProfilesMigrated = true;
+        return;
+      }
+      rethrow;
+    }
+
+    _legacyProfilesMigrated = true;
   }
 
   // ========== Profile Operations ==========
@@ -304,6 +340,7 @@ class FirestoreDataSource {
       'profile_programs',
       'notification_settings',
       'gamification_settings',
+      'ui_preferences',
       'streak',
     ];
 
@@ -618,6 +655,41 @@ class FirestoreDataSource {
   /// Listen to real-time gamification settings updates.
   Stream<Map<String, dynamic>?> listenToGamificationSettings() {
     final doc = _gamificationSettingsDoc;
+    if (doc == null) {
+      return Stream.value(null);
+    }
+    return doc.snapshots().map((snapshot) => snapshot.data());
+  }
+
+  // ========== UI Preferences (locale, calendar, text display) ==========
+
+  /// Push UI preferences to Firestore (last-write-wins).
+  Future<void> pushUiPreferences(Map<String, dynamic> uiPreferences) async {
+    await _ensureProfilePathReady();
+    final doc = _uiPreferencesDoc;
+    if (doc == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await doc.set({
+      ...uiPreferences,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch UI preferences from Firestore.
+  Future<Map<String, dynamic>?> fetchUiPreferences() async {
+    await _ensureProfilePathReady();
+    final doc = _uiPreferencesDoc;
+    if (doc == null) return null;
+
+    final snapshot = await doc.get();
+    return snapshot.data();
+  }
+
+  /// Listen to real-time UI preference updates.
+  Stream<Map<String, dynamic>?> listenToUiPreferences() {
+    final doc = _uiPreferencesDoc;
     if (doc == null) {
       return Stream.value(null);
     }
