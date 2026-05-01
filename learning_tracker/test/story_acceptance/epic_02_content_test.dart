@@ -328,6 +328,7 @@ void main() {
       service = CurriculumActivationService(
         database: db,
         pushActiveCurricula: (_) async {},
+        pushCurriculumTrack: (_) async {},
         trackRepository: TrackRepositoryImpl(database: db),
       );
     });

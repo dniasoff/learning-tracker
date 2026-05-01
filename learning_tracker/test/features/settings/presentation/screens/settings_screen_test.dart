@@ -65,6 +65,7 @@ void main() {
               return CurriculumActivationService(
                 database: database,
                 pushActiveCurricula: (_) async {}, // Mock Firestore sync
+                pushCurriculumTrack: (_) async {}, // Mock push track
                 trackRepository: TrackRepositoryImpl(database: database),
               );
             }),
