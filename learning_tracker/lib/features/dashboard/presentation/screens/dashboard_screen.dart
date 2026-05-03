@@ -230,6 +230,15 @@ class _DashboardBody extends ConsumerWidget {
               .join(' / ')
         : l10n.noFocusTag;
 
+    final tasksReady = dailyTasksAsync.hasValue;
+    final lifetimeReady = lifetimeTotalsAsync.hasValue;
+    final showAllCaughtUp =
+        tasksReady &&
+        lifetimeReady &&
+        reviewCount == 0 &&
+        overdueCount == 0 &&
+        todayCount == 0;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
       children: [
@@ -307,7 +316,7 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 18),
         ],
-        if (reviewCount == 0 && overdueCount == 0 && todayCount == 0)
+        if (showAllCaughtUp)
           _DashboardAllCaughtUpCard(
             doneDisplay: doneDisplay,
             cumulativeLifetime: cumulativeLifetime,
