@@ -6,12 +6,18 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
+import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shared account actions used by multiple settings surfaces.
 
@@ -228,6 +234,92 @@ Future<void> showDeleteAccountFlow(
   try {
     await service.deleteAccount(user.uid);
     if (context.mounted) {
+      await context.router.replaceAll([const SignInRoute()]);
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete account: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+/// Permanent deletion for [Tier.localBorn] accounts (device-only data).
+///
+/// Closes the active Drift DB if needed, deletes the account DB file,
+/// removes the registry row, clears session prefs, and routes to the
+/// account picker or sign-in when nothing remains on device.
+Future<void> showDeleteLocalAccountFlow(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final authState = ref.read(authStateProvider);
+  if (!authState.isLocalBorn) return;
+
+  final confirmed = await showDeleteAccountDialog(context: context);
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final registry = ref.read(deviceRegistryProvider);
+    final session = SessionPersistenceService(prefs: prefs, registry: registry);
+    final accountId = await session.resolveActiveAccountId();
+    if (accountId == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not resolve this account. Try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final account = await registry.findById(accountId);
+    if (account == null || account.tier != 'localBorn') {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only offline accounts can be deleted here.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (activeDbFileName == account.dbFileName) {
+      activeDbFileName = 'learning_tracker';
+      ref.invalidate(userDatabaseProvider);
+    }
+
+    final docsDir = await getApplicationDocumentsDirectory();
+    final lifecycle = AccountLifecycleService(
+      registry: registry,
+      databasesPath: docsDir.path,
+    );
+    await lifecycle.deleteLocalAccount(accountId);
+
+    await session.clearActiveAccount();
+
+    final management = ref.read(accountManagementServiceProvider);
+    await management.signOut();
+
+    ref.read(authStateProvider.notifier).signOut();
+    ref.read(selectedProfileIdProvider.notifier).clear();
+    ref.read(routerProvider).parentPinGuard.lock();
+
+    if (!context.mounted) return;
+    final remaining = await registry.getAllAccounts();
+    if (!context.mounted) return;
+    if (remaining.isNotEmpty) {
+      await context.router.replaceAll([const AccountPickerRoute()]);
+    } else {
       await context.router.replaceAll([const SignInRoute()]);
     }
   } catch (e) {

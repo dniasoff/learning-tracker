@@ -227,6 +227,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
 
+      // Clear any cached Firebase user so offline local sessions are never
+      // mistaken for cloud sign-in (downstream Firestore awaits would stall).
+      await FirebaseAuth.instance.signOut();
+
       if (!mounted) return;
       final router = context.router;
       final docs = await getApplicationDocumentsDirectory();

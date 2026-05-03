@@ -431,6 +431,7 @@
   "signOut": "התנתקות",
   "deleteAccountTitle": "מחיקת חשבון",
   "deleteAccountSubtitle": "הסרה לצמיתות של החשבון ונתוני הענן",
+  "deleteLocalAccountSubtitle": "מחיקה לצמיתות של החשבון במכשיר וכל נתוני הלמידה",
   "settingsHandcraftedTagline": "נוצר ביד עבור מסע התורה שלכם",
   "calendarPreference": "העדפת לוח שנה",
   "calendarPreferenceSubtitle": "יעדים, מועדים ובוררי תאריך",

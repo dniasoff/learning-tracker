@@ -249,9 +249,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       return;
     }
 
-    // Set user mode via profile service
+    // Cloud-born only: sync learner mode to the Firestore-backed user doc.
+    // Local-born accounts often still have a stale Firebase session on device;
+    // awaiting Firestore here blocks offline-first profile creation indefinitely.
+    final authState = ref.read(authStateProvider);
     final user = ref.read(firebaseAuthProvider).currentUser;
-    if (user != null) {
+    if (authState.isCloudBorn && user != null) {
       final profileService = ref.read(userProfileServiceProvider);
       await profileService.setUserMode(
         firebaseUid: user.uid,

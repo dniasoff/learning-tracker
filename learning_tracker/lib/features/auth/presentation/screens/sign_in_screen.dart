@@ -130,6 +130,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
+      await FirebaseAuth.instance.signOut();
       final profiles = await ref
           .read(userDatabaseProvider)
           .profileDao
@@ -271,6 +272,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ref
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
+        await FirebaseAuth.instance.signOut();
         ref.read(selectedProfileIdProvider.notifier).clear();
         final profiles = await ref
             .read(userDatabaseProvider)

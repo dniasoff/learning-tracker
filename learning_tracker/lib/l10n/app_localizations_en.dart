@@ -858,6 +858,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Permanently remove this account and cloud data';
 
   @override
+  String get deleteLocalAccountSubtitle =>
+      'Permanently deletes this device account and all learning data';
+
+  @override
   String get settingsHandcraftedTagline => 'Handcrafted for your Torah journey';
 
   @override

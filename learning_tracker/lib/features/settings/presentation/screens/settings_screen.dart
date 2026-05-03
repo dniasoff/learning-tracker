@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -33,6 +34,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(firebaseAuthProvider).currentUser;
+    final authState = ref.watch(authStateProvider);
     final theme = Theme.of(context);
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
@@ -45,6 +47,10 @@ class SettingsScreen extends ConsumerWidget {
     final hasPasswordProvider =
         user != null &&
         user.providerData.any((info) => info.providerId == 'password');
+    final showDeleteAccountTile =
+        !isChildProfile &&
+        isAdultProfile &&
+        (user != null || authState.isLocalBorn);
 
     return Scaffold(
       body: SafeArea(
@@ -156,7 +162,7 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () => showSignOutConfirmation(context, ref),
                   ),
                 ),
-              if (!isChildProfile && isAdultProfile && user != null) ...[
+              if (showDeleteAccountTile) ...[
                 const SizedBox(height: 12),
                 _SurfaceCard(
                   child: _SettingsTile(
@@ -164,10 +170,18 @@ class SettingsScreen extends ConsumerWidget {
                     iconColor: theme.colorScheme.error,
                     iconBackground: theme.colorScheme.errorContainer,
                     title: l10n.deleteAccountTitle,
-                    subtitle: l10n.deleteAccountSubtitle,
+                    subtitle: authState.isLocalBorn
+                        ? l10n.deleteLocalAccountSubtitle
+                        : l10n.deleteAccountSubtitle,
                     titleColor: theme.colorScheme.error,
                     trailing: const SizedBox.shrink(),
-                    onTap: () => showDeleteAccountFlow(context, ref, user),
+                    onTap: () {
+                      if (authState.isLocalBorn) {
+                        showDeleteLocalAccountFlow(context, ref);
+                      } else if (user != null) {
+                        showDeleteAccountFlow(context, ref, user);
+                      }
+                    },
                   ),
                 ),
               ],

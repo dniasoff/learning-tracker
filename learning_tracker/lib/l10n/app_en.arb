@@ -431,6 +431,7 @@
   "signOut": "Sign Out",
   "deleteAccountTitle": "Delete Account",
   "deleteAccountSubtitle": "Permanently remove this account and cloud data",
+  "deleteLocalAccountSubtitle": "Permanently deletes this device account and all learning data",
   "settingsHandcraftedTagline": "Handcrafted for your Torah journey",
   "calendarPreference": "Calendar Preference",
   "calendarPreferenceSubtitle": "Goals, deadlines, and date pickers",

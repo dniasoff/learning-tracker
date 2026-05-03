@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
@@ -34,11 +35,13 @@ class ParentSettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(firebaseAuthProvider).currentUser;
+    final authState = ref.watch(authStateProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final activeProfile = profilesAsync.asData?.value
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
+    final showDeleteAccountTile = user != null || authState.isLocalBorn;
 
     return Scaffold(
       backgroundColor: _pageBg,
@@ -164,21 +167,31 @@ class ParentSettingsScreen extends ConsumerWidget {
                     onTap: () => showSignOutConfirmation(context, ref),
                   ),
                 ),
-                const SizedBox(height: 12),
-                _WhitePanel(
-                  child: _ManageRow(
-                    iconBackground: _dangerIconBg,
-                    icon: Icons.delete_forever_rounded,
-                    iconColor: const Color(0xFFB00020),
-                    title: l10n.deleteAccountTitle,
-                    titleColor: const Color(0xFFB00020),
-                    subtitle: l10n.deleteAccountSubtitle,
-                    subtitleColor: const Color(0xFFB00020),
-                    leadingSquare: true,
-                    trailing: const SizedBox.shrink(),
-                    onTap: () => showDeleteAccountFlow(context, ref, user),
+                if (showDeleteAccountTile) ...[
+                  const SizedBox(height: 12),
+                  _WhitePanel(
+                    child: _ManageRow(
+                      iconBackground: _dangerIconBg,
+                      icon: Icons.delete_forever_rounded,
+                      iconColor: const Color(0xFFB00020),
+                      title: l10n.deleteAccountTitle,
+                      titleColor: const Color(0xFFB00020),
+                      subtitle: authState.isLocalBorn
+                          ? l10n.deleteLocalAccountSubtitle
+                          : l10n.deleteAccountSubtitle,
+                      subtitleColor: const Color(0xFFB00020),
+                      leadingSquare: true,
+                      trailing: const SizedBox.shrink(),
+                      onTap: () {
+                        if (authState.isLocalBorn) {
+                          showDeleteLocalAccountFlow(context, ref);
+                        } else if (user != null) {
+                          showDeleteAccountFlow(context, ref, user);
+                        }
+                      },
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

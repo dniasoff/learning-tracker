@@ -850,6 +850,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get deleteAccountSubtitle => 'הסרה לצמיתות של החשבון ונתוני הענן';
 
   @override
+  String get deleteLocalAccountSubtitle =>
+      'מחיקה לצמיתות של החשבון במכשיר וכל נתוני הלמידה';
+
+  @override
   String get settingsHandcraftedTagline => 'נוצר ביד עבור מסע התורה שלכם';
 
   @override

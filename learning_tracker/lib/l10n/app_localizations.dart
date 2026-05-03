@@ -1607,6 +1607,12 @@ abstract class AppLocalizations {
   /// **'Permanently remove this account and cloud data'**
   String get deleteAccountSubtitle;
 
+  /// No description provided for @deleteLocalAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently deletes this device account and all learning data'**
+  String get deleteLocalAccountSubtitle;
+
   /// No description provided for @settingsHandcraftedTagline.
   ///
   /// In en, this message translates to:

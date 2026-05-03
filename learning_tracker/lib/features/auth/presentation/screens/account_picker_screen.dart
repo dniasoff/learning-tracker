@@ -470,6 +470,7 @@ class _AccountTile extends ConsumerWidget {
     await session.setActiveAccount(account.accountId);
     await prefs.setBool(kOnboardingComplete, true);
     ref.read(authStateProvider.notifier).setLocalBornSession(profile: profile);
+    await FirebaseAuth.instance.signOut();
 
     if (context.mounted) {
       unawaited(context.router.replaceAll([const AppShellRoute()]));
