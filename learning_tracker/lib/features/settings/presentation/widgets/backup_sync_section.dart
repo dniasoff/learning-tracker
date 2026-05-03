@@ -26,25 +26,21 @@ class BackupSyncSection extends ConsumerWidget {
         heroLayout: parentSettingsHeroLayout,
       ),
       SyncStatusSynced(:final lastSyncedAt) => _buildCloudStatusCard(
-        context,
         theme,
         icon: Icons.cloud_done_rounded,
         subtitle: 'Last synced ${_formatTimeAgo(lastSyncedAt)}',
       ),
       SyncStatusSyncing() => _buildCloudStatusCard(
-        context,
         theme,
         icon: Icons.sync_rounded,
         subtitle: 'Syncing...',
       ),
       SyncStatusPending(:final pendingChanges) => _buildCloudStatusCard(
-        context,
         theme,
         icon: Icons.schedule_rounded,
         subtitle: '$pendingChanges changes pending',
       ),
       SyncStatusOffline(:final pendingChanges) => _buildCloudStatusCard(
-        context,
         theme,
         icon: Icons.cloud_off_rounded,
         subtitle: pendingChanges > 0
@@ -52,7 +48,6 @@ class BackupSyncSection extends ConsumerWidget {
             : 'Offline',
       ),
       SyncStatusError(:final message) => _buildCloudStatusCard(
-        context,
         theme,
         icon: Icons.warning_amber_rounded,
         subtitle: 'Sync error: $message',
@@ -250,7 +245,6 @@ class BackupSyncSection extends ConsumerWidget {
   }
 
   Widget _buildCloudStatusCard(
-    BuildContext context,
     ThemeData theme, {
     required IconData icon,
     required String subtitle,
@@ -300,13 +294,6 @@ class BackupSyncSection extends ConsumerWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-            IconButton(
-              onPressed: () => context.pushRoute(const DeviceRestoreRoute()),
-              icon: const Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.white,
               ),
             ),
           ],
