@@ -133,14 +133,22 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
   }
 
+  /// Whether the selected curriculum has any active programs (shows program step).
+  bool get _hasProgramStepForCurriculum {
+    final id = _state.curriculumId;
+    if (id == null) return false;
+    return LearningProgramRepository.instance
+        .getActiveProgramsByCurriculumType(id.storageKey)
+        .isNotEmpty;
+  }
+
   /// Active steps — program-aware skipping.
   List<AddTrackStep> get _activeSteps {
     final steps = <AddTrackStep>[AddTrackStep.curriculum];
 
-    // Program — always included. ProgramSelectionStep handles the empty
-    // case by auto-dismissing when no programs exist for the curriculum.
-    // This avoids hardcoding which curricula have programs.
-    steps.add(AddTrackStep.program);
+    if (_hasProgramStepForCurriculum) {
+      steps.add(AddTrackStep.program);
+    }
 
     // Scope — skip if program selected (program defines scope)
     if (!_isProgramTrack) {
@@ -230,12 +238,22 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       );
     }
 
-    final step =
+    final programsExistForResume = curriculum != null &&
+        LearningProgramRepository.instance
+            .getActiveProgramsByCurriculumType(curriculum.storageKey)
+            .isNotEmpty;
+
+    var resolvedStep =
         AddTrackStep.values[stepIndex.clamp(0, AddTrackStep.values.length - 1)];
+
+    // Saved "program" step is invalid if this curriculum has no program picker.
+    if (resolvedStep == AddTrackStep.program && !programsExistForResume) {
+      resolvedStep = AddTrackStep.scope;
+    }
 
     setState(() {
       _state = _state.copyWith(
-        currentStep: step,
+        currentStep: resolvedStep,
         curriculumId: curriculum,
         scopeSelections: scopes,
         programId: programId,
@@ -246,7 +264,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       );
     });
 
-    final targetIndex = _activeSteps.indexOf(step);
+    final targetIndex = _activeSteps.indexOf(resolvedStep);
     if (targetIndex > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _pageController.jumpToPage(targetIndex);

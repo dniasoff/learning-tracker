@@ -5,8 +5,8 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 
 /// Stage 2: Join a calendar program or continue self-paced.
 ///
-/// Loads programs via [LearningProgramRepository] — no hardcoded IDs.
-/// Auto-skipped if no programs exist for the selected curriculum.
+/// Loads active programs via [LearningProgramRepository]. The parent
+/// [AddTrackFlow] omits this step when the curriculum has no programs.
 class ProgramSelectionStep extends StatefulWidget {
   const ProgramSelectionStep({
     required this.curriculumId,
@@ -35,9 +35,8 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
   @override
   void initState() {
     super.initState();
-    _programs = LearningProgramRepository.instance.getProgramsByCurriculumType(
-      widget.curriculumId.storageKey,
-    );
+    _programs = LearningProgramRepository.instance
+        .getActiveProgramsByCurriculumType(widget.curriculumId.storageKey);
   }
 
   @override
@@ -84,41 +83,22 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
                     _programs.first,
                   ),
                 ),
-                if (_programs.length > 1) ...[
+                for (var i = 1; i < _programs.length; i++) ...[
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _CompactProgramCard(
-                          program: _programs[1],
-                          onTap: () => widget.onSelected(
-                            _programs[1].id,
-                            _programs[1].displayName,
-                            _programs[1],
-                          ),
-                        ),
-                      ),
-                      if (_programs.length > 2) ...[
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _CompactProgramCard(
-                            program: _programs[2],
-                            accentColor: const Color(0xFFDDE4FF),
-                            iconColor: const Color(0xFF2F4CB5),
-                            onTap: () => widget.onSelected(
-                              _programs[2].id,
-                              _programs[2].displayName,
-                              _programs[2],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                  _CompactProgramCard(
+                    program: _programs[i],
+                    accentColor: i.isEven
+                        ? const Color(0xFFDDE4FF)
+                        : const Color(0xFFF9E4C8),
+                    iconColor: i.isEven
+                        ? const Color(0xFF2F4CB5)
+                        : const Color(0xFF7D5411),
+                    onTap: () => widget.onSelected(
+                      _programs[i].id,
+                      _programs[i].displayName,
+                      _programs[i],
+                    ),
                   ),
-                ],
-                if (_programs.length > 3) ...[
-                  const SizedBox(height: 14),
-                  _ViewMoreProgramsTile(count: _programs.length - 3),
                 ],
                 const SizedBox(height: 18),
                 Center(
@@ -374,60 +354,6 @@ class _CompactProgramCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ViewMoreProgramsTile extends StatelessWidget {
-  const _ViewMoreProgramsTile({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD7DBE3)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 17,
-              backgroundColor: Color(0xFFF3F4F8),
-              child: Icon(Icons.search_rounded, color: AppTheme.brandInkMuted),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'View More Programs',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    '$count more options available',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppTheme.brandInkMuted,
-            ),
-          ],
         ),
       ),
     );

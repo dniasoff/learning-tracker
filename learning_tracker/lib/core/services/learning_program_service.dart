@@ -84,4 +84,15 @@ class LearningProgramRepository {
   List<LearningProgramData> getProgramsByCurriculumType(
     String curriculumType,
   ) => _programs.where((p) => p.curriculumType == curriculumType).toList();
+
+  /// Active programs for a curriculum — used by add-track to decide whether
+  /// to show the program step and to populate the picker.
+  List<LearningProgramData> getActiveProgramsByCurriculumType(
+    String curriculumType,
+  ) =>
+      _programs
+          .where(
+            (p) => p.curriculumType == curriculumType && p.isActive,
+          )
+          .toList();
 }
