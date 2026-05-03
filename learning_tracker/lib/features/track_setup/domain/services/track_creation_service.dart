@@ -26,8 +26,9 @@ const kDefaultStudyDays = <int, String>{
 
 /// Creates a track in the database from an [AddTrackResult].
 ///
-/// All DB writes (stages, study days, scopes, goals) are wrapped
-/// in a single transaction for atomicity.
+/// All core DB writes (stages, study days, scopes, point seeds) run in one
+/// transaction. Goals are removed first (with sync), then re-created after if
+/// the flow includes a goal. Program enrollment is set or cleared after.
 class TrackCreationService {
   TrackCreationService({
     required UserDatabase database,
@@ -50,8 +51,7 @@ class TrackCreationService {
   /// Persist all track configuration from the AddTrackFlow result.
   ///
   /// Curriculum activation runs outside the transaction (idempotent).
-  /// All subsequent writes run inside a single transaction — if any
-  /// step fails, everything rolls back.
+  /// Remaining steps replace any prior track configuration for this curriculum.
   Future<void> createTrack({
     required AddTrackResult result,
     required int profileId,
@@ -87,9 +87,15 @@ class TrackCreationService {
     }
     final trackId = track.id;
 
-    // 3. All remaining writes in a single transaction
+    // Replace prior goals (syncs tombstones) so re-add does not stack duplicates.
+    final existingGoals = await _database.goalDao.getGoalsByTrack(trackId);
+    for (final g in existingGoals) {
+      await _goalRepository.deleteGoal(g.id);
+    }
+
     await _database.transaction(() async {
-      // Apply wizard result (stages) if provided
+      await _database.stageDao.deleteStagesForTrack(trackId);
+
       if (result.wizardResult is LearningProcessWizardResult) {
         final wizard = result.wizardResult! as LearningProcessWizardResult;
         await _wizardService.applyWizardResult(
@@ -99,7 +105,6 @@ class TrackCreationService {
         );
       }
 
-      // Save study day configs
       await _saveStudyDays(
         profileId: profileId,
         curriculumId: curriculum,
@@ -107,7 +112,7 @@ class TrackCreationService {
         studyDays: result.studyDays,
       );
 
-      // Save scope selections if narrowed
+      await _database.curriculumScopeDao.clearScopesForTrack(trackId);
       if (result.scopeSelections != null &&
           result.scopeSelections!.isNotEmpty) {
         await _saveScopes(
@@ -118,31 +123,41 @@ class TrackCreationService {
         );
       }
 
-      // Create goal if provided
-      if (result.goalResult is GoalFormResult) {
-        final goal = result.goalResult! as GoalFormResult;
-        await _goalRepository.createGoal(
-          profileId: profileId,
-          curriculumId: curriculum,
-          trackId: trackId,
-          targetPercent: goal.targetPercent,
-          targetDate: goal.targetDate,
-          description: goal.description,
-          dateType: goal.dateType,
-          goalType: goal.goalType,
-          paceValue: goal.paceValue,
-          paceUnit: goal.paceUnit,
-          learningUnit: goal.learningUnit,
-        );
-      }
-
-      // Gamification: seed per-stage point defaults only for child profiles.
       await _seedPointConfigsIfNeeded(
         profileId: profileId,
         curriculumId: curriculum,
         trackId: trackId,
       );
     });
+
+    if (result.goalResult is GoalFormResult) {
+      final goal = result.goalResult! as GoalFormResult;
+      await _goalRepository.createGoal(
+        profileId: profileId,
+        curriculumId: curriculum,
+        trackId: trackId,
+        targetPercent: goal.targetPercent,
+        targetDate: goal.targetDate,
+        description: goal.description,
+        dateType: goal.dateType,
+        goalType: goal.goalType,
+        paceValue: goal.paceValue,
+        paceUnit: goal.paceUnit,
+        learningUnit: goal.learningUnit,
+      );
+    }
+
+    // Self-paced: clear program enrollment locally + on cloud when switching from programmed.
+    if (result.programId == null) {
+      final removed = await _database.profileProgramDao
+          .clearProgramForProfileAndCurriculum(
+            profileId,
+            curriculum.storageKey,
+          );
+      if (removed > 0) {
+        await _syncEngine?.removeProfileProgramAssignment(curriculum.storageKey);
+      }
+    }
 
     // Link profile to program if one was selected (outside transaction — idempotent)
     if (result.programId != null) {

@@ -772,6 +772,19 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
+  /// Deletes profile-program doc when learner switches to self-paced.
+  Future<void> deleteProfileProgramForCurriculum(String curriculumId) async {
+    await _ensureProfilePathReady();
+    final collection = _profileProgramsCollection;
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+    if (curriculumId.isEmpty) {
+      throw ArgumentError('curriculumId must not be empty');
+    }
+    await collection.doc(curriculumId).delete();
+  }
+
   /// Fetch profile-program assignments from Firestore.
   Future<List<Map<String, dynamic>>> fetchProfilePrograms({
     int pageSize = defaultPageSize,

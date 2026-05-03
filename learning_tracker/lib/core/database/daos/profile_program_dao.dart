@@ -65,4 +65,16 @@ class ProfileProgramDao extends DatabaseAccessor<UserDatabase>
   Future<int> deleteForProfile(int profileId) => (delete(
     profilePrograms,
   )..where((t) => t.profileId.equals(profileId))).go();
+
+  /// Removes program enrollment for one curriculum (self-paced re-add or switch).
+  Future<int> clearProgramForProfileAndCurriculum(
+    int profileId,
+    String curriculumType,
+  ) =>
+      (delete(profilePrograms)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumType.equals(curriculumType),
+          ))
+          .go();
 }

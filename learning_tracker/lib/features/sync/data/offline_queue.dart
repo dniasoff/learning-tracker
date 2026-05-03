@@ -152,6 +152,15 @@ class OfflineQueue {
     );
   }
 
+  /// Enqueue deletion of a profile-program assignment (self-paced switch).
+  Future<void> enqueueProfileProgramDelete(Map<String, dynamic> payload) async {
+    final encoded = jsonEncode(payload);
+    await _queue.enqueue('profile_program_delete', encoded);
+    _logger.info(
+      'Queued profile program delete for offline sync: ${payload['curriculum_id']}',
+    );
+  }
+
   /// Enqueue a ledger entry operation.
   Future<void> enqueueLedgerEntry(Map<String, dynamic> entry) async {
     final payload = jsonEncode(entry);
@@ -309,6 +318,16 @@ class OfflineQueue {
               break;
             case 'profile_program':
               await dataSource.pushProfileProgram(payload);
+              break;
+            case 'profile_program_delete':
+              final cid = payload['curriculum_id'] as String?;
+              if (cid == null || cid.isEmpty) {
+                _logger.warning(
+                  'Invalid profile_program_delete payload: $payload',
+                );
+                continue;
+              }
+              await dataSource.deleteProfileProgramForCurriculum(cid);
               break;
             case 'ledger_entry':
               await dataSource.pushLedgerEntry(payload);

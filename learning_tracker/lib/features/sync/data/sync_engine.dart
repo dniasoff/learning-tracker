@@ -800,6 +800,20 @@ class SyncEngine {
     await _afterEnqueueForBackgroundFlush(context: 'profile program');
   }
 
+  /// Remove profile-program enrollment on Firestore (self-paced re-add).
+  Future<void> removeProfileProgramAssignment(String curriculumStorageKey) async {
+    if (!_firestoreDataSource.isAuthenticated) {
+      _logger.debug(
+        'Skipping profile program delete sync: user not authenticated',
+      );
+      return;
+    }
+    await _offlineQueue.enqueueProfileProgramDelete(
+      _withQueueTargetProfile({'curriculum_id': curriculumStorageKey}),
+    );
+    await _afterEnqueueForBackgroundFlush(context: 'profile program delete');
+  }
+
   /// Push active curricula list to Firestore after local write.
   Future<void> pushActiveCurricula(List<String> activeCurricula) async {
     await _offlineQueue.enqueueActiveCurricula(
