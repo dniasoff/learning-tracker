@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
@@ -57,7 +59,7 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
     switch (state) {
       case AppLifecycleState.resumed:
         engine.attachListeners();
-        engine.pullOnLaunch();
+        unawaited(engine.pullOnLaunch(triggeredFromResume: true));
         break;
       case AppLifecycleState.inactive:
         break;

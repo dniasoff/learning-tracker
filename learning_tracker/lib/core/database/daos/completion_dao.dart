@@ -36,6 +36,30 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   Future<List<Completion>> getCompletionsByProfile(int profileId) =>
       (select(completions)..where((t) => t.profileId.equals(profileId))).get();
 
+  /// Completions for [profileId] whose [sefariaRef] is in [refs] (chunked `IN`).
+  ///
+  /// Used to filter today's daily tasks without loading the full completion
+  /// history for the profile.
+  Future<List<Completion>> getCompletionsByProfileForSefariaRefs(
+    int profileId,
+    Set<String> refs,
+  ) async {
+    if (refs.isEmpty) return [];
+    final list = refs.toList();
+    final out = <Completion>[];
+    for (var i = 0; i < list.length; i += _kInChunkSize) {
+      final end = math.min(i + _kInChunkSize, list.length);
+      final part = list.sublist(i, end);
+      final rows =
+          await (select(completions)..where(
+                (t) => t.profileId.equals(profileId) & t.sefariaRef.isIn(part),
+              ))
+              .get();
+      out.addAll(rows);
+    }
+    return out;
+  }
+
   /// Get completions for a curriculum scoped to a specific profile.
   Future<List<Completion>> getCompletionsByCurriculumAndProfile(
     String curriculumId,

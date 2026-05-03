@@ -212,41 +212,19 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
 
 final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
     .family<LifetimeTotals, int>((ref, profileId) async {
-      final db = ref.watch(userDatabaseProvider);
-      final repo = ref.watch(contentRepositoryProvider);
-
+      final summaries = await ref.watch(
+        globalLifetimeCurriculaProvider(profileId).future,
+      );
       var learnedTotal = 0;
       var sectionTotal = 0;
-      final totalCurricula = CurriculumId.values.length;
-
-      for (final curriculum in CurriculumId.values) {
-        final leaves = await _safeLoadLeaves(repo, curriculum);
-        if (leaves == null || leaves.isEmpty) continue;
-
-        final completions = await db.completionDao
-            .getCompletionsByCurriculumAndProfile(
-              curriculum.storageKey,
-              profileId,
-            );
-        final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
-          profileId,
-          curriculum.storageKey,
-        );
-
-        final learnedRefs = _learnedLeafRefs(
-          leaves: leaves,
-          completedRefs: completions.map((c) => c.sefariaRef).toSet(),
-          ledgerEntries: ledger,
-        );
-
-        learnedTotal += learnedRefs.length;
-        sectionTotal += leaves.length;
+      for (final s in summaries) {
+        learnedTotal += s.learnedLeafCount;
+        sectionTotal += s.totalLeafCount;
       }
-
       return LifetimeTotals(
         learnedSections: learnedTotal,
         totalSections: sectionTotal,
-        totalCurricula: totalCurricula,
+        totalCurricula: CurriculumId.values.length,
       );
     });
 

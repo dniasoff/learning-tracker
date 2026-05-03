@@ -102,6 +102,10 @@ class SyncEngine {
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
 
+  /// Minimum time between full [pullOnLaunch] runs when triggered from
+  /// [AppLifecycleState.resumed] only. Cold start / [initialize] always pulls.
+  static const Duration pullOnResumeMinInterval = Duration(minutes: 5);
+
   // Notification settings keys (must match notification providers).
   static const _notificationSettingsUpdatedAtMsKey =
       'notification_settings_updated_at_ms';
@@ -294,7 +298,11 @@ class SyncEngine {
   // ========== Pull-on-Launch ==========
 
   /// Pull latest data from Firestore on app launch.
-  Future<void> pullOnLaunch() async {
+  ///
+  /// When [triggeredFromResume] is true, a full pull is skipped if the last
+  /// successful pull was within [pullOnResumeMinInterval] (foreground listeners
+  /// still deliver realtime updates).
+  Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {
     if (!_firestoreDataSource.isAuthenticated) {
       _logger.info('Pull-on-launch skipped: user not authenticated');
       return;
@@ -307,6 +315,26 @@ class SyncEngine {
         ),
       );
       return;
+    }
+
+    if (triggeredFromResume) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final ms = prefs.getInt(_lastSyncKey);
+        if (ms != null) {
+          final last = DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+          final elapsed = DateTime.now().toUtc().difference(last);
+          if (elapsed < pullOnResumeMinInterval) {
+            _logger.info(
+              'Pull-on-launch skipped (resume throttle, '
+              'elapsed=${elapsed.inSeconds}s)',
+            );
+            return;
+          }
+        }
+      } catch (e) {
+        _logger.warning('Resume throttle prefs read failed: $e');
+      }
     }
 
     _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
@@ -801,7 +829,9 @@ class SyncEngine {
   }
 
   /// Remove profile-program enrollment on Firestore (self-paced re-add).
-  Future<void> removeProfileProgramAssignment(String curriculumStorageKey) async {
+  Future<void> removeProfileProgramAssignment(
+    String curriculumStorageKey,
+  ) async {
     if (!_firestoreDataSource.isAuthenticated) {
       _logger.debug(
         'Skipping profile program delete sync: user not authenticated',

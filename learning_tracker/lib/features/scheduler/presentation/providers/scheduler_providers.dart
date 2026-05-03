@@ -310,7 +310,13 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   // Hide tasks already completed today (or earlier) while preserving the
   // frozen daily snapshot contract. We do not regenerate rows, we only
   // filter resolved items at read time.
-  final completions = await db.completionDao.getCompletionsByProfile(profileId);
+  final taskRefs = effectiveTasks.map((t) => t.contentItemSefariaRef).toSet();
+  final completions = taskRefs.isEmpty
+      ? const <Completion>[]
+      : await db.completionDao.getCompletionsByProfileForSefariaRefs(
+          profileId,
+          taskRefs,
+        );
   bool isTaskCompleted(DailyTask task) {
     return completions.any((c) {
       if (c.sefariaRef != task.contentItemSefariaRef) return false;
