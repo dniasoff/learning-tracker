@@ -357,6 +357,9 @@
   },
   "dashboardStats": "STATS",
   "learningLifetimeAllCurricula": "Learning lifetime (all curricula)",
+  "dashboardAllCaughtUpTitle": "All caught up! Great work!",
+  "dashboardAllCaughtUpSubtitle": "You have no more tasks for today.",
+  "dashboardLifetimeProgress": "Lifetime Progress",
   "lifetimeSectionsSummary": "{learned} / {total} sections — {n} curricula",
   "@lifetimeSectionsSummary": {
     "placeholders": {

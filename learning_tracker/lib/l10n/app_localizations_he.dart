@@ -715,6 +715,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get learningLifetimeAllCurricula => 'לימוד לכל החיים (כל התוכניות)';
 
   @override
+  String get dashboardAllCaughtUpTitle => 'הכל מעודכן! עבודה מצוינת!';
+
+  @override
+  String get dashboardAllCaughtUpSubtitle => 'אין לך עוד משימות להיום.';
+
+  @override
+  String get dashboardLifetimeProgress => 'התקדמות לכל החיים';
+
+  @override
   String lifetimeSectionsSummary(String learned, String total, int n) {
     return '$learned / $total חלקים — $n תוכניות';
   }

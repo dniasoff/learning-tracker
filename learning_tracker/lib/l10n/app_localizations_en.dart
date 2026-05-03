@@ -720,6 +720,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Learning lifetime (all curricula)';
 
   @override
+  String get dashboardAllCaughtUpTitle => 'All caught up! Great work!';
+
+  @override
+  String get dashboardAllCaughtUpSubtitle =>
+      'You have no more tasks for today.';
+
+  @override
+  String get dashboardLifetimeProgress => 'Lifetime Progress';
+
+  @override
   String lifetimeSectionsSummary(String learned, String total, int n) {
     return '$learned / $total sections — $n curricula';
   }

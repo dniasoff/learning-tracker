@@ -1361,6 +1361,24 @@ abstract class AppLocalizations {
   /// **'Learning lifetime (all curricula)'**
   String get learningLifetimeAllCurricula;
 
+  /// No description provided for @dashboardAllCaughtUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up! Great work!'**
+  String get dashboardAllCaughtUpTitle;
+
+  /// No description provided for @dashboardAllCaughtUpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no more tasks for today.'**
+  String get dashboardAllCaughtUpSubtitle;
+
+  /// No description provided for @dashboardLifetimeProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime Progress'**
+  String get dashboardLifetimeProgress;
+
   /// No description provided for @lifetimeSectionsSummary.
   ///
   /// In en, this message translates to:

@@ -357,6 +357,9 @@
   },
   "dashboardStats": "סטטיסטיקה",
   "learningLifetimeAllCurricula": "לימוד לכל החיים (כל התוכניות)",
+  "dashboardAllCaughtUpTitle": "הכל מעודכן! עבודה מצוינת!",
+  "dashboardAllCaughtUpSubtitle": "אין לך עוד משימות להיום.",
+  "dashboardLifetimeProgress": "התקדמות לכל החיים",
   "lifetimeSectionsSummary": "{learned} / {total} חלקים — {n} תוכניות",
   "@lifetimeSectionsSummary": {
     "placeholders": {
