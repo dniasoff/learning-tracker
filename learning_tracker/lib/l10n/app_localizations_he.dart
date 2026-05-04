@@ -796,9 +796,6 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get faster => 'מהר יותר!';
-
-  @override
   String level1Selection(String name, String levelLabel) {
     return '$name ← $levelLabel בחירה';
   }

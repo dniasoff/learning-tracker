@@ -174,92 +174,61 @@ class _FeaturedProgramCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(28),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFE5E9FF),
+                  ),
+                  child: const Icon(
+                    Icons.menu_book_rounded,
+                    color: Color(0xFF2E4BBB),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  program.displayName,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  program.description.isNotEmpty
+                      ? program.description
+                      : 'Master the curriculum with a steady daily plan.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFFE5E9FF),
-                      ),
-                      child: const Icon(
-                        Icons.menu_book_rounded,
-                        color: Color(0xFF2E4BBB),
-                      ),
+                    const Icon(
+                      Icons.calendar_month_rounded,
+                      size: 15,
+                      color: AppTheme.brandBlueDeep,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      program.displayName,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      program.description.isNotEmpty
-                          ? program.description
-                          : 'Master the curriculum with a steady daily plan.',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_month_rounded,
-                          size: 15,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Starts: ${program.displayName}',
+                        style: theme.textTheme.titleSmall?.copyWith(
                           color: AppTheme.brandBlueDeep,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Starts: ${program.displayName}',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              color: AppTheme.brandBlueDeep,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-              Positioned(
-                right: 14,
-                top: -7,
-                child: Transform.rotate(
-                  angle: 0.15,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF6C78),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Text(
-                      'POPULAR',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

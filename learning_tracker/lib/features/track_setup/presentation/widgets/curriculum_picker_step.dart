@@ -105,83 +105,48 @@ class _CurriculumTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(24),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: style.background,
+                  ),
+                  child: Icon(style.icon, color: style.iconColor, size: 27),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: style.background,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        curriculum.displayNameHe,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                        textDirection: TextDirection.rtl,
                       ),
-                      child: Icon(style.icon, color: style.iconColor, size: 27),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            curriculum.displayNameHe,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                            textDirection: TextDirection.rtl,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            style.subtitle,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: AppTheme.brandInk,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: Color(0xFFC0C6D3),
-                      size: 22,
-                    ),
-                  ],
-                ),
-              ),
-              if (style.isPopular)
-                Positioned(
-                  right: 12,
-                  top: -7,
-                  child: Transform.rotate(
-                    angle: 0.15,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6C78),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Text(
-                        'POPULAR',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
+                      const SizedBox(height: 2),
+                      Text(
+                        style.subtitle,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: AppTheme.brandInk,
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-            ],
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFFC0C6D3),
+                  size: 22,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -207,7 +172,6 @@ class _CurriculumTile extends StatelessWidget {
         iconColor: Color(0xFFB23749),
         background: Color(0xFFFFE0E5),
         subtitle: 'Chumash',
-        isPopular: true,
       ),
       CurriculumId.nach => const _CurriculumStyle(
         icon: Icons.description_rounded,
@@ -255,12 +219,10 @@ class _CurriculumStyle {
     required this.iconColor,
     required this.background,
     required this.subtitle,
-    this.isPopular = false,
   });
 
   final IconData icon;
   final Color iconColor;
   final Color background;
   final String subtitle;
-  final bool isPopular;
 }

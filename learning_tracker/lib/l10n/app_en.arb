@@ -399,7 +399,6 @@
       "name": { "type": "String" }
     }
   },
-  "faster": "FASTER!",
   "level1Selection": "{name} → {levelLabel} selection",
   "@level1Selection": {
     "placeholders": {

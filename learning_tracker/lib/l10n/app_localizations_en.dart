@@ -802,9 +802,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get faster => 'FASTER!';
-
-  @override
   String level1Selection(String name, String levelLabel) {
     return '$name → $levelLabel selection';
   }

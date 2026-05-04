@@ -399,7 +399,6 @@
       "name": { "type": "String" }
     }
   },
-  "faster": "מהר יותר!",
   "level1Selection": "{name} ← {levelLabel} בחירה",
   "@level1Selection": {
     "placeholders": {

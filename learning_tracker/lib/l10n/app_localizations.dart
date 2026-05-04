@@ -1511,12 +1511,6 @@ abstract class AppLocalizations {
   /// **'Select the entire {name}'**
   String learnEntireCurriculumSubtitle(String name);
 
-  /// No description provided for @faster.
-  ///
-  /// In en, this message translates to:
-  /// **'FASTER!'**
-  String get faster;
-
   /// No description provided for @level1Selection.
   ///
   /// In en, this message translates to:

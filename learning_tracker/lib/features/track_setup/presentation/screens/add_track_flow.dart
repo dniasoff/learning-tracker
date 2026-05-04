@@ -238,7 +238,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       );
     }
 
-    final programsExistForResume = curriculum != null &&
+    final programsExistForResume =
+        curriculum != null &&
         LearningProgramRepository.instance
             .getActiveProgramsByCurriculumType(curriculum.storageKey)
             .isNotEmpty;
@@ -1665,71 +1666,40 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             child: InkWell(
               onTap: () => widget.onComplete(null),
               borderRadius: BorderRadius.circular(28),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.learnEntireCurriculumCta,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                l10n.learnEntireCurriculumSubtitle(
-                                  widget.curriculumId.displayNameHe,
-                                ),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.86),
-                                ),
-                              ),
-                            ],
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.learnEntireCurriculumCta,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                        const CircleAvatar(
-                          radius: 21,
-                          backgroundColor: Color(0x40FFFFFF),
-                          child: Icon(Icons.auto_awesome, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    right: 12,
-                    top: -7,
-                    child: Transform.rotate(
-                      angle: 0.14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF6C78),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          l10n.faster,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.learnEntireCurriculumSubtitle(
+                              widget.curriculumId.displayNameHe,
+                            ),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.86),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    const CircleAvatar(
+                      radius: 21,
+                      backgroundColor: Color(0x40FFFFFF),
+                      child: Icon(Icons.auto_awesome, color: Colors.white),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -3740,7 +3710,6 @@ class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
                                 subtitle: _presetDescription(i),
                                 icon: _presetIcon(i),
                                 isSelected: _selectedPresetIndex == i,
-                                isPopular: i == 2,
                                 onTap: () => _selectPreset(i),
                               ),
                             ),
@@ -3922,14 +3891,12 @@ class _ReviewPresetCard extends StatelessWidget {
     required this.icon,
     required this.isSelected,
     required this.onTap,
-    this.isPopular = false,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final bool isSelected;
-  final bool isPopular;
   final VoidCallback onTap;
 
   @override
@@ -3953,76 +3920,42 @@ class _ReviewPresetCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(22),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: isSelected
-                          ? const Color(0x33FFFFFF)
-                          : const Color(0xFFE9ECF2),
-                      child: Icon(
-                        icon,
-                        size: 17,
-                        color: isSelected
-                            ? Colors.white
-                            : AppTheme.brandBlueDeep,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: isSelected ? Colors.white : AppTheme.brandInk,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: isSelected
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : AppTheme.brandInkMuted,
-                        height: 1.25,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isPopular)
-                Positioned(
-                  top: -7,
-                  right: 8,
-                  child: Transform.rotate(
-                    angle: 0.12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6C78),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'POPULAR',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: isSelected
+                      ? const Color(0x33FFFFFF)
+                      : const Color(0xFFE9ECF2),
+                  child: Icon(
+                    icon,
+                    size: 17,
+                    color: isSelected ? Colors.white : AppTheme.brandBlueDeep,
                   ),
                 ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: isSelected ? Colors.white : AppTheme.brandInk,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.85)
+                        : AppTheme.brandInkMuted,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
