@@ -4,7 +4,8 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 
 /// Stage 1: Pick ONE curriculum from all 9 available options.
 ///
-/// Displays Hebrew names. Single tap selection advances immediately.
+/// Displays Hebrew title with English subtitle ([CurriculumId.displayNameEn]).
+/// Single tap selection advances immediately.
 class CurriculumPickerStep extends StatelessWidget {
   const CurriculumPickerStep({
     required this.onSelected,
@@ -132,7 +133,7 @@ class _CurriculumTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        style.subtitle,
+                        curriculum.displayNameEn,
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: AppTheme.brandInk,
                         ),
@@ -159,55 +160,46 @@ class _CurriculumTile extends StatelessWidget {
         icon: Icons.menu_book_rounded,
         iconColor: Color(0xFF3F53BF),
         background: Color(0xFFE5E9FF),
-        subtitle: 'Mishnayos',
       ),
       CurriculumId.bavli => const _CurriculumStyle(
         icon: Icons.gavel_rounded,
         iconColor: Color(0xFF7D5411),
         background: Color(0xFFF9E4C8),
-        subtitle: 'Gemara',
       ),
       CurriculumId.chumash => const _CurriculumStyle(
         icon: Icons.book_outlined,
         iconColor: Color(0xFFB23749),
         background: Color(0xFFFFE0E5),
-        subtitle: 'Chumash',
       ),
       CurriculumId.nach => const _CurriculumStyle(
         icon: Icons.description_rounded,
         iconColor: Color(0xFF646B79),
         background: Color(0xFFEBEDF2),
-        subtitle: 'Nach',
       ),
       CurriculumId.mishnaBerurah => const _CurriculumStyle(
         icon: Icons.gavel_rounded,
         iconColor: Color(0xFF3B4AAE),
         background: Color(0xFFDDE4FF),
-        subtitle: 'Halacha',
       ),
       CurriculumId.yerushalmi => const _CurriculumStyle(
         icon: Icons.auto_stories_rounded,
         iconColor: Color(0xFF32617A),
         background: Color(0xFFE2F4FF),
-        subtitle: 'Talmud Yerushalmi',
       ),
       CurriculumId.mishnehTorah => const _CurriculumStyle(
         icon: Icons.account_balance_rounded,
         iconColor: Color(0xFF5B4BA6),
         background: Color(0xFFEAE5FF),
-        subtitle: 'Mishneh Torah',
       ),
       CurriculumId.tanach => const _CurriculumStyle(
         icon: Icons.auto_stories_rounded,
         iconColor: Color(0xFF1D7D73),
         background: Color(0xFFE0FAF6),
-        subtitle: 'Tanach',
       ),
       CurriculumId.mussar => const _CurriculumStyle(
         icon: Icons.self_improvement_rounded,
         iconColor: Color(0xFF6A4D9F),
         background: Color(0xFFEFE5FF),
-        subtitle: 'Mussar',
       ),
     };
   }
@@ -218,11 +210,9 @@ class _CurriculumStyle {
     required this.icon,
     required this.iconColor,
     required this.background,
-    required this.subtitle,
   });
 
   final IconData icon;
   final Color iconColor;
   final Color background;
-  final String subtitle;
 }
