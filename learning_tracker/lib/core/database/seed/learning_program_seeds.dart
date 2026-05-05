@@ -204,7 +204,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Halakhah Yomit',
     'description': 'Daily halacha study following the Shulchan Aruch cycle.',
     'curriculum_type': 'mishna_berurah',
-    'is_active': true,
+    'is_active': false,
     'has_tests': false,
     'stages_config':
         '['
@@ -220,7 +220,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Arukh HaShulchan Yomi',
     'description': 'Daily study of the Arukh HaShulchan.',
     'curriculum_type': 'mishna_berurah',
-    'is_active': true,
+    'is_active': false,
     'has_tests': false,
     'stages_config':
         '['
@@ -268,7 +268,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Kitzur Shulchan Aruch Yomi',
     'description': 'Daily study of the Kitzur Shulchan Aruch.',
     'curriculum_type': 'mishna_berurah',
-    'is_active': true,
+    'is_active': false,
     'has_tests': false,
     'stages_config':
         '['
