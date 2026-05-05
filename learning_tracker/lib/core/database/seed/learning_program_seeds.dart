@@ -14,7 +14,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'description':
         'Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.',
     'curriculum_type': 'bavli',
-    'is_active': true,
+    'is_active': false,
     'has_tests': false,
     'stages_config':
         '['
@@ -34,7 +34,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'description':
         'Daf Yomi pace with 3 chazarah review cycles and monthly tests.',
     'curriculum_type': 'bavli',
-    'is_active': true,
+    'is_active': false,
     'has_tests': true,
     'stages_config':
         '['
@@ -53,7 +53,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Dirshu Amud HaYomi',
     'description': 'Half-daf daily pace with review cycles and monthly tests.',
     'curriculum_type': 'bavli',
-    'is_active': true,
+    'is_active': false,
     'has_tests': true,
     'stages_config':
         '['
