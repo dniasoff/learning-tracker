@@ -72,7 +72,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Dirshu Kinyan Yerushalmi',
     'description': 'Yerushalmi study with review cycles and monthly tests.',
     'curriculum_type': 'yerushalmi',
-    'is_active': true,
+    'is_active': false,
     'has_tests': true,
     'stages_config':
         '['
