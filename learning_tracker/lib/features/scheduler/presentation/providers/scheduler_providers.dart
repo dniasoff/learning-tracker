@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
@@ -402,7 +403,8 @@ Future<bool> _snapshotMissingProgramAssignments({
         CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
     if (programKey == null) continue;
 
-    final entry = await calendarService.getEntry(programKey, now);
+    final todayLocal = DateUtils.extractLocalDate(now);
+    final entry = await calendarService.getEntry(programKey, todayLocal);
     final todayRef = entry?.todayRef.trim();
     if (todayRef == null || todayRef.isEmpty) continue;
 
@@ -643,14 +645,19 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
         (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))
             .first;
 
-    final todayDate = DateTime(now.year, now.month, now.day);
-    final configuredStartDate = enrollment.trackingStartDate == null
-        ? todayDate
-        : DateTime(
-            enrollment.trackingStartDate!.year,
-            enrollment.trackingStartDate!.month,
-            enrollment.trackingStartDate!.day,
-          );
+    final todayDate = DateUtils.extractLocalDate(now);
+    final DateTime configuredStartDate;
+    if (enrollment.trackingStartDate == null) {
+      configuredStartDate = todayDate;
+    } else {
+      final anchorUtc = enrollment.trackingStartDate!;
+      // Ignore corrupt / default-epoch anchors that would span the whole cycle.
+      if (anchorUtc.isBefore(DateTime.utc(2020, 1, 1))) {
+        configuredStartDate = todayDate;
+      } else {
+        configuredStartDate = DateUtils.extractLocalDate(anchorUtc);
+      }
+    }
     result.removeWhere(
       (t) =>
           t.curriculumId == curriculum &&
@@ -667,26 +674,71 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
       continue;
     }
 
-    // Start anchor represents where the learner is "currently at",
-    // so backlog begins from the next program unit.
-    var effectiveStartDate = configuredStartDate.add(const Duration(days: 1));
-    if (effectiveStartDate.isAfter(todayDate)) {
-      effectiveStartDate = todayDate;
+    // Check if user explicitly selected a starting reference in add-track flow.
+    // Format: "offset:N|ref:SEFARIA_REF" or just "SEFARIA_REF" for legacy.
+    // If present, use that exact ref for today instead of calendar-derived.
+    String? userSelectedTodayRef;
+    final rawRef = enrollment.trackingStartRef;
+    if (rawRef != null && rawRef.isNotEmpty) {
+      if (rawRef.contains('|ref:')) {
+        final parts = rawRef.split('|ref:');
+        if (parts.length > 1) {
+          userSelectedTodayRef = parts[1].trim();
+        }
+      } else if (!rawRef.startsWith('offset:')) {
+        // Legacy: raw ref without offset prefix
+        userSelectedTodayRef = rawRef;
+      }
     }
 
-    final rangeEntries = await calendarService.getEntriesForRange(
-      programKey,
-      effectiveStartDate,
-      todayDate,
-    );
+    // If user selected a specific ref, use it for today and fetch rest from calendar.
+    final List<CalendarProgramEntry> entries;
+    if (userSelectedTodayRef != null && userSelectedTodayRef.isNotEmpty) {
+      // Create synthetic entry for today using user's selected ref
+      final todayEntry = CalendarProgramEntry(
+        programId: programKey,
+        displayNameEn: '',
+        displayNameHe: '',
+        todayRef: userSelectedTodayRef,
+        apiSource: 'local',
+      );
 
-    final entries = rangeEntries.isNotEmpty
-        ? rangeEntries
-        : [
-            if (await calendarService.getEntry(programKey, now)
-                case final todayEntry?)
-              todayEntry,
-          ];
+      // Fetch subsequent days from tomorrow onward
+      var startRangeDate = todayDate.add(const Duration(days: 1));
+      final rangeEntries = startRangeDate.isBefore(todayDate)
+          ? await calendarService.getEntriesForRange(
+              programKey,
+              startRangeDate,
+              todayDate.add(const Duration(days: 30)),
+            )
+          : <CalendarProgramEntry>[];
+
+      entries = [todayEntry, ...rangeEntries];
+    } else {
+      // Fallback: use calendar-derived dates as before
+      var effectiveStartDate = configuredStartDate.add(const Duration(days: 1));
+      if (effectiveStartDate.isAfter(todayDate)) {
+        effectiveStartDate = todayDate;
+      }
+
+      final rangeEntries = effectiveStartDate.isBefore(todayDate) ||
+              effectiveStartDate == todayDate
+          ? await calendarService.getEntriesForRange(
+              programKey,
+              effectiveStartDate,
+              todayDate,
+            )
+          : <CalendarProgramEntry>[];
+
+      entries = rangeEntries.isNotEmpty
+          ? rangeEntries
+          : [
+              if (await calendarService.getEntry(programKey, todayDate)
+                  case final todayEntry?)
+                todayEntry,
+            ];
+    }
+
     if (entries.isEmpty) continue;
 
     for (var i = 0; i < entries.length; i++) {

@@ -1562,6 +1562,19 @@ _TrackTaskBuckets _bucketTrackTasks(List<DailyTask> tasks) {
   );
 }
 
+/// Task to highlight on the active-track card for calendar-linked programs.
+///
+/// [allTasks] is sorted with [DailyTaskPriority.overdueProgram] before
+/// [DailyTaskPriority.todayProgram], so the first row is backlog — not
+/// "today's" assignment. Prefer an explicit today row when present.
+DailyTask? _programTrackFocusTask(List<DailyTask> tasks) {
+  if (tasks.isEmpty) return null;
+  for (final t in tasks) {
+    if (t.priority == DailyTaskPriority.todayProgram) return t;
+  }
+  return tasks.first;
+}
+
 /// Active track card: program (task metrics) vs self-paced (completion) layouts.
 class _ActiveTrackCard extends ConsumerWidget {
   final CurriculumTrack track;
@@ -1612,9 +1625,11 @@ class _ActiveTrackCard extends ConsumerWidget {
     final curriculumTasks = allTasks
         .where((t) => t.trackId == track.id)
         .toList();
-    final todayTask = curriculumTasks.isNotEmpty ? curriculumTasks.first : null;
     final hasProgramEnrollment =
         hasProgramEnrollmentAsync.asData?.value ?? false;
+    final todayTask = hasProgramEnrollment
+        ? _programTrackFocusTask(curriculumTasks)
+        : (curriculumTasks.isNotEmpty ? curriculumTasks.first : null);
     final taskBuckets = _bucketTrackTasks(curriculumTasks);
     final focusLabel = hasProgramEnrollment
         ? l10n.activeTrackNextTask

@@ -2,8 +2,10 @@ import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'program_calendar_providers.g.dart';
@@ -53,20 +55,26 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
     );
   }
 
-  // 3. Resolve start date anchor (today by default; may be offset).
-  final now = DateTime.now();
-  final startDate =
-      enrollment.trackingStartDate ??
-      (() {
-        final rawRef = enrollment.trackingStartRef;
-        if (rawRef == null || !rawRef.startsWith('offset:')) return now;
-        final parsed = int.tryParse(rawRef.substring('offset:'.length));
-        if (parsed == null) return now;
-        return now.add(Duration(days: parsed.clamp(-30, 30)));
-      })();
+  // 3–4. Use the same local calendar day as the scheduler / add-track flow
+  // (clock is UTC per P5; calendar_cycles keys are local YYYY-MM-DD).
+  final clockUtc = ref.watch(clockProvider);
+  final todayLocal = DateUtils.extractLocalDate(clockUtc);
+  final startLocal = enrollment.trackingStartDate != null
+      ? (enrollment.trackingStartDate!.isBefore(DateTime.utc(2020, 1, 1))
+            ? todayLocal
+            : DateUtils.extractLocalDate(enrollment.trackingStartDate!))
+      : (() {
+          final rawRef = enrollment.trackingStartRef;
+          if (rawRef == null || !rawRef.startsWith('offset:')) return todayLocal;
+          final parsed = int.tryParse(rawRef.substring('offset:'.length));
+          if (parsed == null) return todayLocal;
+          return DateUtils.extractLocalDate(
+            clockUtc.add(Duration(days: parsed.clamp(-30, 30))),
+          );
+        })();
 
-  // 4. Resolve today's program assignment + cycle size from local calendar rows.
-  final todayEntry = await calendarService.getEntry(programKey, now);
+  // Today's program row + cycle length from local calendar DB.
+  final todayEntry = await calendarService.getEntry(programKey, todayLocal);
   final cycleEntries = await calendarService.getEntriesForRange(
     programKey,
     DateTime(2024, 1, 1),
@@ -95,11 +103,7 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   final completionCount = completedLearnItems.length;
 
   // 6. Compare expected vs actual since chosen start anchor.
-  final elapsedDays = DateTime(
-    now.year,
-    now.month,
-    now.day,
-  ).difference(DateTime(startDate.year, startDate.month, startDate.day)).inDays;
+  final elapsedDays = todayLocal.difference(startLocal).inDays;
   final expectedCount = elapsedDays >= 0 ? elapsedDays + 1 : 0;
   final delta = completionCount - expectedCount;
   final status = delta > 0
