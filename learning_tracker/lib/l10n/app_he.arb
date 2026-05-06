@@ -76,6 +76,20 @@
   "dashboardChildPointsTab": "נקודות",
   "dashboardSeeAllRewards": "הצג הכול",
   "dashboardMysteryChest": "תיבת מסתורין",
+  "dashboardCurrentBalance": "יתרה נוכחית",
+  "dashboardNextRewardWithName": "פרס הבא: {name}",
+  "@dashboardNextRewardWithName": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "dashboardPtsToGo": "עוד {count} נק׳!",
+  "@dashboardPtsToGo": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "dashboardRedeemPrizes": "מימוש פרסים",
   "dashboardTapToUnlockAtPts": "לחיצה לפתיחה ב־{points} נק׳",
   "@dashboardTapToUnlockAtPts": {
     "placeholders": {

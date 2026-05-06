@@ -76,6 +76,20 @@
   "dashboardChildPointsTab": "Points",
   "dashboardSeeAllRewards": "SEE ALL",
   "dashboardMysteryChest": "Mystery Chest",
+  "dashboardCurrentBalance": "CURRENT BALANCE",
+  "dashboardNextRewardWithName": "Next Reward: {name}",
+  "@dashboardNextRewardWithName": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "dashboardPtsToGo": "{count} pts to go!",
+  "@dashboardPtsToGo": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "dashboardRedeemPrizes": "Redeem Prizes",
   "dashboardTapToUnlockAtPts": "TAP TO UNLOCK AT {points} PTS",
   "@dashboardTapToUnlockAtPts": {
     "placeholders": {

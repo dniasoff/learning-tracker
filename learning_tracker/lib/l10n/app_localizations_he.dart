@@ -172,6 +172,22 @@ class AppLocalizationsHe extends AppLocalizations {
   String get dashboardMysteryChest => 'תיבת מסתורין';
 
   @override
+  String get dashboardCurrentBalance => 'יתרה נוכחית';
+
+  @override
+  String dashboardNextRewardWithName(String name) {
+    return 'פרס הבא: $name';
+  }
+
+  @override
+  String dashboardPtsToGo(String count) {
+    return 'עוד $count נק׳!';
+  }
+
+  @override
+  String get dashboardRedeemPrizes => 'מימוש פרסים';
+
+  @override
   String dashboardTapToUnlockAtPts(String points) {
     return 'לחיצה לפתיחה ב־$points נק׳';
   }

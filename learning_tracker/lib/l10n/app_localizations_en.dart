@@ -173,6 +173,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardMysteryChest => 'Mystery Chest';
 
   @override
+  String get dashboardCurrentBalance => 'CURRENT BALANCE';
+
+  @override
+  String dashboardNextRewardWithName(String name) {
+    return 'Next Reward: $name';
+  }
+
+  @override
+  String dashboardPtsToGo(String count) {
+    return '$count pts to go!';
+  }
+
+  @override
+  String get dashboardRedeemPrizes => 'Redeem Prizes';
+
+  @override
   String dashboardTapToUnlockAtPts(String points) {
     return 'TAP TO UNLOCK AT $points PTS';
   }

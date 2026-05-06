@@ -404,6 +404,30 @@ abstract class AppLocalizations {
   /// **'Mystery Chest'**
   String get dashboardMysteryChest;
 
+  /// No description provided for @dashboardCurrentBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'CURRENT BALANCE'**
+  String get dashboardCurrentBalance;
+
+  /// No description provided for @dashboardNextRewardWithName.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Reward: {name}'**
+  String dashboardNextRewardWithName(String name);
+
+  /// No description provided for @dashboardPtsToGo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pts to go!'**
+  String dashboardPtsToGo(String count);
+
+  /// No description provided for @dashboardRedeemPrizes.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem Prizes'**
+  String get dashboardRedeemPrizes;
+
   /// No description provided for @dashboardTapToUnlockAtPts.
   ///
   /// In en, this message translates to:

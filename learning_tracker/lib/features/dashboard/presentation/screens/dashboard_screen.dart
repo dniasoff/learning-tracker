@@ -45,6 +45,25 @@ const Color _kActiveTrackFocusPillBg = Color(0xFFF1F2F5);
 /// Lifetime bar on the “all caught up” dashboard stats card (design spec).
 const Color _kAllCaughtUpProgressFill = Color(0xFFFFB775);
 
+/// Child dashboard — points & rewards hero (design spec).
+const Color _kChildRewardsCardBlueTop = Color(0xFF1E52D4);
+const Color _kChildRewardsCardBlueDeep = Color(0xFF0E266F);
+const Color _kChildRewardsProgressTrack = Color(0xFF0A1F55);
+const Color _kChildRewardsProgressFill = Color(0xFF22C55E);
+
+void _openSchedulerSection(
+  BuildContext context,
+  WidgetRef ref,
+  SchedulerTaskSection section,
+) {
+  ref.read(schedulerTaskSectionProvider.notifier).setSection(section);
+  context.router.push(const SchedulerRoute());
+}
+
+void _openProgressScreen(BuildContext context) {
+  context.router.navigate(const ProgressRoute());
+}
+
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -458,240 +477,213 @@ class _ChildPointsRewardsTabCard extends StatelessWidget {
   final AsyncValue<DashboardChildNextReward?> nextRewardAsync;
   final VoidCallback onOpenRewards;
 
-  static const double _tabViewHeight = 108.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.brandBlueDeep, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.brandBlue.withValues(alpha: 0.1),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Material(
-              color: Colors.transparent,
-              child: TabBar(
-                tabs: [
-                  Tab(text: l10n.dashboardChildPointsTab),
-                  Tab(text: l10n.bottomNavRewards),
-                ],
-                labelColor: AppTheme.brandBlueDeep,
-                unselectedLabelColor: AppTheme.brandInkMuted,
-                indicatorColor: AppTheme.brandBlueBright,
-                indicatorWeight: 3,
-                dividerColor: Colors.transparent,
-                labelStyle: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-                unselectedLabelStyle: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            SizedBox(
-              height: _tabViewHeight,
-              child: TabBarView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFFD54F),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.emoji_events_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                l10n.totalPoints.toUpperCase(),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: AppTheme.brandBlueDeep,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                l10n.dashboardPointsValue(
-                                  numberFormat.format(totalPoints),
-                                ),
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: AppTheme.brandInk,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _ChildRewardsTabPanel(
-                    nextRewardAsync: nextRewardAsync,
-                    globalPointsFallback: totalPoints,
-                    l10n: l10n,
-                    theme: theme,
-                    numberFormat: numberFormat,
-                    onOpenRewards: onOpenRewards,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChildRewardsTabPanel extends StatelessWidget {
-  const _ChildRewardsTabPanel({
-    required this.nextRewardAsync,
-    required this.globalPointsFallback,
-    required this.l10n,
-    required this.theme,
-    required this.numberFormat,
-    required this.onOpenRewards,
-  });
-
-  final AsyncValue<DashboardChildNextReward?> nextRewardAsync;
-  final int globalPointsFallback;
-  final AppLocalizations l10n;
-  final ThemeData theme;
-  final NumberFormat numberFormat;
-  final VoidCallback onOpenRewards;
+  static const int _defaultThreshold = 1500;
 
   @override
   Widget build(BuildContext context) {
     return nextRewardAsync.when(
-      loading: () => const Center(
-        child: SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (next) {
-        const defaultThreshold = 1500;
-        final threshold = next?.threshold ?? defaultThreshold;
-        final progressPoints = next?.trackPoints ?? globalPointsFallback;
-        final pct = threshold > 0
-            ? (progressPoints / threshold).clamp(0.0, 1.0)
-            : 0.0;
+      loading: () => _buildCard(context, next: null, isLoading: true),
+      error: (_, __) => _buildCard(context, next: null, isLoading: false),
+      data: (next) => _buildCard(context, next: next, isLoading: false),
+    );
+  }
 
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onOpenRewards,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+  Widget _buildCard(
+    BuildContext context, {
+    required DashboardChildNextReward? next,
+    required bool isLoading,
+  }) {
+    final threshold = next?.threshold ?? _defaultThreshold;
+    final progressPoints = next?.trackPoints ?? totalPoints;
+    final pct = threshold > 0
+        ? (progressPoints / threshold).clamp(0.0, 1.0)
+        : 0.0;
+    final ptsRemaining = threshold > 0
+        ? (threshold - progressPoints).clamp(0, 1 << 30)
+        : 0;
+    final rewardTitle = (next != null && next.title.trim().isNotEmpty)
+        ? next.title.trim()
+        : l10n.dashboardMysteryChest;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandBlue.withValues(alpha: 0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      _kChildRewardsCardBlueTop,
+                      Color(0xFF1639A8),
+                      _kChildRewardsCardBlueDeep,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: -28,
+              top: -24,
+              child: Icon(
+                Icons.star_rounded,
+                size: 168,
+                color: Colors.white.withValues(alpha: 0.09),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.card_giftcard_rounded,
-                        color: AppTheme.brandBlueBright,
-                        size: 26,
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.emoji_events_rounded,
+                          color: Color(0xFFFFC107),
+                          size: 30,
+                        ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              l10n.dashboardMysteryChest,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: AppTheme.brandInk,
+                              l10n.dashboardCurrentBalance,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.88),
                                 fontWeight: FontWeight.w800,
+                                letterSpacing: 1.1,
+                                fontSize: 11,
                               ),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
-                              l10n.dashboardTapToUnlockAtPts(
-                                numberFormat.format(threshold),
+                              l10n.dashboardPointsValue(
+                                numberFormat.format(totalPoints),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppTheme.brandInkMuted,
-                                fontWeight: FontWeight.w600,
-                                height: 1.2,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 26,
+                                height: 1.15,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.only(left: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: onOpenRewards,
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
                         child: Text(
-                          l10n.dashboardSeeAllRewards,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.brandBlueBright,
-                            fontWeight: FontWeight.w800,
+                          l10n.dashboardNextRewardWithName(rewardTitle),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      if (isLoading)
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        )
+                      else
+                        Text(
+                          l10n.dashboardPtsToGo(
+                            numberFormat.format(ptsRemaining),
+                          ),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(999),
                     child: LinearProgressIndicator(
-                      value: pct,
-                      minHeight: 5,
-                      backgroundColor: AppTheme.brandBlueSoft.withValues(
-                        alpha: 0.45,
+                      value: isLoading ? null : pct,
+                      minHeight: 8,
+                      backgroundColor: _kChildRewardsProgressTrack.withValues(
+                        alpha: 0.85,
                       ),
-                      color: const Color(0xFF43A047),
+                      color: _kChildRewardsProgressFill,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Center(
+                    child: FilledButton(
+                      onPressed: onOpenRewards,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1639A8),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 14,
+                        ),
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.dashboardRedeemPrizes,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1639A8),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.celebration_rounded, size: 22),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }
@@ -813,17 +805,24 @@ class _DashboardAllCaughtUpCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: AnimatedProgressBar(
-                      value: cumulativeLifetime,
-                      color: _kAllCaughtUpProgressFill,
-                      backgroundColor: const Color(
-                        0xFF0A1F4D,
-                      ).withValues(alpha: 0.55),
-                      height: 12,
-                      duration: const Duration(milliseconds: 700),
-                      curve: Curves.easeOutCubic,
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _openProgressScreen(context),
+                      borderRadius: BorderRadius.circular(999),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: AnimatedProgressBar(
+                          value: cumulativeLifetime,
+                          color: _kAllCaughtUpProgressFill,
+                          backgroundColor: const Color(
+                            0xFF0A1F4D,
+                          ).withValues(alpha: 0.55),
+                          height: 12,
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -836,7 +835,7 @@ class _DashboardAllCaughtUpCard extends StatelessWidget {
   }
 }
 
-class _DashboardLevelPointsCard extends StatelessWidget {
+class _DashboardLevelPointsCard extends ConsumerWidget {
   const _DashboardLevelPointsCard({
     required this.userMode,
     required this.level,
@@ -859,8 +858,14 @@ class _DashboardLevelPointsCard extends StatelessWidget {
   final String lifetimeSectionsDetail;
   final double cumulativeLifetime;
 
+  static const List<SchedulerTaskSection> _bubbleSections = [
+    SchedulerTaskSection.overdue,
+    SchedulerTaskSection.today,
+    SchedulerTaskSection.review,
+  ];
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final bubbleData = userMode == UserMode.child
@@ -924,6 +929,8 @@ class _DashboardLevelPointsCard extends StatelessWidget {
                     label: bubbleData[i].$1,
                     value: bubbleData[i].$2,
                     valueColor: bubbleData[i].$3,
+                    onTap: () =>
+                        _openSchedulerSection(context, ref, _bubbleSections[i]),
                   ),
                 ),
                 if (i < bubbleData.length - 1) const SizedBox(width: 10),
@@ -964,15 +971,22 @@ class _DashboardLevelPointsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 7),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: AnimatedProgressBar(
-              value: cumulativeLifetime,
-              color: const Color(0xFFF4C163),
-              backgroundColor: Colors.white.withValues(alpha: 0.22),
-              height: 12,
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _openProgressScreen(context),
+              borderRadius: BorderRadius.circular(999),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: AnimatedProgressBar(
+                  value: cumulativeLifetime,
+                  color: const Color(0xFFF4C163),
+                  backgroundColor: Colors.white.withValues(alpha: 0.22),
+                  height: 12,
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOutCubic,
+                ),
+              ),
             ),
           ),
         ],
@@ -986,11 +1000,13 @@ class _DashboardStatBubble extends StatelessWidget {
     required this.label,
     required this.value,
     required this.valueColor,
+    required this.onTap,
   });
 
   final String label;
   final String value;
   final Color valueColor;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -999,47 +1015,59 @@ class _DashboardStatBubble extends StatelessWidget {
     // when the Done % or multi-line labels need more than a fixed 96px circle.
     return AspectRatio(
       aspectRatio: 1,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.center,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                    height: 1.05,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Ink(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.82),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                          height: 1.05,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        value,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: valueColor,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: valueColor,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
