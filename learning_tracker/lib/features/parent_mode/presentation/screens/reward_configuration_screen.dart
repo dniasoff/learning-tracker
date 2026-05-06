@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -34,12 +35,6 @@ class RewardConfigurationScreen extends ConsumerStatefulWidget {
 }
 
 class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationScreen> {
-  static const List<IconData> _avatarIcons = [
-    Icons.menu_book_rounded,
-    Icons.auto_stories_rounded,
-    Icons.import_contacts_rounded,
-  ];
-
   final _nameController = TextEditingController();
   final _pointsController = TextEditingController();
 
@@ -138,7 +133,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       if (!_isGlobalReward) {
         _selectedTrackId = m.trackId;
       }
-      _iconIndex = m.iconIndex.clamp(0, _avatarIcons.length - 1);
+      _iconIndex = RewardMilestoneIcons.clampIndex(m.iconIndex);
       _nameController.text = m.title;
       _pointsController.text = '${m.thresholdPoints}';
     });
@@ -210,7 +205,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       thresholdPoints: pointsParsed,
       milestoneId: _editingMilestoneId,
       isEnabled: true,
-      iconIndex: _iconIndex.clamp(0, _avatarIcons.length - 1),
+      iconIndex: RewardMilestoneIcons.clampIndex(_iconIndex),
     );
     await _persistAndSync();
     _clearForm();
@@ -250,7 +245,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       thresholdPoints: m.thresholdPoints,
       milestoneId: m.id,
       isEnabled: !m.isEnabled,
-      iconIndex: m.iconIndex,
+      iconIndex: RewardMilestoneIcons.clampIndex(m.iconIndex),
     );
     await _persistAndSync();
     if (mounted) setState(() {});
@@ -432,19 +427,24 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          for (var i = 0; i < _avatarIcons.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 12),
-                            Expanded(
+                      SizedBox(
+                        height: 76,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          itemCount: RewardMilestoneIcons.choices.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          itemBuilder: (context, i) {
+                            return SizedBox(
+                              width: 64,
                               child: _AvatarTile(
-                                icon: _avatarIcons[i],
+                                icon: RewardMilestoneIcons.choices[i],
                                 selected: _iconIndex == i,
                                 onTap: () => setState(() => _iconIndex = i),
                               ),
-                            ),
-                          ],
-                        ],
+                            );
+                          },
+                        ),
                       ),
                       const SizedBox(height: 22),
                       Text(
@@ -599,10 +599,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    _avatarIcons[_iconIndex.clamp(
-                                      0,
-                                      _avatarIcons.length - 1,
-                                    )],
+                                    RewardMilestoneIcons.iconForIndex(
+                                      _iconIndex,
+                                    ),
                                     color: _kNavy,
                                     size: 30,
                                   ),

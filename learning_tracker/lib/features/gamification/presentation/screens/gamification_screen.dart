@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
@@ -574,6 +575,7 @@ class _AchievementTierCard extends StatelessWidget {
             scheme: scheme,
             unlocked: row.isUnlocked,
             comingSoon: row.isNextUp,
+            rewardIconIndex: row.milestone.iconIndex,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -798,11 +800,13 @@ class _TierIconBox extends StatelessWidget {
     required this.scheme,
     required this.unlocked,
     required this.comingSoon,
+    required this.rewardIconIndex,
   });
 
   final _TierStyle scheme;
   final bool unlocked;
   final bool comingSoon;
+  final int rewardIconIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -810,6 +814,7 @@ class _TierIconBox extends StatelessWidget {
     final borderColor = (comingSoon && isLocked)
         ? const Color(0xFFB0BEC5)
         : scheme.iconBorder;
+    final rewardIcon = RewardMilestoneIcons.iconForIndex(rewardIconIndex);
     return Container(
       width: 58,
       height: 58,
@@ -820,12 +825,26 @@ class _TierIconBox extends StatelessWidget {
             ? Border.all(color: borderColor, width: 1.5)
             : Border.all(color: scheme.iconBorder, width: 1.2),
       ),
-      child: Center(
-        child: Icon(
-          isLocked ? Icons.lock_rounded : scheme.unlockedIcon,
-          size: isLocked ? 28 : 30,
-          color: isLocked ? scheme.lockIconColor : scheme.iconFg,
-        ),
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            rewardIcon,
+            size: isLocked ? 26 : 30,
+            color: isLocked ? scheme.mutedIconColor : scheme.iconFg,
+          ),
+          if (isLocked)
+            Positioned(
+              right: 3,
+              bottom: 3,
+              child: Icon(
+                Icons.lock_rounded,
+                size: 14,
+                color: scheme.lockIconColor,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -873,7 +892,6 @@ class _TierStyle {
     required this.barFill,
     required this.tagBg,
     required this.tagFg,
-    required this.unlockedIcon,
     required this.lockIconColor,
   });
 
@@ -888,7 +906,6 @@ class _TierStyle {
   final Color barFill;
   final Color tagBg;
   final Color tagFg;
-  final IconData unlockedIcon;
   final Color lockIconColor;
 
   static _TierStyle forTitle(String title, bool isLegend) {
@@ -906,7 +923,6 @@ class _TierStyle {
         barFill: const Color(0xFF9E9E9E),
         tagBg: Colors.white.withValues(alpha: 0.2),
         tagFg: Colors.white,
-        unlockedIcon: Icons.workspace_premium_rounded,
         lockIconColor: Colors.white70,
       );
     }
@@ -924,7 +940,6 @@ class _TierStyle {
           barFill: Color(0xFF6D4C41),
           tagBg: Color(0xFFFFE0B2),
           tagFg: Color(0xFFBF360C),
-          unlockedIcon: Icons.military_tech_rounded,
           lockIconColor: Color(0xFF5D4037),
         );
       case 'Silver Star':
@@ -940,7 +955,6 @@ class _TierStyle {
           barFill: Color(0xFF546E7A),
           tagBg: Color(0xFFCFD8DC),
           tagFg: Color(0xFF455A64),
-          unlockedIcon: Icons.star_rounded,
           lockIconColor: Color(0xFF607D8B),
         );
       case 'Gold Star':
@@ -956,7 +970,6 @@ class _TierStyle {
           barFill: Color(0xFFFF8F00),
           tagBg: Color(0xFFFFF3C4),
           tagFg: Color(0xFFE65100),
-          unlockedIcon: Icons.emoji_events_rounded,
           lockIconColor: Color(0xFFF9A825),
         );
       case 'Platinum Star':
@@ -972,7 +985,6 @@ class _TierStyle {
           barFill: Color(0xFF2196F3),
           tagBg: Color(0xFFE1F5FE),
           tagFg: Color(0xFF0277BD),
-          unlockedIcon: Icons.military_tech,
           lockIconColor: Color(0xFF5C6BC0),
         );
       case 'Premium Star':
@@ -988,7 +1000,6 @@ class _TierStyle {
           barFill: Color(0xFF7B1FA2),
           tagBg: Color(0xFFE1BEE7),
           tagFg: Color(0xFF4A148C),
-          unlockedIcon: Icons.diamond_outlined,
           lockIconColor: Color(0xFF6A1B9A),
         );
       case 'Diamond Star':
@@ -1004,7 +1015,6 @@ class _TierStyle {
           barFill: Color(0xFF00ACC1),
           tagBg: Color(0xFFB2EBF2),
           tagFg: Color(0xFF00838F),
-          unlockedIcon: Icons.diamond_outlined,
           lockIconColor: Color(0xFF0097A7),
         );
       case 'Elite Star':
@@ -1020,7 +1030,6 @@ class _TierStyle {
           barFill: Color(0xFFE91E63),
           tagBg: Color(0xFFF8BBD0),
           tagFg: Color(0xFFAD1457),
-          unlockedIcon: Icons.local_fire_department_outlined,
           lockIconColor: Color(0xFFC2185B),
         );
       default:
@@ -1036,7 +1045,6 @@ class _TierStyle {
           barFill: _kBrandBlue,
           tagBg: Color(0xFFECEFF1),
           tagFg: Color(0xFF546E7A),
-          unlockedIcon: Icons.star_rounded,
           lockIconColor: Color(0xFF78909C),
         );
     }

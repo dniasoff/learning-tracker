@@ -25,7 +25,8 @@ class RewardMilestone {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  /// Parent-selected reward avatar tile (0–2). Synced in `reward_settings`.
+  /// Parent-selected reward icon; index into [RewardMilestoneIcons.choices].
+  /// Synced in `reward_settings`.
   final int iconIndex;
 
   RewardMilestone copyWith({
