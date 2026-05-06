@@ -7,14 +7,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_portal_bottom_nav.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+// High-fidelity parent reward screen (navy #00218D, orange #F2994A).
+const Color _kNavy = Color(0xFF00218D);
+const Color _kOrange = Color(0xFFF2994A);
+const Color _kPageBg = Color(0xFFF4F6FB);
+const Color _kFieldFill = Color(0xFFF2F4F8);
+const Color _kPreviewBg = Color(0xFFEEF3FA);
+const Color _kMutedLabel = Color(0xFF6B7280);
+const Color _kCardWhite = Color(0xFFFFFFFF);
 
 @RoutePage()
 class RewardConfigurationScreen extends ConsumerStatefulWidget {
@@ -25,33 +34,36 @@ class RewardConfigurationScreen extends ConsumerStatefulWidget {
       _RewardConfigurationScreenState();
 }
 
-class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationScreen> {
+  static const List<IconData> _avatarIcons = [
+    Icons.menu_book_rounded,
+    Icons.auto_stories_rounded,
+    Icons.import_contacts_rounded,
+  ];
+
+  final _nameController = TextEditingController();
+  final _pointsController = TextEditingController();
+
   List<CurriculumTrack> _tracks = [];
   int? _selectedTrackId;
-  List<RewardMilestone> _milestones = [];
+  bool _isGlobalReward = false;
+  int _iconIndex = 0;
+  String? _editingMilestoneId;
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_onTabChanged);
-    _bootstrap();
-  }
-
-  void _onTabChanged() {
-    if (_tabController.indexIsChanging) return;
-    setState(() {});
-    unawaited(_reloadMilestones());
+    _nameController.addListener(() => setState(() {}));
+    _pointsController.addListener(() => setState(() {}));
+    unawaited(_bootstrap());
   }
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
+    _nameController.dispose();
+    _pointsController.dispose();
     super.dispose();
   }
 
@@ -76,7 +88,6 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
         _selectedTrackId = tracks.isNotEmpty ? tracks.first.id : null;
         _loading = false;
       });
-      await _reloadMilestones();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -85,27 +96,6 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
         });
       }
     }
-  }
-
-  Future<void> _reloadMilestones() async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
-
-    if (_tabController.index == 1) {
-      final list = await svc.getGlobalMilestones();
-      if (mounted) setState(() => _milestones = list);
-      return;
-    }
-
-    if (_selectedTrackId == null) {
-      if (mounted) setState(() => _milestones = []);
-      return;
-    }
-
-    await svc.ensureDefaultsForTrack(_selectedTrackId!);
-    final list = await svc.getMilestonesForTrack(_selectedTrackId!);
-    if (mounted) setState(() => _milestones = list);
   }
 
   String _trackTitle(CurriculumTrack track, AppLocalizations l10n) {
@@ -127,79 +117,73 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     await _invalidateChildRewardProviders();
   }
 
-  bool _hasDuplicateThreshold(int threshold, {String? excludeId}) {
-    for (final m in _milestones) {
+  void _clearForm() {
+    setState(() {
+      _editingMilestoneId = null;
+      _iconIndex = 0;
+      _nameController.clear();
+      _pointsController.clear();
+    });
+  }
+
+  void _applyMilestoneToForm(RewardMilestone m) {
+    setState(() {
+      _editingMilestoneId = m.id;
+      _isGlobalReward = m.trackId == RewardMilestone.kGlobalTrackSentinel;
+      if (!_isGlobalReward) {
+        _selectedTrackId = m.trackId;
+      }
+      _iconIndex = m.iconIndex.clamp(0, _avatarIcons.length - 1);
+      _nameController.text = m.title;
+      _pointsController.text = '${m.thresholdPoints}';
+    });
+  }
+
+  Future<List<RewardMilestone>> _milestonesForCurrentLadder() async {
+    final db = ref.read(userDatabaseProvider);
+    final profileId = ref.read(activeProfileIdProvider);
+    final svc = RewardMilestoneService(db, profileId: profileId);
+    if (_isGlobalReward) {
+      return svc.getGlobalMilestones();
+    }
+    final tid = _selectedTrackId;
+    if (tid == null) return const [];
+    await svc.ensureDefaultsForTrack(tid);
+    return svc.getMilestonesForTrack(tid);
+  }
+
+  Future<bool> _hasDuplicateThresholdAsync(
+    int threshold, {
+    String? excludeId,
+  }) async {
+    final list = await _milestonesForCurrentLadder();
+    for (final m in list) {
       if (excludeId != null && m.id == excludeId) continue;
       if (m.thresholdPoints == threshold) return true;
     }
     return false;
   }
 
-  Future<void> _showMilestoneEditor({
-    RewardMilestone? existing,
-    required bool isGlobal,
-  }) async {
+  Future<void> _saveReward() async {
     final l10n = AppLocalizations.of(context)!;
-    final titleCtrl = TextEditingController(text: existing?.title ?? '');
-    final pointsCtrl = TextEditingController(
-      text: existing != null ? '${existing.thresholdPoints}' : '',
-    );
+    final title = _nameController.text.trim();
+    final pointsParsed = int.tryParse(_pointsController.text.trim()) ?? 0;
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(
-            existing == null ? l10n.rewardConfigAddReward : l10n.rewardConfigEditReward,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                decoration: InputDecoration(labelText: l10n.rewardConfigRewardNameLabel),
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: pointsCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.rewardConfigPointsThresholdLabel,
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.rewardConfigSaveReward),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (ok != true || !mounted) {
-      titleCtrl.dispose();
-      pointsCtrl.dispose();
+    if (title.isEmpty || pointsParsed <= 0) {
       return;
     }
 
-    final title = titleCtrl.text.trim();
-    final pointsParsed = int.tryParse(pointsCtrl.text.trim()) ?? 0;
-    titleCtrl.dispose();
-    pointsCtrl.dispose();
+    if (!_isGlobalReward && (_tracks.isEmpty || _selectedTrackId == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.rewardConfigNoActiveTracks)),
+      );
+      return;
+    }
 
-    if (title.isEmpty || pointsParsed <= 0) return;
-
-    if (_hasDuplicateThreshold(pointsParsed, excludeId: existing?.id)) {
+    if (await _hasDuplicateThresholdAsync(
+      pointsParsed,
+      excludeId: _editingMilestoneId,
+    )) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.rewardConfigDuplicateThreshold)),
@@ -211,7 +195,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final svc = RewardMilestoneService(db, profileId: profileId);
-    final trackId = isGlobal
+    final trackId = _isGlobalReward
         ? RewardMilestone.kGlobalTrackSentinel
         : _selectedTrackId!;
 
@@ -219,11 +203,12 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       trackId: trackId,
       title: title,
       thresholdPoints: pointsParsed,
-      milestoneId: existing?.id,
-      isEnabled: existing?.isEnabled ?? true,
+      milestoneId: _editingMilestoneId,
+      isEnabled: true,
+      iconIndex: _iconIndex.clamp(0, _avatarIcons.length - 1),
     );
     await _persistAndSync();
-    await _reloadMilestones();
+    _clearForm();
     if (mounted) {
       ScaffoldMessenger.of(
         context,
@@ -231,7 +216,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     }
   }
 
-  Future<void> _toggleEnabled(RewardMilestone m, bool isGlobal) async {
+  Future<void> _toggleEnabled(RewardMilestone m) async {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final svc = RewardMilestoneService(db, profileId: profileId);
@@ -241,9 +226,10 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       thresholdPoints: m.thresholdPoints,
       milestoneId: m.id,
       isEnabled: !m.isEnabled,
+      iconIndex: m.iconIndex,
     );
     await _persistAndSync();
-    await _reloadMilestones();
+    if (mounted) setState(() {});
   }
 
   Future<void> _confirmDelete(RewardMilestone m) async {
@@ -272,71 +258,56 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     final svc = RewardMilestoneService(db, profileId: profileId);
     await svc.removeMilestone(m.id);
     await _persistAndSync();
-    await _reloadMilestones();
+    if (_editingMilestoneId == m.id) _clearForm();
+    if (mounted) setState(() {});
   }
 
-  Widget _buildMilestoneList(bool isGlobal) {
+  Future<void> _openManageRewardsSheet() async {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    if (_milestones.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            l10n.rewardConfigEmptyMilestones,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: AppTheme.brandInkMuted,
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: 16 + MediaQuery.viewInsetsOf(ctx).bottom,
             ),
-          ),
-        ),
-      );
-    }
-
-    final sorted = [..._milestones]
-      ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-      itemCount: sorted.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final m = sorted[i];
-        return Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            title: Text(
-              m.title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            subtitle: Text(
-              '${l10n.rewardConfigPointsThresholdLabel}: ${m.thresholdPoints}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppTheme.brandInkMuted,
-              ),
-            ),
-            trailing: Row(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Switch.adaptive(
-                  value: m.isEnabled,
-                  onChanged: (_) => _toggleEnabled(m, isGlobal),
+                Text(
+                  l10n.rewardConfigMenuManageRewards,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: _kNavy,
+                      ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => _showMilestoneEditor(
-                    existing: m,
-                    isGlobal: isGlobal,
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.42,
+                  child: _ManageRewardsList(
+                    load: _milestonesForCurrentLadder,
+                    onEdit: (m) {
+                      Navigator.pop(ctx);
+                      _applyMilestoneToForm(m);
+                    },
+                    onDelete: (m) async {
+                      Navigator.pop(ctx);
+                      await _confirmDelete(m);
+                    },
+                    onToggle: (m) async {
+                      await _toggleEnabled(m);
+                    },
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-                  onPressed: () => _confirmDelete(m),
                 ),
               ],
             ),
@@ -346,148 +317,683 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     );
   }
 
-  Widget _buildPerTrackTab(AppLocalizations l10n) {
-    if (_tracks.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            l10n.rewardConfigNoActiveTracks,
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
+  int get _previewPoints =>
+      int.tryParse(_pointsController.text.trim()) ?? 0;
+
+  String get _previewTitle {
+    final t = _nameController.text.trim();
+    if (t.isEmpty) {
+      return AppLocalizations.of(context)!.rewardConfigNamePlaceholder;
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Text(
-            l10n.rewardConfigPerTrackHelper,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: DropdownButtonFormField<int>(
-            // Controlled selection; `initialValue` does not update when track changes.
-            // ignore: deprecated_member_use
-            value: _selectedTrackId,
-            decoration: InputDecoration(
-              labelText: l10n.rewardConfigSelectTrack,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            items: [
-              for (final t in _tracks)
-                DropdownMenuItem(
-                  value: t.id,
-                  child: Text(_trackTitle(t, l10n)),
-                ),
-            ],
-            onChanged: (id) {
-              if (id == null) return;
-              setState(() => _selectedTrackId = id);
-              unawaited(_reloadMilestones());
-            },
-          ),
-        ),
-        Expanded(child: _buildMilestoneList(false)),
-      ],
-    );
-  }
-
-  Widget _buildGlobalTab(AppLocalizations l10n) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Text(
-            l10n.rewardConfigTotalPointsHelper,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                ),
-          ),
-        ),
-        Expanded(child: _buildMilestoneList(true)),
-      ],
-    );
+    return t;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final isGlobalTab = _tabController.index == 1;
+    final topInset = MediaQuery.paddingOf(context).top;
 
     if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l10n.rewardConfigurationTitle)),
-        body: const Center(child: CircularProgressIndicator()),
+      return const Scaffold(
+        backgroundColor: _kPageBg,
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null) {
       return Scaffold(
+        backgroundColor: _kPageBg,
         appBar: AppBar(title: Text(l10n.rewardConfigurationTitle)),
         body: Center(child: Text(_error!)),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          color: AppTheme.brandBlueDeep,
-          onPressed: () => context.maybePop(),
-        ),
-        title: Text(
-          l10n.rewardConfigurationTitle,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: AppTheme.brandBlueDeep,
-            fontWeight: FontWeight.w800,
+      backgroundColor: _kPageBg,
+      body: Column(
+        children: [
+          _ParentPortalHeader(
+            topInset: topInset,
+            contextLabel: l10n.rewardConfigScreenContextLabel,
+            portalTitle: l10n.parentPortalTitle,
+            onBack: () => context.maybePop(),
+            onMenuSelected: (value) {
+              if (value == 'manage') unawaited(_openManageRewardsSheet());
+            },
           ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _kCardWhite,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1200218D),
+                      blurRadius: 20,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.rewardConfigConfigureNewTitle,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                              fontSize: 22,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.rewardConfigConfigureNewSubtitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: _kMutedLabel,
+                              height: 1.35,
+                            ),
+                      ),
+                      const SizedBox(height: 22),
+                      Text(
+                        l10n.rewardConfigChooseAvatarStep,
+                        style: const TextStyle(
+                          color: _kNavy,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          for (var i = 0; i < _avatarIcons.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 12),
+                            Expanded(
+                              child: _AvatarTile(
+                                icon: _avatarIcons[i],
+                                selected: _iconIndex == i,
+                                onTap: () => setState(() => _iconIndex = i),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+                      Text(
+                        l10n.rewardConfigRewardNameLabel,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _kMutedLabel,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          hintText: l10n.rewardConfigNamePlaceholder,
+                          filled: true,
+                          fillColor: _kFieldFill,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          suffixIcon: Icon(
+                            Icons.edit_outlined,
+                            color: _kMutedLabel.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        l10n.rewardConfigRewardTypeLabel,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _kMutedLabel,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      _RewardTypeSegmented(
+                        perTrackLabel: l10n.rewardConfigPerTrackTab,
+                        totalLabel: l10n.rewardConfigTotalPointsTab,
+                        isGlobal: _isGlobalReward,
+                        onChanged: (global) {
+                          setState(() => _isGlobalReward = global);
+                        },
+                      ),
+                      if (!_isGlobalReward) ...[
+                        const SizedBox(height: 18),
+                        Text(
+                          l10n.rewardConfigChooseTrackLabel,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: _kMutedLabel,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_tracks.isEmpty)
+                          Text(
+                            l10n.rewardConfigNoActiveTracks,
+                            style: const TextStyle(color: _kMutedLabel),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: _kFieldFill,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                // ignore: deprecated_member_use
+                                value: _selectedTrackId,
+                                isExpanded: true,
+                                borderRadius: BorderRadius.circular(12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: _kNavy,
+                                ),
+                                items: [
+                                  for (final t in _tracks)
+                                    DropdownMenuItem(
+                                      value: t.id,
+                                      child: Text(_trackTitle(t, l10n)),
+                                    ),
+                                ],
+                                onChanged: (id) {
+                                  if (id == null) return;
+                                  setState(() => _selectedTrackId = id);
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
+                      const SizedBox(height: 18),
+                      TextField(
+                        controller: _pointsController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          hintText: l10n.rewardConfigPointsPlaceholder,
+                          filled: true,
+                          fillColor: _kFieldFill,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.star_rounded,
+                            color: _kOrange,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _kPreviewBg,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.rewardConfigPreviewLabel,
+                              style: const TextStyle(
+                                color: _kNavy,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    _avatarIcons[_iconIndex.clamp(
+                                      0,
+                                      _avatarIcons.length - 1,
+                                    )],
+                                    color: _kNavy,
+                                    size: 30,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _previewTitle,
+                                        style: const TextStyle(
+                                          color: _kNavy,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: const BoxDecoration(
+                                              color: _kOrange,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            l10n.rewardConfigPointsPreview(
+                                              _previewPoints,
+                                            ),
+                                            style: const TextStyle(
+                                              color: _kOrange,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: TextButton(
+                          onPressed: _clearForm,
+                          child: Text(
+                            l10n.rewardConfigCancel,
+                            style: const TextStyle(
+                              color: _kMutedLabel,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton(
+                          onPressed: _saveReward,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kNavy,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                          ),
+                          child: Text(
+                            l10n.rewardConfigSaveRewardButton,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          ParentPortalBottomNav(
+            selectedIndex: 2,
+            onSelect: (index) => unawaited(
+              navigateParentPortalTab(
+                context,
+                index,
+                currentTabIndex: 2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ParentPortalHeader extends StatelessWidget {
+  const _ParentPortalHeader({
+    required this.topInset,
+    required this.contextLabel,
+    required this.portalTitle,
+    required this.onBack,
+    required this.onMenuSelected,
+  });
+
+  final double topInset;
+  final String contextLabel;
+  final String portalTitle;
+  final VoidCallback onBack;
+  final void Function(String) onMenuSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 0,
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: topInset + 4,
+          left: 4,
+          right: 4,
+          bottom: 12,
         ),
-        centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppTheme.brandBlueDeep,
-          unselectedLabelColor: AppTheme.brandInkMuted,
-          indicatorColor: AppTheme.brandBlueBright,
-          tabs: [
-            Tab(text: l10n.rewardConfigPerTrackTab),
-            Tab(text: l10n.rewardConfigTotalPointsTab),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              color: _kNavy,
+              onPressed: onBack,
+            ),
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Text(
+                    portalTitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: _kNavy,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        contextLabel,
+                        style: TextStyle(
+                          color: _kNavy.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded, color: _kNavy),
+              onSelected: onMenuSelected,
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  value: 'manage',
+                  child: Text(
+                    AppLocalizations.of(ctx)!.rewardConfigMenuManageRewards,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+    );
+  }
+}
+
+class _AvatarTile extends StatelessWidget {
+  const _AvatarTile({
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: _kFieldFill,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? _kNavy : Colors.transparent,
+              width: selected ? 3 : 0,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: selected ? _kNavy : _kMutedLabel.withValues(alpha: 0.45),
+            size: 32,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RewardTypeSegmented extends StatelessWidget {
+  const _RewardTypeSegmented({
+    required this.perTrackLabel,
+    required this.totalLabel,
+    required this.isGlobal,
+    required this.onChanged,
+  });
+
+  final String perTrackLabel;
+  final String totalLabel;
+  final bool isGlobal;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _kFieldFill,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
         children: [
-          _buildPerTrackTab(l10n),
-          _buildGlobalTab(l10n),
+          Expanded(
+            child: _Seg(
+              label: perTrackLabel,
+              selected: !isGlobal,
+              onTap: () => onChanged(false),
+            ),
+          ),
+          Expanded(
+            child: _Seg(
+              label: totalLabel,
+              selected: isGlobal,
+              onTap: () => onChanged(true),
+            ),
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          if (!isGlobalTab && (_tracks.isEmpty || _selectedTrackId == null)) {
-            return;
-          }
-          _showMilestoneEditor(
-            existing: null,
-            isGlobal: isGlobalTab,
-          );
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.rewardConfigAddReward),
+    );
+  }
+}
+
+class _Seg extends StatelessWidget {
+  const _Seg({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? _kNavy : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: selected ? Colors.white : _kMutedLabel,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _ManageRewardsList extends StatefulWidget {
+  const _ManageRewardsList({
+    required this.load,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggle,
+  });
+
+  final Future<List<RewardMilestone>> Function() load;
+  final void Function(RewardMilestone) onEdit;
+  final Future<void> Function(RewardMilestone) onDelete;
+  final Future<void> Function(RewardMilestone) onToggle;
+
+  @override
+  State<_ManageRewardsList> createState() => _ManageRewardsListState();
+}
+
+class _ManageRewardsListState extends State<_ManageRewardsList> {
+  late Future<List<RewardMilestone>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.load();
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _future = widget.load();
+    });
+    await _future;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return FutureBuilder<List<RewardMilestone>>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final list = [...?snap.data]
+          ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
+        if (list.isEmpty) {
+          return Center(
+            child: Text(
+              l10n.rewardConfigEmptyMilestones,
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+        return ListView.separated(
+          itemCount: list.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (_, i) {
+            final m = list[i];
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                m.title,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                '${l10n.rewardConfigPointsThresholdLabel}: ${m.thresholdPoints}',
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Switch.adaptive(
+                    value: m.isEnabled,
+                    onChanged: (_) async {
+                      await widget.onToggle(m);
+                      await _refresh();
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => widget.onEdit(m),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    onPressed: () => widget.onDelete(m),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -111,6 +111,7 @@ class RewardMilestoneService {
     required int thresholdPoints,
     String? milestoneId,
     bool isEnabled = true,
+    int iconIndex = 0,
   }) async {
     assert(
       trackId >= 0,
@@ -130,6 +131,7 @@ class RewardMilestoneService {
         title: title.trim(),
         thresholdPoints: thresholdPoints,
         isEnabled: isEnabled,
+        iconIndex: iconIndex,
         updatedAt: now,
       );
     } else {
@@ -143,6 +145,7 @@ class RewardMilestoneService {
           isEnabled: isEnabled,
           createdAt: now,
           updatedAt: now,
+          iconIndex: iconIndex,
         ),
       );
     }

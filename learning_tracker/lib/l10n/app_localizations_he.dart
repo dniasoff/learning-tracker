@@ -1089,6 +1089,51 @@ class AppLocalizationsHe extends AppLocalizations {
   String get rewardConfigSaved => 'הפרסים נשמרו';
 
   @override
+  String get parentPortalTitle => 'פורטל הורים';
+
+  @override
+  String get rewardConfigScreenContextLabel => 'הגדרת פרסים';
+
+  @override
+  String get rewardConfigConfigureNewTitle => 'הגדרת פרס חדש';
+
+  @override
+  String get rewardConfigConfigureNewSubtitle =>
+      'בחרו סמל והגדירו יעדי נקודות לילד.';
+
+  @override
+  String get rewardConfigChooseAvatarStep => '1. בחירת סמל';
+
+  @override
+  String get rewardConfigRewardTypeLabel => 'סוג פרס';
+
+  @override
+  String get rewardConfigChooseTrackLabel => 'בחירת מסלול';
+
+  @override
+  String get rewardConfigPreviewLabel => 'תצוגה מקדימה';
+
+  @override
+  String rewardConfigPointsPreview(int points) {
+    return '$points נקודות';
+  }
+
+  @override
+  String get rewardConfigCancel => 'ביטול';
+
+  @override
+  String get rewardConfigSaveRewardButton => 'שמירת פרס';
+
+  @override
+  String get rewardConfigNamePlaceholder => 'למשל, כוכב ארד';
+
+  @override
+  String get rewardConfigPointsPlaceholder => 'למשל, 500';
+
+  @override
+  String get rewardConfigMenuManageRewards => 'ניהול פרסים';
+
+  @override
   String get pointConfigPerTaskTitle => 'נקודות לכל משימה שהושלמה';
 
   @override

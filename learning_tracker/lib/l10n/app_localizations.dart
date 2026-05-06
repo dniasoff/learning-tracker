@@ -2051,6 +2051,90 @@ abstract class AppLocalizations {
   /// **'Rewards saved'**
   String get rewardConfigSaved;
 
+  /// No description provided for @parentPortalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Portal'**
+  String get parentPortalTitle;
+
+  /// No description provided for @rewardConfigScreenContextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward Configuration'**
+  String get rewardConfigScreenContextLabel;
+
+  /// No description provided for @rewardConfigConfigureNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure New Reward'**
+  String get rewardConfigConfigureNewTitle;
+
+  /// No description provided for @rewardConfigConfigureNewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a magical icon and set the milestone goals for your child.'**
+  String get rewardConfigConfigureNewSubtitle;
+
+  /// No description provided for @rewardConfigChooseAvatarStep.
+  ///
+  /// In en, this message translates to:
+  /// **'1. CHOOSE AN AVATAR'**
+  String get rewardConfigChooseAvatarStep;
+
+  /// No description provided for @rewardConfigRewardTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward type'**
+  String get rewardConfigRewardTypeLabel;
+
+  /// No description provided for @rewardConfigChooseTrackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose track'**
+  String get rewardConfigChooseTrackLabel;
+
+  /// No description provided for @rewardConfigPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PREVIEW'**
+  String get rewardConfigPreviewLabel;
+
+  /// No description provided for @rewardConfigPointsPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} Points'**
+  String rewardConfigPointsPreview(int points);
+
+  /// No description provided for @rewardConfigCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get rewardConfigCancel;
+
+  /// No description provided for @rewardConfigSaveRewardButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Reward'**
+  String get rewardConfigSaveRewardButton;
+
+  /// No description provided for @rewardConfigNamePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Bronze Star'**
+  String get rewardConfigNamePlaceholder;
+
+  /// No description provided for @rewardConfigPointsPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., 500'**
+  String get rewardConfigPointsPlaceholder;
+
+  /// No description provided for @rewardConfigMenuManageRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage rewards'**
+  String get rewardConfigMenuManageRewards;
+
   /// No description provided for @pointConfigPerTaskTitle.
   ///
   /// In en, this message translates to:

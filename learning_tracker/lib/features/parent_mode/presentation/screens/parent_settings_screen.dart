@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_portal_bottom_nav.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
@@ -210,44 +211,19 @@ class ParentSettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
-          _ParentBottomNav(
-            onSelect: (index) => _onBottomNavTap(context, index),
+          ParentPortalBottomNav(
+            selectedIndex: 3,
+            onSelect: (index) => unawaited(
+              navigateParentPortalTab(
+                context,
+                index,
+                currentTabIndex: 3,
+              ),
+            ),
           ),
         ],
       ),
     );
-  }
-
-  void _onBottomNavTap(BuildContext context, int index) {
-    final router = context.router;
-    switch (index) {
-      case 0:
-        unawaited(
-          router.replaceAll([
-            const AppShellRoute(children: [DashboardRoute()]),
-          ]),
-        );
-        break;
-      case 1:
-        unawaited(
-          router.replaceAll([
-            const AppShellRoute(children: [LearningRoute()]),
-          ]),
-        );
-        break;
-      case 2:
-        final ctx = context;
-        unawaited(
-          Future(() async {
-            await router.replaceAll([const AppShellRoute()]);
-            if (!ctx.mounted) return;
-            await router.push(const GamificationRoute());
-          }),
-        );
-        break;
-      case 3:
-        break;
-    }
   }
 
   Widget _rowDivider() {
@@ -365,108 +341,6 @@ class _ManageRow extends StatelessWidget {
               trailing,
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ParentBottomNav extends StatelessWidget {
-  const _ParentBottomNav({required this.onSelect});
-
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final items = <({IconData icon, String label})>[
-      (icon: Icons.space_dashboard_rounded, label: l10n.dashboard),
-      (icon: Icons.menu_book_rounded, label: l10n.bottomNavTracks),
-      (icon: Icons.emoji_events_rounded, label: l10n.bottomNavRewards),
-      (icon: Icons.settings_rounded, label: l10n.bottomNavParent),
-    ];
-
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x140038A8),
-            blurRadius: 18,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-          child: Row(
-            children: [
-              for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: _BottomNavItem(
-                    icon: items[i].icon,
-                    label: items[i].label,
-                    selected: i == 3,
-                    onTap: () => onSelect(i),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = selected ? AppTheme.brandBlueBright : const Color(0xFF708090);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: selected ? AppTheme.brandBlueSoft : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: fg, size: 22),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: fg,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
         ),
       ),
     );

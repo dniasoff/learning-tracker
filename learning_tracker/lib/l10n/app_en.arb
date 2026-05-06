@@ -525,6 +525,25 @@
   "rewardConfigDuplicateThreshold": "Another reward already uses this point value.",
   "rewardConfigEmptyMilestones": "No rewards yet. Tap below to add one.",
   "rewardConfigSaved": "Rewards saved",
+  "parentPortalTitle": "Parent Portal",
+  "rewardConfigScreenContextLabel": "Reward Configuration",
+  "rewardConfigConfigureNewTitle": "Configure New Reward",
+  "rewardConfigConfigureNewSubtitle": "Select a magical icon and set the milestone goals for your child.",
+  "rewardConfigChooseAvatarStep": "1. CHOOSE AN AVATAR",
+  "rewardConfigRewardTypeLabel": "Reward type",
+  "rewardConfigChooseTrackLabel": "Choose track",
+  "rewardConfigPreviewLabel": "PREVIEW",
+  "rewardConfigPointsPreview": "{points} Points",
+  "@rewardConfigPointsPreview": {
+    "placeholders": {
+      "points": { "type": "int" }
+    }
+  },
+  "rewardConfigCancel": "Cancel",
+  "rewardConfigSaveRewardButton": "Save Reward",
+  "rewardConfigNamePlaceholder": "e.g., Bronze Star",
+  "rewardConfigPointsPlaceholder": "e.g., 500",
+  "rewardConfigMenuManageRewards": "Manage rewards",
   "pointConfigPerTaskTitle": "Points per completed task",
   "pointConfigPerTaskDescription": "For each active learning track, set how many points your child earns when they complete one task from their daily list. The amount depends on the task stage (for example first learn vs review).",
   "pointConfigNoActiveTracksBody": "No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.",

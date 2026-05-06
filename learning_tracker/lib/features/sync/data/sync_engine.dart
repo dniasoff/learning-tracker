@@ -1352,7 +1352,8 @@ class SyncEngine {
     final totalPointsSum = totalPointsRow.read(totalPointsExpr) ?? 0;
 
     // `schema_version` 3: same shape as v2; `reward_settings.milestones[].track_id`
-    // may be `0` (RewardMilestone.kGlobalTrackSentinel) for total-points rewards.
+    // may be `0` (RewardMilestone.kGlobalTrackSentinel) for total-points rewards;
+    // optional `icon_index` (0–2) selects the parent-configured reward avatar tile.
     // Per-track milestones use positive curriculum track ids as before.
     return {
       'schema_version': 3,

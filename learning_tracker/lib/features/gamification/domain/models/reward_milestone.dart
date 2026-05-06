@@ -13,6 +13,7 @@ class RewardMilestone {
     required this.isEnabled,
     required this.createdAt,
     required this.updatedAt,
+    this.iconIndex = 0,
   });
 
   final String id;
@@ -24,6 +25,9 @@ class RewardMilestone {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Parent-selected reward avatar tile (0–2). Synced in `reward_settings`.
+  final int iconIndex;
+
   RewardMilestone copyWith({
     String? id,
     int? profileId,
@@ -33,6 +37,7 @@ class RewardMilestone {
     bool? isEnabled,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? iconIndex,
   }) {
     return RewardMilestone(
       id: id ?? this.id,
@@ -43,6 +48,7 @@ class RewardMilestone {
       isEnabled: isEnabled ?? this.isEnabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      iconIndex: iconIndex ?? this.iconIndex,
     );
   }
 
@@ -54,6 +60,7 @@ class RewardMilestone {
       'title': title,
       'threshold_points': thresholdPoints,
       'is_enabled': isEnabled,
+      'icon_index': iconIndex,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -67,6 +74,7 @@ class RewardMilestone {
       title: (json['title'] ?? '').toString(),
       thresholdPoints: _asInt(json['threshold_points']) ?? 0,
       isEnabled: json['is_enabled'] as bool? ?? true,
+      iconIndex: _asInt(json['icon_index']) ?? 0,
       createdAt:
           DateTime.tryParse((json['created_at'] ?? '').toString()) ??
           DateTime.now().toUtc(),

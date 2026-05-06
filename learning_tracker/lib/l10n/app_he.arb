@@ -525,6 +525,25 @@
   "rewardConfigDuplicateThreshold": "פרס אחר כבר משתמש בערך נקודות זה.",
   "rewardConfigEmptyMilestones": "עדיין אין פרסים. לחצו למטה להוספה.",
   "rewardConfigSaved": "הפרסים נשמרו",
+  "parentPortalTitle": "פורטל הורים",
+  "rewardConfigScreenContextLabel": "הגדרת פרסים",
+  "rewardConfigConfigureNewTitle": "הגדרת פרס חדש",
+  "rewardConfigConfigureNewSubtitle": "בחרו סמל והגדירו יעדי נקודות לילד.",
+  "rewardConfigChooseAvatarStep": "1. בחירת סמל",
+  "rewardConfigRewardTypeLabel": "סוג פרס",
+  "rewardConfigChooseTrackLabel": "בחירת מסלול",
+  "rewardConfigPreviewLabel": "תצוגה מקדימה",
+  "rewardConfigPointsPreview": "{points} נקודות",
+  "@rewardConfigPointsPreview": {
+    "placeholders": {
+      "points": { "type": "int" }
+    }
+  },
+  "rewardConfigCancel": "ביטול",
+  "rewardConfigSaveRewardButton": "שמירת פרס",
+  "rewardConfigNamePlaceholder": "למשל, כוכב ארד",
+  "rewardConfigPointsPlaceholder": "למשל, 500",
+  "rewardConfigMenuManageRewards": "ניהול פרסים",
   "pointConfigPerTaskTitle": "נקודות לכל משימה שהושלמה",
   "pointConfigPerTaskDescription": "לכל מסלול למידה פעיל, הגדירו כמה נקודות הילד מקבל כשהוא משלים משימה אחת מהרשימה היומית. הסכום תלוי בשלב המשימה (למשל לימוד ראשון מול חזרה).",
   "pointConfigNoActiveTracksBody": "לא נמצאו מסלולי למידה פעילים עם שלבים לילד הזה. הפעילו מקצועות והגדירו מסלולים תחת ניהול מסלולים, ואז חזרו לכאן כדי לקבוע נקודות לכל משימה.",

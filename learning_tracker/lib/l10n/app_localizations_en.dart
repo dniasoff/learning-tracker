@@ -1100,6 +1100,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rewardConfigSaved => 'Rewards saved';
 
   @override
+  String get parentPortalTitle => 'Parent Portal';
+
+  @override
+  String get rewardConfigScreenContextLabel => 'Reward Configuration';
+
+  @override
+  String get rewardConfigConfigureNewTitle => 'Configure New Reward';
+
+  @override
+  String get rewardConfigConfigureNewSubtitle =>
+      'Select a magical icon and set the milestone goals for your child.';
+
+  @override
+  String get rewardConfigChooseAvatarStep => '1. CHOOSE AN AVATAR';
+
+  @override
+  String get rewardConfigRewardTypeLabel => 'Reward type';
+
+  @override
+  String get rewardConfigChooseTrackLabel => 'Choose track';
+
+  @override
+  String get rewardConfigPreviewLabel => 'PREVIEW';
+
+  @override
+  String rewardConfigPointsPreview(int points) {
+    return '$points Points';
+  }
+
+  @override
+  String get rewardConfigCancel => 'Cancel';
+
+  @override
+  String get rewardConfigSaveRewardButton => 'Save Reward';
+
+  @override
+  String get rewardConfigNamePlaceholder => 'e.g., Bronze Star';
+
+  @override
+  String get rewardConfigPointsPlaceholder => 'e.g., 500';
+
+  @override
+  String get rewardConfigMenuManageRewards => 'Manage rewards';
+
+  @override
   String get pointConfigPerTaskTitle => 'Points per completed task';
 
   @override
