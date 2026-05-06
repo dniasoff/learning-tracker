@@ -971,6 +971,12 @@ abstract class AppLocalizations {
   /// **'Add Track'**
   String get addTrack;
 
+  /// No description provided for @addTrackCurriculumReplaceWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have a track here. Choosing this curriculum again will replace your current setup and may reset your progress for it.'**
+  String get addTrackCurriculumReplaceWarning;
+
   /// No description provided for @noActiveCurricula.
   ///
   /// In en, this message translates to:

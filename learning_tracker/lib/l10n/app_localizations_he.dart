@@ -485,6 +485,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get addTrack => 'הוסף מסלול';
 
   @override
+  String get addTrackCurriculumReplaceWarning =>
+      'כבר יש לך מסלול כאן. בחירת הקורס שוב תחליף את ההגדרה הנוכחית ועלולה לאפס את ההתקדמות שלך בו.';
+
+  @override
   String get noActiveCurricula => 'אין תוכניות לימוד פעילות';
 
   @override

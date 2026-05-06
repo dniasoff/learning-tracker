@@ -226,6 +226,7 @@
   "addTrackGoalDeadlineNoStudyDaysInWindow": "No study day in your week falls in the range to this deadline. Add study days or move the deadline later.",
   "addTrackGoalDeadlinePaceLineLoading": "Loading scope size to estimate per study day…",
   "addTrack": "Add Track",
+  "addTrackCurriculumReplaceWarning": "You already have a track here. Choosing this curriculum again will replace your current setup and may reset your progress for it.",
   "noActiveCurricula": "No active curricula",
   "errorLoadingCurricula": "Error loading curricula: {error}",
   "@errorLoadingCurricula": {

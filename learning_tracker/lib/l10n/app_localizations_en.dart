@@ -488,6 +488,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addTrack => 'Add Track';
 
   @override
+  String get addTrackCurriculumReplaceWarning =>
+      'You already have a track here. Choosing this curriculum again will replace your current setup and may reset your progress for it.';
+
+  @override
   String get noActiveCurricula => 'No active curricula';
 
   @override

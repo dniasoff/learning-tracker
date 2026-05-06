@@ -226,6 +226,7 @@
   "addTrackGoalDeadlineNoStudyDaysInWindow": "אין יום לימוד בטווח עד תאריך היעד. הוסיפו ימי לימוד או בחרו תאריך מאוחר יותר.",
   "addTrackGoalDeadlinePaceLineLoading": "טוען גודל תחום לחישוב לכל יום לימוד…",
   "addTrack": "הוסף מסלול",
+  "addTrackCurriculumReplaceWarning": "כבר יש לך מסלול כאן. בחירת הקורס שוב תחליף את ההגדרה הנוכחית ועלולה לאפס את ההתקדמות שלך בו.",
   "noActiveCurricula": "אין תוכניות לימוד פעילות",
   "errorLoadingCurricula": "שגיאה בטעינת תוכניות הלימוד: {error}",
   "@errorLoadingCurricula": {

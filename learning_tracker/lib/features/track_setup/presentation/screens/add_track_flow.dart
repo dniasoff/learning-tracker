@@ -755,10 +755,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
 
     return switch (step) {
-      AddTrackStep.curriculum => CurriculumPickerStep(
-        onSelected: _onCurriculumSelected,
-        isOnboarding: widget.isOnboarding,
-      ),
+      AddTrackStep.curriculum => _buildCurriculumStep(),
       AddTrackStep.program => ProgramSelectionStep(
         curriculumId: _state.curriculumId!,
         onSelected: _onProgramSelected,
@@ -770,6 +767,25 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       AddTrackStep.trackName => const SizedBox.shrink(),
       AddTrackStep.bulkMark => _buildScreen8(),
     };
+  }
+
+  Widget _buildCurriculumStep() {
+    final activeAsync = ref.watch(dashboardActiveCurriculaProvider);
+    return activeAsync.when(
+      data: (list) => CurriculumPickerStep(
+        onSelected: _onCurriculumSelected,
+        isOnboarding: widget.isOnboarding,
+        existingTrackCurricula: list.toSet(),
+      ),
+      loading: () => CurriculumPickerStep(
+        onSelected: _onCurriculumSelected,
+        isOnboarding: widget.isOnboarding,
+      ),
+      error: (_, __) => CurriculumPickerStep(
+        onSelected: _onCurriculumSelected,
+        isOnboarding: widget.isOnboarding,
+      ),
+    );
   }
 
   // ── Step Builders ──────────────────────────────────────────────────────────

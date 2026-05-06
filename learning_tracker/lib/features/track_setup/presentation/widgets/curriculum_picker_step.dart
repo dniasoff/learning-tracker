@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Stage 1: Pick ONE curriculum from all 9 available options.
 ///
 /// Displays Hebrew title with English subtitle ([CurriculumId.displayNameEn]).
 /// Single tap selection advances immediately.
+///
+/// When [existingTrackCurricula] contains a curriculum, a warning icon on the
+/// right opens a brief SnackBar — re-adding replaces the current setup.
 class CurriculumPickerStep extends StatelessWidget {
   const CurriculumPickerStep({
     required this.onSelected,
     this.isOnboarding = false,
+    this.existingTrackCurricula = const <CurriculumId>{},
     super.key,
   });
 
   final ValueChanged<CurriculumId> onSelected;
   final bool isOnboarding;
+
+  /// Curricula that already have an active track for this profile.
+  final Set<CurriculumId> existingTrackCurricula;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +40,10 @@ class CurriculumPickerStep extends StatelessWidget {
       CurriculumId.mussar,
     ];
     final remaining = CurriculumId.values
-        .where((curriculum) => !featured.contains(curriculum) && !excluded.contains(curriculum))
+        .where(
+          (curriculum) =>
+              !featured.contains(curriculum) && !excluded.contains(curriculum),
+        )
         .toList();
 
     return Padding(
@@ -62,6 +73,9 @@ class CurriculumPickerStep extends StatelessWidget {
                 for (final curriculum in featured) ...[
                   _CurriculumTile(
                     curriculum: curriculum,
+                    showReplaceWarning: existingTrackCurricula.contains(
+                      curriculum,
+                    ),
                     onTap: () => onSelected(curriculum),
                   ),
                   const SizedBox(height: 12),
@@ -69,6 +83,9 @@ class CurriculumPickerStep extends StatelessWidget {
                 for (final curriculum in remaining) ...[
                   _CurriculumTile(
                     curriculum: curriculum,
+                    showReplaceWarning: existingTrackCurricula.contains(
+                      curriculum,
+                    ),
                     onTap: () => onSelected(curriculum),
                   ),
                   const SizedBox(height: 12),
@@ -83,10 +100,33 @@ class CurriculumPickerStep extends StatelessWidget {
 }
 
 class _CurriculumTile extends StatelessWidget {
-  const _CurriculumTile({required this.curriculum, required this.onTap});
+  const _CurriculumTile({
+    required this.curriculum,
+    required this.showReplaceWarning,
+    required this.onTap,
+  });
 
   final CurriculumId curriculum;
+  final bool showReplaceWarning;
   final VoidCallback onTap;
+
+  static const _warnIconColor = Color(0xFFE65100);
+
+  static void _showReplaceSnack(BuildContext context) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.addTrackCurriculumReplaceWarning),
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,54 +146,80 @@ class _CurriculumTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: style.background,
-                  ),
-                  child: Icon(style.icon, color: style.iconColor, size: 27),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        curriculum.displayNameHe,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4, right: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(22),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 14, 8, 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: style.background,
+                          ),
+                          child: Icon(style.icon, color: style.iconColor, size: 27),
                         ),
-                        textDirection: TextDirection.rtl,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        curriculum.displayNameEn,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: AppTheme.brandInk,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                curriculum.displayNameHe,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                textDirection: TextDirection.rtl,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                curriculum.displayNameEn,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: AppTheme.brandInk,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Color(0xFFC0C6D3),
+                          size: 22,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFFC0C6D3),
-                  size: 22,
-                ),
-              ],
+              ),
             ),
-          ),
+            if (showReplaceWarning)
+              Material(
+                color: Colors.transparent,
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  tooltip: AppLocalizations.of(context)!.addTrackCurriculumReplaceWarning,
+                  icon: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: _warnIconColor,
+                    size: 26,
+                  ),
+                  onPressed: () => _showReplaceSnack(context),
+                ),
+              ),
+          ],
         ),
       ),
     );
