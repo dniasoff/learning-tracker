@@ -78,6 +78,9 @@ dependencies:
   # UUID generation for local auth
   uuid: ^4.5.0
 
+  # Settings footer: version from pubspec (DNI-105)
+  package_info_plus: ^9.0.0
+
   # Filesystem path resolution (app documents dir for SeedManager)
   path_provider: ^2.1.4
 

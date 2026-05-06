@@ -21,10 +21,7 @@ import 'package:learning_tracker/features/settings/presentation/widgets/change_p
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-// TODO(DNI-105): Replace with dynamic version from package_info_plus
-// once the dependency is added to pubspec.yaml.
-const String _appVersion = '1.2.4';
+import 'package:package_info_plus/package_info_plus.dart';
 
 @RoutePage()
 class SettingsScreen extends ConsumerWidget {
@@ -187,16 +184,30 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ],
             const SizedBox(height: 24),
-            Center(
-              child: Text(
-                'v$_appVersion',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 15,
-                ),
-              ),
+            FutureBuilder<PackageInfo>(
+              future: PackageInfo.fromPlatform(),
+              builder: (context, snapshot) {
+                final version = snapshot.data?.version;
+                if (version == null || version.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Text(
+                        'v$version',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 2),
             Center(
               child: Text(
                 l10n.settingsHandcraftedTagline,

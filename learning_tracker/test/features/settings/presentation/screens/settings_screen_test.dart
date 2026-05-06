@@ -16,10 +16,22 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 void main() {
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    PackageInfo.setMockInitialValues(
+      appName: 'Learning Tracker',
+      packageName: 'learning_tracker',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+  });
+
   late UserDatabase database;
   late MockFirebaseAuth mockAuth;
 
@@ -174,8 +186,9 @@ void main() {
 
       await tester.drag(find.byType(ListView), const Offset(0, -1000));
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
 
-      expect(find.text('v1.2.4'), findsOneWidget);
+      expect(find.text('v1.0.0'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
