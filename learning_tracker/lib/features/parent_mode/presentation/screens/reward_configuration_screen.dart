@@ -11,7 +11,6 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_portal_bottom_nav.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -352,10 +351,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       backgroundColor: _kPageBg,
       body: Column(
         children: [
-          _ParentPortalHeader(
+          _RewardConfigHeader(
             topInset: topInset,
-            contextLabel: l10n.rewardConfigScreenContextLabel,
-            portalTitle: l10n.parentPortalTitle,
+            title: l10n.rewardConfigScreenContextLabel,
             onBack: () => context.maybePop(),
             onMenuSelected: (value) {
               if (value == 'manage') unawaited(_openManageRewardsSheet());
@@ -674,34 +672,22 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
               ),
             ),
           ),
-          ParentPortalBottomNav(
-            selectedIndex: 2,
-            onSelect: (index) => unawaited(
-              navigateParentPortalTab(
-                context,
-                index,
-                currentTabIndex: 2,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _ParentPortalHeader extends StatelessWidget {
-  const _ParentPortalHeader({
+class _RewardConfigHeader extends StatelessWidget {
+  const _RewardConfigHeader({
     required this.topInset,
-    required this.contextLabel,
-    required this.portalTitle,
+    required this.title,
     required this.onBack,
     required this.onMenuSelected,
   });
 
   final double topInset;
-  final String contextLabel;
-  final String portalTitle;
+  final String title;
   final VoidCallback onBack;
   final void Function(String) onMenuSelected;
 
@@ -718,57 +704,42 @@ class _ParentPortalHeader extends StatelessWidget {
           bottom: 12,
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              color: _kNavy,
-              onPressed: onBack,
+            SizedBox(
+              width: 48,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                color: _kNavy,
+                onPressed: onBack,
+              ),
             ),
             Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  Text(
-                    portalTitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: _kNavy,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    right: 0,
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Text(
-                        contextLabel,
-                        style: TextStyle(
-                          color: _kNavy.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                        ),
-                      ),
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kNavy,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 48,
+              child: PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.more_vert_rounded, color: _kNavy),
+                onSelected: onMenuSelected,
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'manage',
+                    child: Text(
+                      AppLocalizations.of(ctx)!.rewardConfigMenuManageRewards,
                     ),
                   ),
                 ],
               ),
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded, color: _kNavy),
-              onSelected: onMenuSelected,
-              itemBuilder: (ctx) => [
-                PopupMenuItem(
-                  value: 'manage',
-                  child: Text(
-                    AppLocalizations.of(ctx)!.rewardConfigMenuManageRewards,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
