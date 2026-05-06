@@ -51,6 +51,10 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
   bool _loading = true;
   String? _error;
 
+  /// Total-points ladder when there are no active tracks, or when the parent
+  /// explicitly chose "Total points".
+  bool get _usesGlobalLadder => _tracks.isEmpty || _isGlobalReward;
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +89,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       setState(() {
         _tracks = tracks;
         _selectedTrackId = tracks.isNotEmpty ? tracks.first.id : null;
+        if (tracks.isEmpty) {
+          _isGlobalReward = true;
+        }
         _loading = false;
       });
     } catch (e) {
@@ -122,13 +129,18 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       _iconIndex = 0;
       _nameController.clear();
       _pointsController.clear();
+      if (_tracks.isEmpty) {
+        _isGlobalReward = true;
+      }
     });
   }
 
   void _applyMilestoneToForm(RewardMilestone m) {
     setState(() {
       _editingMilestoneId = m.id;
-      _isGlobalReward = m.trackId == RewardMilestone.kGlobalTrackSentinel;
+      final globalMilestone =
+          m.trackId == RewardMilestone.kGlobalTrackSentinel;
+      _isGlobalReward = _tracks.isEmpty || globalMilestone;
       if (!_isGlobalReward) {
         _selectedTrackId = m.trackId;
       }
@@ -142,7 +154,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final svc = RewardMilestoneService(db, profileId: profileId);
-    if (_isGlobalReward) {
+    if (_usesGlobalLadder) {
       return svc.getGlobalMilestones();
     }
     final tid = _selectedTrackId;
@@ -172,7 +184,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       return;
     }
 
-    if (!_isGlobalReward && (_tracks.isEmpty || _selectedTrackId == null)) {
+    if (!_usesGlobalLadder && _selectedTrackId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.rewardConfigNoActiveTracks)),
       );
@@ -194,7 +206,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final svc = RewardMilestoneService(db, profileId: profileId);
-    final trackId = _isGlobalReward
+    final trackId = _usesGlobalLadder
         ? RewardMilestone.kGlobalTrackSentinel
         : _selectedTrackId!;
 
@@ -463,12 +475,17 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                       _RewardTypeSegmented(
                         perTrackLabel: l10n.rewardConfigPerTrackTab,
                         totalLabel: l10n.rewardConfigTotalPointsTab,
-                        isGlobal: _isGlobalReward,
+                        perTrackEnabled: _tracks.isNotEmpty,
+                        isGlobal: _usesGlobalLadder,
                         onChanged: (global) {
+                          if (_tracks.isEmpty) {
+                            setState(() => _isGlobalReward = true);
+                            return;
+                          }
                           setState(() => _isGlobalReward = global);
                         },
                       ),
-                      if (!_isGlobalReward) ...[
+                      if (!_usesGlobalLadder) ...[
                         const SizedBox(height: 18),
                         Text(
                           l10n.rewardConfigChooseTrackLabel,
@@ -479,45 +496,39 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                                   ),
                         ),
                         const SizedBox(height: 8),
-                        if (_tracks.isEmpty)
-                          Text(
-                            l10n.rewardConfigNoActiveTracks,
-                            style: const TextStyle(color: _kMutedLabel),
-                          )
-                        else
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: _kFieldFill,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: _kFieldFill,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<int>(
+                              // ignore: deprecated_member_use
+                              value: _selectedTrackId,
+                              isExpanded: true,
                               borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                // ignore: deprecated_member_use
-                                value: _selectedTrackId,
-                                isExpanded: true,
-                                borderRadius: BorderRadius.circular(12),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                icon: const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  color: _kNavy,
-                                ),
-                                items: [
-                                  for (final t in _tracks)
-                                    DropdownMenuItem(
-                                      value: t.id,
-                                      child: Text(_trackTitle(t, l10n)),
-                                    ),
-                                ],
-                                onChanged: (id) {
-                                  if (id == null) return;
-                                  setState(() => _selectedTrackId = id);
-                                },
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
                               ),
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: _kNavy,
+                              ),
+                              items: [
+                                for (final t in _tracks)
+                                  DropdownMenuItem(
+                                    value: t.id,
+                                    child: Text(_trackTitle(t, l10n)),
+                                  ),
+                              ],
+                              onChanged: (id) {
+                                if (id == null) return;
+                                setState(() => _selectedTrackId = id);
+                              },
                             ),
                           ),
+                        ),
                       ],
                       const SizedBox(height: 18),
                       TextField(
@@ -792,12 +803,14 @@ class _RewardTypeSegmented extends StatelessWidget {
   const _RewardTypeSegmented({
     required this.perTrackLabel,
     required this.totalLabel,
+    required this.perTrackEnabled,
     required this.isGlobal,
     required this.onChanged,
   });
 
   final String perTrackLabel;
   final String totalLabel;
+  final bool perTrackEnabled;
   final bool isGlobal;
   final ValueChanged<bool> onChanged;
 
@@ -815,13 +828,15 @@ class _RewardTypeSegmented extends StatelessWidget {
             child: _Seg(
               label: perTrackLabel,
               selected: !isGlobal,
-              onTap: () => onChanged(false),
+              enabled: perTrackEnabled,
+              onTap: perTrackEnabled ? () => onChanged(false) : null,
             ),
           ),
           Expanded(
             child: _Seg(
               label: totalLabel,
               selected: isGlobal,
+              enabled: true,
               onTap: () => onChanged(true),
             ),
           ),
@@ -835,19 +850,26 @@ class _Seg extends StatelessWidget {
   const _Seg({
     required this.label,
     required this.selected,
-    required this.onTap,
+    required this.enabled,
+    this.onTap,
   });
 
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final bool enabled;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    const baseMuted = _kMutedLabel;
+    final labelColor = !enabled
+        ? baseMuted.withValues(alpha: 0.35)
+        : (selected ? Colors.white : baseMuted);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(20),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -861,7 +883,7 @@ class _Seg extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: selected ? Colors.white : _kMutedLabel,
+              color: labelColor,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),
