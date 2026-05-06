@@ -34,6 +34,32 @@ class RewardMilestoneService {
     return trackMilestones;
   }
 
+  /// Milestones tied to [RewardMilestone.kGlobalTrackSentinel] (total points).
+  Future<List<RewardMilestone>> getGlobalMilestones() async {
+    return getMilestonesForTrack(RewardMilestone.kGlobalTrackSentinel);
+  }
+
+  /// Same rules as [PointsService.getGlobalTotal] — reward-eligible tracks only.
+  Future<int> getGlobalPointsForRewards() async {
+    final completions = await _database.completionDao.getCompletionsByProfile(
+      profileId,
+    );
+    if (completions.isEmpty) return 0;
+    final eligibility = <int, bool>{};
+    var sum = 0;
+    for (final c in completions) {
+      final eligible =
+          eligibility[c.trackId] ?? await trackCountsTowardRewardPoints(
+                c.trackId,
+              );
+      eligibility[c.trackId] = eligible;
+      if (eligible) {
+        sum += c.points;
+      }
+    }
+    return sum;
+  }
+
   Future<List<RewardMilestone>> getAllMilestones() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_configKey);
@@ -86,6 +112,10 @@ class RewardMilestoneService {
     String? milestoneId,
     bool isEnabled = true,
   }) async {
+    assert(
+      trackId >= 0,
+      'Use RewardMilestone.kGlobalTrackSentinel for total-points rewards.',
+    );
     final now = DateTimeFactory.nowUtc();
     final all = List<RewardMilestone>.from(await getAllMilestones());
 
@@ -141,6 +171,7 @@ class RewardMilestoneService {
   ];
 
   Future<void> ensureDefaultsForTrack(int trackId) async {
+    if (trackId == RewardMilestone.kGlobalTrackSentinel) return;
     var existing = await getMilestonesForTrack(trackId);
     if (_isLegacyThreeTierLadder(existing)) {
       await _migrateLegacyThreeTierToDefaultEight(trackId, existing);
@@ -259,6 +290,43 @@ class RewardMilestoneService {
           title: milestone.title,
           thresholdPoints: milestone.thresholdPoints,
           pointsAtUnlock: trackPoints,
+          unlockedAt: now,
+        ),
+      );
+    }
+
+    if (newlyUnlocked.isNotEmpty) {
+      await _writeUnlocks([...unlocks, ...newlyUnlocked], updatedAt: now);
+    }
+    return newlyUnlocked;
+  }
+
+  /// Unlock enabled global milestones when [getGlobalPointsForRewards] crosses
+  /// thresholds. [RewardUnlockRecord.trackId] is [RewardMilestone.kGlobalTrackSentinel].
+  Future<List<RewardUnlockRecord>> evaluateUnlocksForGlobal() async {
+    final globalPoints = await getGlobalPointsForRewards();
+    final milestones = await getGlobalMilestones();
+    if (milestones.isEmpty) return const [];
+
+    final unlocks = await getAllUnlocks();
+    final unlockedIds = unlocks.map((u) => u.milestoneId).toSet();
+    final now = DateTimeFactory.nowUtc();
+    const sentinel = RewardMilestone.kGlobalTrackSentinel;
+
+    final newlyUnlocked = <RewardUnlockRecord>[];
+    for (final milestone in milestones) {
+      if (!milestone.isEnabled) continue;
+      if (globalPoints < milestone.thresholdPoints) continue;
+      if (unlockedIds.contains(milestone.id)) continue;
+
+      newlyUnlocked.add(
+        RewardUnlockRecord(
+          milestoneId: milestone.id,
+          profileId: profileId,
+          trackId: sentinel,
+          title: milestone.title,
+          thresholdPoints: milestone.thresholdPoints,
+          pointsAtUnlock: globalPoints,
           unlockedAt: now,
         ),
       );

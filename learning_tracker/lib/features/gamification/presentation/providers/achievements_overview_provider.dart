@@ -93,6 +93,7 @@ final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
     await service.ensureDefaultsForTrack(track.id);
     await service.evaluateUnlocksForTrack(track.id);
   }
+  await service.evaluateUnlocksForGlobal();
 
   final unlocks = await service.getAllUnlocks();
   final unlockedIds = unlocks.map((u) => u.milestoneId).toSet();
@@ -138,6 +139,47 @@ final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
           isUnlocked: unlocked,
           isNextUp: isNext,
           isLegendTier: m.title.trim() == 'Legend Star',
+        ),
+      );
+    }
+  }
+
+  final globalMilestones = await service.getGlobalMilestones();
+  final enabledGlobal = globalMilestones.where((m) => m.isEnabled).toList()
+    ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
+
+  if (enabledGlobal.isNotEmpty) {
+    filterOptions.insert(
+      0,
+      const AchievementTrackFilterVm(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        curriculumId: null,
+        sortLabel: '',
+      ),
+    );
+
+    final globalPoints = await service.getGlobalPointsForRewards();
+    RewardMilestone? firstLockedGlobal;
+    for (final m in enabledGlobal) {
+      if (!unlockedIds.contains(m.id)) {
+        firstLockedGlobal = m;
+        break;
+      }
+    }
+
+    for (final m in enabledGlobal) {
+      final unlocked = unlockedIds.contains(m.id);
+      final isNext = !unlocked && firstLockedGlobal?.id == m.id;
+      rows.add(
+        AchievementRowVm(
+          trackId: RewardMilestone.kGlobalTrackSentinel,
+          trackLabel: '',
+          curriculumId: null,
+          milestone: m,
+          trackPoints: globalPoints,
+          isUnlocked: unlocked,
+          isNextUp: isNext,
+          isLegendTier: false,
         ),
       );
     }

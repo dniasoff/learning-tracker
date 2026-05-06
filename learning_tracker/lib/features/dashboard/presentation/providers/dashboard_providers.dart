@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -25,12 +26,15 @@ class DashboardChildNextReward {
     required this.trackPoints,
     required this.threshold,
     required this.title,
+    this.isGlobal = false,
   });
 
   final int trackId;
+  /// Progress numerator: per-track points or global total when [isGlobal].
   final int trackPoints;
   final int threshold;
   final String title;
+  final bool isGlobal;
 }
 
 /// Provider for the CrossCurriculumAggregator instance.
@@ -204,25 +208,56 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   DashboardChildNextReward? best;
   var bestGap = 1 << 30;
 
+  void consider({
+    required int trackId,
+    required int progressPoints,
+    required int threshold,
+    required String title,
+    required bool isGlobal,
+  }) {
+    if (progressPoints >= threshold) return;
+    final gap = threshold - progressPoints;
+    if (gap < bestGap) {
+      bestGap = gap;
+      best = DashboardChildNextReward(
+        trackId: trackId,
+        trackPoints: progressPoints,
+        threshold: threshold,
+        title: title,
+        isGlobal: isGlobal,
+      );
+    }
+  }
+
   for (final track in tracks) {
     await service.ensureDefaultsForTrack(track.id);
-    final trackPoints = await service.getTrackPointsTotal(track.id);
+    final trackPoints = await service.getTrackPointsTotalForRewards(track.id);
     final milestones = await service.getMilestonesForTrack(track.id);
     for (final m in milestones) {
       if (!m.isEnabled) continue;
-      if (trackPoints >= m.thresholdPoints) continue;
-      final gap = m.thresholdPoints - trackPoints;
-      if (gap < bestGap) {
-        bestGap = gap;
-        best = DashboardChildNextReward(
-          trackId: track.id,
-          trackPoints: trackPoints,
-          threshold: m.thresholdPoints,
-          title: m.title,
-        );
-      }
+      consider(
+        trackId: track.id,
+        progressPoints: trackPoints,
+        threshold: m.thresholdPoints,
+        title: m.title,
+        isGlobal: false,
+      );
     }
   }
+
+  final globalPoints = await service.getGlobalPointsForRewards();
+  final globalMilestones = await service.getGlobalMilestones();
+  for (final m in globalMilestones) {
+    if (!m.isEnabled) continue;
+    consider(
+      trackId: RewardMilestone.kGlobalTrackSentinel,
+      progressPoints: globalPoints,
+      threshold: m.thresholdPoints,
+      title: m.title,
+      isGlobal: true,
+    );
+  }
+
   return best;
 }
 

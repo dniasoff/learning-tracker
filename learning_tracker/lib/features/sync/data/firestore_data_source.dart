@@ -11,7 +11,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - `users/{uid}/learner_profiles/{profileId}/learning_ledger/{id}` - Lifetime / cumulative progress (append-only)
 /// - `users/{uid}/learner_profiles/{profileId}/streak/data` - Streak (single doc)
 /// - `users/{uid}/learner_profiles/{profileId}/notification_settings/preferences` - Notification preferences (LWW)
-/// - `users/{uid}/learner_profiles/{profileId}/gamification_settings/config` - Points/rewards config
+/// - `users/{uid}/learner_profiles/{profileId}/gamification_settings/config` -
+///   Points config, `reward_settings` (milestones + unlocks). Milestone
+///   `track_id: 0` means total-points (global) ladder; positive ids are
+///   per-curriculum tracks. Document includes `schema_version` (see
+///   [SyncEngine] gamification payload).
 /// - `users/{uid}/learner_profiles/{profileId}/ui_preferences/data` - Locale, calendar, text display, learning-order prefs
 /// - `users/{uid}/learner_profiles/{profileId}/active_curricula/data` - Active curricula
 /// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state + progress schema (LWW)

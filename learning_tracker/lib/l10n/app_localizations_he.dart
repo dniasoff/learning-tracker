@@ -248,6 +248,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get achievementsAllTracks => 'כל המסלולים';
 
   @override
+  String get achievementsGlobalRewardsLabel => 'נקודות כוללות';
+
+  @override
   String get achievementsStatusUnlocked => 'נפתח!';
 
   @override
@@ -1027,6 +1030,63 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get pointConfigurationSubtitle => 'כמה נקודות שווה כל פעילות';
+
+  @override
+  String get rewardConfigurationTitle => 'הגדרת פרסים';
+
+  @override
+  String get rewardConfigurationSubtitle =>
+      'פרסים לפי מסלול או לפי סך נקודות מכל המסלולים.';
+
+  @override
+  String get rewardConfigPerTrackTab => 'לפי מסלול';
+
+  @override
+  String get rewardConfigTotalPointsTab => 'סך נקודות';
+
+  @override
+  String get rewardConfigPerTrackHelper =>
+      'הפרסים מבוססים על נקודות במסלול הנבחר בלבד.';
+
+  @override
+  String get rewardConfigTotalPointsHelper =>
+      'הפרסים מבוססים על סך הנקודות מכל מסלולי הלמידה (כמו סך הנקודות הכולל של הילד).';
+
+  @override
+  String get rewardConfigSelectTrack => 'מסלול';
+
+  @override
+  String get rewardConfigNoActiveTracks =>
+      'אין מסלולים פעילים. הוסיפו מסלול כדי להגדיר פרסים לפי מסלול.';
+
+  @override
+  String get rewardConfigAddReward => 'הוסף פרס';
+
+  @override
+  String get rewardConfigEditReward => 'עריכת פרס';
+
+  @override
+  String get rewardConfigRewardNameLabel => 'שם הפרס';
+
+  @override
+  String get rewardConfigPointsThresholdLabel => 'נקודות נדרשות';
+
+  @override
+  String get rewardConfigSaveReward => 'שמירה';
+
+  @override
+  String get rewardConfigDeleteReward => 'מחיקה';
+
+  @override
+  String get rewardConfigDuplicateThreshold =>
+      'פרס אחר כבר משתמש בערך נקודות זה.';
+
+  @override
+  String get rewardConfigEmptyMilestones =>
+      'עדיין אין פרסים. לחצו למטה להוספה.';
+
+  @override
+  String get rewardConfigSaved => 'הפרסים נשמרו';
 
   @override
   String get pointConfigPerTaskTitle => 'נקודות לכל משימה שהושלמה';

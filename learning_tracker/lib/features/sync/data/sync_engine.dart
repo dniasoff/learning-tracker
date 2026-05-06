@@ -1351,8 +1351,11 @@ class SyncEngine {
             .getSingle();
     final totalPointsSum = totalPointsRow.read(totalPointsExpr) ?? 0;
 
+    // `schema_version` 3: same shape as v2; `reward_settings.milestones[].track_id`
+    // may be `0` (RewardMilestone.kGlobalTrackSentinel) for total-points rewards.
+    // Per-track milestones use positive curriculum track ids as before.
     return {
-      'schema_version': 2,
+      'schema_version': 3,
       'updated_at': now.toIso8601String(),
       'points_config': pointRows
           .map(

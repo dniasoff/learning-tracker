@@ -1,4 +1,9 @@
 class RewardMilestone {
+  /// Stored as [trackId] for milestones that use [PointsService.getGlobalTotal].
+  ///
+  /// Real curriculum tracks use positive DB ids (auto-increment from 1).
+  static const int kGlobalTrackSentinel = 0;
+
   const RewardMilestone({
     required this.id,
     required this.profileId,

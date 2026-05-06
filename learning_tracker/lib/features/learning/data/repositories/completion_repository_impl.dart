@@ -166,11 +166,15 @@ class CompletionRepositoryImpl implements CompletionRepository {
       }
 
       if (isChildProfile) {
-        newMilestoneUnlocks =
+        final trackUnlocks =
             await _rewardMilestoneService?.evaluateUnlocksForTrack(
               completion.trackId,
             ) ??
-            const [];
+            const <RewardUnlockRecord>[];
+        final globalUnlocks =
+            await _rewardMilestoneService?.evaluateUnlocksForGlobal() ??
+                const <RewardUnlockRecord>[];
+        newMilestoneUnlocks = [...trackUnlocks, ...globalUnlocks];
         unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
       }
     }
@@ -257,6 +261,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         for (final trackId in affectedTrackIds) {
           await rewardSvc.evaluateUnlocksForTrack(trackId);
         }
+        await rewardSvc.evaluateUnlocksForGlobal();
         await _syncEngine?.pushGamificationSettingsSnapshot();
       }
     }

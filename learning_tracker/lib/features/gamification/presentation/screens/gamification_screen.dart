@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
@@ -34,6 +35,9 @@ const Color _kBrandBlue = Color(0xFF0038A8);
 const Color _kPageBg = Color(0xFFF0F2F5);
 
 String _curriculumLabel(BuildContext context, AchievementRowVm row) {
+  if (row.trackId == RewardMilestone.kGlobalTrackSentinel) {
+    return AppLocalizations.of(context)!.achievementsGlobalRewardsLabel;
+  }
   final c = row.curriculumId;
   if (c == null) return row.trackLabel;
   final code = Localizations.localeOf(context).languageCode;
@@ -41,6 +45,9 @@ String _curriculumLabel(BuildContext context, AchievementRowVm row) {
 }
 
 String _filterChipLabel(BuildContext context, AchievementTrackFilterVm opt) {
+  if (opt.trackId == RewardMilestone.kGlobalTrackSentinel) {
+    return AppLocalizations.of(context)!.achievementsGlobalRewardsLabel;
+  }
   final c = opt.curriculumId;
   if (c == null) return opt.sortLabel;
   final code = Localizations.localeOf(context).languageCode;

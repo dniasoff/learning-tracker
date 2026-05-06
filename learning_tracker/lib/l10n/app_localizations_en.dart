@@ -249,6 +249,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementsAllTracks => 'All Tracks';
 
   @override
+  String get achievementsGlobalRewardsLabel => 'Total points';
+
+  @override
   String get achievementsStatusUnlocked => 'Unlocked!';
 
   @override
@@ -1038,6 +1041,63 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pointConfigurationSubtitle =>
       'Set how many points activities are worth';
+
+  @override
+  String get rewardConfigurationTitle => 'Reward configuration';
+
+  @override
+  String get rewardConfigurationSubtitle =>
+      'Set prizes for one track or for total points across all tracks.';
+
+  @override
+  String get rewardConfigPerTrackTab => 'Per track';
+
+  @override
+  String get rewardConfigTotalPointsTab => 'Total points';
+
+  @override
+  String get rewardConfigPerTrackHelper =>
+      'These rewards use points earned on the selected track only.';
+
+  @override
+  String get rewardConfigTotalPointsHelper =>
+      'These rewards use total points from all learning tracks combined (same as your child’s overall points).';
+
+  @override
+  String get rewardConfigSelectTrack => 'Track';
+
+  @override
+  String get rewardConfigNoActiveTracks =>
+      'No active tracks yet. Add a track to configure per-track rewards.';
+
+  @override
+  String get rewardConfigAddReward => 'Add reward';
+
+  @override
+  String get rewardConfigEditReward => 'Edit reward';
+
+  @override
+  String get rewardConfigRewardNameLabel => 'Reward name';
+
+  @override
+  String get rewardConfigPointsThresholdLabel => 'Points needed';
+
+  @override
+  String get rewardConfigSaveReward => 'Save';
+
+  @override
+  String get rewardConfigDeleteReward => 'Delete';
+
+  @override
+  String get rewardConfigDuplicateThreshold =>
+      'Another reward already uses this point value.';
+
+  @override
+  String get rewardConfigEmptyMilestones =>
+      'No rewards yet. Tap below to add one.';
+
+  @override
+  String get rewardConfigSaved => 'Rewards saved';
 
   @override
   String get pointConfigPerTaskTitle => 'Points per completed task';

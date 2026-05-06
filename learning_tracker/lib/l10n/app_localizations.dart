@@ -524,6 +524,12 @@ abstract class AppLocalizations {
   /// **'All Tracks'**
   String get achievementsAllTracks;
 
+  /// No description provided for @achievementsGlobalRewardsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total points'**
+  String get achievementsGlobalRewardsLabel;
+
   /// No description provided for @achievementsStatusUnlocked.
   ///
   /// In en, this message translates to:
@@ -1942,6 +1948,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Set how many points activities are worth'**
   String get pointConfigurationSubtitle;
+
+  /// No description provided for @rewardConfigurationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward configuration'**
+  String get rewardConfigurationTitle;
+
+  /// No description provided for @rewardConfigurationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set prizes for one track or for total points across all tracks.'**
+  String get rewardConfigurationSubtitle;
+
+  /// No description provided for @rewardConfigPerTrackTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Per track'**
+  String get rewardConfigPerTrackTab;
+
+  /// No description provided for @rewardConfigTotalPointsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Total points'**
+  String get rewardConfigTotalPointsTab;
+
+  /// No description provided for @rewardConfigPerTrackHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'These rewards use points earned on the selected track only.'**
+  String get rewardConfigPerTrackHelper;
+
+  /// No description provided for @rewardConfigTotalPointsHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'These rewards use total points from all learning tracks combined (same as your child’s overall points).'**
+  String get rewardConfigTotalPointsHelper;
+
+  /// No description provided for @rewardConfigSelectTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Track'**
+  String get rewardConfigSelectTrack;
+
+  /// No description provided for @rewardConfigNoActiveTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'No active tracks yet. Add a track to configure per-track rewards.'**
+  String get rewardConfigNoActiveTracks;
+
+  /// No description provided for @rewardConfigAddReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Add reward'**
+  String get rewardConfigAddReward;
+
+  /// No description provided for @rewardConfigEditReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit reward'**
+  String get rewardConfigEditReward;
+
+  /// No description provided for @rewardConfigRewardNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward name'**
+  String get rewardConfigRewardNameLabel;
+
+  /// No description provided for @rewardConfigPointsThresholdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Points needed'**
+  String get rewardConfigPointsThresholdLabel;
+
+  /// No description provided for @rewardConfigSaveReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get rewardConfigSaveReward;
+
+  /// No description provided for @rewardConfigDeleteReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get rewardConfigDeleteReward;
+
+  /// No description provided for @rewardConfigDuplicateThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Another reward already uses this point value.'**
+  String get rewardConfigDuplicateThreshold;
+
+  /// No description provided for @rewardConfigEmptyMilestones.
+  ///
+  /// In en, this message translates to:
+  /// **'No rewards yet. Tap below to add one.'**
+  String get rewardConfigEmptyMilestones;
+
+  /// No description provided for @rewardConfigSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards saved'**
+  String get rewardConfigSaved;
 
   /// No description provided for @pointConfigPerTaskTitle.
   ///

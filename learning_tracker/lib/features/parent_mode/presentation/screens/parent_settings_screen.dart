@@ -114,6 +114,21 @@ class ParentSettingsScreen extends ConsumerWidget {
                         onTap: () =>
                             context.pushRoute(const PointConfigRoute()),
                       ),
+                      _rowDivider(),
+                      _ManageRow(
+                        iconBackground: const Color(0xFFFFE8CC),
+                        icon: Icons.card_giftcard_rounded,
+                        iconColor: const Color(0xFFB45309),
+                        title: l10n.rewardConfigurationTitle,
+                        subtitle: l10n.rewardConfigurationSubtitle,
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: _chevronMuted,
+                          size: 26,
+                        ),
+                        onTap: () =>
+                            context.pushRoute(const RewardConfigurationRoute()),
+                      ),
                     ],
                   ),
                 ),
