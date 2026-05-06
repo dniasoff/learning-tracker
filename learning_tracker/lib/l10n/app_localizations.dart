@@ -2315,23 +2315,11 @@ abstract class AppLocalizations {
   /// **'All'**
   String get chartFilterAll;
 
-  /// No description provided for @notifAppBarSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings'**
-  String get notifAppBarSettings;
-
-  /// No description provided for @notifHeroTitle.
+  /// No description provided for @notifAppBarNotifications.
   ///
   /// In en, this message translates to:
   /// **'Notifications'**
-  String get notifHeroTitle;
-
-  /// No description provided for @notifHeroSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep your Torah journey on track!'**
-  String get notifHeroSubtitle;
+  String get notifAppBarNotifications;
 
   /// No description provided for @notifDailyReminder.
   ///

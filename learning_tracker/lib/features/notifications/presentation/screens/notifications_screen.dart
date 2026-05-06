@@ -32,39 +32,13 @@ class NotificationsScreen extends ConsumerWidget {
         elevation: 0,
         titleSpacing: 0,
         title: Text(
-          l10n.notifAppBarSettings,
+          l10n.notifAppBarNotifications,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
-        actions: [
-          const IconButton(
-            onPressed: null,
-            icon: Icon(Icons.notifications, color: Color(0xFF1338A2)),
-          ),
-          const SizedBox(width: 4),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          Text(
-            l10n.notifHeroTitle,
-            style: const TextStyle(
-              fontSize: 38,
-              height: 0.98,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF161D2F),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.notifHeroSubtitle,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Color(0xFF6F7788),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 16),
           _SettingsGroupCard(
             children: [
               _NotificationSwitchRow(

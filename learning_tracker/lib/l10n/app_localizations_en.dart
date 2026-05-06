@@ -1237,13 +1237,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartFilterAll => 'All';
 
   @override
-  String get notifAppBarSettings => 'Settings';
-
-  @override
-  String get notifHeroTitle => 'Notifications';
-
-  @override
-  String get notifHeroSubtitle => 'Keep your Torah journey on track!';
+  String get notifAppBarNotifications => 'Notifications';
 
   @override
   String get notifDailyReminder => 'Daily Reminder';
