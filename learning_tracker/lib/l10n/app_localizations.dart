@@ -548,6 +548,12 @@ abstract class AppLocalizations {
   /// **'Locked'**
   String get achievementsStatusLocked;
 
+  /// No description provided for @achievementsLockedBlurHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach {points} points to unlock'**
+  String achievementsLockedBlurHint(String points);
+
   /// No description provided for @achievementsUnlockedAtPoints.
   ///
   /// In en, this message translates to:
@@ -2134,6 +2140,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manage rewards'**
   String get rewardConfigMenuManageRewards;
+
+  /// No description provided for @rewardConfigRewardCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward created'**
+  String get rewardConfigRewardCreatedTitle;
+
+  /// No description provided for @rewardConfigRewardCreatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" was added. Your child will see it under Achievements — locked and blurred until they reach the points goal.'**
+  String rewardConfigRewardCreatedBody(String name);
+
+  /// No description provided for @rewardConfigRewardUpdatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward updated'**
+  String get rewardConfigRewardUpdatedTitle;
+
+  /// No description provided for @rewardConfigRewardUpdatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your changes to \"{name}\" were saved. Your child will see the update under Achievements.'**
+  String rewardConfigRewardUpdatedBody(String name);
 
   /// No description provided for @pointConfigPerTaskTitle.
   ///

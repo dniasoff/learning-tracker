@@ -142,6 +142,12 @@
   "achievementsStatusUnlocked": "Unlocked!",
   "achievementsStatusComingSoon": "Coming soon!",
   "achievementsStatusLocked": "Locked",
+  "achievementsLockedBlurHint": "Reach {points} points to unlock",
+  "@achievementsLockedBlurHint": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
   "achievementsUnlockedAtPoints": "Unlocked at {points} points",
   "@achievementsUnlockedAtPoints": {
     "placeholders": {
@@ -544,6 +550,20 @@
   "rewardConfigNamePlaceholder": "e.g., Bronze Star",
   "rewardConfigPointsPlaceholder": "e.g., 500",
   "rewardConfigMenuManageRewards": "Manage rewards",
+  "rewardConfigRewardCreatedTitle": "Reward created",
+  "rewardConfigRewardCreatedBody": "\"{name}\" was added. Your child will see it under Achievements — locked and blurred until they reach the points goal.",
+  "@rewardConfigRewardCreatedBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "rewardConfigRewardUpdatedTitle": "Reward updated",
+  "rewardConfigRewardUpdatedBody": "Your changes to \"{name}\" were saved. Your child will see the update under Achievements.",
+  "@rewardConfigRewardUpdatedBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "pointConfigPerTaskTitle": "Points per completed task",
   "pointConfigPerTaskDescription": "For each active learning track, set how many points your child earns when they complete one task from their daily list. The amount depends on the task stage (for example first learn vs review).",
   "pointConfigNoActiveTracksBody": "No active learning tracks with stages were found for this child. Turn on curricula and set up tracks in Manage Tracks, then return here to choose points per task.",

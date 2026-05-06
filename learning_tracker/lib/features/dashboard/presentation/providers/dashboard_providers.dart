@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
@@ -203,6 +204,11 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final service = RewardMilestoneService(db, profileId: profileId);
+
+  if (await service.stripStockTemplateMilestones()) {
+    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
+  }
+
   final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
 
   DashboardChildNextReward? best;
@@ -230,7 +236,6 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   }
 
   for (final track in tracks) {
-    await service.ensureDefaultsForTrack(track.id);
     final trackPoints = await service.getTrackPointsTotalForRewards(track.id);
     final milestones = await service.getMilestonesForTrack(track.id);
     for (final m in milestones) {

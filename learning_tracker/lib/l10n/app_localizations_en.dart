@@ -261,6 +261,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementsStatusLocked => 'Locked';
 
   @override
+  String achievementsLockedBlurHint(String points) {
+    return 'Reach $points points to unlock';
+  }
+
+  @override
   String achievementsUnlockedAtPoints(String points) {
     return 'Unlocked at $points points';
   }
@@ -1143,6 +1148,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rewardConfigMenuManageRewards => 'Manage rewards';
+
+  @override
+  String get rewardConfigRewardCreatedTitle => 'Reward created';
+
+  @override
+  String rewardConfigRewardCreatedBody(String name) {
+    return '\"$name\" was added. Your child will see it under Achievements — locked and blurred until they reach the points goal.';
+  }
+
+  @override
+  String get rewardConfigRewardUpdatedTitle => 'Reward updated';
+
+  @override
+  String rewardConfigRewardUpdatedBody(String name) {
+    return 'Your changes to \"$name\" were saved. Your child will see the update under Achievements.';
+  }
 
   @override
   String get pointConfigPerTaskTitle => 'Points per completed task';

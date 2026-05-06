@@ -142,6 +142,12 @@
   "achievementsStatusUnlocked": "נפתח!",
   "achievementsStatusComingSoon": "בקרוב!",
   "achievementsStatusLocked": "נעול",
+  "achievementsLockedBlurHint": "הגיעו ל־{points} נקודות כדי לפתוח",
+  "@achievementsLockedBlurHint": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
   "achievementsUnlockedAtPoints": "נפתח ב־{points} נקודות",
   "@achievementsUnlockedAtPoints": {
     "placeholders": {
@@ -544,6 +550,20 @@
   "rewardConfigNamePlaceholder": "למשל, כוכב ארד",
   "rewardConfigPointsPlaceholder": "למשל, 500",
   "rewardConfigMenuManageRewards": "ניהול פרסים",
+  "rewardConfigRewardCreatedTitle": "הפרס נוצר",
+  "rewardConfigRewardCreatedBody": "\"{name}\" נוסף. הילד יראה אותו תחת הישגים — נעול ומטושטש עד שיגיע ליעד הנקודות.",
+  "@rewardConfigRewardCreatedBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "rewardConfigRewardUpdatedTitle": "הפרס עודכן",
+  "rewardConfigRewardUpdatedBody": "השינויים ב־\"{name}\" נשמרו. הילד יראה את העדכון תחת הישגים.",
+  "@rewardConfigRewardUpdatedBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "pointConfigPerTaskTitle": "נקודות לכל משימה שהושלמה",
   "pointConfigPerTaskDescription": "לכל מסלול למידה פעיל, הגדירו כמה נקודות הילד מקבל כשהוא משלים משימה אחת מהרשימה היומית. הסכום תלוי בשלב המשימה (למשל לימוד ראשון מול חזרה).",
   "pointConfigNoActiveTracksBody": "לא נמצאו מסלולי למידה פעילים עם שלבים לילד הזה. הפעילו מקצועות והגדירו מסלולים תחת ניהול מסלולים, ואז חזרו לכאן כדי לקבוע נקודות לכל משימה.",

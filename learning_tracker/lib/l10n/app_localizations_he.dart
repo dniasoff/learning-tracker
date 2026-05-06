@@ -260,6 +260,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get achievementsStatusLocked => 'נעול';
 
   @override
+  String achievementsLockedBlurHint(String points) {
+    return 'הגיעו ל־$points נקודות כדי לפתוח';
+  }
+
+  @override
   String achievementsUnlockedAtPoints(String points) {
     return 'נפתח ב־$points נקודות';
   }
@@ -1132,6 +1137,22 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get rewardConfigMenuManageRewards => 'ניהול פרסים';
+
+  @override
+  String get rewardConfigRewardCreatedTitle => 'הפרס נוצר';
+
+  @override
+  String rewardConfigRewardCreatedBody(String name) {
+    return '\"$name\" נוסף. הילד יראה אותו תחת הישגים — נעול ומטושטש עד שיגיע ליעד הנקודות.';
+  }
+
+  @override
+  String get rewardConfigRewardUpdatedTitle => 'הפרס עודכן';
+
+  @override
+  String rewardConfigRewardUpdatedBody(String name) {
+    return 'השינויים ב־\"$name\" נשמרו. הילד יראה את העדכון תחת הישגים.';
+  }
 
   @override
   String get pointConfigPerTaskTitle => 'נקודות לכל משימה שהושלמה';

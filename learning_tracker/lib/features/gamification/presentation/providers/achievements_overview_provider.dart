@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// One milestone row for the achievements list (per track).
 class AchievementRowVm {
@@ -81,6 +82,11 @@ final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final service = RewardMilestoneService(db, profileId: profileId);
+
+  if (await service.stripStockTemplateMilestones()) {
+    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
+  }
+
   final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
   final rewardTracks = <CurriculumTrack>[];
   for (final track in tracks) {
@@ -90,7 +96,6 @@ final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
   }
 
   for (final track in rewardTracks) {
-    await service.ensureDefaultsForTrack(track.id);
     await service.evaluateUnlocksForTrack(track.id);
   }
   await service.evaluateUnlocksForGlobal();
@@ -104,6 +109,13 @@ final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
   for (final track in rewardTracks) {
     final curriculum = _curriculumForStorageKey(track.curriculumId);
     final label = _trackLabelEn(curriculum, track.curriculumId);
+
+    final milestones = await service.getMilestonesForTrack(track.id);
+    final enabled = milestones.where((m) => m.isEnabled).toList()
+      ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
+
+    if (enabled.isEmpty) continue;
+
     filterOptions.add(
       AchievementTrackFilterVm(
         trackId: track.id,
@@ -111,10 +123,6 @@ final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
         sortLabel: label,
       ),
     );
-
-    final milestones = await service.getMilestonesForTrack(track.id);
-    final enabled = milestones.where((m) => m.isEnabled).toList()
-      ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
 
     final trackPoints = await service.getTrackPointsTotalForRewards(track.id);
 

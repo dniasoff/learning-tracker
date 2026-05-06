@@ -79,12 +79,6 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
       final db = ref.read(userDatabaseProvider);
       final profileId = ref.read(activeProfileIdProvider);
       final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
-      final svc = RewardMilestoneService(db, profileId: profileId);
-      for (final t in tracks) {
-        if (await svc.trackCountsTowardRewardPoints(t.id)) {
-          await svc.ensureDefaultsForTrack(t.id);
-        }
-      }
       if (!mounted) return;
       setState(() {
         _tracks = tracks;
@@ -159,7 +153,6 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     }
     final tid = _selectedTrackId;
     if (tid == null) return const [];
-    await svc.ensureDefaultsForTrack(tid);
     return svc.getMilestonesForTrack(tid);
   }
 
@@ -179,6 +172,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     final l10n = AppLocalizations.of(context)!;
     final title = _nameController.text.trim();
     final pointsParsed = int.tryParse(_pointsController.text.trim()) ?? 0;
+    final wasEditing = _editingMilestoneId != null;
 
     if (title.isEmpty || pointsParsed <= 0) {
       return;
@@ -220,11 +214,30 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     );
     await _persistAndSync();
     _clearForm();
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.rewardConfigSaved)));
-    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          wasEditing
+              ? l10n.rewardConfigRewardUpdatedTitle
+              : l10n.rewardConfigRewardCreatedTitle,
+        ),
+        content: Text(
+          wasEditing
+              ? l10n.rewardConfigRewardUpdatedBody(title)
+              : l10n.rewardConfigRewardCreatedBody(title),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              MaterialLocalizations.of(dialogContext).okButtonLabel,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _toggleEnabled(RewardMilestone m) async {
