@@ -62,7 +62,8 @@ Future<void> main(List<String> args) async {
 
   final cache = <String, Map<String, Map<String, String>>>{};
   if (cacheFile.existsSync() && !refresh) {
-    final raw = jsonDecode(cacheFile.readAsStringSync()) as Map<String, dynamic>;
+    final raw =
+        jsonDecode(cacheFile.readAsStringSync()) as Map<String, dynamic>;
     for (final entry in raw.entries) {
       final inner = entry.value as Map<String, dynamic>;
       final converted = <String, Map<String, String>>{};
@@ -145,10 +146,7 @@ Future<void> main(List<String> args) async {
   );
 }
 
-void _writeCache(
-  File f,
-  Map<String, Map<String, Map<String, String>>> cache,
-) {
+void _writeCache(File f, Map<String, Map<String, Map<String, String>>> cache) {
   final keys = cache.keys.toList()..sort();
   final ordered = <String, Map<String, Map<String, String>>>{};
   for (final k in keys) {

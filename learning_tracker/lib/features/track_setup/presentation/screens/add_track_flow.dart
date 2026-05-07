@@ -3462,11 +3462,10 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
                                   ),
                                   child: Text(
                                     label,
-                                    style: theme.textTheme.bodyMedium
-                                        ?.copyWith(
-                                          color: const Color(0xFF6A4A13),
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: const Color(0xFF6A4A13),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 );
                               },

@@ -366,7 +366,8 @@ class LifetimeFolderTreeNode extends ConsumerStatefulWidget {
       _LifetimeFolderTreeNodeState();
 }
 
-class _LifetimeFolderTreeNodeState extends ConsumerState<LifetimeFolderTreeNode> {
+class _LifetimeFolderTreeNodeState
+    extends ConsumerState<LifetimeFolderTreeNode> {
   @override
   Widget build(BuildContext context) {
     final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
