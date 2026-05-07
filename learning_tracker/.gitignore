@@ -63,3 +63,6 @@ tool/data/cities15000.zip
 
 # Other
 node_modules/
+
+# Go build artifacts (sefaria_fetch)
+tool/bin/

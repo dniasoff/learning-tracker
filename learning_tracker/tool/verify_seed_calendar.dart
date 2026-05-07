@@ -18,12 +18,18 @@ const _start = '2024-01-01';
 const _end = '2032-12-31';
 
 const _titleToKey = <String, String>{
+  'Daf Yomi': 'daf_yomi',
+  'Daily Mishnah': 'daily_mishnah',
+  'Daily Rambam': 'daily_rambam',
+  'Daily Rambam (3 Chapters)': 'daily_rambam_3',
+  'Daf a Week': 'daf_a_week',
   'Halakhah Yomit': 'halakhah_yomit',
   'Arukh HaShulchan Yomi': 'arukh_hashulchan_yomi',
   'Tanakh Yomi': 'tanakh_yomi',
   'Yerushalmi Yomi': 'yerushalmi_yomi',
-  'Daily Rambam': 'daily_rambam',
-  'Daily Rambam (3 Chapters)': 'daily_rambam_3',
+  'Nach Yomi': 'nach_yomi',
+  'Chofetz Chaim': 'chofetz_chaim_daily',
+  'Kitzur Shulchan Arukh': 'kitzur_shulchan_aruch_yomi',
 };
 
 Future<void> main(List<String> args) async {
@@ -46,7 +52,20 @@ Future<void> main(List<String> args) async {
   final cache = cacheRaw.map(
     (date, inner) => MapEntry(
       date,
-      (inner as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String)),
+      (inner as Map<String, dynamic>).map((k, v) {
+        // Cache shape is { programKey: { "en": ref, "he": heRef? } }.
+        // Tolerate the legacy en-only string shape so older caches don't
+        // explode the verifier.
+        if (v is String) return MapEntry(k, _Cached(en: v));
+        final m = v as Map<String, dynamic>;
+        return MapEntry(
+          k,
+          _Cached(
+            en: m['en'] as String? ?? '',
+            he: m['he'] as String? ?? '',
+          ),
+        );
+      }),
     ),
   );
 
@@ -70,29 +89,35 @@ Future<void> main(List<String> args) async {
       stderr.writeln('  SKIP $dk (live fetch failed)');
       continue;
     }
-    final cachedDay = cache[dk] ?? const <String, String>{};
+    final cachedDay = cache[dk] ?? const <String, _Cached>{};
     for (final entry in _titleToKey.entries) {
       final liveKey = entry.value;
       if (!live.containsKey(liveKey)) continue;
       final liveRef = live[liveKey]!;
-      final cachedRef = cachedDay[liveKey];
+      final cached = cachedDay[liveKey];
       final t = report.putIfAbsent(liveKey, _Tally.new);
-      if (cachedRef == null) {
+      if (cached == null) {
         t.absent++;
         t.diffs.add('$dk: cache=ABSENT  live=$liveRef');
         continue;
       }
-      // Allow displayValue equivalence for granular-ref cases.
-      if (cachedRef == liveRef ||
+      // Compare English ref. Allow Yerushalmi displayValue equivalence.
+      final enMatches = cached.en == liveRef ||
           _isYerushalmiEquivalent(
-            cachedRef,
+            cached.en,
             liveRef,
-            live[liveKey + '__display'],
-          )) {
+            live['${liveKey}__display'],
+          );
+      final liveHe = live['${liveKey}__he'] ?? '';
+      final heMatches = cached.he == liveHe;
+      if (enMatches && heMatches) {
         t.matched++;
-      } else {
+      } else if (!enMatches) {
         t.mismatched++;
-        t.diffs.add('$dk: cache=$cachedRef live=$liveRef');
+        t.diffs.add('$dk: cache_en=${cached.en} live_en=$liveRef');
+      } else {
+        t.heMismatched++;
+        t.diffs.add('$dk: cache_he=${cached.he} live_he=$liveHe');
       }
     }
     await Future<void>.delayed(const Duration(milliseconds: 400));
@@ -103,13 +128,16 @@ Future<void> main(List<String> args) async {
   var totalProblems = 0;
   for (final e in report.entries) {
     final t = e.value;
-    final total = t.matched + t.mismatched + t.absent;
+    final total = t.matched + t.mismatched + t.heMismatched + t.absent;
     totalChecks += total;
-    totalProblems += t.mismatched + t.absent;
-    final flag = (t.mismatched == 0 && t.absent == 0) ? 'OK   ' : 'CHECK';
+    totalProblems += t.mismatched + t.heMismatched + t.absent;
+    final flag =
+        (t.mismatched == 0 && t.heMismatched == 0 && t.absent == 0)
+            ? 'OK   '
+            : 'CHECK';
     stdout.writeln(
       '  $flag ${e.key.padRight(28)} matched=${t.matched}/$total  '
-      'mismatch=${t.mismatched}  absent_in_cache=${t.absent}',
+      'en_mismatch=${t.mismatched}  he_mismatch=${t.heMismatched}  absent=${t.absent}',
     );
     for (final d in t.diffs.take(3)) {
       stdout.writeln('         $d');
@@ -131,8 +159,15 @@ bool _isYerushalmiEquivalent(String cached, String live, String? disp) {
 class _Tally {
   int matched = 0;
   int mismatched = 0;
+  int heMismatched = 0;
   int absent = 0;
   final diffs = <String>[];
+}
+
+class _Cached {
+  _Cached({required this.en, this.he = ''});
+  final String en;
+  final String he;
 }
 
 Future<Map<String, String>> _fetchDay(HttpClient client, DateTime d) async {
@@ -164,9 +199,11 @@ Future<Map<String, String>> _fetchDay(HttpClient client, DateTime d) async {
         if (k == null) continue;
         final ref = item['ref'] as String?;
         if (ref != null) out[k] = ref;
-        final disp =
-            (item['displayValue'] as Map<String, dynamic>?)?['en'] as String?;
-        if (disp != null) out['${k}__display'] = disp;
+        final dispMap = item['displayValue'] as Map<String, dynamic>?;
+        final dispEn = dispMap?['en'] as String?;
+        if (dispEn != null) out['${k}__display'] = dispEn;
+        final dispHe = dispMap?['he'] as String?;
+        if (dispHe != null) out['${k}__he'] = dispHe;
       }
       return out;
     } on Object {
