@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const kIntroSeen = 'intro_seen';
@@ -181,7 +184,7 @@ class _IntroPageData {
 
 // --- Per page content ------------------------------------------------------
 
-class _IntroPage extends StatelessWidget {
+class _IntroPage extends ConsumerWidget {
   const _IntroPage({required this.data, required this.iconAnimation});
 
   final _IntroPageData data;
@@ -202,11 +205,11 @@ class _IntroPage extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (data.variant == _IntroPageVariant.dailyPlan) {
       return _buildDailyPlanBottomAnchored();
     }
-    return _buildScrolledPage();
+    return _buildScrolledPage(ref);
   }
 
   /// First intro: taller hero zone, then copy + bar; scrolls on very short viewports.
@@ -255,7 +258,8 @@ class _IntroPage extends StatelessWidget {
   }
 
   /// Pages 2 & 3: full-page scroll.
-  Widget _buildScrolledPage() {
+  Widget _buildScrolledPage(WidgetRef ref) {
+    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: CustomScrollView(
@@ -270,11 +274,15 @@ class _IntroPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 _buildHero(),
                 const SizedBox(height: 24),
+                if (data.variant == _IntroPageVariant.rewards) ...[
+                  const _ChildModeTag(),
+                  const SizedBox(height: 12),
+                ],
                 _buildTitleBlock(),
                 const SizedBox(height: 14),
-                _buildSubtitleBlock(),
+                _buildSubtitleBlock(hebrewTerms: hebrewTerms),
                 const SizedBox(height: 20),
-                _buildProgressArea(),
+                _buildProgressArea(hebrewTerms: hebrewTerms),
                 const SizedBox(height: 24),
               ],
             ),
@@ -350,7 +358,7 @@ class _IntroPage extends StatelessWidget {
     }
   }
 
-  Widget _buildSubtitleBlock() {
+  Widget _buildSubtitleBlock({bool hebrewTerms = false}) {
     return AnimatedBuilder(
       animation: iconAnimation,
       builder: (context, _) {
@@ -358,12 +366,15 @@ class _IntroPage extends StatelessWidget {
           parent: iconAnimation,
           curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
         ).value;
-        return Opacity(opacity: fade, child: _subtitleRich());
+        return Opacity(
+          opacity: fade,
+          child: _subtitleRich(hebrewTerms: hebrewTerms),
+        );
       },
     );
   }
 
-  Widget _subtitleRich() {
+  Widget _subtitleRich({bool hebrewTerms = false}) {
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
@@ -405,16 +416,19 @@ class _IntroPage extends StatelessWidget {
           textAlign: TextAlign.center,
         );
       case _IntroPageVariant.rewards:
+        final tierLabel = hebrewTerms
+            ? HebrewTerms.uiTalmidChochom
+            : 'Talmid Chochom';
         return Text(
           'Collect points, build streaks, and unlock mystery rewards as you '
-          'climb from a Novice to a Master Scholar!',
+          'climb from a Novice to a $tierLabel!',
           textAlign: TextAlign.center,
           style: _subStyle,
         );
     }
   }
 
-  Widget _buildProgressArea() {
+  Widget _buildProgressArea({bool hebrewTerms = false}) {
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Column(
@@ -509,11 +523,11 @@ class _IntroPage extends StatelessWidget {
           ),
         );
       case _IntroPageVariant.rewards:
-        return const Column(
+        return Column(
           children: [
-            _FeatureCardsRow(),
-            SizedBox(height: 20),
-            _ScholarLevelCard(),
+            const _FeatureCardsRow(),
+            const SizedBox(height: 20),
+            _ScholarLevelCard(hebrewTerms: hebrewTerms),
           ],
         );
     }
@@ -1097,8 +1111,45 @@ class _FeatureCard extends StatelessWidget {
   }
 }
 
+class _ChildModeTag extends StatelessWidget {
+  const _ChildModeTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: _kBadgeBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.child_care_rounded,
+            size: 14,
+            color: _kNavy,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'CHILD MODE FEATURE',
+            style: GoogleFonts.plusJakartaSans(
+              color: _kNavy,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ScholarLevelCard extends StatelessWidget {
-  const _ScholarLevelCard();
+  const _ScholarLevelCard({required this.hebrewTerms});
+
+  final bool hebrewTerms;
 
   @override
   Widget build(BuildContext context) {
@@ -1183,12 +1234,14 @@ class _ScholarLevelCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'MASTER SCHOLAR',
+                hebrewTerms
+                    ? HebrewTerms.uiTalmidChochom
+                    : 'TALMID CHOCHOM',
                 style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.brandInkSoft,
-                  fontSize: 9,
+                  fontSize: hebrewTerms ? 11 : 9,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
+                  letterSpacing: hebrewTerms ? 0 : 0.3,
                 ),
               ),
             ],

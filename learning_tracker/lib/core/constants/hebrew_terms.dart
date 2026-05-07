@@ -71,12 +71,14 @@ class HebrewTerms {
   //   3. Add a row to the table below so the scope stays discoverable.
   //
   // ┌──────────────────────────┬────────────────────┬────────────────────┐
-  // │ Constant                 │ Hebrew             │ ARB key (English)  │
+  // │ Constant                 │ Hebrew             │ English fallback   │
   // ├──────────────────────────┼────────────────────┼────────────────────┤
-  // │ uiChazaraReview          │ חזרה                │ chazaraReview      │
-  // │ uiReviewSection          │ חזרה SECTION         │ reviewSection      │
-  // │ uiBubbleChazara          │ חזרה                │ bubbleChazara      │
-  // │ uiActiveTrackChazara     │ חזרה                │ activeTrackMetric… │
+  // │ uiChazaraReview          │ חזרה                │ Chazara/Review     │
+  // │ uiReviewSection          │ חזרה SECTION         │ REVIEW SECTION     │
+  // │ uiBubbleChazara          │ חזרה                │ CHAZARA            │
+  // │ uiActiveTrackChazara     │ חזרה                │ CHAZARA            │
+  // │ uiTalmidChochom          │ תלמיד חכם            │ Talmid Chochom     │
+  // │ uiTalmidChochomCaps      │ תלמיד חכם            │ TALMID CHOCHOM     │
   // └──────────────────────────┴────────────────────┴────────────────────┘
 
   /// "Chazara/Review" → Hebrew script.
@@ -90,6 +92,9 @@ class HebrewTerms {
 
   /// Active-track "Chazara" metric label → Hebrew script.
   static const String uiActiveTrackChazara = 'חזרה';
+
+  /// "Talmid Chochom" (highest scholar tier) → Hebrew script.
+  static const String uiTalmidChochom = 'תלמיד חכם';
 
   // ── Curriculum Display Names ─────────────────────────────────────────────
 
