@@ -14,7 +14,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'description':
         'Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.',
     'curriculum_type': 'bavli',
-    'is_active': false,
+    'is_active': true,
     'has_tests': false,
     'stages_config':
         '['
