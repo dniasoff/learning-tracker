@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -16,6 +17,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 CurriculumId _curriculumIdForTrack(CurriculumTrack track) {
@@ -175,6 +177,29 @@ class _DashboardBody extends ConsumerWidget {
     return l10n.goodEvening;
   }
 
+  ({IconData icon, Color fg, Color bg}) _greetingChip() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return (
+        icon: Icons.wb_sunny_rounded,
+        fg: const Color(0xFFE07A00),
+        bg: const Color(0xFFFFF1D6),
+      );
+    }
+    if (hour < 17) {
+      return (
+        icon: Icons.brightness_high_rounded,
+        fg: const Color(0xFFC25400),
+        bg: const Color(0xFFFFE7C7),
+      );
+    }
+    return (
+      icon: Icons.bedtime_rounded,
+      fg: const Color(0xFF4A4296),
+      bg: const Color(0xFFE7E5FB),
+    );
+  }
+
   String _formatDashboardDate(DateTime date) {
     return '${_months[date.month]} ${date.day}, ${date.year}';
   }
@@ -206,6 +231,13 @@ class _DashboardBody extends ConsumerWidget {
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider(profileId),
     );
+    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+    final reviewSectionLabel = hebrewTerms
+        ? HebrewTerms.uiReviewSection
+        : l10n.reviewSection;
+    final chazaraReviewLabel = hebrewTerms
+        ? HebrewTerms.uiChazaraReview
+        : l10n.chazaraReview;
     final name = profileName ?? l10n.learner;
     final now = DateTime.now();
 
@@ -269,17 +301,54 @@ class _DashboardBody extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l10n.greetingHelloName(name),
-                    style: _iosTextStyle(
-                      context,
-                      size: 27,
-                      weight: FontWeight.w800,
-                      color: AppTheme.brandInk,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Builder(
+                    builder: (context) {
+                      final chip = _greetingChip();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: chip.bg,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(chip.icon, size: 14, color: chip.fg),
+                            const SizedBox(width: 6),
+                            Text(
+                              _greeting(l10n),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: chip.fg,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
+                  const SizedBox(height: 6),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      '$name!',
+                      style: _iosTextStyle(
+                        context,
+                        size: 28,
+                        weight: FontWeight.w800,
+                        color: AppTheme.brandInk,
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
                   Text(
                     _formatDashboardDate(now),
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -404,8 +473,8 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         _CompactMissionCard(
-          label: l10n.reviewSection,
-          title: l10n.chazaraReview,
+          label: reviewSectionLabel,
+          title: chazaraReviewLabel,
           count: reviewCount,
           color: AppTheme.brandGold,
           labelColor: AppTheme.brandGoldDeep,
@@ -493,6 +562,8 @@ class _ChildPointsRewardsTabCard extends StatelessWidget {
     required DashboardChildNextReward? next,
     required bool isLoading,
   }) {
+    final hasReward = next != null;
+    final showRewardSection = isLoading || hasReward;
     final threshold = next?.threshold ?? _defaultThreshold;
     final progressPoints = next?.trackPoints ?? totalPoints;
     final pct = threshold > 0
@@ -503,7 +574,7 @@ class _ChildPointsRewardsTabCard extends StatelessWidget {
         : 0;
     final rewardTitle = (next != null && next.title.trim().isNotEmpty)
         ? next.title.trim()
-        : l10n.dashboardMysteryChest;
+        : '';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -597,54 +668,58 @@ class _ChildPointsRewardsTabCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.dashboardNextRewardWithName(rewardTitle),
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            height: 1.25,
+                  if (showRewardSection) ...[
+                    const SizedBox(height: 20),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            hasReward
+                                ? l10n.dashboardNextRewardWithName(rewardTitle)
+                                : l10n.nextReward,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              height: 1.25,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (isLoading)
-                        SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white.withValues(alpha: 0.9),
+                        const SizedBox(width: 8),
+                        if (isLoading)
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          )
+                        else
+                          Text(
+                            l10n.dashboardPtsToGo(
+                              numberFormat.format(ptsRemaining),
+                            ),
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.82),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        )
-                      else
-                        Text(
-                          l10n.dashboardPtsToGo(
-                            numberFormat.format(ptsRemaining),
-                          ),
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.82),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: isLoading ? null : pct,
-                      minHeight: 8,
-                      backgroundColor: _kChildRewardsProgressTrack.withValues(
-                        alpha: 0.85,
-                      ),
-                      color: _kChildRewardsProgressFill,
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: isLoading ? null : pct,
+                        minHeight: 8,
+                        backgroundColor: _kChildRewardsProgressTrack.withValues(
+                          alpha: 0.85,
+                        ),
+                        color: _kChildRewardsProgressFill,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Center(
                     child: FilledButton(
@@ -868,16 +943,20 @@ class _DashboardLevelPointsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+    final chazaraLabel = hebrewTerms
+        ? HebrewTerms.uiBubbleChazara
+        : l10n.bubbleChazara;
     final bubbleData = userMode == UserMode.child
         ? [
             (l10n.bubbleOverdue, '$overdueCount', Colors.white),
             (l10n.bubbleTodayDue, '$todayCount', Colors.white),
-            (l10n.bubbleChazara, '$reviewCount', const Color(0xFFFFC107)),
+            (chazaraLabel, '$reviewCount', const Color(0xFFFFC107)),
           ]
         : [
             (l10n.bubbleOverdue, '$overdueCount', Colors.white),
             (l10n.bubbleTodayDue, '$todayCount', Colors.white),
-            (l10n.bubbleChazara, '$reviewCount', const Color(0xFFFFC107)),
+            (chazaraLabel, '$reviewCount', const Color(0xFFFFC107)),
           ];
 
     return Container(
@@ -1741,6 +1820,9 @@ class _ActiveTrackCard extends ConsumerWidget {
                   dueToday: taskBuckets.dueTodayLane,
                   overdue: taskBuckets.missedProgram,
                   l10n: l10n,
+                  chazaraLabel: ref.watch(hebrewTermsScriptProvider)
+                      ? HebrewTerms.uiActiveTrackChazara
+                      : l10n.activeTrackMetricChazara,
                 ),
                 if (taskBuckets.total == 0)
                   Padding(
@@ -1896,12 +1978,14 @@ class _ProgrammedTrackMetricsRow extends StatelessWidget {
     required this.dueToday,
     required this.overdue,
     required this.l10n,
+    required this.chazaraLabel,
   });
 
   final int chazara;
   final int dueToday;
   final int overdue;
   final AppLocalizations l10n;
+  final String chazaraLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1911,7 +1995,7 @@ class _ProgrammedTrackMetricsRow extends StatelessWidget {
         Expanded(
           child: _ActiveTrackMetricBox(
             count: chazara,
-            label: l10n.activeTrackMetricChazara,
+            label: chazaraLabel,
             valueColor: chazara > 0
                 ? const Color(0xFFB45309)
                 : AppTheme.brandInk,
