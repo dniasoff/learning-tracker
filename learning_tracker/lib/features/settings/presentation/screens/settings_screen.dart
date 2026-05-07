@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_state
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
@@ -122,6 +123,8 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.pushRoute(const NotificationsRoute()),
               ),
             ),
+            const SizedBox(height: 16),
+            const SacredTimeSettingsCard(),
             if (!isChildProfile) ...[
               const SizedBox(height: 16),
               const BackupSyncSection(),
