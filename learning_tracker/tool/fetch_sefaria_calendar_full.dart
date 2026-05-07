@@ -66,17 +66,25 @@ Future<void> main(List<String> args) async {
     for (final entry in raw.entries) {
       final inner = entry.value as Map<String, dynamic>;
       final converted = <String, Map<String, String>>{};
+      var allHaveHe = true;
       for (final pe in inner.entries) {
         final v = pe.value;
-        // Migrate the old "string ref" shape (en-only CSV cache) by
-        // dropping it — we'll re-fetch with both fields.
-        if (v is String) continue;
+        // Drop legacy en-only string shape — we want en + he.
+        if (v is String) {
+          allHaveHe = false;
+          continue;
+        }
         final m = (v as Map<String, dynamic>).map(
           (k, vv) => MapEntry(k, vv as String),
         );
-        if (m.containsKey('en')) converted[pe.key] = m;
+        if (!m.containsKey('en')) continue;
+        if (!m.containsKey('he')) allHaveHe = false;
+        converted[pe.key] = m;
       }
-      if (converted.isNotEmpty) cache[entry.key] = converted;
+      // Only treat the day as "fully cached" when every program has both
+      // en and he — otherwise we want this day re-fetched so the missing
+      // Hebrew refs land.
+      if (converted.isNotEmpty && allHaveHe) cache[entry.key] = converted;
     }
     stdout.writeln(
       'Loaded ${cache.length} fully-cached days '
@@ -192,12 +200,16 @@ Future<Map<String, Map<String, String>>?> _fetchDay(
         final key = _titleToKey[title];
         if (key == null) continue;
         final ref = item['ref'] as String?;
-        final heRef = item['heRef'] as String?;
         if (ref == null || ref.isEmpty) continue;
+        // Sefaria's /api/calendars puts the user-facing Hebrew form in
+        // displayValue.he (e.g. "בבא קמא ס׳") — not in heRef. heRef is null
+        // for calendar items. Capture displayValue.he as our he ref.
+        final displayValue = item['displayValue'] as Map<String, dynamic>?;
+        final he = displayValue?['he'] as String?;
         // Last entry wins on transition days (matches what users actually
         // study that day — the freshly-opened content).
         final entry = <String, String>{'en': ref};
-        if (heRef != null && heRef.isNotEmpty) entry['he'] = heRef;
+        if (he != null && he.isNotEmpty) entry['he'] = he;
         out[key] = entry;
       }
       return out;
