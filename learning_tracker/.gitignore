@@ -56,5 +56,10 @@ app.*.map.json
 # Test artifacts
 test/golden/failures/
 
+# Sacred Time city DB build inputs (rebuildable; output is committed under
+# assets/data/ and the source URL lives in tool/build_cities_db.dart).
+tool/data/cities15000.txt
+tool/data/cities15000.zip
+
 # Other
 node_modules/

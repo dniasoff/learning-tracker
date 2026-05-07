@@ -1,0 +1,11 @@
+cities.sqlite is derived from the GeoNames cities15000 dataset.
+
+Source:  https://download.geonames.org/export/dump/cities15000.zip
+License: Creative Commons Attribution 4.0 (CC BY 4.0)
+         https://creativecommons.org/licenses/by/4.0/
+
+This work uses GeoNames data; some rights reserved by GeoNames
+(http://www.geonames.org). The data is provided "as is" without warranty
+of accuracy, timeliness or completeness.
+
+To rebuild this asset, see learning_tracker/tool/build_cities_db.dart.

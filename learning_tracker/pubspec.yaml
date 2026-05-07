@@ -156,6 +156,8 @@ flutter:
     - assets/fonts/
     - assets/content/hierarchy/
     - assets/db/
+    - assets/data/cities.sqlite
+    - assets/data/NOTICE.txt
 
   fonts:
     - family: Noto Sans Hebrew

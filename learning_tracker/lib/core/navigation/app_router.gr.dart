@@ -59,6 +59,22 @@ class AppShellRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [CityPickerScreen]
+class CityPickerRoute extends PageRouteInfo<void> {
+  const CityPickerRoute({List<PageRouteInfo>? children})
+    : super(CityPickerRoute.name, initialChildren: children);
+
+  static const String name = 'CityPickerRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const CityPickerScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [CompletionHistoryScreen]
 class CompletionHistoryRoute extends PageRouteInfo<CompletionHistoryRouteArgs> {
   CompletionHistoryRoute({
