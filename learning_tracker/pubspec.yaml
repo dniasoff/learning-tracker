@@ -55,6 +55,10 @@ dependencies:
   # Hebrew Calendar
   kosher_dart: ^2.0.18
 
+  # Sacred Time (Shabbos / Yom Tov auto-lock)
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
+
   # Preferences
   shared_preferences: ^2.3.0
 

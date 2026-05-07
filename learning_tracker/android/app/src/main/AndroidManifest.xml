@@ -8,7 +8,11 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
 
-    
+    <!-- Sacred Time: lat/long for local Shabbos/Yom Tov calculation. Coarse only
+         is sufficient — sunset times don't need GPS-grade precision. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+
     <application
         android:label="Torah Learning Tracker"
         android:name="${applicationName}"
