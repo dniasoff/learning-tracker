@@ -13,12 +13,20 @@ class CalendarProgramEntry {
     required this.displayNameHe,
     required this.todayRef,
     required this.apiSource,
+    this.todayRefHe = '',
   });
 
   final String programId;
   final String displayNameEn;
   final String displayNameHe;
+
+  /// English Sefaria ref (e.g. `Hullin 7`).
   final String todayRef;
+
+  /// Hebrew form of the same ref (`heRef` from /api/calendars), or the
+  /// empty string when the API didn't supply one. UI consumers should
+  /// fall back to [todayRef] when this is empty.
+  final String todayRefHe;
   final String apiSource;
 }
 

@@ -10,9 +10,15 @@ class CalendarCycles extends Table {
   /// Date in 'YYYY-MM-DD' format (ISO 8601)
   TextColumn get dateKey => text()();
 
-  /// Sefaria ref for this program on this date
+  /// Sefaria ref for this program on this date (English).
   /// e.g., 'Berakhot 2a', 'Mishnah Berakhot 1.1'
   TextColumn get sefariaRef => text()();
+
+  /// Sefaria ref for this program on this date (Hebrew, `heRef` from
+  /// /api/calendars). Empty string when the API didn't return one.
+  /// e.g., 'ברכות ב׳', 'משנה ברכות א׳:א׳'
+  TextColumn get sefariaRefHe =>
+      text().withDefault(const Constant(''))();
 
   /// Human-readable display name (localized)
   TextColumn get displayName => text().withDefault(const Constant(''))();

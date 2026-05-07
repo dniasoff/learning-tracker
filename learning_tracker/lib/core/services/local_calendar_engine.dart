@@ -58,6 +58,7 @@ class LocalCalendarEngine {
       displayNameEn: def.displayNameEn,
       displayNameHe: def.displayNameHe,
       todayRef: row.sefariaRef,
+      todayRefHe: row.sefariaRefHe,
       apiSource: 'local',
     );
   }
@@ -84,6 +85,7 @@ class LocalCalendarEngine {
           displayNameEn: def.displayNameEn,
           displayNameHe: def.displayNameHe,
           todayRef: row.sefariaRef,
+          todayRefHe: row.sefariaRefHe,
           apiSource: 'local',
         ),
       );

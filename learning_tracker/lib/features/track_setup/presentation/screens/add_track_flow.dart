@@ -3422,31 +3422,54 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
                       else if (_calendarEntry != null)
                         Column(
                           children: [
-                            Text(
-                              _calendarEntry!.todayRef,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: AppTheme.brandInk,
-                                fontWeight: FontWeight.w800,
-                              ),
+                            Builder(
+                              builder: (context) {
+                                final hebrewOnly = ref.watch(
+                                  hebrewTermsScriptProvider,
+                                );
+                                final refLabel =
+                                    hebrewOnly &&
+                                        _calendarEntry!.todayRefHe.isNotEmpty
+                                    ? _calendarEntry!.todayRefHe
+                                    : _calendarEntry!.todayRef;
+                                return Text(
+                                  refLabel,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: AppTheme.brandInk,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF4E2C5),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '${_calendarEntry!.displayNameEn} • ${_calendarEntry!.displayNameHe}',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: const Color(0xFF6A4A13),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                            Builder(
+                              builder: (context) {
+                                final hebrewOnly = ref.watch(
+                                  hebrewTermsScriptProvider,
+                                );
+                                final label = hebrewOnly
+                                    ? _calendarEntry!.displayNameHe
+                                    : _calendarEntry!.displayNameEn;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF4E2C5),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    label,
+                                    style: theme.textTheme.bodyMedium
+                                        ?.copyWith(
+                                          color: const Color(0xFF6A4A13),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         )

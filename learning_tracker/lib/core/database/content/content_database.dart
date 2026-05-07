@@ -42,7 +42,7 @@ class ContentDatabase extends _$ContentDatabase {
   }
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -74,6 +74,17 @@ class ContentDatabase extends _$ContentDatabase {
               await customStatement('DROP TABLE IF EXISTS $table');
             } catch (_) {}
           }
+        }
+        if (from < 4) {
+          // v4: calendar_cycles gains sefaria_ref_he (heRef from Sefaria's
+          // /api/calendars). Existing rows get an empty string so the seed
+          // builder can backfill on next run.
+          try {
+            await customStatement(
+              'ALTER TABLE calendar_cycles '
+              "ADD COLUMN sefaria_ref_he TEXT NOT NULL DEFAULT ''",
+            );
+          } catch (_) {}
         }
       },
     );

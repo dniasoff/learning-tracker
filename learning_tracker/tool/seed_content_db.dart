@@ -542,134 +542,178 @@ String _fmtDate(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
-/// Authoritative date→ref overrides loaded from the Sefaria-Data CSV cache.
-/// Wins over any local-sequence fallback. See
-/// [tool/build_sefaria_calendar_cache.dart] for how this file is built.
+/// (English ref, Hebrew ref) pair for a single program-day. Hebrew is empty
+/// when the program is sourced from a local sequence file rather than from
+/// Sefaria's API (the API supplies `heRef` as part of /api/calendars).
+class _CalRef {
+  const _CalRef({required this.en, this.he = ''});
+  final String en;
+  final String he;
+}
+
+/// Authoritative date→{en, he} mapping from
+/// [tool/data/sefaria_calendar_cache.json], populated by
+/// [tool/fetch_sefaria_calendar_full.dart] from Sefaria's /api/calendars.
 final _sefariaCache = _loadSefariaCache();
 
-Map<String, Map<String, String>> _loadSefariaCache() {
+Map<String, Map<String, _CalRef>> _loadSefariaCache() {
   final f = File('tool/data/sefaria_calendar_cache.json');
   if (!f.existsSync()) return const {};
   final raw = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
-  return raw.map(
-    (date, inner) => MapEntry(
-      date,
-      (inner as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String)),
-    ),
-  );
+  final out = <String, Map<String, _CalRef>>{};
+  for (final entry in raw.entries) {
+    final inner = <String, _CalRef>{};
+    for (final pe in (entry.value as Map<String, dynamic>).entries) {
+      final v = pe.value;
+      if (v is String) {
+        // Legacy en-only shape: keep en, no Hebrew available.
+        inner[pe.key] = _CalRef(en: v);
+      } else if (v is Map) {
+        final en = v['en'] as String?;
+        if (en == null) continue;
+        inner[pe.key] = _CalRef(en: en, he: v['he'] as String? ?? '');
+      }
+    }
+    out[entry.key] = inner;
+  }
+  return out;
 }
 
-String? _fromCache(DateTime d, String programKey) {
+_CalRef? _fromCache(DateTime d, String programKey) {
   final inner = _sefariaCache[_fmtDate(d.toUtc())];
   return inner?[programKey];
 }
 
-/// All calendar program generators. Each `compute` returns a Sefaria-style
-/// ref (or null to skip the day). Programs sourced from the Sefaria-Data CSV
-/// cache fall back to local sequences only when the cache is missing — in
-/// production the cache covers the full build range.
-final _calendarGens = <(String key, String? Function(DateTime) compute)>[
+_CalRef? _en(String? en) => en == null ? null : _CalRef(en: en);
+
+/// All calendar program generators. Each `compute` returns a [_CalRef] (en +
+/// optional he) or null to skip the day. Cache-first: Sefaria-API data wins
+/// over any local-sequence fallback, and supplies the Hebrew form. Local
+/// sequence fallbacks have no Hebrew (he == '') because they pre-date the
+/// API harvest.
+final _calendarGens = <(String key, _CalRef? Function(DateTime) compute)>[
   (
     'daf_yomi',
     (d) =>
-        dafYomiSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2020, 1, 5),
-          dafYomiSequence.length,
-        )],
+        _fromCache(d, 'daf_yomi') ??
+        _en(
+          dafYomiSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2020, 1, 5),
+            dafYomiSequence.length,
+          )],
+        ),
   ),
   (
     'daf_a_week',
     (d) {
+      final cached = _fromCache(d, 'daf_a_week');
+      if (cached != null) return cached;
       final weeks = d.toUtc().difference(DateTime.utc(2005, 3, 6)).inDays ~/ 7;
-      return dafYomiSequence[(weeks % dafYomiSequence.length +
-              dafYomiSequence.length) %
-          dafYomiSequence.length];
+      return _en(
+        dafYomiSequence[(weeks % dafYomiSequence.length +
+                dafYomiSequence.length) %
+            dafYomiSequence.length],
+      );
     },
   ),
   (
     'mishna_yomit',
     (d) =>
-        mishnahYomitSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2027, 9, 21),
-          mishnahYomitSequence.length,
-        )],
+        _fromCache(d, 'daily_mishnah') ??
+        _en(
+          mishnahYomitSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2027, 9, 21),
+            mishnahYomitSequence.length,
+          )],
+        ),
   ),
-  // Daily Rambam (1 chapter): cache-driven. The slow Sefaria fetcher
-  // (tool/fetch_rambam_calendar.dart) writes daily_rambam keys to the cache.
-  // No local fallback — the previously-checked-in seq drifts vs. Sefaria.
+  // Daily Rambam (1ch + 3ch): cache-only. No local fallback — the previously
+  // checked-in seq drifts vs. Sefaria.
   ('rambam_1_chapter', (d) => _fromCache(d, 'daily_rambam')),
   ('rambam_3_chapters', (d) => _fromCache(d, 'daily_rambam_3')),
-  // Halakhah Yomit, Arukh HaShulchan Yomi, Yerushalmi Yomi, Tanakh Yomi:
-  // cache-driven from Sefaria-Data CSVs. Full-range coverage validated
-  // against live API at build-cache time.
   (
     'halakhah_yomit',
     (d) =>
         _fromCache(d, 'halakhah_yomit') ??
-        halakhahYomitSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2020, 11, 12),
-          halakhahYomitSequence.length,
-        )],
+        _en(
+          halakhahYomitSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2020, 11, 12),
+            halakhahYomitSequence.length,
+          )],
+        ),
   ),
   (
     'arukh_hashulchan_yomi',
     (d) =>
         _fromCache(d, 'arukh_hashulchan_yomi') ??
-        arukhHaShulchanSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2020, 5, 29),
-          arukhHaShulchanSequence.length,
-        )],
+        _en(
+          arukhHaShulchanSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2020, 5, 29),
+            arukhHaShulchanSequence.length,
+          )],
+        ),
   ),
   (
     'nach_yomi',
     (d) =>
-        nachYomiSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2007, 11, 1),
-          nachYomiSequence.length,
-        )],
+        _fromCache(d, 'nach_yomi') ??
+        _en(
+          nachYomiSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2007, 11, 1),
+            nachYomiSequence.length,
+          )],
+        ),
   ),
   (
     'yerushalmi_yomi',
     (d) =>
         _fromCache(d, 'yerushalmi_yomi') ??
-        yerushalmiyomiSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2022, 11, 14),
-          yerushalmiyomiSequence.length,
-        )],
+        _en(
+          yerushalmiyomiSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2022, 11, 14),
+            yerushalmiyomiSequence.length,
+          )],
+        ),
   ),
   (
     'dirshu_kinyan_torah',
     (d) =>
-        dafYomiSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2020, 1, 5),
-          dafYomiSequence.length,
-        )],
+        _fromCache(d, 'daf_yomi') ??
+        _en(
+          dafYomiSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2020, 1, 5),
+            dafYomiSequence.length,
+          )],
+        ),
   ),
   (
     'dirshu_amud_hayomi',
-    (d) =>
-        amudHayomiSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2023, 10, 15),
-          amudHayomiSequence.length,
-        )],
+    (d) => _en(
+      amudHayomiSequence[_cyclicIndex(
+        d,
+        DateTime.utc(2023, 10, 15),
+        amudHayomiSequence.length,
+      )],
+    ),
   ),
   (
     'dirshu_kinyan_yerushalmi',
     (d) =>
         _fromCache(d, 'yerushalmi_yomi') ??
-        yerushalmiyomiSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2022, 11, 14),
-          yerushalmiyomiSequence.length,
-        )],
+        _en(
+          yerushalmiyomiSequence[_cyclicIndex(
+            d,
+            DateTime.utc(2022, 11, 14),
+            yerushalmiyomiSequence.length,
+          )],
+        ),
   ),
   (
     'tanakh_yomi',
@@ -677,12 +721,14 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
       final cached = _fromCache(d, 'tanakh_yomi');
       if (cached != null) return cached;
       final entry = tanakhYomiData[_fmtDate(d)];
-      return (entry != null && entry.length >= 2) ? entry[1] : null;
+      return (entry != null && entry.length >= 2) ? _en(entry[1]) : null;
     },
   ),
   (
     'chofetz_chaim_daily',
     (d) {
+      final cached = _fromCache(d, 'chofetz_chaim_daily');
+      if (cached != null) return cached;
       const table = chofetzChaimSimple;
       final idx =
           d.difference(DateTime.utc(d.year, 1, 1)).inDays % table.length;
@@ -692,14 +738,18 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
       final begin = e[2]?.toString();
       final end = e[3]?.toString();
       if (begin == null || begin.isEmpty) return null;
-      return (end == null || end.isEmpty || begin == end)
-          ? 'Chofetz Chaim, $name $begin'
-          : 'Chofetz Chaim, $name $begin-$end';
+      return _en(
+        (end == null || end.isEmpty || begin == end)
+            ? 'Chofetz Chaim, $name $begin'
+            : 'Chofetz Chaim, $name $begin-$end',
+      );
     },
   ),
   (
     'kitzur_shulchan_aruch_yomi',
     (d) {
+      final cached = _fromCache(d, 'kitzur_shulchan_aruch_yomi');
+      if (cached != null) return cached;
       final all = <String>[];
       for (final m in [
         'Tishrei',
@@ -723,7 +773,7 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
           (d.toUtc().difference(tishrei1).inDays % all.length + all.length) %
           all.length;
       final r = all[idx];
-      return r.isEmpty ? null : 'Kitzur Shulchan Aruch $r';
+      return r.isEmpty ? null : _en('Kitzur Shulchan Aruch $r');
     },
   ),
 ];
@@ -748,12 +798,14 @@ Future<int> _generateCalendarCycles(ContentDatabase db) async {
           if (ref == null) continue;
           await db.customInsert(
             'INSERT OR REPLACE INTO calendar_cycles '
-            '(program_key, date_key, sefaria_ref, display_name) '
-            'VALUES (?, ?, ?, ?)',
+            '(program_key, date_key, sefaria_ref, sefaria_ref_he, '
+            'display_name) '
+            'VALUES (?, ?, ?, ?, ?)',
             variables: [
               Variable.withString(key),
               Variable.withString(dateKey),
-              Variable.withString(ref),
+              Variable.withString(ref.en),
+              Variable.withString(ref.he),
               const Variable(''),
             ],
           );
