@@ -896,10 +896,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarPreferenceSubtitle => 'Goals, deadlines, and date pickers';
 
   @override
-  String get calendarGregorian => 'Gregorian';
+  String get calendarGregorian => 'English';
 
   @override
   String get calendarHebrew => 'Hebrew';
+
+  @override
+  String get hebrewTermsPreference => 'Hebrew Terms';
+
+  @override
+  String get hebrewTermsPreferenceSubtitle =>
+      'Show learning terms (chazara, review) in Hebrew script or transliterated';
+
+  @override
+  String get hebrewTermsHebrew => 'Hebrew';
+
+  @override
+  String get hebrewTermsEnglish => 'English';
 
   @override
   String get parentMode => 'Parent Mode';
@@ -1407,7 +1420,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifRewardNotificationsSubtitle =>
-      'When you earn Mitzvah Points!';
+      'When you earn Learning Points!';
 
   @override
   String get notifSacredTime => 'SACRED TIME';

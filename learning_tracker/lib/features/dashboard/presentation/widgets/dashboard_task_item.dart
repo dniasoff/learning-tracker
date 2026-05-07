@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Individual task item card for the dashboard task list.
-class DashboardTaskItem extends StatelessWidget {
+class DashboardTaskItem extends ConsumerWidget {
   const DashboardTaskItem({
     super.key,
     required this.task,
@@ -17,7 +20,7 @@ class DashboardTaskItem extends StatelessWidget {
   final VoidCallback? onComplete;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final borderColor = task.isOverdue
         ? theme.colorScheme.error
@@ -75,6 +78,22 @@ class DashboardTaskItem extends StatelessWidget {
 
   Widget _buildSubtitle(BuildContext context, ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
+    return Consumer(
+      builder: (context, ref, _) {
+        final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+        final chazaraReviewLabel = hebrewTerms
+            ? HebrewTerms.uiChazaraReview
+            : l10n.chazaraReview;
+        return _buildSubtitleInner(theme, l10n, chazaraReviewLabel);
+      },
+    );
+  }
+
+  Widget _buildSubtitleInner(
+    ThemeData theme,
+    AppLocalizations l10n,
+    String chazaraReviewLabel,
+  ) {
     final baseStyle = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
@@ -112,7 +131,7 @@ class DashboardTaskItem extends StatelessWidget {
     }
     if (isReview) {
       suffixSpans.add(
-        TextSpan(text: ' · ${l10n.chazaraReview}', style: reviewStyle),
+        TextSpan(text: ' · $chazaraReviewLabel', style: reviewStyle),
       );
     }
 

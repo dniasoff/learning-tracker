@@ -51,6 +51,46 @@ class HebrewTerms {
   /// Use [getChazaraStageName] for numbered chazara stages.
   static const String stageChazaraPrefix = 'חזרה';
 
+  // ── UI Term Display (Hebrew script variants) ─────────────────────────────
+  //
+  // Strings in this section are the *only* ones swapped by the
+  // "Hebrew Terms" settings toggle (hebrewTermsScriptProvider).
+  // The toggle is independent of the UI locale (en/he):
+  //   ON  → use the Hebrew-script string defined here
+  //   OFF → use the locale-driven ARB string (English transliteration in en)
+  //
+  // The toggle deliberately does NOT cover general UI labels such as
+  // "Today's Missions", "No tasks in this lane", "URGENT", etc. Those follow
+  // the app's locale only.
+  //
+  // To add a new term to the toggle:
+  //   1. Add a `static const String uiXxx = 'עברית';` constant below.
+  //   2. At the call site, swap with:
+  //        ref.watch(hebrewTermsScriptProvider)
+  //          ? HebrewTerms.uiXxx : l10n.xxx
+  //   3. Add a row to the table below so the scope stays discoverable.
+  //
+  // ┌──────────────────────────┬────────────────────┬────────────────────┐
+  // │ Constant                 │ Hebrew             │ ARB key (English)  │
+  // ├──────────────────────────┼────────────────────┼────────────────────┤
+  // │ uiChazaraReview          │ חזרה                │ chazaraReview      │
+  // │ uiReviewSection          │ חזרה SECTION         │ reviewSection      │
+  // │ uiBubbleChazara          │ חזרה                │ bubbleChazara      │
+  // │ uiActiveTrackChazara     │ חזרה                │ activeTrackMetric… │
+  // └──────────────────────────┴────────────────────┴────────────────────┘
+
+  /// "Chazara/Review" → Hebrew script.
+  static const String uiChazaraReview = 'חזרה';
+
+  /// "REVIEW SECTION" header → Hebrew word + English "SECTION".
+  static const String uiReviewSection = 'חזרה SECTION';
+
+  /// "CHAZARA" bubble label → Hebrew script.
+  static const String uiBubbleChazara = 'חזרה';
+
+  /// Active-track "Chazara" metric label → Hebrew script.
+  static const String uiActiveTrackChazara = 'חזרה';
+
   // ── Curriculum Display Names ─────────────────────────────────────────────
 
   /// Maps [CurriculumId.storageKey] to the Hebrew display name.

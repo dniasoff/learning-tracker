@@ -1670,7 +1670,7 @@ abstract class AppLocalizations {
   /// No description provided for @calendarGregorian.
   ///
   /// In en, this message translates to:
-  /// **'Gregorian'**
+  /// **'English'**
   String get calendarGregorian;
 
   /// No description provided for @calendarHebrew.
@@ -1678,6 +1678,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hebrew'**
   String get calendarHebrew;
+
+  /// No description provided for @hebrewTermsPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Hebrew Terms'**
+  String get hebrewTermsPreference;
+
+  /// No description provided for @hebrewTermsPreferenceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show learning terms (chazara, review) in Hebrew script or transliterated'**
+  String get hebrewTermsPreferenceSubtitle;
+
+  /// No description provided for @hebrewTermsHebrew.
+  ///
+  /// In en, this message translates to:
+  /// **'Hebrew'**
+  String get hebrewTermsHebrew;
+
+  /// No description provided for @hebrewTermsEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get hebrewTermsEnglish;
 
   /// No description provided for @parentMode.
   ///
@@ -2618,7 +2642,7 @@ abstract class AppLocalizations {
   /// No description provided for @notifRewardNotificationsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'When you earn Mitzvah Points!'**
+  /// **'When you earn Learning Points!'**
   String get notifRewardNotificationsSubtitle;
 
   /// No description provided for @notifSacredTime.

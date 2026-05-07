@@ -4,21 +4,22 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-part 'hebrew_date_provider.g.dart';
+part 'hebrew_terms_provider.g.dart';
 
-/// In-memory mirror for profile 0 — seeded from [syncHebrewCalendarPreferenceFromPrefs].
-bool _useHebrewDateMirrorProfile0 = true;
+bool _hebrewTermsScriptMirrorProfile0 = true;
 
 /// Call once from [main] after [SharedPreferences.getInstance], so the first
-/// [UseHebrewDateNotifier.build] for profile 0 matches stored prefs.
-void syncHebrewCalendarPreferenceFromPrefs(SharedPreferences prefs) {
-  _useHebrewDateMirrorProfile0 =
-      ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 0);
+/// build of [hebrewTermsScriptProvider] for profile 0 matches stored prefs.
+void syncHebrewTermsScriptPreferenceFromPrefs(SharedPreferences prefs) {
+  _hebrewTermsScriptMirrorProfile0 =
+      ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, 0);
 }
 
-/// Global preference for Hebrew vs Gregorian calendar (per learner profile).
+/// Whether to render Jewish learning terms (chazara, review section, etc.)
+/// in Hebrew script. When false, the same terms are shown in English
+/// transliteration. Independent of the app's UI locale.
 @Riverpod(keepAlive: true)
-class UseHebrewDateNotifier extends _$UseHebrewDateNotifier {
+class HebrewTermsScriptNotifier extends _$HebrewTermsScriptNotifier {
   @override
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
@@ -28,32 +29,32 @@ class UseHebrewDateNotifier extends _$UseHebrewDateNotifier {
       }
     });
     _loadFromPrefs(profileId);
-    return profileId == 0 ? _useHebrewDateMirrorProfile0 : true;
+    return profileId == 0 ? _hebrewTermsScriptMirrorProfile0 : true;
   }
 
   Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    final value = ProfileScopedPreferenceKeys.readUseHebrewCalendar(
+    final value = ProfileScopedPreferenceKeys.readHebrewTermsScript(
       prefs,
       profileId,
     );
     if (profileId == 0) {
-      _useHebrewDateMirrorProfile0 = value;
+      _hebrewTermsScriptMirrorProfile0 = value;
     }
     if (value != state) {
       state = value;
     }
   }
 
-  Future<void> setUseHebrewDate(bool value) async {
+  Future<void> setHebrewTermsScript(bool value) async {
     final profileId = ref.read(activeProfileIdProvider);
     state = value;
     if (profileId == 0) {
-      _useHebrewDateMirrorProfile0 = value;
+      _hebrewTermsScriptMirrorProfile0 = value;
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
-      ProfileScopedPreferenceKeys.useHebrewCalendar(profileId),
+      ProfileScopedPreferenceKeys.hebrewTermsScript(profileId),
       value,
     );
     await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();

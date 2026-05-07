@@ -888,10 +888,23 @@ class AppLocalizationsHe extends AppLocalizations {
   String get calendarPreferenceSubtitle => 'יעדים, מועדים ובוררי תאריך';
 
   @override
-  String get calendarGregorian => 'גרגוריאני';
+  String get calendarGregorian => 'אנגלית';
 
   @override
   String get calendarHebrew => 'עברי';
+
+  @override
+  String get hebrewTermsPreference => 'מונחים בעברית';
+
+  @override
+  String get hebrewTermsPreferenceSubtitle =>
+      'הצגת מונחי לימוד (חזרה, סקירה) בעברית או בתעתיק';
+
+  @override
+  String get hebrewTermsHebrew => 'עברית';
+
+  @override
+  String get hebrewTermsEnglish => 'אנגלית';
 
   @override
   String get parentMode => 'מצב הורה';
@@ -1394,7 +1407,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get notifRewardNotifications => 'התראות פרסים';
 
   @override
-  String get notifRewardNotificationsSubtitle => 'כשאתם מרוויחים נק׳ מצווה!';
+  String get notifRewardNotificationsSubtitle => 'כשאתם מרוויחים נק׳ למידה!';
 
   @override
   String get notifSacredTime => 'זמן קדוש';

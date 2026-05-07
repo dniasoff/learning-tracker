@@ -10,6 +10,7 @@ class ProfileScopedPreferenceKeys {
   static const legacyFontSizeKey = 'text_display_font_size';
   static const legacyShowNikudKey = 'text_display_show_nikud';
   static const legacyLearningOrderKey = 'learning_order_parent_controls';
+  static const legacyHebrewTermsScriptKey = 'hebrew_terms_script';
 
   static String appLocale(int profileId) => 'app_locale_p$profileId';
 
@@ -24,6 +25,9 @@ class ProfileScopedPreferenceKeys {
 
   static String learningOrderParentControls(int profileId) =>
       'learning_order_parent_controls_p$profileId';
+
+  static String hebrewTermsScript(int profileId) =>
+      'hebrew_terms_script_p$profileId';
 
   static String uiPreferencesUpdatedAtMs(int profileId) =>
       'ui_preferences_updated_at_ms_p$profileId';
@@ -41,9 +45,9 @@ class ProfileScopedPreferenceKeys {
     final scoped = prefs.getBool(useHebrewCalendar(profileId));
     if (scoped != null) return scoped;
     if (profileId == 0) {
-      return prefs.getBool(legacyUseHebrewCalendarKey) ?? false;
+      return prefs.getBool(legacyUseHebrewCalendarKey) ?? true;
     }
-    return false;
+    return true;
   }
 
   static int readFontSizeIndex(SharedPreferences prefs, int profileId) {
@@ -74,5 +78,14 @@ class ProfileScopedPreferenceKeys {
       return prefs.getBool(legacyLearningOrderKey) ?? false;
     }
     return false;
+  }
+
+  static bool readHebrewTermsScript(SharedPreferences prefs, int profileId) {
+    final scoped = prefs.getBool(hebrewTermsScript(profileId));
+    if (scoped != null) return scoped;
+    if (profileId == 0) {
+      return prefs.getBool(legacyHebrewTermsScriptKey) ?? true;
+    }
+    return true;
   }
 }

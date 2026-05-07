@@ -45,7 +45,7 @@ final class UseHebrewDateNotifierProvider
 }
 
 String _$useHebrewDateNotifierHash() =>
-    r'66e1c72bf69f356476f337be8cbdc31dbad8efe7';
+    r'63064fb406d58ac93faa45ad2a0e914c9632560d';
 
 /// Global preference for Hebrew vs Gregorian calendar (per learner profile).
 

@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
@@ -88,6 +89,8 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _HebrewDateTile(theme: theme),
+                  _tileDivider(theme),
+                  _HebrewTermsTile(theme: theme),
                   _tileDivider(theme),
                   _LanguagePreferenceTile(theme: theme),
                   if (!isChildProfile) ...[
@@ -331,6 +334,97 @@ class _HebrewDateTile extends ConsumerWidget {
               ref
                   .read(useHebrewDateProvider.notifier)
                   .setUseHebrewDate(selected.first);
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppTheme.brandBlueBright,
+              selectedForegroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFFD7DEEA)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Toggle: render Jewish learning terms (chazara, review section, etc.) in
+/// Hebrew script vs English transliteration. Independent of the app locale.
+class _HebrewTermsTile extends ConsumerWidget {
+  const _HebrewTermsTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final useHebrew = ref.watch(hebrewTermsScriptProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.brandBlueSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.translate_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.hebrewTermsPreference,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 19,
+                        color: const Color(0xFF1D2432),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.hebrewTermsPreferenceSubtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF929BAA),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment<bool>(
+                value: true,
+                label: Text(l10n.hebrewTermsHebrew),
+              ),
+              ButtonSegment<bool>(
+                value: false,
+                label: Text(l10n.hebrewTermsEnglish),
+              ),
+            ],
+            selected: {useHebrew},
+            onSelectionChanged: (selected) {
+              if (selected.isEmpty) return;
+              ref
+                  .read(hebrewTermsScriptProvider.notifier)
+                  .setHebrewTermsScript(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,

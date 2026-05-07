@@ -376,7 +376,10 @@ void main() {
     testWidgets('Gregorian date picker mode works and shows daily pace', (
       tester,
     ) async {
-      SharedPreferences.setMockInitialValues({});
+      // Default is Hebrew calendar; explicitly opt into Gregorian for this case.
+      SharedPreferences.setMockInitialValues({
+        'use_hebrew_calendar_p0': false,
+      });
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -389,7 +392,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Default mode is Deadline (Gregorian by default, useHebrewDate = false)
       expect(find.text('Tap to choose a date'), findsOneWidget);
 
       // Tap the date Card to open Gregorian picker

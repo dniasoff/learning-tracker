@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -115,6 +116,7 @@ void main() {
       // of [useHebrewDateProvider] (deadline / goal date pickers).
       final appPrefs = await SharedPreferences.getInstance();
       syncHebrewCalendarPreferenceFromPrefs(appPrefs);
+      syncHebrewTermsScriptPreferenceFromPrefs(appPrefs);
 
       final container = ProviderContainer(
         overrides: [

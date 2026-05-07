@@ -1517,6 +1517,14 @@ class SyncEngine {
         );
       }
 
+      final hebrewTermsScript = remote['hebrew_terms_script'];
+      if (hebrewTermsScript is bool) {
+        await prefs.setBool(
+          ProfileScopedPreferenceKeys.hebrewTermsScript(profileId),
+          hebrewTermsScript,
+        );
+      }
+
       final stamp =
           remoteUpdatedAt?.millisecondsSinceEpoch ??
           DateTime.now().toUtc().millisecondsSinceEpoch;
@@ -2636,6 +2644,10 @@ class SyncEngine {
           prefs,
           profileId,
         );
+    final hebrewTermsScript = ProfileScopedPreferenceKeys.readHebrewTermsScript(
+      prefs,
+      profileId,
+    );
     final updatedAtMs = prefs.getInt(
       ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
     );
@@ -2651,6 +2663,7 @@ class SyncEngine {
       'use_hebrew_calendar': hebrew,
       'text_display': {'font_size_index': fontIdx, 'show_nikud': nikud},
       'learning_order_parent_controls': learningOrder,
+      'hebrew_terms_script': hebrewTermsScript,
     };
   }
 

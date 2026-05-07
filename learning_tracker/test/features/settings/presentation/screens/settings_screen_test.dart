@@ -153,7 +153,7 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      await tester.drag(find.byType(ListView), const Offset(0, -200));
+      await tester.drag(find.byType(ListView), const Offset(0, -350));
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Notification Settings'), findsOneWidget);
