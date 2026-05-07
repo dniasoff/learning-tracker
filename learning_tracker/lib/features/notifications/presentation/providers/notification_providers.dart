@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
-import 'package:learning_tracker/features/notifications/domain/services/shabbos_time_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -26,16 +26,6 @@ const String _streakAlertMinuteKey = 'streak_alert_minute';
 /// SharedPreferences keys for reward notification settings.
 const String _rewardNotificationEnabledKey = 'reward_notification_enabled';
 
-/// SharedPreferences keys for Shabbos mode settings.
-const String _shabbosModeEnabledKey = 'shabbos_mode_enabled';
-const String _shabbosModeUseLocationKey = 'shabbos_mode_use_location';
-const String _shabbosModeLatitudeKey = 'shabbos_mode_latitude';
-const String _shabbosModeLongitudeKey = 'shabbos_mode_longitude';
-const String _shabbosModeFixedStartHourKey = 'shabbos_mode_fixed_start_hour';
-const String _shabbosModeFixedStartMinuteKey =
-    'shabbos_mode_fixed_start_minute';
-const String _shabbosModeFixedEndHourKey = 'shabbos_mode_fixed_end_hour';
-const String _shabbosModeFixedEndMinuteKey = 'shabbos_mode_fixed_end_minute';
 const String _notificationSettingsUpdatedAtMsKey =
     'notification_settings_updated_at_ms';
 
@@ -46,12 +36,6 @@ const int defaultReminderMinute = 0;
 /// Default streak alert time: 9:00 PM.
 const int defaultStreakAlertHour = 21;
 const int defaultStreakAlertMinute = 0;
-
-/// Default fixed Shabbos times: Friday 18:00 – Saturday 20:00.
-const int defaultShabbosStartHour = 18;
-const int defaultShabbosStartMinute = 0;
-const int defaultShabbosEndHour = 20;
-const int defaultShabbosEndMinute = 0;
 
 /// Provides the [NotificationService] singleton.
 @Riverpod(keepAlive: true)
@@ -182,154 +166,6 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   }
 }
 
-/// Manages the Shabbos mode enabled state.
-@riverpod
-class ShabbosModeEnabled extends _$ShabbosModeEnabled {
-  @override
-  bool build() {
-    _loadFromPrefs();
-    return false; // default disabled
-  }
-
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    state = prefs.getBool(_shabbosModeEnabledKey) ?? false;
-  }
-
-  Future<void> toggle() async {
-    state = !state;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_shabbosModeEnabledKey, state);
-  }
-}
-
-/// Manages whether Shabbos mode uses location-based or fixed times.
-@riverpod
-class ShabbosModeUseLocation extends _$ShabbosModeUseLocation {
-  @override
-  bool build() {
-    _loadFromPrefs();
-    return false; // default: fixed times
-  }
-
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    state = prefs.getBool(_shabbosModeUseLocationKey) ?? false;
-  }
-
-  Future<void> toggle() async {
-    state = !state;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_shabbosModeUseLocationKey, state);
-  }
-}
-
-/// Manages the stored latitude for location-based Shabbos mode.
-@riverpod
-class ShabbosModeLatitude extends _$ShabbosModeLatitude {
-  @override
-  double build() {
-    _loadFromPrefs();
-    return 0.0;
-  }
-
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    state = prefs.getDouble(_shabbosModeLatitudeKey) ?? 0.0;
-  }
-
-  Future<void> setValue(double value) async {
-    state = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_shabbosModeLatitudeKey, value);
-  }
-}
-
-/// Manages the stored longitude for location-based Shabbos mode.
-@riverpod
-class ShabbosModeLongitude extends _$ShabbosModeLongitude {
-  @override
-  double build() {
-    _loadFromPrefs();
-    return 0.0;
-  }
-
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    state = prefs.getDouble(_shabbosModeLongitudeKey) ?? 0.0;
-  }
-
-  Future<void> setValue(double value) async {
-    state = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_shabbosModeLongitudeKey, value);
-  }
-}
-
-/// Manages fixed Shabbos start time (candle lighting).
-@riverpod
-class ShabbosModeFixedStartTime extends _$ShabbosModeFixedStartTime {
-  @override
-  TimeOfDay build() {
-    _loadFromPrefs();
-    return const TimeOfDay(
-      hour: defaultShabbosStartHour,
-      minute: defaultShabbosStartMinute,
-    );
-  }
-
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    final hour =
-        prefs.getInt(_shabbosModeFixedStartHourKey) ?? defaultShabbosStartHour;
-    final minute =
-        prefs.getInt(_shabbosModeFixedStartMinuteKey) ??
-        defaultShabbosStartMinute;
-    state = TimeOfDay(hour: hour, minute: minute);
-  }
-
-  Future<void> setTime(TimeOfDay time) async {
-    state = time;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_shabbosModeFixedStartHourKey, time.hour);
-    await prefs.setInt(_shabbosModeFixedStartMinuteKey, time.minute);
-  }
-}
-
-/// Manages fixed Shabbos end time (havdalah).
-@riverpod
-class ShabbosModeFixedEndTime extends _$ShabbosModeFixedEndTime {
-  @override
-  TimeOfDay build() {
-    _loadFromPrefs();
-    return const TimeOfDay(
-      hour: defaultShabbosEndHour,
-      minute: defaultShabbosEndMinute,
-    );
-  }
-
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    final hour =
-        prefs.getInt(_shabbosModeFixedEndHourKey) ?? defaultShabbosEndHour;
-    final minute =
-        prefs.getInt(_shabbosModeFixedEndMinuteKey) ?? defaultShabbosEndMinute;
-    state = TimeOfDay(hour: hour, minute: minute);
-  }
-
-  Future<void> setTime(TimeOfDay time) async {
-    state = time;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_shabbosModeFixedEndHourKey, time.hour);
-    await prefs.setInt(_shabbosModeFixedEndMinuteKey, time.minute);
-  }
-}
 
 /// Persist the current notification preference set to Firestore for
 /// cloud-born accounts. Local-born accounts remain local-only.
@@ -365,23 +201,6 @@ Future<void> _persistNotificationSettingsToCloud(
     'reward_notifications': {
       'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
     },
-    'shabbos_quiet_mode': {
-      'enabled': prefs.getBool(_shabbosModeEnabledKey) ?? false,
-      'use_location': prefs.getBool(_shabbosModeUseLocationKey) ?? false,
-      'latitude': prefs.getDouble(_shabbosModeLatitudeKey) ?? 0.0,
-      'longitude': prefs.getDouble(_shabbosModeLongitudeKey) ?? 0.0,
-      'fixed_start_hour':
-          prefs.getInt(_shabbosModeFixedStartHourKey) ??
-          defaultShabbosStartHour,
-      'fixed_start_minute':
-          prefs.getInt(_shabbosModeFixedStartMinuteKey) ??
-          defaultShabbosStartMinute,
-      'fixed_end_hour':
-          prefs.getInt(_shabbosModeFixedEndHourKey) ?? defaultShabbosEndHour,
-      'fixed_end_minute':
-          prefs.getInt(_shabbosModeFixedEndMinuteKey) ??
-          defaultShabbosEndMinute,
-    },
     'updated_at': DateTime.fromMillisecondsSinceEpoch(
       updatedAtMs,
       isUtc: true,
@@ -389,43 +208,12 @@ Future<void> _persistNotificationSettingsToCloud(
   });
 }
 
-/// Provides the [ShabbosTimeService] singleton.
-@riverpod
-ShabbosTimeService shabbosTimeService(Ref ref) {
-  return const ShabbosTimeService();
-}
-
-/// Returns true if notifications should currently be suppressed due to
-/// Shabbos/Yom Tov quiet mode.
+/// Returns true if notifications should currently be suppressed because
+/// Sacred Time is active. Backed by [currentSacredWindowProvider] —
+/// notifications follow the same window the lock screen does.
 @riverpod
 bool isShabbosQuietActive(Ref ref) {
-  final enabled = ref.watch(shabbosModeEnabledProvider);
-  if (!enabled) return false;
-
-  final useLocation = ref.watch(shabbosModeUseLocationProvider);
-  final service = ref.watch(shabbosTimeServiceProvider);
-  final now = DateTime.now();
-
-  if (useLocation) {
-    final lat = ref.watch(shabbosModeLatitudeProvider);
-    final lon = ref.watch(shabbosModeLongitudeProvider);
-    if (lat == 0.0 && lon == 0.0) return false; // no location set
-    return service.isDuringShabbosWithLocation(
-      dateTime: now,
-      latitude: lat,
-      longitude: lon,
-    );
-  } else {
-    final startTime = ref.watch(shabbosModeFixedStartTimeProvider);
-    final endTime = ref.watch(shabbosModeFixedEndTimeProvider);
-    return service.isDuringShabbosWithFixedTimes(
-      dateTime: now,
-      startHour: startTime.hour,
-      startMinute: startTime.minute,
-      endHour: endTime.hour,
-      endMinute: endTime.minute,
-    );
-  }
+  return ref.watch(currentSacredWindowProvider) != null;
 }
 
 /// Provides the [NotificationScheduler] instance.
@@ -446,12 +234,6 @@ final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
   ref.watch(streakAlertEnabledProvider);
   ref.watch(streakAlertTimeProvider);
   ref.watch(rewardNotificationEnabledProvider);
-  ref.watch(shabbosModeEnabledProvider);
-  ref.watch(shabbosModeUseLocationProvider);
-  ref.watch(shabbosModeLatitudeProvider);
-  ref.watch(shabbosModeLongitudeProvider);
-  ref.watch(shabbosModeFixedStartTimeProvider);
-  ref.watch(shabbosModeFixedEndTimeProvider);
 
   final prefs = await SharedPreferences.getInstance();
   await _persistNotificationSettingsToCloud(ref, prefs: prefs);

@@ -73,17 +73,6 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets('shows Shabbos mode toggle with explanation', (tester) async {
-    await tester.pumpWidget(buildSubject());
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Shabbos'), findsWidgets);
-    expect(find.byKey(const Key('shabbos_mode_toggle')), findsOneWidget);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(Duration.zero);
-  });
-
   testWidgets('time pickers for reminder and streak alert times', (
     tester,
   ) async {
@@ -128,23 +117,4 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets('Shabbos mode toggle reveals configuration options', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject());
-    await tester.pumpAndSettle();
-
-    // Enable Shabbos mode by tapping the toggle
-    await tester.tap(find.byKey(const Key('shabbos_mode_toggle')).last);
-    await tester.pumpAndSettle();
-
-    // Sub-options should be visible when Shabbos mode is enabled
-    expect(
-      find.byKey(const Key('shabbos_use_location_toggle')),
-      findsOneWidget,
-    );
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(Duration.zero);
-  });
 }

@@ -125,15 +125,6 @@ class SyncEngine {
   static const _streakAlertHourKey = 'streak_alert_hour';
   static const _streakAlertMinuteKey = 'streak_alert_minute';
   static const _rewardNotificationEnabledKey = 'reward_notification_enabled';
-  static const _shabbosModeEnabledKey = 'shabbos_mode_enabled';
-  static const _shabbosModeUseLocationKey = 'shabbos_mode_use_location';
-  static const _shabbosModeLatitudeKey = 'shabbos_mode_latitude';
-  static const _shabbosModeLongitudeKey = 'shabbos_mode_longitude';
-  static const _shabbosModeFixedStartHourKey = 'shabbos_mode_fixed_start_hour';
-  static const _shabbosModeFixedStartMinuteKey =
-      'shabbos_mode_fixed_start_minute';
-  static const _shabbosModeFixedEndHourKey = 'shabbos_mode_fixed_end_hour';
-  static const _shabbosModeFixedEndMinuteKey = 'shabbos_mode_fixed_end_minute';
 
   // ========== Lifecycle Methods ==========
 
@@ -1250,9 +1241,6 @@ class SyncEngine {
       final rewardNotifications =
           remoteSettings['reward_notifications'] as Map<String, dynamic>? ??
           const {};
-      final shabbosQuietMode =
-          remoteSettings['shabbos_quiet_mode'] as Map<String, dynamic>? ??
-          const {};
 
       await prefs.setBool(
         _reminderEnabledKey,
@@ -1280,39 +1268,6 @@ class SyncEngine {
       await prefs.setBool(
         _rewardNotificationEnabledKey,
         rewardNotifications['enabled'] as bool? ?? true,
-      );
-
-      await prefs.setBool(
-        _shabbosModeEnabledKey,
-        shabbosQuietMode['enabled'] as bool? ?? false,
-      );
-      await prefs.setBool(
-        _shabbosModeUseLocationKey,
-        shabbosQuietMode['use_location'] as bool? ?? false,
-      );
-      await prefs.setDouble(
-        _shabbosModeLatitudeKey,
-        (shabbosQuietMode['latitude'] as num?)?.toDouble() ?? 0.0,
-      );
-      await prefs.setDouble(
-        _shabbosModeLongitudeKey,
-        (shabbosQuietMode['longitude'] as num?)?.toDouble() ?? 0.0,
-      );
-      await prefs.setInt(
-        _shabbosModeFixedStartHourKey,
-        shabbosQuietMode['fixed_start_hour'] as int? ?? 18,
-      );
-      await prefs.setInt(
-        _shabbosModeFixedStartMinuteKey,
-        shabbosQuietMode['fixed_start_minute'] as int? ?? 0,
-      );
-      await prefs.setInt(
-        _shabbosModeFixedEndHourKey,
-        shabbosQuietMode['fixed_end_hour'] as int? ?? 20,
-      );
-      await prefs.setInt(
-        _shabbosModeFixedEndMinuteKey,
-        shabbosQuietMode['fixed_end_minute'] as int? ?? 0,
       );
 
       final stamp =
@@ -2690,17 +2645,6 @@ class SyncEngine {
       },
       'reward_notifications': {
         'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
-      },
-      'shabbos_quiet_mode': {
-        'enabled': prefs.getBool(_shabbosModeEnabledKey) ?? false,
-        'use_location': prefs.getBool(_shabbosModeUseLocationKey) ?? false,
-        'latitude': prefs.getDouble(_shabbosModeLatitudeKey) ?? 0.0,
-        'longitude': prefs.getDouble(_shabbosModeLongitudeKey) ?? 0.0,
-        'fixed_start_hour': prefs.getInt(_shabbosModeFixedStartHourKey) ?? 18,
-        'fixed_start_minute':
-            prefs.getInt(_shabbosModeFixedStartMinuteKey) ?? 0,
-        'fixed_end_hour': prefs.getInt(_shabbosModeFixedEndHourKey) ?? 20,
-        'fixed_end_minute': prefs.getInt(_shabbosModeFixedEndMinuteKey) ?? 0,
       },
       // LWW merge compares this timestamp against local prefs timestamp.
       'updated_at': updatedAt.toIso8601String(),
