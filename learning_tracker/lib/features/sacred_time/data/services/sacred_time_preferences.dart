@@ -60,10 +60,7 @@ class SacredTimePreferences {
     return prefs.getBool(_inIsraelKey) ?? false;
   }
 
-  static Future<void> writeInIsrael(
-    SharedPreferences prefs,
-    bool value,
-  ) async {
+  static Future<void> writeInIsrael(SharedPreferences prefs, bool value) async {
     await prefs.setBool(_inIsraelKey, value);
   }
 }

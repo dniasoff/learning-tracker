@@ -721,7 +721,8 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
         effectiveStartDate = todayDate;
       }
 
-      final rangeEntries = effectiveStartDate.isBefore(todayDate) ||
+      final rangeEntries =
+          effectiveStartDate.isBefore(todayDate) ||
               effectiveStartDate == todayDate
           ? await calendarService.getEntriesForRange(
               programKey,

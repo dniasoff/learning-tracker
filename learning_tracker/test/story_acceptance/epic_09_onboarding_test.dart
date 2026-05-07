@@ -377,9 +377,7 @@ void main() {
       tester,
     ) async {
       // Default is Hebrew calendar; explicitly opt into Gregorian for this case.
-      SharedPreferences.setMockInitialValues({
-        'use_hebrew_calendar_p0': false,
-      });
+      SharedPreferences.setMockInitialValues({'use_hebrew_calendar_p0': false});
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(

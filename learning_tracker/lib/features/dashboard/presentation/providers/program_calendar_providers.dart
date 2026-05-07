@@ -65,7 +65,8 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
             : DateUtils.extractLocalDate(enrollment.trackingStartDate!))
       : (() {
           final rawRef = enrollment.trackingStartRef;
-          if (rawRef == null || !rawRef.startsWith('offset:')) return todayLocal;
+          if (rawRef == null || !rawRef.startsWith('offset:'))
+            return todayLocal;
           final parsed = int.tryParse(rawRef.substring('offset:'.length));
           if (parsed == null) return todayLocal;
           return DateUtils.extractLocalDate(

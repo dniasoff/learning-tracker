@@ -114,8 +114,8 @@ class _LocationRow extends StatelessWidget {
     final label = location == null
         ? 'No location set'
         : (location!.cityLabel ??
-            '${location!.latitude.toStringAsFixed(3)}, '
-                '${location!.longitude.toStringAsFixed(3)}');
+              '${location!.latitude.toStringAsFixed(3)}, '
+                  '${location!.longitude.toStringAsFixed(3)}');
     final sourceLabel = location == null
         ? null
         : switch (location!.source) {
@@ -195,8 +195,7 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
   Future<void> _detect() async {
     setState(() => _detecting = true);
     try {
-      final result =
-          await ref.read(sacredLocationProvider.notifier).detect();
+      final result = await ref.read(sacredLocationProvider.notifier).detect();
       if (!mounted) return;
       _showOutcome(result);
     } finally {
@@ -218,7 +217,8 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
             : 'Location permission denied.',
       LocationFetchServiceDisabled() =>
         'Location services are turned off on this device.',
-      LocationFetchError(:final message) => 'Could not detect location: $message',
+      LocationFetchError(:final message) =>
+        'Could not detect location: $message',
     };
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
@@ -259,8 +259,7 @@ class _InIsraelRow extends ConsumerWidget {
         ),
         Switch(
           value: value,
-          onChanged: (v) =>
-              ref.read(inIsraelProvider.notifier).setInIsrael(v),
+          onChanged: (v) => ref.read(inIsraelProvider.notifier).setInIsrael(v),
         ),
       ],
     );

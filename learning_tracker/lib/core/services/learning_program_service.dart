@@ -89,10 +89,7 @@ class LearningProgramRepository {
   /// to show the program step and to populate the picker.
   List<LearningProgramData> getActiveProgramsByCurriculumType(
     String curriculumType,
-  ) =>
-      _programs
-          .where(
-            (p) => p.curriculumType == curriculumType && p.isActive,
-          )
-          .toList();
+  ) => _programs
+      .where((p) => p.curriculumType == curriculumType && p.isActive)
+      .toList();
 }

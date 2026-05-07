@@ -62,8 +62,7 @@ void main() {
       final saturdayNoon = DateTime(2026, 4, 4, 12).toUtc();
       final spanning = windows.where(
         (w) =>
-            !fridayNoon.isBefore(w.startUtc) &&
-            !saturdayNoon.isAfter(w.endUtc),
+            !fridayNoon.isBefore(w.startUtc) && !saturdayNoon.isAfter(w.endUtc),
       );
       expect(
         spanning,
@@ -72,10 +71,7 @@ void main() {
       );
       expect(
         spanning.first.kind,
-        anyOf(
-          SacredWindowKind.shabbosYomTov,
-          SacredWindowKind.yomTov,
-        ),
+        anyOf(SacredWindowKind.shabbosYomTov, SacredWindowKind.yomTov),
       );
     });
 
@@ -92,8 +88,7 @@ void main() {
       );
       final friday = DateTime(2026, 4, 3, 12).toUtc();
       final coveringFriday = windows.where(
-        (w) =>
-            !friday.isBefore(w.startUtc) && !friday.isAfter(w.endUtc),
+        (w) => !friday.isBefore(w.startUtc) && !friday.isAfter(w.endUtc),
       );
       expect(
         coveringFriday,

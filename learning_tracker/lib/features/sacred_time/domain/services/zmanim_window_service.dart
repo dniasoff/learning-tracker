@@ -48,9 +48,11 @@ class ZmanimWindowService {
     var sawShabbos = false;
     var sawYomTov = false;
 
-    for (var d = start;
-        !d.isAfter(endInclusive);
-        d = d.add(const Duration(days: 1))) {
+    for (
+      var d = start;
+      !d.isAfter(endInclusive);
+      d = d.add(const Duration(days: 1))
+    ) {
       final jc = JewishCalendar.fromDateTime(d)..inIsrael = inIsrael;
       final blocked = jc.isAssurBemelacha();
 
@@ -72,8 +74,7 @@ class ZmanimWindowService {
           sawYomKippur = true;
         }
         if (jc.getDayOfWeek() == 7) sawShabbos = true; // SATURDAY
-        if (jc.isYomTov() &&
-            jc.getYomTovIndex() != JewishCalendar.YOM_KIPPUR) {
+        if (jc.isYomTov() && jc.getYomTovIndex() != JewishCalendar.YOM_KIPPUR) {
           sawYomTov = true;
         }
       }
@@ -175,8 +176,7 @@ class ZmanimWindowService {
       longitude,
       forDate,
     );
-    final cal = ComplexZmanimCalendar.intGeoLocation(geo)
-      ..setCalendar(forDate);
+    final cal = ComplexZmanimCalendar.intGeoLocation(geo)..setCalendar(forDate);
     final tz = cal.getTzais();
     if (tz != null) return tz.toUtc();
     return DateTime(forDate.year, forDate.month, forDate.day, 21).toUtc();

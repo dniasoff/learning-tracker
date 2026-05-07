@@ -38,10 +38,12 @@ Future<void> main(List<String> args) async {
 
   final cache = <String, Map<String, String>>{};
   if (cacheFile.existsSync() && !refresh) {
-    final raw = jsonDecode(cacheFile.readAsStringSync()) as Map<String, dynamic>;
+    final raw =
+        jsonDecode(cacheFile.readAsStringSync()) as Map<String, dynamic>;
     for (final entry in raw.entries) {
-      final inner = (entry.value as Map<String, dynamic>)
-          .map((k, v) => MapEntry(k, v as String));
+      final inner = (entry.value as Map<String, dynamic>).map(
+        (k, v) => MapEntry(k, v as String),
+      );
       if (inner.length == _titleToKey.length) cache[entry.key] = inner;
     }
     stdout.writeln('Loaded ${cache.length} fully-cached days');

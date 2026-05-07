@@ -31,6 +31,7 @@ class DashboardChildNextReward {
   });
 
   final int trackId;
+
   /// Progress numerator: per-track points or global total when [isGlobal].
   final int trackPoints;
   final int threshold;

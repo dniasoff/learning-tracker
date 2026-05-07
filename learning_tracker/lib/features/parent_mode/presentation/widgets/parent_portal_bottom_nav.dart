@@ -94,7 +94,9 @@ class _NavPillItem extends StatelessWidget {
             curve: Curves.easeOutCubic,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
             decoration: BoxDecoration(
-              color: selected ? ParentPortalBottomNav._navy : Colors.transparent,
+              color: selected
+                  ? ParentPortalBottomNav._navy
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
               boxShadow: selected
                   ? const [

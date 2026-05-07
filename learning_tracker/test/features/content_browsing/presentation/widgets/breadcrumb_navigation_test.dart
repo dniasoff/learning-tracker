@@ -71,7 +71,9 @@ void main() {
       expect(textWidget.style?.fontWeight, FontWeight.bold);
     });
 
-    testWidgets('renders nothing for an empty navigation stack', (tester) async {
+    testWidgets('renders nothing for an empty navigation stack', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(navigationStack: [], onBreadcrumbTap: (_) {}),
       );

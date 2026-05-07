@@ -58,20 +58,19 @@ class _LockScreen extends StatelessWidget {
                     spec.greeting,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Text(
                     spec.subtitle,
                     textAlign: TextAlign.center,
-                    style:
-                        Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.78),
-                              height: 1.4,
-                            ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),

@@ -1125,11 +1125,7 @@ class _ChildModeTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.child_care_rounded,
-            size: 14,
-            color: _kNavy,
-          ),
+          const Icon(Icons.child_care_rounded, size: 14, color: _kNavy),
           const SizedBox(width: 6),
           Text(
             'CHILD MODE FEATURE',
@@ -1234,9 +1230,7 @@ class _ScholarLevelCard extends StatelessWidget {
                 ),
               ),
               Text(
-                hebrewTerms
-                    ? HebrewTerms.uiTalmidChochom
-                    : 'TALMID CHOCHOM',
+                hebrewTerms ? HebrewTerms.uiTalmidChochom : 'TALMID CHOCHOM',
                 style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.brandInkSoft,
                   fontSize: hebrewTerms ? 11 : 9,

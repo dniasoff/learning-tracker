@@ -84,7 +84,11 @@ Future<void> main(List<String> args) async {
       }
       // Allow displayValue equivalence for granular-ref cases.
       if (cachedRef == liveRef ||
-          _isYerushalmiEquivalent(cachedRef, liveRef, live[liveKey + '__display'])) {
+          _isYerushalmiEquivalent(
+            cachedRef,
+            liveRef,
+            live[liveKey + '__display'],
+          )) {
         t.matched++;
       } else {
         t.mismatched++;
@@ -160,8 +164,8 @@ Future<Map<String, String>> _fetchDay(HttpClient client, DateTime d) async {
         if (k == null) continue;
         final ref = item['ref'] as String?;
         if (ref != null) out[k] = ref;
-        final disp = (item['displayValue'] as Map<String, dynamic>?)?['en']
-            as String?;
+        final disp =
+            (item['displayValue'] as Map<String, dynamic>?)?['en'] as String?;
         if (disp != null) out['${k}__display'] = disp;
       }
       return out;

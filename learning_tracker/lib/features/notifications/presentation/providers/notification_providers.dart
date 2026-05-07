@@ -166,7 +166,6 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   }
 }
 
-
 /// Persist the current notification preference set to Firestore for
 /// cloud-born accounts. Local-born accounts remain local-only.
 Future<void> _persistNotificationSettingsToCloud(

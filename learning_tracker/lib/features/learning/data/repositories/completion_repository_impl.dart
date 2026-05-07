@@ -173,7 +173,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
             const <RewardUnlockRecord>[];
         final globalUnlocks =
             await _rewardMilestoneService?.evaluateUnlocksForGlobal() ??
-                const <RewardUnlockRecord>[];
+            const <RewardUnlockRecord>[];
         newMilestoneUnlocks = [...trackUnlocks, ...globalUnlocks];
         unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
       }

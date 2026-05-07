@@ -61,8 +61,31 @@ void main() {
     });
 
     testWidgets(
-        'hides English subtitle when Hebrew Terms toggle is on (default)',
-        (tester) async {
+      'hides English subtitle when Hebrew Terms toggle is on (default)',
+      (tester) async {
+        const item = ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Zeraim',
+          displayNameHe: 'סדר זרעים',
+          displayNameEn: 'Seder Zeraim',
+          sefariaRef: 'Seder Zeraim',
+          sortOrder: 0,
+          isLeaf: false,
+        );
+
+        await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
+        await tester.pump();
+
+        // Hebrew title is shown.
+        expect(find.text('סדר זרעים'), findsOneWidget);
+        // English transliteration is suppressed in the default Hebrew-only mode.
+        expect(find.text('Seder Zeraim'), findsNothing);
+      },
+    );
+
+    testWidgets('shows English subtitle when Hebrew Terms toggle is off', (
+      tester,
+    ) async {
       const item = ContentItem(
         curriculumId: 'mishnayos',
         level1: 'Seder Zeraim',
@@ -73,33 +96,9 @@ void main() {
         isLeaf: false,
       );
 
-      await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
-      await tester.pump();
-
-      // Hebrew title is shown.
-      expect(find.text('סדר זרעים'), findsOneWidget);
-      // English transliteration is suppressed in the default Hebrew-only mode.
-      expect(find.text('Seder Zeraim'), findsNothing);
-    });
-
-    testWidgets(
-        'shows English subtitle when Hebrew Terms toggle is off',
-        (tester) async {
-      const item = ContentItem(
-        curriculumId: 'mishnayos',
-        level1: 'Seder Zeraim',
-        displayNameHe: 'סדר זרעים',
-        displayNameEn: 'Seder Zeraim',
-        sefariaRef: 'Seder Zeraim',
-        sortOrder: 0,
-        isLeaf: false,
+      await tester.pumpWidget(
+        createTestWidget(item: item, onTap: () {}, hebrewTermsScript: false),
       );
-
-      await tester.pumpWidget(createTestWidget(
-        item: item,
-        onTap: () {},
-        hebrewTermsScript: false,
-      ));
       // Wait for the async _load on the notifier to settle.
       await tester.pumpAndSettle();
 

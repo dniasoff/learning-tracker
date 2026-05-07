@@ -68,9 +68,9 @@ void main() {
     ordered[dk] = {for (final k in ik) k: inner[k]!};
   }
 
-  File(_outputPath).writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert(ordered),
-  );
+  File(
+    _outputPath,
+  ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(ordered));
 
   // Per-program coverage report.
   final programs = <String>{};
@@ -83,9 +83,7 @@ void main() {
   for (final key in programs.toList()..sort()) {
     final count = ordered.values.where((v) => v.containsKey(key)).length;
     final pct = (count / ordered.length * 100).toStringAsFixed(1);
-    stdout.writeln(
-      '    ${key.padRight(28)} $count days  ($pct%)',
-    );
+    stdout.writeln('    ${key.padRight(28)} $count days  ($pct%)');
   }
 }
 
@@ -108,8 +106,9 @@ void _mergeRambamCache(Map<String, Map<String, String>> cache) {
   if (!file.existsSync()) return;
   final raw = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
   for (final entry in raw.entries) {
-    final inner = (entry.value as Map<String, dynamic>)
-        .map((k, v) => MapEntry(k, v as String));
+    final inner = (entry.value as Map<String, dynamic>).map(
+      (k, v) => MapEntry(k, v as String),
+    );
     if (inner.isEmpty) continue;
     cache.putIfAbsent(entry.key, () => <String, String>{}).addAll(inner);
   }
@@ -195,8 +194,9 @@ Map<String, String> _parseArukhHaShulchan() {
 /// Tanach_Yomi_Sedarim_Calendar — `M/D/YYYY,Seder Name,Start Ref,End Ref`
 /// where rows like `2/1/2021,Parasha,,` mark Shabbat (no learning).
 Map<String, String> _parseTanakhYomi() {
-  final lines = File('$_csvDir/Tanach_Yomi_Sedarim_Calendar_-_updated.csv')
-      .readAsLinesSync();
+  final lines = File(
+    '$_csvDir/Tanach_Yomi_Sedarim_Calendar_-_updated.csv',
+  ).readAsLinesSync();
   final out = <String, String>{};
   for (final line in lines) {
     if (line.isEmpty) continue;
@@ -239,8 +239,9 @@ String _formatTanakhRange(String start, String end) {
 /// Daf label looks like "Berakhot 1" which the seed engine will use to
 /// resolve to a Sefaria ref like `Jerusalem Talmud Berakhot.1`.
 Map<String, String> _parseYerushalmiYomi() {
-  final lines = File('$_csvDir/Yerushalmi_Yomi_Cal_-_Sheet1.csv')
-      .readAsLinesSync();
+  final lines = File(
+    '$_csvDir/Yerushalmi_Yomi_Cal_-_Sheet1.csv',
+  ).readAsLinesSync();
   final out = <String, String>{};
   for (final line in lines) {
     if (line.isEmpty) continue;

@@ -155,5 +155,4 @@ void main() {
       expect(prefs.getBool('reward_notification_enabled'), isFalse);
     });
   });
-
 }

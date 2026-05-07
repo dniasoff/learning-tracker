@@ -214,11 +214,7 @@ class ParentSettingsScreen extends ConsumerWidget {
           ParentPortalBottomNav(
             selectedIndex: 3,
             onSelect: (index) => unawaited(
-              navigateParentPortalTab(
-                context,
-                index,
-                currentTabIndex: 3,
-              ),
+              navigateParentPortalTab(context, index, currentTabIndex: 3),
             ),
           ),
         ],

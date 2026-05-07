@@ -35,10 +35,7 @@ class CitiesRepository {
 
     if (!cached.existsSync()) {
       final bytes = await rootBundle.load(_assetPath);
-      await cached.writeAsBytes(
-        bytes.buffer.asUint8List(),
-        flush: true,
-      );
+      await cached.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
     }
 
     final db = sqlite3.open(cachedPath, mode: OpenMode.readOnly);

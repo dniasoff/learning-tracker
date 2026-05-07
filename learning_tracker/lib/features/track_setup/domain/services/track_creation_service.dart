@@ -155,7 +155,9 @@ class TrackCreationService {
             curriculum.storageKey,
           );
       if (removed > 0) {
-        await _syncEngine?.removeProfileProgramAssignment(curriculum.storageKey);
+        await _syncEngine?.removeProfileProgramAssignment(
+          curriculum.storageKey,
+        );
       }
     }
 

@@ -168,7 +168,11 @@ class _CurriculumTile extends StatelessWidget {
                             shape: BoxShape.circle,
                             color: style.background,
                           ),
-                          child: Icon(style.icon, color: style.iconColor, size: 27),
+                          child: Icon(
+                            style.icon,
+                            color: style.iconColor,
+                            size: 27,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -209,8 +213,13 @@ class _CurriculumTile extends StatelessWidget {
                 child: IconButton(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                  tooltip: AppLocalizations.of(context)!.addTrackCurriculumReplaceWarning,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                  tooltip: AppLocalizations.of(
+                    context,
+                  )!.addTrackCurriculumReplaceWarning,
                   icon: const Icon(
                     Icons.warning_amber_rounded,
                     color: _warnIconColor,

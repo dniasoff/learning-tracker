@@ -66,27 +66,26 @@ void main() {
       expect(selected, CurriculumId.bavli);
     });
 
-    testWidgets(
-      'shows replace SnackBar when warning icon is tapped',
-      (tester) async {
-        await tester.pumpWidget(
-          wrapWithL10n(
-            CurriculumPickerStep(
-              onSelected: (_) {},
-              existingTrackCurricula: {CurriculumId.bavli},
-            ),
+    testWidgets('shows replace SnackBar when warning icon is tapped', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapWithL10n(
+          CurriculumPickerStep(
+            onSelected: (_) {},
+            existingTrackCurricula: {CurriculumId.bavli},
           ),
-        );
+        ),
+      );
 
-        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
-        expect(find.textContaining('already have a track'), findsNothing);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.textContaining('already have a track'), findsNothing);
 
-        await tester.tap(find.byIcon(Icons.warning_amber_rounded));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byIcon(Icons.warning_amber_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-        expect(find.textContaining('already have a track'), findsWidgets);
-      },
-    );
+      expect(find.textContaining('already have a track'), findsWidgets);
+    });
   });
 }

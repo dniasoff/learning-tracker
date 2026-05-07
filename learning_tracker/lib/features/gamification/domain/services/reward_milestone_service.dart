@@ -49,9 +49,8 @@ class RewardMilestoneService {
     var sum = 0;
     for (final c in completions) {
       final eligible =
-          eligibility[c.trackId] ?? await trackCountsTowardRewardPoints(
-                c.trackId,
-              );
+          eligibility[c.trackId] ??
+          await trackCountsTowardRewardPoints(c.trackId);
       eligibility[c.trackId] = eligible;
       if (eligible) {
         sum += c.points;

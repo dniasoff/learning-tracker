@@ -34,7 +34,8 @@ class RewardConfigurationScreen extends ConsumerStatefulWidget {
       _RewardConfigurationScreenState();
 }
 
-class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationScreen> {
+class _RewardConfigurationScreenState
+    extends ConsumerState<RewardConfigurationScreen> {
   final _nameController = TextEditingController();
   final _pointsController = TextEditingController();
 
@@ -127,8 +128,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
   void _applyMilestoneToForm(RewardMilestone m) {
     setState(() {
       _editingMilestoneId = m.id;
-      final globalMilestone =
-          m.trackId == RewardMilestone.kGlobalTrackSentinel;
+      final globalMilestone = m.trackId == RewardMilestone.kGlobalTrackSentinel;
       _isGlobalReward = _tracks.isEmpty || globalMilestone;
       if (!_isGlobalReward) {
         _selectedTrackId = m.trackId;
@@ -174,9 +174,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     }
 
     if (!_usesGlobalLadder && _selectedTrackId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.rewardConfigNoActiveTracks)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.rewardConfigNoActiveTracks)));
       return;
     }
 
@@ -226,9 +226,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              MaterialLocalizations.of(dialogContext).okButtonLabel,
-            ),
+            child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
           ),
         ],
       ),
@@ -306,9 +304,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                 Text(
                   l10n.rewardConfigMenuManageRewards,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: _kNavy,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: _kNavy,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -336,8 +334,7 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
     );
   }
 
-  int get _previewPoints =>
-      int.tryParse(_pointsController.text.trim()) ?? 0;
+  int get _previewPoints => int.tryParse(_pointsController.text.trim()) ?? 0;
 
   String get _previewTitle {
     final t = _nameController.text.trim();
@@ -412,9 +409,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                       Text(
                         l10n.rewardConfigConfigureNewSubtitle,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: _kMutedLabel,
-                              height: 1.35,
-                            ),
+                          color: _kMutedLabel,
+                          height: 1.35,
+                        ),
                       ),
                       const SizedBox(height: 22),
                       Text(
@@ -433,7 +430,8 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                           itemCount: RewardMilestoneIcons.choices.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 10),
                           itemBuilder: (context, i) {
                             return SizedBox(
                               width: 64,
@@ -450,9 +448,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                       Text(
                         l10n.rewardConfigRewardNameLabel,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _kMutedLabel,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: _kMutedLabel,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextField(
@@ -480,9 +478,9 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                       Text(
                         l10n.rewardConfigRewardTypeLabel,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _kMutedLabel,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: _kMutedLabel,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       _RewardTypeSegmented(
@@ -502,11 +500,11 @@ class _RewardConfigurationScreenState extends ConsumerState<RewardConfigurationS
                         const SizedBox(height: 18),
                         Text(
                           l10n.rewardConfigChooseTrackLabel,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: _kMutedLabel,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: _kMutedLabel,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         const SizedBox(height: 8),
                         Container(
