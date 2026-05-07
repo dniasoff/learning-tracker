@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/scheduler/presentation/screens/goal_se
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
@@ -563,13 +564,74 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     _goToNextStep();
   }
 
+  /// Shows a confirmation dialog before [_finishFlow] silently replaces an
+  /// existing track. Returns true if the user pressed "Replace".
+  Future<bool?> _confirmReplaceExistingTrack(CurriculumId curriculum) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final hebrewOnly = ref.read(hebrewTermsScriptProvider);
+        final name = hebrewOnly
+            ? curriculum.displayNameHe
+            : curriculum.displayNameEn;
+        return AlertDialog(
+          icon: Icon(
+            Icons.warning_amber_rounded,
+            color: theme.colorScheme.error,
+            size: 32,
+          ),
+          title: Text('Replace your $name track?'),
+          content: Text(
+            'You already have a $name track. Continuing will replace its '
+            'study days, scope, review schedule, and goals with the new '
+            'configuration. Completed sections stay with your account.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+              ),
+              child: const Text('Replace'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _finishFlow({
     _SelfPacedPriorCompletionSelection? priorCompletionSelection,
   }) async {
     if (_isFinishing) return;
     _isFinishing = true;
+
+    // If a track already exists for this curriculum, createTrack will
+    // silently replace its stages, study days, scope, and goals. Confirm
+    // with the user before that lands — the warning icon on the curriculum
+    // tile is informational; this is the destructive moment.
+    final curriculum = _state.curriculumId!;
+    final activeCurricula =
+        ref.read(dashboardActiveCurriculaProvider).asData?.value ??
+        const <CurriculumId>[];
+    if (activeCurricula.contains(curriculum)) {
+      final confirmed = await _confirmReplaceExistingTrack(curriculum);
+      if (confirmed != true) {
+        _isFinishing = false;
+        return;
+      }
+    }
+
     final result = AddTrackResult(
-      curriculumId: _state.curriculumId!,
+      curriculumId: curriculum,
       label: _getSmartDefault(),
       programId: _state.programId,
       programName: _state.programName,
