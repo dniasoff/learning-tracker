@@ -564,15 +564,10 @@ Map<String, Map<String, _CalRef>> _loadSefariaCache() {
   for (final entry in raw.entries) {
     final inner = <String, _CalRef>{};
     for (final pe in (entry.value as Map<String, dynamic>).entries) {
-      final v = pe.value;
-      if (v is String) {
-        // Legacy en-only shape: keep en, no Hebrew available.
-        inner[pe.key] = _CalRef(en: v);
-      } else if (v is Map) {
-        final en = v['en'] as String?;
-        if (en == null) continue;
-        inner[pe.key] = _CalRef(en: en, he: v['he'] as String? ?? '');
-      }
+      final v = pe.value as Map<String, dynamic>;
+      final en = v['en'] as String?;
+      if (en == null) continue;
+      inner[pe.key] = _CalRef(en: en, he: v['he'] as String? ?? '');
     }
     out[entry.key] = inner;
   }

@@ -53,10 +53,6 @@ Future<void> main(List<String> args) async {
     (date, inner) => MapEntry(
       date,
       (inner as Map<String, dynamic>).map((k, v) {
-        // Cache shape is { programKey: { "en": ref, "he": heRef? } }.
-        // Tolerate the legacy en-only string shape so older caches don't
-        // explode the verifier.
-        if (v is String) return MapEntry(k, _Cached(en: v));
         final m = v as Map<String, dynamic>;
         return MapEntry(
           k,

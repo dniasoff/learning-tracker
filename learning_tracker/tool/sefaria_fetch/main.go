@@ -332,11 +332,6 @@ func loadCache(path string) (Cache, error) {
 		entry := make(map[string]Ref, len(progs))
 		allHaveHe := true
 		for k, v := range progs {
-			// Skip legacy en-only string shape — we want en+he, so trigger refetch.
-			if len(v) > 0 && v[0] == '"' {
-				allHaveHe = false
-				continue
-			}
 			var r Ref
 			if err := json.Unmarshal(v, &r); err != nil {
 				return nil, fmt.Errorf("parse cache entry %s/%s: %w", date, k, err)
