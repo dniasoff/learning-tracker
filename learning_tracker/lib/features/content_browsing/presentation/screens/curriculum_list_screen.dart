@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 @RoutePage()
 class CurriculumListScreen extends ConsumerWidget {
@@ -122,6 +123,7 @@ class _CurriculumCard extends ConsumerWidget {
 
         return _buildCard(
           context: context,
+          ref: ref,
           curriculumColor: curriculumColor,
           pctDisplay: pctDisplay,
           percentage: percentage,
@@ -131,6 +133,7 @@ class _CurriculumCard extends ConsumerWidget {
       },
       loading: () => _buildCard(
         context: context,
+        ref: ref,
         curriculumColor: curriculumColor,
         pctDisplay: pctDisplay,
         percentage: percentage,
@@ -138,6 +141,7 @@ class _CurriculumCard extends ConsumerWidget {
       ),
       error: (_, __) => _buildCard(
         context: context,
+        ref: ref,
         curriculumColor: curriculumColor,
         pctDisplay: pctDisplay,
         percentage: percentage,
@@ -147,6 +151,7 @@ class _CurriculumCard extends ConsumerWidget {
 
   Widget _buildCard({
     required BuildContext context,
+    required WidgetRef ref,
     required Color curriculumColor,
     required String pctDisplay,
     required double percentage,
@@ -193,15 +198,17 @@ class _CurriculumCard extends ConsumerWidget {
                         ),
                         textDirection: TextDirection.rtl,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        curriculum.displayNameHe,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.brandInkMuted,
+                      if (!ref.watch(hebrewTermsScriptProvider)) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          curriculum.displayNameEn,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.brandInkMuted,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

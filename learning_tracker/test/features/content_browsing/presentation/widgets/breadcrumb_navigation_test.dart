@@ -21,15 +21,8 @@ void main() {
   }
 
   group('BreadcrumbNavigation', () {
-    testWidgets('shows curriculum name as root level', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(navigationStack: [], onBreadcrumbTap: (_) {}),
-      );
-
-      expect(find.text('משניות'), findsOneWidget);
-    });
-
-    testWidgets('displays navigation stack with separators', (tester) async {
+    testWidgets('renders only the navigation stack — curriculum is shown by '
+        'the adjacent chip, not duplicated here', (tester) async {
       await tester.pumpWidget(
         createTestWidget(
           navigationStack: ['Seder Zeraim', 'Berachos'],
@@ -37,12 +30,12 @@ void main() {
         ),
       );
 
-      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('Berachos'), findsOneWidget);
-
-      // Should have chevron separators
-      expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
+      // Curriculum name should NOT be repeated in the breadcrumb itself.
+      expect(find.text('משניות'), findsNothing);
+      // One separator between two stack items.
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
     });
 
     testWidgets('makes previous levels clickable', (tester) async {
@@ -55,11 +48,9 @@ void main() {
         ),
       );
 
-      // Tap on first level (Seder Zeraim)
       await tester.tap(find.text('Seder Zeraim'));
       expect(tappedLevel, 0);
 
-      // Tap on second level (Berachos)
       await tester.tap(find.text('Berachos'));
       expect(tappedLevel, 1);
     });
@@ -74,26 +65,23 @@ void main() {
         ),
       );
 
-      // Find the current level text widget
       final currentLevelFinder = find.text('Berachos');
       expect(currentLevelFinder, findsOneWidget);
-
-      // Current level should be styled differently (bold, primary color)
       final textWidget = tester.widget<Text>(currentLevelFinder);
       expect(textWidget.style?.fontWeight, FontWeight.bold);
     });
 
-    testWidgets('handles empty navigation stack', (tester) async {
+    testWidgets('renders nothing for an empty navigation stack', (tester) async {
       await tester.pumpWidget(
         createTestWidget(navigationStack: [], onBreadcrumbTap: (_) {}),
       );
 
-      // Should only show curriculum name
-      expect(find.text('משניות'), findsOneWidget);
       expect(find.byIcon(Icons.chevron_right), findsNothing);
+      expect(find.text('משניות'), findsNothing);
     });
 
-    testWidgets('handles maximum depth (4 levels)', (tester) async {
+    testWidgets('handles maximum depth (4 levels) with 3 separators between '
+        'them', (tester) async {
       await tester.pumpWidget(
         createTestWidget(
           navigationStack: ['Seder Zeraim', 'Berachos', 'Perek 1', 'Mishna 1'],
@@ -101,15 +89,11 @@ void main() {
         ),
       );
 
-      // Should show all 4 levels plus curriculum
-      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('Berachos'), findsOneWidget);
       expect(find.text('Perek 1'), findsOneWidget);
       expect(find.text('Mishna 1'), findsOneWidget);
-
-      // Should have 4 chevron separators
-      expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
+      expect(find.byIcon(Icons.chevron_right), findsNWidgets(3));
     });
 
     testWidgets('scrolls horizontally for long breadcrumbs', (tester) async {
@@ -124,7 +108,6 @@ void main() {
         ),
       );
 
-      // Should have a horizontal scroll view
       expect(find.byType(SingleChildScrollView), findsOneWidget);
     });
   });

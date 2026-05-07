@@ -1694,9 +1694,10 @@ class _ActiveTrackCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final curriculum = _curriculumIdForTrack(track);
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final displayNamePrimary =
         '${_trackTypeLabel(track.trackType)} · ${curriculum.displayNameHe}';
-    final displayNameSecondary = curriculum.displayNameEn;
+    final displayNameSecondary = hebrewOnly ? null : curriculum.displayNameEn;
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final bookIconBg = Color.lerp(
       _kActiveTrackPrimaryBlue.withValues(alpha: 0.2),
@@ -1781,16 +1782,18 @@ class _ActiveTrackCard extends ConsumerWidget {
                             letterSpacing: -0.1,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          displayNameSecondary,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.brandInk,
+                        if (displayNameSecondary != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            displayNameSecondary,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.brandInk,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        ],
                       ],
                     ),
                   ),

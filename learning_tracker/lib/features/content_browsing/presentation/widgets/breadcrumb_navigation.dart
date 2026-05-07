@@ -3,7 +3,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 /// Displays breadcrumb navigation showing current position in content hierarchy.
 ///
-/// Example: Mishnayos > Seder Zeraim > Berachos
+/// Renders only the navigation stack — the curriculum root is shown by the
+/// adjacent curriculum chip, so duplicating it here is redundant.
+///
+/// Example (current location is "Berachos" inside Seder Zeraim):
+///   Seder Zeraim > Berachos
 class BreadcrumbNavigation extends StatelessWidget {
   const BreadcrumbNavigation({
     super.key,
@@ -34,23 +38,16 @@ class BreadcrumbNavigation extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            // Curriculum name (root level)
-            _BreadcrumbItem(
-              label: curriculum.displayNameHe,
-              isLast: navigationStack.isEmpty,
-              onTap: () => onBreadcrumbTap(-1),
-            ),
-
-            // Each level in navigation stack
             for (var i = 0; i < navigationStack.length; i++) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: theme.colorScheme.onSurfaceVariant,
+              if (i > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
               _BreadcrumbItem(
                 label: navigationStack[i],
                 isLast: i == navigationStack.length - 1,

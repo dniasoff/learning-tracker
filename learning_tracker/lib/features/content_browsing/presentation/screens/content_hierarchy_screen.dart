@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 @RoutePage()
 class ContentHierarchyScreen extends ConsumerStatefulWidget {
@@ -141,7 +142,9 @@ class _ContentHierarchyScreenState
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    curriculum.displayNameHe,
+                    ref.watch(hebrewTermsScriptProvider)
+                        ? curriculum.displayNameHe
+                        : curriculum.displayNameEn,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,

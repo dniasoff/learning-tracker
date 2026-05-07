@@ -5,13 +5,18 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   Widget createTestWidget({
     required ContentItem item,
     required VoidCallback onTap,
     int completionCount = 0,
+    bool hebrewTermsScript = true,
   }) {
+    SharedPreferences.setMockInitialValues({
+      'hebrew_terms_script_p0': hebrewTermsScript,
+    });
     return ProviderScope(
       overrides: [
         completionCountProvider(
@@ -55,7 +60,9 @@ void main() {
       expect(hebrewText.textAlign, TextAlign.right);
     });
 
-    testWidgets('displays English name as subtitle', (tester) async {
+    testWidgets(
+        'hides English subtitle when Hebrew Terms toggle is on (default)',
+        (tester) async {
       const item = ContentItem(
         curriculumId: 'mishnayos',
         level1: 'Seder Zeraim',
@@ -69,7 +76,34 @@ void main() {
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
       await tester.pump();
 
-      // English name should be the subtitle
+      // Hebrew title is shown.
+      expect(find.text('סדר זרעים'), findsOneWidget);
+      // English transliteration is suppressed in the default Hebrew-only mode.
+      expect(find.text('Seder Zeraim'), findsNothing);
+    });
+
+    testWidgets(
+        'shows English subtitle when Hebrew Terms toggle is off',
+        (tester) async {
+      const item = ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Seder Zeraim',
+        displayNameHe: 'סדר זרעים',
+        displayNameEn: 'Seder Zeraim',
+        sefariaRef: 'Seder Zeraim',
+        sortOrder: 0,
+        isLeaf: false,
+      );
+
+      await tester.pumpWidget(createTestWidget(
+        item: item,
+        onTap: () {},
+        hebrewTermsScript: false,
+      ));
+      // Wait for the async _load on the notifier to settle.
+      await tester.pumpAndSettle();
+
+      expect(find.text('סדר זרעים'), findsOneWidget);
       expect(find.text('Seder Zeraim'), findsOneWidget);
     });
 

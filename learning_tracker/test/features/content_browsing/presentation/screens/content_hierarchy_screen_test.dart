@@ -95,13 +95,12 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      // Should display both items
-      expect(find.text('Seder Zeraim'), findsOneWidget);
-      expect(find.text('Seder Moed'), findsOneWidget);
-
-      // Hebrew names should also be visible
+      // Hebrew titles are shown by default (Hebrew Terms toggle is on).
       expect(find.text('סדר זרעים'), findsOneWidget);
       expect(find.text('סדר מועד'), findsOneWidget);
+      // English transliterations are hidden in default Hebrew-only mode.
+      expect(find.text('Seder Zeraim'), findsNothing);
+      expect(find.text('Seder Moed'), findsNothing);
     });
 
     testWidgets('shows breadcrumb navigation', (tester) async {
@@ -220,8 +219,8 @@ void main() {
       await tester.pumpWidget(createTestWidget(level1: 'Seder Zeraim'));
       await tester.pumpAndSettle();
 
-      // Verify we see the level1-filtered content
-      expect(find.text('Berachos'), findsOneWidget);
+      // Verify we see the level1-filtered content (Hebrew title in default mode)
+      expect(find.text('ברכות'), findsOneWidget);
       expect(find.text('Seder Moed'), findsNothing);
 
       // Back button should be visible when navigation stack is non-empty
@@ -231,9 +230,9 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
 
-      // Now we should see root-level items
-      expect(find.text('Seder Zeraim'), findsOneWidget);
-      expect(find.text('Seder Moed'), findsOneWidget);
+      // Now we should see root-level items by their Hebrew titles.
+      expect(find.text('סדר זרעים'), findsOneWidget);
+      expect(find.text('סדר מועד'), findsOneWidget);
 
       // Back button is always present in the AppBar; at root level it
       // delegates to context.router.maybePop() instead of navigating up.
@@ -285,8 +284,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Leaf items should be visible
-      expect(find.text('Mishna 1'), findsOneWidget);
+      // Leaf items should be visible (Hebrew title in default mode).
+      expect(find.text('משנה א'), findsOneWidget);
     });
   });
 }

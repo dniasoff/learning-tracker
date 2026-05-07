@@ -8,11 +8,13 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// Displays a single content item in the hierarchy browser.
 ///
-/// Shows Hebrew and English names, with completion status indicators.
-/// Leaf items show a review count badge (AC-4) that updates reactively (AC-7).
+/// When the Hebrew Terms toggle is on (default), shows only the Hebrew name.
+/// When off, shows the Hebrew name with the English transliteration as a
+/// subtitle. Leaf items show a review count badge that updates reactively.
 class ContentItemTile extends ConsumerWidget {
   const ContentItemTile({
     super.key,
@@ -48,6 +50,9 @@ class ContentItemTile extends ConsumerWidget {
         0;
 
     final isFolder = !item.isLeaf;
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
+    final showEnglishSubtitle =
+        !hebrewOnly && item.displayNameEn != item.displayNameHe;
     return ListTile(
       minLeadingWidth: isFolder ? 48 : 40,
       minVerticalPadding: isFolder ? 14 : 8,
@@ -60,15 +65,19 @@ class ContentItemTile extends ConsumerWidget {
         textDirection: TextDirection.rtl,
         textAlign: TextAlign.right,
       ),
-      subtitle: Text(
-        item.displayNameEn,
-        style:
-            (isFolder ? theme.textTheme.titleSmall : theme.textTheme.bodyMedium)
-                ?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: isFolder ? FontWeight.w500 : null,
-                ),
-      ),
+      subtitle: showEnglishSubtitle
+          ? Text(
+              item.displayNameEn,
+              style:
+                  (isFolder
+                          ? theme.textTheme.titleSmall
+                          : theme.textTheme.bodyMedium)
+                      ?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: isFolder ? FontWeight.w500 : null,
+                      ),
+            )
+          : null,
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
       onLongPress: item.isLeaf && count > 0

@@ -226,9 +226,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Should show breadcrumb with all levels
-      // 'Mishnayos' appears both in the AppBar title and in the breadcrumb
-      expect(find.text('משניות'), findsNWidgets(2));
+      // Curriculum chip appears once on the screen; the breadcrumb no longer
+      // duplicates the curriculum, so we expect a single occurrence.
+      expect(find.text('משניות'), findsOneWidget);
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('Berachos'), findsOneWidget);
       expect(find.text('Perek 1'), findsOneWidget);
