@@ -412,14 +412,16 @@ class _HebrewTermsTile extends ConsumerWidget {
           const SizedBox(height: 12),
           SegmentedButton<bool>(
             showSelectedIcon: false,
+            // Order matches the Calendar Preference tile above: English on
+            // the left, Hebrew on the right.
             segments: [
-              ButtonSegment<bool>(
-                value: true,
-                label: Text(l10n.hebrewTermsHebrew),
-              ),
               ButtonSegment<bool>(
                 value: false,
                 label: Text(l10n.hebrewTermsEnglish),
+              ),
+              ButtonSegment<bool>(
+                value: true,
+                label: Text(l10n.hebrewTermsHebrew),
               ),
             ],
             selected: {useHebrew},
