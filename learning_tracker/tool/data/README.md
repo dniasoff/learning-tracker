@@ -2,31 +2,28 @@
 
 Source data + build artifacts used by the seed-DB build (`tool/seed_content_db.dart`).
 
-## Calendar caches
+## Calendar cache
 
-`sefaria_calendar_cache.json` — date → program → ref map for the 4 calendar
-programs whose authoritative schedules ship as CSVs in
-[Sefaria-Data/sources/calendars](https://github.com/Sefaria/Sefaria-Data/tree/master/sources/calendars):
+`sefaria_calendar_cache.json` — date → program → `{en, he}` ref map for every
+calendar program our app surfaces. Populated by `tool/sefaria_fetch/` (Go)
+from Sefaria's `/api/calendars`. The committed JSON covers 2024-01-01 →
+2032-12-31 (3288 days × 9 programs, all with both English ref and Hebrew
+`displayValue.he`). Validated against the live API by
+`tool/verify_seed_calendar.dart`.
 
-| Program key             | Source CSV                                                   |
-| ----------------------- | ------------------------------------------------------------ |
-| `halakhah_yomit`        | `Halakhah_Yomit_2020-2038.csv`                               |
-| `arukh_hashulchan_yomi` | `AhS_Yomi_Calendar_-_Sefaria - AhS_Yomi_Calendar_-_Sefaria.csv` |
-| `tanakh_yomi`           | `Tanach_Yomi_Sedarim_Calendar_-_updated.csv`                 |
-| `yerushalmi_yomi`       | `Yerushalmi_Yomi_Cal_-_Sheet1.csv`                           |
+To rebuild or extend the cache:
 
-Built by `tool/build_sefaria_calendar_cache.dart`. The committed JSON covers
-the seed-build range (2024-01-01 to 2032-12-31). Validated against the live
-Sefaria `/api/calendars` API (see `tool/verify_seed_calendar.dart`).
+```sh
+cd tool/sefaria_fetch && go build -o ../bin/sefaria_fetch . && cd ../..
+tool/bin/sefaria_fetch                       # resume — fills missing days only
+tool/bin/sefaria_fetch --refresh             # refetch everything
+tool/bin/sefaria_fetch --start=2028-02-09    # narrow range
+tool/bin/sefaria_fetch --test=2026-05-07     # one day, print, no write
+```
 
-## Daily Rambam (1 + 3 chapters)
-
-Not in this cache. The Rambam cycle skips Yom Tov, so a single-cycle CSV
-can't be repeated linearly. Run `tool/fetch_rambam_calendar.dart` to populate
-`tool/data/sefaria_rambam_cache.json` from the live API. That fetcher is
-slow on purpose — Sefaria rate-limits aggressively. Once the file is fully
-populated and committed, `is_active` can flip back to `true` for both Rambam
-program seeds.
+The fetcher writes atomically (tmp + rename), classifies errors
+(rate-limit / transient / permanent), and uses circuit breakers so a silent
+API contract change exits non-zero rather than producing empty data.
 
 ## City data
 

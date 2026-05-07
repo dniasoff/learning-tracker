@@ -156,11 +156,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Rambam - 1 Chapter',
     'description': 'One chapter of Mishneh Torah per day.',
     'curriculum_type': 'mishneh_torah',
-    // Disabled pending tool/fetch_rambam_calendar.dart populating
-    // tool/data/sefaria_rambam_cache.json. The cycle skips Yom Tov so it
-    // can't be derived from a single-cycle CSV — needs the live Sefaria
-    // calendar harvest.
-    'is_active': false,
+    'is_active': true,
     'has_tests': false,
     'stages_config':
         '['
@@ -176,9 +172,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Rambam - 3 Chapters',
     'description': 'Three chapters of Mishneh Torah per day.',
     'curriculum_type': 'mishneh_torah',
-    // Disabled pending tool/fetch_rambam_calendar.dart populating
-    // tool/data/sefaria_rambam_cache.json (see note above).
-    'is_active': false,
+    'is_active': true,
     'has_tests': false,
     'stages_config':
         '['

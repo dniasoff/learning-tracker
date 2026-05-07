@@ -44,7 +44,7 @@ Future<void> main(List<String> args) async {
   // Load cache the same way seed_content_db.dart does.
   final cacheFile = File(_cachePath);
   if (!cacheFile.existsSync()) {
-    stderr.writeln('Cache missing — run build_sefaria_calendar_cache.dart');
+    stderr.writeln('Cache missing — run tool/sefaria_fetch (go).');
     exit(2);
   }
   final cacheRaw =
@@ -60,10 +60,7 @@ Future<void> main(List<String> args) async {
         final m = v as Map<String, dynamic>;
         return MapEntry(
           k,
-          _Cached(
-            en: m['en'] as String? ?? '',
-            he: m['he'] as String? ?? '',
-          ),
+          _Cached(en: m['en'] as String? ?? '', he: m['he'] as String? ?? ''),
         );
       }),
     ),
@@ -102,7 +99,8 @@ Future<void> main(List<String> args) async {
         continue;
       }
       // Compare English ref. Allow Yerushalmi displayValue equivalence.
-      final enMatches = cached.en == liveRef ||
+      final enMatches =
+          cached.en == liveRef ||
           _isYerushalmiEquivalent(
             cached.en,
             liveRef,
@@ -131,10 +129,9 @@ Future<void> main(List<String> args) async {
     final total = t.matched + t.mismatched + t.heMismatched + t.absent;
     totalChecks += total;
     totalProblems += t.mismatched + t.heMismatched + t.absent;
-    final flag =
-        (t.mismatched == 0 && t.heMismatched == 0 && t.absent == 0)
-            ? 'OK   '
-            : 'CHECK';
+    final flag = (t.mismatched == 0 && t.heMismatched == 0 && t.absent == 0)
+        ? 'OK   '
+        : 'CHECK';
     stdout.writeln(
       '  $flag ${e.key.padRight(28)} matched=${t.matched}/$total  '
       'en_mismatch=${t.mismatched}  he_mismatch=${t.heMismatched}  absent=${t.absent}',

@@ -553,7 +553,7 @@ class _CalRef {
 
 /// Authoritative date→{en, he} mapping from
 /// [tool/data/sefaria_calendar_cache.json], populated by
-/// [tool/fetch_sefaria_calendar_full.dart] from Sefaria's /api/calendars.
+/// [tool/sefaria_fetch] (Go) from Sefaria's /api/calendars.
 final _sefariaCache = _loadSefariaCache();
 
 Map<String, Map<String, _CalRef>> _loadSefariaCache() {

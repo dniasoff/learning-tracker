@@ -1,5 +1,4 @@
-// Sefaria calendar fetcher — Go port of tool/fetch_sefaria_calendar_full.dart
-// with stronger error handling.
+// Sefaria calendar fetcher.
 //
 // Fetches Sefaria's /api/calendars day-by-day and captures BOTH the English
 // `ref` and Hebrew `displayValue.he` for every supported program. Writes
