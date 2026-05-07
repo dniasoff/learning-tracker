@@ -73,3 +73,7 @@ tool/hebcal_fetch/package-lock.json
 
 # Sefaria curator artifacts
 tool/curate_curricula/__pycache__/
+
+# Build artifacts (regenerate via tool/text_extract — needs Sefaria-Project + Mongo)
+tool/data/daily_content_cache.json
+tool/text_extract/__pycache__/

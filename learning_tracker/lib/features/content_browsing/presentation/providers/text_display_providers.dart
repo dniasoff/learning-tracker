@@ -16,7 +16,10 @@ part 'text_display_providers.g.dart';
 TextCacheRepository textCacheRepository(Ref ref) {
   final database = ref.watch(contentDatabaseProvider);
 
-  return TextCacheRepository(textCacheDao: database.contentTextCacheDao);
+  return TextCacheRepository(
+    textCacheDao: database.contentTextCacheDao,
+    dailyContentDao: database.dailyContentDao,
+  );
 }
 
 /// Provider for fetching text by Sefaria reference.

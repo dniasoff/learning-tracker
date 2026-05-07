@@ -12,6 +12,7 @@ void main() {
     database = createTestContentDatabase();
     repository = TextCacheRepository(
       textCacheDao: database.contentTextCacheDao,
+      dailyContentDao: database.dailyContentDao,
     );
   });
 

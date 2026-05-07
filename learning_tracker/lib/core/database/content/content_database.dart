@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/daos/calendar_cycle_dao.dart';
+import 'package:learning_tracker/core/database/content/daos/daily_content_dao.dart';
 import 'package:learning_tracker/core/database/content/daos/seed_metadata_dao.dart';
 import 'package:learning_tracker/core/database/content/daos/text_cache_dao.dart';
 import 'package:learning_tracker/core/database/tables/calendar_cycles.dart';
+import 'package:learning_tracker/core/database/tables/daily_content.dart';
 import 'package:learning_tracker/core/database/tables/seed_metadata.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
 
@@ -23,8 +25,13 @@ part 'content_database.g.dart';
 /// Learning programs and test dates are computed at runtime — see
 /// [LearningProgramRepository] and [generateTestDateSeeds].
 @DriftDatabase(
-  tables: [TextCache, CalendarCycles, SeedMetadata],
-  daos: [ContentTextCacheDao, CalendarCycleDao, SeedMetadataDao],
+  tables: [TextCache, CalendarCycles, DailyContent, SeedMetadata],
+  daos: [
+    ContentTextCacheDao,
+    CalendarCycleDao,
+    DailyContentDao,
+    SeedMetadataDao,
+  ],
 )
 class ContentDatabase extends _$ContentDatabase {
   ContentDatabase(super.e);
@@ -45,7 +52,7 @@ class ContentDatabase extends _$ContentDatabase {
   /// [SeedManager] can compare against the on-device DB without instantiating
   /// Drift (which would otherwise trigger migrations against a read-only
   /// seed).
-  static const int expectedSchemaVersion = 4;
+  static const int expectedSchemaVersion = 5;
 
   @override
   int get schemaVersion => expectedSchemaVersion;
@@ -89,6 +96,21 @@ class ContentDatabase extends _$ContentDatabase {
             await customStatement(
               'ALTER TABLE calendar_cycles '
               "ADD COLUMN sefaria_ref_he TEXT NOT NULL DEFAULT ''",
+            );
+          } catch (_) {}
+        }
+        if (from < 5) {
+          // v5: introduce daily_content — pre-resolved bilingual text keyed
+          // by the display ref a calendar program emits (e.g. 'Chullin 7'
+          // daf-level rather than 'Chullin 7a' / 'Chullin 7b'). Source
+          // viewer falls back to this when text_cache misses. Empty on
+          // first migration; the seed builder repopulates on next build.
+          try {
+            await customStatement(
+              'CREATE TABLE IF NOT EXISTS daily_content ('
+              'sefaria_ref TEXT NOT NULL PRIMARY KEY, '
+              "english_text TEXT NOT NULL DEFAULT '', "
+              "hebrew_text TEXT NOT NULL DEFAULT '')",
             );
           } catch (_) {}
         }

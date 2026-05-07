@@ -201,6 +201,15 @@ Future<void> main(List<String> rawArgs) async {
       calendarCycleCount = await _countRows(db, 'calendar_cycles');
     }
 
+    // Phase 4b: Populate daily_content from extracted JSON cache.
+    // Pre-resolved bilingual text per calendar ref, no API calls — built
+    // from tool/text_extract/main.py (Sefaria-Project + local Mongo).
+    if (args.mode == _Mode.build) {
+      print('Phase 4b: Populating daily_content from extractor cache...');
+      final dcCount = await _populateDailyContent(db);
+      print('  daily_content rows: $dcCount');
+    }
+
     // Phase 5: Finalize
     if (args.mode == _Mode.build || args.mode == _Mode.textOnly) {
       print('Phase 5: Finalizing (content hash, SeedMetadata)...');
@@ -709,6 +718,77 @@ Future<String> _computeContentHashFromFile(String dbPath) async {
   } finally {
     await db.close();
   }
+}
+
+/// Loads the JSON produced by tool/text_extract/main.py and writes one
+/// row per (date, program) to the daily_content table, keyed by the
+/// display ref hebcal/Sefaria emitted for that day. The same display ref
+/// can recur across days (e.g. a stable cycle); INSERT OR REPLACE keeps
+/// the latest text on file.
+Future<int> _populateDailyContent(ContentDatabase db) async {
+  final f = File('tool/data/daily_content_cache.json');
+  if (!f.existsSync()) {
+    print('  no daily_content_cache.json — skipping');
+    return 0;
+  }
+  final raw = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+  // Build a flat ref → (en, he) map. Last write wins on duplicate refs
+  // (deterministic since dates iterate sorted).
+  final byRef = <String, ({String en, String he})>{};
+  // Pull the ref strings from the calendar caches so we know which ref
+  // each (date, program) maps to.
+  final hebcal =
+      jsonDecode(
+            File('tool/data/hebcal_calendar_cache.json').readAsStringSync(),
+          )
+          as Map<String, dynamic>;
+  final sefaria = File('tool/data/sefaria_calendar_cache.json').existsSync()
+      ? jsonDecode(
+              File('tool/data/sefaria_calendar_cache.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>
+      : <String, dynamic>{};
+  for (final date in raw.keys.toList()..sort()) {
+    final progs = raw[date] as Map<String, dynamic>;
+    final hebcalProgs = (hebcal[date] as Map<String, dynamic>?) ?? const {};
+    final sefariaProgs = (sefaria[date] as Map<String, dynamic>?) ?? const {};
+    for (final entry in progs.entries) {
+      final program = entry.key;
+      final text = entry.value as Map<String, dynamic>;
+      final refMap =
+          (hebcalProgs[program] as Map<String, dynamic>?) ??
+          (sefariaProgs[program] as Map<String, dynamic>?);
+      final refStr = refMap?['en'] as String?;
+      if (refStr == null || refStr.isEmpty) continue;
+      final en = (text['en'] as String?) ?? '';
+      final he = (text['he'] as String?) ?? '';
+      if (en.isEmpty && he.isEmpty) continue;
+      byRef[refStr] = (en: en, he: he);
+    }
+  }
+  // Bulk insert
+  var inserted = 0;
+  const batchSize = 500;
+  final entries = byRef.entries.toList();
+  for (var i = 0; i < entries.length; i += batchSize) {
+    final end = (i + batchSize).clamp(0, entries.length);
+    await db.transaction(() async {
+      for (var j = i; j < end; j++) {
+        final e = entries[j];
+        await db.customInsert(
+          'INSERT OR REPLACE INTO daily_content '
+          '(sefaria_ref, english_text, hebrew_text) VALUES (?, ?, ?)',
+          variables: [
+            Variable.withString(e.key),
+            Variable.withString(e.value.en),
+            Variable.withString(e.value.he),
+          ],
+        );
+        inserted++;
+      }
+    });
+  }
+  return inserted;
 }
 
 Future<void> _writeSeedMetadata(

@@ -269,6 +269,7 @@ void main() {
 
         final repo = TextCacheRepository(
           textCacheDao: contentDb.contentTextCacheDao,
+          dailyContentDao: contentDb.dailyContentDao,
         );
 
         // Not cached — returns null (no API fallback)
@@ -283,6 +284,7 @@ void main() {
 
       final repo = TextCacheRepository(
         textCacheDao: contentDb.contentTextCacheDao,
+        dailyContentDao: contentDb.dailyContentDao,
       );
 
       // Uncached text returns null (not available)
