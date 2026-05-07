@@ -1,22 +1,34 @@
 name: Deploy to Google Play
 
+# Triggers ONLY on release-tagged commits and manual dispatch — pushes to
+# dev/main no longer auto-deploy, so day-to-day commits don't churn through
+# version codes. To ship a release:
+#
+#   git tag v1.2.3-alpha       # → uploads to alpha (closed testing)
+#   git tag v1.2.3-beta        # → uploads to beta  (open testing)
+#   git tag v1.2.3             # → uploads to production
+#   git push origin --tags
+#
+# Track suffix on the tag picks the Play track. Plain `v1.2.3` ships to
+# production. Use workflow_dispatch with the `track` input to override
+# (e.g. ship the current dev tree to alpha without cutting a tag).
 on:
   workflow_dispatch:
     inputs:
       track:
-        description: 'Override Play Store track (leave empty for auto)'
-        required: false
+        description: 'Play Store track'
+        required: true
+        default: alpha
         type: choice
         options:
-          - ''
           - internal
           - alpha
           - beta
           - production
   push:
-    branches:
-      - dev
-      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 jobs:
   deploy:
@@ -32,15 +44,19 @@ jobs:
       - name: Determine track
         id: track
         run: |
-          if [ -n "${{ github.event.inputs.track }}" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TRACK="${{ github.event.inputs.track }}"
-          elif [ "${{ github.ref_name }}" = "main" ]; then
-            TRACK="production"
           else
-            TRACK="alpha"
+            REF="${{ github.ref_name }}"
+            case "$REF" in
+              *-alpha*) TRACK="alpha" ;;
+              *-beta*)  TRACK="beta"  ;;
+              *-internal*) TRACK="internal" ;;
+              *)        TRACK="production" ;;
+            esac
           fi
           echo "track=$TRACK" >> "$GITHUB_OUTPUT"
-          echo "Deploying to track: $TRACK (branch: ${{ github.ref_name }})"
+          echo "Deploying to track: $TRACK (ref: ${{ github.ref_name }})"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -121,8 +137,21 @@ jobs:
         id: version
         working-directory: learning_tracker
         run: |
-          VERSION_NAME=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
-          VERSION_CODE=${{ github.run_number }}
+          # Prefer the tag's semver (v1.2.3-alpha → 1.2.3) over pubspec's
+          # version when this run was triggered by a tag. Otherwise read
+          # pubspec.
+          REF="${{ github.ref_name }}"
+          if [[ "$REF" =~ ^v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION_NAME="${BASH_REMATCH[1]}"
+          else
+            VERSION_NAME=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          fi
+          # versionCode (Android int) must strictly increase across all
+          # releases on every track. github.run_number is reused on re-runs,
+          # which Play rejects as a duplicate bundle — multiply by 100 and
+          # add run_attempt so re-runs of the same workflow each get a fresh
+          # code. Plenty of headroom (max int is 2.1B; 187 * 100 = 18,700).
+          VERSION_CODE=$(( ${{ github.run_number }} * 100 + ${{ github.run_attempt }} ))
           echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION_NAME ($VERSION_CODE)"
@@ -139,7 +168,10 @@ jobs:
 
       - name: Build App Bundle
         working-directory: learning_tracker
-        run: flutter build appbundle --release --build-number=${{ github.run_number }}
+        run: |
+          flutter build appbundle --release \
+            --build-name=${{ steps.version.outputs.name }} \
+            --build-number=${{ steps.version.outputs.code }}
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v5
