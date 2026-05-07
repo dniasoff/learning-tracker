@@ -204,7 +204,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Halakhah Yomit',
     'description': 'Daily halacha study following the Shulchan Aruch cycle.',
     'curriculum_type': 'mishna_berurah',
-    'is_active': false,
+    'is_active': true,
     'has_tests': false,
     'stages_config':
         '['

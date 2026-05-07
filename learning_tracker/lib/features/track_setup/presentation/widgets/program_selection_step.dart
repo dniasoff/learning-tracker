@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+
+/// Resolves a learning program's display name in the active language.
+/// When the Hebrew Terms toggle is on (default), returns the Hebrew name from
+/// [CalendarProgramRegistry]; otherwise falls back to the English seed name.
+String _localizedProgramName(LearningProgramData program, bool hebrewOnly) {
+  if (!hebrewOnly) return program.displayName;
+  final reg = CalendarProgramRegistry.byId(program.name);
+  return reg?.displayNameHe ?? program.displayName;
+}
 
 /// Stage 2: Join a calendar program or continue self-paced.
 ///
 /// Loads active programs via [LearningProgramRepository]. The parent
 /// [AddTrackFlow] omits this step when the curriculum has no programs.
-class ProgramSelectionStep extends StatefulWidget {
+class ProgramSelectionStep extends ConsumerStatefulWidget {
   const ProgramSelectionStep({
     required this.curriculumId,
     required this.onSelected,
@@ -25,10 +37,11 @@ class ProgramSelectionStep extends StatefulWidget {
   onSelected;
 
   @override
-  State<ProgramSelectionStep> createState() => _ProgramSelectionStepState();
+  ConsumerState<ProgramSelectionStep> createState() =>
+      _ProgramSelectionStepState();
 }
 
-class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
+class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
   late final List<LearningProgramData> _programs;
   bool _didAutoSkip = false;
 
@@ -42,6 +55,7 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
 
     if (_programs.isEmpty) {
       if (!_didAutoSkip) {
@@ -77,9 +91,10 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
               children: [
                 _FeaturedProgramCard(
                   program: _programs.first,
+                  hebrewOnly: hebrewOnly,
                   onTap: () => widget.onSelected(
                     _programs.first.id,
-                    _programs.first.displayName,
+                    _localizedProgramName(_programs.first, hebrewOnly),
                     _programs.first,
                   ),
                 ),
@@ -87,6 +102,7 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
                   const SizedBox(height: 12),
                   _CompactProgramCard(
                     program: _programs[i],
+                    hebrewOnly: hebrewOnly,
                     accentColor: i.isEven
                         ? const Color(0xFFDDE4FF)
                         : const Color(0xFFF9E4C8),
@@ -95,7 +111,7 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
                         : const Color(0xFF7D5411),
                     onTap: () => widget.onSelected(
                       _programs[i].id,
-                      _programs[i].displayName,
+                      _localizedProgramName(_programs[i], hebrewOnly),
                       _programs[i],
                     ),
                   ),
@@ -148,14 +164,20 @@ class _ProgramSelectionStepState extends State<ProgramSelectionStep> {
 }
 
 class _FeaturedProgramCard extends StatelessWidget {
-  const _FeaturedProgramCard({required this.program, required this.onTap});
+  const _FeaturedProgramCard({
+    required this.program,
+    required this.hebrewOnly,
+    required this.onTap,
+  });
 
   final LearningProgramData program;
+  final bool hebrewOnly;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final name = _localizedProgramName(program, hebrewOnly);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -193,7 +215,7 @@ class _FeaturedProgramCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  program.displayName,
+                  name,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -218,7 +240,7 @@ class _FeaturedProgramCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Starts: ${program.displayName}',
+                        'Starts: $name',
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: AppTheme.brandBlueDeep,
                           fontWeight: FontWeight.w700,
@@ -239,12 +261,14 @@ class _FeaturedProgramCard extends StatelessWidget {
 class _CompactProgramCard extends StatelessWidget {
   const _CompactProgramCard({
     required this.program,
+    required this.hebrewOnly,
     required this.onTap,
     this.accentColor = const Color(0xFFF9E4C8),
     this.iconColor = const Color(0xFF7D5411),
   });
 
   final LearningProgramData program;
+  final bool hebrewOnly;
   final VoidCallback onTap;
   final Color accentColor;
   final Color iconColor;
@@ -252,6 +276,7 @@ class _CompactProgramCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final name = _localizedProgramName(program, hebrewOnly);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -283,7 +308,7 @@ class _CompactProgramCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  program.displayName,
+                  name,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
