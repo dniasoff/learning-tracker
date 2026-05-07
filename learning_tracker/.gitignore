@@ -66,3 +66,7 @@ node_modules/
 
 # Go build artifacts (sefaria_fetch)
 tool/bin/
+
+# Hebcal fetcher (Node)
+tool/hebcal_fetch/node_modules/
+tool/hebcal_fetch/package-lock.json

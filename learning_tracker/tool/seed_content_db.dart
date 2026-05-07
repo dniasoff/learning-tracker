@@ -38,16 +38,7 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 
-import 'lib/sequences/amud_hayomi_seq.dart';
-import 'lib/sequences/arukh_hashulchan_seq.dart';
-import 'lib/sequences/chofetz_chaim_tables.dart';
-import 'lib/sequences/daf_yomi_seq.dart';
 import 'lib/sequences/halakhah_yomit_seq.dart';
-import 'lib/sequences/kitzur_sa_table.dart';
-import 'lib/sequences/mishnah_yomit_seq.dart';
-import 'lib/sequences/nach_yomi_seq.dart';
-import 'lib/sequences/tanakh_yomi_data.dart';
-import 'lib/sequences/yerushalmi_yomi_seq.dart';
 
 // ── Configuration ────────────────────────────────────────────────────────
 
@@ -542,23 +533,45 @@ String _fmtDate(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
-/// (English ref, Hebrew ref) pair for a single program-day. Hebrew is empty
-/// when the program is sourced from a local sequence file rather than from
-/// Sefaria's API (the API supplies `heRef` as part of /api/calendars).
+/// (English ref, Hebrew ref) pair for a single program-day.
 class _CalRef {
   const _CalRef({required this.en, this.he = ''});
   final String en;
   final String he;
 }
 
-/// Authoritative date→{en, he} mapping from
-/// [tool/data/sefaria_calendar_cache.json], populated by
-/// [tool/sefaria_fetch] (Go) from Sefaria's /api/calendars.
-final _sefariaCache = _loadSefariaCache();
+/// Authoritative date→program→ref mapping from
+/// [tool/data/hebcal_calendar_cache.json], populated by [tool/hebcal_fetch]
+/// (Node + @hebcal/learning). Hebcal is the source of truth for every
+/// calendar program except those it doesn't support (currently only
+/// `halakhah_yomit`).
+final _hebcalCache = _loadJsonRefCache(
+  'tool/data/hebcal_calendar_cache.json',
+  required: true,
+);
 
-Map<String, Map<String, _CalRef>> _loadSefariaCache() {
-  final f = File('tool/data/sefaria_calendar_cache.json');
-  if (!f.existsSync()) return const {};
+/// Sefaria cache, kept only for `halakhah_yomit` (R' Ovadia Yosef's
+/// daily-halacha cycle, which hebcal doesn't include). All other programs
+/// read from the hebcal cache.
+final _sefariaCache = _loadJsonRefCache(
+  'tool/data/sefaria_calendar_cache.json',
+  required: false,
+);
+
+Map<String, Map<String, _CalRef>> _loadJsonRefCache(
+  String path, {
+  required bool required,
+}) {
+  final f = File(path);
+  if (!f.existsSync()) {
+    if (required) {
+      throw FileSystemException(
+        'cache missing — run the matching fetcher',
+        path,
+      );
+    }
+    return const {};
+  }
   final raw = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
   final out = <String, Map<String, _CalRef>>{};
   for (final entry in raw.entries) {
@@ -566,7 +579,7 @@ Map<String, Map<String, _CalRef>> _loadSefariaCache() {
     for (final pe in (entry.value as Map<String, dynamic>).entries) {
       final v = pe.value as Map<String, dynamic>;
       final en = v['en'] as String?;
-      if (en == null) continue;
+      if (en == null || en.isEmpty) continue;
       inner[pe.key] = _CalRef(en: en, he: v['he'] as String? ?? '');
     }
     out[entry.key] = inner;
@@ -574,64 +587,51 @@ Map<String, Map<String, _CalRef>> _loadSefariaCache() {
   return out;
 }
 
-_CalRef? _fromCache(DateTime d, String programKey) {
-  final inner = _sefariaCache[_fmtDate(d.toUtc())];
-  return inner?[programKey];
-}
+_CalRef? _fromHebcal(DateTime d, String programKey) =>
+    _hebcalCache[_fmtDate(d.toUtc())]?[programKey];
+
+_CalRef? _fromSefaria(DateTime d, String programKey) =>
+    _sefariaCache[_fmtDate(d.toUtc())]?[programKey];
 
 _CalRef? _en(String? en) => en == null ? null : _CalRef(en: en);
 
 /// All calendar program generators. Each `compute` returns a [_CalRef] (en +
-/// optional he) or null to skip the day. Cache-first: Sefaria-API data wins
-/// over any local-sequence fallback, and supplies the Hebrew form. Local
-/// sequence fallbacks have no Hebrew (he == '') because they pre-date the
-/// API harvest.
+/// optional he) or null to skip the day. Hebcal is the source of truth for
+/// every program except `halakhah_yomit` (R' Ovadia Yosef's daily-halacha
+/// cycle, which hebcal doesn't include — Sefaria + local sequence cover it).
+///
+/// `dirshu_kinyan_torah` shares the daf_yomi cycle and `dirshu_kinyan_yerushalmi`
+/// shares the yerushalmi_yomi cycle — both read those rows out of the
+/// hebcal cache directly.
 final _calendarGens = <(String key, _CalRef? Function(DateTime) compute)>[
+  ('daf_yomi', (d) => _fromHebcal(d, 'daf_yomi')),
+  ('daf_a_week', (d) => _fromHebcal(d, 'daf_a_week')),
+  ('mishna_yomit', (d) => _fromHebcal(d, 'mishna_yomit')),
+  ('rambam_1_chapter', (d) => _fromHebcal(d, 'rambam_1_chapter')),
+  ('rambam_3_chapters', (d) => _fromHebcal(d, 'rambam_3_chapters')),
+  ('arukh_hashulchan_yomi', (d) => _fromHebcal(d, 'arukh_hashulchan_yomi')),
+  ('nach_yomi', (d) => _fromHebcal(d, 'nach_yomi')),
+  ('yerushalmi_yomi', (d) => _fromHebcal(d, 'yerushalmi_yomi')),
+  ('tanakh_yomi', (d) => _fromHebcal(d, 'tanakh_yomi')),
+  ('chofetz_chaim_daily', (d) => _fromHebcal(d, 'chofetz_chaim_daily')),
   (
-    'daf_yomi',
-    (d) =>
-        _fromCache(d, 'daf_yomi') ??
-        _en(
-          dafYomiSequence[_cyclicIndex(
-            d,
-            DateTime.utc(2020, 1, 5),
-            dafYomiSequence.length,
-          )],
-        ),
+    'kitzur_shulchan_aruch_yomi',
+    (d) => _fromHebcal(d, 'kitzur_shulchan_aruch_yomi'),
   ),
-  (
-    'daf_a_week',
-    (d) {
-      final cached = _fromCache(d, 'daf_a_week');
-      if (cached != null) return cached;
-      final weeks = d.toUtc().difference(DateTime.utc(2005, 3, 6)).inDays ~/ 7;
-      return _en(
-        dafYomiSequence[(weeks % dafYomiSequence.length +
-                dafYomiSequence.length) %
-            dafYomiSequence.length],
-      );
-    },
-  ),
-  (
-    'mishna_yomit',
-    (d) =>
-        _fromCache(d, 'daily_mishnah') ??
-        _en(
-          mishnahYomitSequence[_cyclicIndex(
-            d,
-            DateTime.utc(2027, 9, 21),
-            mishnahYomitSequence.length,
-          )],
-        ),
-  ),
-  // Daily Rambam (1ch + 3ch): cache-only. No local fallback — the previously
-  // checked-in seq drifts vs. Sefaria.
-  ('rambam_1_chapter', (d) => _fromCache(d, 'daily_rambam')),
-  ('rambam_3_chapters', (d) => _fromCache(d, 'daily_rambam_3')),
+  ('dirshu_amud_hayomi', (d) => _fromHebcal(d, 'dirshu_amud_hayomi')),
+  ('dirshu_kinyan_torah', (d) => _fromHebcal(d, 'daf_yomi')),
+  ('dirshu_kinyan_yerushalmi', (d) => _fromHebcal(d, 'yerushalmi_yomi')),
+  // New programs (hebcal exposes them; Sefaria's /api/calendars doesn't).
+  ('tehillim_yomi', (d) => _fromHebcal(d, 'tehillim_yomi')),
+  ('perek_yomi', (d) => _fromHebcal(d, 'perek_yomi')),
+  ('sefer_hamitzvot', (d) => _fromHebcal(d, 'sefer_hamitzvot')),
+  ('shemirat_halashon', (d) => _fromHebcal(d, 'shemirat_halashon')),
+  ('pirkei_avot_summer', (d) => _fromHebcal(d, 'pirkei_avot_summer')),
+  // Sefaria-only program: hebcal doesn't expose this cycle.
   (
     'halakhah_yomit',
     (d) =>
-        _fromCache(d, 'halakhah_yomit') ??
+        _fromSefaria(d, 'halakhah_yomit') ??
         _en(
           halakhahYomitSequence[_cyclicIndex(
             d,
@@ -639,137 +639,6 @@ final _calendarGens = <(String key, _CalRef? Function(DateTime) compute)>[
             halakhahYomitSequence.length,
           )],
         ),
-  ),
-  (
-    'arukh_hashulchan_yomi',
-    (d) =>
-        _fromCache(d, 'arukh_hashulchan_yomi') ??
-        _en(
-          arukhHaShulchanSequence[_cyclicIndex(
-            d,
-            DateTime.utc(2020, 5, 29),
-            arukhHaShulchanSequence.length,
-          )],
-        ),
-  ),
-  (
-    'nach_yomi',
-    (d) =>
-        _fromCache(d, 'nach_yomi') ??
-        _en(
-          nachYomiSequence[_cyclicIndex(
-            d,
-            DateTime.utc(2007, 11, 1),
-            nachYomiSequence.length,
-          )],
-        ),
-  ),
-  (
-    'yerushalmi_yomi',
-    (d) =>
-        _fromCache(d, 'yerushalmi_yomi') ??
-        _en(
-          yerushalmiyomiSequence[_cyclicIndex(
-            d,
-            DateTime.utc(2022, 11, 14),
-            yerushalmiyomiSequence.length,
-          )],
-        ),
-  ),
-  (
-    'dirshu_kinyan_torah',
-    (d) =>
-        _fromCache(d, 'daf_yomi') ??
-        _en(
-          dafYomiSequence[_cyclicIndex(
-            d,
-            DateTime.utc(2020, 1, 5),
-            dafYomiSequence.length,
-          )],
-        ),
-  ),
-  (
-    'dirshu_amud_hayomi',
-    (d) => _en(
-      amudHayomiSequence[_cyclicIndex(
-        d,
-        DateTime.utc(2023, 10, 15),
-        amudHayomiSequence.length,
-      )],
-    ),
-  ),
-  (
-    'dirshu_kinyan_yerushalmi',
-    (d) =>
-        _fromCache(d, 'yerushalmi_yomi') ??
-        _en(
-          yerushalmiyomiSequence[_cyclicIndex(
-            d,
-            DateTime.utc(2022, 11, 14),
-            yerushalmiyomiSequence.length,
-          )],
-        ),
-  ),
-  (
-    'tanakh_yomi',
-    (d) {
-      final cached = _fromCache(d, 'tanakh_yomi');
-      if (cached != null) return cached;
-      final entry = tanakhYomiData[_fmtDate(d)];
-      return (entry != null && entry.length >= 2) ? _en(entry[1]) : null;
-    },
-  ),
-  (
-    'chofetz_chaim_daily',
-    (d) {
-      final cached = _fromCache(d, 'chofetz_chaim_daily');
-      if (cached != null) return cached;
-      const table = chofetzChaimSimple;
-      final idx =
-          d.difference(DateTime.utc(d.year, 1, 1)).inDays % table.length;
-      final e = table[idx];
-      if (e.length < 4) return null;
-      final name = chofetzChaimSections[e[1] as String] ?? e[1] as String;
-      final begin = e[2]?.toString();
-      final end = e[3]?.toString();
-      if (begin == null || begin.isEmpty) return null;
-      return _en(
-        (end == null || end.isEmpty || begin == end)
-            ? 'Chofetz Chaim, $name $begin'
-            : 'Chofetz Chaim, $name $begin-$end',
-      );
-    },
-  ),
-  (
-    'kitzur_shulchan_aruch_yomi',
-    (d) {
-      final cached = _fromCache(d, 'kitzur_shulchan_aruch_yomi');
-      if (cached != null) return cached;
-      final all = <String>[];
-      for (final m in [
-        'Tishrei',
-        'Cheshvan',
-        'Kislev',
-        'Tevet',
-        'Shvat',
-        'Adar',
-        'Nisan',
-        'Iyyar',
-        'Sivan',
-        'Tamuz',
-        'Av',
-        'Elul',
-      ]) {
-        all.addAll(kitzurShulchanAruchTable[m] ?? []);
-      }
-      if (all.isEmpty) return null;
-      final tishrei1 = DateTime.utc(d.year - (d.month < 9 ? 1 : 0), 9, 16);
-      final idx =
-          (d.toUtc().difference(tishrei1).inDays % all.length + all.length) %
-          all.length;
-      final r = all[idx];
-      return r.isEmpty ? null : _en('Kitzur Shulchan Aruch $r');
-    },
   ),
 ];
 

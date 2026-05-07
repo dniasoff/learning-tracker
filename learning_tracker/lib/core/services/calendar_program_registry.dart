@@ -3,7 +3,7 @@ class CalendarProgramDefinition {
   final String id;
   final String displayNameEn;
   final String displayNameHe;
-  final String apiSource; // 'sefaria' | 'hebcal'
+  final String apiSource; // 'sefaria' | 'hebcal' | 'local'
   final String apiKey; // Key in the API response
   final String curriculumType; // Maps to CurriculumId.storageKey
   final String? hebcalCategory; // Hebcal category for matching
@@ -22,33 +22,37 @@ class CalendarProgramDefinition {
 /// Static registry of all known calendar-linked learning programs.
 ///
 /// Maps program identifiers to their API sources, display names,
-/// and curriculum types.
+/// and curriculum types. Hebcal is the source of truth for everything
+/// except `halakhah_yomit` (Sefaria) and the Dirshu programs (local).
 class CalendarProgramRegistry {
   static const List<CalendarProgramDefinition> programs = [
-    // Sefaria programs
+    // Hebcal-sourced programs
     CalendarProgramDefinition(
       id: 'daf_yomi',
       displayNameEn: 'Daf Yomi',
       displayNameHe: 'דף יומי',
-      apiSource: 'sefaria',
-      apiKey: 'Daf Yomi',
+      apiSource: 'hebcal',
+      apiKey: 'dafyomi',
       curriculumType: 'bavli',
+      hebcalCategory: 'dafyomi',
     ),
     CalendarProgramDefinition(
-      id: 'yerushalmi_yomi',
-      displayNameEn: 'Yerushalmi Yomi',
-      displayNameHe: 'ירושלמי יומי',
-      apiSource: 'sefaria',
-      apiKey: 'Yerushalmi Yomi',
-      curriculumType: 'yerushalmi',
+      id: 'daf_a_week',
+      displayNameEn: 'Daf a Week',
+      displayNameHe: 'דף השבוע',
+      apiSource: 'hebcal',
+      apiKey: 'dafWeekly',
+      curriculumType: 'bavli',
+      hebcalCategory: 'dafWeekly',
     ),
     CalendarProgramDefinition(
       id: 'mishna_yomit',
       displayNameEn: 'Mishna Yomit',
       displayNameHe: 'משנה יומית',
-      apiSource: 'sefaria',
-      apiKey: 'Daily Mishnah',
+      apiSource: 'hebcal',
+      apiKey: 'mishnayomi',
       curriculumType: 'mishnayos',
+      hebcalCategory: 'mishnayomi',
     ),
     CalendarProgramDefinition(
       id: 'nach_yomi',
@@ -63,26 +67,112 @@ class CalendarProgramRegistry {
       id: 'rambam_1_chapter',
       displayNameEn: 'Rambam - 1 Chapter',
       displayNameHe: 'רמב״ם - פרק אחד',
-      apiSource: 'sefaria',
-      apiKey: 'Daily Rambam',
+      apiSource: 'hebcal',
+      apiKey: 'dailyRambam1',
       curriculumType: 'mishneh_torah',
+      hebcalCategory: 'dailyRambam1',
     ),
     CalendarProgramDefinition(
       id: 'rambam_3_chapters',
       displayNameEn: 'Rambam - 3 Chapters',
       displayNameHe: 'רמב״ם - ג׳ פרקים',
-      apiSource: 'sefaria',
-      apiKey: 'Daily Rambam (3 Chapters)',
+      apiSource: 'hebcal',
+      apiKey: 'dailyRambam3',
       curriculumType: 'mishneh_torah',
+      hebcalCategory: 'dailyRambam3',
     ),
     CalendarProgramDefinition(
-      id: 'daf_a_week',
-      displayNameEn: 'Daf a Week',
-      displayNameHe: 'דף השבוע',
-      apiSource: 'sefaria',
-      apiKey: 'Daf a Week',
-      curriculumType: 'bavli',
+      id: 'yerushalmi_yomi',
+      displayNameEn: 'Yerushalmi Yomi',
+      displayNameHe: 'ירושלמי יומי',
+      apiSource: 'hebcal',
+      apiKey: 'yerushalmi',
+      curriculumType: 'yerushalmi',
+      hebcalCategory: 'yerushalmi',
     ),
+    CalendarProgramDefinition(
+      id: 'arukh_hashulchan_yomi',
+      displayNameEn: 'Arukh HaShulchan Yomi',
+      displayNameHe: 'ערוך השולחן יומי',
+      apiSource: 'hebcal',
+      apiKey: 'arukhHaShulchanYomi',
+      curriculumType: 'mishna_berurah',
+      hebcalCategory: 'arukhHaShulchanYomi',
+    ),
+    CalendarProgramDefinition(
+      id: 'tanakh_yomi',
+      displayNameEn: 'Tanakh Yomi',
+      displayNameHe: 'תנ״ך יומי',
+      apiSource: 'hebcal',
+      apiKey: 'tanakhYomi',
+      curriculumType: 'tanach',
+      hebcalCategory: 'tanakhYomi',
+    ),
+    CalendarProgramDefinition(
+      id: 'chofetz_chaim_daily',
+      displayNameEn: 'Chofetz Chaim Daily',
+      displayNameHe: 'חפץ חיים יומי',
+      apiSource: 'hebcal',
+      apiKey: 'chofetzChaim',
+      curriculumType: 'mussar',
+      hebcalCategory: 'chofetzChaim',
+    ),
+    CalendarProgramDefinition(
+      id: 'kitzur_shulchan_aruch_yomi',
+      displayNameEn: 'Kitzur Shulchan Aruch Yomi',
+      displayNameHe: 'קיצור שולחן ערוך יומי',
+      apiSource: 'hebcal',
+      apiKey: 'kitzurShulchanAruch',
+      curriculumType: 'mishna_berurah',
+      hebcalCategory: 'kitzurShulchanAruch',
+    ),
+    CalendarProgramDefinition(
+      id: 'tehillim_yomi',
+      displayNameEn: 'Tehillim Yomi',
+      displayNameHe: 'תהלים יומי',
+      apiSource: 'hebcal',
+      apiKey: 'dailyPsalms',
+      curriculumType: 'tanach',
+      hebcalCategory: 'dailyPsalms',
+    ),
+    CalendarProgramDefinition(
+      id: 'perek_yomi',
+      displayNameEn: 'Perek Yomi',
+      displayNameHe: 'פרק יומי',
+      apiSource: 'hebcal',
+      apiKey: 'perekYomi',
+      curriculumType: 'mishnayos',
+      hebcalCategory: 'perekYomi',
+    ),
+    CalendarProgramDefinition(
+      id: 'sefer_hamitzvot',
+      displayNameEn: 'Sefer HaMitzvot',
+      displayNameHe: 'ספר המצוות',
+      apiSource: 'hebcal',
+      apiKey: 'seferHaMitzvot',
+      curriculumType: 'mishneh_torah',
+      hebcalCategory: 'seferHaMitzvot',
+    ),
+    CalendarProgramDefinition(
+      id: 'shemirat_halashon',
+      displayNameEn: 'Shemirat HaLashon',
+      displayNameHe: 'שמירת הלשון',
+      apiSource: 'hebcal',
+      apiKey: 'shemiratHaLashon',
+      curriculumType: 'mussar',
+      hebcalCategory: 'shemiratHaLashon',
+    ),
+    CalendarProgramDefinition(
+      id: 'pirkei_avot_summer',
+      displayNameEn: 'Pirkei Avot (Summer)',
+      displayNameHe: 'פרקי אבות',
+      apiSource: 'hebcal',
+      apiKey: 'pirkeiAvotSummer',
+      curriculumType: 'mishnayos',
+      hebcalCategory: 'pirkeiAvotSummer',
+    ),
+
+    // Sefaria-sourced programs (hebcal doesn't supply these)
     CalendarProgramDefinition(
       id: 'halakhah_yomit',
       displayNameEn: 'Halakhah Yomit',
@@ -91,23 +181,9 @@ class CalendarProgramRegistry {
       apiKey: 'Halakhah Yomit',
       curriculumType: 'mishna_berurah',
     ),
-    CalendarProgramDefinition(
-      id: 'arukh_hashulchan_yomi',
-      displayNameEn: 'Arukh HaShulchan Yomi',
-      displayNameHe: 'ערוך השולחן יומי',
-      apiSource: 'sefaria',
-      apiKey: 'Arukh HaShulchan Yomi',
-      curriculumType: 'mishna_berurah',
-    ),
-    CalendarProgramDefinition(
-      id: 'tanakh_yomi',
-      displayNameEn: 'Tanakh Yomi',
-      displayNameHe: 'תנ״ך יומי',
-      apiSource: 'sefaria',
-      apiKey: 'Tanakh Yomi',
-      curriculumType: 'tanach',
-    ),
-    // Dirshu programs (calendar-linked)
+
+    // Dirshu programs (composite — share daf_yomi / yerushalmi cycles plus
+    // their own review structure)
     CalendarProgramDefinition(
       id: 'dirshu_kinyan_torah',
       displayNameEn: 'Dirshu Kinyan Torah',
@@ -120,9 +196,10 @@ class CalendarProgramRegistry {
       id: 'dirshu_amud_hayomi',
       displayNameEn: 'Dirshu Amud HaYomi',
       displayNameHe: 'דרשו עמוד היומי',
-      apiSource: 'local',
-      apiKey: 'Dirshu Amud HaYomi',
+      apiSource: 'hebcal',
+      apiKey: 'dirshuAmudYomi',
       curriculumType: 'bavli',
+      hebcalCategory: 'dirshuAmudYomi',
     ),
     CalendarProgramDefinition(
       id: 'dirshu_kinyan_yerushalmi',
@@ -131,25 +208,6 @@ class CalendarProgramRegistry {
       apiSource: 'local',
       apiKey: 'Dirshu Kinyan Yerushalmi',
       curriculumType: 'yerushalmi',
-    ),
-    // Hebcal programs
-    CalendarProgramDefinition(
-      id: 'chofetz_chaim_daily',
-      displayNameEn: 'Chofetz Chaim Daily',
-      displayNameHe: 'חפץ חיים יומי',
-      apiSource: 'hebcal',
-      apiKey: 'Chofetz Chaim',
-      curriculumType: 'mussar',
-      hebcalCategory: 'chofetzChaim',
-    ),
-    CalendarProgramDefinition(
-      id: 'kitzur_shulchan_aruch_yomi',
-      displayNameEn: 'Kitzur Shulchan Aruch Yomi',
-      displayNameHe: 'קיצור שולחן ערוך יומי',
-      apiSource: 'hebcal',
-      apiKey: 'Kitzur Shulchan Aruch',
-      curriculumType: 'mishna_berurah',
-      hebcalCategory: 'kitzurShulchanAruch',
     ),
   ];
 

@@ -75,19 +75,12 @@ const (
 
 // titleToKey maps Sefaria's calendar item title (English) to our program-key.
 // Anything not in this map is silently skipped.
+//
+// We only fetch programs hebcal-learning doesn't supply. Currently that's
+// just Halakhah Yomit (R' Ovadia Yosef's daily-halacha cycle). Every other
+// program comes from tool/hebcal_fetch/ at seed-build time.
 var titleToKey = map[string]string{
-	"Daf Yomi":                  "daf_yomi",
-	"Daily Mishnah":             "daily_mishnah",
-	"Daily Rambam":              "daily_rambam",
-	"Daily Rambam (3 Chapters)": "daily_rambam_3",
-	"Daf a Week":                "daf_a_week",
-	"Halakhah Yomit":            "halakhah_yomit",
-	"Arukh HaShulchan Yomi":     "arukh_hashulchan_yomi",
-	"Tanakh Yomi":               "tanakh_yomi",
-	"Yerushalmi Yomi":           "yerushalmi_yomi",
-	"Nach Yomi":                 "nach_yomi",
-	"Chofetz Chaim":             "chofetz_chaim_daily",
-	"Kitzur Shulchan Arukh":     "kitzur_shulchan_aruch_yomi",
+	"Halakhah Yomit": "halakhah_yomit",
 }
 
 // Ref is the {en, he} pair for a single program on a single day. The JSON

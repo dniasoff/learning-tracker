@@ -279,4 +279,87 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'api_program_key': 'kitzurShulchanAruch',
     'is_calendar_program': true,
   },
+  {
+    'name': 'tehillim_yomi',
+    'display_name': 'Tehillim Yomi',
+    'description': 'Daily Psalms cycle.',
+    'curriculum_type': 'tanach',
+    'is_active': false,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'dailyPsalms',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'perek_yomi',
+    'display_name': 'Perek Yomi',
+    'description': 'One Mishnah perek per day.',
+    'curriculum_type': 'mishnayos',
+    'is_active': false,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_perek"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'perekYomi',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'sefer_hamitzvot',
+    'display_name': 'Sefer HaMitzvot',
+    'description': 'Daily study of the Rambam\'s Sefer HaMitzvot.',
+    'curriculum_type': 'mishneh_torah',
+    'is_active': false,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'seferHaMitzvot',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'shemirat_halashon',
+    'display_name': 'Shemirat HaLashon',
+    'description':
+        'Daily study of the Chofetz Chaim\'s Shemirat HaLashon (companion to '
+        'Chofetz Chaim Yomi).',
+    'curriculum_type': 'mussar',
+    'is_active': false,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"daily"}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'shemiratHaLashon',
+    'is_calendar_program': true,
+  },
+  {
+    'name': 'pirkei_avot_summer',
+    'display_name': 'Pirkei Avot (Summer)',
+    'description':
+        'One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana.',
+    'curriculum_type': 'mishnayos',
+    'is_active': false,
+    'has_tests': false,
+    'stages_config':
+        '['
+        '{"stage":"learn","label":"לימוד","frequency":"weekly","days":["shabbos"]}'
+        ']',
+    'test_config': '{}',
+    'api_source': 'hebcal',
+    'api_program_key': 'pirkeiAvotSummer',
+    'is_calendar_program': true,
+  },
 ];
