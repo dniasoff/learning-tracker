@@ -70,3 +70,6 @@ tool/bin/
 # Hebcal fetcher (Node)
 tool/hebcal_fetch/node_modules/
 tool/hebcal_fetch/package-lock.json
+
+# Sefaria curator artifacts
+tool/curate_curricula/__pycache__/
