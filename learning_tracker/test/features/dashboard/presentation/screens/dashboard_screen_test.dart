@@ -117,8 +117,16 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 1));
 
-      // Greeting appears at the top of the active (non-empty) dashboard
-      expect(find.text('Shalom, Learner!'), findsOneWidget);
+      // Greeting block: time-of-day chip ("Good morning" / "Good afternoon" /
+      // "Good evening") and the name on a separate line. Assertion checks
+      // both the name and that one of the three greetings is present, since
+      // the test runs at any time of day.
+      expect(find.text('Learner!'), findsOneWidget);
+      final greetingFound =
+          tester.any(find.text('Good morning')) ||
+          tester.any(find.text('Good afternoon')) ||
+          tester.any(find.text('Good evening'));
+      expect(greetingFound, isTrue);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

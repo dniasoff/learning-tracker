@@ -162,7 +162,7 @@ String? _expandHalakhahRef(String raw) {
 /// where %2C is a URL-encoded comma. Use the longer (newer) file that covers
 /// through 2034.
 Map<String, String> _parseArukhHaShulchan() {
-  final filePath =
+  const filePath =
       '$_csvDir/AhS_Yomi_Calendar_-_Sefaria - AhS_Yomi_Calendar_-_Sefaria.csv';
   final lines = File(filePath).readAsLinesSync();
   final out = <String, String>{};
@@ -178,7 +178,7 @@ Map<String, String> _parseArukhHaShulchan() {
     // CSV has occasional typos: "OYoreh De'ah" (extra leading O), "OOrach"
     // (double O). Strip ONLY the duplicate-O case, never a legitimate "O…".
     ref = ref
-        .replaceFirst("Arukh HaShulchan, OYoreh", "Arukh HaShulchan, Yoreh")
+        .replaceFirst('Arukh HaShulchan, OYoreh', 'Arukh HaShulchan, Yoreh')
         .replaceFirst('Arukh HaShulchan, OOrach', 'Arukh HaShulchan, Orach');
     // Section refs use dot delimiters (e.g. "Orach Chaim.1.1-8") — convert
     // the first dot after the section name to a space and the second to ":".
@@ -301,11 +301,6 @@ String _dotToSpaceColonAfterSection(
   final firstDot = tail.indexOf('.');
   if (firstDot == -1) return ref;
   final sectionName = tail.substring(0, firstDot);
-  var rest = tail.substring(firstDot + 1).replaceAll('.', ':');
+  final rest = tail.substring(firstDot + 1).replaceAll('.', ':');
   return '$sectionPrefix$sectionName $rest';
 }
-
-String _fmt(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-'
-    '${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';

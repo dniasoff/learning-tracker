@@ -704,7 +704,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
       );
 
       // Fetch subsequent days from tomorrow onward
-      var startRangeDate = todayDate.add(const Duration(days: 1));
+      final startRangeDate = todayDate.add(const Duration(days: 1));
       final rangeEntries = startRangeDate.isBefore(todayDate)
           ? await calendarService.getEntriesForRange(
               programKey,
