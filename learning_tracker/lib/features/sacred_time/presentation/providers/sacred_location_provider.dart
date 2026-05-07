@@ -1,6 +1,7 @@
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/sacred_time_preferences.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,14 +31,15 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
   Future<LocationFetchResult> detect() async {
     final result = await ref.read(locationServiceProvider).detectCurrent();
     if (result is LocationFetchSuccess) {
-      await _persist(result.location);
-      // Auto-flip the in-Israel toggle from country code on a successful detect.
       final prefs = await SharedPreferences.getInstance();
+      await SacredTimePreferences.writeLocation(prefs, result.location);
       await SacredTimePreferences.writeInIsrael(
         prefs,
         result.location.countryCode == 'IL',
       );
+      state = result.location;
       ref.invalidate(inIsraelProvider);
+      await _pushSnapshot();
     }
     return result;
   }
@@ -56,10 +58,12 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
       countryCode: countryCode,
       cityLabel: cityLabel,
     );
-    await _persist(loc);
     final prefs = await SharedPreferences.getInstance();
+    await SacredTimePreferences.writeLocation(prefs, loc);
     await SacredTimePreferences.writeInIsrael(prefs, countryCode == 'IL');
+    state = loc;
     ref.invalidate(inIsraelProvider);
+    await _pushSnapshot();
   }
 
   Future<void> setManualCoords({
@@ -74,13 +78,14 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
       source: SacredLocationSource.manualCoords,
       fixedAt: DateTime.now().toUtc(),
     );
-    await _persist(loc);
-  }
-
-  Future<void> _persist(SacredLocation loc) async {
     state = loc;
     final prefs = await SharedPreferences.getInstance();
     await SacredTimePreferences.writeLocation(prefs, loc);
+    await _pushSnapshot();
+  }
+
+  Future<void> _pushSnapshot() async {
+    await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
   }
 }
 
@@ -105,5 +110,6 @@ class InIsraelNotifier extends _$InIsraelNotifier {
     state = value;
     final prefs = await SharedPreferences.getInstance();
     await SacredTimePreferences.writeInIsrael(prefs, value);
+    await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
   }
 }

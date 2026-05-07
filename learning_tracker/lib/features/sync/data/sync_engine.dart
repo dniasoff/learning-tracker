@@ -1480,6 +1480,40 @@ class SyncEngine {
         );
       }
 
+      // Sacred Time settings are device-global; only profile 0 carries them
+      // in its UI-preferences doc. Other profile docs leave them alone.
+      if (profileId == 0) {
+        final sacredTime = remote['sacred_time'];
+        if (sacredTime is Map<String, dynamic>) {
+          final lat = sacredTime['latitude'];
+          final lon = sacredTime['longitude'];
+          if (lat is num && lon is num) {
+            await prefs.setDouble('sacred_time_latitude', lat.toDouble());
+            await prefs.setDouble('sacred_time_longitude', lon.toDouble());
+          }
+          final country = sacredTime['country_code'];
+          if (country is String && country.isNotEmpty) {
+            await prefs.setString('sacred_time_country_code', country);
+          }
+          final city = sacredTime['city_label'];
+          if (city is String && city.isNotEmpty) {
+            await prefs.setString('sacred_time_city_label', city);
+          }
+          final source = sacredTime['source'];
+          if (source is String && source.isNotEmpty) {
+            await prefs.setString('sacred_time_source', source);
+          }
+          final fixedAt = sacredTime['fixed_at_ms'];
+          if (fixedAt is int) {
+            await prefs.setInt('sacred_time_fixed_at_ms', fixedAt);
+          }
+          final inIsrael = sacredTime['in_israel'];
+          if (inIsrael is bool) {
+            await prefs.setBool('sacred_time_in_israel', inIsrael);
+          }
+        }
+      }
+
       final stamp =
           remoteUpdatedAt?.millisecondsSinceEpoch ??
           DateTime.now().toUtc().millisecondsSinceEpoch;
@@ -2610,7 +2644,7 @@ class SyncEngine {
         ? DateTime.now().toUtc()
         : DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true);
 
-    return {
+    final payload = <String, dynamic>{
       'schema_version': 2,
       'profile_id': profileId,
       'updated_at': updatedAt.toIso8601String(),
@@ -2620,6 +2654,29 @@ class SyncEngine {
       'learning_order_parent_controls': learningOrder,
       'hebrew_terms_script': hebrewTermsScript,
     };
+
+    // Sacred Time settings are device-global (not per-profile). Stash them
+    // on profile 0's UI-preferences doc so they restore after a wipe + login;
+    // other profile docs don't carry them.
+    if (profileId == 0) {
+      final sacredTime = <String, dynamic>{};
+      final lat = prefs.getDouble('sacred_time_latitude');
+      final lon = prefs.getDouble('sacred_time_longitude');
+      if (lat != null) sacredTime['latitude'] = lat;
+      if (lon != null) sacredTime['longitude'] = lon;
+      final country = prefs.getString('sacred_time_country_code');
+      if (country != null) sacredTime['country_code'] = country;
+      final city = prefs.getString('sacred_time_city_label');
+      if (city != null) sacredTime['city_label'] = city;
+      final source = prefs.getString('sacred_time_source');
+      if (source != null) sacredTime['source'] = source;
+      final fixedAt = prefs.getInt('sacred_time_fixed_at_ms');
+      if (fixedAt != null) sacredTime['fixed_at_ms'] = fixedAt;
+      sacredTime['in_israel'] = prefs.getBool('sacred_time_in_israel') ?? false;
+      payload['sacred_time'] = sacredTime;
+    }
+
+    return payload;
   }
 
   /// Read notification preferences from local SharedPreferences and convert
