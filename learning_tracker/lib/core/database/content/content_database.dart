@@ -41,8 +41,14 @@ class ContentDatabase extends _$ContentDatabase {
     );
   }
 
+  /// The schema version the running code expects. Exposed as a const so
+  /// [SeedManager] can compare against the on-device DB without instantiating
+  /// Drift (which would otherwise trigger migrations against a read-only
+  /// seed).
+  static const int expectedSchemaVersion = 4;
+
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => expectedSchemaVersion;
 
   @override
   MigrationStrategy get migration {

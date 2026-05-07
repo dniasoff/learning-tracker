@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:talker/talker.dart';
@@ -68,18 +69,54 @@ class SeedManager {
 
     // Step 3: Check version (uses raw sqlite3 to avoid triggering Drift
     // migrations on a DB that may be immediately replaced).
+    //
+    // Two version concepts must agree before we trust the on-device DB:
+    //   - seed_metadata.version: bumped by the build pipeline, tracked in
+    //     [bundledSeedVersion]. Detects fresh content/asset releases.
+    //   - PRAGMA user_version: the Drift schema version. Detects
+    //     incompatible schemas — Drift would otherwise try to ALTER the
+    //     read-only seed at runtime and crash.
+    //
+    // Either mismatch forces an atomic replace from the bundled asset.
     final installedVersion = _readInstalledVersion(_dbPath);
-    if (installedVersion == null || bundledSeedVersion > installedVersion) {
+    final installedSchema = _readSchemaVersion(_dbPath);
+    const expectedSchema = ContentDatabase.expectedSchemaVersion;
+    final needsReplace =
+        installedVersion == null ||
+        bundledSeedVersion > installedVersion ||
+        installedSchema == null ||
+        installedSchema != expectedSchema;
+    if (needsReplace) {
       _talker?.info(
-        'SeedManager: Upgrading content DB '
-        '(installed: $installedVersion → bundled: $bundledSeedVersion)',
+        'SeedManager: Replacing content DB '
+        '(installed v$installedVersion / schema v$installedSchema → '
+        'bundled v$bundledSeedVersion / schema v$expectedSchema)',
       );
       await _atomicReplace();
     } else {
-      _talker?.debug('SeedManager: Content DB up to date (v$installedVersion)');
+      _talker?.debug(
+        'SeedManager: Content DB up to date '
+        '(v$installedVersion, schema v$installedSchema)',
+      );
     }
 
     return _dbPath;
+  }
+
+  /// Read the Drift schema version (`PRAGMA user_version`) from the
+  /// installed content.db without triggering migrations.
+  int? _readSchemaVersion(String dbPath) {
+    Database? db;
+    try {
+      db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+      final row = db.select('PRAGMA user_version').firstOrNull;
+      return row?['user_version'] as int?;
+    } catch (e) {
+      _talker?.error('SeedManager: Failed to read schema version', e);
+      return null;
+    } finally {
+      db?.dispose();
+    }
   }
 
   /// Read the installed seed version from an existing content.db.
