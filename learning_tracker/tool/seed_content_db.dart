@@ -46,8 +46,6 @@ import 'lib/sequences/halakhah_yomit_seq.dart';
 import 'lib/sequences/kitzur_sa_table.dart';
 import 'lib/sequences/mishnah_yomit_seq.dart';
 import 'lib/sequences/nach_yomi_seq.dart';
-import 'lib/sequences/rambam_1c_seq.dart';
-import 'lib/sequences/rambam_3c_seq.dart';
 import 'lib/sequences/tanakh_yomi_data.dart';
 import 'lib/sequences/yerushalmi_yomi_seq.dart';
 
@@ -544,7 +542,32 @@ String _fmtDate(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
-/// All 12 calendar program generators — pure date arithmetic.
+/// Authoritative date→ref overrides loaded from the Sefaria-Data CSV cache.
+/// Wins over any local-sequence fallback. See
+/// [tool/build_sefaria_calendar_cache.dart] for how this file is built.
+final _sefariaCache = _loadSefariaCache();
+
+Map<String, Map<String, String>> _loadSefariaCache() {
+  final f = File('tool/data/sefaria_calendar_cache.json');
+  if (!f.existsSync()) return const {};
+  final raw = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+  return raw.map(
+    (date, inner) => MapEntry(
+      date,
+      (inner as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String)),
+    ),
+  );
+}
+
+String? _fromCache(DateTime d, String programKey) {
+  final inner = _sefariaCache[_fmtDate(d.toUtc())];
+  return inner?[programKey];
+}
+
+/// All calendar program generators. Each `compute` returns a Sefaria-style
+/// ref (or null to skip the day). Programs sourced from the Sefaria-Data CSV
+/// cache fall back to local sequences only when the cache is missing — in
+/// production the cache covers the full build range.
 final _calendarGens = <(String key, String? Function(DateTime) compute)>[
   (
     'daf_yomi',
@@ -573,27 +596,18 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
           mishnahYomitSequence.length,
         )],
   ),
-  (
-    'rambam_1_chapter',
-    (d) =>
-        rambam1ChapterSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2024, 6, 22),
-          rambam1ChapterSequence.length,
-        )],
-  ),
-  (
-    'rambam_3_chapters',
-    (d) =>
-        rambam3ChaptersSequence[_cyclicIndex(
-          d,
-          DateTime.utc(2025, 3, 5),
-          rambam3ChaptersSequence.length,
-        )],
-  ),
+  // Daily Rambam (1 chapter): cache-driven. The slow Sefaria fetcher
+  // (tool/fetch_rambam_calendar.dart) writes daily_rambam keys to the cache.
+  // No local fallback — the previously-checked-in seq drifts vs. Sefaria.
+  ('rambam_1_chapter', (d) => _fromCache(d, 'daily_rambam')),
+  ('rambam_3_chapters', (d) => _fromCache(d, 'daily_rambam_3')),
+  // Halakhah Yomit, Arukh HaShulchan Yomi, Yerushalmi Yomi, Tanakh Yomi:
+  // cache-driven from Sefaria-Data CSVs. Full-range coverage validated
+  // against live API at build-cache time.
   (
     'halakhah_yomit',
     (d) =>
+        _fromCache(d, 'halakhah_yomit') ??
         halakhahYomitSequence[_cyclicIndex(
           d,
           DateTime.utc(2020, 11, 12),
@@ -603,6 +617,7 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
   (
     'arukh_hashulchan_yomi',
     (d) =>
+        _fromCache(d, 'arukh_hashulchan_yomi') ??
         arukhHaShulchanSequence[_cyclicIndex(
           d,
           DateTime.utc(2020, 5, 29),
@@ -621,6 +636,7 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
   (
     'yerushalmi_yomi',
     (d) =>
+        _fromCache(d, 'yerushalmi_yomi') ??
         yerushalmiyomiSequence[_cyclicIndex(
           d,
           DateTime.utc(2022, 11, 14),
@@ -648,6 +664,7 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
   (
     'dirshu_kinyan_yerushalmi',
     (d) =>
+        _fromCache(d, 'yerushalmi_yomi') ??
         yerushalmiyomiSequence[_cyclicIndex(
           d,
           DateTime.utc(2022, 11, 14),
@@ -657,6 +674,8 @@ final _calendarGens = <(String key, String? Function(DateTime) compute)>[
   (
     'tanakh_yomi',
     (d) {
+      final cached = _fromCache(d, 'tanakh_yomi');
+      if (cached != null) return cached;
       final entry = tanakhYomiData[_fmtDate(d)];
       return (entry != null && entry.length >= 2) ? entry[1] : null;
     },
