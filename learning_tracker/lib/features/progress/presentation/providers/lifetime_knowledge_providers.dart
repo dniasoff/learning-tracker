@@ -12,11 +12,19 @@ enum LifetimeNodeState { none, partial, full }
 class LifetimeTreeNode {
   const LifetimeTreeNode({
     required this.label,
+    required this.labelHe,
     required this.state,
     required this.children,
   });
 
+  /// Latin / English transliteration label (the storage key value used in
+  /// content_items.level1..4 — e.g. "Chullin", "Perek 1").
   final String label;
+
+  /// Hebrew display label, sourced from any ContentItem in the same group
+  /// (all items at a given level share the same Hebrew name). Falls back
+  /// to [label] when no Hebrew is available.
+  final String labelHe;
   final LifetimeNodeState state;
   final List<LifetimeTreeNode> children;
 }
@@ -455,9 +463,15 @@ List<LifetimeTreeNode> _buildTree(
             ? LifetimeNodeState.full
             : (anyDone ? LifetimeNodeState.partial : LifetimeNodeState.none);
       }
+      // For leaf-level groups we can use the item's Hebrew display name; for
+      // mid-tree groups (e.g. masechta or perek containers) the data model
+      // doesn't carry a group-level Hebrew label, so we fall back to the
+      // storage value. This matches what the content browser already shows.
+      final heLabel = _hebrewLabelForLeafGroup(entry.value) ?? entry.key;
       nodes.add(
         LifetimeTreeNode(
           label: entry.key,
+          labelHe: heLabel,
           state: nodeState,
           children: children,
         ),
@@ -467,4 +481,10 @@ List<LifetimeTreeNode> _buildTree(
   }
 
   return buildAtLevel(leaves, 1);
+}
+
+String? _hebrewLabelForLeafGroup(List<ContentItem> bucket) {
+  if (bucket.isEmpty) return null;
+  final he = bucket.first.displayNameHe;
+  return he.isEmpty ? null : he;
 }

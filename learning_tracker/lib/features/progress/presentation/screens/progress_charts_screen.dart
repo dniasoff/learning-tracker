@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/progress/presentation/widgets/completi
 import 'package:learning_tracker/features/progress/presentation/widgets/cumulative_line_chart.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/points_over_time_chart.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -203,8 +204,9 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
             (curriculum) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: _FilterPill(
-                label:
-                    '${curriculum.displayNameHe} • ${curriculum.displayNameEn}',
+                label: ref.watch(hebrewTermsScriptProvider)
+                    ? curriculum.displayNameHe
+                    : '${curriculum.displayNameHe} • ${curriculum.displayNameEn}',
                 selected: _curriculum == curriculum,
                 onSelected: (_) => setState(
                   () => _curriculum = _curriculum == curriculum

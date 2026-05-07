@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// Gradients for Learning lifetime on Progress (blue) and Settings (warm, no blue).
 class LifetimeFolderGradients {
@@ -186,7 +188,10 @@ class LifetimeFolderFrostedHint extends StatelessWidget {
 }
 
 /// Curriculum row: frosted background, `>` or expand chevron.
-class LifetimeCurriculumFolderRow extends StatelessWidget {
+///
+/// When the Hebrew Terms toggle is on (default), shows only the Hebrew
+/// title; when off, shows the English title with the Hebrew underneath.
+class LifetimeCurriculumFolderRow extends ConsumerWidget {
   const LifetimeCurriculumFolderRow({
     super.key,
     required this.titleEn,
@@ -211,8 +216,9 @@ class LifetimeCurriculumFolderRow extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -239,7 +245,7 @@ class LifetimeCurriculumFolderRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        titleEn,
+                        hebrewOnly ? titleHe : titleEn,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
@@ -247,15 +253,17 @@ class LifetimeCurriculumFolderRow extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        titleHe,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
+                      if (!hebrewOnly) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          titleHe,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -337,7 +345,7 @@ class LifetimeFolderListPanel extends StatelessWidget {
 
 // --- Read-only tree (Progress) ---
 
-class LifetimeFolderTreeNode extends StatefulWidget {
+class LifetimeFolderTreeNode extends ConsumerStatefulWidget {
   const LifetimeFolderTreeNode({
     super.key,
     required this.node,
@@ -354,12 +362,14 @@ class LifetimeFolderTreeNode extends StatefulWidget {
   final void Function(String, bool) onExpandToggle;
 
   @override
-  State<LifetimeFolderTreeNode> createState() => _LifetimeFolderTreeNodeState();
+  ConsumerState<LifetimeFolderTreeNode> createState() =>
+      _LifetimeFolderTreeNodeState();
 }
 
-class _LifetimeFolderTreeNodeState extends State<LifetimeFolderTreeNode> {
+class _LifetimeFolderTreeNodeState extends ConsumerState<LifetimeFolderTreeNode> {
   @override
   Widget build(BuildContext context) {
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final color = switch (widget.node.state) {
       LifetimeNodeState.full => const Color(0xFF3BDD87),
       LifetimeNodeState.partial => const Color(0xFFFFD26A),
@@ -422,7 +432,7 @@ class _LifetimeFolderTreeNodeState extends State<LifetimeFolderTreeNode> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      widget.node.label,
+                      hebrewOnly ? widget.node.labelHe : widget.node.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
