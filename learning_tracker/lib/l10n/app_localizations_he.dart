@@ -1410,7 +1410,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get notifRewardNotificationsSubtitle => 'כשאתם מרוויחים נק׳ למידה!';
 
   @override
-  String get notifSacredTime => 'זמן קדוש';
+  String get notifSacredTime => 'מצב שבת';
 
   @override
   String get notifShabbosYomTovMode => 'מצב שבת / יום טוב';

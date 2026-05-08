@@ -145,20 +145,10 @@ class DailyTaskCard extends ConsumerWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.timer_outlined,
-                            size: 16,
-                            color: AppTheme.brandInkMuted,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${task.estimatedEffortMinutes}m',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
+                          // Per-task time estimate removed — every learner
+                          // works at a different pace, so a single 'Xm'
+                          // chip was misleading and demoralising for those
+                          // who take longer than the seed average.
                           const Icon(
                             Icons.stars_rounded,
                             size: 16,

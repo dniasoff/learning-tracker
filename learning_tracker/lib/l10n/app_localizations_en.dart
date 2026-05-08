@@ -1423,7 +1423,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'When you earn Learning Points!';
 
   @override
-  String get notifSacredTime => 'SACRED TIME';
+  String get notifSacredTime => 'SHABBOS MODE';
 
   @override
   String get notifShabbosYomTovMode => 'Shabbos / Yom Tov\nMode';

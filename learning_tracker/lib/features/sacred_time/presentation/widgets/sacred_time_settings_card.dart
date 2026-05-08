@@ -81,7 +81,7 @@ class _Header extends StatelessWidget {
           const Icon(Icons.lock_clock_outlined, color: Colors.white, size: 17),
           const SizedBox(width: 8),
           const Text(
-            'SACRED TIME',
+            'SHABBOS MODE',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
