@@ -54,28 +54,134 @@ def _clean(s: str) -> str:
     return s.strip()
 
 
-def _resolve(ref_str: str, url_hint: str | None = None) -> tuple[str, str] | None:
+_SEFER_HAMITZVOT_TOKEN = re.compile(r"\b([NP])(\d+)\b")
+_SEFER_HAMITZVOT_LONG = re.compile(
+    r"(Negative|Positive)\s+Commandment\s+(\d+)", re.I
+)
+_SEFER_HAMITZVOT_PRINCIPLE = re.compile(
+    r"Principle\s+(\d+)(?:\s*-\s*(\d+))?", re.I
+)
+_SEFER_HAMITZVOT_INTRO = re.compile(r"Introduction", re.I)
+
+
+def _resolve_one(ref_str: str) -> tuple[str, str] | None:
+    """Resolve a single Sefaria ref. Returns None if Ref() fails."""
+    try:
+        r = Ref(ref_str)
+        en = _clean(r.text("en").as_string())
+        he = _clean(r.text("he").as_string())
+        return en, he
+    except Exception:
+        return None
+
+
+def _resolve_sefer_hamitzvot(ref_str: str) -> tuple[str, str] | None:
+    """Hebcal's sefer_hamitzvot refs come in three flavours:
+
+    - 'Day NN: N353, P149' (brief)  → Negative/Positive Commandments
+    - 'Day NN: Negative Commandment 353; Positive Commandment 149' (long)
+    - 'Day 1: Maimonides' Introduction to Sefer Hamitzvot' → Introductions
+    - 'Day NN: Principle 1-3' → Sefer HaMitzvot, Shorashim 1-3
+
+    Translate to one or more Sefaria refs and concat the text.
+    """
+    refs: list[str] = []
+
+    # Introduction (treat as the broad "Introductions" node).
+    if _SEFER_HAMITZVOT_INTRO.search(ref_str):
+        refs.append("Sefer HaMitzvot, Introductions")
+
+    # Principle (= Shorashim) — single or range.
+    for m in _SEFER_HAMITZVOT_PRINCIPLE.finditer(ref_str):
+        start = m.group(1)
+        end = m.group(2)
+        refs.append(
+            f"Sefer HaMitzvot, Shorashim {start}-{end}" if end
+            else f"Sefer HaMitzvot, Shorashim {start}"
+        )
+
+    # Numbered commandments — long form ("Negative Commandment 353") wins
+    # over abbreviated ("N353") when both could match.
+    pairs: list[tuple[str, int]] = []
+    for kind, num in _SEFER_HAMITZVOT_LONG.findall(ref_str):
+        pairs.append(("Negative" if kind.lower() == "negative" else "Positive", int(num)))
+    if not pairs:
+        for kind, num in _SEFER_HAMITZVOT_TOKEN.findall(ref_str):
+            pairs.append(("Negative" if kind == "N" else "Positive", int(num)))
+    for kind, n in pairs:
+        # Sefaria's index uses the plural form ("Positive Commandments" /
+        # "Negative Commandments" — one parent node, sub-indexed by number).
+        refs.append(f"Sefer HaMitzvot, {kind} Commandments {n}")
+
+    if not refs:
+        return None
+    en_parts, he_parts = [], []
+    for sefaria_ref in refs:
+        res = _resolve_one(sefaria_ref)
+        if res is None:
+            continue
+        en_parts.append(res[0])
+        he_parts.append(res[1])
+    if not en_parts and not he_parts:
+        return None
+    return "\n\n".join(p for p in en_parts if p), "\n\n".join(p for p in he_parts if p)
+
+
+def _resolve_mishneh_torah_multi(ref_str: str) -> tuple[str, str] | None:
+    """Cross-book Mishneh Torah ranges like 'Forbidden Intercourse 21-22,
+    Forbidden Foods 1' — comma-separated parts each meaning '<book> <range>'
+    under the Mishneh Torah parent. Resolve each as 'Mishneh Torah, <part>'
+    and concatenate.
+    """
+    parts = [p.strip() for p in ref_str.split(",") if p.strip()]
+    if len(parts) < 2:
+        return None
+    en_parts, he_parts = [], []
+    any_resolved = False
+    for p in parts:
+        res = _resolve_one(f"Mishneh Torah, {p}")
+        if res is None:
+            continue
+        any_resolved = True
+        en_parts.append(res[0])
+        he_parts.append(res[1])
+    if not any_resolved:
+        return None
+    return "\n\n".join(en_parts), "\n\n".join(he_parts)
+
+
+def _resolve(
+    ref_str: str,
+    url_hint: str | None = None,
+    program_key: str | None = None,
+) -> tuple[str, str] | None:
     """Try to resolve a ref string to (en_text, he_text). Returns None on failure.
 
-    Uses the URL hint if provided — hebcal's URLs are canonical Sefaria refs
-    and resolve more reliably than the human-readable "desc" form.
+    Uses program-specific patches for refs that aren't directly Sefaria-canonical
+    (sefer_hamitzvot's day-numbered shorthand, rambam_3_chapters cross-book ranges).
+    Falls through to URL-decode hint and the bare ref string.
     """
+    # Fast path: program-specific resolvers handle known non-canonical formats.
+    if program_key == "sefer_hamitzvot":
+        out = _resolve_sefer_hamitzvot(ref_str)
+        if out is not None:
+            return out
+    if program_key == "rambam_3_chapters" and "," in ref_str:
+        out = _resolve_mishneh_torah_multi(ref_str)
+        if out is not None:
+            return out
+
     candidates: list[str] = []
-    if url_hint:
-        # Strip query string + decode the path segment.
+    if url_hint and "sefaria.org" in url_hint:
         from urllib.parse import unquote
 
         path = url_hint.split("?", 1)[0].split("/")[-1]
         candidates.append(unquote(path).replace("_", " "))
     candidates.append(ref_str)
     for cand in candidates:
-        try:
-            r = Ref(cand)
-            en = _clean(r.text("en").as_string())
-            he = _clean(r.text("he").as_string())
-            return en, he
-        except Exception:
-            continue
+        out = _resolve_one(cand)
+        if out is not None:
+            return out
     return None
 
 
@@ -124,10 +230,25 @@ def main():
             url = ref.get("url")
             if not en_ref:
                 continue
-            res = _resolve(en_ref, url)
+            res = _resolve(en_ref, url, program_key)
             if res is None:
-                n_failed += 1
-                failures.append(f"{date}|{program_key}|{en_ref}")
+                # Last-resort fallback: hebcal supplied a display ref but
+                # Sefaria can't resolve it (commonly Yalkut Yosef in kitzur's
+                # shemitah-year cycle, which Sefaria doesn't host). Store the
+                # display strings hebcal already has so the user sees the
+                # ref name instead of a blank screen. Marked external so the
+                # app could badge it differently.
+                he_ref = ref.get("he", "")
+                if en_ref or he_ref:
+                    out[date][program_key] = {
+                        "en": en_ref,
+                        "he": he_ref,
+                        "external": True,
+                    }
+                    n_done += 1
+                else:
+                    n_failed += 1
+                    failures.append(f"{date}|{program_key}|{en_ref}")
                 continue
             en_text, he_text = res
             out[date][program_key] = {"en": en_text, "he": he_text}
