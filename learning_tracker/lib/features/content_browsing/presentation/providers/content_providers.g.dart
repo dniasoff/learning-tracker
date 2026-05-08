@@ -158,6 +158,113 @@ final class CurriculumContentFamily extends $Family
   String toString() => r'curriculumContentProvider';
 }
 
+/// Map of `sefariaRef → displayNameHe` for every leaf in [curriculumId].
+///
+/// Lets widgets that have a Sefaria ref (daily-task cards, completion
+/// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
+/// without having to plumb the Hebrew name through the model layer.
+
+@ProviderFor(curriculumHeNames)
+final curriculumHeNamesProvider = CurriculumHeNamesFamily._();
+
+/// Map of `sefariaRef → displayNameHe` for every leaf in [curriculumId].
+///
+/// Lets widgets that have a Sefaria ref (daily-task cards, completion
+/// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
+/// without having to plumb the Hebrew name through the model layer.
+
+final class CurriculumHeNamesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, String>>,
+          Map<String, String>,
+          FutureOr<Map<String, String>>
+        >
+    with
+        $FutureModifier<Map<String, String>>,
+        $FutureProvider<Map<String, String>> {
+  /// Map of `sefariaRef → displayNameHe` for every leaf in [curriculumId].
+  ///
+  /// Lets widgets that have a Sefaria ref (daily-task cards, completion
+  /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
+  /// without having to plumb the Hebrew name through the model layer.
+  CurriculumHeNamesProvider._({
+    required CurriculumHeNamesFamily super.from,
+    required CurriculumId super.argument,
+  }) : super(
+         retry: null,
+         name: r'curriculumHeNamesProvider',
+         isAutoDispose: false,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$curriculumHeNamesHash();
+
+  @override
+  String toString() {
+    return r'curriculumHeNamesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, String>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, String>> create(Ref ref) {
+    final argument = this.argument as CurriculumId;
+    return curriculumHeNames(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CurriculumHeNamesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$curriculumHeNamesHash() => r'33bd58d7620e0125654dcbfe883676f9b8503958';
+
+/// Map of `sefariaRef → displayNameHe` for every leaf in [curriculumId].
+///
+/// Lets widgets that have a Sefaria ref (daily-task cards, completion
+/// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
+/// without having to plumb the Hebrew name through the model layer.
+
+final class CurriculumHeNamesFamily extends $Family
+    with
+        $FunctionalFamilyOverride<FutureOr<Map<String, String>>, CurriculumId> {
+  CurriculumHeNamesFamily._()
+    : super(
+        retry: null,
+        name: r'curriculumHeNamesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: false,
+      );
+
+  /// Map of `sefariaRef → displayNameHe` for every leaf in [curriculumId].
+  ///
+  /// Lets widgets that have a Sefaria ref (daily-task cards, completion
+  /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
+  /// without having to plumb the Hebrew name through the model layer.
+
+  CurriculumHeNamesProvider call(CurriculumId curriculumId) =>
+      CurriculumHeNamesProvider._(argument: curriculumId, from: this);
+
+  @override
+  String toString() => r'curriculumHeNamesProvider';
+}
+
 /// Provides the hierarchy configuration for a specific curriculum.
 
 @ProviderFor(curriculumHierarchyConfig)

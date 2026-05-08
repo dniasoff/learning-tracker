@@ -59,7 +59,7 @@ final class TextCacheRepositoryProvider
 }
 
 String _$textCacheRepositoryHash() =>
-    r'a8a2d94054ddc0f12f5a4c3b030e9700695f11e1';
+    r'566b49d7100e94ac79428a39005321a08b2473b8';
 
 /// Provider for fetching text by Sefaria reference.
 
@@ -238,7 +238,7 @@ final class ShowNikudProvider extends $NotifierProvider<ShowNikud, bool> {
   }
 }
 
-String _$showNikudHash() => r'eeb4e600e34462cff190f4a916406fb17230a35c';
+String _$showNikudHash() => r'298451e7157a57c03acf9bb733a56b899069d089';
 
 /// Provider for nikud display preference (per learner profile).
 

@@ -27,6 +27,26 @@ Future<List<ContentItem>> curriculumContent(
   return repository.getContentForCurriculum(curriculumId);
 }
 
+/// Map of `sefariaRef → displayNameHe` for every leaf in [curriculumId].
+///
+/// Lets widgets that have a Sefaria ref (daily-task cards, completion
+/// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
+/// without having to plumb the Hebrew name through the model layer.
+@Riverpod(keepAlive: true)
+Future<Map<String, String>> curriculumHeNames(
+  Ref ref,
+  CurriculumId curriculumId,
+) async {
+  final items = await ref.watch(curriculumContentProvider(curriculumId).future);
+  final out = <String, String>{};
+  for (final it in items) {
+    if (!it.isLeaf) continue;
+    if (it.displayNameHe.isEmpty) continue;
+    out[it.sefariaRef] = it.displayNameHe;
+  }
+  return out;
+}
+
 /// Provides the hierarchy configuration for a specific curriculum.
 @riverpod
 Future<CurriculumHierarchyConfig> curriculumHierarchyConfig(

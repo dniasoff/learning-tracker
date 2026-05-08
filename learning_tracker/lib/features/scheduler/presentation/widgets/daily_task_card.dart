@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// Card shown on the Daily Tasks list. Tapping opens the text page;
 /// the Mark Complete action lives on that page, not inline here.
@@ -83,13 +85,40 @@ class DailyTaskCard extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                              task.contentItemSefariaRef.replaceAll('_', ' '),
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.brandInk,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                            child: Builder(
+                              builder: (_) {
+                                final useHebrew = ref.watch(
+                                  hebrewTermsScriptProvider,
+                                );
+                                final enText = task.contentItemSefariaRef
+                                    .replaceAll('_', ' ');
+                                var label = enText;
+                                if (useHebrew) {
+                                  // Hebrew display name lookup — falls back
+                                  // to English if the curriculum hasn't
+                                  // loaded yet or this ref isn't a leaf.
+                                  final heMap = ref
+                                      .watch(
+                                        curriculumHeNamesProvider(
+                                          task.curriculumId,
+                                        ),
+                                      )
+                                      .whenOrNull(data: (m) => m);
+                                  final he = heMap == null
+                                      ? null
+                                      : heMap[task.contentItemSefariaRef];
+                                  if (he != null && he.isNotEmpty) label = he;
+                                }
+                                return Text(
+                                  label,
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.brandInk,
+                                      ),
+                                  overflow: TextOverflow.ellipsis,
+                                );
+                              },
                             ),
                           ),
                           if (task.isOverdue)
