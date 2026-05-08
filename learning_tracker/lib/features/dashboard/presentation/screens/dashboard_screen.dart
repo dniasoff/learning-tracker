@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -277,7 +278,11 @@ class _DashboardBody extends ConsumerWidget {
     final focusLabel = groupedTasks.todayTasks.isNotEmpty
         ? groupedTasks.todayTasks
               .take(2)
-              .map((t) => t.curriculumId.displayNameEn.toUpperCase())
+              .map(
+                (t) => hebrewTerms
+                    ? t.curriculumId.displayNameHe
+                    : t.curriculumId.displayNameEn.toUpperCase(),
+              )
               .join(' / ')
         : l10n.noFocusTag;
 
@@ -459,7 +464,11 @@ class _DashboardBody extends ConsumerWidget {
           subtitle: groupedTasks.todayTasks.isNotEmpty
               ? groupedTasks.todayTasks
                     .take(2)
-                    .map((t) => t.curriculumId.displayNameEn)
+                    .map(
+                      (t) => hebrewTerms
+                          ? t.curriculumId.displayNameHe
+                          : t.curriculumId.displayNameEn,
+                    )
                     .join(' / ')
               : l10n.noTasksInLane,
           focusLabel: focusLabel,
@@ -1243,34 +1252,27 @@ class _MainFocusMissionCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 42,
-                child: FilledButton(
-                  onPressed: onTap,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.brandBlue,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 42),
-                    textStyle: theme.textTheme.labelLarge?.copyWith(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
+              FilledButton(
+                onPressed: onTap,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.brandBlue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(l10n.startLearning),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_rounded, size: 18),
-                      ],
-                    ),
+                  textStyle: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
                   ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l10n.startLearning),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                  ],
                 ),
               ),
             ],
@@ -1742,7 +1744,17 @@ class _ActiveTrackCard extends ConsumerWidget {
     final focusLabel = hasProgramEnrollment
         ? l10n.activeTrackNextTask
         : l10n.activeTrackCurrentFocus;
-    final focusValue = todayTask?.contentItemSefariaRef ?? l10n.noProjection;
+    final focusRef = todayTask?.contentItemSefariaRef;
+    final heNameMap = hebrewOnly
+        ? ref
+              .watch(curriculumHeNamesProvider(curriculum))
+              .whenOrNull(data: (m) => m)
+        : null;
+    final focusValue = focusRef == null
+        ? l10n.noProjection
+        : (heNameMap?[focusRef]?.isNotEmpty ?? false
+              ? heNameMap![focusRef]!
+              : focusRef);
     final lifetimeFull =
         lifetimeFraction != null && (lifetimeFraction - 1.0).abs() < 1e-6;
 

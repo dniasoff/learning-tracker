@@ -196,16 +196,19 @@ class SettingsScreen extends ConsumerWidget {
             FutureBuilder<PackageInfo>(
               future: PackageInfo.fromPlatform(),
               builder: (context, snapshot) {
-                final version = snapshot.data?.version;
-                if (version == null || version.isEmpty) {
+                final info = snapshot.data;
+                if (info == null || info.version.isEmpty) {
                   return const SizedBox.shrink();
                 }
+                final buildLabel = info.buildNumber.isNotEmpty
+                    ? 'v${info.version} (${info.buildNumber})'
+                    : 'v${info.version}';
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Center(
                       child: Text(
-                        'v$version',
+                        buildLabel,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontSize: 15,
