@@ -2212,8 +2212,10 @@ class _StudyDaysEditableState extends State<_StudyDaysEditable> {
   void initState() {
     super.initState();
     _days = Map<int, String>.from(kDefaultStudyDays);
-    // Self-paced default: keep Shabbos optional (off) unless user enables it.
-    _days[6] = 'review';
+    // All 7 days default to study. Per the platform-wide rule "all days
+    // default to a learning day" — users in many communities consider
+    // Shabbos a primary learning day, so opting them out by default was a
+    // mismatch. Users can still toggle Shabbos off explicitly.
   }
 
   @override
