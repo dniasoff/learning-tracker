@@ -35,6 +35,44 @@ BOOKS_OUT = DATA_DIR / "curriculum_books.json"
 # Curriculum → list of Sefaria book titles (or a category-regex spec that
 # expands to a list). Categories with many sub-volumes use prefix matching.
 CURRICULUM_BOOK_SPECS: dict[str, dict] = {
+    "bavli": {
+        "category_path": "Talmud/Bavli",
+        "main_subcats": [
+            "Seder Zeraim", "Seder Moed", "Seder Nashim",
+            "Seder Nezikin", "Seder Kodashim", "Seder Tahorot",
+        ],
+        "granularity": "section",  # 'Berakhot 2a' (amud) not 'Berakhot 2a:1' (line)
+    },
+    "yerushalmi": {
+        "category_path": "Talmud/Yerushalmi",
+        "main_subcats": [
+            "Seder Zeraim", "Seder Moed", "Seder Nashim",
+            "Seder Nezikin", "Seder Kodashim", "Seder Tahorot",
+        ],
+        "granularity": "section",
+    },
+    "mishnayos": {
+        "category_path": "Mishnah",
+        "main_subcats": [
+            "Seder Zeraim", "Seder Moed", "Seder Nashim",
+            "Seder Nezikin", "Seder Kodashim", "Seder Tahorot",
+        ],
+    },
+    "chumash": {"category_path": "Tanakh/Torah"},
+    "nach": {
+        "category_path_any": ["Tanakh/Prophets", "Tanakh/Writings"],
+    },
+    "mishna_berurah": {"titles": ["Mishnah Berurah"]},
+    "mussar": {
+        "titles": [
+            "Mesillat Yesharim",
+            "Orchot Tzadikim",
+            "Pirkei DeRabbi Eliezer",
+            "Tanya",
+            "Tomer Devorah",
+            "Shaarei Teshuvah",
+        ],
+    },
     "mishneh_torah": {
         "title_prefix": "Mishneh Torah, ",
         "exclude": [
@@ -82,23 +120,62 @@ def _clean(s: str) -> str:
     return s.strip()
 
 
+def _books_in_toc_category(path: str, main_subcats=None) -> list[str]:
+    """Walk Sefaria's table-of-contents and collect book titles under the
+    given category path. `main_subcats`, if given, restricts which
+    sub-categories to descend into (used to skip commentary subtrees)."""
+    from sefaria.model import library as _lib
+    toc = _lib.get_toc()
+    parts = path.split("/")
+    node = {"contents": toc}
+    for p in parts:
+        contents = node.get("contents") if isinstance(node, dict) else None
+        if not contents:
+            return []
+        match = next((c for c in contents if c.get("category") == p), None)
+        if not match:
+            return []
+        node = match
+    out = []
+
+    def walk(n):
+        for it in n.get("contents", []):
+            if it.get("title") and not it.get("category"):
+                out.append(it["title"])
+            elif it.get("category"):
+                if main_subcats and it["category"] not in main_subcats:
+                    continue
+                walk(it)
+
+    walk(node)
+    return sorted(set(out))
+
+
 def _expand_titles(spec: dict) -> list[str]:
     titles = list(spec.get("titles", []))
     prefix = spec.get("title_prefix")
     if prefix:
         for idx in IndexSet({"title": {"$regex": f"^{re.escape(prefix)}"}}).array():
             titles.append(idx.title)
+    cat_path = spec.get("category_path")
+    if cat_path:
+        titles.extend(_books_in_toc_category(cat_path, spec.get("main_subcats")))
+    for cp in spec.get("category_path_any", []):
+        titles.extend(_books_in_toc_category(cp))
     exclude = set(spec.get("exclude", []))
-    return sorted(t for t in titles if t not in exclude)
+    return sorted(set(t for t in titles if t not in exclude))
 
 
-def _walk_node(node):
-    """Recursively yield atomic Ref objects for any Index node.
+def _walk_node(node, granularity="segment"):
+    """Recursively yield Ref objects at the requested granularity.
+
+    Two granularities:
+      'segment' — leaves of the schema (Mishnah Berakhot 1:1, Genesis 1:1)
+      'section' — one level above leaves (Berakhot 2a, Mishnah Berakhot 1)
 
     Strategy: try the simple path first (Ref(node.full_title) →
-    all_segment_refs), which works for JaggedArrayNode and the few
-    SchemaNode roots Sefaria has consolidated. If that fails, descend
-    into node.children and try each.
+    all_segment_refs / subref enumeration). If that fails, descend
+    into node.children.
     """
     title = None
     if hasattr(node, "full_title"):
@@ -110,9 +187,21 @@ def _walk_node(node):
         try:
             nref = Ref(title)
             yielded = False
-            for r in nref.all_segment_refs():
-                yielded = True
-                yield r
+            if granularity == "section":
+                # Iterate top-level subrefs (one above segment).
+                lengths = getattr(node, "lengths", None)
+                top_n = lengths[0] if lengths else 0
+                for i in range(1, top_n + 1):
+                    try:
+                        sr = nref.subref(i)
+                        yielded = True
+                        yield sr
+                    except Exception:
+                        continue
+            else:
+                for r in nref.all_segment_refs():
+                    yielded = True
+                    yield r
             if yielded:
                 return
         except Exception:
@@ -120,12 +209,13 @@ def _walk_node(node):
     children = getattr(node, "children", None)
     if children:
         for child in children:
-            yield from _walk_node(child)
+            yield from _walk_node(child, granularity)
 
 
-def _atomic_refs_for(title: str):
-    """Yield atomic Ref objects for a book. Handles JaggedArrayNode roots
-    directly and SchemaNode roots via recursive descent."""
+def _atomic_refs_for(title: str, granularity: str = "segment"):
+    """Yield Ref objects for a book at the chosen granularity. Handles
+    JaggedArrayNode roots directly and SchemaNode roots via recursive
+    descent."""
     try:
         idx = __import__("sefaria.model", fromlist=["library"]).library.get_index(
             title
@@ -133,7 +223,7 @@ def _atomic_refs_for(title: str):
     except Exception as e:
         sys.stderr.write(f"  cannot get_index({title!r}): {e}\n")
         return
-    yield from _walk_node(idx.nodes)
+    yield from _walk_node(idx.nodes, granularity)
 
 
 def main():
@@ -165,13 +255,14 @@ def main():
             sys.stderr.write(f"  unknown curriculum {curriculum!r}, skipping\n")
             continue
         titles = _expand_titles(spec)
+        granularity = spec.get("granularity", "segment")
         sys.stderr.write(
-            f"== {curriculum}: {len(titles)} books ==\n"
+            f"== {curriculum}: {len(titles)} books (granularity={granularity}) ==\n"
         )
         per_book: dict[str, list[str]] = {}
         for title in titles:
             count = 0
-            for r in _atomic_refs_for(title):
+            for r in _atomic_refs_for(title, granularity=granularity):
                 ref_str = r.normal()
                 per_book.setdefault(title, []).append(ref_str)
                 count += 1

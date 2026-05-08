@@ -138,6 +138,7 @@ def _toc_book_titles(path: str):
 
 def bavli_strategy(curriculum_id="bavli"):
     """Bavli: Seder → Masechta → Daf → Amud, leaf at amud."""
+    text_refs = _refs_with_text() or set()
     # Existing curriculum has 6 standard sedarim only — exclude Minor Tractates,
     # Guides, commentary, etc.
     main_sedarim = [
@@ -198,6 +199,10 @@ def bavli_strategy(curriculum_id="bavli"):
                 })
                 sort_order += 1
                 for amud in ("a", "b"):
+                    leaf_ref = f"{mas} {daf_label}{amud}"
+                    # Drop past-last-daf refs that don't have content.
+                    if text_refs and leaf_ref not in text_refs:
+                        continue
                     items.append({
                         "curriculumId": curriculum_id,
                         "level1": seder_en,
@@ -206,7 +211,7 @@ def bavli_strategy(curriculum_id="bavli"):
                         "level4": amud,
                         "displayNameHe": f"{mas_he} {_hebrew_numeral(daf_n)}{amud}",
                         "displayNameEn": f"{mas} {daf_label}{amud}",
-                        "sefariaRef": f"{mas} {daf_label}{amud}",
+                        "sefariaRef": leaf_ref,
                         "sortOrder": sort_order,
                         "isLeaf": True,
                     })
@@ -258,17 +263,32 @@ def _items_for_simple_book(
     items.append(book_row)
     sort_order += 1
 
-    # Walk atomic refs. Group by intermediate sections so we emit one row
-    # per (parent path, intermediate, leaf).
-    segs: list = []
-    try:
-        idx = library.get_index(book_title)
-        segs = list(_walk_index_node(idx.nodes))
-    except Exception:
+    # Enumerate atomic refs. Source of truth is the book_text_cache.json
+    # (every leaf must have text); this also keeps granularity consistent
+    # with whatever extract_books.py captured per curriculum.
+    text_refs_set = _refs_with_text() or set()
+    refs_for_book = sorted(
+        r for r in text_refs_set
+        if r == book_title or r.startswith(book_title + " ") or r.startswith(book_title + ",")
+    )
+    class _R:  # noqa: D101
+        def __init__(self, ref):
+            self._ref = ref
+        def normal(self):  # noqa: D102
+            return self._ref
+
+    segs = [_R(r) for r in refs_for_book]
+    if not segs:
+        # Fall back to Sefaria-Project enumeration for newly-added books not
+        # yet in book_text_cache (rare; usually means a re-extract is due).
         try:
-            segs = list(Ref(book_title).all_segment_refs())
+            idx = library.get_index(book_title)
+            segs = list(_walk_index_node(idx.nodes))
         except Exception:
-            return items, sort_order
+            try:
+                segs = list(Ref(book_title).all_segment_refs())
+            except Exception:
+                return items, sort_order
 
     text_refs = _refs_with_text()
     seen_intermediates: set[tuple[str, ...]] = set()
@@ -356,10 +376,12 @@ def _strategy_simple(
 
 def _strategy_mishneh_torah(curriculum_id="mishneh_torah"):
     """Mishneh Torah — Sefer (e.g. 'Sefer Ahavah') / Hilchot ('Mishneh Torah,
-    Blessings') / Chapter / Halakhah. 88 sub-volumes grouped by Sefer via
-    Sefaria's Index.categories[2].
+    Blessings') / Chapter / Halakhah. 85 sub-volumes grouped by Sefer via
+    Sefaria's Index.categories[2], plus the 'Transmission of the Oral Law'
+    introduction grouped under its own Sefer-equivalent.
     """
     level_labels = ["Sefer", "Hilchot", "Chapter", "Halakhah"]
+    # Excluded — index-only entries that have no usable text content.
     excluded = {
         "Mishneh Torah, Negative Mitzvot",
         "Mishneh Torah, Overview of Mishneh Torah Contents",
@@ -369,16 +391,19 @@ def _strategy_mishneh_torah(curriculum_id="mishneh_torah"):
     for idx in IndexSet({"title": {"$regex": "^Mishneh Torah, "}}).array():
         if idx.title in excluded:
             continue
-        sefer = idx.categories[2] if len(idx.categories) > 2 else "Other"
+        cats = idx.categories
+        # 'Transmission of the Oral Law' is the Introduction; Sefaria categorises
+        # it as ['Halakhah', 'Mishneh Torah', 'Introduction'].
+        sefer = cats[2] if len(cats) > 2 else "Other"
         by_sefer.setdefault(sefer, []).append(idx)
 
     items: list[dict] = []
     sort_order = 0
     sefer_order = [
-        "Sefer Madda", "Sefer Ahavah", "Sefer Zemanim", "Sefer Nashim",
-        "Sefer Kedushah", "Sefer Haflaah", "Sefer Zeraim", "Sefer Avodah",
-        "Sefer Korbanot", "Sefer Taharah", "Sefer Nezikim", "Sefer Kinyan",
-        "Sefer Mishpatim", "Sefer Shoftim",
+        "Introduction", "Sefer Madda", "Sefer Ahavah", "Sefer Zemanim",
+        "Sefer Nashim", "Sefer Kedushah", "Sefer Haflaah", "Sefer Zeraim",
+        "Sefer Avodah", "Sefer Korbanot", "Sefer Taharah", "Sefer Nezikim",
+        "Sefer Kinyan", "Sefer Mishpatim", "Sefer Shoftim",
     ]
     for sefer in sefer_order:
         idxs = by_sefer.get(sefer, [])
@@ -405,6 +430,80 @@ def _strategy_mishneh_torah(curriculum_id="mishneh_torah"):
             )
             items.extend(book_items)
     return items, level_labels, 4
+
+
+def _toc_books(category_path: str, main_subcats: list[str] | None = None):
+    """Yield (sub_category_or_none, book_title, he_title) for every book under
+    a Sefaria TOC category. main_subcats restricts which sub-categories to
+    descend into (e.g. exclude commentary subtrees)."""
+    toc = library.get_toc()
+    parts = category_path.split("/")
+    node = {"contents": toc}
+    for p in parts:
+        contents = node.get("contents") if isinstance(node, dict) else None
+        if not contents:
+            return
+        match = next((c for c in contents if c.get("category") == p), None)
+        if not match:
+            return
+        node = match
+
+    def walk(n, current_subcat):
+        for it in n.get("contents", []):
+            if it.get("title") and not it.get("category"):
+                yield current_subcat, it["title"], it.get("heTitle", "")
+            elif it.get("category"):
+                if main_subcats and it["category"] not in main_subcats:
+                    continue
+                yield from walk(it, it["category"])
+
+    yield from walk(node, None)
+
+
+def _strategy_grouped(
+    curriculum_id: str,
+    category_path: str,
+    main_subcats: list[str] | None,
+    level_labels: list[str],
+):
+    """Walk Sefaria's TOC under a category, group books by sub-category,
+    enumerate atomic refs per book, emit hierarchy items with that grouping
+    as level1.
+    """
+
+    def go(curr=curriculum_id):
+        items: list[dict] = []
+        sort_order = 0
+        # Group by sub-category preserving TOC order.
+        groups: dict[str | None, list[tuple[str, str]]] = {}
+        for subcat, title, he_title in _toc_books(category_path, main_subcats):
+            groups.setdefault(subcat, []).append((title, he_title))
+
+        for subcat in groups:
+            if subcat:
+                items.append({
+                    "curriculumId": curr,
+                    "level1": subcat,
+                    "displayNameHe": subcat,
+                    "displayNameEn": subcat,
+                    "sefariaRef": subcat,
+                    "sortOrder": sort_order,
+                    "isLeaf": False,
+                })
+                sort_order += 1
+            for title, he_title in groups[subcat]:
+                book_items, sort_order = _items_for_simple_book(
+                    curr,
+                    title,
+                    he_title or title,
+                    level_labels[1:] if subcat else level_labels,
+                    sort_order,
+                    parent_levels={"level1": subcat} if subcat else None,
+                )
+                items.extend(book_items)
+        return items, level_labels, len(level_labels)
+
+    return go
 
 
 # Per-curriculum strategy table.
@@ -447,7 +546,82 @@ STRATEGIES = {
         ["Book", "Sefer", "Chapter", "Verse"],
     ),
     "mishneh_torah": _strategy_mishneh_torah,
+    "yerushalmi": _strategy_grouped(
+        "yerushalmi",
+        "Talmud/Yerushalmi",
+        [
+            "Seder Zeraim", "Seder Moed", "Seder Nashim",
+            "Seder Nezikin", "Seder Kodashim", "Seder Tahorot",
+        ],
+        ["Seder", "Masechta", "Daf"],
+    ),
+    "mishnayos": _strategy_grouped(
+        "mishnayos",
+        "Mishnah",
+        [
+            "Seder Zeraim", "Seder Moed", "Seder Nashim",
+            "Seder Nezikin", "Seder Kodashim", "Seder Tahorot",
+        ],
+        ["Seder", "Masechta", "Chapter", "Mishnah"],
+    ),
+    "chumash": _strategy_grouped(
+        "chumash", "Tanakh/Torah", None, ["Sefer", "Chapter", "Verse"],
+    ),
+    "nach_prophets": _strategy_grouped(  # placeholder; nach is special
+        "nach", "Tanakh/Prophets", None, ["Sefer", "Chapter", "Verse"],
+    ),
+    "mishna_berurah": _strategy_simple(
+        "mishna_berurah",
+        ["Mishnah Berurah"],
+        ["Book", "Siman", "Seif"],
+    ),
+    "mussar": _strategy_simple(
+        "mussar",
+        [
+            "Mesillat Yesharim",
+            "Orchot Tzadikim",
+            "Pirkei DeRabbi Eliezer",
+            "Tanya",
+            "Tomer Devorah",
+            "Shaarei Teshuvah",
+        ],
+        ["Book", "Chapter"],
+    ),
 }
+
+
+def _strategy_nach(curriculum_id="nach"):
+    """Nach = Prophets + Writings combined. Sefaria TOC has them as siblings."""
+    def go(_curr=curriculum_id):
+        items: list[dict] = []
+        sort_order = 0
+        for cat in ["Prophets", "Writings"]:
+            books = list(_toc_books(f"Tanakh/{cat}", None))
+            if not books:
+                continue
+            items.append({
+                "curriculumId": curriculum_id,
+                "level1": cat,
+                "displayNameHe": cat,
+                "displayNameEn": cat,
+                "sefariaRef": cat,
+                "sortOrder": sort_order,
+                "isLeaf": False,
+            })
+            sort_order += 1
+            for _subcat, title, he_title in books:
+                book_items, sort_order = _items_for_simple_book(
+                    curriculum_id, title, he_title or title,
+                    ["Sefer", "Chapter", "Verse"], sort_order,
+                    parent_levels={"level1": cat},
+                )
+                items.extend(book_items)
+        return items, ["Section", "Sefer", "Chapter", "Verse"], 4
+    return go
+
+
+STRATEGIES["nach"] = _strategy_nach()
+del STRATEGIES["nach_prophets"]
 
 
 # ────────────────────────────────────────────────────────────────────────
