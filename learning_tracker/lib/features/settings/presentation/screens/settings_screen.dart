@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -92,6 +93,8 @@ class SettingsScreen extends ConsumerWidget {
                   _HebrewDateTile(theme: theme),
                   _tileDivider(theme),
                   _HebrewTermsTile(theme: theme),
+                  _tileDivider(theme),
+                  _NikudTile(theme: theme),
                   _tileDivider(theme),
                   _LanguagePreferenceTile(theme: theme),
                   if (!isChildProfile) ...[
@@ -430,6 +433,90 @@ class _HebrewTermsTile extends ConsumerWidget {
               ref
                   .read(hebrewTermsScriptProvider.notifier)
                   .setHebrewTermsScript(selected.first);
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppTheme.brandBlueBright,
+              selectedForegroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFFD7DEEA)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Nikud (Hebrew vowel marks) preference: same layout as [_HebrewTermsTile].
+/// Toggles whether Hebrew text is rendered with or without nikud, applied
+/// in the source viewer.
+class _NikudTile extends ConsumerWidget {
+  const _NikudTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showNikud = ref.watch(showNikudProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.brandBlueSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.text_fields_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nikud',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 19,
+                        color: const Color(0xFF1D2432),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Show or hide Hebrew vowel marks when learning.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF929BAA),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            // Order: Without (cleaner) on the left, With on the right.
+            segments: const [
+              ButtonSegment<bool>(value: false, label: Text('Without nikud')),
+              ButtonSegment<bool>(value: true, label: Text('With nikud')),
+            ],
+            selected: {showNikud},
+            onSelectionChanged: (selected) {
+              if (selected.isEmpty) return;
+              ref.read(showNikudProvider.notifier).set(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,

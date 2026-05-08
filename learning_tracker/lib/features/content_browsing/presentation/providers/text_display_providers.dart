@@ -87,14 +87,16 @@ class ShowNikud extends _$ShowNikud {
     }
   }
 
-  Future<void> toggle() async {
+  Future<void> toggle() async => set(!state);
+
+  Future<void> set(bool value) async {
+    if (value == state) return;
     final profileId = ref.read(activeProfileIdProvider);
-    final newValue = !state;
-    state = newValue;
+    state = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
       ProfileScopedPreferenceKeys.textShowNikud(profileId),
-      newValue,
+      value,
     );
     await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
   }

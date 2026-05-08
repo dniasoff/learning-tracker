@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -65,6 +66,7 @@ const _kOnboardingProfileName = 'onboarding_profile_name';
 const _kOnboardingProfileMode = 'onboarding_profile_mode';
 const _kOnboardingLanguage = 'onboarding_language';
 const _kOnboardingHebrewCalendar = 'onboarding_use_hebrew_calendar';
+const _kOnboardingShowNikud = 'onboarding_show_nikud';
 
 /// Persistent flag — once set, onboarding is never shown again on this device.
 const kOnboardingComplete = 'onboarding_complete';
@@ -74,6 +76,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   /// `true` = Hebrew calendar; `false` = Gregorian (matches UI labels).
   bool _useHebrewCalendar = false;
+
+  /// `true` = render Hebrew text with nikud (vowel marks); `false` = strip.
+  bool _showNikud = true;
   var _phase = _ScreenPhase.profileCreation;
 
   // Profile creation state
@@ -155,6 +160,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (profileMode != null) _profileMode = profileMode;
     if (savedLanguage != null) _selectedLanguage = savedLanguage;
     _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? false;
+    _showNikud = prefs.getBool(_kOnboardingShowNikud) ?? true;
 
     // If the user already advanced this session (e.g., tapped Continue
     // quickly), don't let a delayed restore overwrite the newer phase.
@@ -200,6 +206,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await prefs.setString(_kOnboardingProfileMode, _profileMode);
     await prefs.setString(_kOnboardingLanguage, _selectedLanguage);
     await prefs.setBool(_kOnboardingHebrewCalendar, _useHebrewCalendar);
+    await prefs.setBool(_kOnboardingShowNikud, _showNikud);
   }
 
   Future<void> _clearSavedState() async {
@@ -211,6 +218,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _kOnboardingProfileMode,
       _kOnboardingLanguage,
       _kOnboardingHebrewCalendar,
+      _kOnboardingShowNikud,
     ]) {
       await prefs.remove(key);
     }
@@ -229,6 +237,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await ref
         .read(useHebrewDateProvider.notifier)
         .setUseHebrewDate(_useHebrewCalendar);
+    await ref.read(showNikudProvider.notifier).set(_showNikud);
 
     final repo = ref.read(profileRepositoryProvider);
     final ProfileModel profile;
@@ -736,6 +745,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     leftSelected: _selectedLanguage == 'en',
                     onLeft: () => setState(() => _selectedLanguage = 'en'),
                     onRight: () => setState(() => _selectedLanguage = 'he'),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.text_fields_rounded,
+                        size: 22,
+                        color: AppTheme.brandInk,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Nikud',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.brandInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  pillPair(
+                    leftLabel: 'Without nikud',
+                    rightLabel: 'With nikud',
+                    leftSelected: !_showNikud,
+                    onLeft: () => setState(() => _showNikud = false),
+                    onRight: () => setState(() => _showNikud = true),
                   ),
                 ],
               ),

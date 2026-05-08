@@ -80,3 +80,7 @@ tool/text_extract/__pycache__/
 
 # Build artifact (regenerate via tool/text_extract/extract_books.py)
 tool/data/book_text_cache.json
+
+# Generated at build time from assets/db/content.db.xz by
+# tool/prepare_asset.dart (the .xz is the committed source-of-truth).
+assets/db/content.db.gz

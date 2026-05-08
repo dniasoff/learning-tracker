@@ -99,6 +99,15 @@ jobs:
         working-directory: learning_tracker
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Prepare bundled seed asset (xz → gzip)
+        working-directory: learning_tracker
+        run: |
+          # Repo commits assets/db/content.db.xz (62 MB) so the file fits
+          # under GitHub's 100 MB hard limit. Runtime SeedManager uses
+          # native dart:io gzip (fast, isolate-free), so we re-compress
+          # before flutter build.
+          dart run tool/prepare_asset.dart
+
       - name: Decode google-services.json
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
