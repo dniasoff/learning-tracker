@@ -36,10 +36,15 @@ class BulkMarkScreen extends ConsumerStatefulWidget {
   /// When provided, only content within these scopes is shown.
   final List<ScopeEntry>? scopeConstraints;
 
+  /// When true, completions are created with full gamification points.
+  /// Defaults to false (onboarding "prior learning" bulk marks award no points).
+  final bool awardGamificationPoints;
+
   const BulkMarkScreen({
     super.key,
     required this.curriculumId,
     this.scopeConstraints,
+    this.awardGamificationPoints = false,
   });
 
   @override
@@ -276,6 +281,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           curriculumId: widget.curriculumId,
           resolvedItems: groupItems,
           stageIds: stageIds,
+          awardGamificationPoints: widget.awardGamificationPoints,
         );
         totalItems += result.itemCount;
         totalCompletions += result.completionCount;

@@ -2648,7 +2648,7 @@ abstract class AppLocalizations {
   /// No description provided for @notifSacredTime.
   ///
   /// In en, this message translates to:
-  /// **'SACRED TIME'**
+  /// **'SHABBOS MODE'**
   String get notifSacredTime;
 
   /// No description provided for @notifShabbosYomTovMode.

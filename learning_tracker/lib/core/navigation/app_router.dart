@@ -44,6 +44,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/settings
 import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/device_restore_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
+import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
 
 part 'app_router.gr.dart';
@@ -231,6 +232,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/settings/tracks',
       page: TrackManagementHubRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/settings/tracks/detail',
+      page: TrackDetailRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(

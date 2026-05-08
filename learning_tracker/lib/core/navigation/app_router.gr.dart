@@ -1158,6 +1158,53 @@ class TextDisplayRouteArgs {
 }
 
 /// generated route for
+/// [TrackDetailScreen]
+class TrackDetailRoute extends PageRouteInfo<TrackDetailRouteArgs> {
+  TrackDetailRoute({
+    Key? key,
+    required CurriculumTrack track,
+    List<PageRouteInfo>? children,
+  }) : super(
+         TrackDetailRoute.name,
+         args: TrackDetailRouteArgs(key: key, track: track),
+         initialChildren: children,
+       );
+
+  static const String name = 'TrackDetailRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<TrackDetailRouteArgs>();
+      return TrackDetailScreen(key: args.key, track: args.track);
+    },
+  );
+}
+
+class TrackDetailRouteArgs {
+  const TrackDetailRouteArgs({this.key, required this.track});
+
+  final Key? key;
+
+  final CurriculumTrack track;
+
+  @override
+  String toString() {
+    return 'TrackDetailRouteArgs{key: $key, track: $track}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! TrackDetailRouteArgs) return false;
+    return key == other.key && track == other.track;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ track.hashCode;
+}
+
+/// generated route for
 /// [TrackManagementHubScreen]
 class TrackManagementHubRoute
     extends PageRouteInfo<TrackManagementHubRouteArgs> {

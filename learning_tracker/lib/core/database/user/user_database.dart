@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
+import 'package:learning_tracker/core/database/daos/track_learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
@@ -35,6 +36,7 @@ import 'package:learning_tracker/core/database/tables/streaks.dart';
 import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
+import 'package:learning_tracker/core/database/tables/track_learning_order.dart';
 import 'package:learning_tracker/core/database/tables/user_profiles.dart';
 
 part 'user_database.g.dart';
@@ -60,6 +62,7 @@ part 'user_database.g.dart';
     LearningLedger,
     Bookmarks,
     LearningOrder,
+    TrackLearningOrder,
     Goals,
     Streaks,
     StreakEvents,
@@ -77,6 +80,7 @@ part 'user_database.g.dart';
     StageDao,
     BookmarkDao,
     LearningOrderDao,
+    TrackLearningOrderDao,
     TrackDao,
     ProfileDao,
     UserProfileDao,
@@ -91,7 +95,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -134,6 +138,10 @@ class UserDatabase extends _$UserDatabase {
         // the plan.
         if (from < 6) {
           await m.createTable(dailyPlans);
+        }
+        // v6 → v7: per-track content ordering table.
+        if (from < 7) {
+          await m.createTable(trackLearningOrder);
         }
       },
     );

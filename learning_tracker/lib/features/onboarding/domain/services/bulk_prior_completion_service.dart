@@ -106,6 +106,7 @@ class BulkPriorCompletionService {
     required List<ContentItem> resolvedItems,
     required List<int> stageIds,
     int? profileId,
+    bool awardGamificationPoints = false,
   }) async {
     final sefariaRefs = resolvedItems.map((item) => item.sefariaRef).toList();
     var totalCompletions = 0;
@@ -118,7 +119,7 @@ class BulkPriorCompletionService {
         stageId: stageId,
         trackType: TrackType.personal.storageKey,
         profileId: profileId,
-        awardGamificationPoints: false,
+        awardGamificationPoints: awardGamificationPoints,
       );
       final completions = await _completionRepository.bulkMarkComplete(request);
       totalCompletions += completions.length;
