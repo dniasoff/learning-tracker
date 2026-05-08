@@ -210,6 +210,38 @@ Future<void> main(List<String> rawArgs) async {
       print('  daily_content rows: $dcCount');
     }
 
+    // Phase 4c: Cross-reference validator — every calendar entry must
+    // resolve to a daily_content row. Anything else means the seed would
+    // ship a 'Failed to load' state for that program/day.
+    if (args.mode == _Mode.build) {
+      print('Phase 4c: Cross-referencing calendar_cycles → daily_content...');
+      final unresolved = await db
+          .customSelect(
+            'SELECT c.program_key, c.date_key, c.sefaria_ref '
+            'FROM calendar_cycles c '
+            'LEFT JOIN daily_content d ON c.sefaria_ref = d.sefaria_ref '
+            'WHERE d.sefaria_ref IS NULL '
+            'LIMIT 50',
+          )
+          .get();
+      if (unresolved.isNotEmpty) {
+        print(
+          '  ❌ ${unresolved.length} unresolved entries (showing up to 50):',
+        );
+        for (final row in unresolved) {
+          print(
+            '    ${row.read<String>('program_key')}  '
+            '${row.read<String>('date_key')}  '
+            '${row.read<String>('sefaria_ref')}',
+          );
+        }
+        throw StateError(
+          'Build aborted: calendar entries reference refs not in daily_content',
+        );
+      }
+      print('  ✓ all calendar entries resolve');
+    }
+
     // Phase 5: Finalize
     if (args.mode == _Mode.build || args.mode == _Mode.textOnly) {
       print('Phase 5: Finalizing (content hash, SeedMetadata)...');
@@ -652,6 +684,13 @@ final _calendarGens = <(String key, _CalRef? Function(DateTime) compute)>[
 ];
 
 Future<int> _generateCalendarCycles(ContentDatabase db) async {
+  // Wipe stale rows from prior builds — under --resume the table accumulates
+  // entries from older calendar sources (e.g. Sefaria API days the current
+  // hebcal cache doesn't include). Without this delete, the SQL validator
+  // surfaces phantom rows that point at refs daily_content never resolved.
+  await db.customStatement('DELETE FROM calendar_cycles');
+  await db.customStatement('DELETE FROM daily_content');
+
   final totalDays = _calendarEnd.difference(_calendarStart).inDays + 1;
   print(
     '    Generating $totalDays days × ${_calendarGens.length} programs locally...',

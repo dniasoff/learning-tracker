@@ -65,11 +65,15 @@ _SEFER_HAMITZVOT_INTRO = re.compile(r"Introduction", re.I)
 
 
 def _resolve_one(ref_str: str) -> tuple[str, str] | None:
-    """Resolve a single Sefaria ref. Returns None if Ref() fails."""
+    """Resolve a single Sefaria ref. Returns None if Ref() fails OR if
+    Sefaria has the ref structurally but no text in either language (rare;
+    happens for some Yerushalmi entries with no version yet)."""
     try:
         r = Ref(ref_str)
         en = _clean(r.text("en").as_string())
         he = _clean(r.text("he").as_string())
+        if not en and not he:
+            return None
         return en, he
     except Exception:
         return None
