@@ -83,6 +83,32 @@ def _refs_with_text() -> set[str] | None:
 # Helpers
 
 
+def _hebrew_section(s: str) -> str:
+    """Convert a section token to Hebrew form.
+    - integer → gematria  ('4'  → 'ד', '187' → 'קפ״ז')
+    - integer range  → 'ד-ז' / 'קפ״ז-קפ״ט'
+    - Talmud amud suffix ('a'/'b') passes through (handled by bavli_strategy)
+    - non-numeric (e.g. 'Negative Commandments') passes through unchanged
+    """
+    if not s:
+        return s
+    if "-" in s:
+        return "-".join(_hebrew_section(p) for p in s.split("-"))
+    if s.isdigit():
+        return _hebrew_numeral(int(s))
+    return s
+
+
+def _hebrew_ref(book_he: str, sections: list[str]) -> str:
+    """Build a Hebrew display ref like 'משנה ברכות א:א' from a Hebrew book
+    title plus its section path. Numeric sections become gematria; text
+    sections (used by nested Sefaria books) pass through unchanged."""
+    if not sections:
+        return book_he
+    he_parts = [_hebrew_section(s) for s in sections]
+    return f"{book_he} {':'.join(he_parts)}"
+
+
 def _hebrew_numeral(n: int) -> str:
     """Encode a positive integer as Hebrew gematria letters (no thousands)."""
     if n <= 0:
@@ -305,15 +331,29 @@ def _items_for_simple_book(
         # Comma-separated parts between the book title and the trailing
         # numeric tail are intermediate level fields.
         suffix = ref_str[len(book_title):]
+        # Strip leading separators between the book title and the rest, but
+        # keep one space so the text/num regex can split correctly. The
+        # suffix can begin with ', X, Y 12:3' or ' 12:3' — normalise to
+        # '<text>...?<num>' with a single delimiter.
         suffix = re.sub(r"^[\s,]+", "", suffix)
-        m = re.match(r"^(?P<text>.*?)(?:\s+(?P<num>\d[\d:.\-]*))?\s*$", suffix)
-        text_part = (m.group("text") if m else suffix).rstrip(", ")
-        numeric = m.group("num") if m and m.group("num") else ""
+        # First: pull the trailing numeric tail (e.g. '12:3', '12:3-15')
+        # from the end of the suffix; whatever's left is text/intermediate.
+        num_match = re.search(r"(?:^|\s)(\d[\d:.\-]*)\s*$", suffix)
+        if num_match:
+            numeric = num_match.group(1)
+            text_part = suffix[: num_match.start()].rstrip(", ")
+        else:
+            numeric = ""
+            text_part = suffix.rstrip(", ")
         text_levels = [p.strip() for p in text_part.split(",") if p.strip()]
         num_levels = re.split(r"[:.]", numeric) if numeric else []
         sections = text_levels + num_levels
         if not sections:
             continue
+
+        # Hebrew base for this book (e.g. 'משנה ברכות'). Falls back to the
+        # English title when Sefaria's index has no Hebrew form.
+        book_he = book_he_title or book_title
 
         # Emit intermediate rows for every prefix path we haven't seen yet.
         for cut in range(1, len(sections)):
@@ -324,7 +364,7 @@ def _items_for_simple_book(
             row = dict(book_row)
             row[f"level{book_level_idx + cut}"] = sections[cut - 1]
             row["displayNameEn"] = f"{book_title} {':'.join(sections[: cut])}"
-            row["displayNameHe"] = row["displayNameEn"]
+            row["displayNameHe"] = _hebrew_ref(book_he, sections[: cut])
             row["sefariaRef"] = (
                 f"{book_title} {':'.join(sections[: cut])}"
             )
@@ -338,7 +378,7 @@ def _items_for_simple_book(
         for i, sec in enumerate(sections, start=1):
             leaf[f"level{book_level_idx + i}"] = sec
         leaf["displayNameEn"] = ref_str
-        leaf["displayNameHe"] = ref_str
+        leaf["displayNameHe"] = _hebrew_ref(book_he, sections)
         leaf["sefariaRef"] = ref_str
         leaf["sortOrder"] = sort_order
         leaf["isLeaf"] = True

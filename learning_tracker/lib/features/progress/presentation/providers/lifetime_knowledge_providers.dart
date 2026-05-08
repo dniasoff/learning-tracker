@@ -118,7 +118,12 @@ final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
           ledgerEntries: ledger,
         );
 
-        final tree = _buildTree(leaves, learnedLeafRefs);
+        final heLookup = await _heLabelLookup(repo, curriculum);
+        final tree = _buildTree(
+          leaves,
+          learnedLeafRefs,
+          heLabelLookup: heLookup,
+        );
         final percentage = leaves.isEmpty
             ? 0.0
             : learnedLeafRefs.length / leaves.length;
@@ -247,6 +252,35 @@ Future<List<ContentItem>?> _safeLoadLeaves(
     // Some curricula may not ship local hierarchy assets in this build.
     // Skip them so one missing asset doesn't break the entire view.
     return null;
+  }
+}
+
+/// Build a map from `(level1, level2, level3, level4)` path → displayNameHe
+/// of the matching intermediate (non-leaf) hierarchy row. Lets the lifetime
+/// tree show level-appropriate Hebrew labels (e.g. 'משנה ברכות' at masechta
+/// level instead of the first leaf's 'משנה ברכות א:א').
+Future<Map<String, String>> _heLabelLookup(
+  ContentRepository repo,
+  CurriculumId curriculum,
+) async {
+  try {
+    final content = await repo.getContentForCurriculum(curriculum);
+    final out = <String, String>{};
+    for (final it in content) {
+      if (it.isLeaf) continue;
+      final key = [
+        it.level1,
+        it.level2,
+        it.level3,
+        it.level4,
+      ].where((s) => s != null && s.isNotEmpty).join('|');
+      if (key.isEmpty) continue;
+      if (it.displayNameHe.isEmpty) continue;
+      out[key] = it.displayNameHe;
+    }
+    return out;
+  } catch (_) {
+    return const {};
   }
 }
 
@@ -392,8 +426,9 @@ Set<String> _learnedLeafRefs({
 
 List<LifetimeTreeNode> _buildTree(
   List<ContentItem> leaves,
-  Set<String> learnedRefs,
-) {
+  Set<String> learnedRefs, {
+  Map<String, String> heLabelLookup = const {},
+}) {
   LifetimeNodeState stateForLeaves(List<ContentItem> bucket) {
     if (bucket.isEmpty) return LifetimeNodeState.none;
     final learned = bucket
@@ -463,11 +498,19 @@ List<LifetimeTreeNode> _buildTree(
             ? LifetimeNodeState.full
             : (anyDone ? LifetimeNodeState.partial : LifetimeNodeState.none);
       }
-      // For leaf-level groups we can use the item's Hebrew display name; for
-      // mid-tree groups (e.g. masechta or perek containers) the data model
-      // doesn't carry a group-level Hebrew label, so we fall back to the
-      // storage value. This matches what the content browser already shows.
-      final heLabel = _hebrewLabelForLeafGroup(entry.value) ?? entry.key;
+      // Hebrew label: at non-leaf levels look up the intermediate hierarchy
+      // row's displayNameHe via [heLabelLookup]; only at leaf level fall
+      // back to the item's own displayNameHe (which carries the full
+      // ref-form Hebrew). Without this, masechta-level groups were
+      // showing '<book> <gematria>:<gematria>' from the first leaf's
+      // displayNameHe.
+      final levelKey = _levelLookupKey(entry.value.first, level);
+      final heFromLookup = heLabelLookup[levelKey];
+      final heLabel =
+          heFromLookup ??
+          (level == 4
+              ? (_hebrewLabelForLeafGroup(entry.value) ?? entry.key)
+              : entry.key);
       nodes.add(
         LifetimeTreeNode(
           label: entry.key,
@@ -487,4 +530,21 @@ String? _hebrewLabelForLeafGroup(List<ContentItem> bucket) {
   if (bucket.isEmpty) return null;
   final he = bucket.first.displayNameHe;
   return he.isEmpty ? null : he;
+}
+
+/// Build the lookup key matching the intermediate hierarchy row at [level]
+/// for [item] — same shape used by [_heLabelLookup].
+String _levelLookupKey(ContentItem item, int level) {
+  final parts = <String>[];
+  if (item.level1.isNotEmpty) parts.add(item.level1);
+  if (level >= 2 && item.level2 != null && item.level2!.isNotEmpty) {
+    parts.add(item.level2!);
+  }
+  if (level >= 3 && item.level3 != null && item.level3!.isNotEmpty) {
+    parts.add(item.level3!);
+  }
+  if (level >= 4 && item.level4 != null && item.level4!.isNotEmpty) {
+    parts.add(item.level4!);
+  }
+  return parts.join('|');
 }

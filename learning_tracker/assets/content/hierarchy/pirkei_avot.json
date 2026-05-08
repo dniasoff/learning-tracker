@@ -22,7 +22,7 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1",
+      "displayNameHe": "משנה אבות א",
       "displayNameEn": "Pirkei Avot 1",
       "sefariaRef": "Pirkei Avot 1",
       "sortOrder": 1,
@@ -32,7 +32,7 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:1",
+      "displayNameHe": "משנה אבות א:א",
       "displayNameEn": "Pirkei Avot 1:1",
       "sefariaRef": "Pirkei Avot 1:1",
       "sortOrder": 2,
@@ -43,98 +43,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:2",
-      "displayNameEn": "Pirkei Avot 1:2",
-      "sefariaRef": "Pirkei Avot 1:2",
-      "sortOrder": 3,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "2"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:3",
-      "displayNameEn": "Pirkei Avot 1:3",
-      "sefariaRef": "Pirkei Avot 1:3",
-      "sortOrder": 4,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "3"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:4",
-      "displayNameEn": "Pirkei Avot 1:4",
-      "sefariaRef": "Pirkei Avot 1:4",
-      "sortOrder": 5,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "4"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:5",
-      "displayNameEn": "Pirkei Avot 1:5",
-      "sefariaRef": "Pirkei Avot 1:5",
-      "sortOrder": 6,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "5"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:6",
-      "displayNameEn": "Pirkei Avot 1:6",
-      "sefariaRef": "Pirkei Avot 1:6",
-      "sortOrder": 7,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "6"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:7",
-      "displayNameEn": "Pirkei Avot 1:7",
-      "sefariaRef": "Pirkei Avot 1:7",
-      "sortOrder": 8,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "7"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:8",
-      "displayNameEn": "Pirkei Avot 1:8",
-      "sefariaRef": "Pirkei Avot 1:8",
-      "sortOrder": 9,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "8"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:9",
-      "displayNameEn": "Pirkei Avot 1:9",
-      "sefariaRef": "Pirkei Avot 1:9",
-      "sortOrder": 10,
-      "isLeaf": true,
-      "level2": "1",
-      "level3": "9"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:10",
+      "displayNameHe": "משנה אבות א:י",
       "displayNameEn": "Pirkei Avot 1:10",
       "sefariaRef": "Pirkei Avot 1:10",
-      "sortOrder": 11,
+      "sortOrder": 3,
       "isLeaf": true,
       "level2": "1",
       "level3": "10"
@@ -142,10 +54,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:11",
+      "displayNameHe": "משנה אבות א:יא",
       "displayNameEn": "Pirkei Avot 1:11",
       "sefariaRef": "Pirkei Avot 1:11",
-      "sortOrder": 12,
+      "sortOrder": 4,
       "isLeaf": true,
       "level2": "1",
       "level3": "11"
@@ -153,10 +65,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:12",
+      "displayNameHe": "משנה אבות א:יב",
       "displayNameEn": "Pirkei Avot 1:12",
       "sefariaRef": "Pirkei Avot 1:12",
-      "sortOrder": 13,
+      "sortOrder": 5,
       "isLeaf": true,
       "level2": "1",
       "level3": "12"
@@ -164,10 +76,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:13",
+      "displayNameHe": "משנה אבות א:יג",
       "displayNameEn": "Pirkei Avot 1:13",
       "sefariaRef": "Pirkei Avot 1:13",
-      "sortOrder": 14,
+      "sortOrder": 6,
       "isLeaf": true,
       "level2": "1",
       "level3": "13"
@@ -175,10 +87,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:14",
+      "displayNameHe": "משנה אבות א:יד",
       "displayNameEn": "Pirkei Avot 1:14",
       "sefariaRef": "Pirkei Avot 1:14",
-      "sortOrder": 15,
+      "sortOrder": 7,
       "isLeaf": true,
       "level2": "1",
       "level3": "14"
@@ -186,10 +98,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:15",
+      "displayNameHe": "משנה אבות א:טו",
       "displayNameEn": "Pirkei Avot 1:15",
       "sefariaRef": "Pirkei Avot 1:15",
-      "sortOrder": 16,
+      "sortOrder": 8,
       "isLeaf": true,
       "level2": "1",
       "level3": "15"
@@ -197,10 +109,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:16",
+      "displayNameHe": "משנה אבות א:טוא",
       "displayNameEn": "Pirkei Avot 1:16",
       "sefariaRef": "Pirkei Avot 1:16",
-      "sortOrder": 17,
+      "sortOrder": 9,
       "isLeaf": true,
       "level2": "1",
       "level3": "16"
@@ -208,10 +120,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:17",
+      "displayNameHe": "משנה אבות א:טוב",
       "displayNameEn": "Pirkei Avot 1:17",
       "sefariaRef": "Pirkei Avot 1:17",
-      "sortOrder": 18,
+      "sortOrder": 10,
       "isLeaf": true,
       "level2": "1",
       "level3": "17"
@@ -219,10 +131,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 1:18",
+      "displayNameHe": "משנה אבות א:טוג",
       "displayNameEn": "Pirkei Avot 1:18",
       "sefariaRef": "Pirkei Avot 1:18",
-      "sortOrder": 19,
+      "sortOrder": 11,
       "isLeaf": true,
       "level2": "1",
       "level3": "18"
@@ -230,7 +142,95 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2",
+      "displayNameHe": "משנה אבות א:ב",
+      "displayNameEn": "Pirkei Avot 1:2",
+      "sefariaRef": "Pirkei Avot 1:2",
+      "sortOrder": 12,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "2"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות א:ג",
+      "displayNameEn": "Pirkei Avot 1:3",
+      "sefariaRef": "Pirkei Avot 1:3",
+      "sortOrder": 13,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "3"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות א:ד",
+      "displayNameEn": "Pirkei Avot 1:4",
+      "sefariaRef": "Pirkei Avot 1:4",
+      "sortOrder": 14,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "4"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות א:ה",
+      "displayNameEn": "Pirkei Avot 1:5",
+      "sefariaRef": "Pirkei Avot 1:5",
+      "sortOrder": 15,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "5"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות א:ו",
+      "displayNameEn": "Pirkei Avot 1:6",
+      "sefariaRef": "Pirkei Avot 1:6",
+      "sortOrder": 16,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "6"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות א:ז",
+      "displayNameEn": "Pirkei Avot 1:7",
+      "sefariaRef": "Pirkei Avot 1:7",
+      "sortOrder": 17,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "7"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות א:ח",
+      "displayNameEn": "Pirkei Avot 1:8",
+      "sefariaRef": "Pirkei Avot 1:8",
+      "sortOrder": 18,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "8"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות א:ט",
+      "displayNameEn": "Pirkei Avot 1:9",
+      "sefariaRef": "Pirkei Avot 1:9",
+      "sortOrder": 19,
+      "isLeaf": true,
+      "level2": "1",
+      "level3": "9"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב",
       "displayNameEn": "Pirkei Avot 2",
       "sefariaRef": "Pirkei Avot 2",
       "sortOrder": 20,
@@ -240,7 +240,7 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:1",
+      "displayNameHe": "משנה אבות ב:א",
       "displayNameEn": "Pirkei Avot 2:1",
       "sefariaRef": "Pirkei Avot 2:1",
       "sortOrder": 21,
@@ -251,98 +251,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:2",
-      "displayNameEn": "Pirkei Avot 2:2",
-      "sefariaRef": "Pirkei Avot 2:2",
-      "sortOrder": 22,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "2"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:3",
-      "displayNameEn": "Pirkei Avot 2:3",
-      "sefariaRef": "Pirkei Avot 2:3",
-      "sortOrder": 23,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "3"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:4",
-      "displayNameEn": "Pirkei Avot 2:4",
-      "sefariaRef": "Pirkei Avot 2:4",
-      "sortOrder": 24,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "4"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:5",
-      "displayNameEn": "Pirkei Avot 2:5",
-      "sefariaRef": "Pirkei Avot 2:5",
-      "sortOrder": 25,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "5"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:6",
-      "displayNameEn": "Pirkei Avot 2:6",
-      "sefariaRef": "Pirkei Avot 2:6",
-      "sortOrder": 26,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "6"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:7",
-      "displayNameEn": "Pirkei Avot 2:7",
-      "sefariaRef": "Pirkei Avot 2:7",
-      "sortOrder": 27,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "7"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:8",
-      "displayNameEn": "Pirkei Avot 2:8",
-      "sefariaRef": "Pirkei Avot 2:8",
-      "sortOrder": 28,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "8"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:9",
-      "displayNameEn": "Pirkei Avot 2:9",
-      "sefariaRef": "Pirkei Avot 2:9",
-      "sortOrder": 29,
-      "isLeaf": true,
-      "level2": "2",
-      "level3": "9"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:10",
+      "displayNameHe": "משנה אבות ב:י",
       "displayNameEn": "Pirkei Avot 2:10",
       "sefariaRef": "Pirkei Avot 2:10",
-      "sortOrder": 30,
+      "sortOrder": 22,
       "isLeaf": true,
       "level2": "2",
       "level3": "10"
@@ -350,10 +262,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:11",
+      "displayNameHe": "משנה אבות ב:יא",
       "displayNameEn": "Pirkei Avot 2:11",
       "sefariaRef": "Pirkei Avot 2:11",
-      "sortOrder": 31,
+      "sortOrder": 23,
       "isLeaf": true,
       "level2": "2",
       "level3": "11"
@@ -361,10 +273,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:12",
+      "displayNameHe": "משנה אבות ב:יב",
       "displayNameEn": "Pirkei Avot 2:12",
       "sefariaRef": "Pirkei Avot 2:12",
-      "sortOrder": 32,
+      "sortOrder": 24,
       "isLeaf": true,
       "level2": "2",
       "level3": "12"
@@ -372,10 +284,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:13",
+      "displayNameHe": "משנה אבות ב:יג",
       "displayNameEn": "Pirkei Avot 2:13",
       "sefariaRef": "Pirkei Avot 2:13",
-      "sortOrder": 33,
+      "sortOrder": 25,
       "isLeaf": true,
       "level2": "2",
       "level3": "13"
@@ -383,10 +295,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:14",
+      "displayNameHe": "משנה אבות ב:יד",
       "displayNameEn": "Pirkei Avot 2:14",
       "sefariaRef": "Pirkei Avot 2:14",
-      "sortOrder": 34,
+      "sortOrder": 26,
       "isLeaf": true,
       "level2": "2",
       "level3": "14"
@@ -394,10 +306,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:15",
+      "displayNameHe": "משנה אבות ב:טו",
       "displayNameEn": "Pirkei Avot 2:15",
       "sefariaRef": "Pirkei Avot 2:15",
-      "sortOrder": 35,
+      "sortOrder": 27,
       "isLeaf": true,
       "level2": "2",
       "level3": "15"
@@ -405,10 +317,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 2:16",
+      "displayNameHe": "משנה אבות ב:טוא",
       "displayNameEn": "Pirkei Avot 2:16",
       "sefariaRef": "Pirkei Avot 2:16",
-      "sortOrder": 36,
+      "sortOrder": 28,
       "isLeaf": true,
       "level2": "2",
       "level3": "16"
@@ -416,7 +328,95 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3",
+      "displayNameHe": "משנה אבות ב:ב",
+      "displayNameEn": "Pirkei Avot 2:2",
+      "sefariaRef": "Pirkei Avot 2:2",
+      "sortOrder": 29,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "2"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב:ג",
+      "displayNameEn": "Pirkei Avot 2:3",
+      "sefariaRef": "Pirkei Avot 2:3",
+      "sortOrder": 30,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "3"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב:ד",
+      "displayNameEn": "Pirkei Avot 2:4",
+      "sefariaRef": "Pirkei Avot 2:4",
+      "sortOrder": 31,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "4"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב:ה",
+      "displayNameEn": "Pirkei Avot 2:5",
+      "sefariaRef": "Pirkei Avot 2:5",
+      "sortOrder": 32,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "5"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב:ו",
+      "displayNameEn": "Pirkei Avot 2:6",
+      "sefariaRef": "Pirkei Avot 2:6",
+      "sortOrder": 33,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "6"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב:ז",
+      "displayNameEn": "Pirkei Avot 2:7",
+      "sefariaRef": "Pirkei Avot 2:7",
+      "sortOrder": 34,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "7"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב:ח",
+      "displayNameEn": "Pirkei Avot 2:8",
+      "sefariaRef": "Pirkei Avot 2:8",
+      "sortOrder": 35,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "8"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ב:ט",
+      "displayNameEn": "Pirkei Avot 2:9",
+      "sefariaRef": "Pirkei Avot 2:9",
+      "sortOrder": 36,
+      "isLeaf": true,
+      "level2": "2",
+      "level3": "9"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג",
       "displayNameEn": "Pirkei Avot 3",
       "sefariaRef": "Pirkei Avot 3",
       "sortOrder": 37,
@@ -426,7 +426,7 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:1",
+      "displayNameHe": "משנה אבות ג:א",
       "displayNameEn": "Pirkei Avot 3:1",
       "sefariaRef": "Pirkei Avot 3:1",
       "sortOrder": 38,
@@ -437,98 +437,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:2",
-      "displayNameEn": "Pirkei Avot 3:2",
-      "sefariaRef": "Pirkei Avot 3:2",
-      "sortOrder": 39,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "2"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:3",
-      "displayNameEn": "Pirkei Avot 3:3",
-      "sefariaRef": "Pirkei Avot 3:3",
-      "sortOrder": 40,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "3"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:4",
-      "displayNameEn": "Pirkei Avot 3:4",
-      "sefariaRef": "Pirkei Avot 3:4",
-      "sortOrder": 41,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "4"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:5",
-      "displayNameEn": "Pirkei Avot 3:5",
-      "sefariaRef": "Pirkei Avot 3:5",
-      "sortOrder": 42,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "5"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:6",
-      "displayNameEn": "Pirkei Avot 3:6",
-      "sefariaRef": "Pirkei Avot 3:6",
-      "sortOrder": 43,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "6"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:7",
-      "displayNameEn": "Pirkei Avot 3:7",
-      "sefariaRef": "Pirkei Avot 3:7",
-      "sortOrder": 44,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "7"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:8",
-      "displayNameEn": "Pirkei Avot 3:8",
-      "sefariaRef": "Pirkei Avot 3:8",
-      "sortOrder": 45,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "8"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:9",
-      "displayNameEn": "Pirkei Avot 3:9",
-      "sefariaRef": "Pirkei Avot 3:9",
-      "sortOrder": 46,
-      "isLeaf": true,
-      "level2": "3",
-      "level3": "9"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:10",
+      "displayNameHe": "משנה אבות ג:י",
       "displayNameEn": "Pirkei Avot 3:10",
       "sefariaRef": "Pirkei Avot 3:10",
-      "sortOrder": 47,
+      "sortOrder": 39,
       "isLeaf": true,
       "level2": "3",
       "level3": "10"
@@ -536,10 +448,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:11",
+      "displayNameHe": "משנה אבות ג:יא",
       "displayNameEn": "Pirkei Avot 3:11",
       "sefariaRef": "Pirkei Avot 3:11",
-      "sortOrder": 48,
+      "sortOrder": 40,
       "isLeaf": true,
       "level2": "3",
       "level3": "11"
@@ -547,10 +459,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:12",
+      "displayNameHe": "משנה אבות ג:יב",
       "displayNameEn": "Pirkei Avot 3:12",
       "sefariaRef": "Pirkei Avot 3:12",
-      "sortOrder": 49,
+      "sortOrder": 41,
       "isLeaf": true,
       "level2": "3",
       "level3": "12"
@@ -558,10 +470,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:13",
+      "displayNameHe": "משנה אבות ג:יג",
       "displayNameEn": "Pirkei Avot 3:13",
       "sefariaRef": "Pirkei Avot 3:13",
-      "sortOrder": 50,
+      "sortOrder": 42,
       "isLeaf": true,
       "level2": "3",
       "level3": "13"
@@ -569,10 +481,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:14",
+      "displayNameHe": "משנה אבות ג:יד",
       "displayNameEn": "Pirkei Avot 3:14",
       "sefariaRef": "Pirkei Avot 3:14",
-      "sortOrder": 51,
+      "sortOrder": 43,
       "isLeaf": true,
       "level2": "3",
       "level3": "14"
@@ -580,10 +492,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:15",
+      "displayNameHe": "משנה אבות ג:טו",
       "displayNameEn": "Pirkei Avot 3:15",
       "sefariaRef": "Pirkei Avot 3:15",
-      "sortOrder": 52,
+      "sortOrder": 44,
       "isLeaf": true,
       "level2": "3",
       "level3": "15"
@@ -591,10 +503,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:16",
+      "displayNameHe": "משנה אבות ג:טוא",
       "displayNameEn": "Pirkei Avot 3:16",
       "sefariaRef": "Pirkei Avot 3:16",
-      "sortOrder": 53,
+      "sortOrder": 45,
       "isLeaf": true,
       "level2": "3",
       "level3": "16"
@@ -602,10 +514,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:17",
+      "displayNameHe": "משנה אבות ג:טוב",
       "displayNameEn": "Pirkei Avot 3:17",
       "sefariaRef": "Pirkei Avot 3:17",
-      "sortOrder": 54,
+      "sortOrder": 46,
       "isLeaf": true,
       "level2": "3",
       "level3": "17"
@@ -613,10 +525,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 3:18",
+      "displayNameHe": "משנה אבות ג:טוג",
       "displayNameEn": "Pirkei Avot 3:18",
       "sefariaRef": "Pirkei Avot 3:18",
-      "sortOrder": 55,
+      "sortOrder": 47,
       "isLeaf": true,
       "level2": "3",
       "level3": "18"
@@ -624,7 +536,95 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4",
+      "displayNameHe": "משנה אבות ג:ב",
+      "displayNameEn": "Pirkei Avot 3:2",
+      "sefariaRef": "Pirkei Avot 3:2",
+      "sortOrder": 48,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "2"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג:ג",
+      "displayNameEn": "Pirkei Avot 3:3",
+      "sefariaRef": "Pirkei Avot 3:3",
+      "sortOrder": 49,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "3"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג:ד",
+      "displayNameEn": "Pirkei Avot 3:4",
+      "sefariaRef": "Pirkei Avot 3:4",
+      "sortOrder": 50,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "4"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג:ה",
+      "displayNameEn": "Pirkei Avot 3:5",
+      "sefariaRef": "Pirkei Avot 3:5",
+      "sortOrder": 51,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "5"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג:ו",
+      "displayNameEn": "Pirkei Avot 3:6",
+      "sefariaRef": "Pirkei Avot 3:6",
+      "sortOrder": 52,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "6"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג:ז",
+      "displayNameEn": "Pirkei Avot 3:7",
+      "sefariaRef": "Pirkei Avot 3:7",
+      "sortOrder": 53,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "7"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג:ח",
+      "displayNameEn": "Pirkei Avot 3:8",
+      "sefariaRef": "Pirkei Avot 3:8",
+      "sortOrder": 54,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "8"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ג:ט",
+      "displayNameEn": "Pirkei Avot 3:9",
+      "sefariaRef": "Pirkei Avot 3:9",
+      "sortOrder": 55,
+      "isLeaf": true,
+      "level2": "3",
+      "level3": "9"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד",
       "displayNameEn": "Pirkei Avot 4",
       "sefariaRef": "Pirkei Avot 4",
       "sortOrder": 56,
@@ -634,7 +634,7 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:1",
+      "displayNameHe": "משנה אבות ד:א",
       "displayNameEn": "Pirkei Avot 4:1",
       "sefariaRef": "Pirkei Avot 4:1",
       "sortOrder": 57,
@@ -645,98 +645,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:2",
-      "displayNameEn": "Pirkei Avot 4:2",
-      "sefariaRef": "Pirkei Avot 4:2",
-      "sortOrder": 58,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "2"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:3",
-      "displayNameEn": "Pirkei Avot 4:3",
-      "sefariaRef": "Pirkei Avot 4:3",
-      "sortOrder": 59,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "3"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:4",
-      "displayNameEn": "Pirkei Avot 4:4",
-      "sefariaRef": "Pirkei Avot 4:4",
-      "sortOrder": 60,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "4"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:5",
-      "displayNameEn": "Pirkei Avot 4:5",
-      "sefariaRef": "Pirkei Avot 4:5",
-      "sortOrder": 61,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "5"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:6",
-      "displayNameEn": "Pirkei Avot 4:6",
-      "sefariaRef": "Pirkei Avot 4:6",
-      "sortOrder": 62,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "6"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:7",
-      "displayNameEn": "Pirkei Avot 4:7",
-      "sefariaRef": "Pirkei Avot 4:7",
-      "sortOrder": 63,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "7"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:8",
-      "displayNameEn": "Pirkei Avot 4:8",
-      "sefariaRef": "Pirkei Avot 4:8",
-      "sortOrder": 64,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "8"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:9",
-      "displayNameEn": "Pirkei Avot 4:9",
-      "sefariaRef": "Pirkei Avot 4:9",
-      "sortOrder": 65,
-      "isLeaf": true,
-      "level2": "4",
-      "level3": "9"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:10",
+      "displayNameHe": "משנה אבות ד:י",
       "displayNameEn": "Pirkei Avot 4:10",
       "sefariaRef": "Pirkei Avot 4:10",
-      "sortOrder": 66,
+      "sortOrder": 58,
       "isLeaf": true,
       "level2": "4",
       "level3": "10"
@@ -744,10 +656,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:11",
+      "displayNameHe": "משנה אבות ד:יא",
       "displayNameEn": "Pirkei Avot 4:11",
       "sefariaRef": "Pirkei Avot 4:11",
-      "sortOrder": 67,
+      "sortOrder": 59,
       "isLeaf": true,
       "level2": "4",
       "level3": "11"
@@ -755,10 +667,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:12",
+      "displayNameHe": "משנה אבות ד:יב",
       "displayNameEn": "Pirkei Avot 4:12",
       "sefariaRef": "Pirkei Avot 4:12",
-      "sortOrder": 68,
+      "sortOrder": 60,
       "isLeaf": true,
       "level2": "4",
       "level3": "12"
@@ -766,10 +678,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:13",
+      "displayNameHe": "משנה אבות ד:יג",
       "displayNameEn": "Pirkei Avot 4:13",
       "sefariaRef": "Pirkei Avot 4:13",
-      "sortOrder": 69,
+      "sortOrder": 61,
       "isLeaf": true,
       "level2": "4",
       "level3": "13"
@@ -777,10 +689,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:14",
+      "displayNameHe": "משנה אבות ד:יד",
       "displayNameEn": "Pirkei Avot 4:14",
       "sefariaRef": "Pirkei Avot 4:14",
-      "sortOrder": 70,
+      "sortOrder": 62,
       "isLeaf": true,
       "level2": "4",
       "level3": "14"
@@ -788,10 +700,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:15",
+      "displayNameHe": "משנה אבות ד:טו",
       "displayNameEn": "Pirkei Avot 4:15",
       "sefariaRef": "Pirkei Avot 4:15",
-      "sortOrder": 71,
+      "sortOrder": 63,
       "isLeaf": true,
       "level2": "4",
       "level3": "15"
@@ -799,10 +711,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:16",
+      "displayNameHe": "משנה אבות ד:טוא",
       "displayNameEn": "Pirkei Avot 4:16",
       "sefariaRef": "Pirkei Avot 4:16",
-      "sortOrder": 72,
+      "sortOrder": 64,
       "isLeaf": true,
       "level2": "4",
       "level3": "16"
@@ -810,10 +722,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:17",
+      "displayNameHe": "משנה אבות ד:טוב",
       "displayNameEn": "Pirkei Avot 4:17",
       "sefariaRef": "Pirkei Avot 4:17",
-      "sortOrder": 73,
+      "sortOrder": 65,
       "isLeaf": true,
       "level2": "4",
       "level3": "17"
@@ -821,10 +733,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:18",
+      "displayNameHe": "משנה אבות ד:טוג",
       "displayNameEn": "Pirkei Avot 4:18",
       "sefariaRef": "Pirkei Avot 4:18",
-      "sortOrder": 74,
+      "sortOrder": 66,
       "isLeaf": true,
       "level2": "4",
       "level3": "18"
@@ -832,10 +744,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:19",
+      "displayNameHe": "משנה אבות ד:טוד",
       "displayNameEn": "Pirkei Avot 4:19",
       "sefariaRef": "Pirkei Avot 4:19",
-      "sortOrder": 75,
+      "sortOrder": 67,
       "isLeaf": true,
       "level2": "4",
       "level3": "19"
@@ -843,10 +755,21 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:20",
+      "displayNameHe": "משנה אבות ד:ב",
+      "displayNameEn": "Pirkei Avot 4:2",
+      "sefariaRef": "Pirkei Avot 4:2",
+      "sortOrder": 68,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "2"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד:כ",
       "displayNameEn": "Pirkei Avot 4:20",
       "sefariaRef": "Pirkei Avot 4:20",
-      "sortOrder": 76,
+      "sortOrder": 69,
       "isLeaf": true,
       "level2": "4",
       "level3": "20"
@@ -854,10 +777,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:21",
+      "displayNameHe": "משנה אבות ד:כא",
       "displayNameEn": "Pirkei Avot 4:21",
       "sefariaRef": "Pirkei Avot 4:21",
-      "sortOrder": 77,
+      "sortOrder": 70,
       "isLeaf": true,
       "level2": "4",
       "level3": "21"
@@ -865,10 +788,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 4:22",
+      "displayNameHe": "משנה אבות ד:כב",
       "displayNameEn": "Pirkei Avot 4:22",
       "sefariaRef": "Pirkei Avot 4:22",
-      "sortOrder": 78,
+      "sortOrder": 71,
       "isLeaf": true,
       "level2": "4",
       "level3": "22"
@@ -876,7 +799,84 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5",
+      "displayNameHe": "משנה אבות ד:ג",
+      "displayNameEn": "Pirkei Avot 4:3",
+      "sefariaRef": "Pirkei Avot 4:3",
+      "sortOrder": 72,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "3"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד:ד",
+      "displayNameEn": "Pirkei Avot 4:4",
+      "sefariaRef": "Pirkei Avot 4:4",
+      "sortOrder": 73,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "4"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד:ה",
+      "displayNameEn": "Pirkei Avot 4:5",
+      "sefariaRef": "Pirkei Avot 4:5",
+      "sortOrder": 74,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "5"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד:ו",
+      "displayNameEn": "Pirkei Avot 4:6",
+      "sefariaRef": "Pirkei Avot 4:6",
+      "sortOrder": 75,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "6"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד:ז",
+      "displayNameEn": "Pirkei Avot 4:7",
+      "sefariaRef": "Pirkei Avot 4:7",
+      "sortOrder": 76,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "7"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד:ח",
+      "displayNameEn": "Pirkei Avot 4:8",
+      "sefariaRef": "Pirkei Avot 4:8",
+      "sortOrder": 77,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "8"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ד:ט",
+      "displayNameEn": "Pirkei Avot 4:9",
+      "sefariaRef": "Pirkei Avot 4:9",
+      "sortOrder": 78,
+      "isLeaf": true,
+      "level2": "4",
+      "level3": "9"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה",
       "displayNameEn": "Pirkei Avot 5",
       "sefariaRef": "Pirkei Avot 5",
       "sortOrder": 79,
@@ -886,7 +886,7 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:1",
+      "displayNameHe": "משנה אבות ה:א",
       "displayNameEn": "Pirkei Avot 5:1",
       "sefariaRef": "Pirkei Avot 5:1",
       "sortOrder": 80,
@@ -897,98 +897,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:2",
-      "displayNameEn": "Pirkei Avot 5:2",
-      "sefariaRef": "Pirkei Avot 5:2",
-      "sortOrder": 81,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "2"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:3",
-      "displayNameEn": "Pirkei Avot 5:3",
-      "sefariaRef": "Pirkei Avot 5:3",
-      "sortOrder": 82,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "3"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:4",
-      "displayNameEn": "Pirkei Avot 5:4",
-      "sefariaRef": "Pirkei Avot 5:4",
-      "sortOrder": 83,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "4"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:5",
-      "displayNameEn": "Pirkei Avot 5:5",
-      "sefariaRef": "Pirkei Avot 5:5",
-      "sortOrder": 84,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "5"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:6",
-      "displayNameEn": "Pirkei Avot 5:6",
-      "sefariaRef": "Pirkei Avot 5:6",
-      "sortOrder": 85,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "6"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:7",
-      "displayNameEn": "Pirkei Avot 5:7",
-      "sefariaRef": "Pirkei Avot 5:7",
-      "sortOrder": 86,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "7"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:8",
-      "displayNameEn": "Pirkei Avot 5:8",
-      "sefariaRef": "Pirkei Avot 5:8",
-      "sortOrder": 87,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "8"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:9",
-      "displayNameEn": "Pirkei Avot 5:9",
-      "sefariaRef": "Pirkei Avot 5:9",
-      "sortOrder": 88,
-      "isLeaf": true,
-      "level2": "5",
-      "level3": "9"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:10",
+      "displayNameHe": "משנה אבות ה:י",
       "displayNameEn": "Pirkei Avot 5:10",
       "sefariaRef": "Pirkei Avot 5:10",
-      "sortOrder": 89,
+      "sortOrder": 81,
       "isLeaf": true,
       "level2": "5",
       "level3": "10"
@@ -996,10 +908,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:11",
+      "displayNameHe": "משנה אבות ה:יא",
       "displayNameEn": "Pirkei Avot 5:11",
       "sefariaRef": "Pirkei Avot 5:11",
-      "sortOrder": 90,
+      "sortOrder": 82,
       "isLeaf": true,
       "level2": "5",
       "level3": "11"
@@ -1007,10 +919,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:12",
+      "displayNameHe": "משנה אבות ה:יב",
       "displayNameEn": "Pirkei Avot 5:12",
       "sefariaRef": "Pirkei Avot 5:12",
-      "sortOrder": 91,
+      "sortOrder": 83,
       "isLeaf": true,
       "level2": "5",
       "level3": "12"
@@ -1018,10 +930,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:13",
+      "displayNameHe": "משנה אבות ה:יג",
       "displayNameEn": "Pirkei Avot 5:13",
       "sefariaRef": "Pirkei Avot 5:13",
-      "sortOrder": 92,
+      "sortOrder": 84,
       "isLeaf": true,
       "level2": "5",
       "level3": "13"
@@ -1029,10 +941,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:14",
+      "displayNameHe": "משנה אבות ה:יד",
       "displayNameEn": "Pirkei Avot 5:14",
       "sefariaRef": "Pirkei Avot 5:14",
-      "sortOrder": 93,
+      "sortOrder": 85,
       "isLeaf": true,
       "level2": "5",
       "level3": "14"
@@ -1040,10 +952,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:15",
+      "displayNameHe": "משנה אבות ה:טו",
       "displayNameEn": "Pirkei Avot 5:15",
       "sefariaRef": "Pirkei Avot 5:15",
-      "sortOrder": 94,
+      "sortOrder": 86,
       "isLeaf": true,
       "level2": "5",
       "level3": "15"
@@ -1051,10 +963,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:16",
+      "displayNameHe": "משנה אבות ה:טוא",
       "displayNameEn": "Pirkei Avot 5:16",
       "sefariaRef": "Pirkei Avot 5:16",
-      "sortOrder": 95,
+      "sortOrder": 87,
       "isLeaf": true,
       "level2": "5",
       "level3": "16"
@@ -1062,10 +974,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:17",
+      "displayNameHe": "משנה אבות ה:טוב",
       "displayNameEn": "Pirkei Avot 5:17",
       "sefariaRef": "Pirkei Avot 5:17",
-      "sortOrder": 96,
+      "sortOrder": 88,
       "isLeaf": true,
       "level2": "5",
       "level3": "17"
@@ -1073,10 +985,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:18",
+      "displayNameHe": "משנה אבות ה:טוג",
       "displayNameEn": "Pirkei Avot 5:18",
       "sefariaRef": "Pirkei Avot 5:18",
-      "sortOrder": 97,
+      "sortOrder": 89,
       "isLeaf": true,
       "level2": "5",
       "level3": "18"
@@ -1084,10 +996,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:19",
+      "displayNameHe": "משנה אבות ה:טוד",
       "displayNameEn": "Pirkei Avot 5:19",
       "sefariaRef": "Pirkei Avot 5:19",
-      "sortOrder": 98,
+      "sortOrder": 90,
       "isLeaf": true,
       "level2": "5",
       "level3": "19"
@@ -1095,10 +1007,21 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:20",
+      "displayNameHe": "משנה אבות ה:ב",
+      "displayNameEn": "Pirkei Avot 5:2",
+      "sefariaRef": "Pirkei Avot 5:2",
+      "sortOrder": 91,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "2"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה:כ",
       "displayNameEn": "Pirkei Avot 5:20",
       "sefariaRef": "Pirkei Avot 5:20",
-      "sortOrder": 99,
+      "sortOrder": 92,
       "isLeaf": true,
       "level2": "5",
       "level3": "20"
@@ -1106,10 +1029,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:21",
+      "displayNameHe": "משנה אבות ה:כא",
       "displayNameEn": "Pirkei Avot 5:21",
       "sefariaRef": "Pirkei Avot 5:21",
-      "sortOrder": 100,
+      "sortOrder": 93,
       "isLeaf": true,
       "level2": "5",
       "level3": "21"
@@ -1117,10 +1040,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:22",
+      "displayNameHe": "משנה אבות ה:כב",
       "displayNameEn": "Pirkei Avot 5:22",
       "sefariaRef": "Pirkei Avot 5:22",
-      "sortOrder": 101,
+      "sortOrder": 94,
       "isLeaf": true,
       "level2": "5",
       "level3": "22"
@@ -1128,10 +1051,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 5:23",
+      "displayNameHe": "משנה אבות ה:כג",
       "displayNameEn": "Pirkei Avot 5:23",
       "sefariaRef": "Pirkei Avot 5:23",
-      "sortOrder": 102,
+      "sortOrder": 95,
       "isLeaf": true,
       "level2": "5",
       "level3": "23"
@@ -1139,7 +1062,84 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6",
+      "displayNameHe": "משנה אבות ה:ג",
+      "displayNameEn": "Pirkei Avot 5:3",
+      "sefariaRef": "Pirkei Avot 5:3",
+      "sortOrder": 96,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "3"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה:ד",
+      "displayNameEn": "Pirkei Avot 5:4",
+      "sefariaRef": "Pirkei Avot 5:4",
+      "sortOrder": 97,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "4"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה:ה",
+      "displayNameEn": "Pirkei Avot 5:5",
+      "sefariaRef": "Pirkei Avot 5:5",
+      "sortOrder": 98,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "5"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה:ו",
+      "displayNameEn": "Pirkei Avot 5:6",
+      "sefariaRef": "Pirkei Avot 5:6",
+      "sortOrder": 99,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "6"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה:ז",
+      "displayNameEn": "Pirkei Avot 5:7",
+      "sefariaRef": "Pirkei Avot 5:7",
+      "sortOrder": 100,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "7"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה:ח",
+      "displayNameEn": "Pirkei Avot 5:8",
+      "sefariaRef": "Pirkei Avot 5:8",
+      "sortOrder": 101,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "8"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ה:ט",
+      "displayNameEn": "Pirkei Avot 5:9",
+      "sefariaRef": "Pirkei Avot 5:9",
+      "sortOrder": 102,
+      "isLeaf": true,
+      "level2": "5",
+      "level3": "9"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו",
       "displayNameEn": "Pirkei Avot 6",
       "sefariaRef": "Pirkei Avot 6",
       "sortOrder": 103,
@@ -1149,7 +1149,7 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:1",
+      "displayNameHe": "משנה אבות ו:א",
       "displayNameEn": "Pirkei Avot 6:1",
       "sefariaRef": "Pirkei Avot 6:1",
       "sortOrder": 104,
@@ -1160,98 +1160,10 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:2",
-      "displayNameEn": "Pirkei Avot 6:2",
-      "sefariaRef": "Pirkei Avot 6:2",
-      "sortOrder": 105,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "2"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:3",
-      "displayNameEn": "Pirkei Avot 6:3",
-      "sefariaRef": "Pirkei Avot 6:3",
-      "sortOrder": 106,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "3"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:4",
-      "displayNameEn": "Pirkei Avot 6:4",
-      "sefariaRef": "Pirkei Avot 6:4",
-      "sortOrder": 107,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "4"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:5",
-      "displayNameEn": "Pirkei Avot 6:5",
-      "sefariaRef": "Pirkei Avot 6:5",
-      "sortOrder": 108,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "5"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:6",
-      "displayNameEn": "Pirkei Avot 6:6",
-      "sefariaRef": "Pirkei Avot 6:6",
-      "sortOrder": 109,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "6"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:7",
-      "displayNameEn": "Pirkei Avot 6:7",
-      "sefariaRef": "Pirkei Avot 6:7",
-      "sortOrder": 110,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "7"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:8",
-      "displayNameEn": "Pirkei Avot 6:8",
-      "sefariaRef": "Pirkei Avot 6:8",
-      "sortOrder": 111,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "8"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:9",
-      "displayNameEn": "Pirkei Avot 6:9",
-      "sefariaRef": "Pirkei Avot 6:9",
-      "sortOrder": 112,
-      "isLeaf": true,
-      "level2": "6",
-      "level3": "9"
-    },
-    {
-      "level1": "Pirkei Avot",
-      "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:10",
+      "displayNameHe": "משנה אבות ו:י",
       "displayNameEn": "Pirkei Avot 6:10",
       "sefariaRef": "Pirkei Avot 6:10",
-      "sortOrder": 113,
+      "sortOrder": 105,
       "isLeaf": true,
       "level2": "6",
       "level3": "10"
@@ -1259,13 +1171,101 @@
     {
       "level1": "Pirkei Avot",
       "curriculumId": "pirkei_avot",
-      "displayNameHe": "Pirkei Avot 6:11",
+      "displayNameHe": "משנה אבות ו:יא",
       "displayNameEn": "Pirkei Avot 6:11",
       "sefariaRef": "Pirkei Avot 6:11",
-      "sortOrder": 114,
+      "sortOrder": 106,
       "isLeaf": true,
       "level2": "6",
       "level3": "11"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ב",
+      "displayNameEn": "Pirkei Avot 6:2",
+      "sefariaRef": "Pirkei Avot 6:2",
+      "sortOrder": 107,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "2"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ג",
+      "displayNameEn": "Pirkei Avot 6:3",
+      "sefariaRef": "Pirkei Avot 6:3",
+      "sortOrder": 108,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "3"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ד",
+      "displayNameEn": "Pirkei Avot 6:4",
+      "sefariaRef": "Pirkei Avot 6:4",
+      "sortOrder": 109,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "4"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ה",
+      "displayNameEn": "Pirkei Avot 6:5",
+      "sefariaRef": "Pirkei Avot 6:5",
+      "sortOrder": 110,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "5"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ו",
+      "displayNameEn": "Pirkei Avot 6:6",
+      "sefariaRef": "Pirkei Avot 6:6",
+      "sortOrder": 111,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "6"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ז",
+      "displayNameEn": "Pirkei Avot 6:7",
+      "sefariaRef": "Pirkei Avot 6:7",
+      "sortOrder": 112,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "7"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ח",
+      "displayNameEn": "Pirkei Avot 6:8",
+      "sefariaRef": "Pirkei Avot 6:8",
+      "sortOrder": 113,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "8"
+    },
+    {
+      "level1": "Pirkei Avot",
+      "curriculumId": "pirkei_avot",
+      "displayNameHe": "משנה אבות ו:ט",
+      "displayNameEn": "Pirkei Avot 6:9",
+      "sefariaRef": "Pirkei Avot 6:9",
+      "sortOrder": 114,
+      "isLeaf": true,
+      "level2": "6",
+      "level3": "9"
     }
   ]
 }
