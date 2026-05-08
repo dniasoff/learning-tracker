@@ -195,12 +195,16 @@ def bavli_strategy(curriculum_id="bavli"):
             except Exception:
                 continue
             mas_he = idx.get_title("he") or mas
+            # Show 'Maseches Berakhot' / 'מסכת ברכות' at the masechta level —
+            # 'Maseches' is the conventional way Jewish learners refer to a
+            # Talmudic tractate; the leaf rows below stay at the canonical
+            # Sefaria daf form ('Berakhot 2a' / 'ברכות ב׳').
             items.append({
                 "curriculumId": curriculum_id,
                 "level1": seder_en,
                 "level2": mas,
-                "displayNameHe": mas_he,
-                "displayNameEn": mas,
+                "displayNameHe": f"מסכת {mas_he}",
+                "displayNameEn": f"Maseches {mas}",
                 "sefariaRef": mas,
                 "sortOrder": sort_order,
                 "isLeaf": False,
@@ -259,11 +263,18 @@ def _items_for_simple_book(
     sort_offset: int,
     *,
     parent_levels: dict | None = None,
+    book_label_template: tuple[str, str] | None = None,
 ) -> tuple[list[dict], int]:
     """Walk one book and emit hierarchy items: book → sub-section → leaf.
 
     `parent_levels` lets a caller inject earlier-level fields (e.g. Sefer
     grouping) so each emitted item has the full path.
+
+    `book_label_template` is an optional `(en_template, he_template)` pair —
+    e.g. `("Maseches {name}", "מסכת {name}")` — applied to the book row's
+    displayName fields. The strip prefixes ('Mishnah ', 'משנה ', 'Jerusalem
+    Talmud ', 'תלמוד ירושלמי ') are removed first so the masechta name can
+    be re-prefixed cleanly. Leaf rows keep the canonical Sefaria form.
 
     Refs like 'Mishneh Torah, Blessings 4:7' parse as:
       (book_title='Mishneh Torah, Blessings', sections=['4', '7'])
@@ -274,14 +285,32 @@ def _items_for_simple_book(
     parent_levels = parent_levels or {}
     items: list[dict] = []
     sort_order = sort_offset
+
+    book_display_en = book_title
+    book_display_he = book_he_title or book_title
+    if book_label_template is not None:
+        en_tpl, he_tpl = book_label_template
+        bare_en = book_title
+        for prefix in ("Mishnah ", "Jerusalem Talmud "):
+            if bare_en.startswith(prefix):
+                bare_en = bare_en[len(prefix):]
+                break
+        bare_he = book_he_title or book_title
+        for prefix in ("משנה ", "תלמוד ירושלמי "):
+            if bare_he.startswith(prefix):
+                bare_he = bare_he[len(prefix):]
+                break
+        book_display_en = en_tpl.format(name=bare_en)
+        book_display_he = he_tpl.format(name=bare_he)
+
     # Book row (depth-1 in our hierarchy).
     book_level_idx = len(parent_levels) + 1  # next level# field
     book_row = dict(parent_levels)
     book_row[f"level{book_level_idx}"] = book_title
     book_row.update({
         "curriculumId": curriculum_id,
-        "displayNameHe": book_he_title or book_title,
-        "displayNameEn": book_title,
+        "displayNameHe": book_display_he,
+        "displayNameEn": book_display_en,
         "sefariaRef": book_title,
         "sortOrder": sort_order,
         "isLeaf": False,
@@ -508,6 +537,8 @@ def _strategy_grouped(
     category_path: str,
     main_subcats: list[str] | None,
     level_labels: list[str],
+    *,
+    book_label_template: tuple[str, str] | None = None,
 ):
     """Walk Sefaria's TOC under a category, group books by sub-category,
     enumerate atomic refs per book, emit hierarchy items with that grouping
@@ -549,6 +580,7 @@ def _strategy_grouped(
                     level_labels[1:] if subcat_en else level_labels,
                     sort_order,
                     parent_levels={"level1": subcat_en} if subcat_en else None,
+                    book_label_template=book_label_template,
                 )
                 items.extend(book_items)
         return items, level_labels, len(level_labels)
@@ -604,6 +636,7 @@ STRATEGIES = {
             "Seder Nezikin", "Seder Kodashim", "Seder Tahorot",
         ],
         ["Seder", "Masechta", "Daf"],
+        book_label_template=("Maseches {name}", "מסכת {name}"),
     ),
     "mishnayos": _strategy_grouped(
         "mishnayos",
@@ -613,6 +646,7 @@ STRATEGIES = {
             "Seder Nezikin", "Seder Kodashim", "Seder Tahorot",
         ],
         ["Seder", "Masechta", "Chapter", "Mishnah"],
+        book_label_template=("Maseches {name}", "מסכת {name}"),
     ),
     "chumash": _strategy_grouped(
         "chumash", "Tanakh/Torah", None, ["Sefer", "Chapter", "Verse"],
