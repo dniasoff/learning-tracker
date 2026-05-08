@@ -461,9 +461,23 @@ List<LifetimeTreeNode> _buildTree(
       if (key == null || key.isEmpty) continue;
       grouped.putIfAbsent(key, () => []).add(item);
     }
+    // Sort groups by the smallest sortOrder of any item within them. Without
+    // this, levels keyed on numeric strings ('1', '10', '2', '11', ...)
+    // sort lexicographically — chapter 10 ends up before chapter 2 and
+    // 'yud' (י) shows ahead of 'aleph' (א).
+    final sortedEntries = grouped.entries.toList()
+      ..sort((a, b) {
+        final aMin = a.value
+            .map((e) => e.sortOrder)
+            .reduce((x, y) => x < y ? x : y);
+        final bMin = b.value
+            .map((e) => e.sortOrder)
+            .reduce((x, y) => x < y ? x : y);
+        return aMin.compareTo(bMin);
+      });
 
     final nodes = <LifetimeTreeNode>[];
-    for (final entry in grouped.entries) {
+    for (final entry in sortedEntries) {
       final hasDeeper =
           entry.value.any((item) => levelValue(item) != item.sefariaRef) &&
           level < 4 &&
