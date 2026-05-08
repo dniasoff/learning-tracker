@@ -2,15 +2,26 @@
 ///
 /// [storageKey] is used as the canonical identifier in the database
 /// and API layers. All curriculum_id columns use this value.
+///
+/// **Declaration order is the canonical learning order** the UI uses
+/// everywhere a list of curricula is shown. Order follows traditional
+/// Jewish-learning sequence:
+///   Tanakh (Chumash → Nach → Tanach combined)
+///   → Mishnah (Mishnayos)
+///   → Talmud (Bavli → Yerushalmi)
+///   → Halakhah codes (Mishneh Torah → Mishna Berurah)
+///   → Mussar
+/// Do NOT sort by `displayNameEn` / `storageKey` — those are alphabetical
+/// and put e.g. Bavli before Chumash, which is wrong.
 enum CurriculumId {
+  chumash('chumash'),
+  nach('nach'),
+  tanach('tanach'),
   mishnayos('mishnayos'),
   bavli('bavli'),
   yerushalmi('yerushalmi'),
-  mishnaBerurah('mishna_berurah'),
-  chumash('chumash'),
   mishnehTorah('mishneh_torah'),
-  tanach('tanach'),
-  nach('nach'),
+  mishnaBerurah('mishna_berurah'),
   mussar('mussar');
 
   const CurriculumId(this.storageKey);

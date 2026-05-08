@@ -338,11 +338,12 @@ class _LearningLifetimeTreeCardState extends State<_LearningLifetimeTreeCard> {
       return const SizedBox.shrink();
     }
 
+    // Sort by canonical Jewish-learning order (CurriculumId enum index),
+    // not alphabetical — Chumash → Nach → Mishnayos → Bavli → Yerushalmi →
+    // codes → Mussar.
     final withProgress =
         widget.summaries.where((s) => s.learnedLeafCount > 0).toList()..sort(
-          (a, b) => a.curriculumId.displayNameEn.compareTo(
-            b.curriculumId.displayNameEn,
-          ),
+          (a, b) => a.curriculumId.index.compareTo(b.curriculumId.index),
         );
 
     if (withProgress.isEmpty) {

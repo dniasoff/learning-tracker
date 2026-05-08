@@ -26,8 +26,10 @@ class GroupedDailyView extends StatelessWidget {
       return const Center(child: Text('No tasks for today'));
     }
 
+    // Canonical Jewish-learning order — never alphabetical. The
+    // CurriculumId enum's declaration order is the source of truth.
     final curricula = grouped.keys.toList()
-      ..sort((a, b) => a.storageKey.compareTo(b.storageKey));
+      ..sort((a, b) => a.index.compareTo(b.index));
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
