@@ -57,7 +57,7 @@ void main() {
       expect(find.text('Learn'), findsOneWidget);
     });
 
-    testWidgets('displays estimated effort', (tester) async {
+    testWidgets('displays XP for effort', (tester) async {
       final task = _task(estimatedEffortMinutes: 5);
 
       await tester.pumpWidget(
@@ -66,8 +66,9 @@ void main() {
         ),
       );
 
-      expect(find.text('5m'), findsOneWidget);
-      expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
+      // Widget shows XP (effort * 3), not raw minutes
+      expect(find.text('+15 XP'), findsOneWidget);
+      expect(find.byIcon(Icons.stars_rounded), findsOneWidget);
     });
 
     testWidgets('shows overdue badge when task is overdue', (tester) async {
@@ -144,7 +145,7 @@ void main() {
       );
 
       expect(find.text('Chazara 3'), findsOneWidget);
-      expect(find.text('3m'), findsOneWidget);
+      expect(find.text('+9 XP'), findsOneWidget);
     });
   });
 }
