@@ -373,9 +373,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     if (activeCount <= 1) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot archive your only active track'),
-        ),
+        const SnackBar(content: Text('Cannot archive your only active track')),
       );
       return;
     }

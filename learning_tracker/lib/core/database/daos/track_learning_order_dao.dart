@@ -31,7 +31,7 @@ class TrackLearningOrderDao extends DatabaseAccessor<UserDatabase>
     }
   }
 
-  Future<void> deleteByTrack(int trackId) =>
-      (delete(trackLearningOrder)..where((t) => t.trackId.equals(trackId)))
-          .go();
+  Future<void> deleteByTrack(int trackId) => (delete(
+    trackLearningOrder,
+  )..where((t) => t.trackId.equals(trackId))).go();
 }

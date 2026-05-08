@@ -28,10 +28,7 @@ class _TrackLearningOrderScreenState
 
   @override
   Widget build(BuildContext context) {
-    final args = (
-      trackId: widget.trackId,
-      curriculumId: widget.curriculumId,
-    );
+    final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
     final sedarimAsync = ref.watch(trackSedarimOrderProvider(args));
     final masechtosAsync = ref.watch(trackMasechtosOrderProvider(args));
 
@@ -43,14 +40,11 @@ class _TrackLearningOrderScreenState
     });
 
     final theme = Theme.of(context);
-    final isLoading =
-        sedarimAsync.isLoading || masechtosAsync.isLoading;
+    final isLoading = sedarimAsync.isLoading || masechtosAsync.isLoading;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '${widget.curriculumId.displayNameHe} • Reorder',
-        ),
+        title: Text('${widget.curriculumId.displayNameHe} • Reorder'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -129,7 +123,9 @@ class _TrackLearningOrderScreenState
     final updated = items
         .asMap()
         .entries
-        .map((e) => e.value.copyWith(userSortOrder: e.key, isCustomOrdered: true))
+        .map(
+          (e) => e.value.copyWith(userSortOrder: e.key, isCustomOrdered: true),
+        )
         .toList();
     setState(() => _localSedarim = updated);
     _persistSedarim(updated);
@@ -143,7 +139,9 @@ class _TrackLearningOrderScreenState
     final updated = items
         .asMap()
         .entries
-        .map((e) => e.value.copyWith(userSortOrder: e.key, isCustomOrdered: true))
+        .map(
+          (e) => e.value.copyWith(userSortOrder: e.key, isCustomOrdered: true),
+        )
         .toList();
     setState(() => _localMasechtos = updated);
     _persistMasechtos(updated);

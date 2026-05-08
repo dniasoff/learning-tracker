@@ -16,18 +16,22 @@ final trackLearningOrderRepositoryProvider =
 
 typedef _TrackCurriculumArgs = ({int trackId, CurriculumId curriculumId});
 
-final trackSedarimOrderProvider = FutureProvider.family<
-    List<LearningOrderItem>,
-    _TrackCurriculumArgs>((ref, args) {
-  return ref
-      .watch(trackLearningOrderRepositoryProvider)
-      .getSedarimOrder(args.trackId, args.curriculumId);
-});
+final trackSedarimOrderProvider =
+    FutureProvider.family<List<LearningOrderItem>, _TrackCurriculumArgs>((
+      ref,
+      args,
+    ) {
+      return ref
+          .watch(trackLearningOrderRepositoryProvider)
+          .getSedarimOrder(args.trackId, args.curriculumId);
+    });
 
-final trackMasechtosOrderProvider = FutureProvider.family<
-    List<LearningOrderItem>,
-    _TrackCurriculumArgs>((ref, args) {
-  return ref
-      .watch(trackLearningOrderRepositoryProvider)
-      .getMasechtosOrder(args.trackId, args.curriculumId);
-});
+final trackMasechtosOrderProvider =
+    FutureProvider.family<List<LearningOrderItem>, _TrackCurriculumArgs>((
+      ref,
+      args,
+    ) {
+      return ref
+          .watch(trackLearningOrderRepositoryProvider)
+          .getMasechtosOrder(args.trackId, args.curriculumId);
+    });
