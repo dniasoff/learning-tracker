@@ -92,33 +92,48 @@ def _expand_titles(spec: dict) -> list[str]:
     return sorted(t for t in titles if t not in exclude)
 
 
-def _atomic_refs_for(title: str):
-    """Yield atomic Ref objects for a book. Falls back gracefully when
-    Sefaria's complex schemas don't support all_segment_refs() at the root.
+def _walk_node(node):
+    """Recursively yield atomic Ref objects for any Index node.
+
+    Strategy: try the simple path first (Ref(node.full_title) →
+    all_segment_refs), which works for JaggedArrayNode and the few
+    SchemaNode roots Sefaria has consolidated. If that fails, descend
+    into node.children and try each.
     """
+    title = None
+    if hasattr(node, "full_title"):
+        try:
+            title = node.full_title("en")
+        except Exception:
+            title = None
+    if title:
+        try:
+            nref = Ref(title)
+            yielded = False
+            for r in nref.all_segment_refs():
+                yielded = True
+                yield r
+            if yielded:
+                return
+        except Exception:
+            pass
+    children = getattr(node, "children", None)
+    if children:
+        for child in children:
+            yield from _walk_node(child)
+
+
+def _atomic_refs_for(title: str):
+    """Yield atomic Ref objects for a book. Handles JaggedArrayNode roots
+    directly and SchemaNode roots via recursive descent."""
     try:
-        root = Ref(title)
+        idx = __import__("sefaria.model", fromlist=["library"]).library.get_index(
+            title
+        )
     except Exception as e:
-        sys.stderr.write(f"  cannot Ref({title!r}): {e}\n")
+        sys.stderr.write(f"  cannot get_index({title!r}): {e}\n")
         return
-    try:
-        for r in root.all_segment_refs():
-            yield r
-        return
-    except Exception:
-        pass
-    # Complex schema fallback — walk top-level children's segment refs.
-    try:
-        for child_ref in root.subrefs():
-            try:
-                for r in child_ref.all_segment_refs():
-                    yield r
-            except Exception as e:
-                sys.stderr.write(
-                    f"  segment-walk failed for {child_ref.normal()}: {e}\n"
-                )
-    except Exception as e:
-        sys.stderr.write(f"  subrefs() failed for {title!r}: {e}\n")
+    yield from _walk_node(idx.nodes)
 
 
 def main():

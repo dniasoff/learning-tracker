@@ -41,6 +41,31 @@ BOOK_TEXT_CACHE = APP_ROOT / "tool" / "data" / "book_text_cache.json"
 _TEXT_REFS: set[str] | None = None
 
 
+def _walk_index_node(node):
+    """Recursively yield atomic Ref objects for any Index node — handles
+    both JaggedArrayNode roots (direct) and SchemaNode roots (recursive)."""
+    title = None
+    if hasattr(node, "full_title"):
+        try:
+            title = node.full_title("en")
+        except Exception:
+            title = None
+    if title:
+        try:
+            yielded = False
+            for r in Ref(title).all_segment_refs():
+                yielded = True
+                yield r
+            if yielded:
+                return
+        except Exception:
+            pass
+    children = getattr(node, "children", None)
+    if children:
+        for child in children:
+            yield from _walk_index_node(child)
+
+
 def _refs_with_text() -> set[str] | None:
     """Refs the book extractor confirmed have non-empty text. Used to filter
     out 'structurally exists but empty in Sefaria' leaves before emitting
@@ -235,11 +260,15 @@ def _items_for_simple_book(
 
     # Walk atomic refs. Group by intermediate sections so we emit one row
     # per (parent path, intermediate, leaf).
+    segs: list = []
     try:
-        root = Ref(book_title)
-        segs = list(root.all_segment_refs())
+        idx = library.get_index(book_title)
+        segs = list(_walk_index_node(idx.nodes))
     except Exception:
-        return items, sort_order
+        try:
+            segs = list(Ref(book_title).all_segment_refs())
+        except Exception:
+            return items, sort_order
 
     text_refs = _refs_with_text()
     seen_intermediates: set[tuple[str, ...]] = set()
@@ -249,11 +278,20 @@ def _items_for_simple_book(
         # structurally but the text is empty in both languages).
         if text_refs is not None and ref_str not in text_refs:
             continue
-        # Strip the book-prefix to get just the section path.
-        suffix = ref_str[len(book_title):].lstrip()
-        # Sections are colon-delimited (codes/mishna) or just the daf number.
-        # For depth-2 books: "1:1" → ['1', '1'].
-        sections = re.split(r"[:.]", suffix) if suffix else []
+        # Parse the ref into hierarchy levels. Three shapes:
+        #   - 'Pirkei Avot 1:1'              → text_levels=[],            num=['1','1']
+        #   - 'Sefer HaMitzvot, X 12:3'      → text_levels=['X'],         num=['12','3']
+        #   - 'Sefer HaMitzvot, X, Y 1'      → text_levels=['X','Y'],     num=['1']
+        # Comma-separated parts between the book title and the trailing
+        # numeric tail are intermediate level fields.
+        suffix = ref_str[len(book_title):]
+        suffix = re.sub(r"^[\s,]+", "", suffix)
+        m = re.match(r"^(?P<text>.*?)(?:\s+(?P<num>\d[\d:.\-]*))?\s*$", suffix)
+        text_part = (m.group("text") if m else suffix).rstrip(", ")
+        numeric = m.group("num") if m and m.group("num") else ""
+        text_levels = [p.strip() for p in text_part.split(",") if p.strip()]
+        num_levels = re.split(r"[:.]", numeric) if numeric else []
+        sections = text_levels + num_levels
         if not sections:
             continue
 
@@ -389,13 +427,24 @@ STRATEGIES = {
         ["Volume", "Siman", "Seif"],
     ),
     "arukh_hashulchan": _strategy_simple(
-        "arukh_hashulchan", ["Arukh HaShulchan"], ["Book", "Section", "Seif"],
+        "arukh_hashulchan",
+        ["Arukh HaShulchan"],
+        ["Book", "Volume", "Siman", "Seif"],
     ),
     "chofetz_chaim": _strategy_simple(
-        "chofetz_chaim", ["Chafetz Chaim"], ["Book", "Section", "Seif"],
+        "chofetz_chaim",
+        ["Chafetz Chaim"],
+        ["Book", "Part", "Klal", "Seif"],
     ),
     "sefer_hamitzvot": _strategy_simple(
-        "sefer_hamitzvot", ["Sefer HaMitzvot"], ["Book", "Section", "Mitzvah"],
+        "sefer_hamitzvot",
+        ["Sefer HaMitzvot"],
+        ["Book", "Section", "Subsection", "Item"],
+    ),
+    "shemirat_halashon": _strategy_simple(
+        "shemirat_halashon",
+        ["Shemirat HaLashon"],
+        ["Book", "Sefer", "Chapter", "Verse"],
     ),
     "mishneh_torah": _strategy_mishneh_torah,
 }
