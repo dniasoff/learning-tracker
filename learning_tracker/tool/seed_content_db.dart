@@ -158,9 +158,9 @@ Future<void> main(List<String> rawArgs) async {
   }
 
   final dbPath = '${args.output}/seed.db';
-  final gzPath = '${args.output}/seed.db.gz';
+  final xzPath = '${args.output}/seed.db.xz';
   final sidecarPath = '${args.output}/seed_version.json';
-  const assetPath = 'assets/db/content.db.gz';
+  const assetPath = 'assets/db/content.db.xz';
 
   if (args.mode == _Mode.validateOnly) {
     await _validateExisting(dbPath, args);
@@ -188,6 +188,13 @@ Future<void> main(List<String> rawArgs) async {
     if (args.mode == _Mode.build || args.mode == _Mode.textOnly) {
       print('Phase 3: Fetching text content from Sefaria (he, en)...');
       textCacheCount = await _fetchAndInsertTextContent(db, args);
+      // Phase 3b: Merge atomic text from tool/text_extract/extract_books.py
+      // (Sefaria-Project + local Mongo, no API). Adds the new curricula's
+      // atomic refs without re-fetching anything via API.
+      print('Phase 3b: Merging book_text_cache.json...');
+      final extra = await _mergeBookTextCache(db);
+      textCacheCount += extra;
+      print('  added $extra text_cache rows');
     } else {
       textCacheCount = await _countRows(db, 'text_cache');
     }
@@ -242,6 +249,56 @@ Future<void> main(List<String> rawArgs) async {
       print('  ✓ all calendar entries resolve');
     }
 
+    // Phase 4d: Curriculum-completeness validator — every leaf ref in every
+    // hierarchy.json must exist in text_cache. Locks in 100% curriculum
+    // coverage so a future build can't silently regress.
+    if (args.mode == _Mode.build) {
+      print('Phase 4d: Verifying curriculum hierarchies in text_cache...');
+      final hierarchyDir = Directory('assets/content/hierarchy');
+      var totalLeaves = 0;
+      final missingByCurriculum = <String, List<String>>{};
+      for (final f in hierarchyDir.listSync().whereType<File>()) {
+        if (!f.path.endsWith('.json')) continue;
+        final raw = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+        final items = raw['items'] as List<dynamic>;
+        final leaves = <String>[];
+        for (final it in items.cast<Map<String, dynamic>>()) {
+          if (it['isLeaf'] == true && it['sefariaRef'] is String) {
+            leaves.add(it['sefariaRef'] as String);
+          }
+        }
+        totalLeaves += leaves.length;
+        final name = f.uri.pathSegments.last.replaceAll('.json', '');
+        final missing = <String>[];
+        for (final ref in leaves) {
+          final hit = await db
+              .customSelect(
+                'SELECT 1 FROM text_cache WHERE sefaria_ref = ? LIMIT 1',
+                variables: [Variable.withString(ref)],
+              )
+              .getSingleOrNull();
+          if (hit == null) missing.add(ref);
+        }
+        if (missing.isNotEmpty) missingByCurriculum[name] = missing;
+      }
+      if (missingByCurriculum.isNotEmpty) {
+        print('  ❌ curriculum gaps:');
+        for (final entry in missingByCurriculum.entries) {
+          final sample = entry.value.take(5).join(', ');
+          final more = entry.value.length > 5
+              ? ' …and ${entry.value.length - 5} more'
+              : '';
+          print(
+            '    ${entry.key}: ${entry.value.length} missing ($sample$more)',
+          );
+        }
+        throw StateError(
+          'Build aborted: curriculum hierarchies reference refs not in text_cache',
+        );
+      }
+      print('  ✓ all $totalLeaves curriculum leaves resolve');
+    }
+
     // Phase 5: Finalize
     if (args.mode == _Mode.build || args.mode == _Mode.textOnly) {
       print('Phase 5: Finalizing (content hash, SeedMetadata)...');
@@ -261,16 +318,38 @@ Future<void> main(List<String> rawArgs) async {
   }
 
   // Compress + write sidecar + copy to asset path.
-  print('Phase 6: Compressing seed.db → seed.db.gz...');
+  // xz -9 --extreme reduces the seed by ~45% over gzip, keeping the asset
+  // under GitHub's 100 MB hard limit. The runtime decompresses with
+  // package:archive's XZDecoder (see SeedManager).
+  print('Phase 6: Compressing seed.db → seed.db.xz (xz -9 --extreme)...');
   final uncompressed = File(dbPath).readAsBytesSync();
-  final compressed = gzip.encode(uncompressed);
-  File(gzPath).writeAsBytesSync(compressed);
+  // Remove any stale .xz from a prior run; xz refuses to overwrite by default.
+  if (File(xzPath).existsSync()) {
+    File(xzPath).deleteSync();
+  }
+  final xzResult = Process.runSync(
+    'xz',
+    ['-9', '--extreme', '-k', '-f', dbPath],
+    stdoutEncoding: null,
+    stderrEncoding: null,
+  );
+  if (xzResult.exitCode != 0) {
+    throw StateError('xz failed: ${xzResult.stderr}');
+  }
+  // xz with -k writes alongside the input as <input>.xz; the file we want
+  // is at xzPath already (it's `${dbPath}.xz`).
+  final compressed = File(xzPath).readAsBytesSync();
 
   final assetDir = Directory('assets/db');
   if (!assetDir.existsSync()) {
     assetDir.createSync(recursive: true);
   }
-  File(gzPath).copySync(assetPath);
+  // Drop any leftover gzip asset so the bundle isn't double-shipping.
+  final legacyGz = File('assets/db/content.db.gz');
+  if (legacyGz.existsSync()) {
+    legacyGz.deleteSync();
+  }
+  File(xzPath).copySync(assetPath);
 
   final contentHashForSidecar = await _computeContentHashFromFile(dbPath);
   final buildDate = DateTime.now().toUtc().toIso8601String();
@@ -757,6 +836,48 @@ Future<String> _computeContentHashFromFile(String dbPath) async {
   } finally {
     await db.close();
   }
+}
+
+/// Loads tool/data/book_text_cache.json (atomic curriculum text from
+/// Sefaria-Project + local Mongo) and inserts any refs not already present
+/// in text_cache. Returns the number of new rows added.
+Future<int> _mergeBookTextCache(ContentDatabase db) async {
+  final f = File('tool/data/book_text_cache.json');
+  if (!f.existsSync()) {
+    print('  no book_text_cache.json — skipping');
+    return 0;
+  }
+  final raw = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+  final now = DateTime.now().toUtc();
+  var added = 0;
+  const batchSize = 500;
+  final entries = raw.entries.toList();
+  for (var i = 0; i < entries.length; i += batchSize) {
+    final end = (i + batchSize).clamp(0, entries.length);
+    await db.transaction(() async {
+      for (var j = i; j < end; j++) {
+        final entry = entries[j];
+        final ref = entry.key;
+        final v = entry.value as Map<String, dynamic>;
+        final en = (v['en'] as String?) ?? '';
+        final he = (v['he'] as String?) ?? '';
+        if (en.isEmpty && he.isEmpty) continue;
+        await db.customInsert(
+          'INSERT OR REPLACE INTO text_cache '
+          '(sefaria_ref, hebrew_text, english_text, fetched_at) '
+          'VALUES (?, ?, ?, ?)',
+          variables: [
+            Variable.withString(ref),
+            Variable.withString(he),
+            Variable.withString(en),
+            Variable.withDateTime(now),
+          ],
+        );
+        added++;
+      }
+    });
+  }
+  return added;
 }
 
 /// Loads the JSON produced by tool/text_extract/main.py and writes one

@@ -77,3 +77,6 @@ tool/curate_curricula/__pycache__/
 # Build artifacts (regenerate via tool/text_extract — needs Sefaria-Project + Mongo)
 tool/data/daily_content_cache.json
 tool/text_extract/__pycache__/
+
+# Build artifact (regenerate via tool/text_extract/extract_books.py)
+tool/data/book_text_cache.json

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:archive/archive.dart' show XZDecoder;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
@@ -36,7 +37,7 @@ class SeedManager {
 
   static const String _contentDbName = 'content.db';
   static const String _backupSuffix = '.bak';
-  static const String _seedAssetPath = 'assets/db/content.db.gz';
+  static const String _seedAssetPath = 'assets/db/content.db.xz';
 
   String get _dbPath => '$_dbDirectory/$_contentDbName';
   String get _bakPath => '$_dbPath$_backupSuffix';
@@ -138,11 +139,13 @@ class SeedManager {
     }
   }
 
-  /// Extract seed.db.gz from assets to the target path.
+  /// Extract seed.db.xz from assets to the target path.
   Future<void> _extractSeedDb(String targetPath) async {
     try {
       final compressed = await rootBundle.load(_seedAssetPath);
-      final decompressed = gzip.decode(compressed.buffer.asUint8List());
+      final decompressed = XZDecoder().decodeBytes(
+        compressed.buffer.asUint8List(),
+      );
       await File(targetPath).writeAsBytes(decompressed, flush: true);
       _talker?.info(
         'SeedManager: Seed extracted '

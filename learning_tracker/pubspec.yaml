@@ -28,6 +28,11 @@ dependencies:
   drift_flutter: ^0.2.8
   sqlite3: ^2.9.4
 
+  # Asset decompression — xz reduces the seed.db payload by ~45% over gzip,
+  # which keeps the bundled content asset comfortably under GitHub's
+  # 100 MB hard limit on individual files.
+  archive: ^4.0.9
+
   # Networking
   http: ^1.3.0
 

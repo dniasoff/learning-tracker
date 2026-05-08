@@ -21,6 +21,7 @@ Default mode: dry-run (no writes); --write commits to assets/content/hierarchy/.
 
 import argparse
 import json
+import re
 import sys
 import warnings
 from pathlib import Path
@@ -31,10 +32,27 @@ import django  # noqa: E402
 
 django.setup()
 
-from sefaria.model import library  # noqa: E402
+from sefaria.model import library, IndexSet, Ref  # noqa: E402
 
 APP_ROOT = Path(__file__).resolve().parents[2]
 HIERARCHY_DIR = APP_ROOT / "assets" / "content" / "hierarchy"
+BOOK_TEXT_CACHE = APP_ROOT / "tool" / "data" / "book_text_cache.json"
+
+_TEXT_REFS: set[str] | None = None
+
+
+def _refs_with_text() -> set[str] | None:
+    """Refs the book extractor confirmed have non-empty text. Used to filter
+    out 'structurally exists but empty in Sefaria' leaves before emitting
+    a hierarchy. Returns None if the cache hasn't been built yet (no
+    filtering applied)."""
+    global _TEXT_REFS
+    if _TEXT_REFS is not None:
+        return _TEXT_REFS
+    if not BOOK_TEXT_CACHE.exists():
+        return None
+    _TEXT_REFS = set(json.loads(BOOK_TEXT_CACHE.read_text()).keys())
+    return _TEXT_REFS
 
 # ────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -171,15 +189,215 @@ def bavli_strategy(curriculum_id="bavli"):
     return items, ["Seder", "Masechta", "Daf", "Amud"], 4
 
 
-# Stubs for the rest — populate as we expand
+# ────────────────────────────────────────────────────────────────────────
+# Generic builders for the new curricula. Each enumerates atomic segment
+# refs via Sefaria-Project's Ref().all_segment_refs() and parses each ref
+# into the hierarchy levels appropriate to that tradition.
+
+
+def _items_for_simple_book(
+    curriculum_id: str,
+    book_title: str,
+    book_he_title: str | None,
+    level_labels: list[str],
+    sort_offset: int,
+    *,
+    parent_levels: dict | None = None,
+) -> tuple[list[dict], int]:
+    """Walk one book and emit hierarchy items: book → sub-section → leaf.
+
+    `parent_levels` lets a caller inject earlier-level fields (e.g. Sefer
+    grouping) so each emitted item has the full path.
+
+    Refs like 'Mishneh Torah, Blessings 4:7' parse as:
+      (book_title='Mishneh Torah, Blessings', sections=['4', '7'])
+
+    Top-level refs like 'Pirkei Avot 1:1' parse as:
+      (book_title='Pirkei Avot', sections=['1', '1'])
+    """
+    parent_levels = parent_levels or {}
+    items: list[dict] = []
+    sort_order = sort_offset
+    # Book row (depth-1 in our hierarchy).
+    book_level_idx = len(parent_levels) + 1  # next level# field
+    book_row = dict(parent_levels)
+    book_row[f"level{book_level_idx}"] = book_title
+    book_row.update({
+        "curriculumId": curriculum_id,
+        "displayNameHe": book_he_title or book_title,
+        "displayNameEn": book_title,
+        "sefariaRef": book_title,
+        "sortOrder": sort_order,
+        "isLeaf": False,
+    })
+    items.append(book_row)
+    sort_order += 1
+
+    # Walk atomic refs. Group by intermediate sections so we emit one row
+    # per (parent path, intermediate, leaf).
+    try:
+        root = Ref(book_title)
+        segs = list(root.all_segment_refs())
+    except Exception:
+        return items, sort_order
+
+    text_refs = _refs_with_text()
+    seen_intermediates: set[tuple[str, ...]] = set()
+    for seg in segs:
+        ref_str = seg.normal()
+        # Drop leaves that have no text content (Sefaria recognises the ref
+        # structurally but the text is empty in both languages).
+        if text_refs is not None and ref_str not in text_refs:
+            continue
+        # Strip the book-prefix to get just the section path.
+        suffix = ref_str[len(book_title):].lstrip()
+        # Sections are colon-delimited (codes/mishna) or just the daf number.
+        # For depth-2 books: "1:1" → ['1', '1'].
+        sections = re.split(r"[:.]", suffix) if suffix else []
+        if not sections:
+            continue
+
+        # Emit intermediate rows for every prefix path we haven't seen yet.
+        for cut in range(1, len(sections)):
+            key = tuple(sections[: cut])
+            if key in seen_intermediates:
+                continue
+            seen_intermediates.add(key)
+            row = dict(book_row)
+            row[f"level{book_level_idx + cut}"] = sections[cut - 1]
+            row["displayNameEn"] = f"{book_title} {':'.join(sections[: cut])}"
+            row["displayNameHe"] = row["displayNameEn"]
+            row["sefariaRef"] = (
+                f"{book_title} {':'.join(sections[: cut])}"
+            )
+            row["sortOrder"] = sort_order
+            row["isLeaf"] = False
+            items.append(row)
+            sort_order += 1
+
+        # Leaf row.
+        leaf = dict(book_row)
+        for i, sec in enumerate(sections, start=1):
+            leaf[f"level{book_level_idx + i}"] = sec
+        leaf["displayNameEn"] = ref_str
+        leaf["displayNameHe"] = ref_str
+        leaf["sefariaRef"] = ref_str
+        leaf["sortOrder"] = sort_order
+        leaf["isLeaf"] = True
+        items.append(leaf)
+        sort_order += 1
+
+    return items, sort_order
+
+
+def _strategy_simple(
+    curriculum_id: str,
+    titles: list[str],
+    level_labels: list[str],
+):
+    """For curricula whose books are independent siblings (no Sefer grouping).
+    Emits one book per level1, with intermediate + leaf levels parsed from
+    each book's segment refs.
+    """
+    def go(curr=curriculum_id):
+        items: list[dict] = []
+        sort_order = 0
+        for title in titles:
+            try:
+                idx = library.get_index(title)
+                he_title = idx.get_title("he")
+            except Exception:
+                he_title = None
+            book_items, sort_order = _items_for_simple_book(
+                curr, title, he_title, level_labels, sort_order,
+            )
+            items.extend(book_items)
+        return items, level_labels, len(level_labels)
+    return go
+
+
+def _strategy_mishneh_torah(curriculum_id="mishneh_torah"):
+    """Mishneh Torah — Sefer (e.g. 'Sefer Ahavah') / Hilchot ('Mishneh Torah,
+    Blessings') / Chapter / Halakhah. 88 sub-volumes grouped by Sefer via
+    Sefaria's Index.categories[2].
+    """
+    level_labels = ["Sefer", "Hilchot", "Chapter", "Halakhah"]
+    excluded = {
+        "Mishneh Torah, Negative Mitzvot",
+        "Mishneh Torah, Overview of Mishneh Torah Contents",
+        "Mishneh Torah, Positive Mitzvot",
+    }
+    by_sefer: dict[str, list] = {}
+    for idx in IndexSet({"title": {"$regex": "^Mishneh Torah, "}}).array():
+        if idx.title in excluded:
+            continue
+        sefer = idx.categories[2] if len(idx.categories) > 2 else "Other"
+        by_sefer.setdefault(sefer, []).append(idx)
+
+    items: list[dict] = []
+    sort_order = 0
+    sefer_order = [
+        "Sefer Madda", "Sefer Ahavah", "Sefer Zemanim", "Sefer Nashim",
+        "Sefer Kedushah", "Sefer Haflaah", "Sefer Zeraim", "Sefer Avodah",
+        "Sefer Korbanot", "Sefer Taharah", "Sefer Nezikim", "Sefer Kinyan",
+        "Sefer Mishpatim", "Sefer Shoftim",
+    ]
+    for sefer in sefer_order:
+        idxs = by_sefer.get(sefer, [])
+        if not idxs:
+            continue
+        items.append({
+            "curriculumId": curriculum_id,
+            "level1": sefer,
+            "displayNameHe": sefer,
+            "displayNameEn": sefer,
+            "sefariaRef": sefer,
+            "sortOrder": sort_order,
+            "isLeaf": False,
+        })
+        sort_order += 1
+        for idx in sorted(idxs, key=lambda i: i.title):
+            book_items, sort_order = _items_for_simple_book(
+                curriculum_id,
+                idx.title,
+                idx.get_title("he"),
+                level_labels[1:],
+                sort_order,
+                parent_levels={"level1": sefer},
+            )
+            items.extend(book_items)
+    return items, level_labels, 4
+
+
+# Per-curriculum strategy table.
 STRATEGIES = {
     "bavli": bavli_strategy,
-    # "yerushalmi": ..., "mishnayos": ..., "chumash": ..., "nach": ...,
-    # "mishna_berurah": ..., "mussar": ...,
-    # NEW:
-    # "mishneh_torah": ..., "shulchan_arukh": ..., "arukh_hashulchan": ...,
-    # "kitzur_shulchan_aruch": ..., "chofetz_chaim": ..., "sefer_hamitzvot": ...,
-    # "pirkei_avot": ...,
+    "pirkei_avot": _strategy_simple(
+        "pirkei_avot", ["Pirkei Avot"], ["Book", "Chapter", "Mishnah"],
+    ),
+    "kitzur_shulchan_aruch": _strategy_simple(
+        "kitzur_shulchan_aruch", ["Kitzur Shulchan Arukh"], ["Book", "Siman", "Seif"],
+    ),
+    "shulchan_arukh": _strategy_simple(
+        "shulchan_arukh",
+        [
+            "Shulchan Arukh, Orach Chayim",
+            "Shulchan Arukh, Yoreh De'ah",
+            "Shulchan Arukh, Even HaEzer",
+            "Shulchan Arukh, Choshen Mishpat",
+        ],
+        ["Volume", "Siman", "Seif"],
+    ),
+    "arukh_hashulchan": _strategy_simple(
+        "arukh_hashulchan", ["Arukh HaShulchan"], ["Book", "Section", "Seif"],
+    ),
+    "chofetz_chaim": _strategy_simple(
+        "chofetz_chaim", ["Chafetz Chaim"], ["Book", "Section", "Seif"],
+    ),
+    "sefer_hamitzvot": _strategy_simple(
+        "sefer_hamitzvot", ["Sefer HaMitzvot"], ["Book", "Section", "Mitzvah"],
+    ),
+    "mishneh_torah": _strategy_mishneh_torah,
 }
 
 
