@@ -153,7 +153,7 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      await tester.drag(find.byType(ListView), const Offset(0, -350));
+      await tester.drag(find.byType(ListView), const Offset(0, -700));
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Notification Settings'), findsOneWidget);
@@ -184,11 +184,12 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      await tester.drag(find.byType(ListView), const Offset(0, -1000));
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump();
+      // Scroll far enough to reveal the version widget at the bottom of the
+      // list (after ACCOUNT section and all other content).
+      await tester.drag(find.byType(ListView), const Offset(0, -5000));
+      await tester.pumpAndSettle();
 
-      expect(find.text('v1.0.0'), findsOneWidget);
+      expect(find.text('v1.0.0 (1)'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

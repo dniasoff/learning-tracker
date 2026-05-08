@@ -3,38 +3,43 @@ import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 
 void main() {
   group('CalendarProgramRegistry', () {
-    test('has exactly 15 programs', () {
-      expect(CalendarProgramRegistry.programs.length, 15);
+    test('has exactly 20 programs', () {
+      expect(CalendarProgramRegistry.programs.length, 20);
     });
 
-    group('byApiKey - Sefaria programs', () {
-      test('Daily Mishnah maps to mishna_yomit', () {
-        final def = CalendarProgramRegistry.byApiKey('Daily Mishnah');
+    group('byApiKey - Hebcal programs', () {
+      test('mishnayomi maps to mishna_yomit', () {
+        final def = CalendarProgramRegistry.byApiKey('mishnayomi');
         expect(def, isNotNull);
         expect(def!.id, 'mishna_yomit');
       });
 
-      test('Daily Rambam maps to rambam_1_chapter', () {
-        final def = CalendarProgramRegistry.byApiKey('Daily Rambam');
+      test('dailyRambam1 maps to rambam_1_chapter', () {
+        final def = CalendarProgramRegistry.byApiKey('dailyRambam1');
         expect(def, isNotNull);
         expect(def!.id, 'rambam_1_chapter');
       });
 
-      test('Daily Rambam (3 Chapters) maps to rambam_3_chapters', () {
-        final def = CalendarProgramRegistry.byApiKey(
-          'Daily Rambam (3 Chapters)',
-        );
+      test('dailyRambam3 maps to rambam_3_chapters', () {
+        final def = CalendarProgramRegistry.byApiKey('dailyRambam3');
         expect(def, isNotNull);
         expect(def!.id, 'rambam_3_chapters');
       });
 
-      test('Daf Yomi maps correctly (regression check)', () {
-        final def = CalendarProgramRegistry.byApiKey('Daf Yomi');
+      test('dafyomi maps correctly (regression check)', () {
+        final def = CalendarProgramRegistry.byApiKey('dafyomi');
         expect(def, isNotNull);
         expect(def!.id, 'daf_yomi');
       });
 
-      test('old mismatched keys return null', () {
+      test('stale Sefaria-style keys return null', () {
+        expect(CalendarProgramRegistry.byApiKey('Daily Mishnah'), isNull);
+        expect(CalendarProgramRegistry.byApiKey('Daily Rambam'), isNull);
+        expect(
+          CalendarProgramRegistry.byApiKey('Daily Rambam (3 Chapters)'),
+          isNull,
+        );
+        expect(CalendarProgramRegistry.byApiKey('Daf Yomi'), isNull);
         expect(CalendarProgramRegistry.byApiKey('Mishnah Yomit'), isNull);
         expect(
           CalendarProgramRegistry.byApiKey('Daily Rambam 1 Chapter'),
@@ -87,37 +92,45 @@ void main() {
     });
 
     group('bySource', () {
-      test('sefaria returns 9 programs (nach_yomi moved to hebcal)', () {
+      test('sefaria returns 1 program (halakhah_yomit only)', () {
         final sefaria = CalendarProgramRegistry.bySource('sefaria');
-        expect(sefaria.length, 9);
+        expect(sefaria.length, 1);
+        expect(sefaria.any((p) => p.id == 'halakhah_yomit'), isTrue);
         expect(sefaria.any((p) => p.id == 'nach_yomi'), isFalse);
       });
 
-      test('hebcal returns 3 programs (includes nach_yomi)', () {
+      test('hebcal returns 17 programs', () {
         final hebcal = CalendarProgramRegistry.bySource('hebcal');
-        expect(hebcal.length, 3);
+        expect(hebcal.length, 17);
         expect(hebcal.any((p) => p.id == 'nach_yomi'), isTrue);
         expect(hebcal.any((p) => p.id == 'chofetz_chaim_daily'), isTrue);
         expect(hebcal.any((p) => p.id == 'kitzur_shulchan_aruch_yomi'), isTrue);
       });
+
+      test('local returns 2 programs', () {
+        final local = CalendarProgramRegistry.bySource('local');
+        expect(local.length, 2);
+        expect(local.any((p) => p.id == 'dirshu_kinyan_torah'), isTrue);
+        expect(local.any((p) => p.id == 'dirshu_kinyan_yerushalmi'), isTrue);
+      });
     });
 
-    group('all 6 previously working programs unchanged', () {
-      final workingPrograms = {
-        'daf_yomi': 'Daf Yomi',
-        'yerushalmi_yomi': 'Yerushalmi Yomi',
-        'daf_a_week': 'Daf a Week',
-        'halakhah_yomit': 'Halakhah Yomit',
-        'arukh_hashulchan_yomi': 'Arukh HaShulchan Yomi',
-        'tanakh_yomi': 'Tanakh Yomi',
+    group('key programs have correct apiSource and apiKey', () {
+      final programs = {
+        'daf_yomi': ('hebcal', 'dafyomi'),
+        'yerushalmi_yomi': ('hebcal', 'yerushalmi'),
+        'daf_a_week': ('hebcal', 'dafWeekly'),
+        'halakhah_yomit': ('sefaria', 'Halakhah Yomit'),
+        'arukh_hashulchan_yomi': ('hebcal', 'arukhHaShulchanYomi'),
+        'tanakh_yomi': ('hebcal', 'tanakhYomi'),
       };
 
-      for (final entry in workingPrograms.entries) {
-        test('${entry.key} still has apiKey "${entry.value}"', () {
+      for (final entry in programs.entries) {
+        test('${entry.key} has expected apiSource and apiKey', () {
           final def = CalendarProgramRegistry.byId(entry.key);
           expect(def, isNotNull);
-          expect(def!.apiKey, entry.value);
-          expect(def.apiSource, 'sefaria');
+          expect(def!.apiSource, entry.value.$1);
+          expect(def.apiKey, entry.value.$2);
         });
       }
     });

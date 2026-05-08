@@ -22,21 +22,21 @@ import '../helpers/test_database.dart';
 void main() {
   // ─── Story 19.1: Calendar Registry Bugs ──────────────────────────
   group('Story 19.1 — Calendar Registry Bugs Fixed', () {
-    test('all 15 programs are registered', () {
-      expect(CalendarProgramRegistry.programs.length, 15);
+    test('all 20 programs are registered', () {
+      expect(CalendarProgramRegistry.programs.length, 20);
     });
 
-    test('Sefaria programs have correct apiKeys', () {
+    test('Hebcal programs have correct apiKeys', () {
       expect(
-        CalendarProgramRegistry.byApiKey('Daily Mishnah')?.id,
+        CalendarProgramRegistry.byApiKey('mishnayomi')?.id,
         'mishna_yomit',
       );
       expect(
-        CalendarProgramRegistry.byApiKey('Daily Rambam')?.id,
+        CalendarProgramRegistry.byApiKey('dailyRambam1')?.id,
         'rambam_1_chapter',
       );
       expect(
-        CalendarProgramRegistry.byApiKey('Daily Rambam (3 Chapters)')?.id,
+        CalendarProgramRegistry.byApiKey('dailyRambam3')?.id,
         'rambam_3_chapters',
       );
     });
@@ -155,11 +155,11 @@ void main() {
       }
     });
 
-    test('AT-19.3.2 programs-only seed yields 16 LearningPrograms with '
+    test('AT-19.3.2 programs-only seed yields 21 LearningPrograms with '
         'api fields populated', () {
       // Programs are now served from LearningProgramRepository (compile-time).
       final rows = LearningProgramRepository.instance.getAllPrograms();
-      expect(rows, hasLength(16));
+      expect(rows, hasLength(21));
 
       final dafYomi = rows.firstWhere((p) => p.name == 'daf_yomi');
       expect(dafYomi.apiSource, 'sefaria');
@@ -367,7 +367,7 @@ void main() {
     );
 
     test('learningProgramSeeds exposes api fields for every entry', () {
-      expect(learningProgramSeeds, hasLength(16));
+      expect(learningProgramSeeds, hasLength(21));
       for (final p in learningProgramSeeds) {
         expect(
           p.containsKey('api_source'),
@@ -396,7 +396,7 @@ void main() {
     setUp(() async {
       calDb = createTestContentDatabase();
       engine = LocalCalendarEngine(calDb);
-      // Seed 12 calendar rows for the test date (2026-03-29),
+      // Seed 20 calendar rows for the test date (2026-03-29),
       // plus 5 days of daf_yomi for range query tests.
       for (final entry in [
         ('daf_yomi', 'Berakhot 2a'),
@@ -411,6 +411,11 @@ void main() {
         ('tanakh_yomi', 'Jeremiah 31:32-Jeremiah 32:21'),
         ('chofetz_chaim_daily', 'Chofetz Chaim, Preface 1-4'),
         ('kitzur_shulchan_aruch_yomi', 'Kitzur Shulchan Aruch 1:1-4'),
+        ('tehillim_yomi', 'Psalms 1'),
+        ('perek_yomi', 'Avos 1:1'),
+        ('sefer_hamitzvot', 'Positive Commandment 1'),
+        ('shemirat_halashon', 'Shemirat HaLashon 1'),
+        ('pirkei_avot_summer', 'Avos 1'),
         ('dirshu_kinyan_torah', 'Dirshu Kinyan Torah 1'),
         ('dirshu_amud_hayomi', 'Dirshu Amud HaYomi 1'),
         ('dirshu_kinyan_yerushalmi', 'Dirshu Kinyan Yerushalmi 1'),
@@ -468,16 +473,16 @@ void main() {
       expect(entry.displayNameHe, def.displayNameHe);
     });
 
-    test('AT-19.4.2 getTodayPrograms returns entries for all 15 '
+    test('AT-19.4.2 getTodayPrograms returns entries for all 20 '
         'programs', () async {
       final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
-      expect(results, hasLength(15));
+      expect(results, hasLength(20));
       for (final entry in results) {
         expect(entry.todayRef, isNotEmpty);
         expect(entry.apiSource, 'local');
       }
       final ids = results.map((e) => e.programId).toSet();
-      expect(ids, hasLength(15));
+      expect(ids, hasLength(20));
       expect(ids.contains('daf_yomi'), isTrue);
       expect(ids.contains('nach_yomi'), isTrue);
       expect(ids.contains('chofetz_chaim_daily'), isTrue);
@@ -508,9 +513,9 @@ void main() {
     test(
       'AT-19.4.5 getTodayPrograms returns entries with apiSource=local',
       () async {
-        // With 15 seeded rows, getTodayPrograms returns all 15.
+        // With 20 seeded rows, getTodayPrograms returns all 20.
         final result = await engine.getTodayPrograms(DateTime(2026, 3, 29));
-        expect(result, hasLength(15));
+        expect(result, hasLength(20));
         expect(
           result.every((CalendarProgramEntry e) => e.apiSource == 'local'),
           isTrue,
