@@ -1111,29 +1111,64 @@ class _FeatureCard extends StatelessWidget {
   }
 }
 
+/// Banner shown on the rewards intro page so users understand that points
+/// and rewards aren't surfaced for adult profiles. Replaces the original
+/// small "CHILD MODE FEATURE" pill, which was easy to miss.
 class _ChildModeTag extends StatelessWidget {
   const _ChildModeTag();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: _kBadgeBg,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kNavy.withValues(alpha: 0.18)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.child_care_rounded, size: 14, color: _kNavy),
-          const SizedBox(width: 6),
-          Text(
-            'CHILD MODE FEATURE',
-            style: GoogleFonts.plusJakartaSans(
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: _kNavy.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.child_care_rounded,
+              size: 22,
               color: _kNavy,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'For Child profiles only',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: _kNavy,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Points, streaks, and rewards show up when you create a Child profile. Adult profiles focus on plain learning progress.',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: _kNavy.withValues(alpha: 0.75),
+                    fontSize: 12.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
