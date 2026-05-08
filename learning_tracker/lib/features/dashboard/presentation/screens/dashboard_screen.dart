@@ -1756,9 +1756,17 @@ class _ActiveTrackCard extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: () {
-          context.router.push(
-            ContentHierarchyRoute(curriculumId: curriculum.storageKey),
-          );
+          // Card-level tap: prefer the current-focus text when there is one
+          // (matches the visible 'CURRENT FOCUS' label). Browse-tree fallback
+          // only when nothing is scheduled.
+          final focusRef = todayTask?.contentItemSefariaRef;
+          if (focusRef != null && focusRef.isNotEmpty) {
+            context.router.push(TextDisplayRoute(sefariaRef: focusRef));
+          } else {
+            context.router.push(
+              ContentHierarchyRoute(curriculumId: curriculum.storageKey),
+            );
+          }
         },
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
@@ -1898,8 +1906,20 @@ class _ActiveTrackCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     FilledButton(
-                      onPressed: () =>
-                          context.router.navigate(const LearningRoute()),
+                      onPressed: () {
+                        // If there's a concrete next-task / current focus,
+                        // jump straight to its text — that's what the
+                        // 'CURRENT FOCUS' label promised. Fall back to the
+                        // Learn tab when there's nothing scheduled.
+                        final focusRef = todayTask?.contentItemSefariaRef;
+                        if (focusRef != null && focusRef.isNotEmpty) {
+                          context.router.push(
+                            TextDisplayRoute(sefariaRef: focusRef),
+                          );
+                        } else {
+                          context.router.navigate(const LearningRoute());
+                        }
+                      },
                       style: FilledButton.styleFrom(
                         backgroundColor: _kActiveTrackPrimaryBlue,
                         foregroundColor: Colors.white,
