@@ -71,6 +71,10 @@ jobs:
         working-directory: learning_tracker
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Prepare bundled seed asset (xz → gzip)
+        working-directory: learning_tracker
+        run: dart run tool/prepare_asset.dart
+
       - name: Decode google-services.json
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
@@ -116,6 +120,10 @@ jobs:
       - name: Generate code
         working-directory: learning_tracker
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Prepare bundled seed asset (xz → gzip)
+        working-directory: learning_tracker
+        run: dart run tool/prepare_asset.dart
 
       - name: Decode google-services.json
         env:
