@@ -433,9 +433,10 @@ def _strategy_mishneh_torah(curriculum_id="mishneh_torah"):
 
 
 def _toc_books(category_path: str, main_subcats: list[str] | None = None):
-    """Yield (sub_category_or_none, book_title, he_title) for every book under
-    a Sefaria TOC category. main_subcats restricts which sub-categories to
-    descend into (e.g. exclude commentary subtrees)."""
+    """Yield (subcat_en, subcat_he, book_title, book_he_title) for every book
+    under a Sefaria TOC category. main_subcats restricts which sub-categories
+    to descend into (e.g. exclude commentary subtrees). subcat_en/subcat_he
+    are None at the top level."""
     toc = library.get_toc()
     parts = category_path.split("/")
     node = {"contents": toc}
@@ -448,16 +449,18 @@ def _toc_books(category_path: str, main_subcats: list[str] | None = None):
             return
         node = match
 
-    def walk(n, current_subcat):
+    def walk(n, subcat_en, subcat_he):
         for it in n.get("contents", []):
             if it.get("title") and not it.get("category"):
-                yield current_subcat, it["title"], it.get("heTitle", "")
+                yield subcat_en, subcat_he, it["title"], it.get("heTitle", "")
             elif it.get("category"):
                 if main_subcats and it["category"] not in main_subcats:
                     continue
-                yield from walk(it, it["category"])
+                yield from walk(
+                    it, it["category"], it.get("heCategory") or it["category"],
+                )
 
-    yield from walk(node, None)
+    yield from walk(node, None, None)
 
 
 def _strategy_grouped(
@@ -474,31 +477,38 @@ def _strategy_grouped(
     def go(curr=curriculum_id):
         items: list[dict] = []
         sort_order = 0
-        # Group by sub-category preserving TOC order.
-        groups: dict[str | None, list[tuple[str, str]]] = {}
-        for subcat, title, he_title in _toc_books(category_path, main_subcats):
-            groups.setdefault(subcat, []).append((title, he_title))
+        # Group by sub-category preserving TOC order. Key by English name
+        # (stable across runs); store the Hebrew alongside.
+        groups: dict[str | None, dict] = {}
+        for subcat_en, subcat_he, title, he_title in _toc_books(
+            category_path, main_subcats,
+        ):
+            entry = groups.setdefault(
+                subcat_en, {"he": subcat_he, "books": []},
+            )
+            entry["books"].append((title, he_title))
 
-        for subcat in groups:
-            if subcat:
+        for subcat_en, entry in groups.items():
+            subcat_he = entry["he"] or subcat_en or ""
+            if subcat_en:
                 items.append({
                     "curriculumId": curr,
-                    "level1": subcat,
-                    "displayNameHe": subcat,
-                    "displayNameEn": subcat,
-                    "sefariaRef": subcat,
+                    "level1": subcat_en,
+                    "displayNameHe": subcat_he,
+                    "displayNameEn": subcat_en,
+                    "sefariaRef": subcat_en,
                     "sortOrder": sort_order,
                     "isLeaf": False,
                 })
                 sort_order += 1
-            for title, he_title in groups[subcat]:
+            for title, he_title in entry["books"]:
                 book_items, sort_order = _items_for_simple_book(
                     curr,
                     title,
                     he_title or title,
-                    level_labels[1:] if subcat else level_labels,
+                    level_labels[1:] if subcat_en else level_labels,
                     sort_order,
-                    parent_levels={"level1": subcat} if subcat else None,
+                    parent_levels={"level1": subcat_en} if subcat_en else None,
                 )
                 items.extend(book_items)
         return items, level_labels, len(level_labels)
@@ -595,25 +605,32 @@ def _strategy_nach(curriculum_id="nach"):
     def go(_curr=curriculum_id):
         items: list[dict] = []
         sort_order = 0
-        for cat in ["Prophets", "Writings"]:
-            books = list(_toc_books(f"Tanakh/{cat}", None))
+        # Manual Hebrew labels for the two top-level groupings — Sefaria's
+        # TOC carries heCategory but iterating from a category root drops
+        # that context.
+        nach_groups = [
+            ("Prophets", "נביאים"),
+            ("Writings", "כתובים"),
+        ]
+        for cat_en, cat_he in nach_groups:
+            books = list(_toc_books(f"Tanakh/{cat_en}", None))
             if not books:
                 continue
             items.append({
                 "curriculumId": curriculum_id,
-                "level1": cat,
-                "displayNameHe": cat,
-                "displayNameEn": cat,
-                "sefariaRef": cat,
+                "level1": cat_en,
+                "displayNameHe": cat_he,
+                "displayNameEn": cat_en,
+                "sefariaRef": cat_en,
                 "sortOrder": sort_order,
                 "isLeaf": False,
             })
             sort_order += 1
-            for _subcat, title, he_title in books:
+            for _sc_en, _sc_he, title, he_title in books:
                 book_items, sort_order = _items_for_simple_book(
                     curriculum_id, title, he_title or title,
                     ["Sefer", "Chapter", "Verse"], sort_order,
-                    parent_levels={"level1": cat},
+                    parent_levels={"level1": cat_en},
                 )
                 items.extend(book_items)
         return items, ["Section", "Sefer", "Chapter", "Verse"], 4

@@ -14,7 +14,7 @@
     {
       "curriculumId": "nach",
       "level1": "Prophets",
-      "displayNameHe": "Prophets",
+      "displayNameHe": "נביאים",
       "displayNameEn": "Prophets",
       "sefariaRef": "Prophets",
       "sortOrder": 0,
@@ -102489,7 +102489,7 @@
     {
       "curriculumId": "nach",
       "level1": "Writings",
-      "displayNameHe": "Writings",
+      "displayNameHe": "כתובים",
       "displayNameEn": "Writings",
       "sefariaRef": "Writings",
       "sortOrder": 9318,

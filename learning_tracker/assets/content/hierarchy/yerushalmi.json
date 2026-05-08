@@ -13,7 +13,7 @@
     {
       "curriculumId": "yerushalmi",
       "level1": "Seder Zeraim",
-      "displayNameHe": "Seder Zeraim",
+      "displayNameHe": "סדר זרעים",
       "displayNameEn": "Seder Zeraim",
       "sefariaRef": "Seder Zeraim",
       "sortOrder": 0,
@@ -946,7 +946,7 @@
     {
       "curriculumId": "yerushalmi",
       "level1": "Seder Moed",
-      "displayNameHe": "Seder Moed",
+      "displayNameHe": "סדר מועד",
       "displayNameEn": "Seder Moed",
       "sefariaRef": "Seder Moed",
       "sortOrder": 86,
@@ -2043,7 +2043,7 @@
     {
       "curriculumId": "yerushalmi",
       "level1": "Seder Nashim",
-      "displayNameHe": "Seder Nashim",
+      "displayNameHe": "סדר נשים",
       "displayNameEn": "Seder Nashim",
       "sefariaRef": "Seder Nashim",
       "sortOrder": 187,
@@ -2903,7 +2903,7 @@
     {
       "curriculumId": "yerushalmi",
       "level1": "Seder Nezikin",
-      "displayNameHe": "Seder Nezikin",
+      "displayNameHe": "סדר נזיקין",
       "displayNameEn": "Seder Nezikin",
       "sefariaRef": "Seder Nezikin",
       "sortOrder": 266,
@@ -3652,7 +3652,7 @@
     {
       "curriculumId": "yerushalmi",
       "level1": "Seder Tahorot",
-      "displayNameHe": "Seder Tahorot",
+      "displayNameHe": "סדר טהרות",
       "displayNameEn": "Seder Tahorot",
       "sefariaRef": "Seder Tahorot",
       "sortOrder": 335,
