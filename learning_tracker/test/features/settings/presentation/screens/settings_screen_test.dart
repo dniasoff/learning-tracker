@@ -168,7 +168,7 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      await tester.drag(find.byType(ListView), const Offset(0, -1100));
+      await tester.drag(find.byType(ListView), const Offset(0, -1300));
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('ACCOUNT'), findsOneWidget);

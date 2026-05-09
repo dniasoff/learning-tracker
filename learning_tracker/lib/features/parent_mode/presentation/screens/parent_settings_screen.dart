@@ -86,6 +86,21 @@ class ParentSettingsScreen extends ConsumerWidget {
                   child: Column(
                     children: [
                       _ManageRow(
+                        iconBackground: const Color(0xFFE3F2FD),
+                        icon: Icons.swap_horiz_rounded,
+                        iconColor: AppTheme.brandBlueDeep,
+                        title: l10n.switchProfile,
+                        subtitle: l10n.switchProfileSubtitle,
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: _chevronMuted,
+                          size: 26,
+                        ),
+                        onTap: () =>
+                            context.pushRoute(const ProfilePickerRoute()),
+                      ),
+                      _rowDivider(),
+                      _ManageRow(
                         iconBackground: _managePurple,
                         icon: Icons.route_rounded,
                         iconColor: Colors.white,

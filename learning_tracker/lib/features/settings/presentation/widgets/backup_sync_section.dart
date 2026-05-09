@@ -52,6 +52,14 @@ class BackupSyncSection extends ConsumerWidget {
         icon: Icons.warning_amber_rounded,
         subtitle: 'Sync error: $message',
       ),
+      SyncStatusDegraded(:final pendingChanges, :final reason) =>
+        _buildCloudStatusCard(
+          theme,
+          icon: Icons.sync_problem_rounded,
+          subtitle: pendingChanges > 0
+              ? 'Sync paused — $pendingChanges queued. $reason'
+              : 'Sync paused. $reason',
+        ),
     };
   }
 

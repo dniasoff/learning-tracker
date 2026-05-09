@@ -101,3 +101,20 @@ Future<ContentItem?> contentByRef(
     sefariaRef: sefariaRef,
   );
 }
+
+/// Finds the Hebrew display name for any leaf [sefariaRef] regardless of
+/// which curriculum it came from. Used by screens (e.g. the text viewer)
+/// that take a ref as a route param without knowing its curriculum.
+///
+/// Returns `null` when no curriculum knows about the ref or when the
+/// curriculum hierarchies haven't loaded yet — callers should fall back
+/// to the prettified English ref in that case.
+@riverpod
+Future<String?> hebrewNameForRef(Ref ref, String sefariaRef) async {
+  for (final curriculum in CurriculumId.values) {
+    final map = await ref.watch(curriculumHeNamesProvider(curriculum).future);
+    final he = map[sefariaRef];
+    if (he != null && he.isNotEmpty) return he;
+  }
+  return null;
+}

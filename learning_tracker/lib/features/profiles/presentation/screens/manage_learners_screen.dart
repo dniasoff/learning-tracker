@@ -136,13 +136,24 @@ class _ProfileListTile extends ConsumerWidget {
   }
 
   Future<void> _deleteProfile(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(profileRepositoryProvider);
+    final remaining = await repo.countProfilesForAccount(1);
+    final isLast = remaining <= 1;
+    if (!context.mounted) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Profile'),
+        title: Text(isLast ? 'Delete your only profile?' : 'Delete Profile'),
         content: Text(
-          'Are you sure you want to delete "${profile.displayName}"? '
-          'All learning data for this profile will be permanently lost.',
+          isLast
+              ? 'This is your only profile. Deleting "${profile.displayName}" '
+                    'will erase every track, completion, and lifetime entry on '
+                    'this account. You will need to create a new profile '
+                    'before you can keep learning.'
+              : 'Are you sure you want to delete "${profile.displayName}"? '
+                    'All learning data for this profile will be permanently '
+                    'lost.',
         ),
         actions: [
           TextButton(
@@ -154,7 +165,7 @@ class _ProfileListTile extends ConsumerWidget {
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.brandCoralDeep,
             ),
-            child: const Text('Delete'),
+            child: Text(isLast ? 'Delete anyway' : 'Delete'),
           ),
         ],
       ),
@@ -163,8 +174,7 @@ class _ProfileListTile extends ConsumerWidget {
     if (confirmed != true) return;
 
     final selectedId = ref.read(selectedProfileIdProvider);
-    final repo = ref.read(profileRepositoryProvider);
-    await repo.deleteProfile(profile.id);
+    await repo.deleteProfile(profile.id, allowLast: isLast);
 
     if (selectedId == profile.id) {
       ref.read(selectedProfileIdProvider.notifier).clear();

@@ -233,6 +233,13 @@ Future<void> showDeleteAccountFlow(
 
   try {
     await service.deleteAccount(user.uid);
+    // AuthStateNotifier is keepAlive and doesn't auto-react to Firebase
+    // sign-out — without this it stays in `signedIn` state and the next
+    // route can land back on the signed-in shell instead of the sign-in
+    // screen. Drop the cached state before navigating so the router's
+    // auth-aware guards see a clean signed-out user.
+    ref.read(authStateProvider.notifier).signOut();
+    ref.invalidate(authStateProvider);
     if (context.mounted) {
       await context.router.replaceAll([const SignInRoute()]);
     }

@@ -930,6 +930,24 @@ abstract class AppLocalizations {
   /// **'Switch profile'**
   String get switchProfile;
 
+  /// No description provided for @switchProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change to a different profile or your account'**
+  String get switchProfileSubtitle;
+
+  /// No description provided for @manageProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Profiles'**
+  String get manageProfiles;
+
+  /// No description provided for @manageProfilesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add, edit, or remove learner profiles'**
+  String get manageProfilesSubtitle;
+
   /// No description provided for @notifications.
   ///
   /// In en, this message translates to:

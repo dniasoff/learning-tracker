@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/restore_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -42,7 +43,19 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     }
   }
 
+  /// Drops cached values from the providers most likely to have rendered
+  /// the empty pre-restore snapshot (profile lists, the active profile).
+  /// The dashboard, picker, and shell rebuild from the now-populated DB on
+  /// the next frame. We do NOT invalidate the database connection itself —
+  /// that would close Drift's executor mid-flight.
+  void _refreshProvidersAfterRestore() {
+    ref.invalidate(profileListProvider);
+    ref.invalidate(profileListStreamProvider);
+    ref.invalidate(selectedProfileProvider);
+  }
+
   void _navigateToApp() {
+    _refreshProvidersAfterRestore();
     final router = ref.read(routerProvider);
     router.restoreGuard.markRestoreComplete();
     context.router.replaceAll([const AppShellRoute()]);

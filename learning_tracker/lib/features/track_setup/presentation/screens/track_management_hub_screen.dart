@@ -290,18 +290,15 @@ class _TrackManagementHubScreenState
   }
 
   Future<void> _showArchiveDialog(CurriculumTrack track) async {
-    // Prevent archiving the last active track
+    // Archiving the last track used to be hard-blocked, which left users
+    // with no way to "start over" with a different curriculum from the
+    // hub. Now we warn instead — the dashboard's empty state handles
+    // routing to the Add Track flow afterwards.
     final activeCount = await ref
         .read(userDatabaseProvider)
         .trackDao
         .countActiveTracksForProfile(track.profileId);
-    if (activeCount <= 1) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot archive your only active track')),
-      );
-      return;
-    }
+    final isLastTrack = activeCount <= 1;
 
     if (!mounted) return;
     final curriculum = CurriculumId.values
@@ -312,10 +309,17 @@ class _TrackManagementHubScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Archive Track?'),
+        title: Text(
+          isLastTrack ? 'Archive your only track?' : 'Archive Track?',
+        ),
         content: Text(
-          'Archive "$name"? Your data and progress will be preserved. '
-          'You can reactivate it later.',
+          isLastTrack
+              ? 'This is your only active track. Archiving "$name" will '
+                    'leave you with no learning scheduled. Your data and '
+                    'progress are preserved and you can reactivate it or '
+                    'add a new track at any time.'
+              : 'Archive "$name"? Your data and progress will be preserved. '
+                    'You can reactivate it later.',
         ),
         actions: [
           TextButton(

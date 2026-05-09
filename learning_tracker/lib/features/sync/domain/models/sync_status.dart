@@ -11,6 +11,9 @@ part 'sync_status.freezed.dart';
 /// 3. `pending` - Online but local changes awaiting push
 /// 4. `offline` - Device is offline, changes queued locally
 /// 5. `error` - Sync operation failed
+/// 6. `degraded` - Pushes are queueing silently (e.g. repeated permission
+///    denied or listener quota exhaustion). Surfaced to the UI so users see
+///    that their writes are stuck instead of assuming everything synced.
 @freezed
 sealed class SyncStatus with _$SyncStatus {
   /// Local-born tier — sync permanently disabled (v2 §4.5).
@@ -38,4 +41,14 @@ sealed class SyncStatus with _$SyncStatus {
     required String message,
     required DateTime failedAt,
   }) = SyncStatusError;
+
+  /// Pushes are silently queueing because Firestore keeps refusing them
+  /// (permission-denied threshold reached) or realtime listeners hit the
+  /// connection quota. The queue is intact — work resumes when the
+  /// underlying problem clears — but the UI must show the user that their
+  /// last few writes have not landed yet.
+  const factory SyncStatus.degraded({
+    required int pendingChanges,
+    required String reason,
+  }) = SyncStatusDegraded;
 }

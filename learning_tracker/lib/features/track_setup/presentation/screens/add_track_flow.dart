@@ -3027,10 +3027,27 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
     final program = widget.selectedProgram;
     if (program == null) return null;
     final apiKey = program.apiProgramKey;
-    if (apiKey == null || apiKey.isEmpty) return null;
-    return CalendarProgramRegistry.byId(apiKey)?.id ??
+    if (apiKey == null || apiKey.isEmpty) {
+      assert(
+        !program.isCalendarProgram,
+        'Calendar program ${program.name} has null/empty apiProgramKey — '
+        'every is_calendar_program seed must set api_program_key to a '
+        'CalendarProgramDefinition.id',
+      );
+      return null;
+    }
+    final resolved =
+        CalendarProgramRegistry.byId(apiKey)?.id ??
         CalendarProgramRegistry.byApiKey(apiKey)?.id ??
         CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
+    assert(
+      resolved != null,
+      'Calendar program ${program.name} apiProgramKey="$apiKey" did not '
+      'resolve to any CalendarProgramRegistry entry. Update '
+      'learning_program_seeds.dart so api_program_key matches a '
+      'CalendarProgramDefinition.id.',
+    );
+    return resolved;
   }
 
   List<ContentItem>? _allItems;

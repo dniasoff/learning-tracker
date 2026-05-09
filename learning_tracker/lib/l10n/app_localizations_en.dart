@@ -465,6 +465,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get switchProfile => 'Switch profile';
 
   @override
+  String get switchProfileSubtitle =>
+      'Change to a different profile or your account';
+
+  @override
+  String get manageProfiles => 'Manage Profiles';
+
+  @override
+  String get manageProfilesSubtitle => 'Add, edit, or remove learner profiles';
+
+  @override
   String get notifications => 'Notifications';
 
   @override

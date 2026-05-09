@@ -7,15 +7,22 @@ import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker/talker.dart';
 
 /// Orchestrates full data restoration when a user signs in on a new device.
 ///
-/// A "new device" is detected by checking whether the local database is empty
-/// (no completions and no profile). When detected, this service:
-/// 1. Pulls all user data from Firestore via [SyncEngine.pullOnLaunch]
-/// 2. Fetches active curricula from Firestore
-/// 3. Re-imports bundled content for each active curriculum
+/// "New device" is detected via two signals:
+///   1. The local database is empty (no completions and no user profile).
+///   2. A persisted [restoreStatePrefKey] flag says the previous restore
+///      attempt did not finish — even if the database isn't empty, we treat
+///      the install as still-needs-restore so a partial pull can never leave
+///      the user looking at half-restored data forever.
+///
+/// On restore() the flag is set to [_kStateInProgress] before any merge runs
+/// and only flipped to [_kStateComplete] after every step succeeds. A crash,
+/// sign-out, or aborted restore therefore rolls forward into a clean retry
+/// on next launch instead of getting silently skipped.
 ///
 /// PINs are NOT restored — they are device-local only (FR99).
 class DeviceRestoreService {
@@ -37,21 +44,62 @@ class DeviceRestoreService {
   final CurriculumImportService _curriculumImportService;
   final Talker _logger;
 
+  /// SharedPreferences key tracking restore lifecycle. Values: 'in_progress'
+  /// while a restore is running and 'complete' on success. Absent when the
+  /// device has never attempted a restore (== fresh install).
+  static const String restoreStatePrefKey = 'device_restore_state';
+  static const String _kStateInProgress = 'in_progress';
+  static const String _kStateComplete = 'complete';
+
   final _statusController = StreamController<RestoreStatus>.broadcast();
   Stream<RestoreStatus> get statusStream => _statusController.stream;
+
+  /// Emits exactly once after a successful restore so app-shell consumers
+  /// can `ref.invalidate` the providers that may have rendered stale empty
+  /// data while pull-on-launch was running.
+  final _restoreCompletedController = StreamController<void>.broadcast();
+  Stream<void> get restoreCompletedStream => _restoreCompletedController.stream;
 
   RestoreStatus _currentStatus = const RestoreStatus.idle();
   RestoreStatus get currentStatus => _currentStatus;
 
   bool _restoreCompleted = false;
 
-  /// Check if this is a new device (empty local database).
+  /// Returns true when the device looks "fresh" — either the database has
+  /// no learner data yet OR the last restore attempt didn't reach a clean
+  /// "complete" marker (a previous run may have written some rows before
+  /// failing, in which case the empty-DB check would otherwise be a false
+  /// negative and skip the retry).
   Future<bool> isNewDevice() async {
+    final state = await _readRestoreState();
+    if (state == _kStateInProgress) return true;
+
     final completions = await _database.completionDao.getAllCompletions();
     if (completions.isNotEmpty) return false;
 
     final profiles = await _database.userProfileDao.getAllUserProfiles();
     return profiles.isEmpty;
+  }
+
+  Future<String?> _readRestoreState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(restoreStatePrefKey);
+    } catch (e) {
+      _logger.warning('DeviceRestoreService: read restore state failed: $e');
+      return null;
+    }
+  }
+
+  Future<void> _writeRestoreState(String state) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(restoreStatePrefKey, state);
+    } catch (e) {
+      _logger.warning(
+        'DeviceRestoreService: write restore state ($state) failed: $e',
+      );
+    }
   }
 
   /// Run the full restore process. Returns true if restore completed
@@ -82,6 +130,12 @@ class DeviceRestoreService {
       _logger.info(
         'DeviceRestoreService: new device detected, starting restore',
       );
+
+      // Mark restore as started BEFORE writing any merged data. If we crash,
+      // sign out, or close the app between this line and the success marker
+      // below, the next launch's isNewDevice() will see 'in_progress' and
+      // re-run a clean restore instead of trusting partial state.
+      await _writeRestoreState(_kStateInProgress);
 
       // Step 1: Pull all user data from Firestore
       _updateStatus(
@@ -137,12 +191,20 @@ class DeviceRestoreService {
 
       _logger.info('DeviceRestoreService: restore completed successfully');
       _restoreCompleted = true;
+      await _writeRestoreState(_kStateComplete);
       _updateStatus(
         const RestoreStatus.complete(collectionsRestored: totalSteps),
       );
+      // Tell every Riverpod surface that depends on profile/track/completion
+      // data to re-fetch from the now-populated DB. Without this the dashboard
+      // can render the empty pre-restore snapshot indefinitely.
+      if (!_restoreCompletedController.isClosed) {
+        _restoreCompletedController.add(null);
+      }
       return true;
     } catch (e, stackTrace) {
       _logger.error('DeviceRestoreService: restore failed', e, stackTrace);
+      // Leave the in-progress marker in place so the next launch retries.
       _updateStatus(RestoreStatus.error(message: e.toString()));
       return false;
     }
@@ -161,5 +223,6 @@ class DeviceRestoreService {
 
   Future<void> dispose() async {
     await _statusController.close();
+    await _restoreCompletedController.close();
   }
 }

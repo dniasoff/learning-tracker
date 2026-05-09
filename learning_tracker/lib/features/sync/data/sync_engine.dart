@@ -490,6 +490,22 @@ class SyncEngine {
       _updateStatus(SyncStatus.offline(pendingChanges: pending));
       return;
     }
+    if (_pushSuppressed) {
+      // Online but the server keeps rejecting writes — surface this loudly.
+      // The previous behaviour silently emitted `pending` here, so users
+      // believed their changes were queued for an imminent flush even though
+      // every retry was failing with permission-denied.
+      _updateStatus(
+        SyncStatus.degraded(
+          pendingChanges: pending,
+          reason:
+              'Sync paused — your account is temporarily unable to push '
+              'changes. They are kept on this device and will retry '
+              'automatically.',
+        ),
+      );
+      return;
+    }
     if (pending > 0) {
       _updateStatus(SyncStatus.pending(pendingChanges: pending));
     }

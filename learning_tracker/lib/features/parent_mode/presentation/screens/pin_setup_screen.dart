@@ -63,6 +63,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const AppBarTitle(text: 'Set Parent PIN')),
       body: SafeArea(
@@ -70,12 +71,50 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: PinEntryWidget(
-              title: _isConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
-              errorMessage: _errorMessage,
-              onPinComplete: _isConfirmStep
-                  ? _onConfirmPinEntered
-                  : _onFirstPinEntered,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Explain why a PIN is needed here. The same screen is shown
+                // both for first-time PIN setup AND when secure storage was
+                // wiped (fresh install / "clear data" / device migration) —
+                // PINs are stored only on the current device per FR99 and
+                // are never synced. Without this banner users assume the
+                // PIN prompt is a bug after they sign back in.
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.lock_outline_rounded,
+                        color: theme.colorScheme.onSecondaryContainer,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Parent PINs live only on this device. Set a new '
+                          '4-digit PIN to enable parent mode here. Other '
+                          'devices keep their own PIN.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                PinEntryWidget(
+                  title: _isConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
+                  errorMessage: _errorMessage,
+                  onPinComplete: _isConfirmStep
+                      ? _onConfirmPinEntered
+                      : _onFirstPinEntered,
+                ),
+              ],
             ),
           ),
         ),

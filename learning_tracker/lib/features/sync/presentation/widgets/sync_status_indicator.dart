@@ -53,6 +53,14 @@ class SyncStatusIndicator extends ConsumerWidget {
         'Sync error',
         false,
       ),
+      SyncStatusDegraded(:final pendingChanges) => (
+        Icons.sync_problem_rounded,
+        Colors.orange,
+        pendingChanges > 0
+            ? 'Sync paused — $pendingChanges queued'
+            : 'Sync paused',
+        false,
+      ),
     };
 
     return _buildIndicator(

@@ -26,7 +26,13 @@ abstract class ProfileRepository {
   });
 
   /// Delete a profile and all associated data (cascade).
-  Future<void> deleteProfile(int id);
+  ///
+  /// By default this throws [LastProfileException] when the deletion would
+  /// leave the account with zero profiles, so accidental account-wipes via
+  /// the picker / manage screen still surface a clear error. Set
+  /// [allowLast] to `true` after presenting an explicit "this will leave
+  /// you with no profiles" confirmation to actually remove the last row.
+  Future<void> deleteProfile(int id, {bool allowLast = false});
 
   /// Count profiles for an account.
   Future<int> countProfilesForAccount(int accountId);

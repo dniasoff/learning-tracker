@@ -162,18 +162,18 @@ void main() {
       expect(rows, hasLength(21));
 
       final dafYomi = rows.firstWhere((p) => p.name == 'daf_yomi');
-      expect(dafYomi.apiSource, 'sefaria');
-      expect(dafYomi.apiProgramKey, 'Daf Yomi');
+      expect(dafYomi.apiSource, 'hebcal');
+      expect(dafYomi.apiProgramKey, 'daf_yomi');
       expect(dafYomi.isCalendarProgram, isTrue);
 
       final mishnahYomis = rows.firstWhere((p) => p.name == 'mishnah_yomis');
-      expect(mishnahYomis.apiSource, 'sefaria');
-      expect(mishnahYomis.apiProgramKey, 'Daily Mishnah');
+      expect(mishnahYomis.apiSource, 'hebcal');
+      expect(mishnahYomis.apiProgramKey, 'mishna_yomit');
       expect(mishnahYomis.isCalendarProgram, isTrue);
 
       final nachYomi = rows.firstWhere((p) => p.name == 'nach_yomi');
       expect(nachYomi.apiSource, 'hebcal');
-      expect(nachYomi.apiProgramKey, 'nachyomi');
+      expect(nachYomi.apiProgramKey, 'nach_yomi');
       expect(nachYomi.isCalendarProgram, isTrue);
 
       final oraysa = rows.firstWhere((p) => p.name == 'oraysa');

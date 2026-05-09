@@ -2,11 +2,14 @@
 ///
 /// Each preset is immutable — never modified, only deprecated and replaced.
 ///
-/// Calendar fields (Story 19.3 T11):
-/// - `api_source`: 'sefaria' | 'hebcal' | null (custom program)
-/// - `api_program_key`: API response key (e.g. 'Daf Yomi', 'nachyomi')
-/// - `is_calendar_program`: true when the program is date-driven by an
-///   external API / CalendarCycles table; false for custom programs.
+/// Calendar fields:
+/// - `api_source`: 'sefaria' | 'hebcal' | 'local' | null (custom program).
+///   Must match the same field on the matching `CalendarProgramDefinition`.
+/// - `api_program_key`: must equal a `CalendarProgramDefinition.id` so that
+///   `_resolveCalendarProgramKey` resolves on the first lookup. The seed DB's
+///   `calendar_cycles` table is keyed by the registry id, not the API key.
+/// - `is_calendar_program`: true when the program is date-driven by the
+///   bundled `calendar_cycles` table; false for custom programs.
 const List<Map<String, Object?>> learningProgramSeeds = [
   {
     'name': 'oraysa',
@@ -45,7 +48,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
     'api_source': 'local',
-    'api_program_key': 'Dirshu Kinyan Torah',
+    'api_program_key': 'dirshu_kinyan_torah',
     'is_calendar_program': true,
   },
   {
@@ -63,8 +66,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"chazara_3","label":"חזרה ג׳","delay_days":21}'
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
-    'api_source': 'local',
-    'api_program_key': 'Dirshu Amud HaYomi',
+    'api_source': 'hebcal',
+    'api_program_key': 'dirshu_amud_hayomi',
     'is_calendar_program': true,
   },
   {
@@ -83,7 +86,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{"frequency":"monthly","type":"written"}',
     'api_source': 'local',
-    'api_program_key': 'Dirshu Kinyan Yerushalmi',
+    'api_program_key': 'dirshu_kinyan_yerushalmi',
     'is_calendar_program': true,
   },
   {
@@ -98,8 +101,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_daf"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Daf Yomi',
+    'api_source': 'hebcal',
+    'api_program_key': 'daf_yomi',
     'is_calendar_program': true,
   },
   {
@@ -114,8 +117,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"two_mishnayos"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Daily Mishnah',
+    'api_source': 'hebcal',
+    'api_program_key': 'mishna_yomit',
     'is_calendar_program': true,
   },
   {
@@ -131,7 +134,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'nachyomi',
+    'api_program_key': 'nach_yomi',
     'is_calendar_program': true,
   },
   // ── Calendar-linked programs (no built-in review) ─────────────────────
@@ -147,8 +150,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_daf"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Yerushalmi Yomi',
+    'api_source': 'hebcal',
+    'api_program_key': 'yerushalmi_yomi',
     'is_calendar_program': true,
   },
   {
@@ -163,8 +166,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"one_chapter"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Daily Rambam',
+    'api_source': 'hebcal',
+    'api_program_key': 'rambam_1_chapter',
     'is_calendar_program': true,
   },
   {
@@ -179,8 +182,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily","pace":"three_chapters"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Daily Rambam (3 Chapters)',
+    'api_source': 'hebcal',
+    'api_program_key': 'rambam_3_chapters',
     'is_calendar_program': true,
   },
   {
@@ -195,8 +198,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"weekly","pace":"one_daf"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Daf a Week',
+    'api_source': 'hebcal',
+    'api_program_key': 'daf_a_week',
     'is_calendar_program': true,
   },
   {
@@ -212,7 +215,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'sefaria',
-    'api_program_key': 'Halakhah Yomit',
+    'api_program_key': 'halakhah_yomit',
     'is_calendar_program': true,
   },
   {
@@ -227,8 +230,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Arukh HaShulchan Yomi',
+    'api_source': 'hebcal',
+    'api_program_key': 'arukh_hashulchan_yomi',
     'is_calendar_program': true,
   },
   {
@@ -243,8 +246,8 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         '{"stage":"learn","label":"לימוד","frequency":"daily"}'
         ']',
     'test_config': '{}',
-    'api_source': 'sefaria',
-    'api_program_key': 'Tanakh Yomi',
+    'api_source': 'hebcal',
+    'api_program_key': 'tanakh_yomi',
     'is_calendar_program': true,
   },
   {
@@ -260,7 +263,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'chofetzChaim',
+    'api_program_key': 'chofetz_chaim_daily',
     'is_calendar_program': true,
   },
   {
@@ -276,7 +279,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'kitzurShulchanAruch',
+    'api_program_key': 'kitzur_shulchan_aruch_yomi',
     'is_calendar_program': true,
   },
   {
@@ -292,7 +295,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'dailyPsalms',
+    'api_program_key': 'tehillim_yomi',
     'is_calendar_program': true,
   },
   {
@@ -308,7 +311,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'perekYomi',
+    'api_program_key': 'perek_yomi',
     'is_calendar_program': true,
   },
   {
@@ -324,7 +327,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'seferHaMitzvot',
+    'api_program_key': 'sefer_hamitzvot',
     'is_calendar_program': true,
   },
   {
@@ -342,7 +345,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'shemiratHaLashon',
+    'api_program_key': 'shemirat_halashon',
     'is_calendar_program': true,
   },
   {
@@ -359,7 +362,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         ']',
     'test_config': '{}',
     'api_source': 'hebcal',
-    'api_program_key': 'pirkeiAvotSummer',
+    'api_program_key': 'pirkei_avot_summer',
     'is_calendar_program': true,
   },
 ];

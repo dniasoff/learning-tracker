@@ -163,6 +163,7 @@ void main() {
           pending: (_) => 'pending',
           offline: (_) => 'offline',
           error: (_, __) => 'error',
+          degraded: (_, __) => 'degraded',
         );
 
         expect(result, equals('syncing'));
@@ -189,6 +190,7 @@ void main() {
           pending: (count) => 'pending:$count',
           offline: (_) => 'offline',
           error: (_, __) => 'error',
+          degraded: (_, __) => 'degraded',
         );
 
         expect(result, equals('pending:2'));
@@ -204,6 +206,7 @@ void main() {
           SyncStatusPending(:final pendingChanges) => 'pending:$pendingChanges',
           SyncStatusOffline() => 'offline',
           SyncStatusError() => 'error',
+          SyncStatusDegraded() => 'degraded',
         };
 
         expect(label, equals('pending:5'));

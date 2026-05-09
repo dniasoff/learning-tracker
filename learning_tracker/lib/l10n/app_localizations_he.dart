@@ -462,6 +462,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get switchProfile => 'החלף פרופיל';
 
   @override
+  String get switchProfileSubtitle => 'החלף לפרופיל אחר או לחשבון שלך';
+
+  @override
+  String get manageProfiles => 'ניהול פרופילים';
+
+  @override
+  String get manageProfilesSubtitle => 'הוסף, ערוך או מחק פרופילי לומדים';
+
+  @override
   String get notifications => 'התראות';
 
   @override

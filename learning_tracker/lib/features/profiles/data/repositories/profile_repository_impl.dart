@@ -142,11 +142,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<void> deleteProfile(int id) async {
-    // Guard: cannot delete the last profile
-    final count = await countProfilesForAccount(1);
-    if (count <= 1) {
-      throw const LastProfileException();
+  Future<void> deleteProfile(int id, {bool allowLast = false}) async {
+    // Guard: by default we refuse to leave the account with zero profiles —
+    // the picker would have nothing to show. Callers can opt in via
+    // `allowLast: true` after a strong confirmation; the empty-state UI in
+    // ProfilePicker will route the user to add a fresh profile.
+    if (!allowLast) {
+      final count = await countProfilesForAccount(1);
+      if (count <= 1) {
+        throw const LastProfileException();
+      }
     }
 
     await _db.transaction(() async {

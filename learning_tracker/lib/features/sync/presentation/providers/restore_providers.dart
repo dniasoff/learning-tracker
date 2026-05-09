@@ -49,3 +49,13 @@ final restoreStatusProvider = Provider<RestoreStatus>((ref) {
     error: (error, _) => RestoreStatus.error(message: error.toString()),
   );
 });
+
+/// Emits a tick whenever a successful restore finishes. Surfaces (e.g. the
+/// dashboard, profile picker, track hub) listen for this so they can
+/// `ref.invalidate` cached providers that may have rendered the empty-DB
+/// snapshot taken before pull-on-launch finished merging.
+final restoreCompletedStreamProvider = StreamProvider<void>((ref) {
+  final service = ref.watch(deviceRestoreServiceProvider);
+  if (service == null) return const Stream.empty();
+  return service.restoreCompletedStream;
+});

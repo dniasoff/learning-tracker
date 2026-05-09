@@ -74,13 +74,27 @@ class SettingsScreen extends ConsumerWidget {
               _SectionHeader(title: l10n.sectionTracks),
               const SizedBox(height: 10),
               _SurfaceCard(
-                child: _SettingsTile(
-                  icon: Icons.route_rounded,
-                  iconColor: AppTheme.brandBlueBright,
-                  iconBackground: AppTheme.brandBlueSoft,
-                  title: l10n.manageTracks,
-                  subtitle: l10n.manageTracksDetail,
-                  onTap: () => context.pushRoute(TrackManagementHubRoute()),
+                child: Column(
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.route_rounded,
+                      iconColor: AppTheme.brandBlueBright,
+                      iconBackground: AppTheme.brandBlueSoft,
+                      title: l10n.manageTracks,
+                      subtitle: l10n.manageTracksDetail,
+                      onTap: () => context.pushRoute(TrackManagementHubRoute()),
+                    ),
+                    _tileDivider(theme),
+                    _SettingsTile(
+                      icon: Icons.people_alt_rounded,
+                      iconColor: AppTheme.brandBlueBright,
+                      iconBackground: AppTheme.brandBlueSoft,
+                      title: l10n.manageProfiles,
+                      subtitle: l10n.manageProfilesSubtitle,
+                      onTap: () =>
+                          context.pushRoute(const ManageLearnersRoute()),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),

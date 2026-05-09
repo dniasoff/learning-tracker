@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -21,6 +22,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -37,7 +39,18 @@ class TextDisplayScreen extends ConsumerWidget {
     final textAsync = ref.watch(textContentProvider(sefariaRef));
     final fontSize = ref.watch(fontSizeProvider);
     final showNikud = ref.watch(showNikudProvider);
+    final useHebrew = ref.watch(hebrewTermsScriptProvider);
     final theme = Theme.of(context);
+
+    final englishTitle = sefariaRef.replaceAll('_', ' ');
+    final hebrewTitle = useHebrew
+        ? ref
+              .watch(hebrewNameForRefProvider(sefariaRef))
+              .whenOrNull(data: (he) => he)
+        : null;
+    final title = (hebrewTitle != null && hebrewTitle.isNotEmpty)
+        ? hebrewTitle
+        : englishTitle;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),
@@ -46,7 +59,7 @@ class TextDisplayScreen extends ConsumerWidget {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Text(
-          sefariaRef.replaceAll('_', ' '),
+          title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleLarge?.copyWith(
