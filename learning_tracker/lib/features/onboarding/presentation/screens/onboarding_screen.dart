@@ -788,7 +788,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     pillPair(
                       leftLabel: 'Ashkenazi',
                       rightLabel: 'Sephardi',
-                      leftSelected: _transliterationVariant ==
+                      leftSelected:
+                          _transliterationVariant ==
                           TransliterationVariant.ashkenazi,
                       onLeft: () => setState(
                         () => _transliterationVariant =

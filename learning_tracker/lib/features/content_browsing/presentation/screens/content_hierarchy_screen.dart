@@ -227,9 +227,7 @@ class _ContentHierarchyScreenState
                 }
 
                 final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
-                final variant = ref.watch(
-                  transliterationVariantProvider,
-                );
+                final variant = ref.watch(transliterationVariantProvider);
                 final groupedItems = _groupItemsByNextLevel(
                   items,
                   hebrewTerms,

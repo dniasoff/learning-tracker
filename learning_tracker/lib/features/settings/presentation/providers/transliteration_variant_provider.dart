@@ -19,8 +19,7 @@ void syncTransliterationVariantPreferenceFromPrefs(SharedPreferences prefs) {
 /// named-level values (Bereishis vs Bereshit, Shemos vs Shemot, Kesuvim vs
 /// Ketuvim). Defaults to Ashkenazi. Independent of the Hebrew-terms toggle.
 @Riverpod(keepAlive: true)
-class TransliterationVariantNotifier
-    extends _$TransliterationVariantNotifier {
+class TransliterationVariantNotifier extends _$TransliterationVariantNotifier {
   @override
   TransliterationVariant build() {
     final profileId = ref.watch(activeProfileIdProvider);
