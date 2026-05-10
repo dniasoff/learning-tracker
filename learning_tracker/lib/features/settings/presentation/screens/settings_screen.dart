@@ -20,7 +20,8 @@ import 'package:learning_tracker/features/settings/presentation/providers/hebrew
 import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
-import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart';
+import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart'
+    show sendLogsToFirebase;
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
@@ -215,10 +216,14 @@ class SettingsScreen extends ConsumerWidget {
                 iconColor: AppTheme.brandInkMuted,
                 iconBackground: const Color(0xFFF0F1F5),
                 title: 'Send Diagnostic Logs',
-                subtitle: 'Email last 10 min of activity to developer',
+                subtitle: 'Stream last 10 min of activity to Firebase',
                 trailing: const SizedBox.shrink(),
-                onTap: () =>
-                    sendLogsToDevEmail(context, ref.read(talkerProvider)),
+                onTap: () => sendLogsToFirebase(
+                  context: context,
+                  talker: ref.read(talkerProvider),
+                  firestore: ref.read(firebaseFirestoreProvider),
+                  auth: ref.read(firebaseAuthProvider),
+                ),
               ),
             ),
             const SizedBox(height: 24),

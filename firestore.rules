@@ -16,6 +16,14 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
+      // Diagnostic logs written by the device; readable only via Admin SDK
+      // (Firebase console). TTL field `expires_at` enables auto-deletion —
+      // configure in: Firestore → Data → TTL policies → field: expires_at.
+      match /diagnostic_logs/{logId} {
+        allow create: if isOwner(uid);
+        allow read, update, delete: if false;
+      }
+
       // Account-level profile
       match /profile/{docId} {
         allow read, write: if isOwner(uid);
