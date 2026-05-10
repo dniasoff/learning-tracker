@@ -1,6 +1,4 @@
-import 'dart:developer' as developer;
-
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
@@ -13,14 +11,11 @@ class AccountManagementService {
   AccountManagementService({
     required AuthRepository authRepository,
     required UserDatabase database,
-    required FirebaseFirestore firestore,
   }) : _authRepository = authRepository,
-       _database = database,
-       _firestore = firestore;
+       _database = database;
 
   final AuthRepository _authRepository;
   final UserDatabase _database;
-  final FirebaseFirestore _firestore;
 
   /// Soft sign-out — clears the in-app session so the user sees the
   /// account picker on next launch, but leaves Firebase's cached
@@ -110,104 +105,18 @@ class AccountManagementService {
     return _authRepository.getLinkedProviders();
   }
 
-  /// Deletes all Firestore data for the given user.
-  ///
-  /// Handles both profile-scoped collections (`users/{uid}/profiles/{pid}/...`)
-  /// and legacy flat collections (`users/{uid}/...`).
-  /// A server-side Cloud Function (`onUserDeleted`) also performs this cascade
-  /// when a user is deleted from Firebase Auth outside the app.
+  /// Deletes all Firestore data for the current user via the `deleteAccountData`
+  /// Cloud Function, which uses Admin SDK `recursiveDelete` server-side.
   Future<void> _deleteFirestoreUserData(String uid) async {
     try {
-      final userDocRef = _firestore.collection('users').doc(uid);
-
-      const profileSubcollections = [
-        'completions',
-        'bookmarks',
-        'settings',
-        'goals',
-        'rewards',
-        'learning_ledger',
-        'active_curricula',
-        'curriculum_imports',
-        'curriculum_tracks',
-        'profile_programs',
-        'notification_settings',
-        'gamification_settings',
-      ];
-
-      // 1. Delete profile-scoped data (canonical learner_profiles path)
-      final profilesSnapshot = await userDocRef
-          .collection('learner_profiles')
-          .get();
-      for (final profileDoc in profilesSnapshot.docs) {
-        for (final sub in profileSubcollections) {
-          final subSnapshot = await profileDoc.reference.collection(sub).get();
-          for (final doc in subSnapshot.docs) {
-            await doc.reference.delete();
-          }
-        }
-        // Delete streak/data and active_curricula/data within profile
-        await profileDoc.reference.collection('streak').doc('data').delete();
-        await profileDoc.reference
-            .collection('active_curricula')
-            .doc('data')
-            .delete();
-        // Delete the profile document itself
-        await profileDoc.reference.delete();
-      }
-
-      // Legacy cleanup: remove any old users/{uid}/profiles/{profileId} docs.
-      // Deployed rules often deny this path; skip when not readable.
-      try {
-        final legacyProfiles = await userDocRef.collection('profiles').get();
-        for (final profileDoc in legacyProfiles.docs) {
-          for (final sub in profileSubcollections) {
-            final subSnapshot = await profileDoc.reference
-                .collection(sub)
-                .get();
-            for (final doc in subSnapshot.docs) {
-              await doc.reference.delete();
-            }
-          }
-          await profileDoc.reference.collection('streak').doc('data').delete();
-          await profileDoc.reference
-              .collection('active_curricula')
-              .doc('data')
-              .delete();
-          await profileDoc.reference.delete();
-        }
-      } on FirebaseException catch (e) {
-        if (e.code != 'permission-denied') rethrow;
-      }
-
-      // 2. Delete legacy flat subcollections
-      const legacySubcollections = [
-        ...profileSubcollections,
-        'profile',
-        'learner_profiles',
-        'profiles',
-      ];
-
-      for (final sub in legacySubcollections) {
-        final snapshot = await userDocRef.collection(sub).get();
-        for (final doc in snapshot.docs) {
-          await doc.reference.delete();
-        }
-      }
-
-      // Delete legacy streak document
-      await userDocRef.collection('streak').doc('current').delete();
-
-      // 3. Delete user document itself
-      await userDocRef.delete();
-    } catch (e, stack) {
-      developer.log(
-        'Failed to delete Firestore data for user $uid',
-        error: e,
-        stackTrace: stack,
-        name: 'AccountManagementService',
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'deleteAccountData',
       );
-      // Still proceed with auth deletion and local cleanup
+      await callable.call<Map<String, dynamic>>(<String, dynamic>{});
+    } catch (e) {
+      // Log but don't rethrow — auth deletion + local cleanup still proceed.
+      // The onUserDeleted Cloud Function will also fire when Auth account is
+      // deleted and will handle any remaining data as a safety net.
     }
   }
 

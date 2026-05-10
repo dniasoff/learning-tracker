@@ -328,6 +328,22 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
+  /// Delete a single curriculum track document from Firestore via a server-side
+  /// Cloud Function.
+  Future<void> deleteCurriculumTrack({
+    required String curriculumId,
+    required String trackType,
+  }) async {
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'deleteCurriculumTrack',
+    );
+    await callable.call<Map<String, dynamic>>({
+      'profileId': profileId,
+      'curriculumId': curriculumId,
+      'trackType': trackType,
+    });
+  }
+
   /// Delete a learner profile and all its subcollections via a server-side
   /// Cloud Function.
   ///

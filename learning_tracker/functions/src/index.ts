@@ -5,113 +5,17 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 admin.initializeApp();
 const db = admin.firestore();
 
-/**
- * Recursively deletes all documents in a Firestore collection.
- */
-async function deleteCollection(ref: admin.firestore.CollectionReference): Promise<number> {
-  const snapshot = await ref.limit(500).get();
-  if (snapshot.empty) return 0;
-
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-  await batch.commit();
-
-  // Recurse for collections larger than 500 docs
-  return snapshot.size + (snapshot.size === 500 ? await deleteCollection(ref) : 0);
-}
 
 /**
  * Triggered when a Firebase Auth user is deleted.
- * Cascades the deletion to all Firestore data under `users/{uid}`.
- *
- * Collection structure:
- *   users/{uid}/learner_profiles/{profileId}/{subcollection}/...
- *   users/{uid}/profile/data          (account-level)
- *   users/{uid}/streak/current        (legacy flat)
- *   users/{uid}/{subcollection}/...   (legacy flat)
+ * Cascades deletion to all Firestore data under `users/{uid}` using
+ * Admin SDK recursiveDelete — no subcollection enumeration needed.
  */
 export const onUserDeleted = auth.user().onDelete(async (user) => {
   const uid = user.uid;
-  logger.info(`Cascading delete for user ${uid}`);
-
-  const userDocRef = db.collection("users").doc(uid);
-
-  // --- 1. Delete profile-scoped subcollections (canonical path) ---
-  const profilesSnapshot = await userDocRef.collection("learner_profiles").get();
-
-  const profileSubcollections = [
-    "completions",
-    "bookmarks",
-    "settings",
-    "goals",
-    "rewards",
-    "learning_ledger",
-    "active_curricula",
-    "curriculum_imports",
-    "curriculum_tracks",
-    "profile_programs",
-    "notification_settings",
-    "gamification_settings",
-  ];
-
-  for (const profileDoc of profilesSnapshot.docs) {
-    for (const sub of profileSubcollections) {
-      await deleteCollection(profileDoc.ref.collection(sub));
-    }
-    // Delete streak/data within each profile
-    await profileDoc.ref.collection("streak").doc("data").delete()
-      .catch(() => { /* may not exist */ });
-    // Delete active_curricula/data within each profile
-    await profileDoc.ref.collection("active_curricula").doc("data").delete()
-      .catch(() => { /* may not exist */ });
-    // Delete the profile document itself
-    await profileDoc.ref.delete();
-  }
-
-  // Legacy cleanup: old profile-scoped path users/{uid}/profiles/{profileId}
-  const legacyProfilesSnapshot = await userDocRef.collection("profiles").get();
-  for (const profileDoc of legacyProfilesSnapshot.docs) {
-    for (const sub of profileSubcollections) {
-      await deleteCollection(profileDoc.ref.collection(sub));
-    }
-    await profileDoc.ref.collection("streak").doc("data").delete()
-      .catch(() => { /* may not exist */ });
-    await profileDoc.ref.collection("active_curricula").doc("data").delete()
-      .catch(() => { /* may not exist */ });
-    await profileDoc.ref.delete().catch(() => { /* may not exist */ });
-  }
-
-  // --- 2. Delete legacy flat subcollections (pre-profile-scoping) ---
-  const legacySubcollections = [
-    "completions",
-    "bookmarks",
-    "settings",
-    "goals",
-    "rewards",
-    "learning_ledger",
-    "active_curricula",
-    "curriculum_imports",
-    "curriculum_tracks",
-    "profile_programs",
-    "notification_settings",
-    "gamification_settings",
-    "profile",
-    "learner_profiles",
-    "profiles",
-  ];
-
-  for (const sub of legacySubcollections) {
-    await deleteCollection(userDocRef.collection(sub));
-  }
-
-  // Delete legacy streak/current
-  await userDocRef.collection("streak").doc("current").delete()
-    .catch(() => { /* may not exist */ });
-
-  // --- 3. Delete the user document itself ---
-  await userDocRef.delete();
-
-  logger.info(`Successfully deleted all Firestore data for user ${uid}`);
+  logger.info(`onUserDeleted: cascading delete for uid=${uid}`);
+  await db.recursiveDelete(db.collection("users").doc(uid));
+  logger.info(`onUserDeleted: complete for uid=${uid}`);
 });
 
 /**
@@ -144,5 +48,58 @@ export const deleteLearnerProfile = onCall(async (request) => {
   await db.recursiveDelete(profileRef);
   logger.info(`deleteLearnerProfile: complete uid=${uid} profileId=${profileId}`);
 
+  return { success: true };
+});
+
+/**
+ * Callable: delete a single curriculum track document from Firestore.
+ *
+ * Expects: { profileId: number, curriculumId: string, trackType: string }
+ * Returns: { success: true }
+ */
+export const deleteCurriculumTrack = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { profileId, curriculumId, trackType } = request.data ?? {};
+  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0) {
+    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  }
+  if (typeof curriculumId !== "string" || !curriculumId) {
+    throw new HttpsError("invalid-argument", "curriculumId must be a non-empty string");
+  }
+  if (typeof trackType !== "string" || !trackType) {
+    throw new HttpsError("invalid-argument", "trackType must be a non-empty string");
+  }
+
+  const docId = `${curriculumId}_${trackType}`;
+  const trackRef = db
+    .collection("users").doc(uid)
+    .collection("learner_profiles").doc(String(profileId))
+    .collection("curriculum_tracks").doc(docId);
+
+  await trackRef.delete();
+  logger.info(`deleteCurriculumTrack: uid=${uid} profileId=${profileId} doc=${docId}`);
+  return { success: true };
+});
+
+/**
+ * Callable: delete all Firestore data for the authenticated user.
+ *
+ * Call this before deleting the Firebase Auth account. The `onUserDeleted`
+ * trigger also runs after Auth deletion as a safety net, but by then the
+ * data is already gone (no-op).
+ *
+ * Expects: {} (identity comes from request.auth.uid)
+ * Returns: { success: true }
+ */
+export const deleteAccountData = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const userDocRef = db.collection("users").doc(uid);
+  logger.info(`deleteAccountData: starting for uid=${uid}`);
+  await db.recursiveDelete(userDocRef);
+  logger.info(`deleteAccountData: complete for uid=${uid}`);
   return { success: true };
 });
