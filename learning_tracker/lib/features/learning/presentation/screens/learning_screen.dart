@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -84,7 +85,7 @@ class LearningScreen extends ConsumerWidget {
                           context.router.push(const SchedulerRoute()),
                     ),
                     const SizedBox(height: 36),
-                    _BrowseSection(activeCurricula: activeCurricula),
+                    const _BrowseSection(),
                   ],
                 ),
               );
@@ -301,15 +302,23 @@ class _DailyTasksSection extends ConsumerWidget {
   }
 }
 
-class _LearnTaskCard extends StatelessWidget {
+class _LearnTaskCard extends ConsumerWidget {
   const _LearnTaskCard({required this.task});
 
   final DailyTask task;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
+    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+    final heNamesAsync = ref.watch(
+      curriculumHeNamesProvider(task.curriculumId),
+    );
+    final taskTitle = hebrewTerms
+        ? (heNamesAsync.asData?.value[task.contentItemSefariaRef] ??
+              task.contentItemSefariaRef.replaceAll('_', ' '))
+        : task.contentItemSefariaRef.replaceAll('_', ' ');
     final isOverdue = task.isOverdue;
     return Material(
       color: Colors.transparent,
@@ -399,7 +408,7 @@ class _LearnTaskCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      task.contentItemSefariaRef.replaceAll('_', ' '),
+                      taskTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -472,9 +481,7 @@ class _LearnTaskCard extends StatelessWidget {
 }
 
 class _BrowseSection extends ConsumerWidget {
-  const _BrowseSection({required this.activeCurricula});
-
-  final List<CurriculumId> activeCurricula;
+  const _BrowseSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -484,32 +491,15 @@ class _BrowseSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Browse',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 36,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => context.router.push(const CurriculumListRoute()),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF354993),
-                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-                textStyle: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              child: const Text('All Curricula'),
-            ),
-          ],
+        Text(
+          'Browse',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 36,
+          ),
         ),
         const SizedBox(height: 12),
-        ...activeCurricula.map(
+        ...CurriculumId.values.map(
           (curriculum) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: _CurriculumBrowseCard(

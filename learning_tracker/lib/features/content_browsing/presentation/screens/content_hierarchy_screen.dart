@@ -206,7 +206,8 @@ class _ContentHierarchyScreenState
                   );
                 }
 
-                final groupedItems = _groupItemsByNextLevel(items);
+                final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+                final groupedItems = _groupItemsByNextLevel(items, hebrewTerms);
 
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -243,7 +244,10 @@ class _ContentHierarchyScreenState
     );
   }
 
-  List<ContentItem> _groupItemsByNextLevel(List<ContentItem> items) {
+  List<ContentItem> _groupItemsByNextLevel(
+    List<ContentItem> items,
+    bool hebrewTerms,
+  ) {
     final currentDepth = _navigationStack.length;
 
     if (currentDepth >= 4) {
@@ -262,17 +266,18 @@ class _ContentHierarchyScreenState
         if (!item.isLeaf) {
           uniqueItems[nextLevelValue] = item;
         } else {
+          final he = _displayNameHeForLeaf(nextLevelValue, hebrewTerms);
           uniqueItems[nextLevelValue] = ContentItem(
             curriculumId: item.curriculumId,
             level1: item.level1,
             level2: currentDepth >= 1 ? item.level2 : null,
             level3: currentDepth >= 2 ? item.level3 : null,
             level4: currentDepth >= 3 ? item.level4 : null,
-            displayNameHe: nextLevelValue,
+            displayNameHe: he,
             displayNameEn: nextLevelValue,
             sefariaRef: item.sefariaRef,
             sortOrder: item.sortOrder,
-            isLeaf: false,
+            isLeaf: true,
           );
         }
       }
@@ -282,6 +287,17 @@ class _ContentHierarchyScreenState
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     return result;
+  }
+
+  /// Converts a raw level key to a display label for leaf items.
+  /// Maps Bavli/Yerushalmi amud letters to Hebrew or keeps as-is.
+  String _displayNameHeForLeaf(String levelKey, bool hebrewTerms) {
+    if (!hebrewTerms) return levelKey;
+    return switch (levelKey) {
+      'a' => 'עמוד א',
+      'b' => 'עמוד ב',
+      _ => levelKey,
+    };
   }
 
   String? _getNextLevelValue(ContentItem item, int currentDepth) {

@@ -689,7 +689,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                       Text(
                         isDone
                             ? 'Completed (${task.stageName})'
-                            : 'Mark Learn Complete',
+                            : 'Mark Complete',
                         style: const TextStyle(
                           fontSize: 31 / 2,
                           fontWeight: FontWeight.w700,

@@ -275,18 +275,6 @@ class _DashboardBody extends ConsumerWidget {
     final doneDisplay = lifetimePercentStr;
     final sectionsDetail = lifetimeSectionsStr;
 
-    final focusLabel = groupedTasks.todayTasks.isNotEmpty
-        ? groupedTasks.todayTasks
-              .map(
-                (t) => hebrewTerms
-                    ? t.curriculumId.displayNameHe
-                    : t.curriculumId.displayNameEn.toUpperCase(),
-              )
-              .toSet()
-              .take(2)
-              .join(' / ')
-        : l10n.noFocusTag;
-
     final tasksReady = dailyTasksAsync.hasValue;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
     final showAllCaughtUp =
@@ -473,7 +461,6 @@ class _DashboardBody extends ConsumerWidget {
                     .take(2)
                     .join(' / ')
               : l10n.noTasksInLane,
-          focusLabel: focusLabel,
           count: todayCount,
           onTap: () {
             ref
@@ -954,10 +941,7 @@ class _DashboardLevelPointsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
-    final chazaraLabel = hebrewTerms
-        ? HebrewTerms.uiBubbleChazara
-        : l10n.bubbleChazara;
+    final chazaraLabel = l10n.bubbleChazara;
     final bubbleData = userMode == UserMode.child
         ? [
             (l10n.bubbleOverdue, '$overdueCount', Colors.white),
@@ -1169,13 +1153,11 @@ class _DashboardStatBubble extends StatelessWidget {
 class _MainFocusMissionCard extends StatelessWidget {
   const _MainFocusMissionCard({
     required this.subtitle,
-    required this.focusLabel,
     required this.count,
     required this.onTap,
   });
 
   final String subtitle;
-  final String focusLabel;
   final int count;
   final VoidCallback onTap;
 
@@ -1241,9 +1223,7 @@ class _MainFocusMissionCard extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Text(
-                      focusLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      'TASKS',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: AppTheme.brandCoralDeep,
                         fontWeight: FontWeight.w700,
