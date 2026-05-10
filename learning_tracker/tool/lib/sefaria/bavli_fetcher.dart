@@ -126,7 +126,8 @@ class BavliFetcher extends SefariaFetcherBase {
             level2: title,
             level3: dafNum.toString(),
             level4: amud,
-            displayNameHe: '$heTitle דף ${_toHebrewNumeral(dafNum)} עמוד ${amud == 'a' ? 'א' : 'ב'}',
+            displayNameHe:
+                '$heTitle דף ${_toHebrewNumeral(dafNum)} עמוד ${amud == 'a' ? 'א' : 'ב'}',
             displayNameEn: '$title $dafRef',
             sefariaRef: '$title $dafRef',
             sortOrder: sortOrder++,

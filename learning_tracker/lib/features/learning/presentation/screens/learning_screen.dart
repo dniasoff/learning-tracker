@@ -496,8 +496,7 @@ class _BrowseSection extends ConsumerWidget {
               ),
             ),
             TextButton(
-              onPressed: () =>
-                  context.router.push(const CurriculumListRoute()),
+              onPressed: () => context.router.push(const CurriculumListRoute()),
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFF354993),
                 padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
@@ -537,7 +536,9 @@ class _CurriculumBrowseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = AppTheme.getCurriculumColor(curriculum);
-    final name = hebrewTerms ? curriculum.displayNameHe : curriculum.displayNameEn;
+    final name = hebrewTerms
+        ? curriculum.displayNameHe
+        : curriculum.displayNameEn;
 
     return Material(
       color: Colors.transparent,
@@ -568,11 +569,7 @@ class _CurriculumBrowseCard extends StatelessWidget {
                   color: color.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.auto_stories_rounded,
-                  color: color,
-                  size: 20,
-                ),
+                child: Icon(Icons.auto_stories_rounded, color: color, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
