@@ -266,7 +266,9 @@ Future<void> showDeleteAccountFlow(
   if (deleteError != null) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Account sign-out complete, but deletion was partial: $deleteError'),
+        content: Text(
+          'Account sign-out complete, but deletion was partial: $deleteError',
+        ),
         backgroundColor: Colors.orange,
         duration: const Duration(seconds: 6),
       ),
