@@ -4,7 +4,6 @@ library;
 
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -19,20 +18,6 @@ import 'package:test/test.dart';
 import '../helpers/test_database.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
-
-class MockFirebaseFirestore extends Mock implements FirebaseFirestore {}
-
-// ignore: subtype_of_sealed_class
-class MockCollectionReference extends Mock
-    implements CollectionReference<Map<String, dynamic>> {}
-
-// ignore: subtype_of_sealed_class
-class MockDocumentReference extends Mock
-    implements DocumentReference<Map<String, dynamic>> {}
-
-// ignore: subtype_of_sealed_class
-class MockQuerySnapshot extends Mock
-    implements QuerySnapshot<Map<String, dynamic>> {}
 
 /// A no-op push for testing (avoids Firestore dependency).
 Future<void> _noOpPush({
@@ -615,19 +600,16 @@ void main() {
 
   group('Story 14.3 -- Account management', tags: ['story_14_3'], () {
     late MockAuthRepository mockAuthRepo;
-    late MockFirebaseFirestore mockFirestore;
     late UserDatabase db;
     late AccountManagementService service;
 
     setUp(() {
       SharedPreferences.setMockInitialValues({});
       mockAuthRepo = MockAuthRepository();
-      mockFirestore = MockFirebaseFirestore();
       db = createTestDatabase();
       service = AccountManagementService(
         authRepository: mockAuthRepo,
         database: db,
-        firestore: mockFirestore,
       );
     });
 
@@ -660,72 +642,12 @@ void main() {
           'signOut contract changed — token cleared via AccountLifecycleService, not AuthRepository',
     );
 
+    // Firestore deletion is now server-side via the deleteAccountData Cloud
+    // Function (recursiveDelete) — not testable in unit tests without Firebase
+    // initialisation. The onUserDeleted trigger also handles any leftovers.
     test('user can delete account and all data', () async {
-      // Set up Firestore mocks
-      final mockUsersCollection = MockCollectionReference();
-      final mockUserDoc = MockDocumentReference();
-      when(
-        () => mockFirestore.collection('users'),
-      ).thenReturn(mockUsersCollection);
-      when(() => mockUsersCollection.doc('uid-1')).thenReturn(mockUserDoc);
-
-      // Mock 'profiles' subcollection (profile-scoped data)
-      final mockProfilesCollection = MockCollectionReference();
-      final mockProfilesSnapshot = MockQuerySnapshot();
-      when(
-        () => mockUserDoc.collection('profiles'),
-      ).thenReturn(mockProfilesCollection);
-      when(
-        () => mockProfilesCollection.get(),
-      ).thenAnswer((_) async => mockProfilesSnapshot);
-      when(() => mockProfilesSnapshot.docs).thenReturn([]);
-
-      // Mock 'learner_profiles' subcollection (canonical path)
-      final mockLearnerProfilesCollection = MockCollectionReference();
-      final mockLearnerProfilesSnapshot = MockQuerySnapshot();
-      when(
-        () => mockUserDoc.collection('learner_profiles'),
-      ).thenReturn(mockLearnerProfilesCollection);
-      when(
-        () => mockLearnerProfilesCollection.get(),
-      ).thenAnswer((_) async => mockLearnerProfilesSnapshot);
-      when(() => mockLearnerProfilesSnapshot.docs).thenReturn([]);
-
-      for (final sub in [
-        'completions',
-        'bookmarks',
-        'settings',
-        'goals',
-        'rewards',
-        'learning_ledger',
-        'active_curricula',
-        'curriculum_imports',
-        'curriculum_tracks',
-        'profile_programs',
-        'notification_settings',
-        'gamification_settings',
-        'profile',
-      ]) {
-        final mockSubCollection = MockCollectionReference();
-        final mockSnapshot = MockQuerySnapshot();
-        when(() => mockUserDoc.collection(sub)).thenReturn(mockSubCollection);
-        when(
-          () => mockSubCollection.get(),
-        ).thenAnswer((_) async => mockSnapshot);
-        when(() => mockSnapshot.docs).thenReturn([]);
-      }
-
-      final mockStreakCollection = MockCollectionReference();
-      final mockStreakDoc = MockDocumentReference();
-      when(
-        () => mockUserDoc.collection('streak'),
-      ).thenReturn(mockStreakCollection);
-      when(() => mockStreakCollection.doc('current')).thenReturn(mockStreakDoc);
-      when(() => mockStreakDoc.delete()).thenAnswer((_) async {});
-      when(() => mockUserDoc.delete()).thenAnswer((_) async {});
       when(() => mockAuthRepo.deleteAccount()).thenAnswer((_) async {});
 
-      // Insert local data
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'uid-1',
         displayName: 'User',
@@ -735,8 +657,6 @@ void main() {
 
       await service.deleteAccount('uid-1');
 
-      // Firestore user data deleted
-      verify(() => mockUserDoc.delete()).called(1);
       // Firebase Auth account deleted
       verify(() => mockAuthRepo.deleteAccount()).called(1);
       // Local database cleared

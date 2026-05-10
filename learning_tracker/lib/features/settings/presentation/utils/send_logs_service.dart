@@ -38,13 +38,15 @@ Future<void> sendLogsToFirebase({
   } catch (_) {}
 
   final entries = recent
-      .map((e) => <String, dynamic>{
-            'ts': e.time.toIso8601String(),
-            'lvl': (e.logLevel?.name ?? e.title ?? 'log').toUpperCase(),
-            'msg': e.message ?? '',
-            if (e.exception != null) 'exc': e.exception.toString(),
-            if (e.error != null) 'err': e.error.toString(),
-          })
+      .map(
+        (e) => <String, dynamic>{
+          'ts': e.time.toIso8601String(),
+          'lvl': (e.logLevel?.name ?? e.title ?? 'log').toUpperCase(),
+          'msg': e.message ?? '',
+          if (e.exception != null) 'exc': e.exception.toString(),
+          if (e.error != null) 'err': e.error.toString(),
+        },
+      )
       .toList();
 
   try {
@@ -53,17 +55,17 @@ Future<void> sendLogsToFirebase({
         .doc(uid)
         .collection('diagnostic_logs')
         .add(<String, dynamic>{
-      'captured_at': FieldValue.serverTimestamp(),
-      'version': pkgInfo != null
-          ? '${pkgInfo.version}+${pkgInfo.buildNumber}'
-          : 'unknown',
-      'window_minutes': _logWindowMinutes,
-      'entry_count': entries.length,
-      'entries': entries,
-      // TTL field — enable automatic deletion in Firebase console:
-      // Firestore → Data → TTL policies → collection: diagnostic_logs, field: expires_at
-      'expires_at': Timestamp.fromDate(now.add(const Duration(days: 7))),
-    });
+          'captured_at': FieldValue.serverTimestamp(),
+          'version': pkgInfo != null
+              ? '${pkgInfo.version}+${pkgInfo.buildNumber}'
+              : 'unknown',
+          'window_minutes': _logWindowMinutes,
+          'entry_count': entries.length,
+          'entries': entries,
+          // TTL field — enable automatic deletion in Firebase console:
+          // Firestore → Data → TTL policies → collection: diagnostic_logs, field: expires_at
+          'expires_at': Timestamp.fromDate(now.add(const Duration(days: 7))),
+        });
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,9 +80,9 @@ Future<void> sendLogsToFirebase({
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send logs: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to send logs: $e')));
     }
   }
 }

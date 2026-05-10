@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
@@ -10,27 +9,8 @@ import '../../../../helpers/test_database.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
-class MockFirebaseFirestore extends Mock implements FirebaseFirestore {}
-
-// ignore: subtype_of_sealed_class
-class MockCollectionReference extends Mock
-    implements CollectionReference<Map<String, dynamic>> {}
-
-// ignore: subtype_of_sealed_class
-class MockDocumentReference extends Mock
-    implements DocumentReference<Map<String, dynamic>> {}
-
-// ignore: subtype_of_sealed_class
-class MockQuerySnapshot extends Mock
-    implements QuerySnapshot<Map<String, dynamic>> {}
-
-// ignore: subtype_of_sealed_class
-class MockQueryDocumentSnapshot extends Mock
-    implements QueryDocumentSnapshot<Map<String, dynamic>> {}
-
 void main() {
   late MockAuthRepository mockAuthRepo;
-  late MockFirebaseFirestore mockFirestore;
   late UserDatabase db;
   late AccountManagementService service;
 
@@ -38,12 +18,10 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
     mockAuthRepo = MockAuthRepository();
-    mockFirestore = MockFirebaseFirestore();
     db = createTestDatabase();
     service = AccountManagementService(
       authRepository: mockAuthRepo,
       database: db,
-      firestore: mockFirestore,
     );
   });
 
@@ -86,63 +64,13 @@ void main() {
   });
 
   group('deleteAccount', () {
-    late MockCollectionReference mockUsersCollection;
-    late MockDocumentReference mockUserDoc;
-
     setUp(() {
-      mockUsersCollection = MockCollectionReference();
-      mockUserDoc = MockDocumentReference();
-
-      when(
-        () => mockFirestore.collection('users'),
-      ).thenReturn(mockUsersCollection);
-      when(() => mockUsersCollection.doc('test-uid')).thenReturn(mockUserDoc);
-
-      // Mock all subcollections queried by _deleteFirestoreUserData as empty
-      for (final sub in [
-        'learner_profiles',
-        'profiles',
-        'completions',
-        'bookmarks',
-        'settings',
-        'goals',
-        'rewards',
-        'learning_ledger',
-        'active_curricula',
-        'curriculum_imports',
-        'curriculum_tracks',
-        'profile_programs',
-        'notification_settings',
-        'gamification_settings',
-        'profile',
-      ]) {
-        final mockSubCollection = MockCollectionReference();
-        final mockSnapshot = MockQuerySnapshot();
-        when(() => mockUserDoc.collection(sub)).thenReturn(mockSubCollection);
-        when(
-          () => mockSubCollection.get(),
-        ).thenAnswer((_) async => mockSnapshot);
-        when(() => mockSnapshot.docs).thenReturn([]);
-      }
-
-      // Mock streak subcollection
-      final mockStreakCollection = MockCollectionReference();
-      final mockStreakDoc = MockDocumentReference();
-      when(
-        () => mockUserDoc.collection('streak'),
-      ).thenReturn(mockStreakCollection);
-      when(() => mockStreakCollection.doc('current')).thenReturn(mockStreakDoc);
-      when(() => mockStreakDoc.delete()).thenAnswer((_) async {});
-
-      when(() => mockUserDoc.delete()).thenAnswer((_) async {});
       when(() => mockAuthRepo.deleteAccount()).thenAnswer((_) async {});
     });
 
-    test('deletes Firestore user data', () async {
-      await service.deleteAccount('test-uid');
-
-      verify(() => mockUserDoc.delete()).called(1);
-    });
+    // Firestore deletion is now server-side via the deleteAccountData Cloud
+    // Function (recursiveDelete) — not testable in unit tests without Firebase
+    // initialisation. The onUserDeleted trigger also handles any leftovers.
 
     test('deletes Firebase Auth account', () async {
       await service.deleteAccount('test-uid');
@@ -151,7 +79,6 @@ void main() {
     });
 
     test('clears local database', () async {
-      // Insert test data
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'test-uid',
         displayName: 'Test User',
@@ -161,7 +88,6 @@ void main() {
 
       await service.deleteAccount('test-uid');
 
-      // Verify local data is gone
       final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
         'test-uid',
       );
