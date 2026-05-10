@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -9,6 +10,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -81,6 +83,8 @@ class LearningScreen extends ConsumerWidget {
                       onViewAll: () =>
                           context.router.push(const SchedulerRoute()),
                     ),
+                    const SizedBox(height: 36),
+                    _BrowseSection(activeCurricula: activeCurricula),
                   ],
                 ),
               );
@@ -464,6 +468,133 @@ class _LearnTaskCard extends StatelessWidget {
       DailyTaskPriority.scheduledChazara => Icons.history_rounded,
       DailyTaskPriority.newLearning => Icons.auto_stories_rounded,
     };
+  }
+}
+
+class _BrowseSection extends ConsumerWidget {
+  const _BrowseSection({required this.activeCurricula});
+
+  final List<CurriculumId> activeCurricula;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Browse',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 36,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () =>
+                  context.router.push(const CurriculumListRoute()),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF354993),
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+                textStyle: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              child: const Text('All Curricula'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...activeCurricula.map(
+          (curriculum) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _CurriculumBrowseCard(
+              curriculum: curriculum,
+              hebrewTerms: hebrewTerms,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CurriculumBrowseCard extends StatelessWidget {
+  const _CurriculumBrowseCard({
+    required this.curriculum,
+    required this.hebrewTerms,
+  });
+
+  final CurriculumId curriculum;
+  final bool hebrewTerms;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = AppTheme.getCurriculumColor(curriculum);
+    final name = hebrewTerms ? curriculum.displayNameHe : curriculum.displayNameEn;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => context.router.push(
+          ContentHierarchyRoute(curriculumId: curriculum.storageKey),
+        ),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_stories_rounded,
+                  color: color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  name,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    color: const Color(0xFF171C25),
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFA2A8B6),
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
