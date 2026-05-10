@@ -11,6 +11,8 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
@@ -147,18 +149,21 @@ Future<void> showSignOutConfirmation(
   try {
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
+    // Hard sign-out: clear Firebase session so the user must re-authenticate
+    // on next launch rather than being silently resumed via cached token.
+    await ref.read(authRepositoryProvider).signOut();
     ref.read(authStateProvider.notifier).signOut();
     ref.read(routerProvider).parentPinGuard.lock();
 
-    if (context.mounted) {
-      final registry = ref.read(deviceRegistryProvider);
-      final accounts = await registry.getAllAccounts();
-      if (!context.mounted) return;
-      if (accounts.isNotEmpty) {
-        await context.router.replaceAll([const AccountPickerRoute()]);
-      } else {
-        await context.router.replaceAll([const SignInRoute()]);
-      }
+    final registry = ref.read(deviceRegistryProvider);
+    final accounts = await registry.getAllAccounts();
+    // Use root AppRouter — context.router inside a tab's StackRouter cannot
+    // navigate to root-level routes (SignInRoute, AccountPickerRoute).
+    final router = ref.read(routerProvider);
+    if (accounts.isNotEmpty) {
+      await router.replaceAll([const AccountPickerRoute()]);
+    } else {
+      await router.replaceAll([const SignInRoute()]);
     }
   } catch (e) {
     if (context.mounted) {
@@ -268,9 +273,9 @@ Future<void> showDeleteAccountFlow(
         ],
       ),
     );
-    if (context.mounted) {
-      await context.router.replaceAll([const SignInRoute()]);
-    }
+    // Use root AppRouter — context.router inside a tab cannot navigate to
+    // root-level routes and throws, preventing sign-in navigation.
+    ref.read(routerProvider).replaceAll([const SignInRoute()]);
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -349,13 +354,12 @@ Future<void> showDeleteLocalAccountFlow(
     ref.read(selectedProfileIdProvider.notifier).clear();
     ref.read(routerProvider).parentPinGuard.lock();
 
-    if (!context.mounted) return;
     final remaining = await registry.getAllAccounts();
-    if (!context.mounted) return;
+    final router = ref.read(routerProvider);
     if (remaining.isNotEmpty) {
-      await context.router.replaceAll([const AccountPickerRoute()]);
+      await router.replaceAll([const AccountPickerRoute()]);
     } else {
-      await context.router.replaceAll([const SignInRoute()]);
+      await router.replaceAll([const SignInRoute()]);
     }
   } catch (e) {
     if (context.mounted) {

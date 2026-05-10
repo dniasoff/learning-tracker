@@ -810,9 +810,31 @@ class SyncEngine {
   }
 
   /// Delete a learner profile from Firestore.
+  ///
+  /// Calls the Firestore data source directly so the delete reaches the
+  /// server before [pullOnLaunch] can re-fetch and recreate the profile.
+  /// The queue entry is kept as a redundant safety net for offline cases.
   Future<void> deleteLearnerProfile(int profileId) async {
-    await _offlineQueue.enqueueLearnerProfileDelete(profileId);
-    await _afterEnqueueForBackgroundFlush(context: 'learner profile delete');
+    // Direct delete first — prevents pullOnLaunch from seeing the old doc
+    // and merging it back into the local DB on the next sign-in.
+    if (_firestoreDataSource.isAuthenticated) {
+      try {
+        await _firestoreDataSource.deleteLearnerProfile(profileId);
+      } catch (e) {
+        _logger.warning(
+          'Direct Firestore profile delete failed, '
+          'falling back to queue: $e',
+        );
+        await _offlineQueue.enqueueLearnerProfileDelete(profileId);
+        await _afterEnqueueForBackgroundFlush(
+          context: 'learner profile delete',
+        );
+        return;
+      }
+    } else {
+      await _offlineQueue.enqueueLearnerProfileDelete(profileId);
+      await _afterEnqueueForBackgroundFlush(context: 'learner profile delete');
+    }
   }
 
   /// Push a goal to Firestore after local write.
