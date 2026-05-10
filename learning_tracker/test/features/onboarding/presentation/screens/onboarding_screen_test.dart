@@ -99,7 +99,10 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
 
         expect(find.text('New Profile'), findsNothing);
-        expect(find.text('English'), findsOneWidget);
+        // "English" appears twice now — once for the Calendar pill
+        // (Gregorian was renamed to English) and once for the App Language
+        // pill. Only the Hebrew (עברית) label is unique to the language pair.
+        expect(find.text('English'), findsAtLeastNWidgets(1));
         expect(find.text('עברית'), findsOneWidget);
       },
     );

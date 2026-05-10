@@ -202,10 +202,10 @@ void main() {
             curriculumId: 'mishnayos',
             level1: 'Seder Zeraim',
             level2: 'Berachos',
-            level3: 'Perek 1',
-            level4: 'Mishna 1',
-            displayNameHe: 'משנה א',
-            displayNameEn: 'Mishna 1',
+            level3: '1',
+            level4: '1',
+            displayNameHe: 'משנה ברכות א:א',
+            displayNameEn: 'Mishnah Berakhot 1:1',
             sefariaRef: 'Mishnah Berakhot 1.1',
             sortOrder: 0,
             isLeaf: true,
@@ -213,28 +213,30 @@ void main() {
         ],
       );
 
-      // Start at a deep level (Perek 1)
+      // Start at a deep level (perek 1 inside Berachos inside Seder Zeraim).
+      // Level3 carries the Arabic-integer perek number as in production data.
       await tester.pumpWidget(
         createTestApp(
           home: const ContentHierarchyScreen(
             curriculumId: 'mishnayos',
             level1: 'Seder Zeraim',
             level2: 'Berachos',
-            level3: 'Perek 1',
+            level3: '1',
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Curriculum chip appears once on the screen; the breadcrumb no longer
-      // duplicates the curriculum, so we expect a single occurrence.
+      // Curriculum chip appears once. The breadcrumb segments are rendered
+      // through the unified label renderer — named levels (Seder, Masechta)
+      // appear bare, ordinal levels prefixed with the level word.
       expect(find.text('משניות'), findsOneWidget);
+      // Seder Zeraim → bare value (no hebrewName plumbed in test stub).
       expect(find.text('Seder Zeraim'), findsOneWidget);
+      // Masechta → bare value.
       expect(find.text('Berachos'), findsOneWidget);
-      expect(find.text('Perek 1'), findsOneWidget);
-
-      // Clicking on earlier breadcrumb should navigate up
-      // (actual navigation behavior tested in widget state)
+      // Perek → gematriya-converted with prefix.
+      expect(find.text('פרק א'), findsOneWidget);
     });
   });
 

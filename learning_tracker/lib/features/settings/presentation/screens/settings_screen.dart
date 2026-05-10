@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
@@ -17,6 +18,7 @@ import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacre
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart'
@@ -109,6 +111,7 @@ class SettingsScreen extends ConsumerWidget {
                   _HebrewDateTile(theme: theme),
                   _tileDivider(theme),
                   _HebrewTermsTile(theme: theme),
+                  _TransliterationVariantTileSection(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
                   if (!isChildProfile) ...[
@@ -467,6 +470,118 @@ class _HebrewTermsTile extends ConsumerWidget {
               ref
                   .read(hebrewTermsScriptProvider.notifier)
                   .setHebrewTermsScript(selected.first);
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppTheme.brandBlueBright,
+              selectedForegroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFFD7DEEA)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Conditionally renders the transliteration-variant tile (Sephardi vs
+/// Ashkenazi) only when the Hebrew Terms toggle is **off**. Returns an
+/// empty widget when Hebrew is on, since the variant has no effect there.
+class _TransliterationVariantTileSection extends ConsumerWidget {
+  const _TransliterationVariantTileSection({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final useHebrew = ref.watch(hebrewTermsScriptProvider);
+    if (useHebrew) return const SizedBox.shrink();
+    return Column(
+      children: [
+        _tileDivider(theme),
+        _TransliterationVariantTile(theme: theme),
+      ],
+    );
+  }
+}
+
+/// Picks the Ashkenazi or Sephardi transliteration dialect for English-mode
+/// named values (Bereishis vs Bereshit). Same visual layout as the other
+/// preference tiles on this screen.
+class _TransliterationVariantTile extends ConsumerWidget {
+  const _TransliterationVariantTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final variant = ref.watch(transliterationVariantProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.brandBlueSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.record_voice_over_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pronunciation',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 19,
+                        color: const Color(0xFF1D2432),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Bereishis (Ashkenazi) or Bereshit (Sephardi)',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF929BAA),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<TransliterationVariant>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment<TransliterationVariant>(
+                value: TransliterationVariant.ashkenazi,
+                label: Text('Ashkenazi'),
+              ),
+              ButtonSegment<TransliterationVariant>(
+                value: TransliterationVariant.sephardi,
+                label: Text('Sephardi'),
+              ),
+            ],
+            selected: {variant},
+            onSelectionChanged: (selected) {
+              if (selected.isEmpty) return;
+              ref
+                  .read(transliterationVariantProvider.notifier)
+                  .setVariant(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,

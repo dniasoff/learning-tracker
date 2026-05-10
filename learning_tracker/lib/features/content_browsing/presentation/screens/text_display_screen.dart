@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
@@ -22,7 +23,6 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -39,18 +39,15 @@ class TextDisplayScreen extends ConsumerWidget {
     final textAsync = ref.watch(textContentProvider(sefariaRef));
     final fontSize = ref.watch(fontSizeProvider);
     final showNikud = ref.watch(showNikudProvider);
-    final useHebrew = ref.watch(hebrewTermsScriptProvider);
     final theme = Theme.of(context);
 
-    final englishTitle = sefariaRef.replaceAll('_', ' ');
-    final hebrewTitle = useHebrew
-        ? ref
-              .watch(hebrewNameForRefProvider(sefariaRef))
-              .whenOrNull(data: (he) => he)
-        : null;
-    final title = (hebrewTitle != null && hebrewTitle.isNotEmpty)
-        ? hebrewTitle
-        : englishTitle;
+    // Single label renderer drives the AppBar — leaf segment large, parent
+    // segment as a small subtitle. Both are localized and gematriya-aware.
+    final leafAsync = ref.watch(renderedDisplayForRefProvider(sefariaRef));
+    final parentAsync = ref.watch(renderedParentForRefProvider(sefariaRef));
+    final leafTitle =
+        leafAsync.asData?.value ?? sefariaRef.replaceAll('_', ' ');
+    final parentTitle = parentAsync.asData?.value;
 
     final adjAsync = ref.watch(adjacentContentRefsProvider(sefariaRef));
     final adj = adjAsync.asData?.value;
@@ -65,14 +62,30 @@ class TextDisplayScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.router.maybePop(),
         ),
-        title: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: AppTheme.brandInk,
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              leafTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: AppTheme.brandInk,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (parentTitle != null && parentTitle.isNotEmpty)
+              Text(
+                parentTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppTheme.brandInkMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
         ),
         actions: [
           IconButton(

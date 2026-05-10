@@ -29,6 +29,9 @@ class ProfileScopedPreferenceKeys {
   static String hebrewTermsScript(int profileId) =>
       'hebrew_terms_script_p$profileId';
 
+  static String transliterationVariant(int profileId) =>
+      'transliteration_variant_p$profileId';
+
   static String uiPreferencesUpdatedAtMs(int profileId) =>
       'ui_preferences_updated_at_ms_p$profileId';
 
@@ -87,5 +90,14 @@ class ProfileScopedPreferenceKeys {
       return prefs.getBool(legacyHebrewTermsScriptKey) ?? true;
     }
     return true;
+  }
+
+  /// Reads the saved transliteration variant ("ashkenazi" or "sephardi").
+  /// Defaults to "ashkenazi" when no setting has been persisted yet.
+  static String readTransliterationVariant(
+    SharedPreferences prefs,
+    int profileId,
+  ) {
+    return prefs.getString(transliterationVariant(profileId)) ?? 'ashkenazi';
   }
 }

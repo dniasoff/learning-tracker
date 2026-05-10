@@ -95,9 +95,11 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      // Hebrew titles are shown by default (Hebrew Terms toggle is on).
-      expect(find.text('סדר זרעים'), findsOneWidget);
-      expect(find.text('סדר מועד'), findsOneWidget);
+      // Hebrew titles are shown by default. The unified label renderer
+      // strips the "סדר " structural prefix because the level word is
+      // implicit at this drill-down depth.
+      expect(find.text('זרעים'), findsOneWidget);
+      expect(find.text('מועד'), findsOneWidget);
       // English transliterations are hidden in default Hebrew-only mode.
       expect(find.text('Seder Zeraim'), findsNothing);
       expect(find.text('Seder Moed'), findsNothing);
@@ -230,9 +232,10 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
 
-      // Now we should see root-level items by their Hebrew titles.
-      expect(find.text('סדר זרעים'), findsOneWidget);
-      expect(find.text('סדר מועד'), findsOneWidget);
+      // Now we should see root-level items by their Hebrew titles
+      // (structural prefix stripped by the unified label renderer).
+      expect(find.text('זרעים'), findsOneWidget);
+      expect(find.text('מועד'), findsOneWidget);
 
       // Back button is always present in the AppBar; at root level it
       // delegates to context.router.maybePop() instead of navigating up.
@@ -240,15 +243,18 @@ void main() {
     });
 
     testWidgets('displays leaf items with different styling', (tester) async {
+      // Production data uses numeric values for ordinal levels (Perek/Mishna),
+      // not the literal phrase "Perek 1". The renderer composes the level
+      // word + gematriya from those numbers.
       final testItems = [
         const ContentItem(
           curriculumId: 'mishnayos',
           level1: 'Seder Zeraim',
           level2: 'Berachos',
-          level3: 'Perek 1',
-          level4: 'Mishna 1',
-          displayNameHe: 'משנה א',
-          displayNameEn: 'Mishna 1',
+          level3: '1',
+          level4: '1',
+          displayNameHe: 'משנה ברכות א:א',
+          displayNameEn: 'Mishnah Berakhot 1:1',
           sefariaRef: 'Mishnah Berakhot 1.1',
           sortOrder: 0,
           isLeaf: true,
@@ -260,7 +266,7 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           level1: 'Seder Zeraim',
           level2: 'Berachos',
-          level3: 'Perek 1',
+          level3: '1',
           level4: null,
         ),
       ).thenAnswer((_) async => testItems);
@@ -279,12 +285,13 @@ void main() {
         createTestWidget(
           level1: 'Seder Zeraim',
           level2: 'Berachos',
-          level3: 'Perek 1',
+          level3: '1',
         ),
       );
       await tester.pumpAndSettle();
 
       // Leaf items should be visible (Hebrew title in default mode).
+      // The renderer composes "משנה" + gematriya("1") = "משנה א".
       expect(find.text('משנה א'), findsOneWidget);
     });
   });

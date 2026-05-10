@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -118,6 +119,7 @@ void main() {
       final appPrefs = await SharedPreferences.getInstance();
       syncHebrewCalendarPreferenceFromPrefs(appPrefs);
       syncHebrewTermsScriptPreferenceFromPrefs(appPrefs);
+      syncTransliterationVariantPreferenceFromPrefs(appPrefs);
 
       final container = ProviderContainer(
         overrides: [

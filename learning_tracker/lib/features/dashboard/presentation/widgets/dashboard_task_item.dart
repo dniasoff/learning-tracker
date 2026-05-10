@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
@@ -43,16 +44,32 @@ class DashboardTaskItem extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Line 1: [trackLabel · ] contentRef
-                    Text(
-                      showTrackLabel
-                          ? '${task.trackLabel} · ${task.contentItemSefariaRef}'
-                          : task.contentItemSefariaRef,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    // Line 1: [trackLabel · ] rendered display name
+                    // Renderer-driven: matches reader, browse rows, and
+                    // daily task card.
+                    Builder(
+                      builder: (_) {
+                        final display =
+                            ref
+                                .watch(
+                                  renderedDisplayForRefProvider(
+                                    task.contentItemSefariaRef,
+                                  ),
+                                )
+                                .asData
+                                ?.value ??
+                            task.contentItemSefariaRef.replaceAll('_', ' ');
+                        return Text(
+                          showTrackLabel
+                              ? '${task.trackLabel} · $display'
+                              : display,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
                     ),
                     const SizedBox(height: 2),
                     // Line 2: stageName [· N day(s) overdue]

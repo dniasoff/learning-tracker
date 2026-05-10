@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
@@ -19,6 +20,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,6 +69,7 @@ const _kOnboardingProfileMode = 'onboarding_profile_mode';
 const _kOnboardingLanguage = 'onboarding_language';
 const _kOnboardingHebrewCalendar = 'onboarding_use_hebrew_calendar';
 const _kOnboardingShowNikud = 'onboarding_show_nikud';
+const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 
 /// Persistent flag — once set, onboarding is never shown again on this device.
 const kOnboardingComplete = 'onboarding_complete';
@@ -79,6 +82,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   /// `true` = render Hebrew text with nikud (vowel marks); `false` = strip.
   bool _showNikud = true;
+
+  /// Transliteration dialect for English mode. Defaults to Ashkenazi.
+  TransliterationVariant _transliterationVariant =
+      TransliterationVariant.ashkenazi;
   var _phase = _ScreenPhase.profileCreation;
 
   // Profile creation state
@@ -161,6 +168,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (savedLanguage != null) _selectedLanguage = savedLanguage;
     _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? false;
     _showNikud = prefs.getBool(_kOnboardingShowNikud) ?? true;
+    final savedVariant = prefs.getString(_kOnboardingTransliterationVariant);
+    if (savedVariant == 'sephardi') {
+      _transliterationVariant = TransliterationVariant.sephardi;
+    }
 
     // If the user already advanced this session (e.g., tapped Continue
     // quickly), don't let a delayed restore overwrite the newer phase.
@@ -207,6 +218,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await prefs.setString(_kOnboardingLanguage, _selectedLanguage);
     await prefs.setBool(_kOnboardingHebrewCalendar, _useHebrewCalendar);
     await prefs.setBool(_kOnboardingShowNikud, _showNikud);
+    await prefs.setString(
+      _kOnboardingTransliterationVariant,
+      _transliterationVariant.name,
+    );
   }
 
   Future<void> _clearSavedState() async {
@@ -219,6 +234,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _kOnboardingLanguage,
       _kOnboardingHebrewCalendar,
       _kOnboardingShowNikud,
+      _kOnboardingTransliterationVariant,
     ]) {
       await prefs.remove(key);
     }
@@ -238,6 +254,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         .read(useHebrewDateProvider.notifier)
         .setUseHebrewDate(_useHebrewCalendar);
     await ref.read(showNikudProvider.notifier).set(_showNikud);
+    await ref
+        .read(transliterationVariantProvider.notifier)
+        .setVariant(_transliterationVariant);
 
     final repo = ref.read(profileRepositoryProvider);
     final ProfileModel profile;
@@ -714,7 +733,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   const SizedBox(height: 10),
                   pillPair(
-                    leftLabel: 'Gregorian',
+                    leftLabel: 'English',
                     rightLabel: 'Hebrew',
                     leftSelected: !_useHebrewCalendar,
                     onLeft: () => setState(() => _useHebrewCalendar = false),
@@ -746,6 +765,41 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onLeft: () => setState(() => _selectedLanguage = 'en'),
                     onRight: () => setState(() => _selectedLanguage = 'he'),
                   ),
+                  if (_selectedLanguage == 'en') ...[
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.translate_rounded,
+                          size: 22,
+                          color: AppTheme.brandInk,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Pronunciation',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandInk,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    pillPair(
+                      leftLabel: 'Ashkenazi',
+                      rightLabel: 'Sephardi',
+                      leftSelected: _transliterationVariant ==
+                          TransliterationVariant.ashkenazi,
+                      onLeft: () => setState(
+                        () => _transliterationVariant =
+                            TransliterationVariant.ashkenazi,
+                      ),
+                      onRight: () => setState(
+                        () => _transliterationVariant =
+                            TransliterationVariant.sephardi,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Row(
                     children: [

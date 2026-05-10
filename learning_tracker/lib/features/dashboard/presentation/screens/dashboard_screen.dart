@@ -7,11 +7,11 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -1697,16 +1697,11 @@ class _ActiveTrackCard extends ConsumerWidget {
         ? l10n.activeTrackNextTask
         : l10n.activeTrackCurrentFocus;
     final focusRef = todayTask?.contentItemSefariaRef;
-    final heNameMap = hebrewOnly
-        ? ref
-              .watch(curriculumHeNamesProvider(curriculum))
-              .whenOrNull(data: (m) => m)
-        : null;
+    // Renderer-driven: same path as reader, browse rows, daily task card.
     final focusValue = focusRef == null
         ? l10n.noProjection
-        : (heNameMap?[focusRef]?.isNotEmpty ?? false
-              ? heNameMap![focusRef]!
-              : focusRef);
+        : (ref.watch(renderedDisplayForRefProvider(focusRef)).asData?.value ??
+              focusRef);
     final lifetimeFull =
         lifetimeFraction != null && (lifetimeFraction - 1.0).abs() < 1e-6;
 

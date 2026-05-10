@@ -127,8 +127,9 @@ void main() {
       expect(CurriculumLabels.depth(CurriculumId.bavli), 4);
       expect(CurriculumLabels.level(CurriculumId.bavli, 1).en, 'Seder');
 
-      // Chumash: 4 levels
-      expect(CurriculumLabels.depth(CurriculumId.chumash), 4);
+      // Chumash: 3 levels (Sefer > Perek > Pasuk) — the bundled chumash.json
+      // does not include a Parsha level, so the metadata models 3 levels.
+      expect(CurriculumLabels.depth(CurriculumId.chumash), 3);
       expect(CurriculumLabels.level(CurriculumId.chumash, 1).en, 'Sefer');
     });
 
@@ -572,6 +573,40 @@ void main() {
               reason: '$filename item must have $field',
             );
           }
+        }
+      },
+    );
+
+    // ── Regression: Shaarei Teshuvah hierarchy is clean (no "h" placeholder)
+
+    test(
+      'Shaarei Teshuvah entries in mussar.json have valid level2 values',
+      () {
+        final file = File('assets/content/hierarchy/mussar.json');
+        if (!file.existsSync()) return; // skip when bundled assets removed
+        final data =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final items = (data['items'] as List).cast<Map<String, dynamic>>();
+        final stItems = items
+            .where((i) => i['level1'] == 'Shaarei Teshuvah')
+            .toList();
+
+        // The root sefer entry exists (no level2/3) plus actual structured
+        // gates and verses.
+        expect(stItems.length, greaterThan(50));
+
+        for (final item in stItems) {
+          final level2 = item['level2'] as String?;
+          // The historical bug placed the literal letter 'h' here as a
+          // placeholder. After the data fix, level2 must be either null
+          // (root sefer entry) or a numeric gate index.
+          expect(
+            level2 == null || int.tryParse(level2) != null,
+            isTrue,
+            reason:
+                'Shaarei Teshuvah item has invalid level2=$level2 in '
+                '${item['sefariaRef']}',
+          );
         }
       },
     );

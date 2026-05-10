@@ -26,6 +26,20 @@ class ContentRepositoryImpl implements ContentRepository {
     'tanach': ['chumash', 'nach'],
   };
 
+  /// Synthetic top-section row added when composing Chumash into Tanach.
+  /// Chumash's bundled JSON has only 3 levels (Sefer/Perek/Pasuk) with the
+  /// 5 books at level1; the Tanach hierarchy adds a "Torah" section above
+  /// them so the top layer reads Torah / Prophets / Writings.
+  static const _tanachTorahContainer = ContentItem(
+    curriculumId: 'tanach',
+    level1: 'Torah',
+    displayNameHe: 'תורה',
+    displayNameEn: 'Torah',
+    sefariaRef: 'Torah',
+    sortOrder: -1, // sorted to the top
+    isLeaf: false,
+  );
+
   @override
   Future<List<ContentItem>> getContentForCurriculum(
     CurriculumId curriculumId,
@@ -40,6 +54,11 @@ class ContentRepositoryImpl implements ContentRepository {
     final sources = _compositeSources[key];
     if (sources != null) {
       final allItems = <ContentItem>[];
+      // For Tanach, prepend the synthetic Torah section container so users
+      // see Torah / Prophets / Writings at the top layer.
+      if (key == 'tanach') {
+        allItems.add(_tanachTorahContainer);
+      }
       for (final source in sources) {
         final sourceId = CurriculumId.values.firstWhere(
           (c) => c.storageKey == source,
@@ -47,17 +66,11 @@ class ContentRepositoryImpl implements ContentRepository {
         final sourceItems = await getContentForCurriculum(sourceId);
         allItems.addAll(
           sourceItems.map(
-            (item) => ContentItem(
-              curriculumId: key,
-              level1: item.level1,
-              level2: item.level2,
-              level3: item.level3,
-              level4: item.level4,
-              displayNameHe: item.displayNameHe,
-              displayNameEn: item.displayNameEn,
-              sefariaRef: item.sefariaRef,
-              sortOrder: item.sortOrder + allItems.length,
-              isLeaf: item.isLeaf,
+            (item) => _remapForComposite(
+              item: item,
+              compositeKey: key,
+              source: source,
+              offset: allItems.length,
             ),
           ),
         );
@@ -172,6 +185,49 @@ class ContentRepositoryImpl implements ContentRepository {
     final items = await getContentForCurriculum(curriculumId);
     final matches = items.where((item) => item.sefariaRef == sefariaRef);
     return matches.isNotEmpty ? matches.first : null;
+  }
+
+  /// Transform a source-curriculum item for use in a composite curriculum.
+  ///
+  /// For Tanach + Chumash: shifts levels up by one to fit the Section /
+  /// Sefer / Perek / Pasuk hierarchy. Chumash data is natively 3-level
+  /// (Sefer / Perek / Pasuk); we wrap each item under the synthetic "Torah"
+  /// section so the top layer matches Nach's Prophets / Writings.
+  ///
+  /// For Tanach + Nach: pass through (Nach already has Section / Sefer /
+  /// Perek / Pasuk).
+  ContentItem _remapForComposite({
+    required ContentItem item,
+    required String compositeKey,
+    required String source,
+    required int offset,
+  }) {
+    if (compositeKey == 'tanach' && source == 'chumash') {
+      return ContentItem(
+        curriculumId: compositeKey,
+        level1: 'Torah',
+        level2: item.level1,
+        level3: item.level2,
+        level4: item.level3,
+        displayNameHe: item.displayNameHe,
+        displayNameEn: item.displayNameEn,
+        sefariaRef: item.sefariaRef,
+        sortOrder: item.sortOrder + offset,
+        isLeaf: item.isLeaf,
+      );
+    }
+    return ContentItem(
+      curriculumId: compositeKey,
+      level1: item.level1,
+      level2: item.level2,
+      level3: item.level3,
+      level4: item.level4,
+      displayNameHe: item.displayNameHe,
+      displayNameEn: item.displayNameEn,
+      sefariaRef: item.sefariaRef,
+      sortOrder: item.sortOrder + offset,
+      isLeaf: item.isLeaf,
+    );
   }
 
   void _parseAndCache(String key, Map<String, dynamic> json) {

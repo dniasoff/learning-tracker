@@ -86,11 +86,10 @@ void main() {
       ]);
     });
 
-    test('Chumash has 4-level hierarchy', () {
-      expect(CurriculumLabels.depth(CurriculumId.chumash), 4);
+    test('Chumash has 3-level hierarchy (no Parsha level in data)', () {
+      expect(CurriculumLabels.depth(CurriculumId.chumash), 3);
       expect(CurriculumLabels.labelsEn(CurriculumId.chumash), [
         'Sefer',
-        'Parsha',
         'Perek',
         'Pasuk',
       ]);
@@ -106,13 +105,38 @@ void main() {
       ]);
     });
 
-    test('Mussar has 3-level hierarchy', () {
+    test('Mussar has 3-level hierarchy (Sefer/Perek/Pasuk by default)', () {
       expect(CurriculumLabels.depth(CurriculumId.mussar), 3);
       expect(CurriculumLabels.labelsEn(CurriculumId.mussar), [
         'Sefer',
-        'Section',
-        'Chapter',
+        'Perek',
+        'Pasuk',
       ]);
+    });
+
+    test('Mussar per-book L2 override: Shaarei Teshuvah uses Shaar', () {
+      final l2 = CurriculumLabels.level(
+        CurriculumId.mussar,
+        2,
+        parentL1Value: 'Shaarei Teshuvah',
+      );
+      expect(l2.en, 'Shaar');
+      expect(l2.he, 'שער');
+    });
+
+    test('Mussar per-book L2 override: Tanya uses Part', () {
+      final l2 = CurriculumLabels.level(
+        CurriculumId.mussar,
+        2,
+        parentL1Value: 'Tanya',
+      );
+      expect(l2.en, 'Part');
+      expect(l2.valueKind, LevelValueKind.named);
+    });
+
+    test('Mussar L2 default (no parentL1Value) is Perek', () {
+      final l2 = CurriculumLabels.level(CurriculumId.mussar, 2);
+      expect(l2.en, 'Perek');
     });
 
     test('every level has Hebrew + plural variants', () {

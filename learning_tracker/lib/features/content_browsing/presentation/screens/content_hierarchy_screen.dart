@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -11,6 +12,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 
 @RoutePage()
 class ContentHierarchyScreen extends ConsumerStatefulWidget {
@@ -164,12 +166,29 @@ class _ContentHierarchyScreenState
                   ),
                   Expanded(
                     child: configAsync.when(
-                      data: (config) => BreadcrumbNavigation(
-                        curriculum: curriculum,
-                        levelLabels: config.levelLabels,
-                        navigationStack: _navigationStack,
-                        onBreadcrumbTap: _navigateToLevel,
-                      ),
+                      data: (config) {
+                        final hebrewTerms = ref.watch(
+                          hebrewTermsScriptProvider,
+                        );
+                        final variant = ref.watch(
+                          transliterationVariantProvider,
+                        );
+                        // Every breadcrumb segment goes through the renderer
+                        // — same path as row labels and reader titles.
+                        final segments =
+                            CurriculumLabelRenderer.renderBreadcrumb(
+                              curriculumId: curriculum,
+                              rawSegmentValues: _navigationStack,
+                              useHebrew: hebrewTerms,
+                              transliterationVariant: variant,
+                            );
+                        return BreadcrumbNavigation(
+                          curriculum: curriculum,
+                          levelLabels: config.levelLabels,
+                          navigationStack: segments,
+                          onBreadcrumbTap: _navigateToLevel,
+                        );
+                      },
                       loading: () => const SizedBox.shrink(),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
@@ -208,7 +227,14 @@ class _ContentHierarchyScreenState
                 }
 
                 final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
-                final groupedItems = _groupItemsByNextLevel(items, hebrewTerms);
+                final variant = ref.watch(
+                  transliterationVariantProvider,
+                );
+                final groupedItems = _groupItemsByNextLevel(
+                  items,
+                  hebrewTerms,
+                  variant,
+                );
 
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -245,115 +271,71 @@ class _ContentHierarchyScreenState
     );
   }
 
+  /// Build the list of rows shown at the current drill-down depth.
+  ///
+  /// All display strings — every row's Hebrew and English title — flow
+  /// through `CurriculumLabelRenderer`. The screen no longer carries any
+  /// bespoke prefix-stripping or amud-letter mapping; the renderer is the
+  /// single source of truth.
+  ///
+  /// Browse depth is capped at `CurriculumLabels.maxBrowseDepth(curriculum)`
+  /// so Chumash / Nach / Tanach never drill into pasuk-level rows — the
+  /// chapter row opens the reader directly instead.
   List<ContentItem> _groupItemsByNextLevel(
     List<ContentItem> items,
     bool hebrewTerms,
+    TransliterationVariant variant,
   ) {
+    final curriculum = _curriculumOrNull;
+    if (curriculum == null) return items;
     final currentDepth = _navigationStack.length;
+    final maxBrowseDepth = CurriculumLabels.maxBrowseDepth(curriculum);
+    if (currentDepth >= maxBrowseDepth) return const [];
 
-    if (currentDepth >= 4) {
-      return items;
-    }
-
-    if (items.isNotEmpty && items.every((i) => i.isLeaf)) {
-      return items;
-    }
-
-    // Find parent container to strip its name prefix from children's display names.
-    // E.g., inside Berakhot (depth=2), daf items show 'ברכות דף ב' → strip 'ברכות ' → 'דף ב'.
-    final parentShortHe = _findParentShortHe(items, currentDepth);
-    final parentShortEn = _findParentShortEn(items, currentDepth);
-
+    final nextLevel = currentDepth + 1;
     final uniqueItems = <String, ContentItem>{};
 
     for (final item in items) {
       final nextLevelValue = _getNextLevelValue(item, currentDepth);
-      if (nextLevelValue != null && !uniqueItems.containsKey(nextLevelValue)) {
-        if (!item.isLeaf) {
-          final rawHe = item.displayNameHe;
-          final rawEn = item.displayNameEn;
-          final he =
-              (parentShortHe != null && rawHe.startsWith('$parentShortHe '))
-              ? rawHe.substring(parentShortHe.length + 1)
-              : rawHe;
-          final en =
-              (parentShortEn != null && rawEn.startsWith('$parentShortEn '))
-              ? rawEn.substring(parentShortEn.length + 1)
-              : rawEn;
-          uniqueItems[nextLevelValue] = (he == rawHe && en == rawEn)
-              ? item
-              : ContentItem(
-                  curriculumId: item.curriculumId,
-                  level1: item.level1,
-                  level2: item.level2,
-                  level3: item.level3,
-                  level4: item.level4,
-                  displayNameHe: he,
-                  displayNameEn: en,
-                  sefariaRef: item.sefariaRef,
-                  sortOrder: item.sortOrder,
-                  isLeaf: item.isLeaf,
-                );
-        } else {
-          uniqueItems[nextLevelValue] = ContentItem(
-            curriculumId: item.curriculumId,
-            level1: item.level1,
-            level2: currentDepth >= 1 ? item.level2 : null,
-            level3: currentDepth >= 2 ? item.level3 : null,
-            level4: currentDepth >= 3 ? item.level4 : null,
-            displayNameHe: _displayNameHeForLeaf(nextLevelValue),
-            displayNameEn: _displayNameEnForLeaf(nextLevelValue),
-            sefariaRef: item.sefariaRef,
-            sortOrder: item.sortOrder,
-            isLeaf: true,
-          );
-        }
+      if (nextLevelValue == null || uniqueItems.containsKey(nextLevelValue)) {
+        continue;
       }
+
+      final renderedHe = CurriculumLabelRenderer.renderValue(
+        curriculumId: curriculum,
+        level: nextLevel,
+        rawValue: nextLevelValue,
+        useHebrew: true,
+        hebrewName: !item.isLeaf ? item.displayNameHe : null,
+        parentL1Value: item.level1,
+        transliterationVariant: variant,
+      );
+      final renderedEn = CurriculumLabelRenderer.renderValue(
+        curriculumId: curriculum,
+        level: nextLevel,
+        rawValue: nextLevelValue,
+        useHebrew: false,
+        hebrewName: !item.isLeaf ? item.displayNameHe : null,
+        parentL1Value: item.level1,
+        transliterationVariant: variant,
+      );
+
+      uniqueItems[nextLevelValue] = ContentItem(
+        curriculumId: item.curriculumId,
+        level1: item.level1,
+        level2: currentDepth >= 1 ? item.level2 : null,
+        level3: currentDepth >= 2 ? item.level3 : null,
+        level4: currentDepth >= 3 ? item.level4 : null,
+        displayNameHe: renderedHe,
+        displayNameEn: renderedEn,
+        sefariaRef: item.sefariaRef,
+        sortOrder: item.sortOrder,
+        isLeaf: item.isLeaf,
+      );
     }
 
-    final result = uniqueItems.values.toList()
+    return uniqueItems.values.toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-    return result;
-  }
-
-  /// Returns the short Hebrew name of the current container, used to strip
-  /// redundant prefixes from child display names (e.g. 'ברכות' from 'מסכת ברכות').
-  String? _findParentShortHe(List<ContentItem> items, int currentDepth) {
-    for (final item in items) {
-      if (_getNextLevelValue(item, currentDepth) == null && !item.isLeaf) {
-        return CurriculumLabels.stripStructuralPrefix(item.displayNameHe);
-      }
-    }
-    return null;
-  }
-
-  /// Returns the short English name of the current container (e.g. 'Berakhot').
-  String? _findParentShortEn(List<ContentItem> items, int currentDepth) {
-    for (final item in items) {
-      if (_getNextLevelValue(item, currentDepth) == null && !item.isLeaf) {
-        return item.displayNameEn;
-      }
-    }
-    return null;
-  }
-
-  /// Maps Bavli/Yerushalmi amud letter keys to Hebrew labels; passes other values through.
-  String _displayNameHeForLeaf(String levelKey) {
-    return switch (levelKey) {
-      'a' => 'עמוד א',
-      'b' => 'עמוד ב',
-      _ => levelKey,
-    };
-  }
-
-  /// Maps Bavli/Yerushalmi amud letter keys to English labels; passes other values through.
-  String _displayNameEnForLeaf(String levelKey) {
-    return switch (levelKey) {
-      'a' => 'Amud Aleph',
-      'b' => 'Amud Bet',
-      _ => levelKey,
-    };
   }
 
   String? _getNextLevelValue(ContentItem item, int currentDepth) {

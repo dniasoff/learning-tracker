@@ -50,24 +50,47 @@ class DefaultStageDefinition {
   final int? rollingWindowSize;
 }
 
+/// How a level's raw data value should be interpreted for display.
+///
+/// **named**: the value is a proper name that the renderer shows bare (no
+/// level-word prefix) — e.g. Sefer "Genesis", Masechta "Berakhot", Seder
+/// "Zeraim", Mussar book "Mesillat Yesharim".
+///
+/// **ordinal**: the value is a position (an Arabic integer, a Hebrew gematriya
+/// letter, or a daf "a"/"b" amud). The renderer prefixes the level label and
+/// converts numerals to gematriya in Hebrew mode — e.g. "פרק א", "Perek 1",
+/// "דף ב", "עמוד א".
+enum LevelValueKind { named, ordinal }
+
+/// Which Hebrew transliteration dialect to use when rendering named values
+/// in English mode. Ashkenazi: Bereishis, Shemos, Kesuvim. Sephardi:
+/// Bereshit, Shemot, Ketuvim.
+enum TransliterationVariant { ashkenazi, sephardi }
+
 /// Bilingual, plural-aware label for one hierarchy level of a curriculum.
 ///
 /// Singular and plural forms are both required because UI strings switch:
 /// "Select the **Daf** you are up to" (singular) vs "63 **Masechtos**"
 /// (plural). Hebrew + English forms are required for the bilingual section
-/// headers and Hebrew-terms mode.
+/// headers and Hebrew-terms mode. [valueKind] and [prefixLabelInDisplay] are
+/// consulted by `CurriculumLabelRenderer` to decide how to format a row,
+/// breadcrumb segment, or AppBar title.
 class LevelLabels {
   const LevelLabels({
     required this.en,
     required this.enPlural,
     required this.he,
     required this.hePlural,
+    required this.valueKind,
+    required this.prefixLabelInDisplay,
   });
 
   final String en;
   final String enPlural;
   final String he;
   final String hePlural;
+  final LevelValueKind valueKind;
+  final bool prefixLabelInDisplay;
 
   /// "מסכתות • Masechtos" — for plural section headers.
   String get bilingualPlural => '$hePlural • $enPlural';
@@ -101,24 +124,32 @@ class CurriculumLabels {
         enPlural: 'Sedarim',
         he: 'סדר',
         hePlural: 'סדרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Masechta',
         enPlural: 'Masechtos',
         he: 'מסכת',
         hePlural: 'מסכתות',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Perek',
         enPlural: 'Perakim',
         he: 'פרק',
         hePlural: 'פרקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
       LevelLabels(
         en: 'Mishna',
         enPlural: 'Mishnayos',
         he: 'משנה',
         hePlural: 'משניות',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.bavli: [
@@ -127,19 +158,32 @@ class CurriculumLabels {
         enPlural: 'Sedarim',
         he: 'סדר',
         hePlural: 'סדרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Masechta',
         enPlural: 'Masechtos',
         he: 'מסכת',
         hePlural: 'מסכתות',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
-      LevelLabels(en: 'Daf', enPlural: 'Dafim', he: 'דף', hePlural: 'דפים'),
+      LevelLabels(
+        en: 'Daf',
+        enPlural: 'Dafim',
+        he: 'דף',
+        hePlural: 'דפים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
+      ),
       LevelLabels(
         en: 'Amud',
         enPlural: 'Amudim',
         he: 'עמוד',
         hePlural: 'עמודים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.yerushalmi: [
@@ -148,13 +192,24 @@ class CurriculumLabels {
         enPlural: 'Masechtos',
         he: 'מסכת',
         hePlural: 'מסכתות',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
-      LevelLabels(en: 'Daf', enPlural: 'Dafim', he: 'דף', hePlural: 'דפים'),
+      LevelLabels(
+        en: 'Daf',
+        enPlural: 'Dafim',
+        he: 'דף',
+        hePlural: 'דפים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
+      ),
       LevelLabels(
         en: 'Halacha',
         enPlural: 'Halachos',
         he: 'הלכה',
         hePlural: 'הלכות',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.mishnaBerurah: [
@@ -163,44 +218,55 @@ class CurriculumLabels {
         enPlural: 'Simanim',
         he: 'סימן',
         hePlural: 'סימנים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
       LevelLabels(
         en: 'Seif',
         enPlural: 'Seifim',
         he: 'סעיף',
         hePlural: 'סעיפים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
       LevelLabels(
         en: 'Seif Katan',
         enPlural: 'Seifim Ketanim',
         he: 'סעיף קטן',
         hePlural: 'סעיפים קטנים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.chumash: [
+      // Note: the bundled chumash.json has 3 hierarchy levels
+      // (Sefer / Perek / Pasuk). There is no Parsha level in the data, so
+      // the renderer never sees parsha values. Counting "Parshiyos" in
+      // browse cards (existing primaryUnitLabelPlural behavior) is a
+      // separate stat unrelated to the level hierarchy.
       LevelLabels(
         en: 'Sefer',
         enPlural: 'Seferim',
         he: 'חומש',
         hePlural: 'חומשים',
-      ),
-      LevelLabels(
-        en: 'Parsha',
-        enPlural: 'Parshiyos',
-        he: 'פרשה',
-        hePlural: 'פרשיות',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Perek',
         enPlural: 'Perakim',
         he: 'פרק',
         hePlural: 'פרקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
       LevelLabels(
         en: 'Pasuk',
         enPlural: 'Pesukim',
         he: 'פסוק',
         hePlural: 'פסוקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.mishnehTorah: [
@@ -209,24 +275,32 @@ class CurriculumLabels {
         enPlural: 'Seforim',
         he: 'ספר',
         hePlural: 'ספרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Hilchos',
         enPlural: 'Halachos',
         he: 'הלכות',
         hePlural: 'הלכות',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Perek',
         enPlural: 'Perakim',
         he: 'פרק',
         hePlural: 'פרקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
       LevelLabels(
         en: 'Halacha',
         enPlural: 'Halachos',
         he: 'הלכה',
         hePlural: 'הלכות',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.tanach: [
@@ -235,24 +309,32 @@ class CurriculumLabels {
         enPlural: 'Sections',
         he: 'חלק',
         hePlural: 'חלקים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Sefer',
         enPlural: 'Seforim',
         he: 'ספר',
         hePlural: 'ספרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Perek',
         enPlural: 'Perakim',
         he: 'פרק',
         hePlural: 'פרקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
       LevelLabels(
         en: 'Pasuk',
         enPlural: 'Pesukim',
         he: 'פסוק',
         hePlural: 'פסוקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.nach: [
@@ -261,24 +343,32 @@ class CurriculumLabels {
         enPlural: 'Sections',
         he: 'חלק',
         hePlural: 'חלקים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Sefer',
         enPlural: 'Seforim',
         he: 'ספר',
         hePlural: 'ספרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
       LevelLabels(
         en: 'Perek',
         enPlural: 'Perakim',
         he: 'פרק',
         hePlural: 'פרקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
       LevelLabels(
         en: 'Pasuk',
         enPlural: 'Pesukim',
         he: 'פסוק',
         hePlural: 'פסוקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
     CurriculumId.mussar: [
@@ -287,32 +377,201 @@ class CurriculumLabels {
         enPlural: 'Seforim',
         he: 'ספר',
         hePlural: 'ספרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
+      // L2 default = Perek; per-book overrides in _levelOverrides
+      // turn this into "Shaar" for Shaarei Teshuvah, "Part" for Tanya, etc.
       LevelLabels(
-        en: 'Section',
-        enPlural: 'Sections',
-        he: 'חלק',
-        hePlural: 'חלקים',
-      ),
-      LevelLabels(
-        en: 'Chapter',
-        enPlural: 'Chapters',
+        en: 'Perek',
+        enPlural: 'Perakim',
         he: 'פרק',
         hePlural: 'פרקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
+      ),
+      LevelLabels(
+        en: 'Pasuk',
+        enPlural: 'Pesukim',
+        he: 'פסוק',
+        hePlural: 'פסוקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
       ),
     ],
+  };
+
+  /// English-mode display overrides for named-level values that ship in the
+  /// bundled data as English **translations** (e.g. "Genesis", "Psalms",
+  /// "Prophets"). When Hebrew Terms is off the renderer still wants the
+  /// transliterated Hebrew name, not the translation, in the user's chosen
+  /// dialect.
+  ///
+  /// Keys are the raw data values (case-sensitive). Lookups fall through to
+  /// the raw value when no entry exists — masechtas like "Berakhot" pass
+  /// through because they are already transliterated in the data.
+  static const Map<TransliterationVariant, Map<String, String>>
+  _englishNameTransliterations = {
+    TransliterationVariant.ashkenazi: {
+      // Tanach top sections
+      'Torah': 'Torah',
+      'Prophets': "Nevi'im",
+      'Writings': 'Kesuvim',
+      // Chumash books
+      'Genesis': 'Bereishis',
+      'Exodus': 'Shemos',
+      'Leviticus': 'Vayikra',
+      'Numbers': 'Bamidbar',
+      'Deuteronomy': 'Devarim',
+      // Nach — Nevi'im
+      'Joshua': 'Yehoshua',
+      'Judges': 'Shoftim',
+      'I Samuel': 'Shmuel I',
+      'II Samuel': 'Shmuel II',
+      'I Kings': 'Melachim I',
+      'II Kings': 'Melachim II',
+      'Isaiah': 'Yeshayah',
+      'Jeremiah': 'Yirmiyah',
+      'Ezekiel': 'Yechezkel',
+      'Hosea': 'Hoshea',
+      'Joel': 'Yoel',
+      'Amos': 'Amos',
+      'Obadiah': 'Ovadyah',
+      'Jonah': 'Yonah',
+      'Micah': 'Michah',
+      'Nahum': 'Nachum',
+      'Habakkuk': 'Chavakuk',
+      'Zephaniah': 'Tzefanyah',
+      'Haggai': 'Chagai',
+      'Zechariah': 'Zechariah',
+      'Malachi': 'Malachi',
+      // Nach — Kesuvim
+      'Psalms': 'Tehillim',
+      'Proverbs': 'Mishlei',
+      'Job': 'Iyov',
+      'Song of Songs': 'Shir HaShirim',
+      'Ruth': 'Rus',
+      'Lamentations': 'Eichah',
+      'Ecclesiastes': 'Koheles',
+      'Esther': 'Esther',
+      'Daniel': 'Daniel',
+      'Ezra': 'Ezra',
+      'Nehemiah': 'Nechemya',
+      'I Chronicles': 'Divrei HaYamim I',
+      'II Chronicles': 'Divrei HaYamim II',
+    },
+    TransliterationVariant.sephardi: {
+      // Tanach top sections
+      'Torah': 'Torah',
+      'Prophets': "Nevi'im",
+      'Writings': 'Ketuvim',
+      // Chumash books
+      'Genesis': 'Bereshit',
+      'Exodus': 'Shemot',
+      'Leviticus': 'Vayikra',
+      'Numbers': 'Bamidbar',
+      'Deuteronomy': 'Devarim',
+      // Nach — Nevi'im
+      'Joshua': 'Yehoshua',
+      'Judges': 'Shoftim',
+      'I Samuel': 'Shmuel I',
+      'II Samuel': 'Shmuel II',
+      'I Kings': 'Melakhim I',
+      'II Kings': 'Melakhim II',
+      'Isaiah': "Yesha'yahu",
+      'Jeremiah': 'Yirmiyahu',
+      'Ezekiel': "Yehezk'el",
+      'Hosea': "Hoshe'a",
+      'Joel': "Yo'el",
+      'Amos': 'Amos',
+      'Obadiah': 'Ovadya',
+      'Jonah': 'Yona',
+      'Micah': 'Mikha',
+      'Nahum': 'Nahum',
+      'Habakkuk': 'Havakuk',
+      'Zephaniah': 'Tzefanya',
+      'Haggai': 'Hagai',
+      'Zechariah': 'Zekharya',
+      'Malachi': "Mal'akhi",
+      // Nach — Ketuvim
+      'Psalms': 'Tehilim',
+      'Proverbs': 'Mishlei',
+      'Job': 'Iyov',
+      'Song of Songs': 'Shir HaShirim',
+      'Ruth': 'Rut',
+      'Lamentations': 'Eikha',
+      'Ecclesiastes': 'Kohelet',
+      'Esther': 'Ester',
+      'Daniel': 'Daniel',
+      'Ezra': 'Ezra',
+      'Nehemiah': 'Nehemya',
+      'I Chronicles': 'Divrei HaYamim I',
+      'II Chronicles': 'Divrei HaYamim II',
+    },
+  };
+
+  /// Returns the Hebrew-transliterated English display name for [rawValue]
+  /// in the chosen [variant], or [rawValue] itself when no override exists.
+  /// Used by the unified renderer in English mode.
+  static String transliterateNamedValue(
+    String rawValue, {
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
+    return _englishNameTransliterations[variant]?[rawValue] ?? rawValue;
+  }
+
+  /// Per-book level overrides for curricula whose hierarchy varies by L1 book.
+  /// Mussar is the only one today — Shaarei Teshuvah uses Shaarim (gates),
+  /// Tanya uses Parts (named), the rest use Perakim like the default.
+  static const Map<CurriculumId, Map<String, Map<int, LevelLabels>>>
+  _levelOverrides = {
+    CurriculumId.mussar: {
+      'Shaarei Teshuvah': {
+        2: LevelLabels(
+          en: 'Shaar',
+          enPlural: 'Shaarim',
+          he: 'שער',
+          hePlural: 'שערים',
+          valueKind: LevelValueKind.ordinal,
+          prefixLabelInDisplay: true,
+        ),
+      },
+      'Tanya': {
+        2: LevelLabels(
+          en: 'Part',
+          enPlural: 'Parts',
+          he: 'חלק',
+          hePlural: 'חלקים',
+          valueKind: LevelValueKind.named,
+          prefixLabelInDisplay: false,
+        ),
+      },
+    },
   };
 
   /// All level labels for [id], ordered top → leaf.
   static List<LevelLabels> levels(CurriculumId id) => _levels[id]!;
 
   /// Label for one 1-indexed [oneIndexedLevel]. Throws on out-of-range.
-  static LevelLabels level(CurriculumId id, int oneIndexedLevel) {
+  ///
+  /// Pass [parentL1Value] when a curriculum's level structure varies by its
+  /// top-level book (e.g. Mussar: Shaarei Teshuvah uses Shaarim at L2, Tanya
+  /// uses Parts at L2, everything else uses Perakim). Defaults fall through
+  /// when no override exists.
+  static LevelLabels level(
+    CurriculumId id,
+    int oneIndexedLevel, {
+    String? parentL1Value,
+  }) {
     final list = _levels[id]!;
     if (oneIndexedLevel < 1 || oneIndexedLevel > list.length) {
       throw RangeError(
         'Level $oneIndexedLevel out of range (1..${list.length}) for $id',
       );
+    }
+    if (parentL1Value != null) {
+      final override = _levelOverrides[id]?[parentL1Value]?[oneIndexedLevel];
+      if (override != null) return override;
     }
     return list[oneIndexedLevel - 1];
   }
@@ -336,6 +595,17 @@ class CurriculumLabels {
 
   /// Deepest level (Mishna for Mishnayos, Pasuk for Chumash, …).
   static LevelLabels leaf(CurriculumId id) => _levels[id]!.last;
+
+  /// Deepest level the **browse UI** drills into. For Chumash / Nach /
+  /// Tanach the leaf is Pasuk (verse), which is rarely useful as a row
+  /// — chapter-level rows go straight to the reader. So browse stops one
+  /// level above the leaf for those curricula and at the leaf for every
+  /// other curriculum.
+  static int maxBrowseDepth(CurriculumId id) {
+    final leafLabel = leaf(id).en;
+    if (leafLabel == 'Pasuk') return depth(id) - 1;
+    return depth(id);
+  }
 
   /// Level just above leaf — the typical "container" in drill-down UIs.
   /// Null only for single-level curricula (none currently exist).
