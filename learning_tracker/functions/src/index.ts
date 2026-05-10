@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import { auth, logger } from "firebase-functions/v1";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -111,4 +112,37 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
   await userDocRef.delete();
 
   logger.info(`Successfully deleted all Firestore data for user ${uid}`);
+});
+
+/**
+ * Callable: delete a single learner profile and all its subcollections.
+ *
+ * Uses Admin SDK recursiveDelete so the client never needs to enumerate or
+ * read subcollection documents — zero client reads, one server-side call.
+ *
+ * Expects: { profileId: number }
+ * Returns: { success: true }
+ */
+export const deleteLearnerProfile = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const profileId = request.data?.profileId;
+  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0) {
+    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  }
+
+  const profileRef = db
+    .collection("users")
+    .doc(uid)
+    .collection("learner_profiles")
+    .doc(String(profileId));
+
+  logger.info(`deleteLearnerProfile: uid=${uid} profileId=${profileId}`);
+  await db.recursiveDelete(profileRef);
+  logger.info(`deleteLearnerProfile: complete uid=${uid} profileId=${profileId}`);
+
+  return { success: true };
 });

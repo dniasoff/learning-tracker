@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// Handles all Firestore read/write operations for sync.
@@ -327,39 +328,18 @@ class FirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
-  /// Delete a learner profile from Firestore.
+  /// Delete a learner profile and all its subcollections via a server-side
+  /// Cloud Function.
+  ///
+  /// The function uses Admin SDK `recursiveDelete`, which removes every
+  /// descendant document without the client needing to enumerate or read them.
+  /// This avoids O(n) client-side reads and write charges for each subcollection
+  /// document, and is cheaper + more reliable than the old client-side loop.
   Future<void> deleteLearnerProfile(int profileId) async {
-    final collection = _learnerProfilesCollection;
-    if (collection == null) return;
-    final profileDoc = collection.doc(profileId.toString());
-
-    const profileSubcollections = [
-      'completions',
-      'bookmarks',
-      'settings',
-      'goals',
-      'rewards',
-      'learning_ledger',
-      'active_curricula',
-      'curriculum_imports',
-      'curriculum_tracks',
-      'profile_programs',
-      'notification_settings',
-      'gamification_settings',
-      'ui_preferences',
-      'streak',
-    ];
-
-    // Firestore does not cascade subcollection deletes. Remove descendants
-    // first so profile deletion is complete and does not leave orphaned docs.
-    for (final sub in profileSubcollections) {
-      final subSnapshot = await profileDoc.collection(sub).get();
-      for (final doc in subSnapshot.docs) {
-        await doc.reference.delete();
-      }
-    }
-
-    await profileDoc.delete();
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'deleteLearnerProfile',
+    );
+    await callable.call<Map<String, dynamic>>({'profileId': profileId});
   }
 
   // ========== Completions Operations ==========
