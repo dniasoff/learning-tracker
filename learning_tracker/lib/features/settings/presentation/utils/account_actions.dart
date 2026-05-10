@@ -248,16 +248,30 @@ Future<void> showDeleteAccountFlow(
 
   if (!reauthenticated || !context.mounted) return;
 
+  String? deleteError;
   try {
     await service.deleteAccount(user.uid);
+  } catch (e) {
+    deleteError = e.toString();
+  } finally {
     // AuthStateNotifier is keepAlive and doesn't auto-react to Firebase
-    // sign-out — without this it stays in `signedIn` state and the next
-    // route can land back on the signed-in shell instead of the sign-in
-    // screen. Drop the cached state before navigating so the router's
-    // auth-aware guards see a clean signed-out user.
+    // auth changes — always clear it here so the router guards see a
+    // signed-out user regardless of whether deleteAccount fully succeeded.
     ref.read(authStateProvider.notifier).signOut();
     ref.invalidate(authStateProvider);
-    if (!context.mounted) return;
+  }
+
+  if (!context.mounted) return;
+
+  if (deleteError != null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Account sign-out complete, but deletion was partial: $deleteError'),
+        backgroundColor: Colors.orange,
+        duration: const Duration(seconds: 6),
+      ),
+    );
+  } else {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -274,19 +288,12 @@ Future<void> showDeleteAccountFlow(
         ],
       ),
     );
-    // Use root AppRouter — context.router inside a tab cannot navigate to
-    // root-level routes and throws, preventing sign-in navigation.
-    unawaited(ref.read(routerProvider).replaceAll([const SignInRoute()]));
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete account: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
+
+  if (!context.mounted) return;
+  // Use root AppRouter — context.router inside a tab cannot navigate to
+  // root-level routes and throws, preventing sign-in navigation.
+  unawaited(ref.read(routerProvider).replaceAll([const SignInRoute()]));
 }
 
 /// Permanent deletion for [Tier.localBorn] accounts (device-only data).
