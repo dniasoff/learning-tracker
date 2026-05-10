@@ -46,7 +46,7 @@ class LearningJourneyScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: journeyAsync.when(
-          loading: () => LoadingIndicator(message: l10n.loadingYourJourney),
+          loading: () => const LoadingIndicator(),
           error: (error, _) => ErrorDisplay(
             message: l10n.failedToLoadJourney(error.toString()),
             onRetry: () =>

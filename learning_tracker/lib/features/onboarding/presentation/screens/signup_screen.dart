@@ -515,7 +515,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Start your journey today!',
+                                  'Create your free account',
                                   style: theme.textTheme.bodyLarge?.copyWith(
                                     color: AppTheme.brandInkMuted,
                                   ),

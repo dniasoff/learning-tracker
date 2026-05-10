@@ -256,7 +256,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             Center(
               child: Text(
-                l10n.settingsHandcraftedTagline,
+                'Torah Study Tracker',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
