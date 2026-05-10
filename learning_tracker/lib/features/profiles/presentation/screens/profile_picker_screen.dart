@@ -513,6 +513,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   Future<void> _showDeleteDialog(ProfileModel profile) async {
     final repo = ref.read(profileRepositoryProvider);
+    final remaining = await repo.countProfilesForAccount(1);
+    final isLast = remaining <= 1;
+    if (!mounted) return;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -520,8 +523,18 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;
         return AlertDialog(
-          title: Text(l10n.deleteProfileTitle),
-          content: Text(l10n.deleteProfileConfirm(profile.displayName)),
+          title: Text(
+            isLast ? 'Delete your only profile?' : l10n.deleteProfileTitle,
+          ),
+          content: Text(
+            isLast
+                ? 'This is your only profile. Deleting '
+                      '"${profile.displayName}" will erase every track, '
+                      'completion, and lifetime entry on this account. You '
+                      'will need to create a new profile before you can keep '
+                      'learning.'
+                : l10n.deleteProfileConfirm(profile.displayName),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -532,28 +545,19 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                 backgroundColor: Theme.of(ctx).colorScheme.error,
               ),
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.delete),
+              child: Text(isLast ? 'Delete anyway' : l10n.delete),
             ),
           ],
         );
       },
     );
     if (!(ok ?? false) || !mounted) return;
-    try {
-      await repo.deleteProfile(profile.id);
-      final sel = ref.read(selectedProfileIdProvider) ?? -1;
-      if (sel == profile.id) {
-        ref.read(selectedProfileIdProvider.notifier).clear();
-      }
-      ref.invalidate(profileListProvider);
-    } on LastProfileException {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.cannotDeleteOnlyProfile)));
-      }
+    await repo.deleteProfile(profile.id, allowLast: isLast);
+    final sel = ref.read(selectedProfileIdProvider) ?? -1;
+    if (sel == profile.id) {
+      ref.read(selectedProfileIdProvider.notifier).clear();
     }
+    ref.invalidate(profileListProvider);
   }
 }
 

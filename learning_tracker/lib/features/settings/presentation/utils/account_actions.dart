@@ -188,6 +188,16 @@ Future<void> showDeleteAccountFlow(
     (info) => info.providerId == 'google.com',
   );
 
+  // Show the type-DELETE confirmation first so the user knows what they're
+  // doing before being prompted for credentials. The dialog copy explains
+  // that a sign-in prompt follows.
+  final confirmed = await showDeleteAccountDialog(
+    context: context,
+    needsReauth: hasGoogle || hasPassword,
+    reauthProvider: hasGoogle ? 'Google' : null,
+  );
+  if (confirmed != true || !context.mounted) return;
+
   var reauthenticated = false;
 
   if (hasPassword) {
@@ -224,12 +234,13 @@ Future<void> showDeleteAccountFlow(
         );
       }
     }
+  } else {
+    // No re-auth provider available but we still have a Firebase user —
+    // treat as already authenticated (e.g. anonymous/custom token).
+    reauthenticated = true;
   }
 
   if (!reauthenticated || !context.mounted) return;
-
-  final confirmed = await showDeleteAccountDialog(context: context);
-  if (confirmed != true || !context.mounted) return;
 
   try {
     await service.deleteAccount(user.uid);
@@ -240,6 +251,23 @@ Future<void> showDeleteAccountFlow(
     // auth-aware guards see a clean signed-out user.
     ref.read(authStateProvider.notifier).signOut();
     ref.invalidate(authStateProvider);
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Account deleted'),
+        content: const Text(
+          'Your account and all associated data have been permanently deleted.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
     if (context.mounted) {
       await context.router.replaceAll([const SignInRoute()]);
     }
