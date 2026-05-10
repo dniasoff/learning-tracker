@@ -74,7 +74,7 @@ class HebrewTerms {
   // │ Constant                 │ Hebrew             │ English fallback   │
   // ├──────────────────────────┼────────────────────┼────────────────────┤
   // │ uiChazaraReview          │ חזרה                │ Chazara/Review     │
-  // │ uiReviewSection          │ חזרה SECTION         │ REVIEW SECTION     │
+  // │ uiReviewSection          │ חזרה                │ REVIEW SECTION     │
   // │ uiBubbleChazara          │ חזרה                │ CHAZARA            │
   // │ uiActiveTrackChazara     │ חזרה                │ CHAZARA            │
   // │ uiTalmidChochom          │ תלמיד חכם            │ Talmid Chochom     │
@@ -84,8 +84,8 @@ class HebrewTerms {
   /// "Chazara/Review" → Hebrew script.
   static const String uiChazaraReview = 'חזרה';
 
-  /// "REVIEW SECTION" header → Hebrew word + English "SECTION".
-  static const String uiReviewSection = 'חזרה SECTION';
+  /// "REVIEW SECTION" header → Hebrew.
+  static const String uiReviewSection = 'חזרה';
 
   /// "CHAZARA" bubble label → Hebrew script.
   static const String uiBubbleChazara = 'חזרה';

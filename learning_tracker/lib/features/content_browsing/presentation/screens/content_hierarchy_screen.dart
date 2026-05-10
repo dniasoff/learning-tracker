@@ -258,23 +258,48 @@ class _ContentHierarchyScreenState
       return items;
     }
 
+    // Find parent container to strip its name prefix from children's display names.
+    // E.g., inside Berakhot (depth=2), daf items show 'ברכות דף ב' → strip 'ברכות ' → 'דף ב'.
+    final parentShortHe = _findParentShortHe(items, currentDepth);
+    final parentShortEn = _findParentShortEn(items, currentDepth);
+
     final uniqueItems = <String, ContentItem>{};
 
     for (final item in items) {
       final nextLevelValue = _getNextLevelValue(item, currentDepth);
       if (nextLevelValue != null && !uniqueItems.containsKey(nextLevelValue)) {
         if (!item.isLeaf) {
-          uniqueItems[nextLevelValue] = item;
+          final rawHe = item.displayNameHe;
+          final rawEn = item.displayNameEn;
+          final he = (parentShortHe != null && rawHe.startsWith('$parentShortHe '))
+              ? rawHe.substring(parentShortHe.length + 1)
+              : rawHe;
+          final en = (parentShortEn != null && rawEn.startsWith('$parentShortEn '))
+              ? rawEn.substring(parentShortEn.length + 1)
+              : rawEn;
+          uniqueItems[nextLevelValue] = (he == rawHe && en == rawEn)
+              ? item
+              : ContentItem(
+                  curriculumId: item.curriculumId,
+                  level1: item.level1,
+                  level2: item.level2,
+                  level3: item.level3,
+                  level4: item.level4,
+                  displayNameHe: he,
+                  displayNameEn: en,
+                  sefariaRef: item.sefariaRef,
+                  sortOrder: item.sortOrder,
+                  isLeaf: item.isLeaf,
+                );
         } else {
-          final he = _displayNameHeForLeaf(nextLevelValue, hebrewTerms);
           uniqueItems[nextLevelValue] = ContentItem(
             curriculumId: item.curriculumId,
             level1: item.level1,
             level2: currentDepth >= 1 ? item.level2 : null,
             level3: currentDepth >= 2 ? item.level3 : null,
             level4: currentDepth >= 3 ? item.level4 : null,
-            displayNameHe: he,
-            displayNameEn: nextLevelValue,
+            displayNameHe: _displayNameHeForLeaf(nextLevelValue),
+            displayNameEn: _displayNameEnForLeaf(nextLevelValue),
             sefariaRef: item.sefariaRef,
             sortOrder: item.sortOrder,
             isLeaf: true,
@@ -289,13 +314,50 @@ class _ContentHierarchyScreenState
     return result;
   }
 
-  /// Converts a raw level key to a display label for leaf items.
-  /// Maps Bavli/Yerushalmi amud letters to Hebrew or keeps as-is.
-  String _displayNameHeForLeaf(String levelKey, bool hebrewTerms) {
-    if (!hebrewTerms) return levelKey;
+  /// Returns the short Hebrew name of the current container, used to strip
+  /// redundant prefixes from child display names (e.g. 'ברכות' from 'מסכת ברכות').
+  String? _findParentShortHe(List<ContentItem> items, int currentDepth) {
+    for (final item in items) {
+      if (_getNextLevelValue(item, currentDepth) == null && !item.isLeaf) {
+        return _stripStructuralPrefix(item.displayNameHe);
+      }
+    }
+    return null;
+  }
+
+  /// Returns the short English name of the current container (e.g. 'Berakhot').
+  String? _findParentShortEn(List<ContentItem> items, int currentDepth) {
+    for (final item in items) {
+      if (_getNextLevelValue(item, currentDepth) == null && !item.isLeaf) {
+        return item.displayNameEn;
+      }
+    }
+    return null;
+  }
+
+  /// Strips structural Hebrew prefixes like 'מסכת ', 'ספר ', etc.
+  String _stripStructuralPrefix(String he) {
+    const prefixes = ['מסכת ', 'ספר ', 'חלק ', 'סדר ', 'הלכות '];
+    for (final p in prefixes) {
+      if (he.startsWith(p)) return he.substring(p.length);
+    }
+    return he;
+  }
+
+  /// Maps Bavli/Yerushalmi amud letter keys to Hebrew labels; passes other values through.
+  String _displayNameHeForLeaf(String levelKey) {
     return switch (levelKey) {
       'a' => 'עמוד א',
       'b' => 'עמוד ב',
+      _ => levelKey,
+    };
+  }
+
+  /// Maps Bavli/Yerushalmi amud letter keys to English labels; passes other values through.
+  String _displayNameEnForLeaf(String levelKey) {
+    return switch (levelKey) {
+      'a' => 'Amud Aleph',
+      'b' => 'Amud Bet',
       _ => levelKey,
     };
   }
@@ -311,11 +373,25 @@ class _ContentHierarchyScreenState
   }
 
   void _handleItemTap(ContentItem item) {
-    if (item.isLeaf) {
+    if (item.isLeaf || _isChapterLevelRef(item)) {
       context.router.push(TextDisplayRoute(sefariaRef: item.sefariaRef));
     } else {
       _drillDown(item);
     }
+  }
+
+  /// Returns true when tapping this item should open the text reader directly.
+  /// For Chumash/Nach/Tanach, chapter-level refs (e.g. 'Genesis 1') open text
+  /// rather than drilling into individual verses.
+  bool _isChapterLevelRef(ContentItem item) {
+    final curriculum = _curriculumOrNull;
+    if (curriculum == null) return false;
+    if (curriculum != CurriculumId.chumash &&
+        curriculum != CurriculumId.nach &&
+        curriculum != CurriculumId.tanach) return false;
+    // Chapter ref: '{Book} {digits}' with no colon (e.g., 'Genesis 1', 'Joshua 3').
+    return !item.sefariaRef.contains(':') &&
+        RegExp(r'^.+ \d+$').hasMatch(item.sefariaRef);
   }
 
   void _drillDown(ContentItem item) {

@@ -450,17 +450,6 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         _MainFocusMissionCard(
-          subtitle: groupedTasks.todayTasks.isNotEmpty
-              ? groupedTasks.todayTasks
-                    .map(
-                      (t) => hebrewTerms
-                          ? t.curriculumId.displayNameHe
-                          : t.curriculumId.displayNameEn,
-                    )
-                    .toSet()
-                    .take(2)
-                    .join(' / ')
-              : l10n.noTasksInLane,
           count: todayCount,
           onTap: () {
             ref
@@ -1152,12 +1141,10 @@ class _DashboardStatBubble extends StatelessWidget {
 
 class _MainFocusMissionCard extends StatelessWidget {
   const _MainFocusMissionCard({
-    required this.subtitle,
     required this.count,
     required this.onTap,
   });
 
-  final String subtitle;
   final int count;
   final VoidCallback onTap;
 
@@ -1189,51 +1176,37 @@ class _MainFocusMissionCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.dueToday,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandBlue,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                ),
-              ),
-
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '$count',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 50,
+                    l10n.dueToday,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: AppTheme.brandBlue,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.brandBlue,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                     child: Text(
-                      'TASKS',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.brandCoralDeep,
+                      '$count',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               FilledButton(
                 onPressed: onTap,
                 style: FilledButton.styleFrom(

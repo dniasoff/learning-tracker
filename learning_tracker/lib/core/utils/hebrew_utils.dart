@@ -17,4 +17,20 @@ class HebrewUtils {
   static bool hasNikud(String text) {
     return _nikudPattern.hasMatch(text);
   }
+
+  static final RegExp _htmlTagPattern = RegExp('<[^>]+>');
+
+  /// Decodes HTML entities and removes markup found in Sefaria DB text.
+  static String decodeHtmlEntities(String text) {
+    return text
+        .replaceAll(_htmlTagPattern, '')
+        .replaceAll('&thinsp;', ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('{פ}', '\n\n')
+        .replaceAll('{ס}', '\n');
+  }
 }

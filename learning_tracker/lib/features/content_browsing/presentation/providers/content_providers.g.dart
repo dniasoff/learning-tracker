@@ -794,3 +794,119 @@ final class HebrewNameForRefFamily extends $Family
   @override
   String toString() => r'hebrewNameForRefProvider';
 }
+
+/// Returns the prev and next sibling refs for [sefariaRef] at the same
+/// hierarchy depth within its curriculum.
+///
+/// Used by the text reader to show ← / → navigation arrows.
+/// Navigates through all items at the same level (e.g., amudim within a
+/// masechta, chapters within a sefer).
+
+@ProviderFor(adjacentContentRefs)
+final adjacentContentRefsProvider = AdjacentContentRefsFamily._();
+
+/// Returns the prev and next sibling refs for [sefariaRef] at the same
+/// hierarchy depth within its curriculum.
+///
+/// Used by the text reader to show ← / → navigation arrows.
+/// Navigates through all items at the same level (e.g., amudim within a
+/// masechta, chapters within a sefer).
+
+final class AdjacentContentRefsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<({String? next, String? prev})>,
+          ({String? next, String? prev}),
+          FutureOr<({String? next, String? prev})>
+        >
+    with
+        $FutureModifier<({String? next, String? prev})>,
+        $FutureProvider<({String? next, String? prev})> {
+  /// Returns the prev and next sibling refs for [sefariaRef] at the same
+  /// hierarchy depth within its curriculum.
+  ///
+  /// Used by the text reader to show ← / → navigation arrows.
+  /// Navigates through all items at the same level (e.g., amudim within a
+  /// masechta, chapters within a sefer).
+  AdjacentContentRefsProvider._({
+    required AdjacentContentRefsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'adjacentContentRefsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$adjacentContentRefsHash();
+
+  @override
+  String toString() {
+    return r'adjacentContentRefsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<({String? next, String? prev})> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<({String? next, String? prev})> create(Ref ref) {
+    final argument = this.argument as String;
+    return adjacentContentRefs(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AdjacentContentRefsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$adjacentContentRefsHash() =>
+    r'4c568c67329e1f2a914f8ef927346cb12a7b325b';
+
+/// Returns the prev and next sibling refs for [sefariaRef] at the same
+/// hierarchy depth within its curriculum.
+///
+/// Used by the text reader to show ← / → navigation arrows.
+/// Navigates through all items at the same level (e.g., amudim within a
+/// masechta, chapters within a sefer).
+
+final class AdjacentContentRefsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<({String? next, String? prev})>,
+          String
+        > {
+  AdjacentContentRefsFamily._()
+    : super(
+        retry: null,
+        name: r'adjacentContentRefsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Returns the prev and next sibling refs for [sefariaRef] at the same
+  /// hierarchy depth within its curriculum.
+  ///
+  /// Used by the text reader to show ← / → navigation arrows.
+  /// Navigates through all items at the same level (e.g., amudim within a
+  /// masechta, chapters within a sefer).
+
+  AdjacentContentRefsProvider call(String sefariaRef) =>
+      AdjacentContentRefsProvider._(argument: sefariaRef, from: this);
+
+  @override
+  String toString() => r'adjacentContentRefsProvider';
+}

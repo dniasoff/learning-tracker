@@ -118,3 +118,43 @@ Future<String?> hebrewNameForRef(Ref ref, String sefariaRef) async {
   }
   return null;
 }
+
+/// Returns the prev and next sibling refs for [sefariaRef] at the same
+/// hierarchy depth within its curriculum.
+///
+/// Used by the text reader to show ← / → navigation arrows.
+/// Navigates through all items at the same level (e.g., amudim within a
+/// masechta, chapters within a sefer).
+@riverpod
+Future<({String? prev, String? next})> adjacentContentRefs(
+  Ref ref,
+  String sefariaRef,
+) async {
+  for (final curriculum in CurriculumId.values) {
+    final items = await ref.watch(curriculumContentProvider(curriculum).future);
+    final currentIdx = items.indexWhere((i) => i.sefariaRef == sefariaRef);
+    if (currentIdx < 0) continue;
+
+    final depth = _levelDepth(items[currentIdx]);
+    final sameLevel = items.where((i) => _levelDepth(i) == depth).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    final sameIdx = sameLevel.indexWhere((i) => i.sefariaRef == sefariaRef);
+    if (sameIdx < 0) continue;
+
+    return (
+      prev: sameIdx > 0 ? sameLevel[sameIdx - 1].sefariaRef : null,
+      next: sameIdx < sameLevel.length - 1
+          ? sameLevel[sameIdx + 1].sefariaRef
+          : null,
+    );
+  }
+  return (prev: null, next: null);
+}
+
+int _levelDepth(ContentItem item) {
+  if (item.level4 != null) return 4;
+  if (item.level3 != null) return 3;
+  if (item.level2 != null) return 2;
+  return 1;
+}

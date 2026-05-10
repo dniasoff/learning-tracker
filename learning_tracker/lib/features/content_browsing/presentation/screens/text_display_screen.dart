@@ -52,12 +52,19 @@ class TextDisplayScreen extends ConsumerWidget {
         ? hebrewTitle
         : englishTitle;
 
+    final adjAsync = ref.watch(adjacentContentRefsProvider(sefariaRef));
+    final adj = adjAsync.asData?.value;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF5F7FC),
         elevation: 0,
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.router.maybePop(),
+        ),
         title: Text(
           title,
           maxLines: 1,
@@ -67,6 +74,26 @@ class TextDisplayScreen extends ConsumerWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            tooltip: 'Previous',
+            onPressed: adj?.prev != null
+                ? () => context.router.replace(
+                      TextDisplayRoute(sefariaRef: adj!.prev!),
+                    )
+                : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            tooltip: 'Next',
+            onPressed: adj?.next != null
+                ? () => context.router.replace(
+                      TextDisplayRoute(sefariaRef: adj!.next!),
+                    )
+                : null,
+          ),
+        ],
       ),
       body: SafeArea(
         top: false,
