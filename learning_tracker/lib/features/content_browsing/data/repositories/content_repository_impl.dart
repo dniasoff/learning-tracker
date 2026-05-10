@@ -22,7 +22,9 @@ class ContentRepositoryImpl implements ContentRepository {
   final _configCache = <String, CurriculumHierarchyConfig>{};
 
   /// Maps composite curricula to their source asset(s).
-  static const _compositeSources = <String, List<String>>{};
+  static const _compositeSources = <String, List<String>>{
+    'tanach': ['chumash', 'nach'],
+  };
 
   @override
   Future<List<ContentItem>> getContentForCurriculum(
