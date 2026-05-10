@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+
+final _log = AppLogger(AppLogger.instance);
 
 /// Route guard that redirects to the restore screen on new-device sign-in.
 ///
@@ -37,12 +40,14 @@ class RestoreGuard extends AutoRouteGuard {
     StackRouter router,
   ) async {
     if (_isNewDevice == false) {
+      _log.debug('RestoreGuard: already checked — not new device, proceeding');
       resolver.next();
       return;
     }
 
     // Skip for local-only users — no cloud account means nothing to restore.
     if (!_hasCloudAccount()) {
+      _log.debug('RestoreGuard: no cloud account — skipping restore check');
       _isNewDevice = false;
       resolver.next();
       return;
@@ -53,7 +58,14 @@ class RestoreGuard extends AutoRouteGuard {
     final profiles = await db.userProfileDao.getAllUserProfiles();
     _isNewDevice = completions.isEmpty && profiles.isEmpty;
 
+    _log.info(
+      'RestoreGuard: completions=${completions.length} '
+      'userProfiles=${profiles.length} '
+      'isNewDevice=$_isNewDevice',
+    );
+
     if (_isNewDevice!) {
+      _log.info('RestoreGuard: redirecting to DeviceRestoreRoute');
       unawaited(router.replace(const DeviceRestoreRoute()));
       resolver.next(false);
     } else {

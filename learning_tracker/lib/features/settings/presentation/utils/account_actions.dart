@@ -1,4 +1,5 @@
-import 'package:auto_route/auto_route.dart';
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -275,7 +276,7 @@ Future<void> showDeleteAccountFlow(
     );
     // Use root AppRouter — context.router inside a tab cannot navigate to
     // root-level routes and throws, preventing sign-in navigation.
-    ref.read(routerProvider).replaceAll([const SignInRoute()]);
+    unawaited(ref.read(routerProvider).replaceAll([const SignInRoute()]));
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

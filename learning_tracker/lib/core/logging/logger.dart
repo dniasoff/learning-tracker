@@ -43,7 +43,9 @@ class AppLogger {
       settings: TalkerSettings(
         enabled: true,
         useConsoleLogs: !kReleaseMode,
-        maxHistoryItems: kReleaseMode ? 100 : 1000,
+        // Keep 2000 entries (~10 min of typical activity) in all modes so
+        // "Send Diagnostic Logs" in Settings can capture a full session window.
+        maxHistoryItems: 2000,
       ),
     );
   }

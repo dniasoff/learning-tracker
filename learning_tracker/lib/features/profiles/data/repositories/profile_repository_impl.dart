@@ -1,8 +1,11 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
+
+final _log = AppLogger(AppLogger.instance);
 
 /// Implementation of [ProfileRepository] using Drift database.
 ///
@@ -64,6 +67,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       throw DuplicateProfileNameException(trimmedName);
     }
 
+    _log.info('createProfile: name="$trimmedName" mode=$mode');
     final now = DateTime.now().toUtc();
     final id = await _db.profileDao.insertProfile(
       ProfilesCompanion.insert(
@@ -86,6 +90,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       updatedAt: now,
     );
 
+    _log.info(
+      'createProfile: inserted id=${model.id} name="${model.displayName}"',
+    );
     // Profile creation must succeed offline-first even if cloud push fails.
     try {
       await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
@@ -143,6 +150,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<void> deleteProfile(int id, {bool allowLast = false}) async {
+    _log.info(
+      'deleteProfile: id=$id allowLast=$allowLast '
+      'hasSyncEngine=${_syncEngine != null}',
+    );
     // Guard: by default we refuse to leave the account with zero profiles —
     // the picker would have nothing to show. Callers can opt in via
     // `allowLast: true` after a strong confirmation; the empty-state UI in
@@ -196,8 +207,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);
     });
+    _log.info('deleteProfile: local DB transaction complete for id=$id');
 
     await _syncEngine?.deleteLearnerProfile(id);
+    _log.info('deleteProfile: sync engine notified for id=$id');
   }
 
   @override

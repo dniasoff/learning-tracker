@@ -102,6 +102,12 @@ class SyncEngine {
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
 
+  /// SharedPreferences key for tombstoned learner profile IDs.
+  /// Profiles in this set were deleted locally and must never be
+  /// re-inserted by [_mergeLearnerProfiles], even if Firestore still
+  /// has the document (e.g. network delete in flight).
+  static const _deletedProfileIdsKey = 'sync_deleted_learner_profile_ids';
+
   /// Minimum time between full [pullOnLaunch] runs when triggered from
   /// [AppLifecycleState.resumed] only. Cold start / [initialize] always pulls.
   static const Duration pullOnResumeMinInterval = Duration(minutes: 5);
@@ -334,6 +340,10 @@ class SyncEngine {
       _logger.info('Pull-on-launch: Fetching data from Firestore');
 
       final learnerProfiles = await _firestoreDataSource.fetchLearnerProfiles();
+      _logger.info(
+        'Pull-on-launch: fetched ${learnerProfiles.length} learner profiles '
+        'from Firestore: ids=${learnerProfiles.map((p) => p["id"]).toList()}',
+      );
       await _mergeLearnerProfiles(learnerProfiles);
 
       final accountProfile = await _firestoreDataSource.fetchProfile();
@@ -811,30 +821,67 @@ class SyncEngine {
 
   /// Delete a learner profile from Firestore.
   ///
-  /// Calls the Firestore data source directly so the delete reaches the
-  /// server before [pullOnLaunch] can re-fetch and recreate the profile.
-  /// The queue entry is kept as a redundant safety net for offline cases.
+  /// Step 1 (synchronous): persists a tombstone in SharedPreferences so
+  /// [_mergeLearnerProfiles] will never re-create this profile, even if the
+  /// network delete hasn't propagated yet.
+  ///
+  /// Step 2 (fire-and-forget): kicks off the actual Firestore delete in the
+  /// background so the UI can respond immediately after the local DB write.
   Future<void> deleteLearnerProfile(int profileId) async {
-    // Direct delete first — prevents pullOnLaunch from seeing the old doc
-    // and merging it back into the local DB on the next sign-in.
-    if (_firestoreDataSource.isAuthenticated) {
-      try {
-        await _firestoreDataSource.deleteLearnerProfile(profileId);
-      } catch (e) {
-        _logger.warning(
-          'Direct Firestore profile delete failed, '
-          'falling back to queue: $e',
+    _logger.info(
+      'deleteLearnerProfile: profileId=$profileId '
+      'authenticated=${_firestoreDataSource.isAuthenticated}',
+    );
+
+    // 1. Persist tombstone so pullOnLaunch never re-creates this profile.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = prefs.getStringList(_deletedProfileIdsKey) ?? [];
+      if (!existing.contains(profileId.toString())) {
+        existing.add(profileId.toString());
+        await prefs.setStringList(_deletedProfileIdsKey, existing);
+        _logger.info(
+          'deleteLearnerProfile: tombstone stored, '
+          'total tombstoned=${existing.length}',
+        );
+      }
+    } catch (e) {
+      _logger.warning('deleteLearnerProfile: failed to persist tombstone: $e');
+    }
+
+    // 2. Fire-and-forget Firestore delete — UI does not wait for network.
+    unawaited(() async {
+      if (_firestoreDataSource.isAuthenticated) {
+        try {
+          _logger.info(
+            'deleteLearnerProfile: starting Firestore delete '
+            'profileId=$profileId',
+          );
+          await _firestoreDataSource.deleteLearnerProfile(profileId);
+          _logger.info(
+            'deleteLearnerProfile: Firestore delete complete '
+            'profileId=$profileId',
+          );
+        } catch (e) {
+          _logger.warning(
+            'deleteLearnerProfile: Firestore delete failed, '
+            'falling back to queue: $e',
+          );
+          await _offlineQueue.enqueueLearnerProfileDelete(profileId);
+          await _afterEnqueueForBackgroundFlush(
+            context: 'learner profile delete',
+          );
+        }
+      } else {
+        _logger.info(
+          'deleteLearnerProfile: offline — queuing profileId=$profileId',
         );
         await _offlineQueue.enqueueLearnerProfileDelete(profileId);
         await _afterEnqueueForBackgroundFlush(
           context: 'learner profile delete',
         );
-        return;
       }
-    } else {
-      await _offlineQueue.enqueueLearnerProfileDelete(profileId);
-      await _afterEnqueueForBackgroundFlush(context: 'learner profile delete');
-    }
+    }());
   }
 
   /// Push a goal to Firestore after local write.
@@ -1864,7 +1911,29 @@ class SyncEngine {
   Future<void> _mergeLearnerProfiles(
     List<Map<String, dynamic>> remoteProfiles,
   ) async {
-    _logger.debug('Merging ${remoteProfiles.length} learner profiles');
+    _logger.info(
+      '_mergeLearnerProfiles: merging ${remoteProfiles.length} profiles',
+    );
+
+    // Load tombstone set once — profiles deleted locally are never re-created.
+    var tombstoned = <int>{};
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      tombstoned = (prefs.getStringList(_deletedProfileIdsKey) ?? [])
+          .map(int.tryParse)
+          .whereType<int>()
+          .toSet();
+      if (tombstoned.isNotEmpty) {
+        _logger.info(
+          '_mergeLearnerProfiles: tombstone set=$tombstoned — '
+          'these ids will be skipped even if present in Firestore',
+        );
+      }
+    } catch (e) {
+      _logger.warning(
+        '_mergeLearnerProfiles: failed to load tombstone set: $e',
+      );
+    }
 
     for (final remote in remoteProfiles) {
       try {
@@ -1872,6 +1941,14 @@ class SyncEngine {
         final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
         if (id == null) {
           _logger.warning('Skipping invalid remote learner profile: $remote');
+          continue;
+        }
+
+        // Skip tombstoned profiles — user explicitly deleted them locally.
+        if (tombstoned.contains(id)) {
+          _logger.info(
+            '_mergeLearnerProfiles: skipping tombstoned profile id=$id',
+          );
           continue;
         }
 
@@ -1909,6 +1986,10 @@ class SyncEngine {
 
         final existing = await _database.profileDao.getProfileById(id);
         if (existing == null) {
+          _logger.info(
+            '_mergeLearnerProfiles: INSERT profile id=$id '
+            'name="$displayName" mode=$mode',
+          );
           await _database
               .into(_database.profiles)
               .insertOnConflictUpdate(
@@ -1924,6 +2005,10 @@ class SyncEngine {
               );
         } else if (remoteUpdatedAt != null &&
             remoteUpdatedAt.isAfter(existing.updatedAt)) {
+          _logger.info(
+            '_mergeLearnerProfiles: UPDATE profile id=$id '
+            'name="$displayName" (remote newer)',
+          );
           await (_database.update(
             _database.profiles,
           )..where((t) => t.id.equals(id))).write(
@@ -1933,6 +2018,10 @@ class SyncEngine {
               avatarIndex: Value(avatarIndex),
               updatedAt: Value(updatedAt),
             ),
+          );
+        } else {
+          _logger.debug(
+            '_mergeLearnerProfiles: SKIP profile id=$id (local is current)',
           );
         }
       } catch (e) {

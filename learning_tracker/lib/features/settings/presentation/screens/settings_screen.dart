@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -19,6 +20,7 @@ import 'package:learning_tracker/features/settings/presentation/providers/hebrew
 import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
+import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
@@ -206,6 +208,19 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ],
+            const SizedBox(height: 24),
+            _SurfaceCard(
+              child: _SettingsTile(
+                icon: Icons.bug_report_outlined,
+                iconColor: AppTheme.brandInkMuted,
+                iconBackground: const Color(0xFFF0F1F5),
+                title: 'Send Diagnostic Logs',
+                subtitle: 'Email last 10 min of activity to developer',
+                trailing: const SizedBox.shrink(),
+                onTap: () =>
+                    sendLogsToDevEmail(context, ref.read(talkerProvider)),
+              ),
+            ),
             const SizedBox(height: 24),
             FutureBuilder<PackageInfo>(
               future: PackageInfo.fromPlatform(),

@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+
+final _log = AppLogger(AppLogger.instance);
 
 /// Route guard that redirects to the profile picker when 2+ profiles exist
 /// and no profile has been selected yet.
@@ -31,6 +34,10 @@ class ProfileGuard extends AutoRouteGuard {
   ) async {
     // If a profile is already selected, proceed
     if (_getSelectedProfileId() != null) {
+      _log.debug(
+        'ProfileGuard: profile already selected '
+        'id=${_getSelectedProfileId()}, proceeding',
+      );
       resolver.next();
       return;
     }
@@ -40,11 +47,19 @@ class ProfileGuard extends AutoRouteGuard {
       _getAccountId(),
     );
 
+    _log.info(
+      'ProfileGuard: found ${profiles.length} profiles '
+      'for accountId=${_getAccountId()}',
+    );
+
     if (profiles.isEmpty) {
       // An account must always have at least one profile. Zero profiles
       // means either a fresh cloud sign-in where sync hasn't populated
       // yet, or a user whose profiles were removed — route them to the
       // picker so they can add one, never let them into AppShell.
+      _log.info(
+        'ProfileGuard: no profiles — redirecting to ProfilePickerRoute',
+      );
       unawaited(router.replace(const ProfilePickerRoute()));
       resolver.next(false);
       return;
@@ -52,12 +67,20 @@ class ProfileGuard extends AutoRouteGuard {
 
     if (profiles.length == 1) {
       // Auto-select the single profile
+      _log.info(
+        'ProfileGuard: single profile id=${profiles.first.id} '
+        '— auto-selecting',
+      );
       _setSelectedProfileId(profiles.first.id);
       resolver.next();
       return;
     }
 
     // 2+ profiles, none selected → redirect to picker
+    _log.info(
+      'ProfileGuard: ${profiles.length} profiles, none selected '
+      '— redirecting to ProfilePickerRoute',
+    );
     unawaited(router.replace(const ProfilePickerRoute()));
     resolver.next(false);
   }
