@@ -59,14 +59,16 @@ class AccountManagementService {
   /// 3. Clear local database (FR103)
   /// 4. Clear SharedPreferences
   Future<void> deleteAccount(String uid) async {
-    // 1. Delete Firestore data
+    // 1. Clear local database FIRST — stops SyncEngine from re-pushing local
+    //    data back to Firestore after we delete it in step 2.
+    await _clearLocalDatabase();
+
+    // 2. Delete Firestore data — local DB is now empty so SyncEngine cannot
+    //    race-write the profiles back between this call and step 3.
     await _deleteFirestoreUserData(uid);
 
-    // 2. Delete Firebase Auth account
+    // 3. Delete Firebase Auth account
     await _authRepository.deleteAccount();
-
-    // 3. Clear local database
-    await _clearLocalDatabase();
 
     // 4. Clear all local preferences (onboarding state, settings, etc.)
     final prefs = await SharedPreferences.getInstance();
