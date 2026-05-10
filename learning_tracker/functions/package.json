@@ -9,7 +9,7 @@
     "deploy": "firebase deploy --only functions"
   },
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "keywords": [],
   "author": "",
