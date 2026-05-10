@@ -49,33 +49,31 @@ class ContentItemTile extends ConsumerWidget {
             .value ??
         0;
 
-    final isFolder = !item.isLeaf;
     final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final showEnglishSubtitle =
         !hebrewOnly && item.displayNameEn != item.displayNameHe;
     return ListTile(
-      minLeadingWidth: isFolder ? 48 : 40,
-      minVerticalPadding: isFolder ? 14 : 8,
+      // Consistent leading/padding across all rows regardless of leaf vs
+      // container — leaf rows used to be visibly smaller, but the user
+      // expects a uniform list size at every drill-down level.
+      minLeadingWidth: 48,
+      minVerticalPadding: 14,
       leading: _buildLeadingIcon(theme, count),
       title: Text(
         item.displayNameHe,
-        style: isFolder
-            ? theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)
-            : theme.textTheme.titleMedium,
+        style: theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
         textDirection: TextDirection.rtl,
         textAlign: TextAlign.right,
       ),
       subtitle: showEnglishSubtitle
           ? Text(
               item.displayNameEn,
-              style:
-                  (isFolder
-                          ? theme.textTheme.titleSmall
-                          : theme.textTheme.bodyMedium)
-                      ?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: isFolder ? FontWeight.w500 : null,
-                      ),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
             )
           : null,
       trailing: _buildTrailing(theme, count),

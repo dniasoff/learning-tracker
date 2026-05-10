@@ -8,14 +8,36 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'curriculum_label_providers.g.dart';
 
-/// Renders the leaf display string for [sefariaRef] (e.g. "פרק ג" for
-/// "Genesis 3" in Hebrew mode, "Perek 3" in Ashkenazi English mode). Looks
-/// up the matching `ContentItem` across all curricula, reads the user's
-/// Hebrew-terms toggle and transliteration variant, and delegates to
+/// Renders the **full breadcrumb chain** for [sefariaRef] as a single
+/// string joined by ` › ` (e.g. "משניות › זרעים › ברכות › פרק א › משנה א"
+/// in Hebrew mode). Callers should render the result in a `Text` that
+/// allows wrapping so the chain stays legible on narrow widgets.
+///
+/// Reads the Hebrew-terms toggle and transliteration variant, looks up the
+/// matching `ContentItem` across all curricula, and delegates to
 /// [CurriculumLabelRenderer]. Falls back to a stripped-underscore version
 /// of the ref when no item matches.
 @riverpod
 Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
+  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  final variant = ref.watch(transliterationVariantProvider);
+  final item = await _findContentItem(ref, sefariaRef);
+  if (item == null) {
+    return sefariaRef.replaceAll('_', ' ');
+  }
+  return CurriculumLabelRenderer.renderForItem(
+    item,
+    useHebrew: useHebrew,
+    transliterationVariant: variant,
+    fullPath: true,
+  );
+}
+
+/// Renders just the leaf segment of [sefariaRef] (e.g. "משנה א"). Useful
+/// when the caller already shows ancestor context elsewhere and doesn't
+/// want to duplicate it.
+@riverpod
+Future<String> renderedLeafForRef(Ref ref, String sefariaRef) async {
   final useHebrew = ref.watch(hebrewTermsScriptProvider);
   final variant = ref.watch(transliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);

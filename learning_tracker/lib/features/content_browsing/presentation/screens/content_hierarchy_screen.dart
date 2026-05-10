@@ -173,14 +173,24 @@ class _ContentHierarchyScreenState
                         final variant = ref.watch(
                           transliterationVariantProvider,
                         );
-                        // Every breadcrumb segment goes through the renderer
-                        // — same path as row labels and reader titles.
+                        final allCurriculumItems = ref
+                            .watch(curriculumContentProvider(curriculum))
+                            .asData
+                            ?.value;
+                        // Look up each ancestor's container ContentItem so
+                        // the renderer can use its displayNameHe (e.g.
+                        // 'סדר זרעים') instead of falling back to the raw
+                        // English value ('Seder Zeraim').
+                        final hebrewNames = _hebrewNamesForNavStack(
+                          allCurriculumItems,
+                        );
                         final segments =
                             CurriculumLabelRenderer.renderBreadcrumb(
                               curriculumId: curriculum,
                               rawSegmentValues: _navigationStack,
                               useHebrew: hebrewTerms,
                               transliterationVariant: variant,
+                              hebrewNamesPerSegment: hebrewNames,
                             );
                         return BreadcrumbNavigation(
                           curriculum: curriculum,
@@ -397,5 +407,36 @@ class _ContentHierarchyScreenState
         _navigationStack = _navigationStack.sublist(0, level + 1);
       });
     }
+  }
+
+  /// For each entry in [_navigationStack], find the container ContentItem
+  /// (matching levels 1..N and no deeper) so the renderer can use its
+  /// `displayNameHe` instead of falling back to the raw English value.
+  ///
+  /// Returns null entries when no container is found (e.g. when the content
+  /// list is still loading or a level is an ordinal value rather than a
+  /// named one).
+  List<String?> _hebrewNamesForNavStack(List<ContentItem>? allItems) {
+    final result = <String?>[];
+    if (allItems == null) {
+      return List<String?>.filled(_navigationStack.length, null);
+    }
+    for (var depth = 0; depth < _navigationStack.length; depth++) {
+      final segmentDepth = depth + 1;
+      ContentItem? match;
+      for (final item in allItems) {
+        if (item.level1 != _navigationStack[0]) continue;
+        if (segmentDepth >= 2 && item.level2 != _navigationStack[1]) continue;
+        if (segmentDepth >= 3 && item.level3 != _navigationStack[2]) continue;
+        if (segmentDepth >= 4 && item.level4 != _navigationStack[3]) continue;
+        if (segmentDepth < 2 && item.level2 != null) continue;
+        if (segmentDepth < 3 && item.level3 != null) continue;
+        if (segmentDepth < 4 && item.level4 != null) continue;
+        match = item;
+        break;
+      }
+      result.add(match?.displayNameHe);
+    }
+    return result;
   }
 }

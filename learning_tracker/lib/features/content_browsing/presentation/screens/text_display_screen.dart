@@ -41,13 +41,12 @@ class TextDisplayScreen extends ConsumerWidget {
     final showNikud = ref.watch(showNikudProvider);
     final theme = Theme.of(context);
 
-    // Single label renderer drives the AppBar — leaf segment large, parent
-    // segment as a small subtitle. Both are localized and gematriya-aware.
-    final leafAsync = ref.watch(renderedDisplayForRefProvider(sefariaRef));
-    final parentAsync = ref.watch(renderedParentForRefProvider(sefariaRef));
-    final leafTitle =
-        leafAsync.asData?.value ?? sefariaRef.replaceAll('_', ' ');
-    final parentTitle = parentAsync.asData?.value;
+    // Single label renderer drives the AppBar — full breadcrumb chain so
+    // the user always knows where they are (Sefer › Perek › Mishna / Daf).
+    // Wraps onto multiple lines if needed; the AppBar grows to fit.
+    final chainAsync = ref.watch(renderedDisplayForRefProvider(sefariaRef));
+    final chainTitle =
+        chainAsync.asData?.value ?? sefariaRef.replaceAll('_', ' ');
 
     final adjAsync = ref.watch(adjacentContentRefsProvider(sefariaRef));
     final adj = adjAsync.asData?.value;
@@ -58,34 +57,22 @@ class TextDisplayScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFFF5F7FC),
         elevation: 0,
         automaticallyImplyLeading: false,
+        toolbarHeight: 72,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.router.maybePop(),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              leafTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: AppTheme.brandInk,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            if (parentTitle != null && parentTitle.isNotEmpty)
-              Text(
-                parentTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-          ],
+        title: Text(
+          chainTitle,
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          softWrap: true,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: AppTheme.brandInk,
+            fontWeight: FontWeight.w800,
+            height: 1.3,
+          ),
         ),
         actions: [
           IconButton(

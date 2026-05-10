@@ -1941,11 +1941,15 @@ class _ActiveTrackFocusPill extends StatelessWidget {
           Text(
             value,
             textAlign: TextAlign.center,
-            maxLines: 1,
+            // The full breadcrumb chain can be 4-5 segments; wrap freely
+            // and cap at 3 lines so it never overflows the pill height.
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
+            softWrap: true,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
               color: AppTheme.brandInk,
+              height: 1.35,
             ),
           ),
         ],
