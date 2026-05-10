@@ -277,12 +277,13 @@ class _DashboardBody extends ConsumerWidget {
 
     final focusLabel = groupedTasks.todayTasks.isNotEmpty
         ? groupedTasks.todayTasks
-              .take(2)
               .map(
                 (t) => hebrewTerms
                     ? t.curriculumId.displayNameHe
                     : t.curriculumId.displayNameEn.toUpperCase(),
               )
+              .toSet()
+              .take(2)
               .join(' / ')
         : l10n.noFocusTag;
 
@@ -463,12 +464,13 @@ class _DashboardBody extends ConsumerWidget {
         _MainFocusMissionCard(
           subtitle: groupedTasks.todayTasks.isNotEmpty
               ? groupedTasks.todayTasks
-                    .take(2)
                     .map(
                       (t) => hebrewTerms
                           ? t.curriculumId.displayNameHe
                           : t.curriculumId.displayNameEn,
                     )
+                    .toSet()
+                    .take(2)
                     .join(' / ')
               : l10n.noTasksInLane,
           focusLabel: focusLabel,

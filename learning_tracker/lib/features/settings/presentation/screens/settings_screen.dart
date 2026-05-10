@@ -17,7 +17,6 @@ import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacre
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/language_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart'
@@ -112,8 +111,6 @@ class SettingsScreen extends ConsumerWidget {
                   _HebrewTermsTile(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
-                  _tileDivider(theme),
-                  _LanguagePreferenceTile(theme: theme),
                   if (!isChildProfile) ...[
                     _tileDivider(theme),
                     _SettingsTile(
@@ -554,94 +551,6 @@ class _NikudTile extends ConsumerWidget {
             onSelectionChanged: (selected) {
               if (selected.isEmpty) return;
               ref.read(showNikudProvider.notifier).set(selected.first);
-            },
-            style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: AppTheme.brandBlueBright,
-              selectedForegroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFD7DEEA)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// App language: same layout as [_HebrewDateTile] — [SegmentedButton] for en/he.
-class _LanguagePreferenceTile extends ConsumerWidget {
-  const _LanguagePreferenceTile({required this.theme});
-
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final current = ref.watch(languageProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppTheme.brandBlueSoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.language_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.language,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 19,
-                        color: const Color(0xFF1D2432),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.preferredLanguageForContent,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF929BAA),
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<String>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment<String>(
-                value: 'en',
-                label: Text(supportedLanguages['en']!),
-              ),
-              ButtonSegment<String>(
-                value: 'he',
-                label: Text(supportedLanguages['he']!),
-              ),
-            ],
-            selected: {current},
-            onSelectionChanged: (selected) {
-              if (selected.isEmpty) return;
-              ref.read(languageProvider.notifier).setLanguage(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,
