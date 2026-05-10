@@ -80,8 +80,8 @@ class TextDisplayScreen extends ConsumerWidget {
             tooltip: 'Previous',
             onPressed: adj?.prev != null
                 ? () => context.router.replace(
-                      TextDisplayRoute(sefariaRef: adj!.prev!),
-                    )
+                    TextDisplayRoute(sefariaRef: adj!.prev!),
+                  )
                 : null,
           ),
           IconButton(
@@ -89,8 +89,8 @@ class TextDisplayScreen extends ConsumerWidget {
             tooltip: 'Next',
             onPressed: adj?.next != null
                 ? () => context.router.replace(
-                      TextDisplayRoute(sefariaRef: adj!.next!),
-                    )
+                    TextDisplayRoute(sefariaRef: adj!.next!),
+                  )
                 : null,
           ),
         ],

@@ -118,21 +118,18 @@ void main() {
       expect(config4.depth, 4);
     });
 
-    test('hierarchy config level labels are read from content JSON', () {
-      // Each curriculum has its own hierarchy labels defined in the JSON
-      const hierarchyConfigs = CurriculumDefaults.hierarchyConfigs;
-
-      // Mishnayos: 4 levels
-      expect(hierarchyConfigs[CurriculumId.mishnayos]!.maxLevels, 4);
-      expect(hierarchyConfigs[CurriculumId.mishnayos]!.level1Label, 'Seder');
+    test('hierarchy level labels come from the central CurriculumLabels', () {
+      // Mishnayos: 4 levels, top label "Seder"
+      expect(CurriculumLabels.depth(CurriculumId.mishnayos), 4);
+      expect(CurriculumLabels.level(CurriculumId.mishnayos, 1).en, 'Seder');
 
       // Bavli: 4 levels (Seder > Masechta > Daf > Amud)
-      expect(hierarchyConfigs[CurriculumId.bavli]!.maxLevels, 4);
-      expect(hierarchyConfigs[CurriculumId.bavli]!.level1Label, 'Seder');
+      expect(CurriculumLabels.depth(CurriculumId.bavli), 4);
+      expect(CurriculumLabels.level(CurriculumId.bavli, 1).en, 'Seder');
 
       // Chumash: 4 levels
-      expect(hierarchyConfigs[CurriculumId.chumash]!.maxLevels, 4);
-      expect(hierarchyConfigs[CurriculumId.chumash]!.level1Label, 'Sefer');
+      expect(CurriculumLabels.depth(CurriculumId.chumash), 4);
+      expect(CurriculumLabels.level(CurriculumId.chumash, 1).en, 'Sefer');
     });
 
     test('ContentItem distinguishes leaf and container nodes', () {

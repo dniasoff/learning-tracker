@@ -64,20 +64,11 @@ class ContentRepositoryImpl implements ContentRepository {
       }
       _contentCache[key] = allItems;
 
-      // Build a hierarchy config for the composite curriculum from its defaults.
-      final defaults = CurriculumDefaults.hierarchyConfigs[curriculumId];
-      if (defaults != null) {
-        _configCache[key] = CurriculumHierarchyConfig(
-          curriculumId: key,
-          levelLabels: [
-            defaults.level1Label,
-            if (defaults.level2Label != null) defaults.level2Label!,
-            if (defaults.level3Label != null) defaults.level3Label!,
-            if (defaults.level4Label != null) defaults.level4Label!,
-          ],
-          totalItems: allItems.where((i) => i.isLeaf).length,
-        );
-      }
+      _configCache[key] = CurriculumHierarchyConfig(
+        curriculumId: key,
+        levelLabels: CurriculumLabels.labelsEn(curriculumId),
+        totalItems: allItems.where((i) => i.isLeaf).length,
+      );
 
       return allItems;
     }
@@ -185,11 +176,14 @@ class ContentRepositoryImpl implements ContentRepository {
 
   void _parseAndCache(String key, Map<String, dynamic> json) {
     final configJson = json['hierarchyConfig'] as Map<String, dynamic>;
+    // Always use the central label source; the JSON's levelLabels field
+    // is ignored so the in-app labels can never drift from CurriculumLabels.
+    final curriculumId = CurriculumId.values.firstWhere(
+      (c) => c.storageKey == key,
+    );
     _configCache[key] = CurriculumHierarchyConfig(
       curriculumId: configJson['curriculumId'] as String,
-      levelLabels: (configJson['levelLabels'] as List)
-          .map((e) => e as String)
-          .toList(),
+      levelLabels: CurriculumLabels.labelsEn(curriculumId),
       totalItems: configJson['totalItems'] as int,
     );
 

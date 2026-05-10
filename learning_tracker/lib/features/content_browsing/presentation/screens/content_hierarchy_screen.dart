@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -271,10 +272,12 @@ class _ContentHierarchyScreenState
         if (!item.isLeaf) {
           final rawHe = item.displayNameHe;
           final rawEn = item.displayNameEn;
-          final he = (parentShortHe != null && rawHe.startsWith('$parentShortHe '))
+          final he =
+              (parentShortHe != null && rawHe.startsWith('$parentShortHe '))
               ? rawHe.substring(parentShortHe.length + 1)
               : rawHe;
-          final en = (parentShortEn != null && rawEn.startsWith('$parentShortEn '))
+          final en =
+              (parentShortEn != null && rawEn.startsWith('$parentShortEn '))
               ? rawEn.substring(parentShortEn.length + 1)
               : rawEn;
           uniqueItems[nextLevelValue] = (he == rawHe && en == rawEn)
@@ -319,7 +322,7 @@ class _ContentHierarchyScreenState
   String? _findParentShortHe(List<ContentItem> items, int currentDepth) {
     for (final item in items) {
       if (_getNextLevelValue(item, currentDepth) == null && !item.isLeaf) {
-        return _stripStructuralPrefix(item.displayNameHe);
+        return CurriculumLabels.stripStructuralPrefix(item.displayNameHe);
       }
     }
     return null;
@@ -333,15 +336,6 @@ class _ContentHierarchyScreenState
       }
     }
     return null;
-  }
-
-  /// Strips structural Hebrew prefixes like 'מסכת ', 'ספר ', etc.
-  String _stripStructuralPrefix(String he) {
-    const prefixes = ['מסכת ', 'ספר ', 'חלק ', 'סדר ', 'הלכות '];
-    for (final p in prefixes) {
-      if (he.startsWith(p)) return he.substring(p.length);
-    }
-    return he;
   }
 
   /// Maps Bavli/Yerushalmi amud letter keys to Hebrew labels; passes other values through.
@@ -388,7 +382,8 @@ class _ContentHierarchyScreenState
     if (curriculum == null) return false;
     if (curriculum != CurriculumId.chumash &&
         curriculum != CurriculumId.nach &&
-        curriculum != CurriculumId.tanach) return false;
+        curriculum != CurriculumId.tanach)
+      return false;
     // Chapter ref: '{Book} {digits}' with no colon (e.g., 'Genesis 1', 'Joshua 3').
     return !item.sefariaRef.contains(':') &&
         RegExp(r'^.+ \d+$').hasMatch(item.sefariaRef);

@@ -145,14 +145,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     super.dispose();
   }
 
-  String _getUnitLabel(CurriculumId id) {
-    final config = CurriculumDefaults.hierarchyConfigs[id];
-    if (config == null) return 'items';
-    return config.level4Label ??
-        config.level3Label ??
-        config.level2Label ??
-        config.level1Label;
-  }
+  String _getUnitLabel(CurriculumId id) => CurriculumLabels.leaf(id).en;
 
   DateTime _now() => ref.read(clockProvider);
 

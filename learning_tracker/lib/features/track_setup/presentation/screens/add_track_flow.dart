@@ -258,9 +258,12 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         currentStep: resolvedStep,
         curriculumId: curriculum,
         scopeSelections: scopes,
-        programId: programId,
-        programName: programName,
-        selectedProgram: selectedProgram,
+        // Only restore program state when the saved curriculum actually has
+        // programs — otherwise a stale program from a prior run bleeds into
+        // a curriculum that shouldn't have one (e.g. Chumash showing Mishna Yomit).
+        programId: programsExistForResume ? programId : null,
+        programName: programsExistForResume ? programName : null,
+        selectedProgram: programsExistForResume ? selectedProgram : null,
         studyDays: studyDays,
         trackLabel: label,
       );
@@ -504,10 +507,17 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Curriculum activation (and track creation) is deferred to
     // TrackCreationService.createTrack() so that exiting mid-flow does not
     // leave a phantom track behind. Scope content loads from bundled assets.
+    //
+    // Always clear any stale program state from a previously resumed flow so
+    // that selecting a curriculum with no programs (e.g. Chumash) doesn't
+    // inherit a calendar program (e.g. Mishna Yomit) from last time.
     setState(
       () => _state = _state.copyWith(
         curriculumId: curriculum,
         contentActivated: true,
+        programId: null,
+        programName: null,
+        selectedProgram: null,
       ),
     );
     _goToNextStep();
@@ -1427,22 +1437,17 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   bool _didAutoSkip = false;
 
-  CurriculumHierarchyDefaults get _hierarchy =>
-      CurriculumDefaults.hierarchyConfigs[widget.curriculumId]!;
+  List<String> get _levelLabels =>
+      CurriculumLabels.labelsEn(widget.curriculumId);
 
-  List<String> get _levelLabels => [
-    _hierarchy.level1Label,
-    if (_hierarchy.level2Label != null) _hierarchy.level2Label!,
-    if (_hierarchy.level3Label != null) _hierarchy.level3Label!,
-    if (_hierarchy.level4Label != null) _hierarchy.level4Label!,
-  ];
+  int get _maxLevels => CurriculumLabels.depth(widget.curriculumId);
 
   /// Current drill-down depth (0 = top level showing level 1 items).
   int get _currentLevel =>
       _breadcrumbs.isEmpty ? 1 : _breadcrumbs.last.level + 1;
 
   /// Max selectable level (exclude leaf level — no "By Daf/Amud").
-  int get _maxSelectableLevel => _hierarchy.maxLevels - 1;
+  int get _maxSelectableLevel => _maxLevels - 1;
 
   String _labelForLevel(int level) {
     return level <= _levelLabels.length
@@ -1582,7 +1587,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
 
   int _childCountForValue(List<ContentItem> items, String value) {
     final nextLevel = _currentLevel + 1;
-    if (nextLevel > _hierarchy.maxLevels) return 0;
+    if (nextLevel > _maxLevels) return 0;
     final seen = <String>{};
     for (final item in items) {
       var matches = true;

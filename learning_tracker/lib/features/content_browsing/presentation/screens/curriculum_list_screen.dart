@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -286,7 +287,7 @@ class _CurriculumCard extends ConsumerWidget {
               children: [
                 if (containerCount > 0) ...[
                   Text(
-                    '$containerCount ${_getContainerLabel(curriculum)}',
+                    '$containerCount ${CurriculumLabels.containerCountLabelPlural(curriculum)}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,
@@ -297,7 +298,7 @@ class _CurriculumCard extends ConsumerWidget {
                 ],
                 if (leafCount > 0)
                   Text(
-                    '$leafCount ${_getLeafLabel(curriculum)}',
+                    '$leafCount ${CurriculumLabels.primaryUnitLabelPlural(curriculum)}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,
@@ -310,28 +311,6 @@ class _CurriculumCard extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _getContainerLabel(CurriculumId curriculum) {
-    return switch (curriculum) {
-      CurriculumId.mishnayos => 'Masechos',
-      CurriculumId.bavli => 'Masechos',
-      CurriculumId.yerushalmi => 'Masechos',
-      CurriculumId.chumash => 'Books',
-      CurriculumId.mishnehTorah => 'Seforim',
-      _ => 'Sections',
-    };
-  }
-
-  String _getLeafLabel(CurriculumId curriculum) {
-    return switch (curriculum) {
-      CurriculumId.mishnayos => 'Mishnayos',
-      CurriculumId.bavli => 'Pages',
-      CurriculumId.yerushalmi => 'Pages',
-      CurriculumId.chumash => 'Parshiyos',
-      CurriculumId.mishnehTorah => 'Halachos',
-      _ => 'Items',
-    };
   }
 }
 

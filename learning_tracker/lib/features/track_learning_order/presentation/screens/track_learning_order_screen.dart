@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/draggable_order_item.dart';
@@ -61,7 +62,11 @@ class _TrackLearningOrderScreenState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_localSedarim != null && _localSedarim!.isNotEmpty) ...[
-                    _buildSectionHeader(context, theme, 'סדרים • Sedarim'),
+                    _buildSectionHeader(
+                      context,
+                      theme,
+                      CurriculumLabels.topSectionHeader(widget.curriculumId),
+                    ),
                     ReorderableListView(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -77,8 +82,18 @@ class _TrackLearningOrderScreenState
                     ),
                   ],
                   if (_localMasechtos != null &&
-                      _localMasechtos!.isNotEmpty) ...[
-                    _buildSectionHeader(context, theme, 'מסכתות • Masechtos'),
+                      _localMasechtos!.isNotEmpty &&
+                      CurriculumLabels.hasReorderableLevel2(
+                        widget.curriculumId,
+                      )) ...[
+                    _buildSectionHeader(
+                      context,
+                      theme,
+                      CurriculumLabels.containerSectionHeader(
+                            widget.curriculumId,
+                          ) ??
+                          '',
+                    ),
                     ReorderableListView(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),

@@ -36,78 +36,124 @@ void main() {
     });
   });
 
-  group('CurriculumDefaults - hierarchy configs', () {
-    test('hierarchy configs exist for all curricula', () {
+  group('CurriculumLabels - hierarchy labels', () {
+    test('labels exist for all curricula', () {
       for (final curriculum in CurriculumId.values) {
         expect(
-          CurriculumDefaults.hierarchyConfigs.containsKey(curriculum),
-          isTrue,
-          reason: 'Missing hierarchy config for ${curriculum.storageKey}',
+          () => CurriculumLabels.levels(curriculum),
+          returnsNormally,
+          reason: 'Missing label set for ${curriculum.storageKey}',
         );
+        expect(CurriculumLabels.levels(curriculum), isNotEmpty);
       }
     });
 
     test('Mishnayos has 4-level hierarchy', () {
-      final config =
-          CurriculumDefaults.hierarchyConfigs[CurriculumId.mishnayos]!;
-      expect(config.maxLevels, 4);
-      expect(config.level1Label, 'Seder');
-      expect(config.level2Label, 'Masechta');
-      expect(config.level3Label, 'Perek');
-      expect(config.level4Label, 'Mishna');
+      expect(CurriculumLabels.depth(CurriculumId.mishnayos), 4);
+      expect(CurriculumLabels.labelsEn(CurriculumId.mishnayos), [
+        'Seder',
+        'Masechta',
+        'Perek',
+        'Mishna',
+      ]);
     });
 
     test('Bavli has 4-level hierarchy', () {
-      final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.bavli]!;
-      expect(config.maxLevels, 4);
-      expect(config.level1Label, 'Seder');
-      expect(config.level2Label, 'Masechta');
-      expect(config.level3Label, 'Daf');
-      expect(config.level4Label, 'Amud');
+      expect(CurriculumLabels.depth(CurriculumId.bavli), 4);
+      expect(CurriculumLabels.labelsEn(CurriculumId.bavli), [
+        'Seder',
+        'Masechta',
+        'Daf',
+        'Amud',
+      ]);
     });
 
     test('Yerushalmi has 3-level hierarchy', () {
-      final config =
-          CurriculumDefaults.hierarchyConfigs[CurriculumId.yerushalmi]!;
-      expect(config.maxLevels, 3);
-      expect(config.level1Label, 'Masechta');
-      expect(config.level2Label, 'Daf');
-      expect(config.level3Label, 'Halacha');
+      expect(CurriculumLabels.depth(CurriculumId.yerushalmi), 3);
+      expect(CurriculumLabels.labelsEn(CurriculumId.yerushalmi), [
+        'Masechta',
+        'Daf',
+        'Halacha',
+      ]);
     });
 
     test('Mishna Berurah has 3-level hierarchy', () {
-      final config =
-          CurriculumDefaults.hierarchyConfigs[CurriculumId.mishnaBerurah]!;
-      expect(config.maxLevels, 3);
-      expect(config.level1Label, 'Siman');
-      expect(config.level2Label, 'Seif');
-      expect(config.level3Label, 'Seif Katan');
+      expect(CurriculumLabels.depth(CurriculumId.mishnaBerurah), 3);
+      expect(CurriculumLabels.labelsEn(CurriculumId.mishnaBerurah), [
+        'Siman',
+        'Seif',
+        'Seif Katan',
+      ]);
     });
 
     test('Chumash has 4-level hierarchy', () {
-      final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.chumash]!;
-      expect(config.maxLevels, 4);
-      expect(config.level1Label, 'Sefer');
-      expect(config.level2Label, 'Parsha');
-      expect(config.level3Label, 'Perek');
-      expect(config.level4Label, 'Pasuk');
+      expect(CurriculumLabels.depth(CurriculumId.chumash), 4);
+      expect(CurriculumLabels.labelsEn(CurriculumId.chumash), [
+        'Sefer',
+        'Parsha',
+        'Perek',
+        'Pasuk',
+      ]);
     });
 
     test('Nach has 4-level hierarchy', () {
-      final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.nach]!;
-      expect(config.maxLevels, 4);
-      expect(config.level1Label, 'Section');
-      expect(config.level2Label, 'Sefer');
-      expect(config.level3Label, 'Perek');
-      expect(config.level4Label, 'Pasuk');
+      expect(CurriculumLabels.depth(CurriculumId.nach), 4);
+      expect(CurriculumLabels.labelsEn(CurriculumId.nach), [
+        'Section',
+        'Sefer',
+        'Perek',
+        'Pasuk',
+      ]);
     });
 
     test('Mussar has 3-level hierarchy', () {
-      final config = CurriculumDefaults.hierarchyConfigs[CurriculumId.mussar]!;
-      expect(config.maxLevels, 3);
-      expect(config.level1Label, 'Sefer');
-      expect(config.level2Label, 'Section');
-      expect(config.level3Label, 'Chapter');
+      expect(CurriculumLabels.depth(CurriculumId.mussar), 3);
+      expect(CurriculumLabels.labelsEn(CurriculumId.mussar), [
+        'Sefer',
+        'Section',
+        'Chapter',
+      ]);
+    });
+
+    test('every level has Hebrew + plural variants', () {
+      for (final curriculum in CurriculumId.values) {
+        for (final label in CurriculumLabels.levels(curriculum)) {
+          expect(label.en, isNotEmpty);
+          expect(label.enPlural, isNotEmpty);
+          expect(label.he, isNotEmpty);
+          expect(label.hePlural, isNotEmpty);
+        }
+      }
+    });
+
+    test('topSectionHeader is bilingual plural', () {
+      expect(
+        CurriculumLabels.topSectionHeader(CurriculumId.bavli),
+        'סדרים • Sedarim',
+      );
+      expect(
+        CurriculumLabels.topSectionHeader(CurriculumId.chumash),
+        'חומשים • Seferim',
+      );
+    });
+
+    test('stripStructuralPrefix removes known Hebrew prefixes', () {
+      expect(CurriculumLabels.stripStructuralPrefix('מסכת ברכות'), 'ברכות');
+      expect(CurriculumLabels.stripStructuralPrefix('ספר בראשית'), 'בראשית');
+      // No-match passes through unchanged.
+      expect(CurriculumLabels.stripStructuralPrefix('ברכות'), 'ברכות');
+    });
+
+    test('hasReorderableLevel2 hides chapter list for chumash/tanach', () {
+      expect(
+        CurriculumLabels.hasReorderableLevel2(CurriculumId.chumash),
+        isFalse,
+      );
+      expect(
+        CurriculumLabels.hasReorderableLevel2(CurriculumId.tanach),
+        isFalse,
+      );
+      expect(CurriculumLabels.hasReorderableLevel2(CurriculumId.bavli), isTrue);
     });
   });
 

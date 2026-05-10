@@ -1140,10 +1140,7 @@ class _DashboardStatBubble extends StatelessWidget {
 }
 
 class _MainFocusMissionCard extends StatelessWidget {
-  const _MainFocusMissionCard({
-    required this.count,
-    required this.onTap,
-  });
+  const _MainFocusMissionCard({required this.count, required this.onTap});
 
   final int count;
   final VoidCallback onTap;

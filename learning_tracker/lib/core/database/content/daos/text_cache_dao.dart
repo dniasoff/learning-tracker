@@ -28,7 +28,7 @@ class ContentTextCacheDao extends DatabaseAccessor<ContentDatabase>
 
   /// Returns all child verse rows for a chapter-level ref.
   /// E.g., 'Genesis 1' returns all rows with sefariaRef LIKE 'Genesis 1:%'.
-  Future<List<TextCacheData>> getChildTexts(String chapterRef) =>
-      (select(textCache)
-        ..where((t) => t.sefariaRef.like('$chapterRef:%'))).get();
+  Future<List<TextCacheData>> getChildTexts(String chapterRef) => (select(
+    textCache,
+  )..where((t) => t.sefariaRef.like('$chapterRef:%'))).get();
 }

@@ -63,21 +63,10 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     }
   }
 
-  CurriculumHierarchyDefaults get _hierarchyConfig =>
-      CurriculumDefaults.hierarchyConfigs[widget.curriculumId]!;
-
-  List<String> get _availableLevelLabels {
-    final config = _hierarchyConfig;
-    return [
-      config.level1Label,
-      if (config.level2Label != null) config.level2Label!,
-      if (config.level3Label != null) config.level3Label!,
-      if (config.level4Label != null) config.level4Label!,
-    ];
-  }
+  int get _maxLevels => CurriculumLabels.depth(widget.curriculumId);
 
   String _labelForLevel(int level) {
-    final labels = _availableLevelLabels;
+    final labels = CurriculumLabels.labelsEn(widget.curriculumId);
     return level <= labels.length ? labels[level - 1] : 'Level $level';
   }
 
@@ -140,7 +129,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
               subtitle: Text('Choose which hierarchy level to filter by'),
             ),
             // Only show levels that make sense for scoping (not leaf level)
-            for (var level = 1; level < _hierarchyConfig.maxLevels; level++)
+            for (var level = 1; level < _maxLevels; level++)
               ListTile(
                 title: Text(_labelForLevel(level)),
                 subtitle: Text(

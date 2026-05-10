@@ -75,7 +75,11 @@ class TextCacheRepository {
           .where((t) => t.isNotEmpty)
           .join('\n');
       if (he.isNotEmpty || en.isNotEmpty) {
-        return TextContent(sefariaRef: sefariaRef, hebrewText: he, englishText: en);
+        return TextContent(
+          sefariaRef: sefariaRef,
+          hebrewText: he,
+          englishText: en,
+        );
       }
     }
 
