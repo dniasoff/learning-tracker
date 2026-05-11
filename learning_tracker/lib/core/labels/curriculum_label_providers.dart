@@ -9,14 +9,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'curriculum_label_providers.g.dart';
 
 /// Renders the **full breadcrumb chain** for [sefariaRef] as a single
-/// string joined by ` › ` (e.g. "משניות › זרעים › ברכות › פרק א › משנה א"
-/// in Hebrew mode). Callers should render the result in a `Text` that
+/// string joined by ` › ` (e.g. "זרעים › ברכות › פרק א › משנה א" in
+/// Hebrew mode). Looks up the matching `ContentItem` for the leaf AND
+/// for each ancestor segment so every named level renders in Hebrew,
+/// not just the leaf. Callers should render the result in a `Text` that
 /// allows wrapping so the chain stays legible on narrow widgets.
-///
-/// Reads the Hebrew-terms toggle and transliteration variant, looks up the
-/// matching `ContentItem` across all curricula, and delegates to
-/// [CurriculumLabelRenderer]. Falls back to a stripped-underscore version
-/// of the ref when no item matches.
 @riverpod
 Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
   final useHebrew = ref.watch(hebrewTermsScriptProvider);
@@ -25,12 +22,33 @@ Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
   if (item == null) {
     return sefariaRef.replaceAll('_', ' ');
   }
-  return CurriculumLabelRenderer.renderForItem(
-    item,
+  final id = _curriculumIdFromStorageKey(item.curriculumId);
+  if (id == null) {
+    return useHebrew ? item.displayNameHe : item.displayNameEn;
+  }
+
+  final rawSegments = <String>[item.level1];
+  if (item.level2 != null) rawSegments.add(item.level2!);
+  if (item.level3 != null) rawSegments.add(item.level3!);
+  if (item.level4 != null) rawSegments.add(item.level4!);
+
+  // Look up Hebrew names for every ancestor segment so the renderer
+  // doesn't fall back to the raw English value ("Seder Moed",
+  // "Mishnah Shabbat").
+  final allItems = await ref.watch(curriculumContentProvider(id).future);
+  final hebrewNames = _hebrewNamesForPath(allItems, rawSegments);
+  // The leaf segment uses the item's own displayNameHe (always present
+  // for the matched ref).
+  hebrewNames[hebrewNames.length - 1] = item.displayNameHe;
+
+  final segments = CurriculumLabelRenderer.renderBreadcrumb(
+    curriculumId: id,
+    rawSegmentValues: rawSegments,
     useHebrew: useHebrew,
+    hebrewNamesPerSegment: hebrewNames,
     transliterationVariant: variant,
-    fullPath: true,
   );
+  return segments.join(' › ');
 }
 
 /// Renders just the leaf segment of [sefariaRef] (e.g. "משנה א"). Useful
@@ -67,7 +85,9 @@ Future<String?> renderedParentForRef(Ref ref, String sefariaRef) async {
   );
 }
 
-/// Renders every breadcrumb segment for [sefariaRef] in order.
+/// Renders every breadcrumb segment for [sefariaRef] in order. Looks up
+/// the Hebrew name of every ancestor segment so each renders in Hebrew
+/// rather than the raw English value.
 @riverpod
 Future<List<String>> renderedBreadcrumbForRef(
   Ref ref,
@@ -87,7 +107,8 @@ Future<List<String>> renderedBreadcrumbForRef(
   if (item.level3 != null) rawSegments.add(item.level3!);
   if (item.level4 != null) rawSegments.add(item.level4!);
 
-  final hebrewNames = List<String?>.filled(rawSegments.length, null);
+  final allItems = await ref.watch(curriculumContentProvider(id).future);
+  final hebrewNames = _hebrewNamesForPath(allItems, rawSegments);
   hebrewNames[hebrewNames.length - 1] = item.displayNameHe;
 
   return CurriculumLabelRenderer.renderBreadcrumb(
@@ -97,6 +118,34 @@ Future<List<String>> renderedBreadcrumbForRef(
     hebrewNamesPerSegment: hebrewNames,
     transliterationVariant: variant,
   );
+}
+
+/// For each entry in [rawSegments], find the container ContentItem
+/// (matching levels 1..N and no deeper levels) and return its
+/// [ContentItem.displayNameHe]. Returns null entries when no container
+/// is found at that depth — the renderer will fall back to the raw value.
+List<String?> _hebrewNamesForPath(
+  List<ContentItem> allItems,
+  List<String> rawSegments,
+) {
+  final result = <String?>[];
+  for (var depth = 0; depth < rawSegments.length; depth++) {
+    final segmentDepth = depth + 1;
+    ContentItem? match;
+    for (final it in allItems) {
+      if (it.level1 != rawSegments[0]) continue;
+      if (segmentDepth >= 2 && it.level2 != rawSegments[1]) continue;
+      if (segmentDepth >= 3 && it.level3 != rawSegments[2]) continue;
+      if (segmentDepth >= 4 && it.level4 != rawSegments[3]) continue;
+      if (segmentDepth < 2 && it.level2 != null) continue;
+      if (segmentDepth < 3 && it.level3 != null) continue;
+      if (segmentDepth < 4 && it.level4 != null) continue;
+      match = it;
+      break;
+    }
+    result.add(match?.displayNameHe);
+  }
+  return result;
 }
 
 Future<ContentItem?> _findContentItem(Ref ref, String sefariaRef) async {
