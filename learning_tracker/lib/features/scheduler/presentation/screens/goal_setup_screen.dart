@@ -146,14 +146,20 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     if (useHebrew) {
       return HebrewCalendarUtils.gregorianToHebrew(d.toLocal());
     }
-    return HebrewCalendarUtils.formatEnglishDate(d);
+    return HebrewCalendarUtils.formatEnglishDate(
+      d,
+      locale: Localizations.localeOf(context).toString(),
+    );
   }
 
   String _formatYmdLine(DateTime d, {required bool useHebrew}) {
     if (useHebrew) {
       return HebrewCalendarUtils.gregorianToHebrew(d.toLocal());
     }
-    return HebrewCalendarUtils.formatEnglishDate(d);
+    return HebrewCalendarUtils.formatEnglishDate(
+      d,
+      locale: Localizations.localeOf(context).toString(),
+    );
   }
 
   @override

@@ -11,7 +11,12 @@ class DashboardDateHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gregorian = DateFormat('EEEE, d MMMM y').format(date);
+    final locale = Localizations.localeOf(context).toString();
+    // Weekday + locale-aware long English date — en_US: "Monday, May 11, 2026";
+    // en_GB / he_IL / etc.: "Monday, 11 May 2026".
+    final gregorian =
+        '${DateFormat.EEEE(locale).format(date)}, '
+        '${DateFormat.yMMMMd(locale).format(date)}';
     final hebrew = HebrewCalendarUtils.gregorianToHebrew(date.toUtc());
 
     return Column(

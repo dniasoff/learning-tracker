@@ -82,7 +82,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final accent = trackAccentForType(track.trackType);
     final icon = trackTypeIconData(track.trackType);
     final trackLabel = trackTypeDisplayLabel(track.trackType);
-    final activatedDate = DateFormat('d MMM y').format(track.activatedAt);
+    final activatedDate = DateFormat.yMMMd(
+      Localizations.localeOf(context).toString(),
+    ).format(track.activatedAt);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),

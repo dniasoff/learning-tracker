@@ -7,16 +7,20 @@ import 'package:kosher_dart/kosher_dart.dart';
 
 /// Utilities for Hebrew calendar operations.
 class HebrewCalendarUtils {
-  /// Format a date for **user-facing English-calendar display** — always
-  /// `d MMM y` (e.g. "11 May 2026"). Never use ISO or numeric DMY for
-  /// English dates shown in the UI: the user has explicitly flagged
-  /// `2026-05-11` and `11/05/2026` as undesirable.
+  /// Format a date for **user-facing English-calendar display**.
   ///
-  /// Use this anywhere you'd previously typed a hand-rolled
-  /// `"$y-$m-$d"` or `"$d/$m/$y"` for the Gregorian side of a Hebrew
-  /// date picker, deadline display, projected-finish line, etc.
-  static String formatEnglishDate(DateTime date) {
-    return DateFormat('d MMM y').format(date.toLocal());
+  /// Locale-aware: US locales render `May 11, 2026`; UK / IL / AU / etc.
+  /// render `11 May 2026`. Pass the active app/device locale (via
+  /// `Localizations.localeOf(context).toString()`) from callers that
+  /// have a `BuildContext`. When `locale` is null the formatter falls
+  /// back to `Intl.defaultLocale`.
+  ///
+  /// Never use ISO or numeric DMY for English dates shown in the UI —
+  /// the user has explicitly flagged `2026-05-11` and `11/05/2026` as
+  /// undesirable. Hebrew gematriya dates are formatted separately via
+  /// [gregorianToHebrew].
+  static String formatEnglishDate(DateTime date, {String? locale}) {
+    return DateFormat.yMMMd(locale).format(date.toLocal());
   }
 
   /// Converts a Gregorian DateTime to a Hebrew date string.
