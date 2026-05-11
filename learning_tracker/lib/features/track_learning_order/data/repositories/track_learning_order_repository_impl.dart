@@ -36,22 +36,61 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   }
 
   Future<Map<String, ({String he, String en, int sortOrder})>>
-  _buildMasechtosIndex(CurriculumId curriculumId) async {
+  _buildMasechtosIndex(int trackId, CurriculumId curriculumId) async {
     final allItems = await _contentRepository.getContentForCurriculum(
       curriculumId,
     );
-    final index = <String, ({String he, String en, int sortOrder})>{};
-    for (final item in allItems) {
-      if (item.level2 != null && !item.isLeaf) {
-        index.putIfAbsent(
-          item.sefariaRef,
-          () => (
-            he: item.displayNameHe,
-            en: item.displayNameEn,
-            sortOrder: item.sortOrder,
-          ),
-        );
+
+    // Look up the user's seder order so we can group masechtos by their
+    // parent seder's position. Without this the masechtos list keeps its
+    // source-data order even after the sedarim above are reordered.
+    final sedarimIndex = await _buildSedarimIndex(curriculumId);
+    final daoRows = await _database.trackLearningOrderDao.getByTrack(trackId);
+    final sederUserOrder = <String, int>{};
+    var seen = 0;
+    for (final row in daoRows) {
+      if (sedarimIndex.containsKey(row.sefariaRef)) {
+        sederUserOrder[row.sefariaRef] = seen++;
       }
+    }
+
+    int parentSederPriority(String level1) {
+      // Match the stored seder ref by its sefariaRef. In Mishnayos/Bavli
+      // data the seder container's sefariaRef equals its level1 value.
+      final userIdx = sederUserOrder[level1];
+      if (userIdx != null) return userIdx;
+      // Fall back to source order so unordered sedarim stay in default place.
+      final src = sedarimIndex[level1]?.sortOrder ?? 1 << 30;
+      return 1000 + src; // bucketed after user-ordered sedarim
+    }
+
+    // Filter to L2-only containers (level2 set, level3 null, level4 null,
+    // not a leaf). This excludes Perakim/Mishnayot that were leaking into
+    // the masechtos list because they also have level2 != null.
+    final masechtos =
+        allItems
+            .where(
+              (i) =>
+                  i.level2 != null &&
+                  i.level3 == null &&
+                  i.level4 == null &&
+                  !i.isLeaf,
+            )
+            .toList()
+          ..sort((a, b) {
+            final pa = parentSederPriority(a.level1);
+            final pb = parentSederPriority(b.level1);
+            if (pa != pb) return pa.compareTo(pb);
+            return a.sortOrder.compareTo(b.sortOrder);
+          });
+
+    final index = <String, ({String he, String en, int sortOrder})>{};
+    for (var i = 0; i < masechtos.length; i++) {
+      final item = masechtos[i];
+      index.putIfAbsent(
+        item.sefariaRef,
+        () => (he: item.displayNameHe, en: item.displayNameEn, sortOrder: i),
+      );
     }
     return index;
   }
@@ -109,7 +148,7 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
     int trackId,
     CurriculumId curriculumId,
   ) async {
-    final index = await _buildMasechtosIndex(curriculumId);
+    final index = await _buildMasechtosIndex(trackId, curriculumId);
     return _getOrderedItems(trackId, index);
   }
 

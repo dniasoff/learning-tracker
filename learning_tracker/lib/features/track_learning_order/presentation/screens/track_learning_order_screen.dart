@@ -167,7 +167,14 @@ class _TrackLearningOrderScreenState
     ref
         .read(trackLearningOrderRepositoryProvider)
         .saveSedarimOrder(widget.trackId, items)
-        .then((_) => ref.invalidate(trackSedarimOrderProvider(args)));
+        .then((_) {
+          ref.invalidate(trackSedarimOrderProvider(args));
+          // Reordering sedarim shifts the natural grouping of masechtos
+          // below — drop the local cache so the bottom list re-fetches
+          // with the new parent-seder priority.
+          ref.invalidate(trackMasechtosOrderProvider(args));
+          if (mounted) setState(() => _localMasechtos = null);
+        });
   }
 
   void _persistMasechtos(List<LearningOrderItem> items) {

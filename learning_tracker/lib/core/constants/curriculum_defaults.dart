@@ -674,8 +674,15 @@ class CurriculumLabels {
 
   /// Bilingual plural header for the level-2 reorder section
   /// (e.g. "מסכתות • Masechtos"). Null for single-level curricula.
-  static String? containerSectionHeader(CurriculumId id) =>
-      container(id)?.bilingualPlural;
+  ///
+  /// **Always returns level 2's plural** — not "level above leaf". For
+  /// deep curricula like Mishnayos (Seder/Masechta/Perek/Mishna) the
+  /// second reorder section is Masechtos (L2), not Perakim (L3).
+  static String? containerSectionHeader(CurriculumId id) {
+    final list = _levels[id]!;
+    if (list.length < 2) return null;
+    return list[1].bilingualPlural;
+  }
 
   /// Whether the level-2 reorder section should render. Chumash and Tanach
   /// hide it: a 929-row chapter list is unworkable as a drag-reorder UI;

@@ -113,10 +113,12 @@ void main() {
         // Yesharim, Orchot Tzadikim, Tomer Devorah, Shaarei Teshuvah)
         // simply don't use L4. Tanya uses the Part override at L2 and
         // Perek override at L3.
-        expect(
-          CurriculumLabels.labelsEn(CurriculumId.mussar),
-          ['Sefer', 'Perek', 'Pasuk', 'Pasuk'],
-        );
+        expect(CurriculumLabels.labelsEn(CurriculumId.mussar), [
+          'Sefer',
+          'Perek',
+          'Pasuk',
+          'Pasuk',
+        ]);
       },
     );
 
